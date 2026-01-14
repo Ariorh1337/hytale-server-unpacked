@@ -39,6 +39,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
    private static volatile JWTValidator jwtValidator;
    private volatile HandshakeHandler.AuthState authState = HandshakeHandler.AuthState.REQUESTING_AUTH_GRANT;
    private volatile boolean authTokenPacketReceived = false;
+   private volatile String authenticatedUsername;
    private static final int AUTH_GRANT_TIMEOUT_SECONDS = 30;
    private static final int AUTH_TOKEN_TIMEOUT_SECONDS = 30;
    private static final int SERVER_TOKEN_EXCHANGE_TIMEOUT_SECONDS = 15;
@@ -259,7 +260,19 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
             } else {
                UUID tokenUuid = claims.getSubjectAsUUID();
                String tokenUsername = claims.username;
-               if (tokenUuid != null && tokenUuid.equals(this.playerUuid)) {
+               if (tokenUuid == null || !tokenUuid.equals(this.playerUuid)) {
+                  LOGGER.at(Level.WARNING)
+                     .log("JWT UUID mismatch for %s (expected: %s, got: %s)", NettyUtil.formatRemoteAddress(this.channel), this.playerUuid, tokenUuid);
+                  this.disconnect("Invalid token claims: UUID mismatch");
+               } else if (tokenUsername == null || tokenUsername.isEmpty()) {
+                  LOGGER.at(Level.WARNING).log("JWT missing username for %s", NettyUtil.formatRemoteAddress(this.channel));
+                  this.disconnect("Invalid token claims: missing username");
+               } else if (!tokenUsername.equals(this.username)) {
+                  LOGGER.at(Level.WARNING)
+                     .log("JWT username mismatch for %s (expected: %s, got: %s)", NettyUtil.formatRemoteAddress(this.channel), this.username, tokenUsername);
+                  this.disconnect("Invalid token claims: username mismatch");
+               } else {
+                  this.authenticatedUsername = tokenUsername;
                   if (serverAuthGrant != null && !serverAuthGrant.isEmpty()) {
                      this.authState = HandshakeHandler.AuthState.EXCHANGING_SERVER_TOKEN;
                      this.setTimeout(
@@ -270,10 +283,6 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
                      LOGGER.at(Level.WARNING).log("Client did not provide server auth grant for mutual authentication");
                      this.disconnect("Mutual authentication required - please update your client");
                   }
-               } else {
-                  LOGGER.at(Level.WARNING)
-                     .log("JWT UUID mismatch for %s (expected: %s, got: %s)", NettyUtil.formatRemoteAddress(this.channel), this.playerUuid, tokenUuid);
-                  this.disconnect("Invalid token claims: UUID mismatch");
                }
             }
          } else {
@@ -371,7 +380,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
    }
 
    private void completeAuthentication(byte[] passwordChallenge) {
-      this.auth = new PlayerAuthentication(this.playerUuid, this.username);
+      this.auth = new PlayerAuthentication(this.playerUuid, this.authenticatedUsername);
       if (this.referralData != null) {
          this.auth.setReferralData(this.referralData);
       }
@@ -383,7 +392,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
       this.authState = HandshakeHandler.AuthState.AUTHENTICATED;
       this.clearTimeout();
       LOGGER.at(Level.INFO)
-         .log("Mutual authentication complete for %s (%s) from %s", this.username, this.playerUuid, NettyUtil.formatRemoteAddress(this.channel));
+         .log("Mutual authentication complete for %s (%s) from %s", this.authenticatedUsername, this.playerUuid, NettyUtil.formatRemoteAddress(this.channel));
       this.onAuthenticated(passwordChallenge);
    }
 
