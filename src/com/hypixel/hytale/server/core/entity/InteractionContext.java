@@ -380,7 +380,7 @@ public class InteractionContext {
 
    @Nullable
    public String getRootInteractionId(@Nonnull InteractionType type) {
-      if (this.runningForEntity != null) {
+      if (this.runningForEntity != null && this.runningForEntity.isValid()) {
          Interactions interactions = this.runningForEntity.getStore().getComponent(this.runningForEntity, Interactions.getComponentType());
          if (interactions != null) {
             String interactionId = interactions.getInteractionId(type);

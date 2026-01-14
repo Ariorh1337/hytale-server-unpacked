@@ -278,6 +278,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
                BuilderCodec.builder(ItemResourceType.class, ItemResourceType::new)
                   .append(new KeyedCodec<>("Id", Codec.STRING), (itemResourceType, s) -> itemResourceType.id = s, itemResourceType -> itemResourceType.id)
                   .addValidator(ResourceType.VALIDATOR_CACHE.getValidator())
+                  .addValidator(Validators.nonNull())
                   .add()
                   .<Integer>append(
                      new KeyedCodec<>("Quantity", Codec.INTEGER),

@@ -234,35 +234,37 @@ public class InstancesPlugin extends JavaPlugin {
 
       PlayerRef playerRefComponent = componentAccessor.getComponent(entityRef, PlayerRef.getComponentType());
       assert playerRefComponent != null;
-      originalWorld.execute(playerRefComponent::removeFromStore);
       UUIDComponent uuidComponent = componentAccessor.getComponent(entityRef, UUIDComponent.getComponentType());
       assert uuidComponent != null;
       UUID playerUUID = uuidComponent.getUuid();
       InstanceEntityConfig finalPlayerConfig = instanceEntityConfigComponent;
-      worldFuture.orTimeout(1L, TimeUnit.MINUTES).thenCompose(world -> {
-         ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
-         Transform spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
-         return world.addPlayer(playerRefComponent, spawnPoint, Boolean.TRUE, Boolean.FALSE);
-      }).whenComplete((ret, ex) -> {
-         if (ex != null) {
-            get().getLogger().at(Level.SEVERE).withCause(ex).log("Failed to send %s to instance world", playerRefComponent.getUsername());
-            finalPlayerConfig.setReturnPointOverride(null);
-         }
+      CompletableFuture.runAsync(playerRefComponent::removeFromStore, originalWorld)
+         .thenCombine(worldFuture.orTimeout(1L, TimeUnit.MINUTES), (ignored, world) -> (World)world)
+         .thenCompose(world -> {
+            ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+            Transform spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
+            return world.addPlayer(playerRefComponent, spawnPoint, Boolean.TRUE, Boolean.FALSE);
+         })
+         .whenComplete((ret, ex) -> {
+            if (ex != null) {
+               get().getLogger().at(Level.SEVERE).withCause(ex).log("Failed to send %s to instance world", playerRefComponent.getUsername());
+               finalPlayerConfig.setReturnPointOverride(null);
+            }
 
-         if (ret == null) {
-            if (originalWorld.isAlive()) {
-               originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
-            } else {
-               World defaultWorld = Universe.get().getDefaultWorld();
-               if (defaultWorld != null) {
-                  defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
+            if (ret == null) {
+               if (originalWorld.isAlive()) {
+                  originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
                } else {
-                  get().getLogger().at(Level.SEVERE).log("No fallback world for %s, disconnecting", playerRefComponent.getUsername());
-                  playerRefComponent.getPacketHandler().disconnect("Failed to teleport - no world available");
+                  World defaultWorld = Universe.get().getDefaultWorld();
+                  if (defaultWorld != null) {
+                     defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
+                  } else {
+                     get().getLogger().at(Level.SEVERE).log("No fallback world for %s, disconnecting", playerRefComponent.getUsername());
+                     playerRefComponent.getPacketHandler().disconnect("Failed to teleport - no world available");
+                  }
                }
             }
-         }
-      });
+         });
    }
 
    public static void teleportPlayerToInstance(

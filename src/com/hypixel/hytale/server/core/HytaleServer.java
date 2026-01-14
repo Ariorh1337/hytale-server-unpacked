@@ -349,6 +349,11 @@ public class HytaleServer {
                FormatUtil.nanosToString(System.nanoTime() - this.bootStart)
             );
          LOGGER.at(Level.INFO).log("\u001b[0;32m===============================================================================================");
+         ServerAuthManager authManager = ServerAuthManager.getInstance();
+         if (!authManager.isSingleplayer() && authManager.getAuthMode() == ServerAuthManager.AuthMode.NONE) {
+            LOGGER.at(Level.WARNING).log("%sNo server tokens configured. Use /auth login to authenticate.", "\u001b[0;31m");
+         }
+
          this.sendSingleplayerSignal(">> Singleplayer Ready <<");
       }
    }
