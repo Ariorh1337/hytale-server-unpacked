@@ -126,7 +126,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
 
    @Override
    public void registered0(@Nonnull PacketHandler oldHandler) {
-      this.setTimeout("send-world-settings", () -> this.assets != null, 1L, TimeUnit.SECONDS);
+      this.setTimeout("send-world-settings", () -> this.assets != null, 10L, TimeUnit.SECONDS);
       PlayerSetupConnectEvent event = HytaleServer.get()
          .getEventBus()
          .<Void, PlayerSetupConnectEvent>dispatchFor(PlayerSetupConnectEvent.class)

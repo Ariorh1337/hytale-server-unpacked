@@ -87,9 +87,16 @@ public class ItemPhysicsSystem extends EntityTickingSystem<EntityStore> {
       }
 
       BlockCollisionData blockCollisionData = collisionResult.getFirstBlockCollision();
-      if (blockCollisionData != null && blockCollisionData.collisionNormal.equals(Vector3d.UP)) {
-         velocityComponent.setZero();
-         position.assign(blockCollisionData.collisionPoint);
+      if (blockCollisionData != null) {
+         if (blockCollisionData.collisionNormal.equals(Vector3d.UP)) {
+            velocityComponent.setZero();
+            position.assign(blockCollisionData.collisionPoint);
+         } else {
+            Vector3d velocity = velocityComponent.getVelocity();
+            double dot = velocity.dot(blockCollisionData.collisionNormal);
+            Vector3d velocityToCancel = blockCollisionData.collisionNormal.clone().scale(dot);
+            velocity.subtract(velocityToCancel);
+         }
       } else {
          velocityComponent.assignVelocityTo(scaledVelocity).scale(dt);
          position.add(scaledVelocity);

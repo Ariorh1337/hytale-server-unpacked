@@ -351,8 +351,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
                   LOGGER.at(Level.WARNING).withCause(ex).log("Error exchanging server auth grant");
                   this.channel.eventLoop().execute(() -> {
                      if (this.authState == HandshakeHandler.AuthState.EXCHANGING_SERVER_TOKEN) {
-                        byte[] passwordChallenge = this.generatePasswordChallengeIfNeeded();
-                        this.completeAuthentication(passwordChallenge);
+                        this.disconnect("Server authentication failed - please try again later");
                      }
                   });
                   return null;

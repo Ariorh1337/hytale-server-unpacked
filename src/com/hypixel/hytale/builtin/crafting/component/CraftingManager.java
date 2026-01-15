@@ -578,7 +578,7 @@ public class CraftingManager implements Component<EntityStore> {
 
             if (slotCraftingMaterial.getResourceTypeId() != null && slotItemStack.getItem().getResourceTypes() != null) {
                for (ItemResourceType itemResourceType : slotItemStack.getItem().getResourceTypes()) {
-                  if (itemResourceType.id.equals(slotCraftingMaterial.getResourceTypeId())) {
+                  if (slotCraftingMaterial.getResourceTypeId().equals(itemResourceType.id)) {
                      return true;
                   }
                }

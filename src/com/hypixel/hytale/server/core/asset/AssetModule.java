@@ -18,6 +18,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.asset.monitor.AssetMonitor;
 import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.HomeOrSpawnPoint;
 import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
@@ -93,52 +94,56 @@ public class AssetModule extends JavaPlugin {
          this.loadPacksFromDirectory(modsPath);
       }
 
-      this.getEventRegistry().register((short)-16, LoadAssetEvent.class, event -> {
-         if (this.hasLoaded) {
-            throw new IllegalStateException("LoadAssetEvent has already been dispatched");
-         }
-
-         AssetRegistry.ASSET_LOCK.writeLock().lock();
-
-         try {
-            this.hasLoaded = true;
-            AssetRegistryLoader.preLoadAssets(event);
-
-            for (AssetPack pack : this.assetPacks) {
-               AssetRegistryLoader.loadAssets(event, pack);
+      if (this.assetPacks.isEmpty()) {
+         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage("Failed to load any asset packs"));
+      } else {
+         this.getEventRegistry().register((short)-16, LoadAssetEvent.class, event -> {
+            if (this.hasLoaded) {
+               throw new IllegalStateException("LoadAssetEvent has already been dispatched");
             }
-         } finally {
-            AssetRegistry.ASSET_LOCK.writeLock().unlock();
-         }
-      });
-      this.getEventRegistry().register((short)-16, AssetPackRegisterEvent.class, event -> AssetRegistryLoader.loadAssets(null, event.getAssetPack()));
-      this.getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {
-         for (AssetStore<?, ?, ?> assetStore : AssetRegistry.getStoreMap().values()) {
-            assetStore.removeAssetPack(event.getAssetPack().getName());
-         }
-      });
-      this.getEventRegistry().register(LoadAssetEvent.class, AssetModule::validateWorldGen);
-      this.getEventRegistry().register(EventPriority.FIRST, LoadAssetEvent.class, SneakyThrow.sneakyConsumer(AssetRegistryLoader::writeSchemas));
-      this.getEventRegistry().register(RegisterAssetStoreEvent.class, this::onNewStore);
-      this.getEventRegistry().register(RemoveAssetStoreEvent.class, this::onRemoveStore);
-      this.getEventRegistry().registerGlobal(BootEvent.class, event -> {
-         StringBuilder sb = new StringBuilder("Total Loaded Assets: ");
-         AssetStore[] assetStores = AssetRegistry.getStoreMap().values().toArray(AssetStore[]::new);
-         Arrays.sort(assetStores, Comparator.comparingInt(o -> o.getAssetMap().getAssetCount()));
 
-         for (int i = assetStores.length - 1; i >= 0; i--) {
-            AssetStore assetStore = assetStores[i];
-            String simpleName = assetStore.getAssetClass().getSimpleName();
-            int assetCount = assetStore.getAssetMap().getAssetCount();
-            sb.append(simpleName).append(": ").append(assetCount).append(", ");
-         }
+            AssetRegistry.ASSET_LOCK.writeLock().lock();
 
-         sb.setLength(sb.length() - 2);
-         this.getLogger().at(Level.INFO).log(sb.toString());
-      });
-      RespawnController.CODEC.register("HomeOrSpawnPoint", HomeOrSpawnPoint.class, HomeOrSpawnPoint.CODEC);
-      RespawnController.CODEC.register("WorldSpawnPoint", WorldSpawnPoint.class, WorldSpawnPoint.CODEC);
-      this.getCommandRegistry().registerCommand(new DroplistCommand());
+            try {
+               this.hasLoaded = true;
+               AssetRegistryLoader.preLoadAssets(event);
+
+               for (AssetPack pack : this.assetPacks) {
+                  AssetRegistryLoader.loadAssets(event, pack);
+               }
+            } finally {
+               AssetRegistry.ASSET_LOCK.writeLock().unlock();
+            }
+         });
+         this.getEventRegistry().register((short)-16, AssetPackRegisterEvent.class, event -> AssetRegistryLoader.loadAssets(null, event.getAssetPack()));
+         this.getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {
+            for (AssetStore<?, ?, ?> assetStore : AssetRegistry.getStoreMap().values()) {
+               assetStore.removeAssetPack(event.getAssetPack().getName());
+            }
+         });
+         this.getEventRegistry().register(LoadAssetEvent.class, AssetModule::validateWorldGen);
+         this.getEventRegistry().register(EventPriority.FIRST, LoadAssetEvent.class, SneakyThrow.sneakyConsumer(AssetRegistryLoader::writeSchemas));
+         this.getEventRegistry().register(RegisterAssetStoreEvent.class, this::onNewStore);
+         this.getEventRegistry().register(RemoveAssetStoreEvent.class, this::onRemoveStore);
+         this.getEventRegistry().registerGlobal(BootEvent.class, event -> {
+            StringBuilder sb = new StringBuilder("Total Loaded Assets: ");
+            AssetStore[] assetStores = AssetRegistry.getStoreMap().values().toArray(AssetStore[]::new);
+            Arrays.sort(assetStores, Comparator.comparingInt(o -> o.getAssetMap().getAssetCount()));
+
+            for (int i = assetStores.length - 1; i >= 0; i--) {
+               AssetStore assetStore = assetStores[i];
+               String simpleName = assetStore.getAssetClass().getSimpleName();
+               int assetCount = assetStore.getAssetMap().getAssetCount();
+               sb.append(simpleName).append(": ").append(assetCount).append(", ");
+            }
+
+            sb.setLength(sb.length() - 2);
+            this.getLogger().at(Level.INFO).log(sb.toString());
+         });
+         RespawnController.CODEC.register("HomeOrSpawnPoint", HomeOrSpawnPoint.class, HomeOrSpawnPoint.CODEC);
+         RespawnController.CODEC.register("WorldSpawnPoint", WorldSpawnPoint.class, WorldSpawnPoint.CODEC);
+         this.getCommandRegistry().registerCommand(new DroplistCommand());
+      }
    }
 
    @Override

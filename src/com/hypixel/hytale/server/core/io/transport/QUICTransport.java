@@ -22,6 +22,7 @@ import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioChannelOption;
 import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
 import io.netty.handler.codec.quic.QuicChannel;
+import io.netty.handler.codec.quic.QuicCongestionControlAlgorithm;
 import io.netty.handler.codec.quic.QuicServerCodecBuilder;
 import io.netty.handler.codec.quic.QuicSslContext;
 import io.netty.handler.codec.quic.QuicSslContextBuilder;
@@ -145,6 +146,8 @@ public class QUICTransport implements Transport {
             .initialMaxStreamDataBidirectionalLocal(131072L)
             .initialMaxStreamDataBidirectionalRemote(131072L)
             .initialMaxStreamsBidirectional(1L)
+            .discoverPmtu(true)
+            .congestionControlAlgorithm(QuicCongestionControlAlgorithm.BBR)
             .handler(
                new ChannelInboundHandlerAdapter() {
                   @Override

@@ -20,6 +20,7 @@ import com.hypixel.hytale.plugin.early.EarlyPluginLoader;
 import com.hypixel.hytale.server.core.asset.AssetRegistryLoader;
 import com.hypixel.hytale.server.core.asset.LoadAssetEvent;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
+import com.hypixel.hytale.server.core.auth.SessionServiceClient;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.console.ConsoleSender;
 import com.hypixel.hytale.server.core.event.events.BootEvent;
@@ -40,6 +41,7 @@ import io.netty.handler.codec.quic.Quic;
 import io.sentry.Sentry;
 import io.sentry.SentryOptions;
 import io.sentry.protocol.Contexts;
+import io.sentry.protocol.User;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
 import java.time.Instant;
@@ -179,11 +181,29 @@ public class HytaleServer {
                      "release"
                   )
                );
+               User user = new User();
+               HashMap<String, Object> unknown = new HashMap<>();
+               user.setUnknown(unknown);
+               if (hardwareUUID != null) {
+                  unknown.put("hardware-uuid", hardwareUUID.toString());
+               }
+
+               ServerAuthManager authManager = ServerAuthManager.getInstance();
+               unknown.put("auth-mode", authManager.getAuthMode().toString());
+               SessionServiceClient.GameProfile profile = authManager.getSelectedProfile();
+               if (profile != null) {
+                  user.setUsername(profile.username);
+                  user.setId(profile.uuid.toString());
+               }
+
+               user.setIpAddress("{{auto}}");
                if (Constants.SINGLEPLAYER) {
                   scope.setContexts(
                      "singleplayer", Map.of("owner-uuid", String.valueOf(SingleplayerModule.getUuid()), "owner-name", SingleplayerModule.getUsername())
                   );
                }
+
+               scope.setUser(user);
             }
          );
          HytaleLogger.getLogger().setSentryClient(Sentry.getCurrentScopes());
