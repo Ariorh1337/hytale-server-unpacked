@@ -158,6 +158,24 @@ public class HytaleServer {
             }
 
             contexts.put("plugins", pluginsContext);
+            User user = new User();
+            HashMap<String, Object> unknown = new HashMap<>();
+            user.setUnknown(unknown);
+            UUID hardwareUUID = HardwareUtil.getUUID();
+            if (hardwareUUID != null) {
+               unknown.put("hardware-uuid", hardwareUUID.toString());
+            }
+
+            ServerAuthManager authManager = ServerAuthManager.getInstance();
+            unknown.put("auth-mode", authManager.getAuthMode().toString());
+            SessionServiceClient.GameProfile profile = authManager.getSelectedProfile();
+            if (profile != null) {
+               user.setUsername(profile.username);
+               user.setId(profile.uuid.toString());
+            }
+
+            user.setIpAddress("{{auto}}");
+            event.setUser(user);
             return event;
          });
          Sentry.init(options);
@@ -181,29 +199,11 @@ public class HytaleServer {
                      "release"
                   )
                );
-               User user = new User();
-               HashMap<String, Object> unknown = new HashMap<>();
-               user.setUnknown(unknown);
-               if (hardwareUUID != null) {
-                  unknown.put("hardware-uuid", hardwareUUID.toString());
-               }
-
-               ServerAuthManager authManager = ServerAuthManager.getInstance();
-               unknown.put("auth-mode", authManager.getAuthMode().toString());
-               SessionServiceClient.GameProfile profile = authManager.getSelectedProfile();
-               if (profile != null) {
-                  user.setUsername(profile.username);
-                  user.setId(profile.uuid.toString());
-               }
-
-               user.setIpAddress("{{auto}}");
                if (Constants.SINGLEPLAYER) {
                   scope.setContexts(
                      "singleplayer", Map.of("owner-uuid", String.valueOf(SingleplayerModule.getUuid()), "owner-name", SingleplayerModule.getUsername())
                   );
                }
-
-               scope.setUser(user);
             }
          );
          HytaleLogger.getLogger().setSentryClient(Sentry.getCurrentScopes());
