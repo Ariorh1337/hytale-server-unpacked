@@ -257,8 +257,8 @@ public class FarmingSystems {
          assert farmingBlock != null;
          BlockModule.BlockStateInfo info = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType());
          assert info != null;
+         BlockChunk blockChunk = commandBuffer.getComponent(info.getChunkRef(), BlockChunk.getComponentType());
          if (farmingBlock.getLastTickGameTime() == null) {
-            BlockChunk blockChunk = commandBuffer.getComponent(info.getChunkRef(), BlockChunk.getComponentType());
             int blockId = blockChunk.getBlock(
                ChunkUtil.xFromBlockInColumn(info.getIndex()), ChunkUtil.yFromBlockInColumn(info.getIndex()), ChunkUtil.zFromBlockInColumn(info.getIndex())
             );
@@ -271,6 +271,7 @@ public class FarmingSystems {
             farmingBlock.setLastTickGameTime(
                store.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType()).getGameTime()
             );
+            blockChunk.markNeedsSaving();
             if (blockType.getFarming().getStages() != null) {
                FarmingStageData[] stages = blockType.getFarming().getStages().get(blockType.getFarming().getStartingStageSet());
                if (stages != null && stages.length > 0) {
@@ -318,6 +319,7 @@ public class FarmingSystems {
             farmingBlock.setLastTickGameTime(
                store.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType()).getGameTime()
             );
+            blockChunk.markNeedsSaving();
          }
 
          int x = ChunkUtil.xFromBlockInColumn(info.getIndex());
@@ -329,7 +331,7 @@ public class FarmingSystems {
          assert column != null;
          Ref<ChunkStore> section = column.getSection(ChunkUtil.chunkCoordinate(y));
          BlockSection blockSection = commandBuffer.getComponent(section, BlockSection.getComponentType());
-         FarmingUtil.tickFarming(commandBuffer, blockSection, section, ref, farmingBlock, x, y, z, true);
+         FarmingUtil.tickFarming(commandBuffer, blockChunk, blockSection, section, ref, farmingBlock, x, y, z, true);
       }
 
       @Override
@@ -407,37 +409,41 @@ public class FarmingSystems {
          if (blocks.getTickingBlocksCountCopy() != 0) {
             ChunkSection section = archetypeChunk.getComponent(index, ChunkSection.getComponentType());
             assert section != null;
-            BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(section.getChunkColumnReference(), BlockComponentChunk.getComponentType());
-            assert blockComponentChunk != null;
-            Ref<ChunkStore> ref = archetypeChunk.getReferenceTo(index);
-            blocks.forEachTicking(
-               blockComponentChunk, commandBuffer, section.getY(), (blockComponentChunk1, commandBuffer1, localX, localY, localZ, blockId) -> {
-                  Ref<ChunkStore> blockRef = blockComponentChunk1.getEntityReference(ChunkUtil.indexBlockInColumn(localX, localY, localZ));
-                  if (blockRef == null) {
-                     return BlockTickStrategy.IGNORED;
-                  } else {
-                     FarmingBlock farming = commandBuffer1.getComponent(blockRef, FarmingBlock.getComponentType());
-                     if (farming != null) {
-                        FarmingUtil.tickFarming(commandBuffer1, blocks, ref, blockRef, farming, localX, localY, localZ, false);
-                        return BlockTickStrategy.SLEEP;
+            if (section.getChunkColumnReference() != null && section.getChunkColumnReference().isValid()) {
+               BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(section.getChunkColumnReference(), BlockComponentChunk.getComponentType());
+               assert blockComponentChunk != null;
+               Ref<ChunkStore> ref = archetypeChunk.getReferenceTo(index);
+               BlockChunk blockChunk = commandBuffer.getComponent(section.getChunkColumnReference(), BlockChunk.getComponentType());
+               assert blockChunk != null;
+               blocks.forEachTicking(
+                  blockComponentChunk, commandBuffer, section.getY(), (blockComponentChunk1, commandBuffer1, localX, localY, localZ, blockId) -> {
+                     Ref<ChunkStore> blockRef = blockComponentChunk1.getEntityReference(ChunkUtil.indexBlockInColumn(localX, localY, localZ));
+                     if (blockRef == null) {
+                        return BlockTickStrategy.IGNORED;
                      } else {
-                        TilledSoilBlock soil = commandBuffer1.getComponent(blockRef, TilledSoilBlock.getComponentType());
-                        if (soil != null) {
-                           tickSoil(commandBuffer1, blockComponentChunk1, blockRef, soil);
+                        FarmingBlock farming = commandBuffer1.getComponent(blockRef, FarmingBlock.getComponentType());
+                        if (farming != null) {
+                           FarmingUtil.tickFarming(commandBuffer1, blockChunk, blocks, ref, blockRef, farming, localX, localY, localZ, false);
                            return BlockTickStrategy.SLEEP;
                         } else {
-                           CoopBlock coop = commandBuffer1.getComponent(blockRef, CoopBlock.getComponentType());
-                           if (coop != null) {
-                              tickCoop(commandBuffer1, blockComponentChunk1, blockRef, coop);
+                           TilledSoilBlock soil = commandBuffer1.getComponent(blockRef, TilledSoilBlock.getComponentType());
+                           if (soil != null) {
+                              tickSoil(commandBuffer1, blockComponentChunk1, blockRef, soil);
                               return BlockTickStrategy.SLEEP;
                            } else {
-                              return BlockTickStrategy.IGNORED;
+                              CoopBlock coop = commandBuffer1.getComponent(blockRef, CoopBlock.getComponentType());
+                              if (coop != null) {
+                                 tickCoop(commandBuffer1, blockComponentChunk1, blockRef, coop);
+                                 return BlockTickStrategy.SLEEP;
+                              } else {
+                                 return BlockTickStrategy.IGNORED;
+                              }
                            }
                         }
                      }
                   }
-               }
-            );
+               );
+            }
          }
       }
 

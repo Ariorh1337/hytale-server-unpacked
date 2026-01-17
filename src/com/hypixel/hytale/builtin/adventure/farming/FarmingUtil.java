@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
@@ -43,6 +44,7 @@ public class FarmingUtil {
 
    public static void tickFarming(
       CommandBuffer<ChunkStore> commandBuffer,
+      BlockChunk blockChunk,
       BlockSection blockSection,
       Ref<ChunkStore> sectionRef,
       Ref<ChunkStore> blockRef,
@@ -65,7 +67,18 @@ public class FarmingUtil {
                float currentProgress = farmingBlock.getGrowthProgress();
                int currentStage = (int)currentProgress;
                String currentStageSet = farmingBlock.getCurrentStageSet();
-               FarmingStageData[] stages = farmingConfig.getStages().get(currentStageSet);
+               FarmingStageData[] stages = currentStageSet != null ? farmingConfig.getStages().get(currentStageSet) : null;
+               if (stages == null) {
+                  currentStageSet = farmingConfig.getStartingStageSet();
+                  if (currentStageSet == null) {
+                     return;
+                  }
+
+                  farmingBlock.setCurrentStageSet(currentStageSet);
+                  stages = farmingConfig.getStages().get(currentStageSet);
+                  blockChunk.markNeedsSaving();
+               }
+
                if (stages != null) {
                   if (currentStage < 0) {
                      currentStage = 0;
@@ -85,6 +98,7 @@ public class FarmingUtil {
                      while (currentStage < stages.length) {
                         FarmingStageData stage = stages[currentStage];
                         if (stage.shouldStop(commandBuffer, sectionRef, blockRef, x, y, z)) {
+                           blockChunk.markNeedsSaving();
                            farmingBlock.setGrowthProgress(stages.length);
                            commandBuffer.removeEntity(blockRef, RemoveReason.REMOVE);
                            break;
@@ -92,6 +106,7 @@ public class FarmingUtil {
 
                         Rangef range = stage.getDuration();
                         if (range == null) {
+                           blockChunk.markNeedsSaving();
                            commandBuffer.removeEntity(blockRef, RemoveReason.REMOVE);
                            break;
                         }
@@ -128,6 +143,7 @@ public class FarmingUtil {
                         remainingTimeSeconds -= remainingDurationSeconds;
                         currentProgress = ++currentStage;
                         farmingBlock.setGrowthProgress(currentProgress);
+                        blockChunk.markNeedsSaving();
                         farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
                         if (currentStage >= stages.length) {
                            if (stages[currentStage - 1].implementsShouldStop()) {

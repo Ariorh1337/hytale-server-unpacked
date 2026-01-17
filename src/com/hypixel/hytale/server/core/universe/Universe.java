@@ -754,13 +754,20 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
 
             this.finalizePlayerRemoval(playerRef);
          } else {
+            CompletableFuture<Void> removedFuture = new CompletableFuture<>();
             CompletableFuture.runAsync(() -> {
-                  Player playerComponentx = ref.getStore().getComponent(ref, Player.getComponentType());
-                  if (playerComponentx != null) {
-                     playerComponentx.remove();
-                  }
-               }, world)
-               .orTimeout(5L, TimeUnit.SECONDS)
+               Player playerComponent = ref.getStore().getComponent(ref, Player.getComponentType());
+               if (playerComponent != null) {
+                  playerComponent.remove();
+               }
+            }, world).whenComplete((unused, throwable) -> {
+               if (throwable != null) {
+                  removedFuture.completeExceptionally(throwable);
+               } else {
+                  removedFuture.complete(unused);
+               }
+            });
+            removedFuture.orTimeout(5L, TimeUnit.SECONDS)
                .whenComplete(
                   (result, error) -> {
                      if (error != null) {
