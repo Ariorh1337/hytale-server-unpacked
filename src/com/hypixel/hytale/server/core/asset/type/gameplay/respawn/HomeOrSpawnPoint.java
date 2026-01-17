@@ -18,7 +18,8 @@ public class HomeOrSpawnPoint implements RespawnController {
 
    @Override
    public void respawnPlayer(@Nonnull World world, @Nonnull Ref<EntityStore> playerReference, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-      Transform homePosition = Player.getRespawnPosition(playerReference, world.getName(), commandBuffer);
-      commandBuffer.addComponent(playerReference, Teleport.getComponentType(), new Teleport(null, homePosition));
+      Transform homeTransform = Player.getRespawnPosition(playerReference, world.getName(), commandBuffer);
+      Teleport teleportComponent = Teleport.createForPlayer(homeTransform);
+      commandBuffer.addComponent(playerReference, Teleport.getComponentType(), teleportComponent);
    }
 }

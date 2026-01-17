@@ -71,7 +71,6 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class BuilderRole extends SpawnableWithModelBuilder<Role> implements SpawnEffect {
    protected String[] displayNames;
@@ -1240,13 +1239,13 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    }
 
    @Override
-   public String getMemoriesNameOverride(ExecutionContext context, @NullableDecl Scope modifierScope) {
+   public String getMemoriesNameOverride(ExecutionContext context, @Nullable Scope modifierScope) {
       return this.memoriesNameOverride.get(context);
    }
 
    @Nonnull
    @Override
-   public String getNameTranslationKey(ExecutionContext context, @NullableDecl Scope modifierScope) {
+   public String getNameTranslationKey(ExecutionContext context, @Nullable Scope modifierScope) {
       return this.nameTranslationKey.get(context);
    }
 

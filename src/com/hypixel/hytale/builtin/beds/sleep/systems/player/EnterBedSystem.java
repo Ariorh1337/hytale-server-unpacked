@@ -17,8 +17,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class EnterBedSystem extends RefChangeSystem<EntityStore, MountedComponent> {
    public static final Query<EntityStore> QUERY = Query.and(MountedComponent.getComponentType(), PlayerRef.getComponentType());
@@ -34,29 +34,23 @@ public class EnterBedSystem extends RefChangeSystem<EntityStore, MountedComponen
    }
 
    public void onComponentAdded(
-      @NonNullDecl Ref<EntityStore> ref,
-      @NonNullDecl MountedComponent component,
-      @NonNullDecl Store<EntityStore> store,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       this.check(ref, component, store);
    }
 
    public void onComponentSet(
-      @NonNullDecl Ref<EntityStore> ref,
-      @NullableDecl MountedComponent oldComponent,
-      @NonNullDecl MountedComponent newComponent,
-      @NonNullDecl Store<EntityStore> store,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Ref<EntityStore> ref,
+      @Nullable MountedComponent oldComponent,
+      @Nonnull MountedComponent newComponent,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       this.check(ref, newComponent, store);
    }
 
    public void onComponentRemoved(
-      @NonNullDecl Ref<EntityStore> ref,
-      @NonNullDecl MountedComponent component,
-      @NonNullDecl Store<EntityStore> store,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
    }
 
@@ -71,6 +65,7 @@ public class EnterBedSystem extends RefChangeSystem<EntityStore, MountedComponen
       CanSleepInWorld.Result canSleepResult = CanSleepInWorld.check(world);
       if (canSleepResult.isNegative()) {
          PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+         assert playerRef != null;
          if (canSleepResult instanceof CanSleepInWorld.NotDuringSleepHoursRange(LocalDateTime worldTime, SleepConfig sleepConfig)) {
             LocalTime startTime = sleepConfig.getSleepStartTime();
             Duration untilSleep = sleepConfig.computeDurationUntilSleep(worldTime);
@@ -88,7 +83,7 @@ public class EnterBedSystem extends RefChangeSystem<EntityStore, MountedComponen
    private Message getMessage(CanSleepInWorld.Result param1) {
       // $VF: Couldn't be decompiled
       // Please report this to the Vineflower issue tracker, at https://github.com/Vineflower/vineflower/issues with a copy of the class file (if you have the rights to distribute it!)
-      // java.lang.IllegalStateException: Invalid switch case set: [[const(0)], [var1_1 instanceof x], [null]] for selector of type Lcom/hypixel/hytale/builtin/beds/sleep/systems/world/CanSleepInWorld$Result;
+      // java.lang.IllegalStateException: Invalid switch case set: [[const(0)], [var1_1 instanceof ignored], [null]] for selector of type Lcom/hypixel/hytale/builtin/beds/sleep/systems/world/CanSleepInWorld$Result;
       //   at org.jetbrains.java.decompiler.modules.decompiler.exps.SwitchHeadExprent.checkExprTypeBounds(SwitchHeadExprent.java:63)
       //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarTypeProcessor.checkTypeExpr(VarTypeProcessor.java:156)
       //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarTypeProcessor.checkTypeExprent(VarTypeProcessor.java:137)
@@ -139,7 +134,7 @@ public class EnterBedSystem extends RefChangeSystem<EntityStore, MountedComponen
       return Message.translation(msgKey).param("h", displayHour).param("m", String.format("%02d", minute));
    }
 
-   private static Message formatDuration(Duration duration) {
+   private static Message formatDuration(@Nonnull Duration duration) {
       long totalMinutes = duration.toMinutes();
       long hours = totalMinutes / 60L;
       long minutes = totalMinutes % 60L;

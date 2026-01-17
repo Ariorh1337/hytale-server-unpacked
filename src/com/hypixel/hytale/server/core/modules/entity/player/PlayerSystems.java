@@ -62,7 +62,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class PlayerSystems {
    @Nonnull
@@ -112,13 +111,10 @@ public class PlayerSystems {
 
             movementUpdateQueue.clear();
             if (shouldTeleport) {
-               commandBuffer.addComponent(
-                  archetypeChunk.getReferenceTo(index),
-                  Teleport.getComponentType(),
-                  new Teleport(transformComponent.getPosition(), transformComponent.getRotation())
-                     .withHeadRotation(headRotationComponent.getRotation())
-                     .withoutVelocityReset()
-               );
+               Teleport teleport = Teleport.createExact(transformComponent.getPosition(), transformComponent.getRotation(), headRotationComponent.getRotation())
+                  .withoutVelocityReset();
+               Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+               commandBuffer.addComponent(ref, Teleport.getComponentType(), teleport);
             }
          }
       }
@@ -189,10 +185,10 @@ public class PlayerSystems {
 
       public void handle(
          int index,
-         @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer,
-         @NonNullDecl KillFeedEvent.DecedentMessage event
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull KillFeedEvent.DecedentMessage event
       ) {
          DisplayNameComponent displayNameComponent = archetypeChunk.getComponent(index, DisplayNameComponent.getComponentType());
          Message displayName;
@@ -224,10 +220,10 @@ public class PlayerSystems {
 
       public void handle(
          int index,
-         @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer,
-         @NonNullDecl KillFeedEvent.KillerMessage event
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull KillFeedEvent.KillerMessage event
       ) {
          DisplayNameComponent displayNameComponent = archetypeChunk.getComponent(index, DisplayNameComponent.getComponentType());
          Message displayName;
@@ -303,10 +299,7 @@ public class PlayerSystems {
 
       @Override
       public void onEntityAdded(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl AddReason reason,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          DisplayNameComponent displayNameComponent = commandBuffer.getComponent(ref, DisplayNameComponent.getComponentType());
          assert displayNameComponent != null;
@@ -319,10 +312,7 @@ public class PlayerSystems {
 
       @Override
       public void onEntityRemove(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl RemoveReason reason,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
       }
    }
@@ -549,9 +539,9 @@ public class PlayerSystems {
       public void tick(
          float dt,
          int index,
-         @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          World world = commandBuffer.getExternalData().getWorld();
          TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());

@@ -5,7 +5,6 @@ import com.hypixel.hytale.procedurallib.logic.cell.jitter.CellJitter;
 import com.hypixel.hytale.procedurallib.logic.point.PointConsumer;
 import it.unimi.dsi.fastutil.HashCommon;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class SkipCellPointEvaluator implements PointEvaluator {
    @Nonnull
@@ -83,7 +82,7 @@ public class SkipCellPointEvaluator implements PointEvaluator {
    }
 
    @Override
-   public <T> void collectPoint(int cellHash, int cellX, int cellY, double cellCentreX, double cellCentreY, T ctx, @NonNullDecl PointConsumer<T> consumer) {
+   public <T> void collectPoint(int cellHash, int cellX, int cellY, double cellCentreX, double cellCentreY, T ctx, @Nonnull PointConsumer<T> consumer) {
       if (!this.skip(this.mode, cellX, cellY)) {
          this.pointEvaluator.collectPoint(cellHash, cellX, cellY, cellCentreX, cellCentreY, ctx, consumer);
       }

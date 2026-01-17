@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ChainingInteraction extends Interaction {
    @Nonnull
@@ -96,7 +95,7 @@ public class ChainingInteraction extends Interaction {
 
    @Override
    protected void tick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       InteractionSyncData clientState = context.getClientState();
       assert clientState != null;
@@ -114,7 +113,7 @@ public class ChainingInteraction extends Interaction {
 
    @Override
    protected void simulateTick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       if (firstRun) {
          CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();

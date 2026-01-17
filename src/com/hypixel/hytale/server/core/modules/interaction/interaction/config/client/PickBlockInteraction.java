@@ -12,8 +12,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class PickBlockInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -31,23 +30,19 @@ public class PickBlockInteraction extends SimpleBlockInteraction {
 
    @Override
    protected void interactWithBlock(
-      @NonNullDecl World world,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer,
-      @NonNullDecl InteractionType type,
-      @NonNullDecl InteractionContext context,
-      @NullableDecl ItemStack itemInHand,
-      @NonNullDecl Vector3i targetBlock,
-      @NonNullDecl CooldownHandler cooldownHandler
+      @Nonnull World world,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull InteractionType type,
+      @Nonnull InteractionContext context,
+      @Nullable ItemStack itemInHand,
+      @Nonnull Vector3i targetBlock,
+      @Nonnull CooldownHandler cooldownHandler
    ) {
    }
 
    @Override
    protected void simulateInteractWithBlock(
-      @NonNullDecl InteractionType type,
-      @NonNullDecl InteractionContext context,
-      @NullableDecl ItemStack itemInHand,
-      @NonNullDecl World world,
-      @NonNullDecl Vector3i targetBlock
+      @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock
    ) {
    }
 

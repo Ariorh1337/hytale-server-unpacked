@@ -37,8 +37,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.metadata.CapturedNPCMetadata;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
    public static final BuilderCodec<UseCaptureCrateInteraction> CODEC = BuilderCodec.builder(
@@ -71,7 +71,7 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
 
    @Override
    protected void tick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
       if (commandBuffer == null) {
@@ -145,13 +145,13 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
 
    @Override
    protected void interactWithBlock(
-      @NonNullDecl World world,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer,
-      @NonNullDecl InteractionType type,
-      @NonNullDecl InteractionContext context,
-      @NullableDecl ItemStack itemInHand,
-      @NonNullDecl Vector3i targetBlock,
-      @NonNullDecl CooldownHandler cooldownHandler
+      @Nonnull World world,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull InteractionType type,
+      @Nonnull InteractionContext context,
+      @Nullable ItemStack itemInHand,
+      @Nonnull Vector3i targetBlock,
+      @Nonnull CooldownHandler cooldownHandler
    ) {
       ItemStack item = context.getHeldItem();
       if (item == null) {
@@ -216,11 +216,7 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
 
    @Override
    protected void simulateInteractWithBlock(
-      @NonNullDecl InteractionType type,
-      @NonNullDecl InteractionContext context,
-      @NullableDecl ItemStack itemInHand,
-      @NonNullDecl World world,
-      @NonNullDecl Vector3i targetBlock
+      @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock
    ) {
    }
 }

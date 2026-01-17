@@ -18,7 +18,7 @@ public class AuthConfig {
    public static final String SCOPE_SERVER = "hytale:server";
    public static final String SCOPE_EDITOR = "hytale:editor";
    public static final int HTTP_TIMEOUT_SECONDS = 10;
-   public static final int DEVICE_POLL_INTERVAL_SECONDS = 5;
+   public static final int DEVICE_POLL_INTERVAL_SECONDS = 15;
    public static final String ENV_SERVER_AUDIENCE = "HYTALE_SERVER_AUDIENCE";
    public static final String ENV_SERVER_IDENTITY_TOKEN = "HYTALE_SERVER_IDENTITY_TOKEN";
    public static final String ENV_SERVER_SESSION_TOKEN = "HYTALE_SERVER_SESSION_TOKEN";

@@ -15,7 +15,7 @@ public class CraftingConfig {
          gameplayConfig -> gameplayConfig.benchMaterialHorizontalChestSearchRadius,
          (gameplayConfig, parent) -> gameplayConfig.benchMaterialHorizontalChestSearchRadius = parent.benchMaterialHorizontalChestSearchRadius
       )
-      .addValidator(Validators.range(0, 7))
+      .addValidator(Validators.range(0, 14))
       .documentation("The horizontal radius of search around a bench to use materials from the chests")
       .add()
       .<Integer>appendInherited(
@@ -24,7 +24,7 @@ public class CraftingConfig {
          gameplayConfig -> gameplayConfig.benchMaterialVerticalChestSearchRadius,
          (gameplayConfig, parent) -> gameplayConfig.benchMaterialVerticalChestSearchRadius = parent.benchMaterialVerticalChestSearchRadius
       )
-      .addValidator(Validators.range(0, 7))
+      .addValidator(Validators.range(0, 14))
       .documentation("The vertical radius of search around a bench to use materials from the chests")
       .add()
       .<Integer>appendInherited(
@@ -37,8 +37,8 @@ public class CraftingConfig {
       .documentation("The maximum number of chests a crafting bench will draw materials from")
       .add()
       .build();
-   protected int benchMaterialHorizontalChestSearchRadius = 7;
-   protected int benchMaterialVerticalChestSearchRadius = 3;
+   protected int benchMaterialHorizontalChestSearchRadius = 14;
+   protected int benchMaterialVerticalChestSearchRadius = 6;
    protected int benchMaterialChestLimit = 100;
 
    public int getBenchMaterialHorizontalChestSearchRadius() {

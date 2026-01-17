@@ -38,7 +38,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class PlaceBlockInteraction extends SimpleInteraction {
    public static final int MAX_ADVENTURE_PLACEMENT_RANGE_SQUARED = 36;
@@ -84,7 +83,7 @@ public class PlaceBlockInteraction extends SimpleInteraction {
 
    @Override
    protected final void tick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       InteractionSyncData clientState = context.getClientState();
       assert clientState != null;
@@ -185,7 +184,7 @@ public class PlaceBlockInteraction extends SimpleInteraction {
 
    @Override
    protected void simulateTick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       super.simulateTick0(firstRun, time, type, context, cooldownHandler);
       if (!Interaction.failed(context.getState().state)) {

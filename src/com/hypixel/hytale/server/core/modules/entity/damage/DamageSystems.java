@@ -107,8 +107,6 @@ import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bouncycastle.util.Arrays;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class DamageSystems {
    public static final float DEFAULT_DAMAGE_DELAY = 1.0F;
@@ -844,7 +842,7 @@ public class DamageSystems {
       }
 
       @Override
-      public void tick(float dt, int systemIndex, @NonNullDecl Store<EntityStore> store) {
+      public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
          World world = store.getExternalData().getWorld();
          if (world.getWorldConfig().isFallDamageEnabled()) {
             super.tick(dt, systemIndex, store);
@@ -939,7 +937,7 @@ public class DamageSystems {
       }
 
       @Override
-      public void tick(float dt, int systemIndex, @NonNullDecl Store<EntityStore> store) {
+      public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
          World world = store.getExternalData().getWorld();
          if (world.getWorldConfig().isFallDamageEnabled()) {
             super.tick(dt, systemIndex, store);
@@ -1015,13 +1013,13 @@ public class DamageSystems {
    }
 
    public static class FilterNPCWorldConfig extends DamageEventSystem {
-      @NullableDecl
+      @Nullable
       @Override
       public SystemGroup<EntityStore> getGroup() {
          return DamageModule.get().getFilterDamageGroup();
       }
 
-      @NullableDecl
+      @Nullable
       @Override
       public Query<EntityStore> getQuery() {
          return DamageSystems.NPCS_QUERY;
@@ -1029,10 +1027,10 @@ public class DamageSystems {
 
       public void handle(
          int index,
-         @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer,
-         @NonNullDecl Damage event
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull Damage event
       ) {
          World world = store.getExternalData().getWorld();
          GameplayConfig gameplayConfig = world.getGameplayConfig();
@@ -1047,13 +1045,13 @@ public class DamageSystems {
    public static class FilterPlayerWorldConfig extends DamageEventSystem {
       private static final Query<EntityStore> QUERY = Query.and(AllLegacyLivingEntityTypesQuery.INSTANCE, Player.getComponentType());
 
-      @NullableDecl
+      @Nullable
       @Override
       public SystemGroup<EntityStore> getGroup() {
          return DamageModule.get().getFilterDamageGroup();
       }
 
-      @NullableDecl
+      @Nullable
       @Override
       public Query<EntityStore> getQuery() {
          return QUERY;
@@ -1061,10 +1059,10 @@ public class DamageSystems {
 
       public void handle(
          int index,
-         @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer,
-         @NonNullDecl Damage event
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull Damage event
       ) {
          World world = store.getExternalData().getWorld();
          GameplayConfig gameplayConfig = world.getGameplayConfig();
@@ -1579,10 +1577,10 @@ public class DamageSystems {
 
       public void handle(
          int index,
-         @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer,
-         @NonNullDecl Damage event
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull Damage event
       ) {
       }
 

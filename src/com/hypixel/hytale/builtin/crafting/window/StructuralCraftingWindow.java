@@ -42,7 +42,6 @@ import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class StructuralCraftingWindow extends CraftingWindow implements ItemContainerWindow {
    private static final int MAX_OPTIONS = 64;
@@ -311,7 +310,7 @@ public class StructuralCraftingWindow extends CraftingWindow implements ItemCont
       }
    }
 
-   @NullableDecl
+   @Nullable
    private ObjectList<CraftingRecipe> getMatchingRecipes(@Nullable ItemStack inputStack) {
       if (inputStack == null) {
          return null;

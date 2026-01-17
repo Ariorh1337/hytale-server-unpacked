@@ -11,39 +11,38 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.loader.util.ResolvedBlockArrayJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.util.ResolvedVariantsBlockArrayLoader;
-import com.hypixel.hytale.server.worldgen.prefab.BlockPlacementMask;
 import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
 import com.hypixel.hytale.server.worldgen.util.ResolvedBlockArray;
+import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 
-public class BlockPlacementMaskJsonLoader extends JsonLoader<SeedStringResource, BlockPlacementMask> {
-   private static final BlockPlacementMask.IEntry WILDCARD_FALSE = new BlockPlacementMask.WildcardEntry(false);
-   private static final BlockPlacementMask.IEntry WILDCARD_TRUE = new BlockPlacementMask.WildcardEntry(true);
+public class BlockPlacementMaskJsonLoader extends JsonLoader<SeedStringResource, BlockMaskCondition> {
    private String fileName;
 
    public BlockPlacementMaskJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {
-      super(seed.append(".BlockPlacementMask"), dataFolder, json);
+      super(seed.append(".BlockMaskCondition"), dataFolder, json);
    }
 
-   public BlockPlacementMask load() {
+   public BlockMaskCondition load() {
       BlockPlacementMaskRegistry registry = this.seed.get().getBlockMaskRegistry();
       if (this.fileName != null) {
-         BlockPlacementMask mask = registry.getIfPresentFileMask(this.fileName);
+         BlockMaskCondition mask = registry.getIfPresentFileMask(this.fileName);
          if (mask != null) {
             return mask;
          }
       }
 
-      Long2ObjectMap<BlockPlacementMask.Mask> specificMasks = null;
-      BlockPlacementMask.IMask defaultMask;
+      Long2ObjectMap<BlockMaskCondition.Mask> specificMasks = Long2ObjectMaps.emptyMap();
+      BlockMaskCondition.Mask defaultMask;
       if (this.json != null && !this.json.isJsonNull()) {
          if (this.has("Default")) {
-            defaultMask = new BlockPlacementMask.Mask(this.loadEntries(this.get("Default").getAsJsonArray()));
+            defaultMask = new BlockMaskCondition.Mask(this.loadEntries(this.get("Default").getAsJsonArray()));
          } else {
-            defaultMask = BlockPlacementMask.DEFAULT_MASK;
+            defaultMask = BlockMaskCondition.DEFAULT_MASK;
          }
 
          if (this.has("Specific")) {
@@ -67,7 +66,7 @@ public class BlockPlacementMaskJsonLoader extends JsonLoader<SeedStringResource,
                         }
 
                         JsonArray rule = specificObject.getAsJsonArray("Rule");
-                        specificMasks.put(MathUtil.packLong(index, blockEntry.fluidId()), new BlockPlacementMask.Mask(this.loadEntries(rule)));
+                        specificMasks.put(MathUtil.packLong(index, blockEntry.fluidId()), new BlockMaskCondition.Mask(this.loadEntries(rule)));
                      }
                   }
                } catch (Throwable e) {
@@ -76,10 +75,10 @@ public class BlockPlacementMaskJsonLoader extends JsonLoader<SeedStringResource,
             }
          }
       } else {
-         defaultMask = BlockPlacementMask.DEFAULT_MASK;
+         defaultMask = BlockMaskCondition.DEFAULT_MASK;
       }
 
-      BlockPlacementMask mask = registry.retainOrAllocateMask(defaultMask, specificMasks);
+      BlockMaskCondition mask = registry.retainOrAllocateMask(defaultMask, specificMasks);
       if (this.fileName != null) {
          registry.putFileMask(this.fileName, mask);
       }
@@ -88,8 +87,8 @@ public class BlockPlacementMaskJsonLoader extends JsonLoader<SeedStringResource,
    }
 
    @Nonnull
-   protected BlockPlacementMask.IEntry[] loadEntries(@Nonnull JsonArray jsonArray) {
-      BlockPlacementMask.IEntry[] entries = new BlockPlacementMask.IEntry[jsonArray.size()];
+   protected BlockMaskCondition.MaskEntry[] loadEntries(@Nonnull JsonArray jsonArray) {
+      BlockMaskCondition.MaskEntry[] entries = new BlockMaskCondition.MaskEntry[jsonArray.size()];
       int head = 0;
       int tail = entries.length;
 
@@ -117,7 +116,7 @@ public class BlockPlacementMaskJsonLoader extends JsonLoader<SeedStringResource,
                   System.arraycopy(entries, tail, entries, tail - 1, entries.length - tail);
                }
 
-               entries[entries.length - 1] = replace ? WILDCARD_TRUE : WILDCARD_FALSE;
+               entries[entries.length - 1] = replace ? BlockMaskCondition.MaskEntry.WILDCARD_TRUE : BlockMaskCondition.MaskEntry.WILDCARD_FALSE;
                tail--;
             } else {
                string = string.substring(beginIndex);

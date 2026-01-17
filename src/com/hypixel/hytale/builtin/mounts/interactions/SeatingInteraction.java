@@ -49,7 +49,7 @@ public class SeatingInteraction extends SimpleBlockInteraction {
          Vector3f whereWasHit = new Vector3f(rawTarget.x + 0.5F, rawTarget.y + 0.5F, rawTarget.z + 0.5F);
          BlockMountAPI.BlockMountResult result = BlockMountAPI.mountOnBlock(ref, commandBuffer, targetBlock, whereWasHit);
          if (result == BlockMountAPI.DidNotMount.ALREADY_MOUNTED) {
-            int soundEventIndex = SoundEvent.getAssetMap().getIndex("Creative_Play_Add_Mask");
+            int soundEventIndex = SoundEvent.getAssetMap().getIndex("SFX_Creative_Play_Add_Mask");
             SoundUtil.playSoundEvent2d(ref, soundEventIndex, SoundCategory.SFX, commandBuffer);
          } else if (result instanceof BlockMountAPI.Mounted mounted) {
             BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(mounted.blockType().getBlockSoundSetIndex());

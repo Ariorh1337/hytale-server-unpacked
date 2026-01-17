@@ -11,9 +11,11 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class UniqueItemUsagesComponent implements Component<EntityStore> {
+   @Nonnull
    public static final BuilderCodec<UniqueItemUsagesComponent> CODEC = BuilderCodec.builder(UniqueItemUsagesComponent.class, UniqueItemUsagesComponent::new)
       .append(new KeyedCodec<>("UniqueItemUsed", new ArrayCodec<>(Codec.STRING, String[]::new)), (playerMemories, usages) -> {
          if (usages != null) {
@@ -28,7 +30,7 @@ public class UniqueItemUsagesComponent implements Component<EntityStore> {
       return EntityModule.get().getUniqueItemUsagesComponentType();
    }
 
-   @NullableDecl
+   @Nullable
    @Override
    public Component<EntityStore> clone() {
       UniqueItemUsagesComponent component = new UniqueItemUsagesComponent();

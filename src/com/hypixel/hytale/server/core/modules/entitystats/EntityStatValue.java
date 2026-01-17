@@ -60,7 +60,7 @@ public class EntityStatValue {
    }
 
    public float asPercentage() {
-      return (this.value - this.min) / (this.max - this.min);
+      return this.min == this.max ? 0.0F : (this.value - this.min) / (this.max - this.min);
    }
 
    public float getMin() {

@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
@@ -48,6 +49,8 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
    @Nonnull
    private final PrefabEditSession prefabEditSession;
    private volatile boolean isSaving = false;
+   private volatile long lastProgressUpdateTime = 0L;
+   private static final long PROGRESS_UPDATE_INTERVAL_MS = 100L;
    @Nonnull
    private String browserSearchQuery = "";
    private final Set<UUID> selectedPrefabUuids = new HashSet<>();
@@ -199,10 +202,11 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
             World world = store.getExternalData().getWorld();
             int totalPrefabs = prefabsToSave.size();
             CompletableFuture<Boolean>[] saveFutures = new CompletableFuture[totalPrefabs];
+            AtomicInteger completedCount = new AtomicInteger(0);
+            this.lastProgressUpdateTime = 0L;
 
             for (int i = 0; i < totalPrefabs; i++) {
                PrefabEditingMetadata metadata = prefabsToSave.get(i);
-               int index = i;
                Path savePath = this.getWritableSavePath(metadata);
                saveFutures[i] = PrefabSaver.savePrefab(
                      playerComponent,
@@ -217,14 +221,20 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                   )
                   .thenApply(
                      success -> {
-                        float progress = (float)(index + 1) / totalPrefabs;
-                        UICommandBuilder progressBuilder = new UICommandBuilder();
-                        progressBuilder.set("#SavingPage #ProgressBar.Value", progress);
-                        progressBuilder.set(
-                           "#SavingPage #StatusText.TextSpans",
-                           Message.translation("server.commands.editprefab.save.progress").param("current", index + 1).param("total", totalPrefabs)
-                        );
-                        this.sendUpdate(progressBuilder);
+                        int completed = completedCount.incrementAndGet();
+                        long now = System.currentTimeMillis();
+                        if (now - this.lastProgressUpdateTime >= 100L || completed == totalPrefabs) {
+                           this.lastProgressUpdateTime = now;
+                           float progress = (float)completed / totalPrefabs;
+                           UICommandBuilder progressBuilder = new UICommandBuilder();
+                           progressBuilder.set("#SavingPage #ProgressBar.Value", progress);
+                           progressBuilder.set(
+                              "#SavingPage #StatusText.TextSpans",
+                              Message.translation("server.commands.editprefab.save.progress").param("current", completed).param("total", totalPrefabs)
+                           );
+                           this.sendUpdate(progressBuilder);
+                        }
+
                         return (Boolean)success;
                      }
                   );
@@ -260,6 +270,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                )
                .exceptionally(throwable -> {
                   this.isSaving = false;
+                  LOGGER.atWarning().withCause(throwable).log("Error saving prefabs");
                   this.onSavingFailed(Message.raw(throwable.getMessage() != null ? throwable.getMessage() : "Unknown error"));
                   return null;
                });

@@ -7,7 +7,6 @@ import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public abstract class SimpleInstantInteraction extends SimpleInteraction {
    public static final BuilderCodec<SimpleInstantInteraction> CODEC = BuilderCodec.abstractBuilder(SimpleInstantInteraction.class, SimpleInteraction.CODEC)
@@ -22,7 +21,7 @@ public abstract class SimpleInstantInteraction extends SimpleInteraction {
 
    @Override
    protected final void tick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       if (firstRun) {
          this.firstRun(type, context, cooldownHandler);
@@ -32,7 +31,7 @@ public abstract class SimpleInstantInteraction extends SimpleInteraction {
 
    @Override
    protected void simulateTick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       if (firstRun) {
          this.simulateFirstRun(type, context, cooldownHandler);

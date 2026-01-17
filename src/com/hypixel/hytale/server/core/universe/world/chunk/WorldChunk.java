@@ -319,6 +319,7 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
          short oldHeight = this.blockChunk.getHeight(x, z);
          BlockSection blockSection = this.blockChunk.getSectionAtBlockY(y);
          int oldRotation = blockSection.getRotationIndex(x, y, z);
+         int oldFiller = blockSection.getFiller(x, y, z);
          int oldBlock = blockSection.get(x, y, z);
          boolean changed = (oldBlock != id || rotation != oldRotation) && blockSection.set(x, y, z, id, rotation, filler);
          if (changed || (settings & 64) != 0) {
@@ -396,11 +397,14 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
                int settingsWithoutFiller = settings | 8 | 16;
                BlockType oldBlockType = blockTypeAssetMap.getAsset(oldBlock);
                String oldBlockKey = oldBlockType.getId();
+               int baseX = worldX - FillerBlockUtil.unpackX(oldFiller);
+               int baseY = y - FillerBlockUtil.unpackY(oldFiller);
+               int baseZ = worldZ - FillerBlockUtil.unpackZ(oldFiller);
                FillerBlockUtil.forEachFillerBlock(hitboxAssetMap.getAsset(oldBlockType.getHitboxTypeIndex()).get(oldRotation), (x1, y1, z1) -> {
                   if (x1 != 0 || y1 != 0 || z1 != 0) {
-                     int blockX = worldX + x1;
-                     int blockY = y + y1;
-                     int blockZ = worldZ + z1;
+                     int blockX = baseX + x1;
+                     int blockY = baseY + y1;
+                     int blockZ = baseZ + z1;
                      if (ChunkUtil.isSameChunk(worldX, worldZ, blockX, blockZ)) {
                         String blockTypeKey1 = this.getBlockType(blockX, blockY, blockZ).getId();
                         if (blockTypeKey1.equals(oldBlockKey)) {
@@ -563,7 +567,12 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
 
       int index = ChunkUtil.indexBlockInColumn(x, y, z);
       Ref<ChunkStore> reference = this.blockComponentChunk.getEntityReference(index);
-      return reference == null ? null : reference.getStore().copyEntity(reference);
+      if (reference != null) {
+         return reference.getStore().copyEntity(reference);
+      }
+
+      Holder<ChunkStore> holder = this.blockComponentChunk.getEntityHolder(index);
+      return holder != null ? holder.clone() : null;
    }
 
    @Override

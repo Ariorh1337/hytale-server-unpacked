@@ -138,15 +138,6 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
          if (clientReferral != null) {
             this.writeNoCache(clientReferral);
          } else {
-            HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-            boolean enableCompression;
-            if (!serverConfig.isLocalCompressionEnabled()) {
-               enableCompression = !oldHandler.isLocalConnection();
-            } else {
-               enableCompression = true;
-            }
-
-            oldHandler.setCompressionEnabled(enableCompression);
             PlayerRef otherPlayer = Universe.get().getPlayer(this.uuid);
             if (otherPlayer != null) {
                HytaleLogger.getLogger().at(Level.INFO).log("Found match of player %s on %s", this.uuid, otherPlayer.getUsername());
@@ -180,6 +171,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             this.assets = new PlayerCommonAssets(requiredAssets);
             worldSettings.requiredAssets = requiredAssets;
             this.write(worldSettings);
+            HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
             this.write(new ServerInfo(HytaleServer.get().getServerName(), serverConfig.getMotd(), serverConfig.getMaxPlayers()));
             this.setTimeout("receive-assets-request", () -> this.receivedRequest, 120L, TimeUnit.SECONDS);
          }

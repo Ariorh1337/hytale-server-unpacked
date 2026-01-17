@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.worldgen.util.cache;
 
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.worldgen.util.LogUtil;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -17,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -130,6 +132,7 @@ public class ConcurrentSizedTimeoutCache<K, V> implements Cache<K, V> {
 
          try {
             ConcurrentSizedTimeoutCache.CacheEntry<K, V> newEntry = this.pool.isEmpty() ? new ConcurrentSizedTimeoutCache.CacheEntry<>() : this.pool.poll();
+            Objects.requireNonNull(newEntry, "CacheEntry pool returned null entry!");
             newEntry.key = (K)var23;
             newEntry.value = newValue;
             newEntry.timestamp = timestamp;
@@ -165,7 +168,10 @@ public class ConcurrentSizedTimeoutCache<K, V> implements Cache<K, V> {
 
             while (it.hasNext()) {
                ConcurrentSizedTimeoutCache.CacheEntry<K, V> entry = it.next().getValue();
-               if (entry.timestamp >= expireTimestamp) {
+               if (entry == null) {
+                  LogUtil.getLogger().at(Level.SEVERE).log("Found null entry in cache bucket during cleanup!");
+                  it.remove();
+               } else if (entry.timestamp >= expireTimestamp) {
                   it.remove();
                   if (destroyer != null) {
                      destroyer.accept(entry.key, entry.value);

@@ -78,9 +78,9 @@ public class SpawnSetCommand extends AbstractWorldCommand {
          rotation = this.rotationArg.get(context);
       }
 
-      Transform transform = new Transform(position, rotation);
+      Transform spawnTransform = new Transform(position.clone(), rotation.clone());
       WorldConfig worldConfig = world.getWorldConfig();
-      worldConfig.setSpawnProvider(new GlobalSpawnProvider(transform));
+      worldConfig.setSpawnProvider(new GlobalSpawnProvider(spawnTransform));
       worldConfig.markChanged();
       world.getLogger().at(Level.INFO).log("Set spawn provider to: %s", worldConfig.getSpawnProvider());
       context.sendMessage(

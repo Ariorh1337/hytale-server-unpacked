@@ -91,13 +91,20 @@ public abstract class FluidTicker {
       int worldY,
       int worldZ
    ) {
-      World world = commandBuffer.getExternalData().getWorld();
-      long hash = HashUtil.rehash(worldX, worldY, worldZ, 4030921250L);
-      long tick = commandBuffer.getExternalData().getWorld().getTick();
-      int flowRateLimitTicks = Math.round(this.flowRate * world.getTps());
-      return (hash + tick) % flowRateLimitTicks != 0L
-         ? BlockTickStrategy.CONTINUE
-         : this.process(world, tick, cachedAccessor, fluidSection, blockSection, fluid, fluidId, worldX, worldY, worldZ);
+      int block = blockSection.get(worldX, worldY, worldZ);
+      if (isFullySolid(BlockType.getAssetMap().getAsset(block))) {
+         fluidSection.setFluid(worldX, worldY, worldZ, 0, (byte)0);
+         setTickingSurrounding(cachedAccessor, blockSection, worldX, worldY, worldZ);
+         return BlockTickStrategy.SLEEP;
+      } else {
+         World world = commandBuffer.getExternalData().getWorld();
+         long hash = HashUtil.rehash(worldX, worldY, worldZ, 4030921250L);
+         long tick = commandBuffer.getExternalData().getWorld().getTick();
+         int flowRateLimitTicks = Math.round(this.flowRate * world.getTps());
+         return (hash + tick) % flowRateLimitTicks != 0L
+            ? BlockTickStrategy.CONTINUE
+            : this.process(world, tick, cachedAccessor, fluidSection, blockSection, fluid, fluidId, worldX, worldY, worldZ);
+      }
    }
 
    public BlockTickStrategy process(
@@ -113,13 +120,6 @@ public abstract class FluidTicker {
       int worldZ
    ) {
       byte fluidLevel = fluidSection.getFluidLevel(worldX, worldY, worldZ);
-      int block = blockSection.get(worldX, worldY, worldZ);
-      if (isFullySolid(BlockType.getAssetMap().getAsset(block))) {
-         fluidSection.setFluid(worldX, worldY, worldZ, 0, (byte)0);
-         setTickingSurrounding(accessor, blockSection, worldX, worldY, worldZ);
-         return BlockTickStrategy.SLEEP;
-      }
-
       switch (this.isAlive(accessor, fluidSection, blockSection, fluid, fluidId, fluidLevel, worldX, worldY, worldZ)) {
          case ALIVE:
             return this.spread(world, tick, accessor, fluidSection, blockSection, fluid, fluidId, fluidLevel, worldX, worldY, worldZ);
@@ -301,6 +301,7 @@ public abstract class FluidTicker {
 
       int curX = worldX;
       int curZ = worldZ;
+      int supportedById = this.getSupportedById();
 
       for (int i = 1; i < maxDropDistance; i++) {
          int blockX = worldX + ox * i;
@@ -325,7 +326,8 @@ public abstract class FluidTicker {
 
          int otherFluidId = fluidSection.getFluidId(blockX, worldY, blockZ);
          BlockType block = blockMap.getAsset(blockSection.get(blockX, worldY, blockZ));
-         if (otherFluidId != 0 && !this.isSelfFluid(fluidId, otherFluidId) || otherFluidId == 0 && isSolid(block)) {
+         if (otherFluidId != 0 && (otherFluidId != fluidId || otherFluidId == supportedById || supportedById == Integer.MIN_VALUE)
+            || otherFluidId == 0 && isSolid(block)) {
             break;
          }
 

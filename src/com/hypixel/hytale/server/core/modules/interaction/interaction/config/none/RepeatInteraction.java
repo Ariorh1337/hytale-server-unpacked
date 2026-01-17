@@ -19,7 +19,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.StringTag;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class RepeatInteraction extends SimpleInteraction {
    public static final BuilderCodec<RepeatInteraction> CODEC = BuilderCodec.builder(RepeatInteraction.class, RepeatInteraction::new, SimpleInteraction.CODEC)
@@ -57,7 +56,7 @@ public class RepeatInteraction extends SimpleInteraction {
 
    @Override
    protected void tick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();
       if (firstRun && this.repeat != -1) {
@@ -96,7 +95,7 @@ public class RepeatInteraction extends SimpleInteraction {
 
    @Override
    protected void simulateTick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       InteractionChain chain = context.getInstanceStore().getMetaObject(FORKED_CHAIN);
       DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();

@@ -46,9 +46,7 @@ public class PickupItemSystem extends EntityTickingSystem<EntityStore> {
          commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
       } else {
          Ref<EntityStore> targetRef = pickupItemComponent.getTargetRef();
-         if (!targetRef.isValid()) {
-            commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
-         } else {
+         if (targetRef != null && targetRef.isValid()) {
             TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
             assert transformComponent != null;
             Vector3d position = transformComponent.getPosition();
@@ -64,6 +62,8 @@ public class PickupItemSystem extends EntityTickingSystem<EntityStore> {
             if (updateMovement(pickupItemComponent, position, targetPosition, dt)) {
                pickupItemComponent.setFinished(true);
             }
+         } else {
+            commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
          }
       }
    }

@@ -40,7 +40,15 @@ public class WorldValidationUtil {
          if (options.contains(ValidationOption.BLOCK_STATES) && holder != null) {
             UnknownComponents<ChunkStore> unknownComponents = holder.getComponent(ChunkStore.REGISTRY.getUnknownComponentType());
             if (unknownComponents != null && !unknownComponents.getUnknownComponents().isEmpty()) {
-               sb.append("\tUnknown Components: ").append(holder).append("\n");
+               sb.append("\tUnknown Components at (")
+                  .append(x + offsetX)
+                  .append(',')
+                  .append(y + offsetY)
+                  .append(',')
+                  .append(z + offsetZ)
+                  .append("): ")
+                  .append(unknownComponents.getUnknownComponents().keySet())
+                  .append("\n");
             }
          }
       };

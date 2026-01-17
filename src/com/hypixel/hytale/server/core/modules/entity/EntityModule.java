@@ -434,7 +434,7 @@ public class EntityModule extends JavaPlugin {
       this.itemPhysicsComponentType = entityStoreRegistry.registerComponent(ItemPhysicsComponent.class, ItemPhysicsComponent::new);
       entityStoreRegistry.registerSystem(new ItemSystems.EnsureRequiredComponents());
       entityStoreRegistry.registerSystem(new ItemSystems.TrackerSystem(this.visibleComponentType));
-      this.prefabCopyableComponentType = entityStoreRegistry.registerComponent(PrefabCopyableComponent.class, PrefabCopyableComponent::get);
+      this.prefabCopyableComponentType = entityStoreRegistry.registerComponent(PrefabCopyableComponent.class, "PrefabCopyable", PrefabCopyableComponent.CODEC);
       this.pickupItemComponentType = entityStoreRegistry.registerComponent(PickupItemComponent.class, "PickupItem", PickupItemComponent.CODEC);
       entityStoreRegistry.registerSystem(new DespawnSystem(this.despawnComponentComponentType));
       this.itemSpatialResourceType = entityStoreRegistry.registerSpatialResource(() -> new KDTree<>(Ref::isValid));

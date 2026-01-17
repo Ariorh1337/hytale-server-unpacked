@@ -27,7 +27,9 @@ import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -332,9 +334,11 @@ public class SelectionPrefabSerializer {
          out.put("fluids", fluidContentOut);
       }
 
-      BsonArray entities = new BsonArray();
-      prefab.forEachEntity(holder -> entities.add(EntityStore.REGISTRY.serialize(holder)));
-      if (!entities.isEmpty()) {
+      List<BsonDocument> entityList = new ArrayList<>();
+      prefab.forEachEntity(holder -> entityList.add(EntityStore.REGISTRY.serialize(holder)));
+      if (!entityList.isEmpty()) {
+         BsonArray entities = new BsonArray();
+         entityList.forEach(entities::add);
          out.put("entities", entities);
       }
 

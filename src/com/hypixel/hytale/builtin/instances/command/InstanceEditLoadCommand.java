@@ -46,8 +46,9 @@ public class InstanceEditLoadCommand extends AbstractAsyncCommand {
                Store<EntityStore> playerStore = ref.getStore();
                World playerWorld = playerStore.getExternalData().getWorld();
                playerWorld.execute(() -> {
-                  Transform spawn = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, playerStore);
-                  playerStore.addComponent(ref, Teleport.getComponentType(), new Teleport(world, spawn));
+                  Transform spawnTransform = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, playerStore);
+                  Teleport teleportComponent = Teleport.createForPlayer(world, spawnTransform);
+                  playerStore.addComponent(ref, Teleport.getComponentType(), teleportComponent);
                });
             }
          });

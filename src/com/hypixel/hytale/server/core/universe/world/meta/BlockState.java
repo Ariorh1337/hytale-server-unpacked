@@ -38,7 +38,7 @@ public abstract class BlockState implements Component<ChunkStore> {
       .addField(
          new KeyedCodec<>("Position", Vector3i.CODEC),
          (entity, o) -> entity.position = o,
-         entity -> Vector3i.ZERO.equals(entity.position) ? null : entity.position
+         entity -> entity.position != null && !Vector3i.ZERO.equals(entity.position) ? entity.position : null
       )
       .build();
    public static final KeyedCodec<String> TYPE_STRUCTURE = new KeyedCodec<>("Type", Codec.STRING);
@@ -115,6 +115,10 @@ public abstract class BlockState implements Component<ChunkStore> {
 
    public Vector3i __internal_getPosition() {
       return this.position;
+   }
+
+   public void clearPositionForSerialization() {
+      this.position = null;
    }
 
    public int getBlockX() {

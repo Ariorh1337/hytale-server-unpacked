@@ -33,7 +33,6 @@ import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -81,7 +80,7 @@ public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteract
       return true;
    }
 
-   @NonNullDecl
+   @Nonnull
    @Override
    public WaitForDataFrom getWaitForDataFrom() {
       return WaitForDataFrom.Client;
@@ -144,7 +143,7 @@ public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteract
       }
    }
 
-   @NonNullDecl
+   @Nonnull
    @Override
    protected Interaction generatePacket() {
       return new com.hypixel.hytale.protocol.SpawnDeployableFromRaycastInteraction();

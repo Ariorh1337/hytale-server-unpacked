@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class CheckUniqueItemUsageInteraction extends SimpleInstantInteraction {
    public static final BuilderCodec<CheckUniqueItemUsageInteraction> CODEC = BuilderCodec.builder(
@@ -30,7 +29,7 @@ public class CheckUniqueItemUsageInteraction extends SimpleInstantInteraction {
    }
 
    @Override
-   protected void firstRun(@NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+   protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
       assert commandBuffer != null;
       Ref<EntityStore> ref = context.getEntity();

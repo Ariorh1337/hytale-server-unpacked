@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class DisplayNameComponent implements Component<EntityStore> {
    @Nonnull
@@ -38,7 +37,7 @@ public class DisplayNameComponent implements Component<EntityStore> {
       return this.displayName;
    }
 
-   @NullableDecl
+   @Nullable
    @Override
    public Component<EntityStore> clone() {
       return new DisplayNameComponent(this.displayName);

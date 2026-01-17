@@ -9,10 +9,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nullable;
 
-public class MemoriesPageSupplier implements OpenCustomUIInteraction.CustomPageSupplier {
+public class MemoriesUnlockedPageSuplier implements OpenCustomUIInteraction.CustomPageSupplier {
    @Nullable
    @Override
    public CustomUIPage tryCreate(Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor, PlayerRef playerRef, InteractionContext context) {
-      return new MemoriesPage(playerRef, context.getTargetBlock());
+      return new MemoriesUnlockedPage(playerRef, context.getTargetBlock());
    }
 }

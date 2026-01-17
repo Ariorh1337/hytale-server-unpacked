@@ -522,6 +522,14 @@ public class InteractionContext {
                      }
                   } else if (prioPrimary < prioSecondary) {
                      selectedInventory = -5;
+                  } else {
+                     if (type == InteractionType.Primary && !primary.getItem().getInteractions().containsKey(InteractionType.Primary)) {
+                        selectedInventory = -5;
+                     }
+
+                     if (type == InteractionType.Secondary && !primary.getItem().getInteractions().containsKey(InteractionType.Secondary)) {
+                        selectedInventory = -5;
+                     }
                   }
                }
 

@@ -97,7 +97,8 @@ public class TeleportHistory implements Component<EntityStore> {
          playerRef.sendMessage(MESSAGE_COMMANDS_TELEPORT_WORLD_NOT_LOADED);
       } else {
          to.push(point);
-         store.addComponent(ref, Teleport.getComponentType(), new Teleport(targetWorld, point.position, point.rotation));
+         Teleport teleportComponent = Teleport.createForPlayer(targetWorld, point.position, point.rotation);
+         store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
          Vector3d pos = point.position;
          int remainingInDirection = from.size();
          int totalInOtherDirection = to.size() - 1;

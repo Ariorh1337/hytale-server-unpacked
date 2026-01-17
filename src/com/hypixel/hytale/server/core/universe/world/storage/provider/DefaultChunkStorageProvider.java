@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import java.io.IOException;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class DefaultChunkStorageProvider implements IChunkStorageProvider {
    @Nonnull
@@ -22,15 +21,15 @@ public class DefaultChunkStorageProvider implements IChunkStorageProvider {
    @Nonnull
    public static final IChunkStorageProvider DEFAULT = new IndexedStorageChunkStorageProvider();
 
-   @NonNullDecl
+   @Nonnull
    @Override
-   public IChunkLoader getLoader(@NonNullDecl Store<ChunkStore> store) throws IOException {
+   public IChunkLoader getLoader(@Nonnull Store<ChunkStore> store) throws IOException {
       return DEFAULT.getLoader(store);
    }
 
    @Nonnull
    @Override
-   public IChunkSaver getSaver(@NonNullDecl Store<ChunkStore> store) throws IOException {
+   public IChunkSaver getSaver(@Nonnull Store<ChunkStore> store) throws IOException {
       return DEFAULT.getSaver(store);
    }
 

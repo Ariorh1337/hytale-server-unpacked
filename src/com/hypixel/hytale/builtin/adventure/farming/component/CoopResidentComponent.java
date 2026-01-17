@@ -7,7 +7,7 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class CoopResidentComponent implements Component<EntityStore> {
    public static final BuilderCodec<CoopResidentComponent> CODEC = BuilderCodec.builder(CoopResidentComponent.class, CoopResidentComponent::new)
@@ -43,7 +43,7 @@ public class CoopResidentComponent implements Component<EntityStore> {
       return this.markedForDespawn;
    }
 
-   @NullableDecl
+   @Nullable
    @Override
    public Component<EntityStore> clone() {
       CoopResidentComponent component = new CoopResidentComponent();

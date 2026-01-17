@@ -11,7 +11,9 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
@@ -80,28 +82,15 @@ public class CreateWarpWhenTeleporterPlacedSystem extends RefChangeSystem<ChunkS
       RotationTuple rotationTuple = RotationTuple.get(rotationIndex);
       Rotation rotationYaw = rotationTuple.yaw();
       Vector3i rotationTupleAxis = rotationTuple.yaw().getAxisDirection();
-      Vector3d offset = new Vector3d(WARP_OFFSET.getX() * rotationTupleAxis.x, 0.0, WARP_OFFSET.getZ() * rotationTupleAxis.z);
+      Vector3d warpOffset = new Vector3d(WARP_OFFSET.getX() * rotationTupleAxis.x, 0.0, WARP_OFFSET.getZ() * rotationTupleAxis.z);
       float warpRotationYaw = (float)rotationYaw.getRadians() + (float)Math.toRadians(180.0);
-      Vector3d warpPosition = new Vector3d(x, y, z).add(offset).add(0.5, 0.0, 0.5);
+      Vector3d warpPosition = new Vector3d(x, y, z).add(warpOffset).add(0.5, 0.0, 0.5);
+      Transform warpTransform = new Transform(warpPosition, new Vector3f(Float.NaN, warpRotationYaw, Float.NaN));
       String warpId = name.toLowerCase();
-      TeleportPlugin.get()
-         .getWarps()
-         .put(
-            warpId,
-            new Warp(
-               warpPosition.getX(),
-               warpPosition.getY(),
-               warpPosition.getZ(),
-               warpRotationYaw,
-               Float.NaN,
-               Float.NaN,
-               name,
-               worldChunk.getWorld(),
-               "*Teleporter",
-               Instant.now()
-            )
-         );
-      TeleportPlugin.get().saveWarps();
+      Warp warp = new Warp(warpTransform, name, worldChunk.getWorld(), "*Teleporter", Instant.now());
+      TeleportPlugin teleportPlugin = TeleportPlugin.get();
+      teleportPlugin.getWarps().put(warpId, warp);
+      teleportPlugin.saveWarps();
    }
 
    public void onComponentSet(

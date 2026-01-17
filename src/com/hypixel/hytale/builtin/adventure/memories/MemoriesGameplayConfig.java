@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -37,10 +38,28 @@ public class MemoriesGameplayConfig {
       .addValidator(Validators.nonNull())
       .addValidator(Item.VALIDATOR_CACHE.getValidator())
       .add()
+      .<ModelParticle>appendInherited(
+         new KeyedCodec<>("MemoriesCatchEntityParticle", ModelParticle.CODEC),
+         (activationEffects, s) -> activationEffects.memoriesCatchEntityParticle = s,
+         activationEffects -> activationEffects.memoriesCatchEntityParticle,
+         (activationEffects, parent) -> activationEffects.memoriesCatchEntityParticle = parent.memoriesCatchEntityParticle
+      )
+      .addValidator(Validators.nonNull())
+      .add()
+      .<Integer>appendInherited(
+         new KeyedCodec<>("MemoriesCatchParticleViewDistance", Codec.INTEGER),
+         (memoriesGameplayConfig, integer) -> memoriesGameplayConfig.memoriesCatchParticleViewDistance = integer,
+         memoriesGameplayConfig -> memoriesGameplayConfig.memoriesCatchParticleViewDistance,
+         (memoriesGameplayConfig, parent) -> memoriesGameplayConfig.memoriesCatchParticleViewDistance = parent.memoriesCatchParticleViewDistance
+      )
+      .addValidator(Validators.greaterThan(16))
+      .add()
       .build();
    private int[] memoriesAmountPerLevel;
    private String memoriesRecordParticles;
    private String memoriesCatchItemId;
+   private ModelParticle memoriesCatchEntityParticle;
+   private int memoriesCatchParticleViewDistance = 64;
 
    @Nullable
    public static MemoriesGameplayConfig get(@Nonnull GameplayConfig config) {
@@ -57,5 +76,13 @@ public class MemoriesGameplayConfig {
 
    public String getMemoriesCatchItemId() {
       return this.memoriesCatchItemId;
+   }
+
+   public ModelParticle getMemoriesCatchEntityParticle() {
+      return this.memoriesCatchEntityParticle;
+   }
+
+   public int getMemoriesCatchParticleViewDistance() {
+      return this.memoriesCatchParticleViewDistance;
    }
 }

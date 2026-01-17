@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class NPCMemoryProvider extends MemoryProvider<NPCMemory> {
    public static final double DEFAULT_RADIUS = 10.0;
@@ -82,7 +81,7 @@ public class NPCMemoryProvider extends MemoryProvider<NPCMemory> {
       }
    }
 
-   @NullableDecl
+   @Nullable
    private static String getMemoriesNameOverride(@Nonnull Builder<?> builder) {
       if (builder instanceof ISpawnableWithModel spawnableWithModel) {
          ExecutionContext executionContext = new ExecutionContext();

@@ -55,8 +55,6 @@ public class HytaleServerConfig {
       .add()
       .append(new KeyedCodec<>("MaxViewRadius", Codec.INTEGER), (o, i) -> o.maxViewRadius = i, o -> o.maxViewRadius)
       .add()
-      .append(new KeyedCodec<>("LocalCompressionEnabled", Codec.BOOLEAN), (o, i) -> o.localCompressionEnabled = i, o -> o.localCompressionEnabled)
-      .add()
       .append(new KeyedCodec<>("Defaults", HytaleServerConfig.Defaults.CODEC), (o, obj) -> o.defaults = obj, o -> o.defaults)
       .add()
       .append(
@@ -128,7 +126,6 @@ public class HytaleServerConfig {
    private String password = "";
    private int maxPlayers = 100;
    private int maxViewRadius = 32;
-   private boolean localCompressionEnabled;
    @Nonnull
    private HytaleServerConfig.Defaults defaults = new HytaleServerConfig.Defaults(this);
    @Nonnull
@@ -205,15 +202,6 @@ public class HytaleServerConfig {
 
    public void setMaxViewRadius(int maxViewRadius) {
       this.maxViewRadius = maxViewRadius;
-      this.markChanged();
-   }
-
-   public boolean isLocalCompressionEnabled() {
-      return this.localCompressionEnabled;
-   }
-
-   public void setLocalCompressionEnabled(boolean localCompression) {
-      this.localCompressionEnabled = localCompression;
       this.markChanged();
    }
 

@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class DroplistCommand extends CommandBase {
    @Nonnull
@@ -26,7 +25,7 @@ public class DroplistCommand extends CommandBase {
    }
 
    @Override
-   protected void executeSync(@NonNullDecl CommandContext context) {
+   protected void executeSync(@Nonnull CommandContext context) {
       String droplistId = this.itemDroplistArg.get(context);
       ItemDropList itemDropList = ItemDropList.getAssetMap().getAsset(droplistId);
       if (itemDropList == null) {

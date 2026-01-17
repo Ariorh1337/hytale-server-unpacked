@@ -76,6 +76,9 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
          commandBuilder.set("#MemoriesProgressBarTexture.Value", (float)recordedMemories.size() / totalMemories);
          commandBuilder.set("#TotalCollected.Text", String.valueOf(recordedMemories.size()));
          commandBuilder.set("#MemoriesTotal.Text", String.valueOf(totalMemories));
+         eventBuilder.addEventBinding(
+            CustomUIEventBindingType.Activating, "#MemoriesInfoButton", new EventData().append("Action", MemoriesPage.PageAction.MemoriesInfo)
+         );
          GameplayConfig gameplayConfig = store.getExternalData().getWorld().getGameplayConfig();
          PlayerMemories playerMemories = store.getComponent(ref, PlayerMemories.getComponentType());
          int i = 0;
@@ -263,6 +266,12 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
             this.selectedMemory = null;
             this.rebuild();
             break;
+         case MemoriesInfo:
+            BlockPosition blockPostion = new BlockPosition(
+               (int)this.recordMemoriesParticlesPosition.x, (int)this.recordMemoriesParticlesPosition.y, (int)this.recordMemoriesParticlesPosition.z
+            );
+            player.getPageManager().openCustomPage(ref, store, new MemoriesUnlockedPage(this.playerRef, blockPostion));
+            break;
          case SelectMemory:
             if (data.memoryId == null || this.currentCategory == null) {
                return;
@@ -362,6 +371,7 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
       Record,
       ViewCategory,
       Back,
+      MemoriesInfo,
       SelectMemory;
 
       public static final Codec<MemoriesPage.PageAction> CODEC = new EnumCodec<>(MemoriesPage.PageAction.class);

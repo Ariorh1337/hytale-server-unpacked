@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.event.PrefabPasteEvent;
 import com.hypixel.hytale.server.core.prefab.event.PrefabPlaceEntityEvent;
@@ -174,7 +175,11 @@ public class PrefabUtil {
             }
 
             String blockKey = block.getId();
-            if (filler == 0) {
+            if (filler != 0) {
+               if (holder != null) {
+                  chunk.setState(bx, by, bz, holder.clone());
+               }
+            } else {
                if (pasteAnchorAsBlock && technicalPaste && x == buffer.getAnchorX() && y == buffer.getAnchorY() && z == buffer.getAnchorZ()) {
                   int index = blockTypeMap.getIndex("Editor_Anchor");
                   BlockType type = blockTypeMap.getAsset(index);
@@ -226,7 +231,11 @@ public class PrefabUtil {
                            entityPosition.z = entityWorldPosition.z;
                            PrefabPlaceEntityEvent prefabPlaceEntityEvent = new PrefabPlaceEntityEvent(prefabId, entityToAdd);
                            componentAccessor.invoke(prefabPlaceEntityEvent);
-                           entityToAdd.addComponent(FromPrefab.getComponentType(), FromPrefab.INSTANCE);
+                           entityToAdd.ensureComponent(FromPrefab.getComponentType());
+                           if (technicalPaste) {
+                              entityToAdd.ensureComponent(PrefabCopyableComponent.getComponentType());
+                           }
+
                            componentAccessor.addEntity(entityToAdd, AddReason.LOAD);
                         }
                      }

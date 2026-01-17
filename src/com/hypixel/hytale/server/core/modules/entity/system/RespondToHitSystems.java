@@ -25,8 +25,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class RespondToHitSystems {
    public static class EntityTrackerAddAndRemove extends RefChangeSystem<EntityStore, RespondToHit> {
@@ -137,17 +135,14 @@ public class RespondToHitSystems {
    }
 
    public static class OnPlayerSettingsChange extends RefChangeSystem<EntityStore, PlayerSettings> {
-      @NonNullDecl
+      @Nonnull
       @Override
       public ComponentType<EntityStore, PlayerSettings> componentType() {
          return PlayerSettings.getComponentType();
       }
 
       public void onComponentAdded(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl PlayerSettings component,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull PlayerSettings component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          Player player = commandBuffer.getComponent(ref, Player.getComponentType());
          if (player.getGameMode() == GameMode.Creative) {
@@ -160,11 +155,11 @@ public class RespondToHitSystems {
       }
 
       public void onComponentSet(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NullableDecl PlayerSettings oldComponent,
-         @NonNullDecl PlayerSettings newComponent,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref,
+         @Nullable PlayerSettings oldComponent,
+         @Nonnull PlayerSettings newComponent,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          Player player = commandBuffer.getComponent(ref, Player.getComponentType());
          if (player.getGameMode() == GameMode.Creative) {
@@ -177,14 +172,11 @@ public class RespondToHitSystems {
       }
 
       public void onComponentRemoved(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl PlayerSettings component,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull PlayerSettings component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
       }
 
-      @NullableDecl
+      @Nullable
       @Override
       public Query<EntityStore> getQuery() {
          return Player.getComponentType();

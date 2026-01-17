@@ -10,8 +10,8 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.protocol.BlockMountType;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class WakeUpOnDismountSystem extends RefChangeSystem<EntityStore, MountedComponent> {
    @Override
@@ -25,27 +25,21 @@ public class WakeUpOnDismountSystem extends RefChangeSystem<EntityStore, Mounted
    }
 
    public void onComponentAdded(
-      @NonNullDecl Ref<EntityStore> ref,
-      @NonNullDecl MountedComponent component,
-      @NonNullDecl Store<EntityStore> store,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
    }
 
    public void onComponentSet(
-      @NonNullDecl Ref<EntityStore> ref,
-      @NullableDecl MountedComponent oldComponent,
-      @NonNullDecl MountedComponent newComponent,
-      @NonNullDecl Store<EntityStore> store,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Ref<EntityStore> ref,
+      @Nullable MountedComponent oldComponent,
+      @Nonnull MountedComponent newComponent,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
    }
 
    public void onComponentRemoved(
-      @NonNullDecl Ref<EntityStore> ref,
-      @NonNullDecl MountedComponent component,
-      @NonNullDecl Store<EntityStore> store,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       if (component.getBlockMountType() == BlockMountType.Bed) {
          commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSomnolence.AWAKE);

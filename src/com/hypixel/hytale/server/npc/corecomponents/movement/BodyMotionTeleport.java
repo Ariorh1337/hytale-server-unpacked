@@ -96,7 +96,7 @@ public class BodyMotionTeleport extends BodyMotionBase {
                switch (this.orientation) {
                   case Unchanged: {
                      Vector3f bodyRotation = transformComponent.getRotation();
-                     componentAccessor.addComponent(ref, Teleport.getComponentType(), new Teleport(this.target, bodyRotation));
+                     componentAccessor.addComponent(ref, Teleport.getComponentType(), Teleport.createExact(this.target, bodyRotation));
                      break;
                   }
                   case TowardsTarget: {
@@ -115,7 +115,7 @@ public class BodyMotionTeleport extends BodyMotionBase {
                      }
 
                      componentAccessor.addComponent(
-                        ref, Teleport.getComponentType(), new Teleport(this.target, new Vector3f(yaw, pitch, bodyRotation.getRoll()))
+                        ref, Teleport.getComponentType(), Teleport.createExact(this.target, new Vector3f(yaw, pitch, bodyRotation.getRoll()))
                      );
                      break;
                   }
@@ -128,7 +128,7 @@ public class BodyMotionTeleport extends BodyMotionBase {
                      TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
                      assert targetTransformComponent != null;
                      Vector3f bodyRotation = targetTransformComponent.getRotation();
-                     componentAccessor.addComponent(ref, Teleport.getComponentType(), new Teleport(this.target, bodyRotation));
+                     componentAccessor.addComponent(ref, Teleport.getComponentType(), Teleport.createExact(this.target, bodyRotation));
                   }
                }
 

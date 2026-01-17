@@ -1446,12 +1446,13 @@ public class ComponentRegistry<ECS_TYPE> implements IComponentRegistry<ECS_TYPE>
          Function<Codec<Component<ECS_TYPE>>, Codec<Component<ECS_TYPE>>> function = componentCodec -> componentCodec != null
             ? componentCodec
             : TempUnknownComponent.COMPONENT_CODEC;
-         return BuilderCodec.<Holder>builder(Holder.class, this.registry::newHolder)
-            .addField(
+         return BuilderCodec.builder(Holder.class, this.registry::newHolder)
+            .append(
                new KeyedCodec<>("Components", new MapProvidedMapCodec<>(this.codecMap, function, LinkedHashMap::new, false)),
                (holder, map) -> holder.loadComponentsMap(this, map),
                holder -> holder.createComponentsMap(this)
             )
+            .add()
             .build();
       }
 

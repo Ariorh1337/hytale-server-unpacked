@@ -8,6 +8,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class PickupItemComponent implements Component<EntityStore> {
    public static final float PICKUP_TRAVEL_TIME_DEFAULT = 0.15F;
@@ -76,7 +77,7 @@ public class PickupItemComponent implements Component<EntityStore> {
       return this.startPosition;
    }
 
-   @Nonnull
+   @Nullable
    public Ref<EntityStore> getTargetRef() {
       return this.targetRef;
    }

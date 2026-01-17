@@ -15,9 +15,7 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGeneratorExecution;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
-import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
-import com.hypixel.hytale.server.worldgen.util.condition.DefaultBlockMaskCondition;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,15 +56,15 @@ public class PrefabPasteUtil {
 
          return true;
       }, (cx, cy, cz, block, holder, supportValue, rotation, filler, buffer, fluidId, fluidLevel) -> {
-         if (buffer.blockMask != DefaultBlockMaskCondition.DEFAULT_FALSE) {
+         if (buffer.blockMask != BlockMaskCondition.DEFAULT_FALSE) {
             int bx = cx + buffer.posChunk.x;
             int by = cy + buffer.posChunk.y + buffer.yOffset;
             int bz = cz + buffer.posChunk.z;
             if (by >= 0 && by < 320) {
-               if (buffer.blockMask != DefaultBlockMaskCondition.DEFAULT_TRUE) {
+               if (buffer.blockMask != BlockMaskCondition.DEFAULT_TRUE) {
                   int currentBlock = buffer.execution.getBlock(bx, by, bz);
                   int currentFluid = buffer.execution.getFluid(bx, by, bz);
-                  if (!buffer.blockMask.eval(currentBlock, currentFluid, new BlockFluidEntry(block, 0, fluidId))) {
+                  if (!buffer.blockMask.eval(currentBlock, currentFluid, block, fluidId)) {
                      return;
                   }
                }
@@ -215,7 +213,7 @@ public class PrefabPasteUtil {
          this.execution = null;
          this.fitHeightmap = false;
          this.deepSearch = false;
-         this.blockMask = DefaultBlockMaskCondition.DEFAULT_TRUE;
+         this.blockMask = BlockMaskCondition.DEFAULT_TRUE;
          this.environmentId = Integer.MIN_VALUE;
          this.heightCondition = DefaultCoordinateCondition.DEFAULT_TRUE;
          this.spawnCondition = DefaultCoordinateRndCondition.DEFAULT_TRUE;

@@ -2,20 +2,29 @@ package com.hypixel.hytale.builtin.buildertools.prefabeditor.saving;
 
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
+import com.hypixel.hytale.component.ComponentRegistry;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.VectorBoxUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
 import com.hypixel.hytale.server.core.prefab.PrefabSaveException;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
+import com.hypixel.hytale.server.core.universe.world.chunk.EntityChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
@@ -28,6 +37,11 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -51,14 +65,12 @@ public class PrefabSaver {
       @Nonnull Vector3i originalFileAnchor,
       @Nonnull PrefabSaverSettings settings
    ) {
-      return CompletableFuture.supplyAsync(() -> {
-         BlockSelection blockSelection = copyBlocks(sender, world, anchorPoint, minPoint, maxPoint, pastePosition, originalFileAnchor, settings);
-         return blockSelection == null ? false : save(sender, blockSelection, pathToSave, settings);
-      }, world);
+      return copyBlocksAsync(sender, world, anchorPoint, minPoint, maxPoint, pastePosition, originalFileAnchor, settings)
+         .thenApplyAsync(blockSelection -> blockSelection == null ? false : save(sender, blockSelection, pathToSave, settings), world);
    }
 
-   @Nullable
-   private static BlockSelection copyBlocks(
+   @Nonnull
+   private static CompletableFuture<BlockSelection> copyBlocksAsync(
       @Nonnull CommandSender sender,
       @Nonnull World world,
       @Nonnull Vector3i anchorPoint,
@@ -69,29 +81,65 @@ public class PrefabSaver {
       @Nonnull PrefabSaverSettings settings
    ) {
       ChunkStore chunkStore = world.getChunkStore();
-      long start = System.nanoTime();
-      int width = maxPoint.x - minPoint.x;
-      int height = maxPoint.y - minPoint.y;
-      int depth = maxPoint.z - minPoint.z;
       BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
       int editorBlock = assetMap.getIndex("Editor_Block");
       if (editorBlock == Integer.MIN_VALUE) {
          sender.sendMessage(Message.translation("server.commands.editprefab.save.error.unknownBlockIdKey").param("key", "Editor_Block".toString()));
-         return null;
+         return CompletableFuture.completedFuture(null);
+      } else {
+         int editorBlockPrefabAir = assetMap.getIndex("Editor_Empty");
+         if (editorBlockPrefabAir == Integer.MIN_VALUE) {
+            sender.sendMessage(Message.translation("server.commands.editprefab.save.error.unknownBlockIdKey").param("key", "Editor_Empty".toString()));
+            return CompletableFuture.completedFuture(null);
+         } else {
+            int editorBlockPrefabAnchor = assetMap.getIndex("Editor_Anchor");
+            if (editorBlockPrefabAnchor == Integer.MIN_VALUE) {
+               sender.sendMessage(Message.translation("server.commands.editprefab.save.error.unknownBlockIdKey").param("key", "Editor_Anchor".toString()));
+               return CompletableFuture.completedFuture(null);
+            } else {
+               return preloadChunksInSelectionAsync(chunkStore, minPoint, maxPoint)
+                  .thenApplyAsync(
+                     loadedChunks -> copyBlocksWithLoadedChunks(
+                        sender,
+                        world,
+                        anchorPoint,
+                        minPoint,
+                        maxPoint,
+                        pastePosition,
+                        originalFileAnchor,
+                        settings,
+                        (Long2ObjectMap<Ref<ChunkStore>>)loadedChunks,
+                        editorBlock,
+                        editorBlockPrefabAir,
+                        editorBlockPrefabAnchor
+                     ),
+                     world
+                  );
+            }
+         }
       }
+   }
 
-      int editorBlockPrefabAir = assetMap.getIndex("Editor_Empty");
-      if (editorBlockPrefabAir == Integer.MIN_VALUE) {
-         sender.sendMessage(Message.translation("server.commands.editprefab.save.error.unknownBlockIdKey").param("key", "Editor_Empty".toString()));
-         return null;
-      }
-
-      int editorBlockPrefabAnchor = assetMap.getIndex("Editor_Anchor");
-      if (editorBlockPrefabAnchor == Integer.MIN_VALUE) {
-         sender.sendMessage(Message.translation("server.commands.editprefab.save.error.unknownBlockIdKey").param("key", "Editor_Anchor".toString()));
-         return null;
-      }
-
+   @Nullable
+   private static BlockSelection copyBlocksWithLoadedChunks(
+      @Nonnull CommandSender sender,
+      @Nonnull World world,
+      @Nonnull Vector3i anchorPoint,
+      @Nonnull Vector3i minPoint,
+      @Nonnull Vector3i maxPoint,
+      @Nonnull Vector3i pastePosition,
+      @Nonnull Vector3i originalFileAnchor,
+      @Nonnull PrefabSaverSettings settings,
+      @Nonnull Long2ObjectMap<Ref<ChunkStore>> loadedChunks,
+      int editorBlock,
+      int editorBlockPrefabAir,
+      int editorBlockPrefabAnchor
+   ) {
+      ChunkStore chunkStore = world.getChunkStore();
+      long start = System.nanoTime();
+      int width = maxPoint.x - minPoint.x;
+      int height = maxPoint.y - minPoint.y;
+      int depth = maxPoint.z - minPoint.z;
       int newAnchorX = anchorPoint.x - pastePosition.x;
       int newAnchorY = anchorPoint.y - pastePosition.y;
       int newAnchorZ = anchorPoint.z - pastePosition.z;
@@ -103,7 +151,6 @@ public class PrefabSaver {
       int fluidCount = 0;
       int top = Math.max(minPoint.y, maxPoint.y);
       int bottom = Math.min(minPoint.y, maxPoint.y);
-      Long2ObjectMap<Ref<ChunkStore>> loadedChunks = preloadChunksInSelection(world, chunkStore, minPoint, maxPoint);
 
       for (int x = minPoint.x; x <= maxPoint.x; x++) {
          for (int z = minPoint.z; z <= maxPoint.z; z++) {
@@ -123,6 +170,7 @@ public class PrefabSaver {
                      assert sectionComponent != null;
                      BlockPhysics blockPhysicsComponent = chunkStore.getStore().getComponent(sectionRef, BlockPhysics.getComponentType());
                      int block = sectionComponent.get(x, y, z);
+                     int filler = sectionComponent.getFiller(x, y, z);
                      if (settings.isBlocks() && (block != 0 || settings.isEmpty()) && block != editorBlock) {
                         if (block == editorBlockPrefabAir) {
                            block = 0;
@@ -133,13 +181,7 @@ public class PrefabSaver {
                            holder = holder.clone();
                            BlockState blockState = BlockState.getBlockState(holder);
                            if (blockState != null) {
-                              int localX = x - pastePosition.x;
-                              int localY = y - pastePosition.y;
-                              int localZ = z - pastePosition.z;
-                              Vector3i position = blockState.__internal_getPosition();
-                              if (position != null) {
-                                 position.assign(localX, localY, localZ);
-                              }
+                              blockState.clearPositionForSerialization();
                            }
                         }
 
@@ -149,7 +191,7 @@ public class PrefabSaver {
                            z,
                            block,
                            sectionComponent.getRotationIndex(x, y, z),
-                           sectionComponent.getFiller(x, y, z),
+                           filler,
                            blockPhysicsComponent != null ? blockPhysicsComponent.get(x, y, z) : 0,
                            holder
                         );
@@ -172,10 +214,74 @@ public class PrefabSaver {
 
       if (settings.isEntities()) {
          Store<EntityStore> store = world.getEntityStore().getStore();
+         ComponentType<EntityStore, BlockEntity> blockEntityType = BlockEntity.getComponentType();
+         Set<UUID> addedEntityUuids = new HashSet<>();
+         ComponentRegistry.Data<EntityStore> data = EntityStore.REGISTRY.getData();
+         ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableType = PrefabCopyableComponent.getComponentType();
+         ComponentType<EntityStore, TransformComponent> transformType = TransformComponent.getComponentType();
          BuilderToolsPlugin.forEachCopyableInSelection(world, minPoint.x, minPoint.y, minPoint.z, width, height, depth, e -> {
-            Holder<EntityStore> holder = store.copyEntity(e);
-            selection.addEntityFromWorld(holder);
+            BlockEntity blockEntityx = store.getComponent(e, blockEntityType);
+            if (blockEntityx != null) {
+               String key = blockEntityx.getBlockTypeKey();
+               if (key != null && (key.equals("Editor_Block") || key.equals("Editor_Empty") || key.equals("Editor_Anchor"))) {
+                  return;
+               }
+            }
+
+            Holder<EntityStore> holderx = store.copyEntity(e);
+            UUIDComponent uuidCompx = holderx.getComponent(UUIDComponent.getComponentType());
+            if (uuidCompx != null) {
+               addedEntityUuids.add(uuidCompx.getUuid());
+            }
+
+            TransformComponent transformx = holderx.getComponent(transformType);
+            if (transformx != null && transformx.getPosition() != null) {
+               transformx.getPosition().subtract(selection.getX(), selection.getY(), selection.getZ());
+            }
+
+            selection.addEntityHolderRaw(holderx);
          });
+
+         for (Ref<ChunkStore> chunkRef : loadedChunks.values()) {
+            EntityChunk entityChunk = chunkStore.getStore().getComponent(chunkRef, EntityChunk.getComponentType());
+            if (entityChunk != null) {
+               for (Holder<EntityStore> holder : entityChunk.getEntityHolders()) {
+                  UUIDComponent uuidComp = holder.getComponent(UUIDComponent.getComponentType());
+                  TransformComponent transform = holder.getComponent(transformType);
+                  Vector3d position = transform != null ? transform.getPosition() : null;
+                  boolean hasPrefabCopyable = holder.getArchetype().contains(prefabCopyableType);
+                  boolean hasSerializable = holder.hasSerializableComponents(data);
+                  if (hasPrefabCopyable && hasSerializable) {
+                     BlockEntity blockEntity = holder.getComponent(blockEntityType);
+                     if (blockEntity != null) {
+                        String key = blockEntity.getBlockTypeKey();
+                        if (key != null && (key.equals("Editor_Block") || key.equals("Editor_Empty") || key.equals("Editor_Anchor"))) {
+                           continue;
+                        }
+                     }
+
+                     if (transform != null
+                        && position != null
+                        && VectorBoxUtil.isInside(minPoint.x, minPoint.y, minPoint.z, 0.0, 0.0, 0.0, width + 1, height + 1, depth + 1, position)
+                        && (uuidComp == null || !addedEntityUuids.contains(uuidComp.getUuid()))) {
+                        if (uuidComp != null) {
+                           addedEntityUuids.add(uuidComp.getUuid());
+                        }
+
+                        Holder<EntityStore> clonedHolder = holder.clone();
+                        TransformComponent clonedTransform = clonedHolder.getComponent(transformType);
+                        if (clonedTransform != null && clonedTransform.getPosition() != null) {
+                           clonedTransform.getPosition().subtract(selection.getX(), selection.getY(), selection.getZ());
+                        }
+
+                        selection.addEntityHolderRaw(clonedHolder);
+                     }
+                  }
+               }
+            }
+         }
+
+         selection.sortEntitiesByPosition();
       }
 
       long end = System.nanoTime();
@@ -188,8 +294,8 @@ public class PrefabSaver {
    }
 
    @Nonnull
-   private static Long2ObjectMap<Ref<ChunkStore>> preloadChunksInSelection(
-      @Nonnull World world, @Nonnull ChunkStore chunkStore, @Nonnull Vector3i minPoint, @Nonnull Vector3i maxPoint
+   private static CompletableFuture<Long2ObjectMap<Ref<ChunkStore>>> preloadChunksInSelectionAsync(
+      @Nonnull ChunkStore chunkStore, @Nonnull Vector3i minPoint, @Nonnull Vector3i maxPoint
    ) {
       LongSet chunkIndices = new LongOpenHashSet();
       int minChunkX = minPoint.x >> 5;
@@ -204,21 +310,20 @@ public class PrefabSaver {
       }
 
       Long2ObjectMap<Ref<ChunkStore>> loadedChunks = new Long2ObjectOpenHashMap<>(chunkIndices.size());
+      List<CompletableFuture<Void>> chunkFutures = new ArrayList<>(chunkIndices.size());
 
       for (long chunkIndex : chunkIndices) {
-         CompletableFuture<Ref<ChunkStore>> future = chunkStore.getChunkReferenceAsync(chunkIndex);
-
-         while (!future.isDone()) {
-            world.consumeTaskQueue();
-         }
-
-         Ref<ChunkStore> reference = future.join();
-         if (reference != null && reference.isValid()) {
-            loadedChunks.put(chunkIndex, reference);
-         }
+         CompletableFuture<Void> future = chunkStore.getChunkReferenceAsync(chunkIndex).thenAccept(reference -> {
+            if (reference != null && reference.isValid()) {
+               synchronized (loadedChunks) {
+                  loadedChunks.put(chunkIndex, (Ref<ChunkStore>)reference);
+               }
+            }
+         });
+         chunkFutures.add(future);
       }
 
-      return loadedChunks;
+      return CompletableFuture.allOf(chunkFutures.toArray(CompletableFuture[]::new)).thenApply(v -> loadedChunks);
    }
 
    private static boolean save(

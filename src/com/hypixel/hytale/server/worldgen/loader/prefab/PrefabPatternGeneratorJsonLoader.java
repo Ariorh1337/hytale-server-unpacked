@@ -25,7 +25,6 @@ import com.hypixel.hytale.server.worldgen.prefab.PrefabPatternGenerator;
 import com.hypixel.hytale.server.worldgen.util.LogUtil;
 import com.hypixel.hytale.server.worldgen.util.ResolvedBlockArray;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
-import com.hypixel.hytale.server.worldgen.util.condition.DefaultBlockMaskCondition;
 import com.hypixel.hytale.server.worldgen.util.condition.HashSetBlockFluidCondition;
 import com.hypixel.hytale.server.worldgen.util.function.ConstantCoordinateDoubleSupplier;
 import com.hypixel.hytale.server.worldgen.util.function.ICoordinateDoubleSupplier;
@@ -128,7 +127,7 @@ public class PrefabPatternGeneratorJsonLoader extends JsonLoader<SeedStringResou
 
    @Nullable
    protected BlockMaskCondition loadMask() {
-      BlockMaskCondition configuration = DefaultBlockMaskCondition.DEFAULT_TRUE;
+      BlockMaskCondition configuration = BlockMaskCondition.DEFAULT_TRUE;
       if (this.has("Mask")) {
          configuration = new BlockPlacementMaskJsonLoader(this.seed, this.dataFolder, this.getRaw("Mask")).load();
       }

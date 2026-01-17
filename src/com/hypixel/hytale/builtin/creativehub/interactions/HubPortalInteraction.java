@@ -37,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class HubPortalInteraction extends SimpleInstantInteraction {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -68,7 +67,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
    @Nullable
    private String instanceTemplate;
 
-   @NonNullDecl
+   @Nonnull
    @Override
    public WaitForDataFrom getWaitForDataFrom() {
       return WaitForDataFrom.Server;
@@ -126,7 +125,8 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
          spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(targetWorld, uuidComponent.getUuid()) : new Transform();
       }
 
-      componentAccessor.addComponent(playerRef, Teleport.getComponentType(), new Teleport(targetWorld, spawnPoint));
+      Teleport teleportComponent = Teleport.createForPlayer(targetWorld, spawnPoint);
+      componentAccessor.addComponent(playerRef, Teleport.getComponentType(), teleportComponent);
    }
 
    private void teleportToLoadingWorld(

@@ -448,7 +448,7 @@ public class PrefabEditSessionManager {
                               targetWorld
                            );
                            CompletableFuture.runAsync(() -> {
-                              Teleport teleportComponent = new Teleport(targetWorld, new Transform(spawnPoint));
+                              Teleport teleportComponent = Teleport.createForPlayer(targetWorld, new Transform(spawnPoint));
                               componentAccessor.putComponent(ref, Teleport.getComponentType(), teleportComponent);
                            }, sourceWorld);
                         }
@@ -918,21 +918,19 @@ public class PrefabEditSessionManager {
 
       World finalReturnWorld = returnWorld;
       Transform finalReturnLocation = returnLocation;
-      return CompletableFuture.runAsync(
-            () -> componentAccessor.putComponent(ref, Teleport.getComponentType(), new Teleport(finalReturnWorld, finalReturnLocation)), world
-         )
-         .thenRunAsync(() -> {
-            World worldToRemove = Universe.get().getWorld(prefabEditSession.getWorldName());
-            if (worldToRemove != null) {
-               Universe.get().removeWorld(prefabEditSession.getWorldName());
-            }
+      Teleport teleportComponent = Teleport.createForPlayer(finalReturnWorld, finalReturnLocation);
+      return CompletableFuture.runAsync(() -> componentAccessor.putComponent(ref, Teleport.getComponentType(), teleportComponent), world).thenRunAsync(() -> {
+         World worldToRemove = Universe.get().getWorld(prefabEditSession.getWorldName());
+         if (worldToRemove != null) {
+            Universe.get().removeWorld(prefabEditSession.getWorldName());
+         }
 
-            for (PrefabEditingMetadata prefab : prefabEditSession.getLoadedPrefabMetadata().values()) {
-               this.prefabsBeingEdited.remove(prefab.getPrefabPath());
-            }
+         for (PrefabEditingMetadata prefab : prefabEditSession.getLoadedPrefabMetadata().values()) {
+            this.prefabsBeingEdited.remove(prefab.getPrefabPath());
+         }
 
-            this.activeEditSessions.remove(playerRef.getUuid());
-         });
+         this.activeEditSessions.remove(playerRef.getUuid());
+      });
    }
 
    @Nonnull

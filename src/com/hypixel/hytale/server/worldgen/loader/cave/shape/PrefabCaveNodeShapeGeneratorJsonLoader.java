@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabLoader;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
 import com.hypixel.hytale.server.worldgen.loader.prefab.BlockPlacementMaskJsonLoader;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
-import com.hypixel.hytale.server.worldgen.util.condition.DefaultBlockMaskCondition;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,7 +49,7 @@ public class PrefabCaveNodeShapeGeneratorJsonLoader extends CaveNodeShapeGenerat
 
    @Nullable
    protected BlockMaskCondition loadMask() {
-      BlockMaskCondition configuration = DefaultBlockMaskCondition.DEFAULT_TRUE;
+      BlockMaskCondition configuration = BlockMaskCondition.DEFAULT_TRUE;
       if (this.has("Mask")) {
          configuration = new BlockPlacementMaskJsonLoader(this.seed, this.dataFolder, this.getRaw("Mask")).load();
       }

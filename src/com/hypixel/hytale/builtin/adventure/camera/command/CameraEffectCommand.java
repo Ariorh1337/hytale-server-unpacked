@@ -19,8 +19,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class CameraEffectCommand extends AbstractCommandCollection {
    @Nonnull
@@ -52,12 +51,12 @@ public class CameraEffectCommand extends AbstractCommandCollection {
 
       @Override
       protected void execute(
-         @NonNullDecl CommandContext context,
-         @NullableDecl Ref<EntityStore> sourceRef,
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl PlayerRef playerRef,
-         @NonNullDecl World world,
-         @NonNullDecl Store<EntityStore> store
+         @Nonnull CommandContext context,
+         @Nullable Ref<EntityStore> sourceRef,
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull PlayerRef playerRef,
+         @Nonnull World world,
+         @Nonnull Store<EntityStore> store
       ) {
          DamageCause damageCause = context.get(this.causeArg);
          float damageAmount = context.get(this.damageArg);
@@ -95,12 +94,12 @@ public class CameraEffectCommand extends AbstractCommandCollection {
 
       @Override
       protected void execute(
-         @NonNullDecl CommandContext context,
-         @NullableDecl Ref<EntityStore> sourceRef,
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl PlayerRef playerRef,
-         @NonNullDecl World world,
-         @NonNullDecl Store<EntityStore> store
+         @Nonnull CommandContext context,
+         @Nullable Ref<EntityStore> sourceRef,
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull PlayerRef playerRef,
+         @Nonnull World world,
+         @Nonnull Store<EntityStore> store
       ) {
          CameraEffect cameraEffect = context.get(this.effectArg);
          float intensity = context.get(this.intensityArg);

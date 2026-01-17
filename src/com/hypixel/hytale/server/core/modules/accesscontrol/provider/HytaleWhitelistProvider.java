@@ -22,7 +22,11 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 
 public class HytaleWhitelistProvider extends BlockingDiskFile implements AccessProvider {
+   @Nonnull
+   private static final String WHITELIST_FILE_PATH = "whitelist.json";
+   @Nonnull
    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+   @Nonnull
    private final Set<UUID> whitelist = new HashSet<>();
    private boolean isEnabled;
 

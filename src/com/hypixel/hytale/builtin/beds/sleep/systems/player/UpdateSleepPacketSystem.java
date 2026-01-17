@@ -26,8 +26,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
    public static final Query<EntityStore> QUERY = Query.and(PlayerRef.getComponentType(), PlayerSomnolence.getComponentType(), SleepTracker.getComponentType());
@@ -49,25 +49,28 @@ public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
    public void tick(
       float dt,
       int index,
-      @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-      @NonNullDecl Store<EntityStore> store,
-      @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+      @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       UpdateSleepState packet = this.createSleepPacket(store, index, archetypeChunk);
-      SleepTracker sleepTracker = archetypeChunk.getComponent(index, SleepTracker.getComponentType());
-      packet = sleepTracker.generatePacketToSend(packet);
+      SleepTracker sleepTrackerComponent = archetypeChunk.getComponent(index, SleepTracker.getComponentType());
+      assert sleepTrackerComponent != null;
+      packet = sleepTrackerComponent.generatePacketToSend(packet);
       if (packet != null) {
-         PlayerRef playerRef = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
-         playerRef.getPacketHandler().write(packet);
+         PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
+         assert playerRefComponent != null;
+         playerRefComponent.getPacketHandler().write(packet);
       }
    }
 
-   private UpdateSleepState createSleepPacket(Store<EntityStore> store, int index, ArchetypeChunk<EntityStore> archetypeChunk) {
+   private UpdateSleepState createSleepPacket(@Nonnull Store<EntityStore> store, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk) {
       World world = store.getExternalData().getWorld();
       WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
       WorldSleep worldSleepState = worldSomnolence.getState();
-      PlayerSomnolence playerSomnolence = archetypeChunk.getComponent(index, PlayerSomnolence.getComponentType());
-      PlayerSleep playerSleepState = playerSomnolence.getSleepState();
+      PlayerSomnolence playerSomnolenceComponent = archetypeChunk.getComponent(index, PlayerSomnolence.getComponentType());
+      assert playerSomnolenceComponent != null;
+      PlayerSleep playerSleepState = playerSomnolenceComponent.getSleepState();
       SleepClock clock = worldSleepState instanceof WorldSlumber slumber ? slumber.createSleepClock() : null;
 
       return switch (playerSleepState) {
@@ -90,7 +93,7 @@ public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
    }
 
    @Nullable
-   private SleepMultiplayer createSleepMultiplayer(Store<EntityStore> store) {
+   private SleepMultiplayer createSleepMultiplayer(@Nonnull Store<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       List<PlayerRef> playerRefs = new ArrayList<>(world.getPlayerRefs());
       if (playerRefs.size() <= 1) {

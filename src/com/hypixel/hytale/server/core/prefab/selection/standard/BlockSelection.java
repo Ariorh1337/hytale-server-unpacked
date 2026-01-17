@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentRegistry;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
@@ -540,6 +541,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                      }
                   }
 
+                  if (holder != null && b.filler != 0) {
+                     return new BlockSelection.BlockHolder(b.blockId(), b.rotation(), b.filler(), b.supportValue(), null);
+                  }
+
                   if (holder == null) {
                      return (BlockSelection.BlockHolder)b;
                   }
@@ -596,6 +601,53 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
       try {
          this.entities.add(entityHolder);
+      } finally {
+         this.entitiesLock.writeLock().unlock();
+      }
+   }
+
+   public void sortEntitiesByPosition() {
+      this.entitiesLock.writeLock().lock();
+
+      try {
+         ComponentType<EntityStore, TransformComponent> transformType = TransformComponent.getComponentType();
+         this.entities.sort((a, b) -> {
+            TransformComponent ta = a.getComponent(transformType);
+            TransformComponent tb = b.getComponent(transformType);
+            if (ta == null && tb == null) {
+               return 0;
+            }
+
+            if (ta == null) {
+               return 1;
+            }
+
+            if (tb == null) {
+               return -1;
+            }
+
+            Vector3d pa = ta.getPosition();
+            Vector3d pb = tb.getPosition();
+            if (pa == null && pb == null) {
+               return 0;
+            }
+
+            if (pa == null) {
+               return 1;
+            }
+
+            if (pb == null) {
+               return -1;
+            }
+
+            int cmp = Double.compare(pa.getX(), pb.getX());
+            if (cmp != 0) {
+               return cmp;
+            }
+
+            cmp = Double.compare(pa.getY(), pb.getY());
+            return cmp != 0 ? cmp : Double.compare(pa.getZ(), pb.getZ());
+         });
       } finally {
          this.entitiesLock.writeLock().unlock();
       }

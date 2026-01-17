@@ -61,7 +61,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
          world, currentRuleSet, coordinate, mutablePos, currentYaw, upsideDown
       );
       if (frontConnection != null) {
-         boolean valid = isWidthFulfilled(world, coordinate, mutablePos, frontConnection, currentYaw, blockId, width);
+         boolean valid = isWidthFulfilled(world, coordinate, mutablePos, frontConnection, currentYaw, blockId, rotation, width);
          if (valid) {
             resultingStair = frontConnection.getStairType(true);
          }
@@ -71,7 +71,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
          world, currentRuleSet, coordinate, mutablePos, rotation, currentYaw, upsideDown, width
       );
       if (backConnection != null) {
-         boolean valid = isWidthFulfilled(world, coordinate, mutablePos, backConnection, currentYaw, blockId, width);
+         boolean valid = isWidthFulfilled(world, coordinate, mutablePos, backConnection, currentYaw, blockId, rotation, width);
          if (valid) {
             resultingStair = backConnection.getStairType(false);
          }
@@ -80,7 +80,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
       if (resultingStair == StairConnectedBlockRuleSet.StairType.STRAIGHT) {
          Vector3i aboveCoordinate = new Vector3i(coordinate).add(0, 1, 0);
          StairConnectedBlockRuleSet.StairConnection resultingConnection = getValleyConnection(
-            world, aboveCoordinate, currentRuleSet, currentRotation, mutablePos, false, width
+            world, coordinate, aboveCoordinate, currentRuleSet, currentRotation, mutablePos, false, blockId, rotation, width
          );
          if (resultingConnection != null) {
             resultingStair = resultingConnection.getStairType(true);
@@ -90,7 +90,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
       if (resultingStair == StairConnectedBlockRuleSet.StairType.STRAIGHT) {
          Vector3i belowCoordinate = new Vector3i(coordinate).add(0, -1, 0);
          StairConnectedBlockRuleSet.StairConnection resultingConnection = getValleyConnection(
-            world, belowCoordinate, currentRuleSet, currentRotation, mutablePos, true, width
+            world, coordinate, belowCoordinate, currentRuleSet, currentRotation, mutablePos, true, blockId, rotation, width
          );
          if (resultingConnection != null) {
             resultingStair = resultingConnection.getStairType(false);
@@ -117,6 +117,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
       StairConnectedBlockRuleSet.StairConnection backConnection,
       Rotation currentYaw,
       int blockId,
+      int rotation,
       int width
    ) {
       boolean valid = true;
@@ -128,9 +129,11 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
          mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
          WorldChunk chunk = world.getChunkIfLoaded(ChunkUtil.indexChunkFromBlock(mutablePos.x, mutablePos.z));
          if (chunk != null) {
+            int otherRotation = chunk.getRotationIndex(mutablePos.x, mutablePos.y, mutablePos.z);
             int otherFiller = chunk.getFiller(mutablePos.x, mutablePos.y, mutablePos.z);
             int otherBlockId = chunk.getBlock(mutablePos);
-            if ((otherFiller != 0 || otherBlockId != blockId) && (otherFiller != requiredFiller || otherBlockId != blockId)) {
+            if ((otherFiller != 0 || otherBlockId != blockId || otherRotation != rotation)
+               && (otherFiller != requiredFiller || otherBlockId != blockId || otherRotation != rotation)) {
                valid = false;
                break;
             }
@@ -141,49 +144,61 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
    }
 
    private static StairConnectedBlockRuleSet.StairConnection getValleyConnection(
-      World world, Vector3i coordinate, StairLikeConnectedBlockRuleSet currentRuleSet, RotationTuple rotation, Vector3i mutablePos, boolean reverse, int width
+      World world,
+      Vector3i placementCoordinate,
+      Vector3i checkCoordinate,
+      StairLikeConnectedBlockRuleSet currentRuleSet,
+      RotationTuple rotation,
+      Vector3i mutablePos,
+      boolean reverse,
+      int blockId,
+      int blockRotation,
+      int width
    ) {
       Rotation yaw = rotation.yaw();
       mutablePos.assign(reverse ? Vector3i.SOUTH : Vector3i.NORTH).scale(width);
       yaw.rotateY(mutablePos, mutablePos);
-      mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
+      mutablePos.add(checkCoordinate.x, checkCoordinate.y, checkCoordinate.z);
       ObjectIntPair<StairConnectedBlockRuleSet.StairType> backStair = StairConnectedBlockRuleSet.getStairData(
          world, mutablePos, currentRuleSet.getMaterialName()
       );
       if (backStair == null) {
          return null;
-      } else {
-         boolean backConnection = reverse
-            ? isTopperConnectionCompatible(rotation, backStair, Rotation.None)
-            : isValleyConnectionCompatible(rotation, backStair, Rotation.None, false);
-         if (!backConnection) {
-            return null;
-         } else {
-            mutablePos.assign(reverse ? Vector3i.EAST : Vector3i.WEST).scale(width);
-            yaw.rotateY(mutablePos, mutablePos);
-            mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
-            ObjectIntPair<StairConnectedBlockRuleSet.StairType> leftStair = StairConnectedBlockRuleSet.getStairData(
-               world, mutablePos, currentRuleSet.getMaterialName()
-            );
-            mutablePos.assign(reverse ? Vector3i.WEST : Vector3i.EAST).scale(width);
-            yaw.rotateY(mutablePos, mutablePos);
-            mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
-            ObjectIntPair<StairConnectedBlockRuleSet.StairType> rightStair = StairConnectedBlockRuleSet.getStairData(
-               world, mutablePos, currentRuleSet.getMaterialName()
-            );
-            boolean leftConnection = reverse
-               ? isTopperConnectionCompatible(rotation, leftStair, Rotation.Ninety)
-               : isValleyConnectionCompatible(rotation, leftStair, Rotation.Ninety, false);
-            boolean rightConnection = reverse
-               ? isTopperConnectionCompatible(rotation, rightStair, Rotation.TwoSeventy)
-               : isValleyConnectionCompatible(rotation, rightStair, Rotation.TwoSeventy, false);
-            if (leftConnection == rightConnection) {
-               return null;
-            } else {
-               return leftConnection ? StairConnectedBlockRuleSet.StairConnection.CORNER_LEFT : StairConnectedBlockRuleSet.StairConnection.CORNER_RIGHT;
-            }
-         }
       }
+
+      boolean backConnection = reverse
+         ? isTopperConnectionCompatible(rotation, backStair, Rotation.None)
+         : isValleyConnectionCompatible(rotation, backStair, Rotation.None, false);
+      if (!backConnection) {
+         return null;
+      }
+
+      mutablePos.assign(reverse ? Vector3i.EAST : Vector3i.WEST).scale(width);
+      yaw.rotateY(mutablePos, mutablePos);
+      mutablePos.add(checkCoordinate.x, checkCoordinate.y, checkCoordinate.z);
+      ObjectIntPair<StairConnectedBlockRuleSet.StairType> leftStair = StairConnectedBlockRuleSet.getStairData(
+         world, mutablePos, currentRuleSet.getMaterialName()
+      );
+      mutablePos.assign(reverse ? Vector3i.WEST : Vector3i.EAST).scale(width);
+      yaw.rotateY(mutablePos, mutablePos);
+      mutablePos.add(checkCoordinate.x, checkCoordinate.y, checkCoordinate.z);
+      ObjectIntPair<StairConnectedBlockRuleSet.StairType> rightStair = StairConnectedBlockRuleSet.getStairData(
+         world, mutablePos, currentRuleSet.getMaterialName()
+      );
+      boolean leftConnection = reverse
+         ? isTopperConnectionCompatible(rotation, leftStair, Rotation.Ninety)
+         : isValleyConnectionCompatible(rotation, leftStair, Rotation.Ninety, false);
+      boolean rightConnection = reverse
+         ? isTopperConnectionCompatible(rotation, rightStair, Rotation.TwoSeventy)
+         : isValleyConnectionCompatible(rotation, rightStair, Rotation.TwoSeventy, false);
+      if (leftConnection == rightConnection) {
+         return null;
+      }
+
+      StairConnectedBlockRuleSet.StairConnection connection = leftConnection
+         ? StairConnectedBlockRuleSet.StairConnection.CORNER_LEFT
+         : StairConnectedBlockRuleSet.StairConnection.CORNER_RIGHT;
+      return !isWidthFulfilled(world, placementCoordinate, mutablePos, connection, yaw, blockId, blockRotation, width) ? null : connection;
    }
 
    private static boolean isTopperConnectionCompatible(

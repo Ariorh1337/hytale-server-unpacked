@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.dat
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ParallelInteraction extends Interaction {
    public static final BuilderCodec<ParallelInteraction> CODEC = BuilderCodec.builder(
@@ -47,7 +46,7 @@ public class ParallelInteraction extends Interaction {
 
    @Override
    protected void tick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       IndexedLookupTableAssetMap<String, RootInteraction> assetMap = RootInteraction.getAssetMap();
       context.execute(RootInteraction.getRootInteractionOrUnknown(this.interactions[0]));
@@ -62,7 +61,7 @@ public class ParallelInteraction extends Interaction {
 
    @Override
    protected void simulateTick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       IndexedLookupTableAssetMap<String, RootInteraction> assetMap = RootInteraction.getAssetMap();
       context.execute(RootInteraction.getRootInteractionOrUnknown(this.interactions[0]));

@@ -30,7 +30,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class LegacyProjectileSystems {
    @Nonnull
@@ -90,10 +89,7 @@ public class LegacyProjectileSystems {
 
       @Override
       public void onEntityAdded(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl AddReason reason,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          ProjectileComponent projectileComponent = commandBuffer.getComponent(ref, PROJECTILE_COMPONENT_TYPE);
          assert projectileComponent != null;
@@ -105,10 +101,7 @@ public class LegacyProjectileSystems {
 
       @Override
       public void onEntityRemove(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl RemoveReason reason,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
       }
    }

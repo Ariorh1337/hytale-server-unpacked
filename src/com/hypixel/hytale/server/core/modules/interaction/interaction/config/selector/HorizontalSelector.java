@@ -217,16 +217,33 @@ public class HorizontalSelector extends SelectorType {
                LocalCachedChunkAccessor localAccessor = LocalCachedChunkAccessor.atWorldCoords(
                   commandBuffer.getStore().getExternalData().getWorld(), (int)fromX, (int)fromZ, (int)(HorizontalSelector.this.endDistance + 1.0)
                );
-               return BlockIterator.iterateFromTo(
-                  fromX,
-                  fromY,
-                  fromZ,
-                  toX,
-                  toY,
-                  toZ,
-                  (x, y, z, px, py, pz, qx, qy, qz, accessor) -> accessor.getBlockType(x, y, z).getMaterial() != BlockMaterial.Solid,
-                  localAccessor
-               );
+               return BlockIterator.iterateFromTo(fromX, fromY, fromZ, toX, toY, toZ, (x, y, z, px, py, pz, qx, qy, qz, accessor) -> {
+                  if (accessor.getBlockType(x, y, z).getMaterial() == BlockMaterial.Solid) {
+                     BlockType blockType = accessor.getBlockType(x, y, z);
+                     if (blockType == null) {
+                        return true;
+                     }
+
+                     BlockBoundingBoxes blockHitboxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+                     if (blockHitboxes == null) {
+                        return true;
+                     }
+
+                     BlockBoundingBoxes.RotatedVariantBoxes rotatedHitboxes = blockHitboxes.get(accessor.getBlockRotationIndex(x, y, z));
+                     Vector3d lineFrom = new Vector3d(fromX, fromY, fromZ);
+                     Vector3d lineTo = new Vector3d(toX, toY, toZ);
+
+                     for (Box box : rotatedHitboxes.getDetailBoxes()) {
+                        Box offsetBox = box.clone().offset(x, y, z);
+                        boolean intersect = offsetBox.intersectsLine(lineFrom, lineTo);
+                        if (intersect) {
+                           return false;
+                        }
+                     }
+                  }
+
+                  return true;
+               }, localAccessor);
             };
             this.executor.setLineOfSightProvider(provider);
          } else {

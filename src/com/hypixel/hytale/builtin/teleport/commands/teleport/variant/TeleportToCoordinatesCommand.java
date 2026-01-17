@@ -73,8 +73,8 @@ public class TeleportToCoordinatesCommand extends AbstractPlayerCommand {
       float roll = this.rollArg.provided(context)
          ? this.rollArg.get(context).resolve(previousHeadRotation.getRoll() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
          : Float.NaN;
-      Teleport teleport = new Teleport(new Vector3d(x, y, z), new Vector3f(previousBodyRotation.getPitch(), yaw, previousBodyRotation.getRoll()))
-         .withHeadRotation(new Vector3f(pitch, yaw, roll));
+      Teleport teleport = Teleport.createForPlayer(new Vector3d(x, y, z), new Vector3f(previousBodyRotation.getPitch(), yaw, previousBodyRotation.getRoll()))
+         .setHeadRotation(new Vector3f(pitch, yaw, roll));
       store.addComponent(ref, Teleport.getComponentType(), teleport);
       boolean hasRotation = this.yawArg.provided(context) || this.pitchArg.provided(context) || this.rollArg.provided(context);
       if (hasRotation) {

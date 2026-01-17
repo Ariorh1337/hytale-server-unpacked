@@ -124,7 +124,7 @@ public class PrefabTeleportPage extends InteractiveCustomUIPage<PrefabTeleportPa
                   WorldChunk worldChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(centerX, centerZ));
                   int teleportY = worldChunk != null ? worldChunk.getHeight(centerX, centerZ) + 8 : maxPoint.y + 8;
                   Vector3d teleportPosition = new Vector3d(centerX + 0.5, teleportY, centerZ + 0.5);
-                  store.addComponent(ref, Teleport.getComponentType(), new Teleport(teleportPosition, new Vector3f()));
+                  store.addComponent(ref, Teleport.getComponentType(), Teleport.createForPlayer(teleportPosition, new Vector3f()));
                   playerComponent.getPageManager().setPage(ref, store, Page.None);
                }
             } catch (IllegalArgumentException var15) {

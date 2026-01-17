@@ -1062,7 +1062,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
                                  int worldX = ChunkUtil.minBlock(chunk.getX()) + x;
                                  int worldZ = ChunkUtil.minBlock(chunk.getZ()) + z;
                                  blockValidator.accept(
-                                    worldX, y, worldZ, blockId, 0, 1.0F, holder, blockPhys != null ? blockPhys.get(x, y, z) : 0, rotation, filler, null
+                                    worldX, worldY, worldZ, blockId, 0, 1.0F, holder, blockPhys != null ? blockPhys.get(x, y, z) : 0, rotation, filler, null
                                  );
                                  if (options.contains(ValidationOption.BLOCK_FILLER)) {
                                     var fetcher = new FillerBlockUtil.FillerFetcher<BlockSection, ChunkStore>() {

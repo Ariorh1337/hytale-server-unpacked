@@ -175,7 +175,7 @@ public class DistortedCaveNodeShape implements CaveNodeShape {
                      boolean isCandidateBlock = !surfaceLimited || current != 0;
                      if (isCandidateBlock) {
                         BlockFluidEntry blockEntry = CaveNodeShapeUtils.getFillingBlock(caveType, caveNodeType, y, random);
-                        if (caveType.getBlockMask().eval(current, currentFluid, blockEntry)) {
+                        if (caveType.getBlockMask().eval(current, currentFluid, blockEntry.blockId(), blockEntry.fluidId())) {
                            if (execution.setBlock(cx, y, cz, (byte)6, blockEntry, environment)) {
                               if (y < lowest) {
                                  lowest = y;

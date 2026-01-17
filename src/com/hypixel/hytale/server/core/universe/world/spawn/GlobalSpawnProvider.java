@@ -21,13 +21,13 @@ public class GlobalSpawnProvider implements ISpawnProvider {
    public GlobalSpawnProvider() {
    }
 
-   public GlobalSpawnProvider(Transform spawnPoint) {
+   public GlobalSpawnProvider(@Nonnull Transform spawnPoint) {
       this.spawnPoint = spawnPoint;
    }
 
    @Override
    public Transform getSpawnPoint(@Nonnull World world, @Nonnull UUID uuid) {
-      return this.spawnPoint;
+      return this.spawnPoint.clone();
    }
 
    @Nonnull

@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
@@ -701,25 +702,21 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       if (ref != null && ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         world.execute(
-            () -> {
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               assert playerComponent != null;
-               WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
-               if (!worldMapTracker.isAllowTeleportToMarkers()) {
-                  this.disconnect("You are not allowed to use TeleportToWorldMapMarker!");
-               } else {
-                  MapMarker marker = worldMapTracker.getSentMarkers().get(packet.id);
-                  if (marker != null) {
-                     world.getEntityStore()
-                        .getStore()
-                        .addComponent(
-                           this.playerRef.getReference(), Teleport.getComponentType(), new Teleport(null, PositionUtil.toTransform(marker.transform))
-                        );
-                  }
+         world.execute(() -> {
+            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            assert playerComponent != null;
+            WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
+            if (!worldMapTracker.isAllowTeleportToMarkers()) {
+               this.disconnect("You are not allowed to use TeleportToWorldMapMarker!");
+            } else {
+               MapMarker marker = worldMapTracker.getSentMarkers().get(packet.id);
+               if (marker != null) {
+                  Transform transform = PositionUtil.toTransform(marker.transform);
+                  Teleport teleportComponent = Teleport.createForPlayer(transform);
+                  world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
                }
             }
-         );
+         });
       }
    }
 
@@ -728,29 +725,22 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       if (ref != null && ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         world.execute(
-            () -> {
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               assert playerComponent != null;
-               WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
-               if (!worldMapTracker.isAllowTeleportToCoordinates()) {
-                  this.disconnect("You are not allowed to use TeleportToWorldMapMarker!");
-               } else {
-                  world.getChunkStore()
-                     .getChunkReferenceAsync(ChunkUtil.indexChunkFromBlock(packet.x, packet.y))
-                     .thenAcceptAsync(
-                        chunkRef -> {
-                           BlockChunk blockChunk = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
-                           Vector3d position = new Vector3d(packet.x, blockChunk.getHeight(packet.x, packet.y) + 2, packet.y);
-                           world.getEntityStore()
-                              .getStore()
-                              .addComponent(this.playerRef.getReference(), Teleport.getComponentType(), new Teleport(null, position, Vector3f.NaN));
-                        },
-                        world
-                     );
-               }
+         world.execute(() -> {
+            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            assert playerComponent != null;
+            WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
+            if (!worldMapTracker.isAllowTeleportToCoordinates()) {
+               this.disconnect("You are not allowed to use TeleportToWorldMapMarker!");
+            } else {
+               world.getChunkStore().getChunkReferenceAsync(ChunkUtil.indexChunkFromBlock(packet.x, packet.y)).thenAcceptAsync(chunkRef -> {
+                  BlockChunk blockChunkComponent = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
+                  assert blockChunkComponent != null;
+                  Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
+                  Teleport teleportComponent = Teleport.createForPlayer(null, position, new Vector3f(0.0F, 0.0F, 0.0F));
+                  world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
+               }, world);
             }
-         );
+         });
       }
    }
 

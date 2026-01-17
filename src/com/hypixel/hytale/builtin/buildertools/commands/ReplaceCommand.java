@@ -81,34 +81,32 @@ public class ReplaceCommand extends AbstractPlayerCommand {
                   context.sendMessage(Message.translation("server.builderTools.replace.replacementAllDone").param("to", toValue));
                } else if (fromValue == null) {
                   context.sendMessage(Message.translation("server.commands.replace.fromRequired"));
+               } else if (regex) {
+                  Pattern pattern;
+                  try {
+                     pattern = Pattern.compile(fromValue);
+                  } catch (PatternSyntaxException e) {
+                     context.sendMessage(Message.translation("server.commands.replace.invalidRegex").param("error", e.getMessage()));
+                     return;
+                  }
+
+                  int[] toIds = toIntArray(toBlockIds);
+                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+                     s.replace(r, value -> {
+                        String valueKey = assetMap.getAsset(value).getId();
+                        return pattern.matcher(valueKey).matches();
+                     }, toIds, componentAccessor);
+                     context.sendMessage(Message.translation("server.commands.replace.success").param("regex", fromValue).param("replacement", toValue));
+                  });
                } else if (fromMaterial == null) {
                   context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", fromValue).param("key", fromValue));
                } else if (!substringSwap) {
-                  if (regex) {
-                     Pattern pattern;
-                     try {
-                        pattern = Pattern.compile(fromValue);
-                     } catch (PatternSyntaxException e) {
-                        context.sendMessage(Message.translation("server.commands.replace.invalidRegex").param("error", e.getMessage()));
-                        return;
-                     }
-
-                     int[] toIds = toIntArray(toBlockIds);
-                     BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
-                        s.replace(r, value -> {
-                           String valueKey = assetMap.getAsset(value).getId();
-                           return pattern.matcher(valueKey).matches();
-                        }, toIds, componentAccessor);
-                        context.sendMessage(Message.translation("server.commands.replace.success").param("regex", fromValue).param("to", toValue));
-                     });
-                  } else {
-                     int[] toIds = toIntArray(toBlockIds);
-                     int fromBlockId = fromMaterial.getBlockId();
-                     BuilderToolsPlugin.addToQueue(
-                        playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, block -> block == fromBlockId, toIds, componentAccessor)
-                     );
-                     context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
-                  }
+                  int[] toIds = toIntArray(toBlockIds);
+                  int fromBlockId = fromMaterial.getBlockId();
+                  BuilderToolsPlugin.addToQueue(
+                     playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, block -> block == fromBlockId, toIds, componentAccessor)
+                  );
+                  context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
                } else {
                   String[] blockKeys = fromValue.split(",");
                   Int2IntArrayMap swapMap = new Int2IntArrayMap();

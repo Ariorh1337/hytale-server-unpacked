@@ -4,7 +4,8 @@ import com.hypixel.hytale.builtin.beds.BedsPlugin;
 import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class WorldSomnolence implements Resource<EntityStore> {
    private WorldSleep state = WorldSleep.Awake.INSTANCE;
@@ -17,11 +18,11 @@ public class WorldSomnolence implements Resource<EntityStore> {
       return this.state;
    }
 
-   public void setState(WorldSleep state) {
+   public void setState(@Nonnull WorldSleep state) {
       this.state = state;
    }
 
-   @NullableDecl
+   @Nullable
    @Override
    public Resource<EntityStore> clone() {
       WorldSomnolence clone = new WorldSomnolence();

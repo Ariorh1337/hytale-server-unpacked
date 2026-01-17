@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import javax.annotation.Nonnull;
 
 public class StartSlumberSystem extends DelayedSystem<EntityStore> {
    public static final Duration NODDING_OFF_DURATION = Duration.ofMillis(3200L);
@@ -30,7 +30,7 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
    }
 
    @Override
-   public void delayedTick(float dt, int systemIndex, @NonNullDecl Store<EntityStore> store) {
+   public void delayedTick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
       this.checkIfEveryoneIsReadyToSleep(store);
    }
 
@@ -40,15 +40,15 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       if (!playerRefs.isEmpty()) {
          if (!CanSleepInWorld.check(world).isNegative()) {
             float wakeUpHour = world.getGameplayConfig().getWorldConfig().getSleepConfig().getWakeUpHour();
-            WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
-            WorldSleep worldState = worldSomnolence.getState();
+            WorldSomnolence worldSomnolenceResource = store.getResource(WorldSomnolence.getResourceType());
+            WorldSleep worldState = worldSomnolenceResource.getState();
             if (worldState == WorldSleep.Awake.INSTANCE) {
                if (this.isEveryoneReadyToSleep(store)) {
                   WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
                   Instant now = timeResource.getGameTime();
                   Instant target = this.computeWakeupInstant(now, wakeUpHour);
                   float irlSeconds = computeIrlSeconds(now, target);
-                  worldSomnolence.setState(new WorldSlumber(now, target, irlSeconds));
+                  worldSomnolenceResource.setState(new WorldSlumber(now, target, irlSeconds));
                   store.forEachEntityParallel(PlayerSomnolence.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
                      Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                      commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.Slumber.createComponent(timeResource));
@@ -59,7 +59,7 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       }
    }
 
-   private Instant computeWakeupInstant(Instant now, float wakeUpHour) {
+   private Instant computeWakeupInstant(@Nonnull Instant now, float wakeUpHour) {
       LocalDateTime ldt = LocalDateTime.ofInstant(now, ZoneOffset.UTC);
       int hours = (int)wakeUpHour;
       float fractionalHour = wakeUpHour - hours;

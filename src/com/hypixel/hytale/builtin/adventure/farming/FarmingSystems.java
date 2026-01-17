@@ -46,8 +46,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class FarmingSystems {
    private static boolean updateSoilDecayTime(CommandBuffer<ChunkStore> commandBuffer, TilledSoilBlock soilBlock, BlockType blockType) {
@@ -83,19 +81,13 @@ public class FarmingSystems {
 
       @Override
       public void onEntityAdded(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl AddReason reason,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
       }
 
       @Override
       public void onEntityRemove(
-         @NonNullDecl Ref<EntityStore> ref,
-         @NonNullDecl RemoveReason reason,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          if (reason != RemoveReason.UNLOAD) {
             UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
@@ -151,9 +143,9 @@ public class FarmingSystems {
       public void tick(
          float dt,
          int index,
-         @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-         @NonNullDecl Store<EntityStore> store,
-         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          CoopResidentComponent coopResidentComponent = archetypeChunk.getComponent(index, CoopResidentComponent.getComponentType());
          if (coopResidentComponent != null) {
@@ -193,10 +185,7 @@ public class FarmingSystems {
 
       @Override
       public void onEntityAdded(
-         @NonNullDecl Ref<ChunkStore> ref,
-         @NonNullDecl AddReason reason,
-         @NonNullDecl Store<ChunkStore> store,
-         @NonNullDecl CommandBuffer<ChunkStore> commandBuffer
+         @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          CoopBlock coopBlock = commandBuffer.getComponent(ref, CoopBlock.getComponentType());
          if (coopBlock != null) {
@@ -219,10 +208,7 @@ public class FarmingSystems {
 
       @Override
       public void onEntityRemove(
-         @NonNullDecl Ref<ChunkStore> ref,
-         @NonNullDecl RemoveReason reason,
-         @NonNullDecl Store<ChunkStore> store,
-         @NonNullDecl CommandBuffer<ChunkStore> commandBuffer
+         @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          if (reason != RemoveReason.UNLOAD) {
             CoopBlock coop = commandBuffer.getComponent(ref, CoopBlock.getComponentType());
@@ -253,7 +239,7 @@ public class FarmingSystems {
          }
       }
 
-      @NullableDecl
+      @Nullable
       @Override
       public Query<ChunkStore> getQuery() {
          return QUERY;

@@ -17,11 +17,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import javax.annotation.Nonnull;
 
 public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
    @Override
-   public void tick(float dt, int systemIndex, @NonNullDecl Store<EntityStore> store) {
+   public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
       if (worldSomnolence.getState() instanceof WorldSlumber slumber) {
@@ -33,8 +33,9 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
             Instant wakeUpTime = computeWakeupTime(slumber);
             timeResource.setGameTime(wakeUpTime, world, store);
             store.forEachEntityParallel(PlayerSomnolence.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
-               PlayerSomnolence somnolence = archetypeChunk.getComponent(index, PlayerSomnolence.getComponentType());
-               if (somnolence.getSleepState() instanceof PlayerSleep.Slumber) {
+               PlayerSomnolence somnolenceComponent = archetypeChunk.getComponent(index, PlayerSomnolence.getComponentType());
+               assert somnolenceComponent != null;
+               if (somnolenceComponent.getSleepState() instanceof PlayerSleep.Slumber) {
                   Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                   commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.MorningWakeUp.createComponent(timeResource));
                }
@@ -43,14 +44,14 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
       }
    }
 
-   private static Instant computeWakeupTime(WorldSlumber slumber) {
+   private static Instant computeWakeupTime(@Nonnull WorldSlumber slumber) {
       float progress = slumber.getProgressSeconds() / slumber.getIrlDurationSeconds();
       long totalNanos = Duration.between(slumber.getStartInstant(), slumber.getTargetInstant()).toNanos();
       long progressNanos = (long)((float)totalNanos * progress);
       return slumber.getStartInstant().plusNanos(progressNanos);
    }
 
-   private static boolean isSomeoneAwake(ComponentAccessor<EntityStore> store) {
+   private static boolean isSomeoneAwake(@Nonnull ComponentAccessor<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       Collection<PlayerRef> playerRefs = world.getPlayerRefs();
       if (playerRefs.isEmpty()) {
@@ -60,12 +61,12 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
       Iterator var3 = playerRefs.iterator();
       if (var3.hasNext()) {
          PlayerRef playerRef = (PlayerRef)var3.next();
-         PlayerSomnolence somnolence = store.getComponent(playerRef.getReference(), PlayerSomnolence.getComponentType());
-         if (somnolence == null) {
+         PlayerSomnolence somnolenceComponent = store.getComponent(playerRef.getReference(), PlayerSomnolence.getComponentType());
+         if (somnolenceComponent == null) {
             return true;
          }
 
-         PlayerSleep sleepState = somnolence.getSleepState();
+         PlayerSleep sleepState = somnolenceComponent.getSleepState();
          return sleepState instanceof PlayerSleep.FullyAwake;
       } else {
          return false;

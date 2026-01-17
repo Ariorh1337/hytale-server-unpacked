@@ -33,17 +33,17 @@ public class OpAddCommand extends CommandBase {
       UUID uuid = this.playerArg.get(context);
       PermissionsModule permissionsModule = PermissionsModule.get();
       String opGroup = "OP";
-      String rawInput = context.getInput(this.playerArg)[0];
-      Message displayMessage = Message.raw(rawInput).bold(true);
+      PlayerRef playerRef = Universe.get().getPlayer(uuid);
+      String displayName = playerRef != null ? playerRef.getUsername() : uuid.toString();
+      Message displayMessage = Message.raw(displayName).bold(true);
       Set<String> groups = permissionsModule.getGroupsForUser(uuid);
       if (groups.contains("OP")) {
          context.sendMessage(MESSAGE_COMMANDS_OP_ALREADY.param("username", displayMessage));
       } else {
          permissionsModule.addUserToGroup(uuid, "OP");
          context.sendMessage(MESSAGE_COMMANDS_OP_ADDED.param("username", displayMessage));
-         PlayerRef oppedPlayerRef = Universe.get().getPlayer(uuid);
-         if (oppedPlayerRef != null) {
-            oppedPlayerRef.sendMessage(MESSAGE_COMMANDS_OP_ADDED_TARGET);
+         if (playerRef != null) {
+            playerRef.sendMessage(MESSAGE_COMMANDS_OP_ADDED_TARGET);
          }
       }
    }

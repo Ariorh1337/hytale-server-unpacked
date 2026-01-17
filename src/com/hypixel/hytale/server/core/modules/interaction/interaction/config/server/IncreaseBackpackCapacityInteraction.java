@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class IncreaseBackpackCapacityInteraction extends SimpleInstantInteraction {
    public static final BuilderCodec<IncreaseBackpackCapacityInteraction> CODEC = BuilderCodec.builder(
@@ -36,7 +35,7 @@ public class IncreaseBackpackCapacityInteraction extends SimpleInstantInteractio
    }
 
    @Override
-   protected void firstRun(@NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+   protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       Ref<EntityStore> ref = context.getEntity();
       Player playerComponent = context.getCommandBuffer().getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {

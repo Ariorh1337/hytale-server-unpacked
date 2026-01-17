@@ -35,7 +35,7 @@ import com.hypixel.hytale.server.npc.metadata.CapturedNPCMetadata;
 import java.time.Instant;
 import java.util.Map;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class FarmingUtil {
    private static final int MAX_SECONDS_BETWEEN_TICKS = 15;
@@ -165,8 +165,10 @@ public class FarmingUtil {
       }
    }
 
-   @NullableDecl
-   public static CapturedNPCMetadata generateCapturedNPCMetadata(ComponentAccessor<EntityStore> componentAccessor, Ref<EntityStore> entityRef, int roleIndex) {
+   @Nullable
+   public static CapturedNPCMetadata generateCapturedNPCMetadata(
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> entityRef, int roleIndex
+   ) {
       PersistentModel persistentModel = componentAccessor.getComponent(entityRef, PersistentModel.getComponentType());
       if (persistentModel == null) {
          return null;

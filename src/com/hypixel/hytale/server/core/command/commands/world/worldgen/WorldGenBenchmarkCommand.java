@@ -20,6 +20,7 @@ import java.io.FileWriter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -105,51 +106,56 @@ public class WorldGenBenchmarkCommand extends CommandBase {
                long startTime = System.nanoTime();
                new Thread(
                      () -> {
-                        Set<CompletableFuture<GeneratedChunk>> currentChunks = new HashSet<>();
-                        long nextBroadcast = System.nanoTime();
+                        try {
+                           Set<CompletableFuture<GeneratedChunk>> currentChunks = new HashSet<>();
+                           long nextBroadcast = System.nanoTime();
 
-                        do {
-                           long thisTime = System.nanoTime();
-                           if (thisTime >= nextBroadcast) {
-                              world.execute(
-                                 () -> world.sendMessage(
-                                    MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_PROGRESS.param(
-                                       "percent", Math.round((1.0 - (double)generatingChunks.size() / chunkCount) * 1000.0) / 10.0
+                           do {
+                              long thisTime = System.nanoTime();
+                              if (thisTime >= nextBroadcast) {
+                                 world.execute(
+                                    () -> world.sendMessage(
+                                       MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_PROGRESS.param(
+                                          "percent", Math.round((1.0 - (double)generatingChunks.size() / chunkCount) * 1000.0) / 10.0
+                                       )
                                     )
-                                 )
-                              );
-                              nextBroadcast = thisTime + 5000000000L;
+                                 );
+                                 nextBroadcast = thisTime + 5000000000L;
+                              }
+
+                              currentChunks.removeIf(CompletableFuture::isDone);
+
+                              for (int i = currentChunks.size(); i < 20 && !generatingChunks.isEmpty(); i++) {
+                                 long index = generatingChunks.removeLong(generatingChunks.size() - 1);
+                                 CompletableFuture<GeneratedChunk> future = worldGen.generate(
+                                    seed, index, ChunkUtil.xOfChunkIndex(index), ChunkUtil.zOfChunkIndex(index), idx -> true
+                                 );
+                                 currentChunks.add(future);
+                              }
+                           } while (!currentChunks.isEmpty());
+
+                           String duration = FormatUtil.nanosToString(System.nanoTime() - startTime);
+                           world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_DONE.param("duration", duration)));
+                           world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVING));
+                           String fileName = "quant." + System.currentTimeMillis() + "." + (maxX - minX) + "x" + (maxZ - minZ) + "." + worldName + ".txt";
+                           File folder = new File("quantification");
+                           File file = new File("quantification" + File.separator + fileName);
+                           folder.mkdirs();
+
+                           try (FileWriter fw = new FileWriter(file)) {
+                              fw.write(benchmarkableWorldGen.getBenchmark().buildReport().join());
+                              world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_DONE.param("fileName", fileName)));
+                           } catch (Exception e) {
+                              HytaleLogger.getLogger().at(Level.SEVERE).withCause(e).log("Failed to save worldgen benchmark report!");
+                              world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_FAILED));
                            }
 
-                           currentChunks.removeIf(CompletableFuture::isDone);
-
-                           for (int i = currentChunks.size(); i < 20 && !generatingChunks.isEmpty(); i++) {
-                              long index = generatingChunks.removeLong(generatingChunks.size() - 1);
-                              CompletableFuture<GeneratedChunk> future = worldGen.generate(
-                                 seed, index, ChunkUtil.xOfChunkIndex(index), ChunkUtil.zOfChunkIndex(index), idx -> true
-                              );
-                              currentChunks.add(future);
-                           }
-                        } while (!currentChunks.isEmpty());
-
-                        String duration = FormatUtil.nanosToString(System.nanoTime() - startTime);
-                        world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_DONE.param("duration", duration)));
-                        world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVING));
-                        String fileName = "quant." + System.currentTimeMillis() + "." + (maxX - minX) + "x" + (maxZ - minZ) + "." + worldName + ".txt";
-                        File folder = new File("quantification");
-                        File file = new File("quantification" + File.separator + fileName);
-                        folder.mkdirs();
-
-                        try (FileWriter fw = new FileWriter(file)) {
-                           fw.write(benchmarkableWorldGen.getBenchmark().buildReport().join());
-                           world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_DONE.param("fileName", fileName)));
-                        } catch (Exception e) {
-                           HytaleLogger.getLogger().at(Level.SEVERE).withCause(e).log("Failed to save worldgen benchmark report!");
-                           world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_FAILED));
+                           benchmarkableWorldGen.getBenchmark().stop();
+                        } catch (RejectedExecutionException e) {
+                           HytaleLogger.getLogger().at(Level.SEVERE).log("Cancelled worldgen benchmark due to generator shutdown");
+                        } finally {
+                           IS_RUNNING.set(false);
                         }
-
-                        benchmarkableWorldGen.getBenchmark().stop();
-                        IS_RUNNING.set(false);
                      },
                      "WorldGenBenchmarkCommand"
                   )

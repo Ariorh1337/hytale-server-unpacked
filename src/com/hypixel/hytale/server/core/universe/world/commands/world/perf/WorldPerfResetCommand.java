@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class WorldPerfResetCommand extends AbstractWorldCommand {
    @Nonnull
@@ -21,7 +20,7 @@ public class WorldPerfResetCommand extends AbstractWorldCommand {
    }
 
    @Override
-   protected void execute(@NonNullDecl CommandContext context, @NonNullDecl World world, @NonNullDecl Store<EntityStore> store) {
+   protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       if (this.allFlag.provided(context)) {
          Universe.get().getWorlds().forEach((name, w) -> w.clearMetrics());
          context.sendMessage(MESSAGE_COMMANDS_WORLD_PERF_RESET_ALL);

@@ -13,9 +13,8 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public final class CloseWorldWhenBreakingDeviceSystems {
    private CloseWorldWhenBreakingDeviceSystems() {
@@ -24,10 +23,8 @@ public final class CloseWorldWhenBreakingDeviceSystems {
    private static void maybeCloseFragmentWorld(@Nullable PortalDevice device) {
       if (device != null) {
          World world = device.getDestinationWorld();
-         if (world != null) {
-            if (world.getPlayerCount() <= 0) {
-               Universe.get().removeWorld(world.getName());
-            }
+         if (world != null && world.getPlayerCount() <= 0) {
+            Universe.get().removeWorld(world.getName());
          }
       }
    }
@@ -39,27 +36,21 @@ public final class CloseWorldWhenBreakingDeviceSystems {
       }
 
       public void onComponentAdded(
-         @NonNullDecl Ref<ChunkStore> ref,
-         @NonNullDecl PortalDevice component,
-         @NonNullDecl Store<ChunkStore> store,
-         @NonNullDecl CommandBuffer<ChunkStore> commandBuffer
+         @Nonnull Ref<ChunkStore> ref, @Nonnull PortalDevice component, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
       }
 
       public void onComponentSet(
-         @NonNullDecl Ref<ChunkStore> ref,
-         @NullableDecl PortalDevice oldComponent,
-         @NonNullDecl PortalDevice newComponent,
-         @NonNullDecl Store<ChunkStore> store,
-         @NonNullDecl CommandBuffer<ChunkStore> commandBuffer
+         @Nonnull Ref<ChunkStore> ref,
+         @Nullable PortalDevice oldComponent,
+         @Nonnull PortalDevice newComponent,
+         @Nonnull Store<ChunkStore> store,
+         @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
       }
 
       public void onComponentRemoved(
-         @NonNullDecl Ref<ChunkStore> ref,
-         @NonNullDecl PortalDevice component,
-         @NonNullDecl Store<ChunkStore> store,
-         @NonNullDecl CommandBuffer<ChunkStore> commandBuffer
+         @Nonnull Ref<ChunkStore> ref, @Nonnull PortalDevice component, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          CloseWorldWhenBreakingDeviceSystems.maybeCloseFragmentWorld(component);
       }
@@ -73,19 +64,13 @@ public final class CloseWorldWhenBreakingDeviceSystems {
    public static class EntityRemoved extends RefSystem<ChunkStore> {
       @Override
       public void onEntityAdded(
-         @NonNullDecl Ref<ChunkStore> ref,
-         @NonNullDecl AddReason reason,
-         @NonNullDecl Store<ChunkStore> store,
-         @NonNullDecl CommandBuffer<ChunkStore> commandBuffer
+         @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
       }
 
       @Override
       public void onEntityRemove(
-         @NonNullDecl Ref<ChunkStore> ref,
-         @NonNullDecl RemoveReason reason,
-         @NonNullDecl Store<ChunkStore> store,
-         @NonNullDecl CommandBuffer<ChunkStore> commandBuffer
+         @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          PortalDevice device = store.getComponent(ref, PortalDevice.getComponentType());
          CloseWorldWhenBreakingDeviceSystems.maybeCloseFragmentWorld(device);

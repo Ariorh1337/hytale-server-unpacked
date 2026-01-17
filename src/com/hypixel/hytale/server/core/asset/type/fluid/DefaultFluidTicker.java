@@ -84,24 +84,8 @@ public class DefaultFluidTicker extends FluidTicker {
          int spreadFluidId = this.getSpreadFluidId(fluidId);
          int blockIdBelow = blockSectionBelow.get(worldX, worldY - 1, worldZ);
          BlockType blockBelow = blockMap.getAsset(blockIdBelow);
-         if (!isSolid(blockBelow)) {
-            DefaultFluidTicker.FluidCollisionConfig config = this.getCollisionMap().get(fluidBelowId);
-            if (config != null && !executeCollision(world, accessor, fluidSectionBelow, blockSectionBelow, config, worldX, worldY - 1, worldZ)) {
-               return BlockTickStrategy.CONTINUE;
-            }
-
-            if (fluidBelowId == 0 && !isSolid(blockBelow) || fluidBelowId == spreadFluidId && fluidLevelBelow < fluidBelow.getMaxFluidLevel()) {
-               int spreadId = this.getSpreadFluidId(fluidId);
-               Fluid spreadFluid = fluidMap.getAsset(spreadId);
-               boolean changed = fluidSectionBelow.setFluid(worldX, worldY - 1, worldZ, spreadId, (byte)spreadFluid.getMaxFluidLevel());
-               if (changed) {
-                  blockSectionBelow.setTicking(worldX, worldY - 1, worldZ, true);
-               }
-            }
-
-            return BlockTickStrategy.SLEEP;
-         } else {
-            if (fluidBelowId == 0) {
+         if (isSolid(blockBelow) || fluidBelowId != 0 && fluidBelowId != spreadFluidId && fluidBelowId == fluidId) {
+            if (fluidBelowId == 0 || fluidBelowId != spreadFluidId) {
                if (fluidLevel == 1 && fluid.getMaxFluidLevel() != 1) {
                   return BlockTickStrategy.SLEEP;
                }
@@ -159,6 +143,22 @@ public class DefaultFluidTicker extends FluidTicker {
                         }
                      }
                   }
+               }
+            }
+
+            return BlockTickStrategy.SLEEP;
+         } else {
+            DefaultFluidTicker.FluidCollisionConfig config = this.getCollisionMap().get(fluidBelowId);
+            if (config != null && !executeCollision(world, accessor, fluidSectionBelow, blockSectionBelow, config, worldX, worldY - 1, worldZ)) {
+               return BlockTickStrategy.CONTINUE;
+            }
+
+            if (fluidBelowId == 0 && !isSolid(blockBelow) || fluidBelowId == spreadFluidId && fluidLevelBelow < fluidBelow.getMaxFluidLevel()) {
+               int spreadId = this.getSpreadFluidId(fluidId);
+               Fluid spreadFluid = fluidMap.getAsset(spreadId);
+               boolean changed = fluidSectionBelow.setFluid(worldX, worldY - 1, worldZ, spreadId, (byte)spreadFluid.getMaxFluidLevel());
+               if (changed) {
+                  blockSectionBelow.setTicking(worldX, worldY - 1, worldZ, true);
                }
             }
 

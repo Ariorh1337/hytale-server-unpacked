@@ -25,7 +25,6 @@ import com.hypixel.hytale.server.worldgen.loader.biome.BiomeMaskJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
 import com.hypixel.hytale.server.worldgen.loader.prefab.BlockPlacementMaskJsonLoader;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
-import com.hypixel.hytale.server.worldgen.util.condition.DefaultBlockMaskCondition;
 import java.nio.file.Path;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
@@ -117,7 +116,7 @@ public class CavePrefabConfigJsonLoader extends JsonLoader<SeedStringResource, C
 
    @Nullable
    protected BlockMaskCondition loadBlockMask() {
-      BlockMaskCondition configuration = DefaultBlockMaskCondition.DEFAULT_TRUE;
+      BlockMaskCondition configuration = BlockMaskCondition.DEFAULT_TRUE;
       if (this.has("Mask")) {
          configuration = new BlockPlacementMaskJsonLoader(this.seed, this.dataFolder, this.getRaw("Mask")).load();
       }

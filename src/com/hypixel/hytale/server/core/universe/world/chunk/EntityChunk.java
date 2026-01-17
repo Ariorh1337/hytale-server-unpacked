@@ -111,14 +111,20 @@ public class EntityChunk implements Component<ChunkStore> {
    @Nonnull
    @Override
    public Component<ChunkStore> cloneSerializable() {
+      ComponentRegistry.Data<EntityStore> data = EntityStore.REGISTRY.getData();
       ObjectArrayList<Holder<EntityStore>> entityHoldersClone = new ObjectArrayList<>(this.entityHolders.size() + this.entityReferences.size());
 
       for (Holder<EntityStore> entityHolder : this.entityHolders) {
-         entityHoldersClone.add(entityHolder.clone());
+         if (entityHolder.getArchetype().hasSerializableComponents(data)) {
+            entityHoldersClone.add(entityHolder.cloneSerializable(data));
+         }
       }
 
       for (Ref<EntityStore> reference : this.entityReferences) {
-         entityHoldersClone.add(reference.getStore().copySerializableEntity(reference));
+         Store<EntityStore> store = reference.getStore();
+         if (store.getArchetype(reference).hasSerializableComponents(data)) {
+            entityHoldersClone.add(store.copySerializableEntity(reference));
+         }
       }
 
       return new EntityChunk(entityHoldersClone, new HashSet<>());
@@ -308,6 +314,7 @@ public class EntityChunk implements Component<ChunkStore> {
                   LOGGER.at(Level.SEVERE).log("Empty archetype entity holder: %s (#%d)", holder, i);
                   holders[i] = holders[--holderCount];
                   holders[holderCount] = holder;
+                  worldChunkComponent.markNeedsSaving();
                } else if (archetype.count() == 1 && archetype.contains(Nameplate.getComponentType())) {
                   LOGGER.at(Level.SEVERE).log("Nameplate only entity holder: %s (#%d)", holder, i);
                   holders[i] = holders[--holderCount];

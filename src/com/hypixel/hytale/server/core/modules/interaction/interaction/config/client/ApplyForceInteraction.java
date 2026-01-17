@@ -43,7 +43,6 @@ import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ApplyForceInteraction extends SimpleInteraction {
    @Nonnull
@@ -200,7 +199,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
 
    @Override
    protected void tick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       InteractionSyncData contextState = context.getState();
       if (firstRun) {
@@ -232,7 +231,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
 
    @Override
    protected void simulateTick0(
-      boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       InteractionSyncData contextState = context.getState();
       Ref<EntityStore> entityRef = context.getEntity();

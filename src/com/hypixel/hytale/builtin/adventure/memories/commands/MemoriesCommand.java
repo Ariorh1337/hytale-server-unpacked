@@ -9,5 +9,6 @@ public class MemoriesCommand extends AbstractCommandCollection {
       this.addSubCommand(new MemoriesCapacityCommand());
       this.addSubCommand(new MemoriesLevelCommand());
       this.addSubCommand(new MemoriesUnlockCommand());
+      this.addSubCommand(new MemoriesSetCountCommand());
    }
 }

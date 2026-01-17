@@ -1070,7 +1070,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       if (this.qualityId != null) {
          this.qualityIndex = itemQualityAssetMap.getIndexOrDefault(this.qualityId, 0);
          ItemQuality itemQuality = itemQualityAssetMap.getAsset(this.qualityIndex);
-         if (this.itemEntityConfig == null && itemQuality != null) {
+         if (itemQuality != null) {
             this.itemEntityConfig = itemQuality.getItemEntityConfig();
          }
       }

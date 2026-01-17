@@ -48,7 +48,9 @@ public class TeleportTopCommand extends AbstractPlayerCommand {
          Vector3f headRotation = headRotationComponent.getRotation().clone();
          int height = worldChunk.getHeight(MathUtil.floor(position.getX()), MathUtil.floor(position.getZ()));
          store.ensureAndGetComponent(ref, TeleportHistory.getComponentType()).append(world, position.clone(), headRotation.clone(), "Underground");
-         store.addComponent(ref, Teleport.getComponentType(), new Teleport(new Vector3d(position.getX(), height + 2, position.getZ()), Vector3f.NaN));
+         store.addComponent(
+            ref, Teleport.getComponentType(), Teleport.createForPlayer(new Vector3d(position.getX(), height + 2, position.getZ()), Vector3f.NaN)
+         );
          context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_TOP);
       }
    }
