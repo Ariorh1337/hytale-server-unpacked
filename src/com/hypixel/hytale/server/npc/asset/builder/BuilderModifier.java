@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.asset.builder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.schema.NamedSchema;
 import com.hypixel.hytale.codec.schema.SchemaContext;
@@ -200,7 +201,9 @@ public class BuilderModifier {
          String combatConfig = null;
          JsonElement combatConfigValue = modify.get("_CombatConfig");
          if (combatConfigValue != null) {
-            combatConfig = combatConfigValue.getAsString();
+            combatConfig = BalanceAsset.CHILD_ASSET_CODEC.decode(BsonUtil.translateJsonToBson(combatConfigValue), extraInfo);
+            extraInfo.getValidationResults()._processValidationResults();
+            extraInfo.getValidationResults().logOrThrowValidatorExceptions(HytaleLogger.getLogger());
          }
 
          Map<String, String> interactionVars = null;
@@ -287,9 +290,11 @@ public class BuilderModifier {
          s.setProperties(props);
          props.put("_ExportStates", new ArraySchema(new StringSchema()));
          props.put("_InterfaceParameters", new ObjectSchema());
-         StringSchema combatConfig = new StringSchema();
-         combatConfig.setHytaleAssetRef(BalanceAsset.class.getSimpleName());
-         props.put("_CombatConfig", combatConfig);
+         Schema combatConfigKeySchema = context.refDefinition(Codec.STRING);
+         combatConfigKeySchema.setTitle("Reference to " + BalanceAsset.class.getSimpleName());
+         Schema combatConfigNestedSchema = context.refDefinition(BalanceAsset.CHILD_ASSET_CODEC);
+         Schema combatConfigSchema = Schema.anyOf(combatConfigKeySchema, combatConfigNestedSchema);
+         props.put("_CombatConfig", combatConfigSchema);
          ObjectSchema interactionVars = new ObjectSchema();
          interactionVars.setTitle("Map");
          Schema childSchema = context.refDefinition(RootInteraction.CHILD_ASSET_CODEC);

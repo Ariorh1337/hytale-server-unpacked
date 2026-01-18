@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.npc.asset.builder.SpawnableWithModelBuilder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.IntHolder;
@@ -84,7 +85,7 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    protected final EnumSet<RoleDebugFlags> parsedDebugFlags = EnumSet.noneOf(RoleDebugFlags.class);
    protected String debugFlags;
    protected double inertia;
-   protected double knockbackScale;
+   protected final DoubleHolder knockbackScale = new DoubleHolder();
    protected String opaqueBlockSet;
    protected boolean applyAvoidance;
    protected double entityAvoidanceStrength;
@@ -274,7 +275,7 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       this.getDouble(
          data,
          "KnockbackScale",
-         v -> this.knockbackScale = v,
+         this.knockbackScale,
          1.0,
          DoubleSingleValidator.greaterEqual0(),
          BuilderDescriptorState.Stable,
@@ -964,8 +965,8 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       return this.inertia;
    }
 
-   public double getKnockbackScale() {
-      return this.knockbackScale;
+   public double getKnockbackScale(@Nonnull BuilderSupport support) {
+      return this.knockbackScale.get(support.getExecutionContext());
    }
 
    @Nullable

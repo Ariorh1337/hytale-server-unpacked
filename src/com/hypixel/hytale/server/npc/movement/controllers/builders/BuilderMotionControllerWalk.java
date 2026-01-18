@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.NumberArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
@@ -37,9 +38,9 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
    private final DoubleHolder minJumpDistance = new DoubleHolder();
    private final DoubleHolder jumpBlending = new DoubleHolder();
    private final DoubleHolder jumpDescentBlending = new DoubleHolder();
-   private double climbSpeedMult;
-   private double climbSpeedPow;
-   private double climbSpeedConst;
+   private final DoubleHolder climbSpeedMult = new DoubleHolder();
+   private final DoubleHolder climbSpeedPow = new DoubleHolder();
+   private final DoubleHolder climbSpeedConst = new DoubleHolder();
    private final DoubleHolder minDescentAnimationHeight = new DoubleHolder();
    private final DoubleHolder descendFlatness = new DoubleHolder();
    private final DoubleHolder descendSpeedCompensation = new DoubleHolder();
@@ -56,8 +57,8 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
    private float hoverFreq;
    private double maxWalkSpeedAfterHitMultiplier;
    private String fenceBlockSet;
-   private MotionControllerWalk.DescentAnimationType descentAnimationType;
-   private MotionControllerWalk.AscentAnimationType ascentAnimationType;
+   private final EnumHolder<MotionControllerWalk.DescentAnimationType> descentAnimationType = new EnumHolder<>();
+   private final EnumHolder<MotionControllerWalk.AscentAnimationType> ascentAnimationType = new EnumHolder<>();
 
    @Nonnull
    public MotionControllerWalk build(@Nonnull BuilderSupport builderSupport) {
@@ -235,7 +236,7 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       this.getEnum(
          data,
          "AscentAnimationType",
-         v -> this.ascentAnimationType = v,
+         this.ascentAnimationType,
          MotionControllerWalk.AscentAnimationType.class,
          MotionControllerWalk.AscentAnimationType.Walk,
          BuilderDescriptorState.Stable,
@@ -245,7 +246,7 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       this.getDouble(
          data,
          "ClimbSpeedMult",
-         v -> this.climbSpeedMult = v,
+         this.climbSpeedMult,
          0.0,
          null,
          BuilderDescriptorState.WorkInProgress,
@@ -255,7 +256,7 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       this.getDouble(
          data,
          "ClimbSpeedPow",
-         v -> this.climbSpeedPow = v,
+         this.climbSpeedPow,
          1.0,
          null,
          BuilderDescriptorState.WorkInProgress,
@@ -265,7 +266,7 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       this.getDouble(
          data,
          "ClimbSpeedConst",
-         v -> this.climbSpeedConst = v,
+         this.climbSpeedConst,
          5.0,
          DoubleSingleValidator.greater0(),
          BuilderDescriptorState.WorkInProgress,
@@ -305,7 +306,7 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       this.getEnum(
          data,
          "DescentAnimationType",
-         v -> this.descentAnimationType = v,
+         this.descentAnimationType,
          MotionControllerWalk.DescentAnimationType.class,
          MotionControllerWalk.DescentAnimationType.Fall,
          BuilderDescriptorState.Experimental,
@@ -484,16 +485,16 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       return this.maxClimbHeight.get(support.getExecutionContext());
    }
 
-   public double getClimbSpeedMult() {
-      return this.climbSpeedMult;
+   public double getClimbSpeedMult(BuilderSupport support) {
+      return this.climbSpeedMult.get(support.getExecutionContext());
    }
 
-   public double getClimbSpeedPow() {
-      return this.climbSpeedPow;
+   public double getClimbSpeedPow(BuilderSupport support) {
+      return this.climbSpeedPow.get(support.getExecutionContext());
    }
 
-   public double getClimbSpeedConst() {
-      return this.climbSpeedConst;
+   public double getClimbSpeedConst(BuilderSupport support) {
+      return this.climbSpeedConst.get(support.getExecutionContext());
    }
 
    public double getDescendForwardAmount(@Nonnull BuilderSupport builderSupport) {
@@ -573,12 +574,12 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       return this.jumpDescentBlending.get(support.getExecutionContext());
    }
 
-   public MotionControllerWalk.DescentAnimationType getDescentAnimationType() {
-      return this.descentAnimationType;
+   public MotionControllerWalk.DescentAnimationType getDescentAnimationType(BuilderSupport support) {
+      return this.descentAnimationType.get(support.getExecutionContext());
    }
 
-   public MotionControllerWalk.AscentAnimationType getAscentAnimationType() {
-      return this.ascentAnimationType;
+   public MotionControllerWalk.AscentAnimationType getAscentAnimationType(BuilderSupport support) {
+      return this.ascentAnimationType.get(support.getExecutionContext());
    }
 
    public double getDescentSteepness(@Nonnull BuilderSupport support) {

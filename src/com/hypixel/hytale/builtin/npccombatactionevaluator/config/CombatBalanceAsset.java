@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.npc.config.balancing.BalanceAsset;
 import javax.annotation.Nonnull;
 
 public class CombatBalanceAsset extends BalanceAsset {
-   public static final BuilderCodec<CombatBalanceAsset> CODEC = BuilderCodec.builder(CombatBalanceAsset.class, CombatBalanceAsset::new, ABSTRACT_CODEC)
+   public static final BuilderCodec<CombatBalanceAsset> CODEC = BuilderCodec.builder(CombatBalanceAsset.class, CombatBalanceAsset::new, BASE_CODEC)
       .documentation("A balance asset which also configures a combat action evaluator.")
       .<Float>appendInherited(
          new KeyedCodec<>("TargetMemoryDuration", Codec.FLOAT),

@@ -167,6 +167,10 @@ public class BlockPattern {
          }
 
          blockId = BlockType.getAssetMap().getIndex(blockText);
+         if (blockId == Integer.MIN_VALUE) {
+            LOGGER.at(Level.WARNING).log("Invalid block name '%s' - using empty block", blockText);
+            return 0;
+         }
       }
 
       return blockId;

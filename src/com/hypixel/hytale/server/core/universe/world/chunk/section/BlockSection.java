@@ -604,11 +604,13 @@ public class BlockSection implements Component<ChunkStore> {
             if (blockId != 0) {
                int rotation = this.rotationSection.get(idx);
                BlockType blockType = blockTypeMap.getAsset(blockId);
-               BlockBoundingBoxes asset = hitBoxAssetMap.getAsset(blockType.getHitboxTypeIndex());
-               if (asset != BlockBoundingBoxes.UNIT_BOX) {
-                  double boxMaximumExtent = asset.get(rotation).getBoundingBox().getMaximumExtent();
-                  if (boxMaximumExtent > maximumExtent) {
-                     maximumExtent = boxMaximumExtent;
+               if (blockType != null && !blockType.isUnknown()) {
+                  BlockBoundingBoxes asset = hitBoxAssetMap.getAsset(blockType.getHitboxTypeIndex());
+                  if (asset != BlockBoundingBoxes.UNIT_BOX) {
+                     double boxMaximumExtent = asset.get(rotation).getBoundingBox().getMaximumExtent();
+                     if (boxMaximumExtent > maximumExtent) {
+                        maximumExtent = boxMaximumExtent;
+                     }
                   }
                }
             }
