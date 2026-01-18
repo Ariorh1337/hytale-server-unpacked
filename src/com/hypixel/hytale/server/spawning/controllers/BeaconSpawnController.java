@@ -72,6 +72,10 @@ public class BeaconSpawnController extends SpawnController<NPCBeaconSpawnJob> {
       assert legacySpawnBeaconComponent != null;
       BeaconSpawnWrapper wrapper = legacySpawnBeaconComponent.getSpawnWrapper();
       RoleSpawnParameters spawn = wrapper.pickRole(ThreadLocalRandom.current());
+      if (spawn == null) {
+         return null;
+      }
+
       String spawnId = spawn.getId();
       int roleIndex = NPCPlugin.get().getIndex(spawnId);
       if (roleIndex >= 0 && !this.unspawnableRoles.contains(roleIndex)) {

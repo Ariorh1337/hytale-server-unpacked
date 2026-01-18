@@ -107,53 +107,55 @@ public class SpawnBeacon extends Entity {
 
       for (int i = 0; i < concurrentSpawns; i++) {
          RoleSpawnParameters roleSpawnParameters = this.spawnWrapper.pickRole(ThreadLocalRandom.current());
-         int roleIndex = NPCPlugin.get().getIndex(roleSpawnParameters.getId());
-         if (!this.unspawnableRoles.contains(roleIndex)) {
-            ISpawnableWithModel spawnable = (ISpawnableWithModel)NPCPlugin.get().tryGetCachedValidRole(roleIndex);
-            this.spawningContext.setSpawnable(spawnable);
-            if (!positionSelector.hasPositionsForRole(roleIndex)) {
-               this.markUnspawnable(ref, roleIndex, store);
-               this.spawningContext.releaseFull();
-            } else {
-               Vector3d targetPos = targetRef.getStore().getComponent(targetRef, TransformComponent.getComponentType()).getPosition();
-               if (!positionSelector.prepareSpawnContext(targetPos, concurrentSpawns, roleIndex, this.spawningContext, this.spawnWrapper)) {
+         if (roleSpawnParameters != null) {
+            int roleIndex = NPCPlugin.get().getIndex(roleSpawnParameters.getId());
+            if (!this.unspawnableRoles.contains(roleIndex)) {
+               ISpawnableWithModel spawnable = (ISpawnableWithModel)NPCPlugin.get().tryGetCachedValidRole(roleIndex);
+               this.spawningContext.setSpawnable(spawnable);
+               if (!positionSelector.hasPositionsForRole(roleIndex)) {
+                  this.markUnspawnable(ref, roleIndex, store);
                   this.spawningContext.releaseFull();
                } else {
-                  Vector3d position = this.spawningContext.newPosition();
-                  Vector3f rotation = this.spawningContext.newRotation();
-                  FlockAsset flockDefinition = roleSpawnParameters.getFlockDefinition();
-                  int flockSize = flockDefinition != null ? flockDefinition.pickFlockSize() : 1;
+                  Vector3d targetPos = targetRef.getStore().getComponent(targetRef, TransformComponent.getComponentType()).getPosition();
+                  if (!positionSelector.prepareSpawnContext(targetPos, concurrentSpawns, roleIndex, this.spawningContext, this.spawnWrapper)) {
+                     this.spawningContext.releaseFull();
+                  } else {
+                     Vector3d position = this.spawningContext.newPosition();
+                     Vector3f rotation = this.spawningContext.newRotation();
+                     FlockAsset flockDefinition = roleSpawnParameters.getFlockDefinition();
+                     int flockSize = flockDefinition != null ? flockDefinition.pickFlockSize() : 1;
 
-                  try {
-                     Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get()
-                        .spawnEntity(
-                           store,
+                     try {
+                        Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get()
+                           .spawnEntity(
+                              store,
+                              roleIndex,
+                              position,
+                              rotation,
+                              this.spawningContext.getModel(),
+                              (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store)
+                           );
+                        Ref<EntityStore> npcRef = npcPair.first();
+                        NPCEntity npcComponent = npcPair.second();
+                        FlockPlugin.trySpawnFlock(
+                           npcRef,
+                           npcComponent,
                            roleIndex,
                            position,
                            rotation,
-                           this.spawningContext.getModel(),
-                           (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store)
+                           flockSize,
+                           flockDefinition,
+                           null,
+                           (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store),
+                           store
                         );
-                     Ref<EntityStore> npcRef = npcPair.first();
-                     NPCEntity npcComponent = npcPair.second();
-                     FlockPlugin.trySpawnFlock(
-                        npcRef,
-                        npcComponent,
-                        roleIndex,
-                        position,
-                        rotation,
-                        flockSize,
-                        flockDefinition,
-                        null,
-                        (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store),
-                        store
-                     );
-                     spawnedCount++;
-                  } catch (RuntimeException e) {
-                     LOGGER.at(Level.WARNING).log("Failed to create %s: %s", NPCPlugin.get().getName(roleIndex), e.getMessage());
-                     this.markUnspawnable(ref, roleIndex, store);
-                  } finally {
-                     this.spawningContext.releaseFull();
+                        spawnedCount++;
+                     } catch (RuntimeException e) {
+                        LOGGER.at(Level.WARNING).log("Failed to create %s: %s", NPCPlugin.get().getName(roleIndex), e.getMessage());
+                        this.markUnspawnable(ref, roleIndex, store);
+                     } finally {
+                        this.spawningContext.releaseFull();
+                     }
                   }
                }
             }
