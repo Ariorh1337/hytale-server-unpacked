@@ -37,7 +37,6 @@ public class PlayerEffectClearCommand extends AbstractPlayerCommand {
 
    private static class PlayerEffectClearOtherCommand extends CommandBase {
       private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
-      private static final Message MESSAGE_EFFECTS_CLEARED_OTHER = Message.translation("server.commands.player.effect.clear.success.other");
       @Nonnull
       private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.argtype.player.desc", ArgTypes.PLAYER_REF);
 
@@ -53,19 +52,23 @@ public class PlayerEffectClearCommand extends AbstractPlayerCommand {
          if (ref != null && ref.isValid()) {
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData().getWorld();
-            world.execute(() -> {
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               if (playerComponent == null) {
-                  context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
-               } else {
-                  PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-                  assert playerRefComponent != null;
-                  EffectControllerComponent effectControllerComponent = store.getComponent(ref, EffectControllerComponent.getComponentType());
-                  assert effectControllerComponent != null;
-                  effectControllerComponent.clearEffects(ref, store);
-                  context.sendMessage(MESSAGE_EFFECTS_CLEARED_OTHER.param("username", playerRefComponent.getUsername()));
+            world.execute(
+               () -> {
+                  Player playerComponent = store.getComponent(ref, Player.getComponentType());
+                  if (playerComponent == null) {
+                     context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
+                  } else {
+                     PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+                     assert playerRefComponent != null;
+                     EffectControllerComponent effectControllerComponent = store.getComponent(ref, EffectControllerComponent.getComponentType());
+                     assert effectControllerComponent != null;
+                     effectControllerComponent.clearEffects(ref, store);
+                     context.sendMessage(
+                        Message.translation("server.commands.player.effect.clear.success.other").param("username", playerRefComponent.getUsername())
+                     );
+                  }
                }
-            });
+            );
          } else {
             context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
          }

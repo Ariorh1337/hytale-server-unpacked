@@ -4,14 +4,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ProtocolVersion {
-   private final String hash;
+   private final int crc;
 
-   public ProtocolVersion(String hash) {
-      this.hash = hash;
+   public ProtocolVersion(int crc) {
+      this.crc = crc;
    }
 
-   public String getHash() {
-      return this.hash;
+   public int getCrc() {
+      return this.crc;
    }
 
    @Override
@@ -20,7 +20,7 @@ public class ProtocolVersion {
          return true;
       } else if (o != null && this.getClass() == o.getClass()) {
          ProtocolVersion that = (ProtocolVersion)o;
-         return this.hash != null ? this.hash.equals(that.hash) : that.hash == null;
+         return this.crc == that.crc;
       } else {
          return false;
       }
@@ -28,12 +28,12 @@ public class ProtocolVersion {
 
    @Override
    public int hashCode() {
-      return 31 * (this.hash != null ? this.hash.hashCode() : 0);
+      return 31 * this.crc;
    }
 
    @Nonnull
    @Override
    public String toString() {
-      return "ProtocolVersion{hash='" + this.hash + "'}";
+      return "ProtocolVersion{crc=" + this.crc + "}";
    }
 }

@@ -61,7 +61,7 @@ public class SimpleCraftingWindow extends CraftingWindow implements MaterialCont
             this.invalidateExtraResources();
             if (accepted) {
                String completedState = craftRecipe.getTimeSeconds() > 0.0F ? "CraftCompleted" : "CraftCompletedInstant";
-               this.setBlockInteractionState(completedState, world, 70);
+               this.setBlockInteractionState(completedState, world);
                if (this.bench.getCompletedSoundEventIndex() != 0) {
                   Vector3d pos = new Vector3d();
                   this.blockType.getBlockCenter(this.rotationIndex, pos);
@@ -70,7 +70,7 @@ public class SimpleCraftingWindow extends CraftingWindow implements MaterialCont
                }
             }
          } else if (action instanceof TierUpgradeAction && craftingManager.startTierUpgrade(ref, store, this)) {
-            this.setBlockInteractionState("BenchUpgrading", world, 70);
+            this.setBlockInteractionState("BenchUpgrading", world);
             if (this.bench.getBenchUpgradeSoundEventIndex() != 0) {
                Vector3d pos = new Vector3d();
                this.blockType.getBlockCenter(this.rotationIndex, pos);

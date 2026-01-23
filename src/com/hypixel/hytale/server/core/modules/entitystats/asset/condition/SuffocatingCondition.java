@@ -35,10 +35,10 @@ public class SuffocatingCondition extends Condition {
    @Override
    public boolean eval0(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> ref, @Nonnull Instant currentTime) {
       if (EntityUtils.getEntity(ref, componentAccessor) instanceof LivingEntity livingEntity) {
-         World world = componentAccessor.getExternalData().getWorld();
+         World var16 = componentAccessor.getExternalData().getWorld();
          Transform lookVec = TargetUtil.getLook(ref, componentAccessor);
          Vector3d position = lookVec.getPosition();
-         ChunkStore chunkStore = world.getChunkStore();
+         ChunkStore chunkStore = var16.getChunkStore();
          long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x, position.z);
          Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
          if (chunkRef != null && chunkRef.isValid()) {

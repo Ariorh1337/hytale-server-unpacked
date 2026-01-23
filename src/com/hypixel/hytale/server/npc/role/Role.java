@@ -98,6 +98,8 @@ public class Role implements IAnnotatedComponentCollection {
    protected final double separationFarRadiusTarget;
    protected final boolean applySeparation;
    protected final Vector3d lastSeparationSteering = new Vector3d();
+   @Nullable
+   protected final float[] headPitchAngleRange;
    protected final boolean stayInEnvironment;
    protected final String allowedEnvironments;
    @Nullable
@@ -213,6 +215,12 @@ public class Role implements IAnnotatedComponentCollection {
       this.separationNearRadiusTarget = builder.getSeparationNearRadiusTarget();
       this.separationFarRadiusTarget = builder.getSeparationFarRadiusTarget();
       this.applySeparation = builder.isApplySeparation(builderSupport);
+      if (builder.isOverridingHeadPitchAngle(builderSupport)) {
+         this.headPitchAngleRange = builder.getHeadPitchAngleRange(builderSupport);
+      } else {
+         this.headPitchAngleRange = null;
+      }
+
       this.stayInEnvironment = builder.isStayingInEnvironment();
       this.allowedEnvironments = builder.getAllowedEnvironments();
       this.entityAvoidanceStrength = builder.getEntityAvoidanceStrength();
@@ -571,6 +579,7 @@ public class Role implements IAnnotatedComponentCollection {
          motionController.setRole(this);
          motionController.setInertia(this.inertia);
          motionController.setKnockbackScale(this.knockbackScale);
+         motionController.setHeadPitchAngleRange(this.headPitchAngleRange);
          if (boundingBox != null && model != null) {
             motionController.updateModelParameters(ref, model, boundingBox, componentAccessor);
             motionController.updatePhysicsValues(model.getPhysicsValues());

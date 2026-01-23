@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.entity.entities.player.windows;
 
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -7,9 +8,9 @@ import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -64,35 +65,32 @@ public abstract class BlockWindow extends Window implements ValidatedWindow {
    }
 
    @Override
-   public boolean validate() {
-      PlayerRef playerRef = this.getPlayerRef();
-      if (playerRef == null) {
-         return false;
-      }
-
-      Ref<EntityStore> ref = playerRef.getReference();
-      if (ref == null) {
-         return false;
-      }
-
-      Store<EntityStore> store = ref.getStore();
+   public boolean validate(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
-      if (transformComponent.getPosition().distanceSquaredTo(this.x, this.y, this.z) > this.maxDistanceSqr) {
+      if (transformComponent != null && !(transformComponent.getPosition().distanceSquaredTo(this.x, this.y, this.z) > this.maxDistanceSqr)) {
+         ChunkStore chunkStore = world.getChunkStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(this.x, this.z);
+         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+         if (chunkRef != null && chunkRef.isValid()) {
+            Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+            WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+            if (worldChunkComponent == null) {
+               return false;
+            }
+
+            BlockType currentBlockType = worldChunkComponent.getBlockType(this.x, this.y, this.z);
+            if (currentBlockType == null) {
+               return false;
+            }
+
+            Item currentItem = currentBlockType.getItem();
+            return currentItem == null ? false : currentItem.equals(this.blockType.getItem());
+         } else {
+            return false;
+         }
+      } else {
          return false;
       }
-
-      WorldChunk worldChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(this.x, this.z));
-      if (worldChunk == null) {
-         return false;
-      }
-
-      BlockType currentBlockType = worldChunk.getBlockType(this.x, this.y, this.z);
-      if (currentBlockType == null) {
-         return false;
-      }
-
-      Item currentItem = currentBlockType.getItem();
-      return currentItem == null ? false : currentItem.equals(this.blockType.getItem());
    }
 }

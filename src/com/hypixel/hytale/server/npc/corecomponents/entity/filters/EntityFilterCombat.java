@@ -32,7 +32,7 @@ public class EntityFilterCombat extends EntityFilterBase {
 
    @Override
    public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-      List<InterpretedCombatData> combatData = CombatViewSystems.getCombatData(targetRef);
+      List<InterpretedCombatData> combatData = CombatViewSystems.getCombatData(targetRef, store);
 
       for (int i = 0; i < combatData.size(); i++) {
          InterpretedCombatData data = combatData.get(i);

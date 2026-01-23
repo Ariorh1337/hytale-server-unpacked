@@ -254,7 +254,9 @@ public class KnockbackPredictionSystems {
          TransformComponent.getComponentType(),
          KnockbackSimulation.getComponentType(),
          BOUNDING_BOX_COMPONENT_TYPE,
-         MovementStatesComponent.getComponentType()
+         MovementStatesComponent.getComponentType(),
+         MovementManager.getComponentType(),
+         PlayerRef.getComponentType()
       );
       private static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(new SystemDependency<>(Order.AFTER, PlayerSystems.ProcessPlayerInput.class));
 

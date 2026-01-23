@@ -227,7 +227,7 @@ public final class WorldUtil {
             while (y >= yBottom) {
                int blockId = chunkSection.get(x, y--, z);
                int fluidId = fluidSectionComponent != null ? fluidSectionComponent.getFluidId(x, y, z) : 0;
-               if (blockId != 0 || fluidId == 0) {
+               if (blockId != 0 || fluidId != 0) {
                   BlockType blockType = assetMap.getAsset(blockId);
                   if (blockType != null && !blockType.isUnknown()) {
                      int filler = chunkSection.getFiller(x, y, z);

@@ -22,7 +22,6 @@ import javax.annotation.Nonnull;
 
 public class PlayerEffectApplyCommand extends AbstractPlayerCommand {
    private static final float DEFAULT_DURATION = 100.0F;
-   private static final Message MESSAGE_EFFECT_APPLIED_SELF = Message.translation("server.commands.player.effect.apply.success.self");
    @Nonnull
    private final RequiredArg<EntityEffect> effectArg = this.withRequiredArg("effect", "server.commands.player.effect.apply.effect.desc", ArgTypes.EFFECT_ASSET);
    @Nonnull
@@ -46,12 +45,11 @@ public class PlayerEffectApplyCommand extends AbstractPlayerCommand {
       EntityEffect effect = this.effectArg.get(context);
       Float duration = this.durationArg.get(context);
       effectControllerComponent.addEffect(ref, effect, duration, OverlapBehavior.OVERWRITE, store);
-      context.sendMessage(MESSAGE_EFFECT_APPLIED_SELF.param("effect", effect.getId()).param("duration", duration));
+      context.sendMessage(Message.translation("server.commands.player.effect.apply.success.self").param("effect", effect.getId()).param("duration", duration));
    }
 
    private static class PlayerEffectApplyOtherCommand extends CommandBase {
       private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
-      private static final Message MESSAGE_EFFECT_APPLIED_OTHER = Message.translation("server.commands.player.effect.apply.success.other");
       @Nonnull
       private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.argtype.player.desc", ArgTypes.PLAYER_REF);
       @Nonnull
@@ -90,7 +88,8 @@ public class PlayerEffectApplyCommand extends AbstractPlayerCommand {
                      Float duration = this.durationArg.get(context);
                      effectControllerComponent.addEffect(ref, effect, duration, OverlapBehavior.OVERWRITE, store);
                      context.sendMessage(
-                        MESSAGE_EFFECT_APPLIED_OTHER.param("username", playerRefComponent.getUsername())
+                        Message.translation("server.commands.player.effect.apply.success.other")
+                           .param("username", playerRefComponent.getUsername())
                            .param("effect", effect.getId())
                            .param("duration", duration)
                      );

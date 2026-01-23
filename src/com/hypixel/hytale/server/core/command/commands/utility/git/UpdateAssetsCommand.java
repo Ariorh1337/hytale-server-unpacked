@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
 
 public class UpdateAssetsCommand extends AbstractCommandCollection {
    public UpdateAssetsCommand() {
-      super("assets", "server.commands.update.assets.desc");
+      super("assets", "server.commands.git.assets.desc");
       this.addSubCommand(new UpdateAssetsCommand.UpdateAssetsStatusCommand());
       this.addSubCommand(new UpdateAssetsCommand.UpdateAssetsResetCommand());
       this.addSubCommand(new UpdateAssetsCommand.UpdateAssetsPullCommand());
@@ -53,7 +53,7 @@ public class UpdateAssetsCommand extends AbstractCommandCollection {
                String commandDisplay = String.join(" ", processCommand);
 
                try {
-                  context.sendMessage(Message.translation("server.commands.update.running").param("cmd", commandDisplay));
+                  context.sendMessage(Message.translation("server.commands.git.running").param("cmd", commandDisplay));
                   Process process = new ProcessBuilder(processCommand).directory(gitPath.toFile()).start();
 
                   try {
@@ -62,21 +62,21 @@ public class UpdateAssetsCommand extends AbstractCommandCollection {
 
                      String line;
                      while ((line = reader.readLine()) != null) {
-                        context.sendMessage(Message.translation("server.commands.update.runningStdOut").param("cmd", commandDisplay).param("line", line));
+                        context.sendMessage(Message.translation("server.commands.git.runningStdOut").param("cmd", commandDisplay).param("line", line));
                      }
 
                      reader = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
 
                      while ((line = reader.readLine()) != null) {
-                        context.sendMessage(Message.translation("server.commands.update.runningStdErr").param("cmd", commandDisplay).param("line", line));
+                        context.sendMessage(Message.translation("server.commands.git.runningStdErr").param("cmd", commandDisplay).param("line", line));
                      }
 
-                     context.sendMessage(Message.translation("server.commands.update.done").param("cmd", commandDisplay));
+                     context.sendMessage(Message.translation("server.commands.git.done").param("cmd", commandDisplay));
                   } catch (InterruptedException e) {
                      Thread.currentThread().interrupt();
                   }
                } catch (IOException e) {
-                  context.sendMessage(Message.translation("server.commands.update.failed").param("cmd", commandDisplay).param("msg", e.getMessage()));
+                  context.sendMessage(Message.translation("server.commands.git.failed").param("cmd", commandDisplay).param("msg", e.getMessage()));
                }
             }
          });
@@ -85,7 +85,7 @@ public class UpdateAssetsCommand extends AbstractCommandCollection {
 
    private static class UpdateAssetsPullCommand extends UpdateAssetsCommand.UpdateAssetsGitCommand {
       public UpdateAssetsPullCommand() {
-         super("pull", "server.commands.update.assets.pull.desc");
+         super("pull", "server.commands.git.assets.pull.desc");
       }
 
       @Nonnull
@@ -103,7 +103,7 @@ public class UpdateAssetsCommand extends AbstractCommandCollection {
 
    private static class UpdateAssetsResetCommand extends UpdateAssetsCommand.UpdateAssetsGitCommand {
       public UpdateAssetsResetCommand() {
-         super("reset", "server.commands.update.assets.reset.desc");
+         super("reset", "server.commands.git.assets.reset.desc");
       }
 
       @Nonnull
@@ -115,7 +115,7 @@ public class UpdateAssetsCommand extends AbstractCommandCollection {
 
    private static class UpdateAssetsStatusCommand extends UpdateAssetsCommand.UpdateAssetsGitCommand {
       public UpdateAssetsStatusCommand() {
-         super("status", "server.commands.update.assets.status.desc");
+         super("status", "server.commands.git.assets.status.desc");
       }
 
       @Nonnull

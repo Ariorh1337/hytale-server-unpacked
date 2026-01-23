@@ -1,14 +1,13 @@
-package com.hypixel.hytale.server.core.universe.world.worldmap.markers;
+package com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers;
 
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerRespawnPointData;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import javax.annotation.Nonnull;
 
@@ -19,10 +18,8 @@ public class RespawnMarkerProvider implements WorldMapManager.MarkerProvider {
    }
 
    @Override
-   public void update(
-      @Nonnull World world, @Nonnull GameplayConfig gameplayConfig, @Nonnull WorldMapTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ
-   ) {
-      WorldMapConfig worldMapConfig = gameplayConfig.getWorldMapConfig();
+   public void update(@Nonnull World world, @Nonnull MapMarkerTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
+      WorldMapConfig worldMapConfig = world.getGameplayConfig().getWorldMapConfig();
       if (worldMapConfig.isDisplayHome()) {
          PlayerRespawnPointData[] respawnPoints = tracker.getPlayer().getPlayerConfigData().getPerWorldData(world.getName()).getRespawnPoints();
          if (respawnPoints != null) {
@@ -34,7 +31,7 @@ public class RespawnMarkerProvider implements WorldMapManager.MarkerProvider {
    }
 
    private static void addRespawnMarker(
-      @Nonnull WorldMapTracker tracker, int playerChunkX, int playerChunkZ, @Nonnull PlayerRespawnPointData respawnPoint, int index
+      @Nonnull MapMarkerTracker tracker, int playerChunkX, int playerChunkZ, @Nonnull PlayerRespawnPointData respawnPoint, int index
    ) {
       String respawnPointName = respawnPoint.getName();
       Vector3i respawnPointPosition = respawnPoint.getBlockPosition();

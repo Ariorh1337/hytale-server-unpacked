@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nonnull;
@@ -61,23 +62,24 @@ public class ReplaceCommand extends AbstractPlayerCommand {
       if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
          if (toPattern != null && !toPattern.isEmpty()) {
             String toValue = toPattern.toString();
-            Integer[] toBlockIds = toPattern.getResolvedKeys();
             Material fromMaterial = fromValue != null ? Material.fromKey(fromValue) : null;
-            if (fromMaterial != null && fromMaterial.isFluid()) {
-               Material toMaterial = Material.fromKey(toValue);
-               if (toMaterial == null) {
-                  context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", toValue).param("key", toValue));
+            Material toMaterial = Material.fromPattern(toPattern, ThreadLocalRandom.current());
+            if (toMaterial.isFluid() && !substringSwap && !regex) {
+               if (fromMaterial == null) {
+                  context.sendMessage(Message.translation("server.commands.replace.fromRequired"));
                } else {
                   BuilderToolsPlugin.addToQueue(
                      playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, fromMaterial, toMaterial, componentAccessor)
                   );
                   context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
                }
+            } else if (fromMaterial != null && fromMaterial.isFluid()) {
+               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, fromMaterial, toMaterial, componentAccessor));
+               context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
             } else {
                BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
                if (fromValue == null && !substringSwap && !regex) {
-                  int[] toIds = toIntArray(toBlockIds);
-                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, null, toIds, componentAccessor));
+                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, null, toPattern, componentAccessor));
                   context.sendMessage(Message.translation("server.builderTools.replace.replacementAllDone").param("to", toValue));
                } else if (fromValue == null) {
                   context.sendMessage(Message.translation("server.commands.replace.fromRequired"));
@@ -90,21 +92,19 @@ public class ReplaceCommand extends AbstractPlayerCommand {
                      return;
                   }
 
-                  int[] toIds = toIntArray(toBlockIds);
                   BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
                      s.replace(r, value -> {
                         String valueKey = assetMap.getAsset(value).getId();
                         return pattern.matcher(valueKey).matches();
-                     }, toIds, componentAccessor);
+                     }, toPattern, componentAccessor);
                      context.sendMessage(Message.translation("server.commands.replace.success").param("regex", fromValue).param("replacement", toValue));
                   });
                } else if (fromMaterial == null) {
                   context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", fromValue).param("key", fromValue));
                } else if (!substringSwap) {
-                  int[] toIds = toIntArray(toBlockIds);
                   int fromBlockId = fromMaterial.getBlockId();
                   BuilderToolsPlugin.addToQueue(
-                     playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, block -> block == fromBlockId, toIds, componentAccessor)
+                     playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, block -> block == fromBlockId, toPattern, componentAccessor)
                   );
                   context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
                } else {
@@ -147,16 +147,6 @@ public class ReplaceCommand extends AbstractPlayerCommand {
             context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", "").param("key", ""));
          }
       }
-   }
-
-   private static int[] toIntArray(Integer[] arr) {
-      int[] result = new int[arr.length];
-
-      for (int i = 0; i < arr.length; i++) {
-         result[i] = arr[i];
-      }
-
-      return result;
    }
 
    private static class ReplaceFromToCommand extends AbstractPlayerCommand {

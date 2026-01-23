@@ -1091,9 +1091,9 @@ public class NPCPlugin extends JavaPlugin {
       @Nonnull Store<EntityStore> store,
       int roleIndex,
       @Nonnull Vector3d position,
-      Vector3f rotation,
-      Model spawnModel,
-      TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn
+      @Nullable Vector3f rotation,
+      @Nullable Model spawnModel,
+      @Nullable TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn
    ) {
       return this.spawnEntity(store, roleIndex, position, rotation, spawnModel, null, postSpawn);
    }

@@ -8,6 +8,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeIntPosition;
@@ -21,6 +22,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class PasteCommand extends AbstractPlayerCommand {
+   @Nonnull
+   private final FlagArg technicalFlag = this.withFlagArg("technical", "server.commands.paste.technical.desc");
+
    public PasteCommand() {
       super("paste", "server.commands.paste.desc");
       this.setPermissionGroup(GameMode.Creative);
@@ -41,7 +45,8 @@ public class PasteCommand extends AbstractPlayerCommand {
       int x = MathUtil.floor(position.x);
       int y = MathUtil.floor(position.y);
       int z = MathUtil.floor(position.z);
-      BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.paste(r, x, y, z, componentAccessor));
+      boolean technical = this.technicalFlag.get(context);
+      BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.paste(r, x, y, z, technical, componentAccessor));
    }
 
    private static class PasteAtPositionCommand extends AbstractPlayerCommand {
@@ -49,6 +54,8 @@ public class PasteCommand extends AbstractPlayerCommand {
       private final RequiredArg<RelativeIntPosition> positionArg = this.withRequiredArg(
          "position", "server.commands.paste.position.desc", ArgTypes.RELATIVE_BLOCK_POSITION
       );
+      @Nonnull
+      private final FlagArg technicalFlag = this.withFlagArg("technical", "server.commands.paste.technical.desc");
 
       public PasteAtPositionCommand() {
          super("server.commands.paste.desc");
@@ -66,8 +73,9 @@ public class PasteCommand extends AbstractPlayerCommand {
          Vector3d position = transformComponent.getPosition();
          RelativeIntPosition relativePos = this.positionArg.get(context);
          Vector3i blockPos = relativePos.getBlockPosition(position, chunkStore);
+         boolean technical = this.technicalFlag.get(context);
          BuilderToolsPlugin.addToQueue(
-            playerComponent, playerRef, (r, s, componentAccessor) -> s.paste(r, blockPos.x, blockPos.y, blockPos.z, componentAccessor)
+            playerComponent, playerRef, (r, s, componentAccessor) -> s.paste(r, blockPos.x, blockPos.y, blockPos.z, technical, componentAccessor)
          );
       }
    }

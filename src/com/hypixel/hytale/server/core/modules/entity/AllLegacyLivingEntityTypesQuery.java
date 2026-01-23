@@ -24,7 +24,7 @@ public class AllLegacyLivingEntityTypesQuery implements Query<EntityStore> {
    }
 
    @Override
-   public void validateRegistry(ComponentRegistry<EntityStore> registry) {
+   public void validateRegistry(@Nonnull ComponentRegistry<EntityStore> registry) {
    }
 
    @Override

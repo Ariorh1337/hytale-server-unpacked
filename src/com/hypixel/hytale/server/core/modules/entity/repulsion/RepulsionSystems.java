@@ -250,29 +250,31 @@ public class RepulsionSystems {
             spatialResource.getSpatialStructure().ordered(transformComponent.getPosition(), radius, results);
 
             for (Ref<EntityStore> entityRef : results) {
-               TransformComponent entityTransformComponent = store.getComponent(entityRef, this.transformComponentComponentType);
-               assert entityTransformComponent != null;
-               Vector2d entityPosition = new Vector2d(entityTransformComponent.getPosition().x, entityTransformComponent.getPosition().z);
-               if (!entityPosition.equals(position)) {
-                  double distance = position.distanceTo(entityPosition);
-                  if (!(distance < 0.1)) {
-                     double fraction = (radius - distance) / radius;
-                     float maxForce = repulsion.maxForce;
-                     int flip = 1;
-                     if (maxForce < 0.0F) {
-                        flip = -1;
-                        maxForce *= flip;
-                     }
+               TransformComponent entityTransformComponent = commandBuffer.getComponent(entityRef, this.transformComponentComponentType);
+               if (entityTransformComponent != null) {
+                  Vector2d entityPosition = new Vector2d(entityTransformComponent.getPosition().x, entityTransformComponent.getPosition().z);
+                  if (!entityPosition.equals(position)) {
+                     double distance = position.distanceTo(entityPosition);
+                     if (!(distance < 0.1)) {
+                        double fraction = (radius - distance) / radius;
+                        float maxForce = repulsion.maxForce;
+                        int flip = 1;
+                        if (maxForce < 0.0F) {
+                           flip = -1;
+                           maxForce *= flip;
+                        }
 
-                     double force = Math.max(repulsion.minForce, maxForce * fraction);
-                     force *= flip;
-                     Vector2d push = entityPosition.subtract(position);
-                     push.normalize();
-                     push.scale(force);
-                     Velocity entityVelocityComponent = commandBuffer.getComponent(entityRef, Velocity.getComponentType());
-                     assert entityVelocityComponent != null;
-                     Vector3d addedVelocity = new Vector3d((float)push.x, 0.0, (float)push.y);
-                     entityVelocityComponent.addInstruction(addedVelocity, null, ChangeVelocityType.Add);
+                        double force = Math.max(repulsion.minForce, maxForce * fraction);
+                        force *= flip;
+                        Vector2d push = entityPosition.subtract(position);
+                        push.normalize();
+                        push.scale(force);
+                        Velocity entityVelocityComponent = commandBuffer.getComponent(entityRef, Velocity.getComponentType());
+                        if (entityVelocityComponent != null) {
+                           Vector3d addedVelocity = new Vector3d((float)push.x, 0.0, (float)push.y);
+                           entityVelocityComponent.addInstruction(addedVelocity, null, ChangeVelocityType.Add);
+                        }
+                     }
                   }
                }
             }

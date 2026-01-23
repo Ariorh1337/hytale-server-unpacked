@@ -230,6 +230,7 @@ public class NPCMemory extends Memory {
             if (!results.isEmpty()) {
                PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
                assert playerRefComponent != null;
+               Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                MemoriesPlugin memoriesPlugin = MemoriesPlugin.get();
                PlayerMemories playerMemoriesComponent = archetypeChunk.getComponent(index, PlayerMemories.getComponentType());
                assert playerMemoriesComponent != null;
@@ -264,16 +265,18 @@ public class NPCMemory extends Memory {
                               if (memoriesGameplayConfig != null) {
                                  ItemStack memoryItemStack = new ItemStack(memoriesGameplayConfig.getMemoriesCatchItemId());
                                  Vector3d memoryItemHolderPosition = npcTransformComponent.getPosition().clone();
-                                 BoundingBox boundingBox = commandBuffer.getComponent(npcRef, BoundingBox.getComponentType());
-                                 if (boundingBox != null) {
-                                    memoryItemHolderPosition.y = memoryItemHolderPosition.y + boundingBox.getBoundingBox().middleY();
+                                 BoundingBox boundingBoxComponent = commandBuffer.getComponent(npcRef, BoundingBox.getComponentType());
+                                 if (boundingBoxComponent != null) {
+                                    memoryItemHolderPosition.y = memoryItemHolderPosition.y + boundingBoxComponent.getBoundingBox().middleY();
                                  }
 
                                  Holder<EntityStore> memoryItemHolder = ItemComponent.generatePickedUpItem(
-                                    memoryItemStack, memoryItemHolderPosition, commandBuffer, playerRefComponent.getReference()
+                                    memoryItemStack, memoryItemHolderPosition, commandBuffer, ref
                                  );
                                  float memoryCatchItemLifetimeS = 0.62F;
-                                 memoryItemHolder.getComponent(PickupItemComponent.getComponentType()).setInitialLifeTime(memoryCatchItemLifetimeS);
+                                 PickupItemComponent pickupItemComponent = memoryItemHolder.getComponent(PickupItemComponent.getComponentType());
+                                 assert pickupItemComponent != null;
+                                 pickupItemComponent.setInitialLifeTime(0.62F);
                                  commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
                                  displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, npcRef, commandBuffer);
                               }

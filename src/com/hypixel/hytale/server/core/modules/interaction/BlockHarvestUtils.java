@@ -86,13 +86,19 @@ public class BlockHarvestUtils {
       }
 
       if (item == null || item.getWeapon() == null && item.getBuilderToolData() == null) {
+         int requiredQuality = breaking.getQuality();
          if (tool == null) {
-            return ItemToolSpec.getAssetMap().getAsset(gatherType);
+            ItemToolSpec defaultSpec = ItemToolSpec.getAssetMap().getAsset(gatherType);
+            return defaultSpec != null && defaultSpec.getQuality() < requiredQuality ? null : defaultSpec;
          }
 
          if (tool.getSpecs() != null) {
             for (ItemToolSpec spec : tool.getSpecs()) {
                if (Objects.equals(spec.getGatherType(), gatherType)) {
+                  if (spec.getQuality() < requiredQuality) {
+                     return null;
+                  }
+
                   return spec;
                }
             }

@@ -29,17 +29,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class ObjectiveReachLocationMarkerCommand extends AbstractCommandCollection {
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_NOT_FOUND = Message.translation(
-      "server.commands.objective.reachLocationMarker.notFound"
-   );
-   @Nonnull
-   private static final Message MESSAGE_GENERAL_FAILED_DID_YOU_MEAN = Message.translation("server.general.failed.didYouMean");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_ADDED = Message.translation(
-      "server.commands.objective.reachLocationMarker.added"
-   );
-
    public ObjectiveReachLocationMarkerCommand() {
       super("reachlocationmarker", "server.commands.objective.reachLocationMarker");
       this.addSubCommand(new ObjectiveReachLocationMarkerCommand.AddReachLocationMarkerCommand());
@@ -61,11 +50,9 @@ public class ObjectiveReachLocationMarkerCommand extends AbstractCommandCollecti
       ) {
          String reachLocationMarkerId = this.reachLocationMarkerArg.get(context);
          if (ReachLocationMarkerAsset.getAssetMap().getAsset(reachLocationMarkerId) == null) {
+            context.sendMessage(Message.translation("server.commands.objective.reachLocationMarker.notFound").param("id", reachLocationMarkerId));
             context.sendMessage(
-               ObjectiveReachLocationMarkerCommand.MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_NOT_FOUND.param("id", reachLocationMarkerId)
-            );
-            context.sendMessage(
-               ObjectiveReachLocationMarkerCommand.MESSAGE_GENERAL_FAILED_DID_YOU_MEAN
+               Message.translation("server.general.failed.didYouMean")
                   .param(
                      "choices",
                      StringUtil.sortByFuzzyDistance(
@@ -89,7 +76,7 @@ public class ObjectiveReachLocationMarkerCommand extends AbstractCommandCollecti
             holder.ensureComponent(Intangible.getComponentType());
             holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
             store.addEntity(holder, AddReason.SPAWN);
-            context.sendMessage(ObjectiveReachLocationMarkerCommand.MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_ADDED.param("id", reachLocationMarkerId));
+            context.sendMessage(Message.translation("server.commands.objective.reachLocationMarker.added").param("id", reachLocationMarkerId));
          }
       }
    }

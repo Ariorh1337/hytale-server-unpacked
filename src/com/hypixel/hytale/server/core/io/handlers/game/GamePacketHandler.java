@@ -69,6 +69,7 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.handlers.GenericPacketHandler;
@@ -83,6 +84,7 @@ import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.BlockPlaceUtils;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
@@ -152,6 +154,12 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          + "), "
          + (this.playerRef != null ? this.playerRef.getUuid() + ", " + this.playerRef.getUsername() : "null player")
          + "}";
+   }
+
+   @Override
+   protected void registered0(PacketHandler oldHandler) {
+      HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+      this.enterStage("play", timeouts.getPlay());
    }
 
    protected void registerHandlers() {
@@ -417,6 +425,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       Ref<EntityStore> ref = this.playerRef.getReference();
       if (ref != null && ref.isValid()) {
          this.playerRef.setLanguage(packet.language);
+         I18nModule.get().sendTranslations(this, packet.language);
       }
    }
 
@@ -433,7 +442,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          world.execute(() -> {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert playerComponent != null;
-            UpdateWindow updateWindowPacket = playerComponent.getWindowManager().clientOpenWindow(supplier.get());
+            UpdateWindow updateWindowPacket = playerComponent.getWindowManager().clientOpenWindow(ref, supplier.get(), store);
             if (updateWindowPacket != null) {
                this.writeNoCache(updateWindowPacket);
             }
@@ -451,8 +460,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             assert playerComponent != null;
             Window window = playerComponent.getWindowManager().getWindow(packet.id);
             if (window != null) {
-               if (window instanceof ValidatedWindow && !((ValidatedWindow)window).validate()) {
-                  window.close();
+               if (window instanceof ValidatedWindow validatedWindow && !validatedWindow.validate(ref, store)) {
+                  window.close(ref, store);
                } else {
                   window.handleAction(this.playerRef.getReference(), store, packet.action);
                }
@@ -479,9 +488,14 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                      packet.usableItemsItemsPreferredPickupLocation,
                      packet.solidBlockItemsPreferredPickupLocation,
                      packet.miscItemsPreferredPickupLocation,
-                     new PlayerCreativeSettings(packet.allowNPCDetection, packet.respondToHit)
+                     new PlayerCreativeSettings(packet.allowNPCDetection, packet.respondToHit),
+                     packet.hideHelmet,
+                     packet.hideCuirass,
+                     packet.hideGauntlets,
+                     packet.hidePants
                   )
                );
+               store.getComponent(ref, Player.getComponentType()).invalidateEquipmentNetwork();
             }
          );
       }
@@ -579,7 +593,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          world.execute(() -> {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert playerComponent != null;
-            playerComponent.getWindowManager().closeWindow(packet.id);
+            playerComponent.getWindowManager().closeWindow(ref, packet.id, store);
          });
       }
    }

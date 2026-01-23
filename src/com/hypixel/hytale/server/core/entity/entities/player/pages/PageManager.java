@@ -74,7 +74,7 @@ public class PageManager {
          return false;
       }
 
-      List<OpenWindow> windowPackets = this.windowManager.openWindows(windows);
+      List<OpenWindow> windowPackets = this.windowManager.openWindows(ref, store, windows);
       if (windowPackets == null) {
          return false;
       }
@@ -95,7 +95,7 @@ public class PageManager {
          return false;
       }
 
-      List<OpenWindow> windowPackets = this.windowManager.openWindows(windows);
+      List<OpenWindow> windowPackets = this.windowManager.openWindows(ref, store, windows);
       if (windowPackets == null) {
          return false;
       }

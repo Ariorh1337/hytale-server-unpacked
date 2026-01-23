@@ -300,10 +300,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       if (this.provideCharacterCollisions) {
          Ref<EntityStore> creatorReference = null;
          if (this.creatorUuid != null) {
-            Entity creator = entityWorld.getEntity(this.creatorUuid);
-            if (creator != null) {
-               creatorReference = creator.getReference();
-            }
+            creatorReference = entityWorld.getEntityRef(this.creatorUuid);
          }
 
          maxRelativeDistance = this.entityCollisionProvider

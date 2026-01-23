@@ -38,7 +38,7 @@ public class SteeringSystem extends SteppableTickingSystem {
          new SystemDependency<>(Order.AFTER, KnockbackSystems.ApplyKnockback.class),
          new SystemDependency<>(Order.BEFORE, TransformSystems.EntityTrackerUpdate.class)
       );
-      this.query = Query.and(npcEntityComponent);
+      this.query = Query.and(npcEntityComponent, TransformComponent.getComponentType());
    }
 
    @Nonnull
@@ -66,46 +66,48 @@ public class SteeringSystem extends SteppableTickingSystem {
       @Nonnull Store<EntityStore> store,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      NPCEntity npc = archetypeChunk.getComponent(index, this.npcEntityComponent);
-      assert npc != null;
-      TransformComponent npcTransformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-      assert npcTransformComponent != null;
-      Role role = npc.getRole();
-      Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+      NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcEntityComponent);
+      assert npcComponent != null;
+      TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+      assert transformComponent != null;
+      Role role = npcComponent.getRole();
+      if (role != null) {
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
 
-      try {
-         if (role.getDebugSupport().isDebugMotionSteering()) {
-            Vector3d position = npcTransformComponent.getPosition();
-            double x = position.getX();
-            double z = position.getZ();
-            float yaw = npcTransformComponent.getRotation().getYaw();
-            role.getActiveMotionController().steer(ref, role, role.getBodySteering(), role.getHeadSteering(), dt, commandBuffer);
-            x = position.getX() - x;
-            z = position.getZ() - z;
-            double l = Math.sqrt(x * x + z * z);
-            double v = l / dt;
-            double vx = x / dt;
-            double vz = z / dt;
-            double vh = l > 0.0 ? PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z)) : 0.0;
-            NPCPlugin.get()
-               .getLogger()
-               .at(Level.FINER)
-               .log(
-                  "=   Role    = t =%.4f v =%.4f vx=%.4f vz=%.4f h =%.4f nh=%.4f vh=%.4f",
-                  dt,
-                  v,
-                  vx,
-                  vz,
-                  (180.0F / (float)Math.PI) * yaw,
-                  (180.0F / (float)Math.PI) * yaw,
-                  180.0F / (float)Math.PI * vh
-               );
-         } else {
-            role.getActiveMotionController().steer(ref, role, role.getBodySteering(), role.getHeadSteering(), dt, commandBuffer);
+         try {
+            if (role.getDebugSupport().isDebugMotionSteering()) {
+               Vector3d position = transformComponent.getPosition();
+               double x = position.getX();
+               double z = position.getZ();
+               float yaw = transformComponent.getRotation().getYaw();
+               role.getActiveMotionController().steer(ref, role, role.getBodySteering(), role.getHeadSteering(), dt, commandBuffer);
+               x = position.getX() - x;
+               z = position.getZ() - z;
+               double l = Math.sqrt(x * x + z * z);
+               double v = l / dt;
+               double vx = x / dt;
+               double vz = z / dt;
+               double vh = l > 0.0 ? PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z)) : 0.0;
+               NPCPlugin.get()
+                  .getLogger()
+                  .at(Level.FINER)
+                  .log(
+                     "=   Role    = t =%.4f v =%.4f vx=%.4f vz=%.4f h =%.4f nh=%.4f vh=%.4f",
+                     dt,
+                     v,
+                     vx,
+                     vz,
+                     (180.0F / (float)Math.PI) * yaw,
+                     (180.0F / (float)Math.PI) * yaw,
+                     180.0F / (float)Math.PI * vh
+                  );
+            } else {
+               role.getActiveMotionController().steer(ref, role, role.getBodySteering(), role.getHeadSteering(), dt, commandBuffer);
+            }
+         } catch (IllegalArgumentException | IllegalStateException e) {
+            NPCPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log();
+            commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
          }
-      } catch (IllegalArgumentException | IllegalStateException e) {
-         NPCPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log();
-         commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
       }
    }
 }

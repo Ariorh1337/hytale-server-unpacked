@@ -77,19 +77,19 @@ public class MouseInteraction implements Packet {
       byte nullBits = buf.getByte(offset);
       obj.clientTimestamp = buf.getLongLE(offset + 1);
       obj.activeSlot = buf.getIntLE(offset + 9);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.screenPoint = Vector2f.deserialize(buf, offset + 13);
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.mouseButton = MouseButtonEvent.deserialize(buf, offset + 21);
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 4) != 0) {
          obj.worldInteraction = WorldInteraction.deserialize(buf, offset + 24);
       }
 
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 8) != 0) {
          int varPos0 = offset + 52 + buf.getIntLE(offset + 44);
          int itemInHandIdLen = VarInt.peek(buf, varPos0);
          if (itemInHandIdLen < 0) {
@@ -103,7 +103,7 @@ public class MouseInteraction implements Packet {
          obj.itemInHandId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 16) != 0) {
          int varPos1 = offset + 52 + buf.getIntLE(offset + 48);
          obj.mouseMotion = MouseMotionEvent.deserialize(buf, varPos1);
       }
@@ -114,7 +114,7 @@ public class MouseInteraction implements Packet {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 52;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 44);
          int pos0 = offset + 52 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
@@ -124,7 +124,7 @@ public class MouseInteraction implements Packet {
          }
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 48);
          int pos1 = offset + 52 + fieldOffset1;
          pos1 += MouseMotionEvent.computeBytesConsumed(buf, pos1);
@@ -140,23 +140,23 @@ public class MouseInteraction implements Packet {
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
-      if (this.itemInHandId != null) {
+      if (this.screenPoint != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.screenPoint != null) {
+      if (this.mouseButton != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.mouseButton != null) {
+      if (this.worldInteraction != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.mouseMotion != null) {
+      if (this.itemInHandId != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.worldInteraction != null) {
+      if (this.mouseMotion != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
@@ -221,7 +221,7 @@ public class MouseInteraction implements Packet {
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 8) != 0) {
          int itemInHandIdOffset = buffer.getIntLE(offset + 44);
          if (itemInHandIdOffset < 0) {
             return ValidationResult.error("Invalid offset for ItemInHandId");
@@ -248,7 +248,7 @@ public class MouseInteraction implements Packet {
          }
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 16) != 0) {
          int mouseMotionOffset = buffer.getIntLE(offset + 48);
          if (mouseMotionOffset < 0) {
             return ValidationResult.error("Invalid offset for MouseMotion");

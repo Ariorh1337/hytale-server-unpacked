@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthBrowserFlow;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthClient;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthDeviceFlow;
@@ -51,6 +52,7 @@ public class ServerAuthManager {
    });
    private ScheduledFuture<?> refreshTask;
    private Runnable cancelActiveFlow;
+   private volatile String pendingFatalError;
 
    private ServerAuthManager() {
    }
@@ -128,7 +130,8 @@ public class ServerAuthManager {
                this.gameSession.set(session);
                hasCliTokens = true;
             } else {
-               LOGGER.at(Level.WARNING).log("Token validation failed. Server starting unauthenticated. Use /auth login to authenticate.");
+               this.pendingFatalError = "Token validation failed. Provided tokens may be expired, tampered, or malformed. Remove invalid tokens or provide valid ones.";
+               LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
             }
          }
 
@@ -154,6 +157,12 @@ public class ServerAuthManager {
                this.hasIdentityToken() ? "present" : "missing",
                this.authMode
             );
+      }
+   }
+
+   public void checkPendingFatalError() {
+      if (this.pendingFatalError != null) {
+         HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(this.pendingFatalError));
       }
    }
 
@@ -184,13 +193,15 @@ public class ServerAuthManager {
       }
 
       this.refreshScheduler.shutdown();
-      String currentSessionToken = this.getSessionToken();
-      if (currentSessionToken != null && !currentSessionToken.isEmpty()) {
-         if (this.sessionServiceClient == null) {
-            this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
-         }
+      if (this.isSingleplayer()) {
+         String currentSessionToken = this.getSessionToken();
+         if (currentSessionToken != null && !currentSessionToken.isEmpty()) {
+            if (this.sessionServiceClient == null) {
+               this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+            }
 
-         this.sessionServiceClient.terminateSession(currentSessionToken);
+            this.sessionServiceClient.terminateSession(currentSessionToken);
+         }
       }
    }
 
@@ -241,6 +252,16 @@ public class ServerAuthManager {
    public boolean hasSessionToken() {
       SessionServiceClient.GameSessionResponse session = this.gameSession.get();
       return session != null && session.sessionToken != null;
+   }
+
+   @Nullable
+   public String getOAuthAccessToken() {
+      if (!this.refreshOAuthTokens()) {
+         return null;
+      }
+
+      IAuthCredentialStore store = this.credentialStore.get();
+      return store.getTokens().accessToken();
    }
 
    public void setServerCertificate(@Nonnull X509Certificate certificate) {
@@ -469,6 +490,9 @@ public class ServerAuthManager {
 
       JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.hytale.com", "");
       boolean valid = true;
+      OptionSet optionSet = Options.getOptionSet();
+      UUID expectedOwnerUuid = optionSet != null && optionSet.has(Options.OWNER_UUID) ? optionSet.valueOf(Options.OWNER_UUID) : null;
+      String expectedOwnerName = optionSet != null && optionSet.has(Options.OWNER_NAME) ? optionSet.valueOf(Options.OWNER_NAME) : null;
       if (identityToken != null) {
          JWTValidator.IdentityTokenClaims claims = validator.validateIdentityToken(identityToken);
          if (claims == null) {
@@ -478,7 +502,22 @@ public class ServerAuthManager {
             LOGGER.at(Level.WARNING).log("Identity token missing required scope: expected %s, got %s", "hytale:server", claims.scope);
             valid = false;
          } else {
-            LOGGER.at(Level.INFO).log("Identity token validated for %s (%s)", claims.username, claims.subject);
+            if (expectedOwnerUuid != null) {
+               UUID tokenUuid = claims.getSubjectAsUUID();
+               if (tokenUuid == null || !tokenUuid.equals(expectedOwnerUuid)) {
+                  LOGGER.at(Level.WARNING).log("Identity token UUID mismatch: token has %s, expected %s", claims.subject, expectedOwnerUuid);
+                  valid = false;
+               }
+            }
+
+            if (expectedOwnerName != null && claims.username != null && !claims.username.equals(expectedOwnerName)) {
+               LOGGER.at(Level.WARNING).log("Identity token username mismatch: token has '%s', expected '%s'", claims.username, expectedOwnerName);
+               valid = false;
+            }
+
+            if (valid) {
+               LOGGER.at(Level.INFO).log("Identity token validated for %s (%s)", claims.username, claims.subject);
+            }
          }
       }
 
@@ -488,7 +527,17 @@ public class ServerAuthManager {
             LOGGER.at(Level.WARNING).log("Session token validation failed");
             valid = false;
          } else {
-            LOGGER.at(Level.INFO).log("Session token validated");
+            if (expectedOwnerUuid != null) {
+               UUID tokenUuid = claims.getSubjectAsUUID();
+               if (tokenUuid == null || !tokenUuid.equals(expectedOwnerUuid)) {
+                  LOGGER.at(Level.WARNING).log("Session token UUID mismatch: token has %s, expected %s", claims.subject, expectedOwnerUuid);
+                  valid = false;
+               }
+            }
+
+            if (valid) {
+               LOGGER.at(Level.INFO).log("Session token validated");
+            }
          }
       }
 

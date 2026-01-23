@@ -79,87 +79,87 @@ public class CosmeticsModule extends JavaPlugin {
 
    public void validateSkin(@Nonnull com.hypixel.hytale.protocol.PlayerSkin skin) throws CosmeticsModule.InvalidSkinException {
       if (skin == null) {
-         throw new CosmeticsModule.InvalidSkinException("Skin can't be null!");
+         throw new CosmeticsModule.InvalidSkinException("skin", null);
       }
 
       if (skin.face == null || !this.registry.getFaces().containsKey(skin.face)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid face attachment!");
+         throw new CosmeticsModule.InvalidSkinException("face", skin.face);
       }
 
       if (skin.ears == null || !this.registry.getEars().containsKey(skin.ears)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid ears attachment!");
+         throw new CosmeticsModule.InvalidSkinException("ears", skin.ears);
       }
 
       if (skin.mouth == null || !this.registry.getMouths().containsKey(skin.mouth)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid mouth attachment!");
+         throw new CosmeticsModule.InvalidSkinException("mouth", skin.mouth);
       }
 
       if (!this.isValidAttachment(this.registry.getBodyCharacteristics(), skin.bodyCharacteristic, true)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid body characteristic!");
+         throw new CosmeticsModule.InvalidSkinException("body", skin.bodyCharacteristic);
       }
 
       if (!this.isValidAttachment(this.registry.getUnderwear(), skin.underwear, true)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid underwear attachment!");
+         throw new CosmeticsModule.InvalidSkinException("underwear", skin.underwear);
       }
 
       if (!this.isValidAttachment(this.registry.getEyes(), skin.eyes, true)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid eye attachment!");
+         throw new CosmeticsModule.InvalidSkinException("eyes", skin.eyes);
       }
 
       if (!this.isValidAttachment(this.registry.getSkinFeatures(), skin.skinFeature)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid skin feature attachment!");
+         throw new CosmeticsModule.InvalidSkinException("skin feature", skin.skinFeature);
       }
 
       if (!this.isValidAttachment(this.registry.getEyebrows(), skin.eyebrows)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid eye brows attachment!");
+         throw new CosmeticsModule.InvalidSkinException("eyebrows", skin.eyebrows);
       }
 
       if (!this.isValidAttachment(this.registry.getPants(), skin.pants)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid pants attachment!");
+         throw new CosmeticsModule.InvalidSkinException("pants", skin.pants);
       }
 
       if (!this.isValidAttachment(this.registry.getOverpants(), skin.overpants)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid overpants attachment!");
+         throw new CosmeticsModule.InvalidSkinException("overpants", skin.overpants);
       }
 
       if (!this.isValidAttachment(this.registry.getShoes(), skin.shoes)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid shoes attachment!");
+         throw new CosmeticsModule.InvalidSkinException("shoes", skin.shoes);
       }
 
       if (!this.isValidAttachment(this.registry.getUndertops(), skin.undertop)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid under top attachment!");
+         throw new CosmeticsModule.InvalidSkinException("undertop", skin.undertop);
       }
 
       if (!this.isValidAttachment(this.registry.getOvertops(), skin.overtop)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid over top attachment!");
+         throw new CosmeticsModule.InvalidSkinException("overtop", skin.overtop);
       }
 
       if (!this.isValidAttachment(this.registry.getGloves(), skin.gloves)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid gloves attachment!");
+         throw new CosmeticsModule.InvalidSkinException("gloves", skin.gloves);
       }
 
       if (!this.isValidAttachment(this.registry.getHeadAccessories(), skin.headAccessory)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid head accessory attachment!");
+         throw new CosmeticsModule.InvalidSkinException("head accessory", skin.headAccessory);
       }
 
       if (!this.isValidAttachment(this.registry.getFaceAccessories(), skin.faceAccessory)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid face accessory attachment!");
+         throw new CosmeticsModule.InvalidSkinException("face accessory", skin.faceAccessory);
       }
 
       if (!this.isValidAttachment(this.registry.getEarAccessories(), skin.earAccessory)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid ear accessory attachment!");
+         throw new CosmeticsModule.InvalidSkinException("ear accessory", skin.earAccessory);
       }
 
       if (!this.isValidHaircutAttachment(skin.haircut, skin.headAccessory)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid haircut attachment!");
+         throw new CosmeticsModule.InvalidSkinException("haircut", skin.haircut);
       }
 
       if (!this.isValidAttachment(this.registry.getFacialHairs(), skin.facialHair)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid facial accessory attachment!");
+         throw new CosmeticsModule.InvalidSkinException("facial hair", skin.facialHair);
       }
 
       if (!this.isValidAttachment(this.registry.getCapes(), skin.cape)) {
-         throw new CosmeticsModule.InvalidSkinException("Invalid capes attachment!");
+         throw new CosmeticsModule.InvalidSkinException("cape", skin.cape);
       }
    }
 
@@ -337,8 +337,26 @@ public class CosmeticsModule extends JavaPlugin {
    }
 
    public static class InvalidSkinException extends Exception {
-      public InvalidSkinException(String message) {
-         super(message);
+      private final String partType;
+      private final String partId;
+
+      public InvalidSkinException(String partType, @Nullable String partId) {
+         super(formatMessage(partType, partId));
+         this.partType = partType;
+         this.partId = partId;
+      }
+
+      private static String formatMessage(String partType, @Nullable String partId) {
+         return partId == null ? "Missing required " + partType : "Unknown " + partType + ": " + partId;
+      }
+
+      public String getPartType() {
+         return this.partType;
+      }
+
+      @Nullable
+      public String getPartId() {
+         return this.partId;
       }
    }
 }

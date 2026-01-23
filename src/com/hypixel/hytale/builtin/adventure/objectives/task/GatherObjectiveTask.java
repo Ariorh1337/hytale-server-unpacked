@@ -60,16 +60,21 @@ public class GatherObjectiveTask extends CountObjectiveTask {
          LivingEntity livingEntity = event.getEntity();
          if (livingEntity instanceof Player) {
             Ref<EntityStore> ref = livingEntity.getReference();
-            World refWorld = store.getExternalData().getWorld();
-            refWorld.execute(() -> {
-               UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-               assert uuidComponent != null;
-               Set<UUID> activePlayerUUIDs = objective.getActivePlayerUUIDs();
-               if (activePlayerUUIDs.contains(uuidComponent.getUuid())) {
-                  int count = this.countObjectiveItemInInventories(activePlayerUUIDs, store);
-                  this.setTaskCompletion(store, ref, count, objective);
-               }
-            });
+            if (ref != null && ref.isValid()) {
+               World refWorld = store.getExternalData().getWorld();
+               refWorld.execute(() -> {
+                  if (ref.isValid()) {
+                     UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+                     if (uuidComponent != null) {
+                        Set<UUID> activePlayerUUIDs = objective.getActivePlayerUUIDs();
+                        if (activePlayerUUIDs.contains(uuidComponent.getUuid())) {
+                           int count = this.countObjectiveItemInInventories(activePlayerUUIDs, store);
+                           this.setTaskCompletion(store, ref, count, objective);
+                        }
+                     }
+                  }
+               });
+            }
          }
       });
       return RegistrationTransactionRecord.wrap(this.eventRegistry);

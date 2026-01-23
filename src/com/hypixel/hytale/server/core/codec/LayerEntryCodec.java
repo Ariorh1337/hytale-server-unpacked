@@ -18,10 +18,13 @@ public class LayerEntryCodec {
          new KeyedCodec<>("UseToolArg", Codec.BOOLEAN), (entry, useToolArg) -> entry.useToolArg = useToolArg != null && useToolArg, entry -> entry.useToolArg
       )
       .add()
+      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN), (entry, skip) -> entry.skip = skip != null && skip, entry -> entry.skip)
+      .add()
       .build();
    private Integer depth;
    private String material;
    private boolean useToolArg = false;
+   private boolean skip = false;
 
    public LayerEntryCodec() {
    }
@@ -44,5 +47,9 @@ public class LayerEntryCodec {
 
    public boolean isUseToolArg() {
       return this.useToolArg;
+   }
+
+   public boolean isSkip() {
+      return this.skip;
    }
 }

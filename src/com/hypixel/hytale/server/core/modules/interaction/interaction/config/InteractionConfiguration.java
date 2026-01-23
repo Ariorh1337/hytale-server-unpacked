@@ -81,6 +81,10 @@ public class InteractionConfiguration implements NetworkSerializable<com.hypixel
       return priority == null ? 0 : priority.getPriority(slot);
    }
 
+   public float getUseDistance(GameMode mode) {
+      return this.useDistance == null ? DEFAULT_USE_DISTANCE.getOrDefault(mode, 1.0F) : this.useDistance.getOrDefault(mode, 1.0F);
+   }
+
    @Nonnull
    public com.hypixel.hytale.protocol.InteractionConfiguration toPacket() {
       com.hypixel.hytale.protocol.InteractionConfiguration packet = new com.hypixel.hytale.protocol.InteractionConfiguration();

@@ -66,13 +66,13 @@ public class CaveNodeChildEntryJsonLoader extends JsonLoader<SeedStringResource,
          }
 
          for (int i = 0; i < nodeArray.size(); i++) {
-            JsonElement nodeEntryElement = nodeArray.get(i);
-            CaveNodeType caveNodeType = this.loadCaveNodeType(nodeEntryElement);
+            JsonElement nodeEntryElement = this.getOrLoad(nodeArray.get(i));
+            CaveNodeType caveNodeType = this.loadCaveNodeType(i, nodeEntryElement);
             double weight = weightsArray != null ? weightsArray.get(i).getAsDouble() : 1.0;
             builder.put(caveNodeType, weight);
          }
-      } else if (nodeElement.isJsonPrimitive()) {
-         CaveNodeType caveNodeType = this.loadCaveNodeType(nodeElement);
+      } else if (nodeElement.isJsonObject() || nodeElement.isJsonPrimitive()) {
+         CaveNodeType caveNodeType = this.loadCaveNodeType(0, nodeElement);
          builder.put(caveNodeType, 1.0);
       }
 
@@ -84,9 +84,16 @@ public class CaveNodeChildEntryJsonLoader extends JsonLoader<SeedStringResource,
    }
 
    @Nonnull
-   protected CaveNodeType loadCaveNodeType(@Nonnull JsonElement element) {
-      String caveNodeTypeName = element.getAsString();
-      return this.storage.getOrLoadCaveNodeType(caveNodeTypeName);
+   protected CaveNodeType loadCaveNodeType(int index, @Nonnull JsonElement element) {
+      if (element.isJsonObject()) {
+         String caveNodeTypeName = this.seed.get().getUniqueName("ChildCaveType#");
+         return this.storage.loadCaveNodeType(caveNodeTypeName, element.getAsJsonObject());
+      } else if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+         String caveNodeTypeName = element.getAsString();
+         return this.storage.getOrLoadCaveNodeType(caveNodeTypeName);
+      } else {
+         throw error("Invalid cave node type entry: %d", index);
+      }
    }
 
    @Nonnull
@@ -236,6 +243,7 @@ public class CaveNodeChildEntryJsonLoader extends JsonLoader<SeedStringResource,
 
    public interface Constants {
       String KEY_NODE = "Node";
+      String KEY_SEED = "Seed";
       String KEY_WEIGHTS = "Weights";
       String KEY_ANCHOR = "Anchor";
       String KEY_OFFSET = "Offset";

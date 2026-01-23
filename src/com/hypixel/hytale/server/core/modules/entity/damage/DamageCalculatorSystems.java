@@ -162,14 +162,14 @@ public class DamageCalculatorSystems {
                damageSequence.addSequentialHit();
                DamageEntityInteraction.EntityStatOnHit[] entityStatsOnHit = damageSequence.getEntityStatOnHit();
                if (entityStatsOnHit != null && damage.getSource() instanceof Damage.EntitySource entitySource) {
-                  Ref<EntityStore> attackerRef = entitySource.getRef();
-                  EntityStatMap entityStatMapComponent = commandBuffer.getComponent(attackerRef, EntityStatMap.getComponentType());
-                  if (entityStatMapComponent == null) {
+                  Ref<EntityStore> sourceRef = entitySource.getRef();
+                  EntityStatMap sourceEntityStatMapComponent = commandBuffer.getComponent(sourceRef, EntityStatMap.getComponentType());
+                  if (sourceEntityStatMapComponent == null) {
                      return;
                   }
 
                   for (DamageEntityInteraction.EntityStatOnHit statOnHit : entityStatsOnHit) {
-                     statOnHit.processEntityStatsOnHit(damageSequence.getSequentialHits(), entityStatMapComponent);
+                     statOnHit.processEntityStatsOnHit(damageSequence.getSequentialHits(), sourceEntityStatMapComponent);
                   }
                }
             }

@@ -11,6 +11,7 @@ import com.hypixel.hytale.protocol.packets.connection.ClientType;
 import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
 import com.hypixel.hytale.server.core.auth.JWTValidator;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
@@ -23,12 +24,9 @@ import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.io.transport.QUICTransport;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
 import io.netty.channel.Channel;
-import io.netty.handler.timeout.ReadTimeoutHandler;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,9 +38,6 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
    private volatile HandshakeHandler.AuthState authState = HandshakeHandler.AuthState.REQUESTING_AUTH_GRANT;
    private volatile boolean authTokenPacketReceived = false;
    private volatile String authenticatedUsername;
-   private static final int AUTH_GRANT_TIMEOUT_SECONDS = 30;
-   private static final int AUTH_TOKEN_TIMEOUT_SECONDS = 30;
-   private static final int SERVER_TOKEN_EXCHANGE_TIMEOUT_SECONDS = 15;
    private final ClientType clientType;
    private final String identityToken;
    private final UUID playerUuid;
@@ -110,8 +105,8 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
 
    @Override
    public void registered0(PacketHandler oldHandler) {
-      Duration authTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getAuthTimeout();
-      this.channel.pipeline().replace("timeOut", "timeOut", new ReadTimeoutHandler(authTimeout.toMillis(), TimeUnit.MILLISECONDS));
+      HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+      this.enterStage("auth", timeouts.getAuth());
       JWTValidator.IdentityTokenClaims identityClaims = getJwtValidator().validateIdentityToken(this.identityToken);
       if (identityClaims == null) {
          LOGGER.at(Level.WARNING).log("Identity token validation failed for %s from %s", this.username, NettyUtil.formatRemoteAddress(this.channel));
@@ -140,7 +135,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
                      identityClaims.scope,
                      NettyUtil.formatRemoteAddress(this.channel)
                   );
-               this.setTimeout("auth-grant-timeout", () -> this.authState != HandshakeHandler.AuthState.REQUESTING_AUTH_GRANT, 30L, TimeUnit.SECONDS);
+               this.continueStage("auth:grant", timeouts.getAuthGrant(), () -> this.authState != HandshakeHandler.AuthState.REQUESTING_AUTH_GRANT);
                this.requestAuthGrant();
             }
          } else {
@@ -188,11 +183,9 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
                                              );
                                           this.write(new AuthGrant(authGrant, finalServerIdentityToken));
                                           this.authState = HandshakeHandler.AuthState.AWAITING_AUTH_TOKEN;
-                                          this.setTimeout(
-                                             "auth-token-timeout",
-                                             () -> this.authState != HandshakeHandler.AuthState.AWAITING_AUTH_TOKEN,
-                                             30L,
-                                             TimeUnit.SECONDS
+                                          HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+                                          this.continueStage(
+                                             "auth:token", timeouts.getAuthToken(), () -> this.authState != HandshakeHandler.AuthState.AWAITING_AUTH_TOKEN
                                           );
                                        }
                                     }
@@ -275,8 +268,9 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
                   this.authenticatedUsername = tokenUsername;
                   if (serverAuthGrant != null && !serverAuthGrant.isEmpty()) {
                      this.authState = HandshakeHandler.AuthState.EXCHANGING_SERVER_TOKEN;
-                     this.setTimeout(
-                        "server-token-exchange-timeout", () -> this.authState != HandshakeHandler.AuthState.EXCHANGING_SERVER_TOKEN, 15L, TimeUnit.SECONDS
+                     HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+                     this.continueStage(
+                        "auth:server-exchange", timeouts.getAuthServerExchange(), () -> this.authState != HandshakeHandler.AuthState.EXCHANGING_SERVER_TOKEN
                      );
                      this.exchangeServerAuthGrant(serverAuthGrant);
                   } else {

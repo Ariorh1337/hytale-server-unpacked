@@ -7,18 +7,23 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageData> {
    @Nonnull
@@ -37,6 +42,7 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
       commandBuilder.set("#Empty #CheckBox.Value", false);
       commandBuilder.set("#Overwrite #CheckBox.Value", false);
       commandBuilder.set("#FromClipboard #CheckBox.Value", false);
+      commandBuilder.set("#UsePlayerAnchor #CheckBox.Value", false);
       eventBuilder.addEventBinding(
          CustomUIEventBindingType.Activating,
          "#SaveButton",
@@ -47,6 +53,7 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
             .append("@Empty", "#Empty #CheckBox.Value")
             .append("@Overwrite", "#Overwrite #CheckBox.Value")
             .append("@FromClipboard", "#FromClipboard #CheckBox.Value")
+            .append("@UsePlayerAnchor", "#UsePlayerAnchor #CheckBox.Value")
       );
       eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton", new EventData().append("Action", PrefabSavePage.Action.Cancel.name()));
    }
@@ -63,17 +70,33 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
             }
 
             playerComponent.getPageManager().setPage(ref, store, Page.None);
+            Vector3i playerAnchor = this.getPlayerAnchor(ref, store, data.usePlayerAnchor && !data.fromClipboard);
             BuilderToolsPlugin.addToQueue(playerComponent, this.playerRef, (r, s, componentAccessor) -> {
                if (data.fromClipboard) {
                   s.save(r, data.name, true, data.overwrite, componentAccessor);
                } else {
-                  s.saveFromSelection(r, data.name, true, data.overwrite, data.entities, data.empty, componentAccessor);
+                  s.saveFromSelection(r, data.name, true, data.overwrite, data.entities, data.empty, playerAnchor, componentAccessor);
                }
             });
             break;
          case Cancel:
             playerComponent.getPageManager().setPage(ref, store, Page.None);
       }
+   }
+
+   @Nullable
+   private Vector3i getPlayerAnchor(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, boolean usePlayerAnchor) {
+      if (!usePlayerAnchor) {
+         return null;
+      }
+
+      TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+      if (transformComponent == null) {
+         return null;
+      }
+
+      Vector3d position = transformComponent.getPosition();
+      return new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ()));
    }
 
    public enum Action {
@@ -87,6 +110,7 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
       public static final String EMPTY = "@Empty";
       public static final String OVERWRITE = "@Overwrite";
       public static final String FROM_CLIPBOARD = "@FromClipboard";
+      public static final String USE_PLAYER_ANCHOR = "@UsePlayerAnchor";
       public static final BuilderCodec<PrefabSavePage.PageData> CODEC = BuilderCodec.builder(PrefabSavePage.PageData.class, PrefabSavePage.PageData::new)
          .append(
             new KeyedCodec<>("Action", new EnumCodec<>(PrefabSavePage.Action.class, EnumCodec.EnumStyle.LEGACY)),
@@ -104,6 +128,8 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
          .add()
          .append(new KeyedCodec<>("@FromClipboard", Codec.BOOLEAN), (o, fromClipboard) -> o.fromClipboard = fromClipboard, o -> o.fromClipboard)
          .add()
+         .append(new KeyedCodec<>("@UsePlayerAnchor", Codec.BOOLEAN), (o, usePlayerAnchor) -> o.usePlayerAnchor = usePlayerAnchor, o -> o.usePlayerAnchor)
+         .add()
          .build();
       public PrefabSavePage.Action action;
       public String name;
@@ -111,6 +137,7 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
       public boolean empty = false;
       public boolean overwrite = false;
       public boolean fromClipboard = false;
+      public boolean usePlayerAnchor = false;
 
       public PageData() {
       }

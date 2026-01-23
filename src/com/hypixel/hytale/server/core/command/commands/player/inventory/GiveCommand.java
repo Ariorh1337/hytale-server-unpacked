@@ -23,12 +23,6 @@ import org.bson.BsonDocument;
 
 public class GiveCommand extends AbstractPlayerCommand {
    @Nonnull
-   private static final Message MESSAGE_COMMANDS_GIVE_RECEIVED = Message.translation("server.commands.give.received");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_GIVE_INSUFFICIENT_INV_SPACE = Message.translation("server.commands.give.insufficientInvSpace");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_GIVE_INVALID_METADATA = Message.translation("server.commands.give.invalidMetadata");
-   @Nonnull
    private final RequiredArg<Item> itemArg = this.withRequiredArg("item", "server.commands.give.item.desc", ArgTypes.ITEM_ASSET);
    @Nonnull
    private final DefaultArg<Integer> quantityArg = this.withDefaultArg("quantity", "server.commands.give.quantity.desc", ArgTypes.INTEGER, 1, "1");
@@ -64,7 +58,7 @@ public class GiveCommand extends AbstractPlayerCommand {
          try {
             metadata = BsonDocument.parse(metadataStr);
          } catch (Exception e) {
-            context.sendMessage(MESSAGE_COMMANDS_GIVE_INVALID_METADATA.param("error", e.getMessage()));
+            context.sendMessage(Message.translation("server.commands.give.invalidMetadata").param("error", e.getMessage()));
             return;
          }
       }
@@ -74,21 +68,15 @@ public class GiveCommand extends AbstractPlayerCommand {
       ItemStack remainder = transaction.getRemainder();
       Message itemNameMessage = Message.translation(item.getTranslationKey());
       if (remainder != null && !remainder.isEmpty()) {
-         context.sendMessage(MESSAGE_COMMANDS_GIVE_INSUFFICIENT_INV_SPACE.param("quantity", quantity).param("item", itemNameMessage));
+         context.sendMessage(Message.translation("server.commands.give.insufficientInvSpace").param("quantity", quantity).param("item", itemNameMessage));
       } else {
-         context.sendMessage(MESSAGE_COMMANDS_GIVE_RECEIVED.param("quantity", quantity).param("item", itemNameMessage));
+         context.sendMessage(Message.translation("server.commands.give.received").param("quantity", quantity).param("item", itemNameMessage));
       }
    }
 
    private static class GiveOtherCommand extends CommandBase {
       @Nonnull
       private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
-      @Nonnull
-      private static final Message MESSAGE_COMMANDS_GIVE_GAVE = Message.translation("server.commands.give.gave");
-      @Nonnull
-      private static final Message MESSAGE_COMMANDS_GIVE_INSUFFICIENT_INV_SPACE = Message.translation("server.commands.give.insufficientInvSpace");
-      @Nonnull
-      private static final Message MESSAGE_COMMANDS_GIVE_INVALID_METADATA = Message.translation("server.commands.give.invalidMetadata");
       @Nonnull
       private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.argtype.player.desc", ArgTypes.PLAYER_REF);
       @Nonnull
@@ -134,7 +122,7 @@ public class GiveCommand extends AbstractPlayerCommand {
                         try {
                            metadata = BsonDocument.parse(metadataStr);
                         } catch (Exception e) {
-                           context.sendMessage(MESSAGE_COMMANDS_GIVE_INVALID_METADATA.param("error", e.getMessage()));
+                           context.sendMessage(Message.translation("server.commands.give.invalidMetadata").param("error", e.getMessage()));
                            return;
                         }
                      }
@@ -144,10 +132,13 @@ public class GiveCommand extends AbstractPlayerCommand {
                      ItemStack remainder = transaction.getRemainder();
                      Message itemNameMessage = Message.translation(item.getTranslationKey());
                      if (remainder != null && !remainder.isEmpty()) {
-                        context.sendMessage(MESSAGE_COMMANDS_GIVE_INSUFFICIENT_INV_SPACE.param("quantity", quantity).param("item", itemNameMessage));
+                        context.sendMessage(
+                           Message.translation("server.commands.give.insufficientInvSpace").param("quantity", quantity).param("item", itemNameMessage)
+                        );
                      } else {
                         context.sendMessage(
-                           MESSAGE_COMMANDS_GIVE_GAVE.param("targetUsername", targetPlayerRef.getUsername())
+                           Message.translation("server.commands.give.gave")
+                              .param("targetUsername", targetPlayerRef.getUsername())
                               .param("quantity", quantity)
                               .param("item", itemNameMessage)
                         );

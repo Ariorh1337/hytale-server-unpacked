@@ -32,9 +32,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
 import java.util.ArrayList;
@@ -103,11 +103,14 @@ public class HytaleGenerator extends JavaPlugin {
          .append(new KeyedCodec<>("WorldStructure", Codec.STRING), HandleProvider::setWorldStructureName, HandleProvider::getWorldStructureName)
          .documentation("The world structure to be used for this world.")
          .add()
-         .append(new KeyedCodec<>("PlayerSpawn", Transform.CODEC), HandleProvider::setPlayerSpawn, HandleProvider::getPlayerSpawn)
-         .add()
          .build();
       IWorldGenProvider.CODEC.register("HytaleGenerator", HandleProvider.class, generatorProvider);
       this.getCommandRegistry().registerCommand(new ViewportCommand(this.assetManager));
+      this.getEventRegistry().registerGlobal(RemoveWorldEvent.class, event -> {
+         if (event.getWorld().getChunkStore().getGenerator() instanceof Handle handle) {
+            this.generators.remove(handle.getProfile());
+         }
+      });
    }
 
    @Nonnull

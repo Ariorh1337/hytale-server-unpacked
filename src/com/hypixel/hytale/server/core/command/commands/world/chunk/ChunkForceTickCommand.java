@@ -18,12 +18,6 @@ import javax.annotation.Nonnull;
 
 public class ChunkForceTickCommand extends AbstractWorldCommand {
    @Nonnull
-   private static final Message MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED = Message.translation("server.commands.errors.chunkNotLoaded");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_FORCECHUNKTICK_CHUNK_LOAD_USAGE = Message.translation("server.commands.forcechunktick.chunkLoadUsage");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_FORCECHUNKTICK_BLOCKS_IN_CHUNK_TICK = Message.translation("server.commands.forcechunktick.blocksInChunkTick");
-   @Nonnull
    private final RequiredArg<RelativeChunkPosition> chunkPosArg = this.withRequiredArg(
       "x z", "server.commands.chunk.forcetick.position.desc", ArgTypes.RELATIVE_CHUNK_POSITION
    );
@@ -52,10 +46,15 @@ public class ChunkForceTickCommand extends AbstractWorldCommand {
             }
          }
 
-         context.sendMessage(MESSAGE_COMMANDS_FORCECHUNKTICK_BLOCKS_IN_CHUNK_TICK.param("chunkX", position.x).param("chunkZ", position.y));
+         context.sendMessage(Message.translation("server.commands.forcechunktick.blocksInChunkTick").param("chunkX", position.x).param("chunkZ", position.y));
       } else {
-         context.sendMessage(MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED.param("chunkX", position.x).param("chunkZ", position.y).param("world", world.getName()));
-         context.sendMessage(MESSAGE_COMMANDS_FORCECHUNKTICK_CHUNK_LOAD_USAGE.param("chunkX", position.x).param("chunkZ", position.y));
+         context.sendMessage(
+            Message.translation("server.commands.errors.chunkNotLoaded")
+               .param("chunkX", position.x)
+               .param("chunkZ", position.y)
+               .param("world", world.getName())
+         );
+         context.sendMessage(Message.translation("server.commands.forcechunktick.chunkLoadUsage").param("chunkX", position.x).param("chunkZ", position.y));
       }
    }
 }

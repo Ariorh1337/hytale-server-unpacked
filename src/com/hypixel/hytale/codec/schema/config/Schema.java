@@ -35,7 +35,11 @@ public class Schema {
       .addField(new KeyedCodec<>("$id", Codec.STRING, false, true), (o, i) -> o.id = i, o -> o.id)
       .addField(new KeyedCodec<>("type", new Schema.ArrayOrNull(), false, true), (o, i) -> o.types = i, o -> o.types)
       .addField(new KeyedCodec<>("title", Codec.STRING, false, true), (o, i) -> o.title = i, o -> o.title)
-      .addField(new KeyedCodec<>("description", Codec.STRING, false, true), (o, i) -> o.description = i, o -> o.description)
+      .addField(
+         new KeyedCodec<>("description", Codec.STRING, false, true),
+         (o, i) -> o.description = i,
+         o -> o.description == null && o.markdownDescription != null ? Documentation.stripMarkdown(o.markdownDescription) : o.description
+      )
       .addField(new KeyedCodec<>("markdownDescription", Codec.STRING, false, true), (o, i) -> o.markdownDescription = i, o -> o.markdownDescription)
       .addField(new KeyedCodec<>("enumDescriptions", Codec.STRING_ARRAY, false, true), (o, i) -> o.enumDescriptions = i, o -> {
          if (o.enumDescriptions == null && o.markdownEnumDescriptions != null) {

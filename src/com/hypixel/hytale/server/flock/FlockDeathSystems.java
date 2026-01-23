@@ -37,13 +37,13 @@ public class FlockDeathSystems {
          }
 
          Damage damageInfo = component.getDeathInfo();
-         Ref<EntityStore> attackerRef = null;
+         Ref<EntityStore> sourceRef = null;
          if (damageInfo != null && damageInfo.getSource() instanceof Damage.EntitySource entitySource) {
-            attackerRef = entitySource.getRef();
+            sourceRef = entitySource.getRef();
          }
 
-         if (attackerRef != null) {
-            Flock attackerFlock = FlockPlugin.getFlock(commandBuffer, attackerRef);
+         if (sourceRef != null) {
+            Flock attackerFlock = FlockPlugin.getFlock(commandBuffer, sourceRef);
             if (attackerFlock != null) {
                attackerFlock.onTargetKilled(commandBuffer, ref);
             }

@@ -8,6 +8,7 @@ import com.google.gson.stream.JsonReader;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
@@ -30,15 +31,26 @@ public abstract class JsonLoader<K extends SeedResource, T> extends Loader<K, T>
       return this.json != null && this.json.isJsonObject() && this.json.getAsJsonObject().has(name);
    }
 
+   @Nonnull
+   public JsonElement getOrLoad(@Nonnull JsonElement element) {
+      if (element.isJsonObject()) {
+         JsonObject obj = element.getAsJsonObject();
+         JsonElement path = obj.get("File");
+         if (path != null && path.isJsonPrimitive() && path.getAsJsonPrimitive().isString()) {
+            JsonElement loaded = this.loadFileElem(path.getAsString());
+            element = Objects.requireNonNullElse(loaded, element);
+         }
+      }
+
+      return element;
+   }
+
    @Nullable
    public JsonElement get(String name) {
       if (this.json != null && this.json.isJsonObject()) {
          JsonElement element = this.json.getAsJsonObject().get(name);
          if (element != null && element.isJsonObject()) {
-            JsonObject object = element.getAsJsonObject();
-            if (object.has("File")) {
-               element = this.loadFileElem(object.get("File").getAsString());
-            }
+            element = this.getOrLoad(element);
          }
 
          return element;

@@ -103,34 +103,34 @@ public class ModelVFX {
       obj.switchTo = SwitchTo.fromValue(buf.getByte(offset + 1));
       obj.effectDirection = EffectDirection.fromValue(buf.getByte(offset + 2));
       obj.animationDuration = buf.getFloatLE(offset + 3);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.animationRange = Vector2f.deserialize(buf, offset + 7);
       }
 
       obj.loopOption = LoopOption.fromValue(buf.getByte(offset + 15));
       obj.curveType = CurveType.fromValue(buf.getByte(offset + 16));
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.highlightColor = Color.deserialize(buf, offset + 17);
       }
 
       obj.highlightThickness = buf.getFloatLE(offset + 20);
       obj.useBloomOnHighlight = buf.getByte(offset + 24) != 0;
       obj.useProgessiveHighlight = buf.getByte(offset + 25) != 0;
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          obj.noiseScale = Vector2f.deserialize(buf, offset + 26);
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 8) != 0) {
          obj.noiseScrollSpeed = Vector2f.deserialize(buf, offset + 34);
       }
 
-      if ((nullBits & 32) != 0) {
+      if ((nullBits & 16) != 0) {
          obj.postColor = Color.deserialize(buf, offset + 42);
       }
 
       obj.postColorOpacity = buf.getFloatLE(offset + 45);
       int pos = offset + 49;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 32) != 0) {
          int idLen = VarInt.peek(buf, pos);
          if (idLen < 0) {
             throw ProtocolException.negativeLength("Id", idLen);
@@ -151,7 +151,7 @@ public class ModelVFX {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int pos = offset + 49;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 32) != 0) {
          int sl = VarInt.peek(buf, pos);
          pos += VarInt.length(buf, pos) + sl;
       }
@@ -161,27 +161,27 @@ public class ModelVFX {
 
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
-      if (this.id != null) {
+      if (this.animationRange != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.animationRange != null) {
+      if (this.highlightColor != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.highlightColor != null) {
+      if (this.noiseScale != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.noiseScale != null) {
+      if (this.noiseScrollSpeed != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.noiseScrollSpeed != null) {
+      if (this.postColor != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.postColor != null) {
+      if (this.id != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
@@ -246,7 +246,7 @@ public class ModelVFX {
 
       byte nullBits = buffer.getByte(offset);
       int pos = offset + 49;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 32) != 0) {
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");

@@ -124,16 +124,16 @@ public class Model {
       obj.scale = buf.getFloatLE(offset + 2);
       obj.eyeHeight = buf.getFloatLE(offset + 6);
       obj.crouchOffset = buf.getFloatLE(offset + 10);
-      if ((nullBits[1] & 1) != 0) {
+      if ((nullBits[0] & 1) != 0) {
          obj.hitbox = Hitbox.deserialize(buf, offset + 14);
       }
 
-      if ((nullBits[1] & 8) != 0) {
+      if ((nullBits[0] & 2) != 0) {
          obj.light = ColorLight.deserialize(buf, offset + 38);
       }
 
       obj.phobia = Phobia.fromValue(buf.getByte(offset + 42));
-      if ((nullBits[0] & 1) != 0) {
+      if ((nullBits[0] & 4) != 0) {
          int varPos0 = offset + 91 + buf.getIntLE(offset + 43);
          int assetIdLen = VarInt.peek(buf, varPos0);
          if (assetIdLen < 0) {
@@ -147,7 +147,7 @@ public class Model {
          obj.assetId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 2) != 0) {
+      if ((nullBits[0] & 8) != 0) {
          int varPos1 = offset + 91 + buf.getIntLE(offset + 47);
          int pathLen = VarInt.peek(buf, varPos1);
          if (pathLen < 0) {
@@ -161,7 +161,7 @@ public class Model {
          obj.path = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 16) != 0) {
          int varPos2 = offset + 91 + buf.getIntLE(offset + 51);
          int textureLen = VarInt.peek(buf, varPos2);
          if (textureLen < 0) {
@@ -175,7 +175,7 @@ public class Model {
          obj.texture = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[0] & 32) != 0) {
          int varPos3 = offset + 91 + buf.getIntLE(offset + 55);
          int gradientSetLen = VarInt.peek(buf, varPos3);
          if (gradientSetLen < 0) {
@@ -189,7 +189,7 @@ public class Model {
          obj.gradientSet = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 16) != 0) {
+      if ((nullBits[0] & 64) != 0) {
          int varPos4 = offset + 91 + buf.getIntLE(offset + 59);
          int gradientIdLen = VarInt.peek(buf, varPos4);
          if (gradientIdLen < 0) {
@@ -203,12 +203,12 @@ public class Model {
          obj.gradientId = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 32) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int varPos5 = offset + 91 + buf.getIntLE(offset + 63);
          obj.camera = CameraSettings.deserialize(buf, varPos5);
       }
 
-      if ((nullBits[0] & 64) != 0) {
+      if ((nullBits[1] & 1) != 0) {
          int varPos6 = offset + 91 + buf.getIntLE(offset + 67);
          int animationSetsCount = VarInt.peek(buf, varPos6);
          if (animationSetsCount < 0) {
@@ -244,7 +244,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 128) != 0) {
+      if ((nullBits[1] & 2) != 0) {
          int varPos7 = offset + 91 + buf.getIntLE(offset + 71);
          int attachmentsCount = VarInt.peek(buf, varPos7);
          if (attachmentsCount < 0) {
@@ -269,7 +269,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[1] & 2) != 0) {
+      if ((nullBits[1] & 4) != 0) {
          int varPos8 = offset + 91 + buf.getIntLE(offset + 75);
          int particlesCount = VarInt.peek(buf, varPos8);
          if (particlesCount < 0) {
@@ -294,7 +294,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[1] & 4) != 0) {
+      if ((nullBits[1] & 8) != 0) {
          int varPos9 = offset + 91 + buf.getIntLE(offset + 79);
          int trailsCount = VarInt.peek(buf, varPos9);
          if (trailsCount < 0) {
@@ -386,7 +386,7 @@ public class Model {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       int maxEnd = 91;
-      if ((nullBits[0] & 1) != 0) {
+      if ((nullBits[0] & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 43);
          int pos0 = offset + 91 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
@@ -396,7 +396,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 2) != 0) {
+      if ((nullBits[0] & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 47);
          int pos1 = offset + 91 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
@@ -406,7 +406,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 16) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 51);
          int pos2 = offset + 91 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
@@ -416,7 +416,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[0] & 32) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 55);
          int pos3 = offset + 91 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
@@ -426,7 +426,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 16) != 0) {
+      if ((nullBits[0] & 64) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 59);
          int pos4 = offset + 91 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
@@ -436,7 +436,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 32) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 63);
          int pos5 = offset + 91 + fieldOffset5;
          pos5 += CameraSettings.computeBytesConsumed(buf, pos5);
@@ -445,7 +445,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 64) != 0) {
+      if ((nullBits[1] & 1) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 67);
          int pos6 = offset + 91 + fieldOffset6;
          int dictLen = VarInt.peek(buf, pos6);
@@ -462,7 +462,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 128) != 0) {
+      if ((nullBits[1] & 2) != 0) {
          int fieldOffset7 = buf.getIntLE(offset + 71);
          int pos7 = offset + 91 + fieldOffset7;
          int arrLen = VarInt.peek(buf, pos7);
@@ -477,7 +477,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[1] & 2) != 0) {
+      if ((nullBits[1] & 4) != 0) {
          int fieldOffset8 = buf.getIntLE(offset + 75);
          int pos8 = offset + 91 + fieldOffset8;
          int arrLen = VarInt.peek(buf, pos8);
@@ -492,7 +492,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[1] & 4) != 0) {
+      if ((nullBits[1] & 8) != 0) {
          int fieldOffset9 = buf.getIntLE(offset + 79);
          int pos9 = offset + 91 + fieldOffset9;
          int arrLen = VarInt.peek(buf, pos9);
@@ -544,51 +544,51 @@ public class Model {
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[2];
-      if (this.assetId != null) {
+      if (this.hitbox != null) {
          nullBits[0] = (byte)(nullBits[0] | 1);
       }
 
-      if (this.path != null) {
+      if (this.light != null) {
          nullBits[0] = (byte)(nullBits[0] | 2);
       }
 
-      if (this.texture != null) {
+      if (this.assetId != null) {
          nullBits[0] = (byte)(nullBits[0] | 4);
       }
 
-      if (this.gradientSet != null) {
+      if (this.path != null) {
          nullBits[0] = (byte)(nullBits[0] | 8);
       }
 
-      if (this.gradientId != null) {
+      if (this.texture != null) {
          nullBits[0] = (byte)(nullBits[0] | 16);
       }
 
-      if (this.camera != null) {
+      if (this.gradientSet != null) {
          nullBits[0] = (byte)(nullBits[0] | 32);
       }
 
-      if (this.animationSets != null) {
+      if (this.gradientId != null) {
          nullBits[0] = (byte)(nullBits[0] | 64);
       }
 
-      if (this.attachments != null) {
+      if (this.camera != null) {
          nullBits[0] = (byte)(nullBits[0] | 128);
       }
 
-      if (this.hitbox != null) {
+      if (this.animationSets != null) {
          nullBits[1] = (byte)(nullBits[1] | 1);
       }
 
-      if (this.particles != null) {
+      if (this.attachments != null) {
          nullBits[1] = (byte)(nullBits[1] | 2);
       }
 
-      if (this.trails != null) {
+      if (this.particles != null) {
          nullBits[1] = (byte)(nullBits[1] | 4);
       }
 
-      if (this.light != null) {
+      if (this.trails != null) {
          nullBits[1] = (byte)(nullBits[1] | 8);
       }
 
@@ -862,7 +862,7 @@ public class Model {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-      if ((nullBits[0] & 1) != 0) {
+      if ((nullBits[0] & 4) != 0) {
          int assetIdOffset = buffer.getIntLE(offset + 43);
          if (assetIdOffset < 0) {
             return ValidationResult.error("Invalid offset for AssetId");
@@ -889,7 +889,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 2) != 0) {
+      if ((nullBits[0] & 8) != 0) {
          int pathOffset = buffer.getIntLE(offset + 47);
          if (pathOffset < 0) {
             return ValidationResult.error("Invalid offset for Path");
@@ -916,7 +916,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 16) != 0) {
          int textureOffset = buffer.getIntLE(offset + 51);
          if (textureOffset < 0) {
             return ValidationResult.error("Invalid offset for Texture");
@@ -943,7 +943,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[0] & 32) != 0) {
          int gradientSetOffset = buffer.getIntLE(offset + 55);
          if (gradientSetOffset < 0) {
             return ValidationResult.error("Invalid offset for GradientSet");
@@ -970,7 +970,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 16) != 0) {
+      if ((nullBits[0] & 64) != 0) {
          int gradientIdOffset = buffer.getIntLE(offset + 59);
          if (gradientIdOffset < 0) {
             return ValidationResult.error("Invalid offset for GradientId");
@@ -997,7 +997,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 32) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int cameraOffset = buffer.getIntLE(offset + 63);
          if (cameraOffset < 0) {
             return ValidationResult.error("Invalid offset for Camera");
@@ -1016,7 +1016,7 @@ public class Model {
          pos += CameraSettings.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits[0] & 64) != 0) {
+      if ((nullBits[1] & 1) != 0) {
          int animationSetsOffset = buffer.getIntLE(offset + 67);
          if (animationSetsOffset < 0) {
             return ValidationResult.error("Invalid offset for AnimationSets");
@@ -1058,7 +1058,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[0] & 128) != 0) {
+      if ((nullBits[1] & 2) != 0) {
          int attachmentsOffset = buffer.getIntLE(offset + 71);
          if (attachmentsOffset < 0) {
             return ValidationResult.error("Invalid offset for Attachments");
@@ -1090,7 +1090,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[1] & 2) != 0) {
+      if ((nullBits[1] & 4) != 0) {
          int particlesOffset = buffer.getIntLE(offset + 75);
          if (particlesOffset < 0) {
             return ValidationResult.error("Invalid offset for Particles");
@@ -1122,7 +1122,7 @@ public class Model {
          }
       }
 
-      if ((nullBits[1] & 4) != 0) {
+      if ((nullBits[1] & 8) != 0) {
          int trailsOffset = buffer.getIntLE(offset + 79);
          if (trailsOffset < 0) {
             return ValidationResult.error("Invalid offset for Trails");

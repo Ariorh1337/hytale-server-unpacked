@@ -96,6 +96,7 @@ public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
    private SleepMultiplayer createSleepMultiplayer(@Nonnull Store<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       List<PlayerRef> playerRefs = new ArrayList<>(world.getPlayerRefs());
+      playerRefs.removeIf(playerRefx -> playerRefx.getReference() == null);
       if (playerRefs.size() <= 1) {
          return null;
       }

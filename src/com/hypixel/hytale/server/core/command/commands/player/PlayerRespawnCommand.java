@@ -28,7 +28,7 @@ public class PlayerRespawnCommand extends AbstractPlayerCommand {
    protected void execute(
       @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
    ) {
-      store.tryRemoveComponent(ref, DeathComponent.getComponentType());
+      DeathComponent.respawn(store, ref);
       context.sendMessage(MESSAGE_COMMANDS_PLAYER_RESPAWN_SUCCESS_SELF);
    }
 
@@ -54,7 +54,7 @@ public class PlayerRespawnCommand extends AbstractPlayerCommand {
                if (playerComponent == null) {
                   context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
                } else {
-                  store.tryRemoveComponent(ref, DeathComponent.getComponentType());
+                  DeathComponent.respawn(store, ref);
                   context.sendMessage(Message.translation("server.commands.player.respawn.success.other").param("username", playerRef.getUsername()));
                }
             });

@@ -14,7 +14,7 @@ public class SchemaFile {
    public static final int FIXED_BLOCK_SIZE = 1;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 1;
-   public static final int MAX_SIZE = 16384006;
+   public static final int MAX_SIZE = 67108866;
    @Nullable
    public String content;
 
@@ -40,8 +40,8 @@ public class SchemaFile {
             throw ProtocolException.negativeLength("Content", contentLen);
          }
 
-         if (contentLen > 4096000) {
-            throw ProtocolException.stringTooLong("Content", contentLen, 4096000);
+         if (contentLen > 16777215) {
+            throw ProtocolException.stringTooLong("Content", contentLen, 16777215);
          }
 
          int contentVarLen = VarInt.length(buf, pos);
@@ -71,7 +71,7 @@ public class SchemaFile {
 
       buf.writeByte(nullBits);
       if (this.content != null) {
-         PacketIO.writeVarString(buf, this.content, 4096000);
+         PacketIO.writeVarString(buf, this.content, 16777215);
       }
    }
 
@@ -97,8 +97,8 @@ public class SchemaFile {
             return ValidationResult.error("Invalid string length for Content");
          }
 
-         if (contentLen > 4096000) {
-            return ValidationResult.error("Content exceeds max length 4096000");
+         if (contentLen > 16777215) {
+            return ValidationResult.error("Content exceeds max length 16777215");
          }
 
          pos += VarInt.length(buffer, pos);

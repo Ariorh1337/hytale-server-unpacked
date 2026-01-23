@@ -39,7 +39,7 @@ public class EffectConditionInteraction extends SimpleInstantInteraction {
       )
       .addValidator(Validators.nonNull())
       .addValidator(Validators.nonEmptyArray())
-      .addValidator(EntityEffect.VALIDATOR_CACHE.getArrayValidator())
+      .addValidatorLate(() -> EntityEffect.VALIDATOR_CACHE.getArrayValidator().late())
       .add()
       .<Match>append(
          new KeyedCodec<>("Match", new EnumCodec<>(Match.class)),

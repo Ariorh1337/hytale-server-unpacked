@@ -67,46 +67,47 @@ public class LaunchProjectileInteraction extends SimpleInstantInteraction implem
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
       assert commandBuffer != null;
       World world = commandBuffer.getExternalData().getWorld();
-      Ref<EntityStore> attackerRef = context.getEntity();
-      if (EntityUtils.getEntity(attackerRef, commandBuffer) instanceof LivingEntity attackerLivingEntity) {
-         Transform lookVec = TargetUtil.getLook(attackerRef, commandBuffer);
+      Ref<EntityStore> sourceRef = context.getEntity();
+      if (EntityUtils.getEntity(sourceRef, commandBuffer) instanceof LivingEntity attackerLivingEntity) {
+         Transform lookVec = TargetUtil.getLook(sourceRef, commandBuffer);
          Vector3d lookPosition = lookVec.getPosition();
          Vector3f lookRotation = lookVec.getRotation();
-         UUIDComponent attackerUuidComponent = commandBuffer.getComponent(attackerRef, UUIDComponent.getComponentType());
-         assert attackerUuidComponent != null;
-         UUID attackerUuid = attackerUuidComponent.getUuid();
-         TimeResource timeResource = commandBuffer.getResource(TimeResource.getResourceType());
-         Holder<EntityStore> holder = ProjectileComponent.assembleDefaultProjectile(timeResource, this.projectileId, lookPosition, lookRotation);
-         ProjectileComponent projectileComponent = holder.getComponent(ProjectileComponent.getComponentType());
-         assert projectileComponent != null;
-         holder.ensureComponent(Intangible.getComponentType());
-         if (projectileComponent.getProjectile() == null) {
-            projectileComponent.initialize();
+         UUIDComponent sourceUuidComponent = commandBuffer.getComponent(sourceRef, UUIDComponent.getComponentType());
+         if (sourceUuidComponent != null) {
+            UUID sourceUuid = sourceUuidComponent.getUuid();
+            TimeResource timeResource = commandBuffer.getResource(TimeResource.getResourceType());
+            Holder<EntityStore> holder = ProjectileComponent.assembleDefaultProjectile(timeResource, this.projectileId, lookPosition, lookRotation);
+            ProjectileComponent projectileComponent = holder.getComponent(ProjectileComponent.getComponentType());
+            assert projectileComponent != null;
+            holder.ensureComponent(Intangible.getComponentType());
             if (projectileComponent.getProjectile() == null) {
-               return;
-            }
-         }
-
-         projectileComponent.shoot(
-            holder, attackerUuid, lookPosition.getX(), lookPosition.getY(), lookPosition.getZ(), lookRotation.getYaw(), lookRotation.getPitch()
-         );
-         commandBuffer.addEntity(holder, AddReason.SPAWN);
-         ItemStack itemInHand = context.getHeldItem();
-         if (itemInHand != null && !itemInHand.isEmpty()) {
-            Item item = itemInHand.getItem();
-            if (attackerLivingEntity.canDecreaseItemStackDurability(attackerRef, commandBuffer) && !itemInHand.isUnbreakable() && item.getWeapon() != null) {
-               Inventory inventory = attackerLivingEntity.getInventory();
-               ItemContainer section = inventory.getSectionById(context.getHeldItemSectionId());
-               if (section != null) {
-                  attackerLivingEntity.updateItemStackDurability(
-                     attackerRef, itemInHand, section, context.getHeldItemSlot(), -item.getDurabilityLossOnHit(), commandBuffer
-                  );
+               projectileComponent.initialize();
+               if (projectileComponent.getProjectile() == null) {
+                  return;
                }
             }
 
-            if (itemInHand.isBroken()) {
-               BrokenPenalties brokenPenalties = world.getGameplayConfig().getItemDurabilityConfig().getBrokenPenalties();
-               projectileComponent.applyBrokenPenalty((float)brokenPenalties.getWeapon(1.0));
+            projectileComponent.shoot(
+               holder, sourceUuid, lookPosition.getX(), lookPosition.getY(), lookPosition.getZ(), lookRotation.getYaw(), lookRotation.getPitch()
+            );
+            commandBuffer.addEntity(holder, AddReason.SPAWN);
+            ItemStack itemInHand = context.getHeldItem();
+            if (itemInHand != null && !itemInHand.isEmpty()) {
+               Item item = itemInHand.getItem();
+               if (attackerLivingEntity.canDecreaseItemStackDurability(sourceRef, commandBuffer) && !itemInHand.isUnbreakable() && item.getWeapon() != null) {
+                  Inventory inventory = attackerLivingEntity.getInventory();
+                  ItemContainer section = inventory.getSectionById(context.getHeldItemSectionId());
+                  if (section != null) {
+                     attackerLivingEntity.updateItemStackDurability(
+                        sourceRef, itemInHand, section, context.getHeldItemSlot(), -item.getDurabilityLossOnHit(), commandBuffer
+                     );
+                  }
+               }
+
+               if (itemInHand.isBroken()) {
+                  BrokenPenalties brokenPenalties = world.getGameplayConfig().getItemDurabilityConfig().getBrokenPenalties();
+                  projectileComponent.applyBrokenPenalty((float)brokenPenalties.getWeapon(1.0));
+               }
             }
          }
       }

@@ -28,9 +28,14 @@ public class CaveTypesJsonLoader extends JsonLoader<SeedStringResource, CaveType
          CaveType[] caveTypes = new CaveType[typesArray.size()];
 
          for (int i = 0; i < typesArray.size(); i++) {
-            JsonObject caveTypeObject = typesArray.get(i).getAsJsonObject();
-            String name = this.loadName(caveTypeObject);
-            caveTypes[i] = this.loadCaveType(name, caveTypeObject);
+            JsonElement entry = this.getOrLoad(typesArray.get(i));
+            if (!entry.isJsonObject()) {
+               throw error("Expected CaveType entry to be a JsonObject at index: %d", i);
+            }
+
+            JsonObject caveTypeJson = entry.getAsJsonObject();
+            String name = this.loadName(caveTypeJson);
+            caveTypes[i] = this.loadCaveType(name, caveTypeJson);
          }
 
          return caveTypes;

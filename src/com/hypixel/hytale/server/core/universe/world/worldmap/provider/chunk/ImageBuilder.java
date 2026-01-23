@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.universe.world.worldmap.provider.chunk;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.protocol.ShaderType;
 import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
@@ -406,26 +407,30 @@ class ImageBuilder {
       int tintColorR = 255;
       int tintColorG = 255;
       int tintColorB = 255;
-      Environment environment = Environment.getAssetMap().getAsset(environmentId);
-      com.hypixel.hytale.protocol.Color waterTint = environment.getWaterTint();
-      if (waterTint != null) {
-         tintColorR = tintColorR * (waterTint.red & 255) / 255;
-         tintColorG = tintColorG * (waterTint.green & 255) / 255;
-         tintColorB = tintColorB * (waterTint.blue & 255) / 255;
-      }
-
       Fluid fluid = Fluid.getAssetMap().getAsset(fluidId);
-      com.hypixel.hytale.protocol.Color partcileColor = fluid.getParticleColor();
-      if (partcileColor != null) {
-         tintColorR = tintColorR * (partcileColor.red & 255) / 255;
-         tintColorG = tintColorG * (partcileColor.green & 255) / 255;
-         tintColorB = tintColorB * (partcileColor.blue & 255) / 255;
-      }
+      if (fluid != null) {
+         if (fluid.hasEffect(ShaderType.Water)) {
+            Environment environment = Environment.getAssetMap().getAsset(environmentId);
+            com.hypixel.hytale.protocol.Color waterTint = environment.getWaterTint();
+            if (waterTint != null) {
+               tintColorR = tintColorR * (waterTint.red & 255) / 255;
+               tintColorG = tintColorG * (waterTint.green & 255) / 255;
+               tintColorB = tintColorB * (waterTint.blue & 255) / 255;
+            }
+         }
 
-      float depthMultiplier = Math.min(1.0F, 1.0F / fluidDepth);
-      outColor.r = (int)(tintColorR + ((outColor.r & 0xFF) - tintColorR) * depthMultiplier) & 0xFF;
-      outColor.g = (int)(tintColorG + ((outColor.g & 0xFF) - tintColorG) * depthMultiplier) & 0xFF;
-      outColor.b = (int)(tintColorB + ((outColor.b & 0xFF) - tintColorB) * depthMultiplier) & 0xFF;
+         com.hypixel.hytale.protocol.Color partcileColor = fluid.getParticleColor();
+         if (partcileColor != null) {
+            tintColorR = tintColorR * (partcileColor.red & 255) / 255;
+            tintColorG = tintColorG * (partcileColor.green & 255) / 255;
+            tintColorB = tintColorB * (partcileColor.blue & 255) / 255;
+         }
+
+         float depthMultiplier = Math.min(1.0F, 1.0F / fluidDepth);
+         outColor.r = (int)(tintColorR + ((outColor.r & 0xFF) - tintColorR) * depthMultiplier) & 0xFF;
+         outColor.g = (int)(tintColorG + ((outColor.g & 0xFF) - tintColorG) * depthMultiplier) & 0xFF;
+         outColor.b = (int)(tintColorB + ((outColor.b & 0xFF) - tintColorB) * depthMultiplier) & 0xFF;
+      }
    }
 
    @Nonnull

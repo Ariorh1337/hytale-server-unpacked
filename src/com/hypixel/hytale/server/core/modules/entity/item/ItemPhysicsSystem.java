@@ -44,7 +44,7 @@ public class ItemPhysicsSystem extends EntityTickingSystem<EntityStore> {
       this.velocityComponentType = velocityComponentType;
       this.boundingBoxComponentType = boundingBoxComponentType;
       this.transformComponentType = TransformComponent.getComponentType();
-      this.query = Query.and(itemPhysicsComponentType, boundingBoxComponentType, velocityComponentType);
+      this.query = Query.and(itemPhysicsComponentType, boundingBoxComponentType, velocityComponentType, this.transformComponentType);
    }
 
    @Nonnull

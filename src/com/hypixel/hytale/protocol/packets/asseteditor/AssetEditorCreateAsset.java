@@ -60,16 +60,16 @@ public class AssetEditorCreateAsset implements Packet {
       AssetEditorCreateAsset obj = new AssetEditorCreateAsset();
       byte nullBits = buf.getByte(offset);
       obj.token = buf.getIntLE(offset + 1);
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.rebuildCaches = AssetEditorRebuildCaches.deserialize(buf, offset + 5);
       }
 
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int varPos0 = offset + 22 + buf.getIntLE(offset + 10);
          obj.path = AssetPath.deserialize(buf, varPos0);
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int varPos1 = offset + 22 + buf.getIntLE(offset + 14);
          int dataCount = VarInt.peek(buf, varPos1);
          if (dataCount < 0) {
@@ -112,7 +112,7 @@ public class AssetEditorCreateAsset implements Packet {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 22;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 10);
          int pos0 = offset + 22 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
@@ -121,7 +121,7 @@ public class AssetEditorCreateAsset implements Packet {
          }
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 14);
          int pos1 = offset + 22 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
@@ -148,15 +148,15 @@ public class AssetEditorCreateAsset implements Packet {
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
-      if (this.path != null) {
+      if (this.rebuildCaches != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.data != null) {
+      if (this.path != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.rebuildCaches != null) {
+      if (this.data != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
@@ -233,7 +233,7 @@ public class AssetEditorCreateAsset implements Packet {
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int pathOffset = buffer.getIntLE(offset + 10);
          if (pathOffset < 0) {
             return ValidationResult.error("Invalid offset for Path");
@@ -252,7 +252,7 @@ public class AssetEditorCreateAsset implements Packet {
          pos += AssetPath.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int dataOffset = buffer.getIntLE(offset + 14);
          if (dataOffset < 0) {
             return ValidationResult.error("Invalid offset for Data");

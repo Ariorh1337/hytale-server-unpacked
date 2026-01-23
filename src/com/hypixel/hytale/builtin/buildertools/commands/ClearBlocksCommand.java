@@ -25,6 +25,8 @@ import javax.annotation.Nonnull;
 public class ClearBlocksCommand extends AbstractPlayerCommand {
    @Nonnull
    private static final Message MESSAGE_COMMANDS_CLEAR_NO_SELECTION = Message.translation("server.commands.clear.noSelection");
+   @Nonnull
+   private static final Message MESSAGE_COMMANDS_CLEAR_SUCCESS = Message.translation("server.commands.clear.success");
 
    public ClearBlocksCommand() {
       super("clearBlocks", "server.commands.clear.desc");
@@ -65,6 +67,7 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
                   BuilderToolsPlugin.addToQueue(
                      playerComponent, playerRef, (r, s, componentAccessor) -> s.clear(min.x, min.y, min.z, max.x, max.y, max.z, componentAccessor)
                   );
+                  playerRef.sendMessage(ClearBlocksCommand.MESSAGE_COMMANDS_CLEAR_SUCCESS);
                }
             }
          }
@@ -83,6 +86,7 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
             playerRef.sendMessage(MESSAGE_COMMANDS_CLEAR_NO_SELECTION);
          } else {
             BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.set(BlockPattern.EMPTY, componentAccessor));
+            playerRef.sendMessage(MESSAGE_COMMANDS_CLEAR_SUCCESS);
          }
       }
    }

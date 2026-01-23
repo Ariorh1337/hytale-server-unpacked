@@ -74,17 +74,17 @@ public class ProjectileConfig {
       }
 
       obj.launchForce = buf.getDoubleLE(offset + 123);
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.spawnOffset = Vector3f.deserialize(buf, offset + 131);
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          obj.rotationOffset = Direction.deserialize(buf, offset + 143);
       }
 
       obj.launchLocalSoundEventIndex = buf.getIntLE(offset + 155);
       obj.projectileSoundEventIndex = buf.getIntLE(offset + 159);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 8) != 0) {
          int varPos0 = offset + 171 + buf.getIntLE(offset + 163);
          obj.model = Model.deserialize(buf, varPos0);
       }
@@ -120,7 +120,7 @@ public class ProjectileConfig {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 171;
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 163);
          int pos0 = offset + 171 + fieldOffset0;
          pos0 += Model.computeBytesConsumed(buf, pos0);
@@ -154,15 +154,15 @@ public class ProjectileConfig {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.model != null) {
+      if (this.spawnOffset != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.spawnOffset != null) {
+      if (this.rotationOffset != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.rotationOffset != null) {
+      if (this.model != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
@@ -240,7 +240,7 @@ public class ProjectileConfig {
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 8) != 0) {
          int modelOffset = buffer.getIntLE(offset + 163);
          if (modelOffset < 0) {
             return ValidationResult.error("Invalid offset for Model");

@@ -22,9 +22,6 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public class WhoCommand extends AbstractAsyncCommand {
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_WHO_PLAYER_WITH_DISPLAY_NAME = Message.translation("server.commands.who.playerWithDisplayName");
-
    public WhoCommand() {
       super("who", "server.commands.who.desc");
       this.setPermissionGroup(GameMode.Adventure);
@@ -55,7 +52,9 @@ public class WhoCommand extends AbstractAsyncCommand {
                         Message displayName = displayNameComponent.getDisplayName();
                         if (displayName != null) {
                            playerMessages.add(
-                              MESSAGE_COMMANDS_WHO_PLAYER_WITH_DISPLAY_NAME.param("displayName", displayName).param("username", playerRef.getUsername())
+                              Message.translation("server.commands.who.playerWithDisplayName")
+                                 .param("displayName", displayName)
+                                 .param("username", playerRef.getUsername())
                            );
                         } else {
                            playerMessages.add(Message.raw(playerRef.getUsername()));

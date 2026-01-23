@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 public class AssetPrefabFileProvider implements FileListProvider {
    private static final String PREFAB_EXTENSION = ".prefab.json";
    private static final int MAX_SEARCH_RESULTS = 50;
+   private static final String BASE_ASSET_PACK_DISPLAY_NAME = "HytaleAssets";
 
    @Nonnull
    @Override
@@ -42,7 +43,15 @@ public class AssetPrefabFileProvider implements FileListProvider {
          entries.add(new FileListProvider.FileEntry(packKey, displayName, true));
       }
 
-      entries.sort(Comparator.comparing(FileListProvider.FileEntry::displayName, String.CASE_INSENSITIVE_ORDER));
+      entries.sort((a, b) -> {
+         boolean aIsBase = "HytaleAssets".equals(a.displayName());
+         boolean bIsBase = "HytaleAssets".equals(b.displayName());
+         if (aIsBase != bIsBase) {
+            return aIsBase ? -1 : 1;
+         } else {
+            return a.displayName().compareToIgnoreCase(b.displayName());
+         }
+      });
       return entries;
    }
 
@@ -119,7 +128,7 @@ public class AssetPrefabFileProvider implements FileListProvider {
 
       for (int i = 0; i < Math.min(allResults.size(), 50); i++) {
          AssetPrefabFileProvider.SearchResult result = allResults.get(i);
-         entries.add(new FileListProvider.FileEntry(result.relativePath(), result.displayName(), false, result.score()));
+         entries.add(new FileListProvider.FileEntry(result.relativePath(), result.displayName(), false, false, result.score()));
       }
 
       return entries;

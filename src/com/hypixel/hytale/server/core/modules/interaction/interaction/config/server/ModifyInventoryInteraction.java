@@ -116,7 +116,9 @@ public class ModifyInventoryInteraction extends SimpleInstantInteraction {
       Ref<EntityStore> ref = context.getEntity();
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
+      if (playerComponent == null) {
+         context.getState().state = InteractionState.Failed;
+      } else {
          boolean hasRequiredGameMode = this.requiredGameMode == null || playerComponent.getGameMode() == this.requiredGameMode;
          if (hasRequiredGameMode) {
             CombinedItemContainer combinedHotbarFirst = playerComponent.getInventory().getCombinedHotbarFirst();

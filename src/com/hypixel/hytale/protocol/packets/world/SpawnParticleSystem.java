@@ -59,21 +59,21 @@ public class SpawnParticleSystem implements Packet {
    public static SpawnParticleSystem deserialize(@Nonnull ByteBuf buf, int offset) {
       SpawnParticleSystem obj = new SpawnParticleSystem();
       byte nullBits = buf.getByte(offset);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.position = Position.deserialize(buf, offset + 1);
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.rotation = Direction.deserialize(buf, offset + 25);
       }
 
       obj.scale = buf.getFloatLE(offset + 37);
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          obj.color = Color.deserialize(buf, offset + 41);
       }
 
       int pos = offset + 44;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 8) != 0) {
          int particleSystemIdLen = VarInt.peek(buf, pos);
          if (particleSystemIdLen < 0) {
             throw ProtocolException.negativeLength("ParticleSystemId", particleSystemIdLen);
@@ -94,7 +94,7 @@ public class SpawnParticleSystem implements Packet {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int pos = offset + 44;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 8) != 0) {
          int sl = VarInt.peek(buf, pos);
          pos += VarInt.length(buf, pos) + sl;
       }
@@ -105,19 +105,19 @@ public class SpawnParticleSystem implements Packet {
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
-      if (this.particleSystemId != null) {
+      if (this.position != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.position != null) {
+      if (this.rotation != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.rotation != null) {
+      if (this.color != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.color != null) {
+      if (this.particleSystemId != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
@@ -163,7 +163,7 @@ public class SpawnParticleSystem implements Packet {
 
       byte nullBits = buffer.getByte(offset);
       int pos = offset + 44;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 8) != 0) {
          int particleSystemIdLen = VarInt.peek(buffer, pos);
          if (particleSystemIdLen < 0) {
             return ValidationResult.error("Invalid string length for ParticleSystemId");

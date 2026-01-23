@@ -23,8 +23,6 @@ import javax.annotation.Nonnull;
 
 public class ChunkFixHeightMapCommand extends AbstractWorldCommand {
    @Nonnull
-   private static final Message MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED = Message.translation("server.commands.errors.chunkNotLoaded");
-   @Nonnull
    private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_STARTED = Message.translation("server.commands.chunk.fixHeightMap.started");
    @Nonnull
    private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_DONE = Message.translation("server.commands.chunk.fixHeightMap.done");
@@ -32,16 +30,6 @@ public class ChunkFixHeightMapCommand extends AbstractWorldCommand {
    private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_INVALIDATING_LIGHTING = Message.translation(
       "server.commands.chunk.fixHeightMap.invalidatingLighting"
    );
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_WAITING_FOR_LIGHTING = Message.translation(
-      "server.commands.chunk.fixHeightMap.waitingForLighting"
-   );
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_FINISHED = Message.translation(
-      "server.commands.chunk.fixHeightMap.lightingFinished"
-   );
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_ERROR = Message.translation("server.commands.chunk.fixHeightMap.lightingError");
    @Nonnull
    private final RequiredArg<RelativeChunkPosition> chunkPosArg = this.withRequiredArg(
       "x z", "server.commands.chunk.fixheight.position.desc", ArgTypes.RELATIVE_CHUNK_POSITION
@@ -80,23 +68,25 @@ public class ChunkFixHeightMapCommand extends AbstractWorldCommand {
 
          chunkLighting.invalidateLightInChunk(worldChunkComponent);
          context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_DONE);
-         context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_WAITING_FOR_LIGHTING.param("x", chunkX).param("z", chunkZ));
+         context.sendMessage(Message.translation("server.commands.chunk.fixHeightMap.waitingForLighting").param("x", chunkX).param("z", chunkZ));
          int[] count = new int[]{0};
          ScheduledFuture<?>[] scheduledFuture = new ScheduledFuture[1];
          scheduledFuture[0] = HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             if (chunkLighting.isQueued(chunkX, chunkZ)) {
                if (count[0]++ > 60) {
                   scheduledFuture[0].cancel(false);
-                  context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_ERROR.param("x", chunkX).param("z", chunkZ));
+                  context.sendMessage(Message.translation("server.commands.chunk.fixHeightMap.lightingError").param("x", chunkX).param("z", chunkZ));
                }
             } else {
                world.getNotificationHandler().updateChunk(chunkIndex);
-               context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_FINISHED.param("x", chunkX).param("z", chunkZ));
+               context.sendMessage(Message.translation("server.commands.chunk.fixHeightMap.lightingFinished").param("x", chunkX).param("z", chunkZ));
                scheduledFuture[0].cancel(false);
             }
          }, 1L, 1L, TimeUnit.SECONDS);
       } else {
-         context.sendMessage(MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED.param("chunkX", chunkX).param("chunkZ", chunkZ).param("world", world.getName()));
+         context.sendMessage(
+            Message.translation("server.commands.errors.chunkNotLoaded").param("chunkX", chunkX).param("chunkZ", chunkZ).param("world", world.getName())
+         );
       }
    }
 }

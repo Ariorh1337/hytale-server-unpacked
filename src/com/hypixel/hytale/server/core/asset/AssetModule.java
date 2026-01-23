@@ -186,7 +186,7 @@ public class AssetModule extends JavaPlugin {
       path = path.toAbsolutePath().normalize();
 
       for (AssetPack pack : this.assetPacks) {
-         if (path.startsWith(pack.getRoot())) {
+         if (path.getFileSystem() == pack.getRoot().getFileSystem() && path.startsWith(pack.getRoot())) {
             return pack;
          }
       }

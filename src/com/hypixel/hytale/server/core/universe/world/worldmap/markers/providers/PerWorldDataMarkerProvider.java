@@ -1,24 +1,21 @@
-package com.hypixel.hytale.server.core.universe.world.worldmap.markers;
+package com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers;
 
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import javax.annotation.Nonnull;
 
-public class PlayerMarkersProvider implements WorldMapManager.MarkerProvider {
-   public static final PlayerMarkersProvider INSTANCE = new PlayerMarkersProvider();
+public class PerWorldDataMarkerProvider implements WorldMapManager.MarkerProvider {
+   public static final PerWorldDataMarkerProvider INSTANCE = new PerWorldDataMarkerProvider();
 
-   private PlayerMarkersProvider() {
+   private PerWorldDataMarkerProvider() {
    }
 
    @Override
-   public void update(
-      @Nonnull World world, @Nonnull GameplayConfig gameplayConfig, @Nonnull WorldMapTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ
-   ) {
+   public void update(@Nonnull World world, @Nonnull MapMarkerTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
       Player player = tracker.getPlayer();
       PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
       MapMarker[] worldMapMarkers = perWorldData.getWorldMapMarkers();

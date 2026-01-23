@@ -1725,7 +1725,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          RailConfig rotatedRail = this.rotatedRailConfig[rotationIndex];
          if (rotatedRail == null) {
             RotationTuple rotation = RotationTuple.get(rotationIndex);
-            rotatedRail = new RailConfig(this.railConfig);
+            rotatedRail = this.railConfig.clone();
 
             for (RailPoint p : rotatedRail.points) {
                Vector3f hyPoint = new Vector3f(p.point.x - 0.5F, p.point.y - 0.5F, p.point.z - 0.5F);

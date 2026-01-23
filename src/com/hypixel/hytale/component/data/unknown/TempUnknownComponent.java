@@ -7,15 +7,18 @@ import javax.annotation.Nonnull;
 import org.bson.BsonDocument;
 
 public class TempUnknownComponent<ECS_TYPE> implements Component<ECS_TYPE> {
+   @Nonnull
    public static final Codec<Component> COMPONENT_CODEC = new FunctionCodec<>(
       Codec.BSON_DOCUMENT, TempUnknownComponent::new, component -> ((TempUnknownComponent)component).document
    );
-   private BsonDocument document;
+   @Nonnull
+   private final BsonDocument document;
 
-   public TempUnknownComponent(BsonDocument document) {
+   public TempUnknownComponent(@Nonnull BsonDocument document) {
       this.document = document;
    }
 
+   @Nonnull
    public BsonDocument getDocument() {
       return this.document;
    }

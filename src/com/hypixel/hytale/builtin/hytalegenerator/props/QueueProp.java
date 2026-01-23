@@ -9,6 +9,7 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class QueueProp extends Prop {
    @Nonnull
@@ -16,20 +17,25 @@ public class QueueProp extends Prop {
    @Nonnull
    private final ContextDependency contextDependency;
    @Nonnull
+   private final Bounds3i readBounds_voxelGrid;
+   @Nonnull
    private final Bounds3i writeBounds_voxelGrid;
 
    public QueueProp(@Nonnull List<Prop> propsQueue) {
       this.props = new ArrayList<>(propsQueue);
+      this.readBounds_voxelGrid = new Bounds3i();
+      this.writeBounds_voxelGrid = new Bounds3i();
       Vector3i writeRange = new Vector3i();
       Vector3i readRange = new Vector3i();
 
       for (Prop prop : propsQueue) {
          writeRange = Vector3i.max(writeRange, prop.getContextDependency().getWriteRange());
          readRange = Vector3i.max(readRange, prop.getContextDependency().getReadRange());
+         this.readBounds_voxelGrid.encompass(prop.getReadBounds_voxelGrid());
+         this.writeBounds_voxelGrid.encompass(prop.getWriteBounds_voxelGrid());
       }
 
       this.contextDependency = new ContextDependency(readRange, writeRange);
-      this.writeBounds_voxelGrid = this.contextDependency.getTotalPropBounds_voxelGrid();
    }
 
    @Nonnull
@@ -63,9 +69,15 @@ public class QueueProp extends Prop {
       return this.contextDependency.clone();
    }
 
+   @NonNullDecl
+   @Override
+   public Bounds3i getReadBounds_voxelGrid() {
+      return this.readBounds_voxelGrid;
+   }
+
    @Nonnull
    @Override
-   public Bounds3i getWriteBounds() {
+   public Bounds3i getWriteBounds_voxelGrid() {
       return this.writeBounds_voxelGrid;
    }
 

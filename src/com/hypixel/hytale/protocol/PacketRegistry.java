@@ -321,7 +321,7 @@ public final class PacketRegistry {
    }
 
    static {
-      register(0, "Connect", Connect.class, 82, 38161, false, Connect::validateStructure, Connect::deserialize);
+      register(0, "Connect", Connect.class, 46, 38013, false, Connect::validateStructure, Connect::deserialize);
       register(1, "Disconnect", Disconnect.class, 2, 16384007, false, Disconnect::validateStructure, Disconnect::deserialize);
       register(2, "Ping", Ping.class, 29, 29, false, Ping::validateStructure, Ping::deserialize);
       register(3, "Pong", Pong.class, 20, 20, false, Pong::validateStructure, Pong::deserialize);
@@ -615,7 +615,7 @@ public final class PacketRegistry {
       register(114, "DisplayDebug", DisplayDebug.class, 19, 32768037, false, DisplayDebug::validateStructure, DisplayDebug::deserialize);
       register(115, "ClearDebugShapes", ClearDebugShapes.class, 0, 0, false, ClearDebugShapes::validateStructure, ClearDebugShapes::deserialize);
       register(
-         116, "SyncPlayerPreferences", SyncPlayerPreferences.class, 8, 8, false, SyncPlayerPreferences::validateStructure, SyncPlayerPreferences::deserialize
+         116, "SyncPlayerPreferences", SyncPlayerPreferences.class, 12, 12, false, SyncPlayerPreferences::validateStructure, SyncPlayerPreferences::deserialize
       );
       register(117, "ClientPlaceBlock", ClientPlaceBlock.class, 20, 20, false, ClientPlaceBlock::validateStructure, ClientPlaceBlock::deserialize);
       register(

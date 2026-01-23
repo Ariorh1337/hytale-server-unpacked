@@ -4,11 +4,15 @@ import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.data.unknown.UnknownComponents;
+import com.hypixel.hytale.event.IEvent;
+import com.hypixel.hytale.event.IEventDispatcher;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferUtil;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
 import com.hypixel.hytale.server.core.universe.world.ValidationOption;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
@@ -94,6 +98,13 @@ public class PrefabBufferValidator {
          IPrefabBuffer.iterateAllColumns(),
          (x, y, z, mask, blockId, chance, holder, supportValue, rotation, filler, o) -> {
             legacyValidator.accept(x, y, z, mask, blockId, chance, holder, supportValue, rotation, filler, o);
+            IEventDispatcher<PrefabBufferValidator.ValidateBlockEvent, PrefabBufferValidator.ValidateBlockEvent> dispatch = HytaleServer.get()
+               .getEventBus()
+               .dispatchFor(PrefabBufferValidator.ValidateBlockEvent.class);
+            if (dispatch.hasListener()) {
+               dispatch.dispatch(new PrefabBufferValidator.ValidateBlockEvent(x, y, z, blockId, supportValue, rotation, filler, holder, sb));
+            }
+
             if (options.contains(ValidationOption.BLOCK_FILLER)) {
                FillerBlockUtil.ValidationResult fillerResult = FillerBlockUtil.validateBlock(x, y, z, blockId, rotation, filler, prefab, null, FILLER_FETCHER);
                switch (fillerResult) {
@@ -146,5 +157,10 @@ public class PrefabBufferValidator {
          (Void)null
       );
       return !sb.isEmpty() ? sb.toString() : null;
+   }
+
+   public record ValidateBlockEvent(
+      int x, int y, int z, int blockId, int support, int rotation, int filler, @Nullable Holder<ChunkStore> holder, StringBuilder reason
+   ) implements IEvent<Void> {
    }
 }

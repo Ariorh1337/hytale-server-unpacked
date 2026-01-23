@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -23,6 +24,8 @@ import org.jline.utils.AttributedStyle;
 import org.jline.utils.Colors;
 
 public class MessageUtil {
+   private static final String[] ICU_PLURAL_KEYWORDS = new String[]{"zero", "one", "two", "few", "many", "other"};
+
    public static AttributedString toAnsiString(@Nonnull Message message) {
       AttributedStyle style = AttributedStyle.DEFAULT;
       String color = message.getColor();
@@ -140,12 +143,10 @@ public class MessageUtil {
                            sb.append(replacementMessage.messageId);
                         }
                      }
-                  } else if (replacement == null) {
-                     sb.append(text, i, end);
-                  } else {
+                  } else if (replacement != null) {
                      String formattedReplacement;
                      formattedReplacement = "";
-                     label185:
+                     label147:
                      switch (format) {
                         case "upper":
                            if (replacement instanceof StringParamValue s) {
@@ -168,7 +169,7 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label185;
+                                 break label147;
                               case "decimal":
                               case null:
                               default:
@@ -180,40 +181,20 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label185;
+                                 break label147;
                            }
                         case "plural":
                            if (options != null) {
-                              String oneText = null;
-                              String otherText = null;
-                              int oneIdx = options.indexOf("one {");
-                              int otherIdx = options.indexOf("other {");
-                              if (oneIdx >= 0) {
-                                 int oneStart = oneIdx + "one {".length();
-                                 int oneEnd = findMatchingBrace(options, oneStart - 1);
-                                 if (oneEnd > oneStart) {
-                                    oneText = options.substring(oneStart, oneEnd);
-                                 }
-                              }
-
-                              if (otherIdx >= 0) {
-                                 int otherStart = otherIdx + "other {".length();
-                                 int otherEnd = findMatchingBrace(options, otherStart - 1);
-                                 if (otherEnd > otherStart) {
-                                    otherText = options.substring(otherStart, otherEnd);
-                                 }
-                              }
-
+                              Map<String, String> pluralTexts = parsePluralOptions(options);
                               int value = Integer.parseInt(replacement.toString());
+                              String category = getPluralCategory(value, "en-US");
                               String selected;
-                              if (value == 1 && oneText != null) {
-                                 selected = oneText;
-                              } else if (otherText != null) {
-                                 selected = otherText;
-                              } else if (oneText != null) {
-                                 selected = oneText;
+                              if (pluralTexts.containsKey(category)) {
+                                 selected = pluralTexts.get(category);
+                              } else if (pluralTexts.containsKey("other")) {
+                                 selected = pluralTexts.get("other");
                               } else {
-                                 selected = "";
+                                 selected = pluralTexts.isEmpty() ? "" : pluralTexts.values().iterator().next();
                               }
 
                               formattedReplacement = formatText(selected, params, messageParams);
@@ -233,6 +214,8 @@ public class MessageUtil {
                      }
 
                      sb.append(formattedReplacement);
+                  } else {
+                     sb.append(text, i, end);
                   }
 
                   i = end;
@@ -291,5 +274,167 @@ public class MessageUtil {
       }
 
       return end >= i ? end - i + 1 : 0;
+   }
+
+   @Nonnull
+   private static Map<String, String> parsePluralOptions(@Nonnull String options) {
+      HashMap<String, String> result = new HashMap<>();
+
+      for (String keyword : ICU_PLURAL_KEYWORDS) {
+         String searchPattern = keyword + " {";
+         int idx = options.indexOf(searchPattern);
+         if (idx >= 0) {
+            int braceStart = idx + keyword.length() + 1;
+            int end = findMatchingBrace(options, braceStart);
+            if (end > braceStart + 1) {
+               result.put(keyword, options.substring(braceStart + 1, end));
+            }
+         }
+      }
+
+      return result;
+   }
+
+   @Nonnull
+   private static String getPluralCategory(int n, @Nonnull String locale) {
+      String lang = locale.contains("-") ? locale.substring(0, locale.indexOf(45)) : locale;
+
+      return switch (lang) {
+         case "en" -> getEnglishPluralCategory(n);
+         case "fr" -> getFrenchPluralCategory(n);
+         case "de" -> getGermanPluralCategory(n);
+         case "pt" -> !locale.equals("pt-BR") && !locale.equals("pt_BR") ? getPortuguesePluralCategory(n) : getPortugueseBrazilianPluralCategory(n);
+         case "ru" -> getRussianPluralCategory(n);
+         case "es" -> getSpanishPluralCategory(n);
+         case "pl" -> getPolishPluralCategory(n);
+         case "tr" -> getTurkishPluralCategory(n);
+         case "uk" -> getUkrainianPluralCategory(n);
+         case "it" -> getItalianPluralCategory(n);
+         case "nl" -> getDutchPluralCategory(n);
+         case "da" -> getDanishPluralCategory(n);
+         case "fi" -> getFinnishPluralCategory(n);
+         case "no", "nb", "nn" -> getNorwegianPluralCategory(n);
+         case "zh" -> getChinesePluralCategory(n);
+         case "ja" -> getJapanesePluralCategory(n);
+         case "ko" -> getKoreanPluralCategory(n);
+         default -> getEnglishPluralCategory(n);
+      };
+   }
+
+   @Nonnull
+   private static String getEnglishPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getFrenchPluralCategory(int n) {
+      return n != 0 && n != 1 ? "other" : "one";
+   }
+
+   @Nonnull
+   private static String getGermanPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getPortuguesePluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getPortugueseBrazilianPluralCategory(int n) {
+      return n != 0 && n != 1 ? "other" : "one";
+   }
+
+   @Nonnull
+   private static String getRussianPluralCategory(int n) {
+      int absN = Math.abs(n);
+      int mod10 = absN % 10;
+      int mod100 = absN % 100;
+      if (mod10 == 1 && mod100 != 11) {
+         return "one";
+      } else if (mod10 < 2 || mod10 > 4 || mod100 >= 12 && mod100 <= 14) {
+         return mod10 != 0 && (mod10 < 5 || mod10 > 9) && (mod100 < 11 || mod100 > 14) ? "other" : "many";
+      } else {
+         return "few";
+      }
+   }
+
+   @Nonnull
+   private static String getSpanishPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getPolishPluralCategory(int n) {
+      int absN = Math.abs(n);
+      int mod10 = absN % 10;
+      int mod100 = absN % 100;
+      if (n == 1) {
+         return "one";
+      } else if (mod10 < 2 || mod10 > 4 || mod100 >= 12 && mod100 <= 14) {
+         return mod10 != 0 && mod10 != 1 && (mod10 < 5 || mod10 > 9) && (mod100 < 12 || mod100 > 14) ? "other" : "many";
+      } else {
+         return "few";
+      }
+   }
+
+   @Nonnull
+   private static String getTurkishPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getUkrainianPluralCategory(int n) {
+      int absN = Math.abs(n);
+      int mod10 = absN % 10;
+      int mod100 = absN % 100;
+      if (mod10 == 1 && mod100 != 11) {
+         return "one";
+      } else if (mod10 < 2 || mod10 > 4 || mod100 >= 12 && mod100 <= 14) {
+         return mod10 != 0 && (mod10 < 5 || mod10 > 9) && (mod100 < 11 || mod100 > 14) ? "other" : "many";
+      } else {
+         return "few";
+      }
+   }
+
+   @Nonnull
+   private static String getItalianPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getDutchPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getDanishPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getFinnishPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getNorwegianPluralCategory(int n) {
+      return n == 1 ? "one" : "other";
+   }
+
+   @Nonnull
+   private static String getChinesePluralCategory(int n) {
+      return "other";
+   }
+
+   @Nonnull
+   private static String getJapanesePluralCategory(int n) {
+      return "other";
+   }
+
+   @Nonnull
+   private static String getKoreanPluralCategory(int n) {
+      return "other";
    }
 }

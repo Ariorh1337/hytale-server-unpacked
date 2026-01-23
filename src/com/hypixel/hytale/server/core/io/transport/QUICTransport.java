@@ -47,6 +47,7 @@ import jdk.net.ExtendedSocketOptions;
 public class QUICTransport implements Transport {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    public static final AttributeKey<X509Certificate> CLIENT_CERTIFICATE_ATTR = AttributeKey.valueOf("CLIENT_CERTIFICATE");
+   public static final AttributeKey<Integer> ALPN_REJECT_ERROR_CODE_ATTR = AttributeKey.valueOf("ALPN_REJECT_ERROR_CODE");
    @Nonnull
    private final EventLoopGroup workerGroup = NettyUtil.getEventLoopGroup("ServerWorkerGroup");
    private final Bootstrap bootstrapIpv4;
@@ -64,7 +65,7 @@ public class QUICTransport implements Transport {
       ServerAuthManager.getInstance().setServerCertificate(ssc.cert());
       LOGGER.at(Level.INFO).log("Server certificate registered for mutual auth, fingerprint: %s", CertificateUtil.computeCertificateFingerprint(ssc.cert()));
       QuicSslContext sslContext = QuicSslContextBuilder.forServer(ssc.key(), null, ssc.cert())
-         .applicationProtocols("hytale/1")
+         .applicationProtocols("hytale/2", "hytale/1")
          .earlyData(false)
          .clientAuth(ClientAuth.REQUIRE)
          .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -134,7 +135,7 @@ public class QUICTransport implements Transport {
 
       @Override
       public void channelActive(@Nonnull ChannelHandlerContext ctx) throws Exception {
-         Duration playTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getPlayTimeout();
+         Duration playTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getPlay();
          ChannelHandler quicHandler = new QuicServerCodecBuilder()
             .sslContext(this.sslContext)
             .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
@@ -161,6 +162,15 @@ public class QUICTransport implements Transport {
                      QUICTransport.LOGGER
                         .at(Level.INFO)
                         .log("Received connection from %s to %s", NettyUtil.formatRemoteAddress(channel), NettyUtil.formatLocalAddress(channel));
+                     String negotiatedAlpn = channel.sslEngine().getApplicationProtocol();
+                     int negotiatedVersion = this.parseProtocolVersion(negotiatedAlpn);
+                     if (negotiatedVersion < 2) {
+                        QUICTransport.LOGGER
+                           .at(Level.INFO)
+                           .log("Marking connection from %s for rejection: ALPN %s < required %d", NettyUtil.formatRemoteAddress(channel), negotiatedAlpn, 2);
+                        channel.attr(QUICTransport.ALPN_REJECT_ERROR_CODE_ATTR).set(5);
+                     }
+
                      X509Certificate clientCert = QuicChannelInboundHandlerAdapter.this.extractClientCertificate(channel);
                      if (clientCert == null) {
                         QUICTransport.LOGGER
@@ -170,6 +180,18 @@ public class QUICTransport implements Transport {
                      } else {
                         channel.attr(QUICTransport.CLIENT_CERTIFICATE_ATTR).set(clientCert);
                         QUICTransport.LOGGER.at(Level.FINE).log("Client certificate: %s", clientCert.getSubjectX500Principal().getName());
+                     }
+                  }
+
+                  private int parseProtocolVersion(String alpn) {
+                     if (alpn != null && alpn.startsWith("hytale/")) {
+                        try {
+                           return Integer.parseInt(alpn.substring(7));
+                        } catch (NumberFormatException e) {
+                           return 0;
+                        }
+                     } else {
+                        return 0;
                      }
                   }
 

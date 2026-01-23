@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
+import com.hypixel.hytale.math.vector.Location;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
@@ -206,7 +207,13 @@ public class TeleportSystems {
          PlayerRef playerRefComponent = commandBuffer.getComponent(ref, this.playerRefComponentType);
          assert playerRefComponent != null;
          commandBuffer.removeComponent(ref, this.teleportComponentType);
+         TransformComponent transformComponent = commandBuffer.getComponent(ref, this.transformComponentType);
+         String originWorldName = commandBuffer.getExternalData().getWorld().getName();
+         Location origin = new Location(originWorldName, transformComponent.getTransform().clone());
+         Location destination = new Location(targetWorld.getName(), teleport.getPosition().clone(), teleport.getRotation().clone());
          commandBuffer.run(s -> {
+            TeleportRecord teleportRecord = s.ensureAndGetComponent(ref, TeleportRecord.getComponentType());
+            teleportRecord.setLastTeleport(new TeleportRecord.Entry(origin, destination, System.nanoTime()));
             playerRefComponent.removeFromStore();
             targetWorld.addPlayer(playerRefComponent, new Transform(teleport.getPosition(), teleport.getRotation()));
          });
@@ -230,7 +237,12 @@ public class TeleportSystems {
             headRotationComponent.teleportRotation(teleportHeadRotation != null ? teleportHeadRotation : teleportRotation);
          }
 
-         playerComponent.getWindowManager().validateWindows();
+         TeleportRecord teleportHistory = commandBuffer.ensureAndGetComponent(ref, TeleportRecord.getComponentType());
+         World world = commandBuffer.getExternalData().getWorld();
+         Location origin = new Location(world.getName(), teleportPosition.clone(), teleportRotation.clone());
+         Location destination = new Location(world.getName(), teleportPosition.clone(), teleportRotation.clone());
+         teleportHistory.setLastTeleport(new TeleportRecord.Entry(origin, destination, System.nanoTime()));
+         playerComponent.getWindowManager().validateWindows(ref, commandBuffer);
          int id = pendingTeleportComponent.queueTeleport(teleport);
          ClientTeleport teleportPacket = new ClientTeleport(
             (byte)id,

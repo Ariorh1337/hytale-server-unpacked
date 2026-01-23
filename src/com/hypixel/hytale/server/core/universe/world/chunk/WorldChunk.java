@@ -38,6 +38,7 @@ import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerSta
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.StampedLock;
 import java.util.logging.Level;
@@ -62,7 +63,7 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
    private int activeTimer = 15;
    private boolean needsSaving;
    private boolean isSaving;
-   private boolean keepLoaded;
+   private final AtomicInteger keepLoaded = new AtomicInteger();
    private boolean lightingUpdatesEnabled = true;
    @Deprecated
    public final AtomicLong chunkLightTiming = new AtomicLong();
@@ -280,11 +281,15 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
    }
 
    public boolean shouldKeepLoaded() {
-      return this.keepLoaded;
+      return this.keepLoaded.get() > 0;
    }
 
-   public void setKeepLoaded(boolean keepLoaded) {
-      this.keepLoaded = keepLoaded;
+   public void addKeepLoaded() {
+      this.keepLoaded.incrementAndGet();
+   }
+
+   public void removeKeepLoaded() {
+      this.keepLoaded.decrementAndGet();
    }
 
    public int pollKeepAlive(int pollCount) {

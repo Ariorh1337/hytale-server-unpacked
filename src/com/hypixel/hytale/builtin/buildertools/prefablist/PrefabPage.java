@@ -1,18 +1,15 @@
 package com.hypixel.hytale.builtin.buildertools.prefablist;
 
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
+import com.hypixel.hytale.builtin.buildertools.utils.PasteToolUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
-import com.hypixel.hytale.protocol.packets.inventory.SetActiveSlot;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.Inventory;
-import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.ui.Value;
@@ -33,7 +30,6 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
-   private static final String PASTE_TOOL_ID = "EditorTool_Paste";
    private static final String ASSETS_ROOT_KEY = "Assets";
    @Nonnull
    private final ServerFileBrowser browser;
@@ -191,7 +187,7 @@ public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
          playerComponent.getPageManager().setPage(ref, store, Page.None);
          BlockSelection prefab = PrefabStore.get().getPrefab(file);
          BuilderToolsPlugin.addToQueue(playerComponent, playerRefComponent, (r, s, componentAccessor) -> s.load(displayPath, prefab, componentAccessor));
-         this.switchToPasteTool(playerComponent, playerRefComponent);
+         PasteToolUtil.switchToPasteTool(playerComponent, playerRefComponent);
       }
    }
 
@@ -199,7 +195,18 @@ public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
       String displayPath;
       if (this.inAssetsRoot) {
          String currentDirStr = this.assetsCurrentDir.toString().replace('\\', '/');
-         displayPath = currentDirStr.isEmpty() ? "Assets" : "Assets/" + currentDirStr;
+         if (currentDirStr.isEmpty()) {
+            displayPath = "Assets";
+         } else {
+            String[] parts = currentDirStr.split("/", 2);
+            String packName = parts[0];
+            String subPath = parts.length > 1 ? "/" + parts[1] : "";
+            if ("HytaleAssets".equals(packName)) {
+               displayPath = packName + subPath;
+            } else {
+               displayPath = "Mods/" + packName + subPath;
+            }
+         }
       } else {
          Path root = this.browser.getRoot();
          String rootDisplay = this.getRootDisplayName(root);
@@ -255,61 +262,6 @@ public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
          String eventKey = !this.browser.getSearchQuery().isEmpty() && !entry.isDirectory() ? "SearchResult" : "File";
          eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#FileList[" + buttonIndex + "]", EventData.of(eventKey, entry.name()));
          buttonIndex++;
-      }
-   }
-
-   private void switchToPasteTool(@Nonnull Player playerComponent, @Nonnull PlayerRef playerRef) {
-      Inventory inventory = playerComponent.getInventory();
-      ItemContainer hotbar = inventory.getHotbar();
-      ItemContainer storage = inventory.getStorage();
-      ItemContainer tools = inventory.getTools();
-      int hotbarSize = hotbar.getCapacity();
-
-      for (short slot = 0; slot < hotbarSize; slot++) {
-         ItemStack itemStack = hotbar.getItemStack(slot);
-         if (itemStack != null && !itemStack.isEmpty() && "EditorTool_Paste".equals(itemStack.getItemId())) {
-            inventory.setActiveHotbarSlot((byte)slot);
-            playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
-            return;
-         }
-      }
-
-      short emptySlot = -1;
-
-      for (short slot = 0; slot < hotbarSize; slot++) {
-         ItemStack itemStack = hotbar.getItemStack(slot);
-         if (itemStack == null || itemStack.isEmpty()) {
-            emptySlot = slot;
-            break;
-         }
-      }
-
-      if (emptySlot != -1) {
-         for (short slot = 0; slot < storage.getCapacity(); slot++) {
-            ItemStack itemStack = storage.getItemStack(slot);
-            if (itemStack != null && !itemStack.isEmpty() && "EditorTool_Paste".equals(itemStack.getItemId())) {
-               storage.moveItemStackFromSlotToSlot(slot, 1, hotbar, emptySlot);
-               inventory.setActiveHotbarSlot((byte)emptySlot);
-               playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
-               return;
-            }
-         }
-
-         ItemStack pasteToolStack = null;
-
-         for (short slot = 0; slot < tools.getCapacity(); slot++) {
-            ItemStack itemStack = tools.getItemStack(slot);
-            if (itemStack != null && !itemStack.isEmpty() && "EditorTool_Paste".equals(itemStack.getItemId())) {
-               pasteToolStack = itemStack;
-               break;
-            }
-         }
-
-         if (pasteToolStack != null) {
-            hotbar.setItemStackForSlot(emptySlot, new ItemStack(pasteToolStack.getItemId()));
-            inventory.setActiveHotbarSlot((byte)emptySlot);
-            playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
-         }
       }
    }
 }

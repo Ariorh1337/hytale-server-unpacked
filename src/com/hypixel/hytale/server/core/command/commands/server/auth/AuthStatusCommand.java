@@ -12,8 +12,6 @@ import javax.annotation.Nonnull;
 
 public class AuthStatusCommand extends CommandBase {
    @Nonnull
-   private static final Message MESSAGE_STATUS_HEADER = Message.translation("server.commands.auth.status.format");
-   @Nonnull
    private static final Message MESSAGE_STATUS_CONNECTION_MODE_AUTHENTICATED = Message.translation("server.commands.auth.status.connectionMode.authenticated")
       .color(Color.GREEN);
    @Nonnull
@@ -98,7 +96,8 @@ public class AuthStatusCommand extends CommandBase {
       }
 
       context.sendMessage(
-         MESSAGE_STATUS_HEADER.param("connectionMode", connectionModeMessage)
+         Message.translation("server.commands.auth.status.format")
+            .param("connectionMode", connectionModeMessage)
             .param("tokenMode", modeMessage)
             .param("profile", profileInfo)
             .param("sessionToken", sessionTokenStatus)

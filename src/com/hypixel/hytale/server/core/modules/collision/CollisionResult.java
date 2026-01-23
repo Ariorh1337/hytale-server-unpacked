@@ -267,14 +267,13 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
                   int x = triggerCollision.x;
                   int y = triggerCollision.y;
                   int z = triggerCollision.z;
-                  String blockTypeId = blockType.getId();
                   if (filler != 0) {
                      x -= FillerBlockUtil.unpackX(filler);
                      y -= FillerBlockUtil.unpackY(filler);
                      z -= FillerBlockUtil.unpackZ(filler);
                   }
 
-                  long index = BlockUtil.pack(x, y, z);
+                  long index = BlockUtil.packUnchecked(x, y, z);
                   if (this.newTriggers.add(index)) {
                      BlockPosition pos = new BlockPosition(x, y, z);
                      if (!this.lastTriggers.remove(index) && interactionsEnter != null) {

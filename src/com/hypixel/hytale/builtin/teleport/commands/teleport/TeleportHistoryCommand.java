@@ -17,8 +17,6 @@ import javax.annotation.Nonnull;
 public class TeleportHistoryCommand extends AbstractPlayerCommand {
    @Nonnull
    private static final Message MESSAGE_COMMANDS_TELEPORT_HISTORY_EMPTY = Message.translation("server.commands.teleport.history.empty");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_TELEPORT_HISTORY_INFO = Message.translation("server.commands.teleport.history.info");
 
    public TeleportHistoryCommand() {
       super("history", "server.commands.teleport.dump.desc");
@@ -38,7 +36,7 @@ public class TeleportHistoryCommand extends AbstractPlayerCommand {
       if (backSize == 0 && forwardSize == 0) {
          context.sendMessage(MESSAGE_COMMANDS_TELEPORT_HISTORY_EMPTY);
       } else {
-         context.sendMessage(MESSAGE_COMMANDS_TELEPORT_HISTORY_INFO.param("backCount", backSize).param("forwardCount", forwardSize));
+         context.sendMessage(Message.translation("server.commands.teleport.history.info").param("backCount", backSize).param("forwardCount", forwardSize));
       }
    }
 }

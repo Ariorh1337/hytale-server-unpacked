@@ -51,7 +51,7 @@ public abstract class Interaction {
          case 16 -> ChangeBlockInteraction.deserialize(buf, offset + typeIdLen);
          case 17 -> ChangeStateInteraction.deserialize(buf, offset + typeIdLen);
          case 18 -> FirstClickInteraction.deserialize(buf, offset + typeIdLen);
-         case 19 -> RefillContainerInteraction.deserialize(buf, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("Interaction", typeId);
          case 20 -> SelectInteraction.deserialize(buf, offset + typeIdLen);
          case 21 -> DamageEntityInteraction.deserialize(buf, offset + typeIdLen);
          case 22 -> RepeatInteraction.deserialize(buf, offset + typeIdLen);
@@ -77,7 +77,6 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.deserialize(buf, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.deserialize(buf, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.deserialize(buf, offset + typeIdLen);
-         default -> throw ProtocolException.unknownPolymorphicType("Interaction", typeId);
       };
    }
 
@@ -105,7 +104,7 @@ public abstract class Interaction {
          case 16 -> ChangeBlockInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 17 -> ChangeStateInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 18 -> FirstClickInteraction.computeBytesConsumed(buf, offset + typeIdLen);
-         case 19 -> RefillContainerInteraction.computeBytesConsumed(buf, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("Interaction", typeId);
          case 20 -> SelectInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 21 -> DamageEntityInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 22 -> RepeatInteraction.computeBytesConsumed(buf, offset + typeIdLen);
@@ -131,7 +130,6 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.computeBytesConsumed(buf, offset + typeIdLen);
-         default -> throw ProtocolException.unknownPolymorphicType("Interaction", typeId);
       };
    }
 
@@ -148,8 +146,6 @@ public abstract class Interaction {
          return 16;
       } else if (this instanceof ChangeStateInteraction sub) {
          return 17;
-      } else if (this instanceof RefillContainerInteraction sub) {
-         return 19;
       } else if (this instanceof SimpleBlockInteraction sub) {
          return 0;
       } else if (this instanceof PlaceBlockInteraction sub) {
@@ -270,7 +266,7 @@ public abstract class Interaction {
          case 16 -> ChangeBlockInteraction.validateStructure(buffer, offset + typeIdLen);
          case 17 -> ChangeStateInteraction.validateStructure(buffer, offset + typeIdLen);
          case 18 -> FirstClickInteraction.validateStructure(buffer, offset + typeIdLen);
-         case 19 -> RefillContainerInteraction.validateStructure(buffer, offset + typeIdLen);
+         default -> ValidationResult.error("Unknown polymorphic type ID " + typeId + " for Interaction");
          case 20 -> SelectInteraction.validateStructure(buffer, offset + typeIdLen);
          case 21 -> DamageEntityInteraction.validateStructure(buffer, offset + typeIdLen);
          case 22 -> RepeatInteraction.validateStructure(buffer, offset + typeIdLen);
@@ -296,7 +292,6 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.validateStructure(buffer, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.validateStructure(buffer, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.validateStructure(buffer, offset + typeIdLen);
-         default -> ValidationResult.error("Unknown polymorphic type ID " + typeId + " for Interaction");
       };
    }
 }

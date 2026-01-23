@@ -1442,7 +1442,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    }
 
    public <T extends EntityDataSystem<ECS_TYPE, Q, R>, Q, R> void fetch(
-      @Nonnull Collection<Ref<ECS_TYPE>> refs, @Nonnull SystemType<ECS_TYPE, T> systemType, Q query, @Nonnull List<R> results
+      @Nonnull Collection<Ref<ECS_TYPE>> refs, @Nonnull SystemType<ECS_TYPE, T> systemType, @Nonnull Q query, @Nonnull List<R> results
    ) {
       if (this.shutdown) {
          throw new IllegalStateException("Store is shutdown!");

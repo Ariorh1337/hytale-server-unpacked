@@ -28,20 +28,6 @@ public class TeleportAllCommand extends CommandBase {
    @Nonnull
    private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
    @Nonnull
-   private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_OR_ARG = Message.translation("server.commands.errors.playerOrArg");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_WITH_LOOK_NOTIFICATION = Message.translation(
-      "server.commands.teleport.teleportedWithLookNotification"
-   );
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES_NOTIFICATION = Message.translation(
-      "server.commands.teleport.teleportedToCoordinatesNotification"
-   );
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE_WITH_LOOK = Message.translation("server.commands.teleport.teleportEveryoneWithLook");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE = Message.translation("server.commands.teleport.teleportEveryone");
-   @Nonnull
    private final RequiredArg<Coord> xArg = this.withRequiredArg("x", "server.commands.teleport.x.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
    @Nonnull
    private final RequiredArg<Coord> yArg = this.withRequiredArg("y", "server.commands.teleport.y.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
@@ -72,7 +58,7 @@ public class TeleportAllCommand extends CommandBase {
          targetWorld = this.worldArg.get(context);
       } else {
          if (!context.isPlayer()) {
-            context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_OR_ARG.param("option", "world"));
+            context.sendMessage(Message.translation("server.commands.errors.playerOrArg").param("option", "world"));
             return;
          }
 
@@ -158,7 +144,8 @@ public class TeleportAllCommand extends CommandBase {
                               : roll * (180.0F / (float)Math.PI);
                            NotificationUtil.sendNotification(
                               playerRefComponent.getPacketHandler(),
-                              MESSAGE_COMMANDS_TELEPORT_TELEPORTED_WITH_LOOK_NOTIFICATION.param("x", x)
+                              Message.translation("server.commands.teleport.teleportedWithLookNotification")
+                                 .param("x", x)
                                  .param("y", y)
                                  .param("z", z)
                                  .param("yaw", displayYaw)
@@ -171,7 +158,8 @@ public class TeleportAllCommand extends CommandBase {
                         } else {
                            NotificationUtil.sendNotification(
                               playerRefComponent.getPacketHandler(),
-                              MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES_NOTIFICATION.param("x", x)
+                              Message.translation("server.commands.teleport.teleportedToCoordinatesNotification")
+                                 .param("x", x)
                                  .param("y", y)
                                  .param("z", z)
                                  .param("sender", context.sender().getDisplayName()),
@@ -189,7 +177,8 @@ public class TeleportAllCommand extends CommandBase {
                float displayPitch = this.pitchArg.provided(context) ? this.pitchArg.get(context).getRawValue() : 0.0F;
                float displayRoll = this.rollArg.provided(context) ? this.rollArg.get(context).getRawValue() : 0.0F;
                context.sendMessage(
-                  MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE_WITH_LOOK.param("world", targetWorld.getName())
+                  Message.translation("server.commands.teleport.teleportEveryoneWithLook")
+                     .param("world", targetWorld.getName())
                      .param("x", x)
                      .param("y", y)
                      .param("z", z)
@@ -198,7 +187,13 @@ public class TeleportAllCommand extends CommandBase {
                      .param("roll", displayRoll)
                );
             } else {
-               context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE.param("world", targetWorld.getName()).param("x", x).param("y", y).param("z", z));
+               context.sendMessage(
+                  Message.translation("server.commands.teleport.teleportEveryone")
+                     .param("world", targetWorld.getName())
+                     .param("x", x)
+                     .param("y", y)
+                     .param("z", z)
+               );
             }
          }
       );

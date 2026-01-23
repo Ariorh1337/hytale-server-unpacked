@@ -11,9 +11,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class WeatherGetCommand extends AbstractWorldCommand {
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_WEATHER_GET_FORCED_WEATHER = Message.translation("server.commands.weather.get.getForcedWeather");
-
    public WeatherGetCommand() {
       super("get", "server.commands.weather.get.desc");
    }
@@ -30,6 +27,6 @@ public class WeatherGetCommand extends AbstractWorldCommand {
          weatherId = "not locked";
       }
 
-      context.sendMessage(MESSAGE_COMMANDS_WEATHER_GET_FORCED_WEATHER.param("worldName", world.getName()).param("weather", weatherId));
+      context.sendMessage(Message.translation("server.commands.weather.get.getForcedWeather").param("worldName", world.getName()).param("weather", weatherId));
    }
 }

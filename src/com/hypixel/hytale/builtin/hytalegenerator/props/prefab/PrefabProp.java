@@ -43,6 +43,7 @@ import java.util.Random;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class PrefabProp extends Prop {
    private final WeightedMap<List<PrefabBuffer>> prefabPool;
@@ -52,6 +53,7 @@ public class PrefabProp extends Prop {
    private final SeedGenerator seedGenerator;
    private final BlockMask materialMask;
    private final Directionality directionality;
+   private final Bounds3i readBounds_voxelGrid;
    private final Bounds3i writeBounds_voxelGrid;
    private final Bounds3i prefabBounds_voxelGrid;
    private final List<PrefabProp> childProps;
@@ -148,7 +150,8 @@ public class PrefabProp extends Prop {
          }
       }
 
-      this.writeBounds_voxelGrid = this.contextDependency.getTotalPropBounds_voxelGrid();
+      this.readBounds_voxelGrid = this.contextDependency.getReadBounds_voxelGrid();
+      this.writeBounds_voxelGrid = this.contextDependency.getWriteBounds_voxelGrid();
       this.prefabBounds_voxelGrid = new Bounds3i();
       this.prefabBounds_voxelGrid.min.assign(this.contextDependency.getWriteRange()).scale(-1);
       this.prefabBounds_voxelGrid.max.assign(this.contextDependency.getWriteRange()).add(Vector3i.ALL_ONES);
@@ -348,12 +351,18 @@ public class PrefabProp extends Prop {
 
    @Override
    public ContextDependency getContextDependency() {
-      return this.contextDependency.clone();
+      return this.contextDependency;
+   }
+
+   @NonNullDecl
+   @Override
+   public Bounds3i getReadBounds_voxelGrid() {
+      return this.readBounds_voxelGrid;
    }
 
    @Nonnull
    @Override
-   public Bounds3i getWriteBounds() {
+   public Bounds3i getWriteBounds_voxelGrid() {
       return this.writeBounds_voxelGrid;
    }
 }

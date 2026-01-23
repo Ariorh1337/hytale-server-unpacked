@@ -5,6 +5,7 @@ import com.hypixel.hytale.codec.DocumentContainingCodec;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.codecs.map.ObjectMapCodec;
 import com.hypixel.hytale.codec.lookup.Priority;
@@ -23,7 +24,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -57,9 +57,7 @@ public class HytaleServerConfig {
       .add()
       .append(new KeyedCodec<>("Defaults", HytaleServerConfig.Defaults.CODEC), (o, obj) -> o.defaults = obj, o -> o.defaults)
       .add()
-      .append(
-         new KeyedCodec<>("ConnectionTimeouts", HytaleServerConfig.ConnectionTimeouts.CODEC), (o, m) -> o.connectionTimeouts = m, o -> o.connectionTimeouts
-      )
+      .append(new KeyedCodec<>("ConnectionTimeouts", HytaleServerConfig.TimeoutProfile.CODEC), (o, m) -> o.connectionTimeouts = m, o -> o.connectionTimeouts)
       .add()
       .append(new KeyedCodec<>("RateLimit", HytaleServerConfig.RateLimitConfig.CODEC), (o, m) -> o.rateLimitConfig = m, o -> o.rateLimitConfig)
       .add()
@@ -104,10 +102,13 @@ public class HytaleServerConfig {
       .add()
       .append(new KeyedCodec<>("AuthCredentialStore", Codec.BSON_DOCUMENT), (o, value) -> o.authCredentialStoreConfig = value, o -> o.authCredentialStoreConfig)
       .add()
+      .append(new KeyedCodec<>("Update", HytaleServerConfig.UpdateConfig.CODEC), (o, value) -> o.updateConfig = value, o -> o.updateConfig)
+      .add()
       .afterDecode(config -> {
          config.defaults.hytaleServerConfig = config;
-         config.connectionTimeouts.hytaleServerConfig = config;
+         config.connectionTimeouts.setHytaleServerConfig(config);
          config.rateLimitConfig.hytaleServerConfig = config;
+         config.updateConfig.hytaleServerConfig = config;
          config.modules.values().forEach(m -> m.setHytaleServerConfig(config));
          if (config.legacyPluginConfig != null && !config.legacyPluginConfig.isEmpty()) {
             for (Entry<PluginIdentifier, HytaleServerConfig.ModConfig> entry : config.legacyPluginConfig.entrySet()) {
@@ -129,7 +130,7 @@ public class HytaleServerConfig {
    @Nonnull
    private HytaleServerConfig.Defaults defaults = new HytaleServerConfig.Defaults(this);
    @Nonnull
-   private HytaleServerConfig.ConnectionTimeouts connectionTimeouts = new HytaleServerConfig.ConnectionTimeouts(this);
+   private HytaleServerConfig.TimeoutProfile connectionTimeouts = new HytaleServerConfig.TimeoutProfile(this);
    @Nonnull
    private HytaleServerConfig.RateLimitConfig rateLimitConfig = new HytaleServerConfig.RateLimitConfig(this);
    @Nonnull
@@ -151,6 +152,8 @@ public class HytaleServerConfig {
    @Nullable
    private transient AuthCredentialStoreProvider authCredentialStoreProvider = null;
    private boolean displayTmpTagsInStrings;
+   @Nonnull
+   private HytaleServerConfig.UpdateConfig updateConfig = new HytaleServerConfig.UpdateConfig(this);
 
    public String getServerName() {
       return this.serverName;
@@ -216,11 +219,11 @@ public class HytaleServerConfig {
    }
 
    @Nonnull
-   public HytaleServerConfig.ConnectionTimeouts getConnectionTimeouts() {
+   public HytaleServerConfig.TimeoutProfile getConnectionTimeouts() {
       return this.connectionTimeouts;
    }
 
-   public void setConnectionTimeouts(@Nonnull HytaleServerConfig.ConnectionTimeouts connectionTimeouts) {
+   public void setConnectionTimeouts(@Nonnull HytaleServerConfig.TimeoutProfile connectionTimeouts) {
       this.connectionTimeouts = connectionTimeouts;
       this.markChanged();
    }
@@ -301,6 +304,16 @@ public class HytaleServerConfig {
       this.markChanged();
    }
 
+   @Nonnull
+   public HytaleServerConfig.UpdateConfig getUpdateConfig() {
+      return this.updateConfig;
+   }
+
+   public void setUpdateConfig(@Nonnull HytaleServerConfig.UpdateConfig updateConfig) {
+      this.updateConfig = updateConfig;
+      this.markChanged();
+   }
+
    public void removeModule(@Nonnull String module) {
       this.modules.remove(module);
       this.markChanged();
@@ -362,73 +375,6 @@ public class HytaleServerConfig {
             (o, m) -> o.modules = m,
             o -> o.modules
          );
-   }
-
-   public static class ConnectionTimeouts {
-      public static final Duration DEFAULT_INITIAL_TIMEOUT = Duration.of(10L, ChronoUnit.SECONDS);
-      public static final Duration DEFAULT_AUTH_TIMEOUT = Duration.of(30L, ChronoUnit.SECONDS);
-      public static final Duration DEFAULT_PLAY_TIMEOUT = Duration.of(1L, ChronoUnit.MINUTES);
-      public static final Codec<HytaleServerConfig.ConnectionTimeouts> CODEC = BuilderCodec.<HytaleServerConfig.ConnectionTimeouts>builder(
-            HytaleServerConfig.ConnectionTimeouts.class, HytaleServerConfig.ConnectionTimeouts::new
-         )
-         .addField(new KeyedCodec<>("InitialTimeout", Codec.DURATION), (o, d) -> o.initialTimeout = d, o -> o.initialTimeout)
-         .addField(new KeyedCodec<>("AuthTimeout", Codec.DURATION), (o, d) -> o.authTimeout = d, o -> o.authTimeout)
-         .addField(new KeyedCodec<>("PlayTimeout", Codec.DURATION), (o, d) -> o.playTimeout = d, o -> o.playTimeout)
-         .addField(
-            new KeyedCodec<>("JoinTimeouts", new MapCodec<>(Codec.DURATION, ConcurrentHashMap::new, false)), (o, m) -> o.joinTimeouts = m, o -> o.joinTimeouts
-         )
-         .build();
-      private Duration initialTimeout;
-      private Duration authTimeout;
-      private Duration playTimeout;
-      private Map<String, Duration> joinTimeouts = new ConcurrentHashMap<>();
-      @Nonnull
-      private Map<String, Duration> unmodifiableJoinTimeouts = Collections.unmodifiableMap(this.joinTimeouts);
-      private transient HytaleServerConfig hytaleServerConfig;
-
-      public ConnectionTimeouts() {
-      }
-
-      public ConnectionTimeouts(HytaleServerConfig hytaleServerConfig) {
-         this.hytaleServerConfig = hytaleServerConfig;
-      }
-
-      public Duration getInitialTimeout() {
-         return this.initialTimeout != null ? this.initialTimeout : DEFAULT_INITIAL_TIMEOUT;
-      }
-
-      public void setInitialTimeout(Duration initialTimeout) {
-         this.initialTimeout = initialTimeout;
-         this.hytaleServerConfig.markChanged();
-      }
-
-      public Duration getAuthTimeout() {
-         return this.authTimeout != null ? this.authTimeout : DEFAULT_AUTH_TIMEOUT;
-      }
-
-      public void setAuthTimeout(Duration authTimeout) {
-         this.authTimeout = authTimeout;
-         this.hytaleServerConfig.markChanged();
-      }
-
-      public Duration getPlayTimeout() {
-         return this.playTimeout != null ? this.playTimeout : DEFAULT_PLAY_TIMEOUT;
-      }
-
-      public void setPlayTimeout(Duration playTimeout) {
-         this.playTimeout = playTimeout;
-         this.hytaleServerConfig.markChanged();
-      }
-
-      @Nonnull
-      public Map<String, Duration> getJoinTimeouts() {
-         return this.unmodifiableJoinTimeouts;
-      }
-
-      public void setJoinTimeouts(Map<String, Duration> joinTimeouts) {
-         this.joinTimeouts = joinTimeouts;
-         this.hytaleServerConfig.markChanged();
-      }
    }
 
    public static class Defaults {
@@ -662,6 +608,340 @@ public class HytaleServerConfig {
          if (this.hytaleServerConfig != null) {
             this.hytaleServerConfig.markChanged();
          }
+      }
+   }
+
+   public static class TimeoutProfile {
+      private static final HytaleServerConfig.TimeoutProfile SINGLEPLAYER_DEFAULTS = new HytaleServerConfig.TimeoutProfile(
+         Duration.ofSeconds(30L),
+         Duration.ofSeconds(60L),
+         Duration.ofSeconds(60L),
+         Duration.ofSeconds(60L),
+         Duration.ofSeconds(30L),
+         Duration.ofSeconds(60L),
+         Duration.ofSeconds(120L),
+         Duration.ofSeconds(30L),
+         Duration.ofSeconds(300L),
+         Duration.ofSeconds(300L),
+         Duration.ofSeconds(120L)
+      );
+      private static final HytaleServerConfig.TimeoutProfile MULTIPLAYER_DEFAULTS = new HytaleServerConfig.TimeoutProfile(
+         Duration.ofSeconds(15L),
+         Duration.ofSeconds(30L),
+         Duration.ofSeconds(30L),
+         Duration.ofSeconds(30L),
+         Duration.ofSeconds(15L),
+         Duration.ofSeconds(45L),
+         Duration.ofSeconds(60L),
+         Duration.ofSeconds(15L),
+         Duration.ofSeconds(120L),
+         Duration.ofSeconds(120L),
+         Duration.ofSeconds(60L)
+      );
+      public static final Codec<HytaleServerConfig.TimeoutProfile> CODEC = BuilderCodec.<HytaleServerConfig.TimeoutProfile>builder(
+            HytaleServerConfig.TimeoutProfile.class, HytaleServerConfig.TimeoutProfile::new
+         )
+         .addField(new KeyedCodec<>("InitialTimeout", Codec.DURATION), (o, d) -> o.initial = d, o -> o.initial)
+         .addField(new KeyedCodec<>("AuthTimeout", Codec.DURATION), (o, d) -> o.auth = d, o -> o.auth)
+         .addField(new KeyedCodec<>("AuthGrantTimeout", Codec.DURATION), (o, d) -> o.authGrant = d, o -> o.authGrant)
+         .addField(new KeyedCodec<>("AuthTokenTimeout", Codec.DURATION), (o, d) -> o.authToken = d, o -> o.authToken)
+         .addField(new KeyedCodec<>("AuthServerExchangeTimeout", Codec.DURATION), (o, d) -> o.authServerExchange = d, o -> o.authServerExchange)
+         .addField(new KeyedCodec<>("PasswordTimeout", Codec.DURATION), (o, d) -> o.password = d, o -> o.password)
+         .addField(new KeyedCodec<>("PlayTimeout", Codec.DURATION), (o, d) -> o.play = d, o -> o.play)
+         .addField(new KeyedCodec<>("SetupWorldSettings", Codec.DURATION), (o, d) -> o.setupWorldSettings = d, o -> o.setupWorldSettings)
+         .addField(new KeyedCodec<>("SetupAssetsRequest", Codec.DURATION), (o, d) -> o.setupAssetsRequest = d, o -> o.setupAssetsRequest)
+         .addField(new KeyedCodec<>("SetupSendAssets", Codec.DURATION), (o, d) -> o.setupSendAssets = d, o -> o.setupSendAssets)
+         .addField(new KeyedCodec<>("SetupAddToUniverse", Codec.DURATION), (o, d) -> o.setupAddToUniverse = d, o -> o.setupAddToUniverse)
+         .build();
+      private Duration initial;
+      private Duration auth;
+      private Duration authGrant;
+      private Duration authToken;
+      private Duration authServerExchange;
+      private Duration password;
+      private Duration play;
+      private Duration setupWorldSettings;
+      private Duration setupAssetsRequest;
+      private Duration setupSendAssets;
+      private Duration setupAddToUniverse;
+      private transient HytaleServerConfig hytaleServerConfig;
+
+      public static HytaleServerConfig.TimeoutProfile defaults() {
+         return Constants.SINGLEPLAYER ? SINGLEPLAYER_DEFAULTS : MULTIPLAYER_DEFAULTS;
+      }
+
+      public TimeoutProfile() {
+      }
+
+      public TimeoutProfile(HytaleServerConfig hytaleServerConfig) {
+         this.hytaleServerConfig = hytaleServerConfig;
+      }
+
+      private TimeoutProfile(
+         Duration initial,
+         Duration auth,
+         Duration authGrant,
+         Duration authToken,
+         Duration authServerExchange,
+         Duration password,
+         Duration play,
+         Duration worldSettings,
+         Duration assetsRequest,
+         Duration sendAssets,
+         Duration addToUniverse
+      ) {
+         this.initial = initial;
+         this.auth = auth;
+         this.authGrant = authGrant;
+         this.authToken = authToken;
+         this.authServerExchange = authServerExchange;
+         this.password = password;
+         this.play = play;
+         this.setupWorldSettings = worldSettings;
+         this.setupAssetsRequest = assetsRequest;
+         this.setupSendAssets = sendAssets;
+         this.setupAddToUniverse = addToUniverse;
+      }
+
+      public Duration getInitial() {
+         return this.initial != null ? this.initial : defaults().initial;
+      }
+
+      public void setInitial(Duration d) {
+         this.initial = d;
+         this.markChanged();
+      }
+
+      public Duration getAuth() {
+         return this.auth != null ? this.auth : defaults().auth;
+      }
+
+      public void setAuth(Duration d) {
+         this.auth = d;
+         this.markChanged();
+      }
+
+      public Duration getAuthGrant() {
+         return this.authGrant != null ? this.authGrant : defaults().authGrant;
+      }
+
+      public void setAuthGrant(Duration d) {
+         this.authGrant = d;
+         this.markChanged();
+      }
+
+      public Duration getAuthToken() {
+         return this.authToken != null ? this.authToken : defaults().authToken;
+      }
+
+      public void setAuthToken(Duration d) {
+         this.authToken = d;
+         this.markChanged();
+      }
+
+      public Duration getAuthServerExchange() {
+         return this.authServerExchange != null ? this.authServerExchange : defaults().authServerExchange;
+      }
+
+      public void setAuthServerExchange(Duration d) {
+         this.authServerExchange = d;
+         this.markChanged();
+      }
+
+      public Duration getPassword() {
+         return this.password != null ? this.password : defaults().password;
+      }
+
+      public void setPassword(Duration d) {
+         this.password = d;
+         this.markChanged();
+      }
+
+      public Duration getPlay() {
+         return this.play != null ? this.play : defaults().play;
+      }
+
+      public void setPlay(Duration d) {
+         this.play = d;
+         this.markChanged();
+      }
+
+      public Duration getSetupWorldSettings() {
+         return this.setupWorldSettings != null ? this.setupWorldSettings : defaults().setupWorldSettings;
+      }
+
+      public void setSetupWorldSettings(Duration d) {
+         this.setupWorldSettings = d;
+         this.markChanged();
+      }
+
+      public Duration getSetupAssetsRequest() {
+         return this.setupAssetsRequest != null ? this.setupAssetsRequest : defaults().setupAssetsRequest;
+      }
+
+      public void setSetupAssetsRequest(Duration d) {
+         this.setupAssetsRequest = d;
+         this.markChanged();
+      }
+
+      public Duration getSetupSendAssets() {
+         return this.setupSendAssets != null ? this.setupSendAssets : defaults().setupSendAssets;
+      }
+
+      public void setSetupSendAssets(Duration d) {
+         this.setupSendAssets = d;
+         this.markChanged();
+      }
+
+      public Duration getSetupAddToUniverse() {
+         return this.setupAddToUniverse != null ? this.setupAddToUniverse : defaults().setupAddToUniverse;
+      }
+
+      public void setSetupAddToUniverse(Duration d) {
+         this.setupAddToUniverse = d;
+         this.markChanged();
+      }
+
+      private void markChanged() {
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      void setHytaleServerConfig(HytaleServerConfig hytaleServerConfig) {
+         this.hytaleServerConfig = hytaleServerConfig;
+      }
+   }
+
+   public static class UpdateConfig {
+      public static final int DEFAULT_CHECK_INTERVAL_SECONDS = 3600;
+      public static final Codec<HytaleServerConfig.UpdateConfig> CODEC = BuilderCodec.<HytaleServerConfig.UpdateConfig>builder(
+            HytaleServerConfig.UpdateConfig.class, HytaleServerConfig.UpdateConfig::new
+         )
+         .addField(new KeyedCodec<>("Enabled", Codec.BOOLEAN), (o, b) -> o.enabled = b, o -> o.enabled)
+         .addField(new KeyedCodec<>("CheckIntervalSeconds", Codec.INTEGER), (o, i) -> o.checkIntervalSeconds = i, o -> o.checkIntervalSeconds)
+         .addField(new KeyedCodec<>("NotifyPlayersOnAvailable", Codec.BOOLEAN), (o, b) -> o.notifyPlayersOnAvailable = b, o -> o.notifyPlayersOnAvailable)
+         .addField(new KeyedCodec<>("Patchline", Codec.STRING), (o, s) -> o.patchline = s, o -> o.patchline)
+         .addField(new KeyedCodec<>("RunBackupBeforeUpdate", Codec.BOOLEAN), (o, b) -> o.runBackupBeforeUpdate = b, o -> o.runBackupBeforeUpdate)
+         .addField(new KeyedCodec<>("BackupConfigBeforeUpdate", Codec.BOOLEAN), (o, b) -> o.backupConfigBeforeUpdate = b, o -> o.backupConfigBeforeUpdate)
+         .addField(
+            new KeyedCodec<>("AutoApplyMode", new EnumCodec<>(HytaleServerConfig.UpdateConfig.AutoApplyMode.class)),
+            (o, m) -> o.autoApplyMode = m,
+            o -> o.autoApplyMode
+         )
+         .addField(new KeyedCodec<>("AutoApplyDelayMinutes", Codec.INTEGER), (o, i) -> o.autoApplyDelayMinutes = i, o -> o.autoApplyDelayMinutes)
+         .build();
+      private Boolean enabled;
+      private Integer checkIntervalSeconds;
+      private Boolean notifyPlayersOnAvailable;
+      private String patchline;
+      private Boolean runBackupBeforeUpdate;
+      private Boolean backupConfigBeforeUpdate;
+      private HytaleServerConfig.UpdateConfig.AutoApplyMode autoApplyMode;
+      private Integer autoApplyDelayMinutes;
+      transient HytaleServerConfig hytaleServerConfig;
+
+      public UpdateConfig() {
+      }
+
+      public UpdateConfig(HytaleServerConfig hytaleServerConfig) {
+         this.hytaleServerConfig = hytaleServerConfig;
+      }
+
+      public boolean isEnabled() {
+         return this.enabled != null ? this.enabled : true;
+      }
+
+      public void setEnabled(boolean enabled) {
+         this.enabled = enabled;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      public int getCheckIntervalSeconds() {
+         return this.checkIntervalSeconds != null ? this.checkIntervalSeconds : 3600;
+      }
+
+      public void setCheckIntervalSeconds(int checkIntervalSeconds) {
+         this.checkIntervalSeconds = checkIntervalSeconds;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      public boolean isNotifyPlayersOnAvailable() {
+         return this.notifyPlayersOnAvailable != null ? this.notifyPlayersOnAvailable : true;
+      }
+
+      public void setNotifyPlayersOnAvailable(boolean notifyPlayersOnAvailable) {
+         this.notifyPlayersOnAvailable = notifyPlayersOnAvailable;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      @Nullable
+      public String getPatchline() {
+         return this.patchline;
+      }
+
+      public void setPatchline(@Nullable String patchline) {
+         this.patchline = patchline;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      public boolean isRunBackupBeforeUpdate() {
+         return this.runBackupBeforeUpdate != null ? this.runBackupBeforeUpdate : true;
+      }
+
+      public void setRunBackupBeforeUpdate(boolean runBackupBeforeUpdate) {
+         this.runBackupBeforeUpdate = runBackupBeforeUpdate;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      public boolean isBackupConfigBeforeUpdate() {
+         return this.backupConfigBeforeUpdate != null ? this.backupConfigBeforeUpdate : true;
+      }
+
+      public void setBackupConfigBeforeUpdate(boolean backupConfigBeforeUpdate) {
+         this.backupConfigBeforeUpdate = backupConfigBeforeUpdate;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      @Nonnull
+      public HytaleServerConfig.UpdateConfig.AutoApplyMode getAutoApplyMode() {
+         return this.autoApplyMode != null ? this.autoApplyMode : HytaleServerConfig.UpdateConfig.AutoApplyMode.DISABLED;
+      }
+
+      public void setAutoApplyMode(@Nonnull HytaleServerConfig.UpdateConfig.AutoApplyMode autoApplyMode) {
+         this.autoApplyMode = autoApplyMode;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      public int getAutoApplyDelayMinutes() {
+         return this.autoApplyDelayMinutes != null ? this.autoApplyDelayMinutes : 30;
+      }
+
+      public void setAutoApplyDelayMinutes(int autoApplyDelayMinutes) {
+         this.autoApplyDelayMinutes = autoApplyDelayMinutes;
+         if (this.hytaleServerConfig != null) {
+            this.hytaleServerConfig.markChanged();
+         }
+      }
+
+      public enum AutoApplyMode {
+         DISABLED,
+         WHEN_EMPTY,
+         SCHEDULED;
       }
    }
 }

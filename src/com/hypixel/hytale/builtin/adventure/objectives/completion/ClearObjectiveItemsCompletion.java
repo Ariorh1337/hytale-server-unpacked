@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.adventure.objectives.config.completion.ClearOb
 import com.hypixel.hytale.builtin.adventure.objectives.config.completion.ObjectiveCompletionAsset;
 import com.hypixel.hytale.builtin.adventure.objectives.interactions.StartObjectiveInteraction;
 import com.hypixel.hytale.component.ComponentAccessor;
-import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -27,9 +26,8 @@ public class ClearObjectiveItemsCompletion extends ObjectiveCompletion {
    @Override
    public void handle(@Nonnull Objective objective, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       objective.forEachParticipant((participantReference, objectiveUuid) -> {
-         Entity entity = EntityUtils.getEntity(participantReference, componentAccessor);
-         if (entity instanceof LivingEntity) {
-            CombinedItemContainer inventory = ((LivingEntity)entity).getInventory().getCombinedHotbarFirst();
+         if (EntityUtils.getEntity(participantReference, componentAccessor) instanceof LivingEntity livingEntity) {
+            CombinedItemContainer inventory = livingEntity.getInventory().getCombinedHotbarFirst();
 
             for (short i = 0; i < inventory.getCapacity(); i++) {
                ItemStack itemStack = inventory.getItemStack(i);

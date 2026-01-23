@@ -264,6 +264,20 @@ public class Fluid implements JsonAssetWithMap<String, IndexedLookupTableAssetMa
       return this.maxFluidLevel;
    }
 
+   public boolean hasEffect(ShaderType shader) {
+      if (this.effect == null) {
+         return false;
+      }
+
+      for (ShaderType e : this.effect) {
+         if (e == shader) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
    public FluidTicker getTicker() {
       return this.ticker;
    }

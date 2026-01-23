@@ -31,7 +31,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Processi
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManager;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.ResourceQuantity;
@@ -69,11 +68,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -115,7 +112,6 @@ public class ProcessingBenchState
    public static final String PROCESSING = "Processing";
    public static final String PROCESS_COMPLETED = "ProcessCompleted";
    protected WorldMapManager.MarkerReference marker;
-   private final Map<UUID, ProcessingBenchWindow> windows = new ConcurrentHashMap<>();
    private ProcessingBench processingBench;
    private ItemContainer inputContainer;
    private ItemContainer fuelContainer;
@@ -587,15 +583,15 @@ public class ProcessingBenchState
    }
 
    private void sendProgress(float progress) {
-      this.windows.forEach((uuid, window) -> window.setProgress(progress));
+      this.windows.forEach((uuid, window) -> ((ProcessingBenchWindow)window).setProgress(progress));
    }
 
    private void sendProcessingSlots() {
-      this.windows.forEach((uuid, window) -> window.setProcessingSlots(this.processingSlots));
+      this.windows.forEach((uuid, window) -> ((ProcessingBenchWindow)window).setProcessingSlots(this.processingSlots));
    }
 
    private void sendProcessingFuelSlots() {
-      this.windows.forEach((uuid, window) -> window.setProcessingFuelSlots(this.processingFuelSlots));
+      this.windows.forEach((uuid, window) -> ((ProcessingBenchWindow)window).setProcessingFuelSlots(this.processingFuelSlots));
    }
 
    public boolean isActive() {
@@ -617,7 +613,7 @@ public class ProcessingBenchState
          }
 
          this.updateRecipe();
-         this.windows.forEach((uuid, window) -> window.setActive(active));
+         this.windows.forEach((uuid, window) -> ((ProcessingBenchWindow)window).setActive(active));
          this.markNeedsSave();
          return true;
       } else {
@@ -632,16 +628,16 @@ public class ProcessingBenchState
 
       float fuelPercent = this.lastConsumedFuelTotal > 0 ? this.fuelTime / this.lastConsumedFuelTotal : 0.0F;
       this.windows.forEach((uuid, window) -> {
-         window.setFuelTime(fuelPercent);
-         window.setMaxFuel(this.lastConsumedFuelTotal);
-         window.setProcessingFuelSlots(this.processingFuelSlots);
+         ProcessingBenchWindow processingBenchWindow = (ProcessingBenchWindow)window;
+         processingBenchWindow.setFuelTime(fuelPercent);
+         processingBenchWindow.setMaxFuel(this.lastConsumedFuelTotal);
+         processingBenchWindow.setProcessingFuelSlots(this.processingFuelSlots);
       });
    }
 
    @Override
    public void onDestroy() {
       super.onDestroy();
-      WindowManager.closeAndRemoveAll(this.windows);
       if (this.combinedItemContainer != null) {
          List<ItemStack> itemStacks = this.combinedItemContainer.dropAllItemStacks();
          this.dropFuelItems(itemStacks);
@@ -767,11 +763,6 @@ public class ProcessingBenchState
    @Nullable
    public CraftingRecipe getRecipe() {
       return this.recipe;
-   }
-
-   @Nonnull
-   public Map<UUID, ProcessingBenchWindow> getWindows() {
-      return this.windows;
    }
 
    public float getInputProgress() {

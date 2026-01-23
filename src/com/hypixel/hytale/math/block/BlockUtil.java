@@ -49,6 +49,23 @@ public class BlockUtil {
       }
    }
 
+   public static long packUnchecked(int x, int y, int z) {
+      long l = (y & 511L) << 54 | (z & 67108863L) << 27 | x & 67108863L;
+      if (y < 0) {
+         l |= Long.MIN_VALUE;
+      }
+
+      if (z < 0) {
+         l |= 9007199254740992L;
+      }
+
+      if (x < 0) {
+         l |= 67108864L;
+      }
+
+      return l;
+   }
+
    public static int unpackX(long packed) {
       int i = (int)(packed & 67108863L);
       if ((packed & 67108864L) != 0L) {

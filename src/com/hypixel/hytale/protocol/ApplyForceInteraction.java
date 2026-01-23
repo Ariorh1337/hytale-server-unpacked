@@ -133,13 +133,13 @@ public class ApplyForceInteraction extends SimpleInteraction {
       obj.cancelOnItemChange = buf.getByte(offset + 10) != 0;
       obj.next = buf.getIntLE(offset + 11);
       obj.failed = buf.getIntLE(offset + 15);
-      if ((nullBits & 32) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.velocityConfig = VelocityConfig.deserialize(buf, offset + 19);
       }
 
       obj.changeVelocityType = ChangeVelocityType.fromValue(buf.getByte(offset + 40));
       obj.duration = buf.getFloatLE(offset + 41);
-      if ((nullBits & 128) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.verticalClamp = FloatRange.deserialize(buf, offset + 45);
       }
 
@@ -152,12 +152,12 @@ public class ApplyForceInteraction extends SimpleInteraction {
       obj.raycastDistance = buf.getFloatLE(offset + 71);
       obj.raycastHeightOffset = buf.getFloatLE(offset + 75);
       obj.raycastMode = RaycastMode.fromValue(buf.getByte(offset + 79));
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 4) != 0) {
          int varPos0 = offset + 104 + buf.getIntLE(offset + 80);
          obj.effects = InteractionEffects.deserialize(buf, varPos0);
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 8) != 0) {
          int varPos1 = offset + 104 + buf.getIntLE(offset + 84);
          int settingsCount = VarInt.peek(buf, varPos1);
          if (settingsCount < 0) {
@@ -182,12 +182,12 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 16) != 0) {
          int varPos2 = offset + 104 + buf.getIntLE(offset + 88);
          obj.rules = InteractionRules.deserialize(buf, varPos2);
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 32) != 0) {
          int varPos3 = offset + 104 + buf.getIntLE(offset + 92);
          int tagsCount = VarInt.peek(buf, varPos3);
          if (tagsCount < 0) {
@@ -210,12 +210,12 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 64) != 0) {
          int varPos4 = offset + 104 + buf.getIntLE(offset + 96);
          obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
       }
 
-      if ((nullBits & 64) != 0) {
+      if ((nullBits & 128) != 0) {
          int varPos5 = offset + 104 + buf.getIntLE(offset + 100);
          int forcesCount = VarInt.peek(buf, varPos5);
          if (forcesCount < 0) {
@@ -246,7 +246,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 104;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 80);
          int pos0 = offset + 104 + fieldOffset0;
          pos0 += InteractionEffects.computeBytesConsumed(buf, pos0);
@@ -255,7 +255,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 84);
          int pos1 = offset + 104 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
@@ -270,7 +270,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 16) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 88);
          int pos2 = offset + 104 + fieldOffset2;
          pos2 += InteractionRules.computeBytesConsumed(buf, pos2);
@@ -279,7 +279,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 32) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 92);
          int pos3 = offset + 104 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
@@ -289,7 +289,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 64) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 96);
          int pos4 = offset + 104 + fieldOffset4;
          pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4);
@@ -298,7 +298,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 64) != 0) {
+      if ((nullBits & 128) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 100);
          int pos5 = offset + 104 + fieldOffset5;
          int arrLen = VarInt.peek(buf, pos5);
@@ -320,35 +320,35 @@ public class ApplyForceInteraction extends SimpleInteraction {
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
-      if (this.effects != null) {
+      if (this.velocityConfig != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.settings != null) {
+      if (this.verticalClamp != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.rules != null) {
+      if (this.effects != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.tags != null) {
+      if (this.settings != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.camera != null) {
+      if (this.rules != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.velocityConfig != null) {
+      if (this.tags != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
-      if (this.forces != null) {
+      if (this.camera != null) {
          nullBits = (byte)(nullBits | 64);
       }
 
-      if (this.verticalClamp != null) {
+      if (this.forces != null) {
          nullBits = (byte)(nullBits | 128);
       }
 
@@ -501,7 +501,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 4) != 0) {
          int effectsOffset = buffer.getIntLE(offset + 80);
          if (effectsOffset < 0) {
             return ValidationResult.error("Invalid offset for Effects");
@@ -520,7 +520,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          pos += InteractionEffects.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 8) != 0) {
          int settingsOffset = buffer.getIntLE(offset + 84);
          if (settingsOffset < 0) {
             return ValidationResult.error("Invalid offset for Settings");
@@ -548,7 +548,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 16) != 0) {
          int rulesOffset = buffer.getIntLE(offset + 88);
          if (rulesOffset < 0) {
             return ValidationResult.error("Invalid offset for Rules");
@@ -567,7 +567,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          pos += InteractionRules.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 32) != 0) {
          int tagsOffset = buffer.getIntLE(offset + 92);
          if (tagsOffset < 0) {
             return ValidationResult.error("Invalid offset for Tags");
@@ -594,7 +594,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 64) != 0) {
          int cameraOffset = buffer.getIntLE(offset + 96);
          if (cameraOffset < 0) {
             return ValidationResult.error("Invalid offset for Camera");
@@ -613,7 +613,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          pos += InteractionCameraSettings.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits & 64) != 0) {
+      if ((nullBits & 128) != 0) {
          int forcesOffset = buffer.getIntLE(offset + 100);
          if (forcesOffset < 0) {
             return ValidationResult.error("Invalid offset for Forces");

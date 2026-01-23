@@ -59,16 +59,16 @@ public class StatModifiersManager {
 
          World world = componentAccessor.getExternalData().getWorld();
          if (EntityUtils.getEntity(ref, componentAccessor) instanceof LivingEntity livingEntity) {
-            Inventory inventory = livingEntity.getInventory();
+            Inventory var12 = livingEntity.getInventory();
             Int2ObjectOpenHashMap effectModifiers = calculateEffectStatModifiers(ref, componentAccessor);
             applyEffectModifiers(statMap, effectModifiers);
             BrokenPenalties brokenPenalties = world.getGameplayConfig().getItemDurabilityConfig().getBrokenPenalties();
-            Int2ObjectMap statModifiers = computeStatModifiers(brokenPenalties, inventory);
+            Int2ObjectMap statModifiers = computeStatModifiers(brokenPenalties, var12);
             applyStatModifiers(statMap, statModifiers);
-            ItemStack itemInHand = inventory.getItemInHand();
+            ItemStack itemInHand = var12.getItemInHand();
             addItemStatModifiers(itemInHand, statMap, "*Weapon_", v -> v.getWeapon() != null ? v.getWeapon().getStatModifiers() : null);
             if (itemInHand == null || itemInHand.getItem().getUtility().isCompatible()) {
-               addItemStatModifiers(inventory.getUtilityItem(), statMap, "*Utility_", v -> v.getUtility().getStatModifiers());
+               addItemStatModifiers(var12.getUtilityItem(), statMap, "*Utility_", v -> v.getUtility().getStatModifiers());
             }
          }
       }

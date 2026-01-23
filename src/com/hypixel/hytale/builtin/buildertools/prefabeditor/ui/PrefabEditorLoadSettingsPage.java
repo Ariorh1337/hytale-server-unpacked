@@ -667,7 +667,20 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
    private void buildAssetsBrowserList(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
       String currentDirStr = this.assetsCurrentDir.toString().replace('\\', '/');
-      String displayPath = currentDirStr.isEmpty() ? "Assets" : "Assets/" + currentDirStr;
+      String displayPath;
+      if (currentDirStr.isEmpty()) {
+         displayPath = "Assets";
+      } else {
+         String[] parts = currentDirStr.split("/", 2);
+         String packName = parts[0];
+         String subPath = parts.length > 1 ? "/" + parts[1] : "";
+         if ("HytaleAssets".equals(packName)) {
+            displayPath = packName + subPath;
+         } else {
+            displayPath = "Mods/" + packName + subPath;
+         }
+      }
+
       commandBuilder.set("#BrowserPage #CurrentPath.Text", displayPath);
       List<FileListProvider.FileEntry> entries = this.assetProvider.getFiles(this.assetsCurrentDir, this.browserSearchQuery);
       int buttonIndex = 0;
@@ -828,7 +841,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       } else {
          AssetPack pack = this.findAssetPackForPath(rootStr);
          if (pack != null) {
-            String packPrefix = pack.equals(AssetModule.get().getBaseAssetPack()) ? "Assets" : "[" + pack.getName() + "]";
+            String packPrefix = pack.equals(AssetModule.get().getBaseAssetPack()) ? "HytaleAssets" : "[" + pack.getName() + "]";
             Path parent = root.getParent();
             return parent != null && parent.getFileName() != null
                ? packPrefix + "/" + parent.getFileName() + "/" + root.getFileName()

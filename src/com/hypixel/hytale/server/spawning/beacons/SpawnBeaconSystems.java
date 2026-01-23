@@ -81,7 +81,7 @@ public class SpawnBeaconSystems {
       ) {
          this.componentType = componentType;
          this.npcComponentType = NPCEntity.getComponentType();
-         this.query = Query.and(componentType, Query.not(initialBeaconDelayComponentType));
+         this.query = Query.and(componentType, UUIDComponent.getComponentType(), Query.not(initialBeaconDelayComponentType));
       }
 
       @Nonnull

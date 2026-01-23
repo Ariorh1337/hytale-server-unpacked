@@ -42,11 +42,11 @@ public class AnimationSet {
    public static AnimationSet deserialize(@Nonnull ByteBuf buf, int offset) {
       AnimationSet obj = new AnimationSet();
       byte nullBits = buf.getByte(offset);
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.nextAnimationDelay = Rangef.deserialize(buf, offset + 1);
       }
 
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int varPos0 = offset + 17 + buf.getIntLE(offset + 9);
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
@@ -60,7 +60,7 @@ public class AnimationSet {
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int varPos1 = offset + 17 + buf.getIntLE(offset + 13);
          int animationsCount = VarInt.peek(buf, varPos1);
          if (animationsCount < 0) {
@@ -91,7 +91,7 @@ public class AnimationSet {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 17;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 9);
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
@@ -101,7 +101,7 @@ public class AnimationSet {
          }
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 13);
          int pos1 = offset + 17 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
@@ -122,15 +122,15 @@ public class AnimationSet {
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
-      if (this.id != null) {
+      if (this.nextAnimationDelay != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.animations != null) {
+      if (this.id != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.nextAnimationDelay != null) {
+      if (this.animations != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
@@ -194,7 +194,7 @@ public class AnimationSet {
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int idOffset = buffer.getIntLE(offset + 9);
          if (idOffset < 0) {
             return ValidationResult.error("Invalid offset for Id");
@@ -221,7 +221,7 @@ public class AnimationSet {
          }
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int animationsOffset = buffer.getIntLE(offset + 13);
          if (animationsOffset < 0) {
             return ValidationResult.error("Invalid offset for Animations");

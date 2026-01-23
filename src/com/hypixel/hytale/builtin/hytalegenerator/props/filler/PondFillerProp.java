@@ -17,6 +17,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class PondFillerProp extends Prop {
    private static final int TRAVERSED = 1;
@@ -30,6 +31,7 @@ public class PondFillerProp extends Prop {
    private final Scanner scanner;
    private final Pattern pattern;
    private final ContextDependency contextDependency;
+   private final Bounds3i readBounds_voxelGrid;
    private final Bounds3i writeBounds_voxelGrid;
 
    public PondFillerProp(
@@ -51,7 +53,8 @@ public class PondFillerProp extends Prop {
       SpaceSize.stack(scanner.readSpaceWith(pattern), boundingSpace);
       Vector3i range = boundingSpace.getRange();
       this.contextDependency = new ContextDependency(range, range);
-      this.writeBounds_voxelGrid = this.contextDependency.getTotalPropBounds_voxelGrid();
+      this.readBounds_voxelGrid = this.contextDependency.getReadBounds_voxelGrid();
+      this.writeBounds_voxelGrid = this.contextDependency.getWriteBounds_voxelGrid();
    }
 
    public FillerPropScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
@@ -221,9 +224,15 @@ public class PondFillerProp extends Prop {
       return this.contextDependency.clone();
    }
 
+   @NonNullDecl
+   @Override
+   public Bounds3i getReadBounds_voxelGrid() {
+      return this.readBounds_voxelGrid;
+   }
+
    @Nonnull
    @Override
-   public Bounds3i getWriteBounds() {
+   public Bounds3i getWriteBounds_voxelGrid() {
       return this.writeBounds_voxelGrid;
    }
 

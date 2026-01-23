@@ -28,7 +28,7 @@ public class RotateObjectSystem extends EntityTickingSystem<EntityStore> {
 
    @Override
    public Query<EntityStore> getQuery() {
-      return this.rotateObjectComponentType;
+      return Query.and(this.rotateObjectComponentType, this.transformComponentType);
    }
 
    @Override
@@ -39,10 +39,10 @@ public class RotateObjectSystem extends EntityTickingSystem<EntityStore> {
       @Nonnull Store<EntityStore> store,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
-      assert transformComponent != null;
       RotateObjectComponent rotateObjectComponent = archetypeChunk.getComponent(index, this.rotateObjectComponentType);
       assert rotateObjectComponent != null;
+      TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
+      assert transformComponent != null;
       Vector3f rotation = transformComponent.getRotation();
       rotation.y = rotation.y + rotateObjectComponent.getRotationSpeed() * dt;
       if (rotation.y >= 360.0F) {

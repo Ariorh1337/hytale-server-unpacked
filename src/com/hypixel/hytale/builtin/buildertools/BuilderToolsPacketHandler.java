@@ -211,19 +211,24 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                if (entityReference == null) {
                   playerComponent.sendMessage(Message.translation("server.general.entityNotFound").param("id", entityId));
                } else {
-                  LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-                  switch (packet.action) {
-                     case Freeze:
-                        UUIDComponent uuidComponent = store.getComponent(entityReference, UUIDComponent.getComponentType());
-                        if (uuidComponent != null) {
-                           CommandManager.get().handleCommand(playerComponent, "npc freeze --toggle --entity " + uuidComponent.getUuid());
-                        }
-                        break;
-                     case Clone:
-                        world.execute(() -> EntityCloneCommand.cloneEntity(playerComponent, entityReference, store));
-                        break;
-                     case Remove:
-                        world.execute(() -> EntityRemoveCommand.removeEntity(ref, entityReference, store));
+                  Player targetPlayerComponent = store.getComponent(entityReference, Player.getComponentType());
+                  if (targetPlayerComponent != null) {
+                     playerComponent.sendMessage(Message.translation("server.builderTools.entityTool.cannotTargetPlayer"));
+                  } else {
+                     LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+                     switch (packet.action) {
+                        case Freeze:
+                           UUIDComponent uuidComponent = store.getComponent(entityReference, UUIDComponent.getComponentType());
+                           if (uuidComponent != null) {
+                              CommandManager.get().handleCommand(playerComponent, "npc freeze --toggle --entity " + uuidComponent.getUuid());
+                           }
+                           break;
+                        case Clone:
+                           world.execute(() -> EntityCloneCommand.cloneEntity(playerComponent, entityReference, store));
+                           break;
+                        case Remove:
+                           world.execute(() -> EntityRemoveCommand.removeEntity(ref, entityReference, store));
+                     }
                   }
                }
             }
@@ -395,6 +400,16 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                Player playerComponent = store.getComponent(ref, Player.getComponentType());
                if (hasPermission(playerComponent, "hytale.editor.selection.clipboard")) {
                   LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+                  boolean keepEmptyBlocks = true;
+                  BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
+                  if (builderTool != null && builderTool.getId().equals("Selection")) {
+                     BuilderTool.ArgData args = builderTool.getItemArgData(playerComponent.getInventory().getItemInHand());
+                     if (args != null && args.tool() != null) {
+                        keepEmptyBlocks = (Boolean)args.tool().getOrDefault("KeepEmptyBlocks", true);
+                     }
+                  }
+
+                  boolean finalKeepEmptyBlocks = keepEmptyBlocks;
                   float[] tmx = new float[16];
 
                   for (int i = 0; i < packet.transformationMatrix.length; i++) {
@@ -483,6 +498,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                               transformationMatrix,
                               rotationOrigin,
                               blockChangeOffsetOrigin,
+                              finalKeepEmptyBlocks,
                               componentAccessor
                            );
                            s.select(initialSelectionMin, initialSelectionMax, "SelectionTranslatePacket", componentAccessor);

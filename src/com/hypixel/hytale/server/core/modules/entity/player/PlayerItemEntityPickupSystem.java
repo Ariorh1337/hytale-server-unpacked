@@ -70,6 +70,7 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
       this.dependencies = Set.of(new SystemDependency<>(Order.AFTER, PlayerSpatialSystem.class, OrderPriority.CLOSEST));
       this.query = Query.and(
          itemComponentType,
+         TransformComponent.getComponentType(),
          Query.not(Interactable.getComponentType()),
          Query.not(PickupItemComponent.getComponentType()),
          Query.not(PreventPickup.getComponentType())

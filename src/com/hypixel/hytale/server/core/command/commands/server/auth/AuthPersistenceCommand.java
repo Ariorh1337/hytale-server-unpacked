@@ -15,14 +15,6 @@ import javax.annotation.Nonnull;
 public class AuthPersistenceCommand extends CommandBase {
    @Nonnull
    private static final Message MESSAGE_SINGLEPLAYER = Message.translation("server.commands.auth.persistence.singleplayer").color(Color.RED);
-   @Nonnull
-   private static final Message MESSAGE_CURRENT = Message.translation("server.commands.auth.persistence.current").color(Color.YELLOW);
-   @Nonnull
-   private static final Message MESSAGE_AVAILABLE = Message.translation("server.commands.auth.persistence.available").color(Color.GRAY);
-   @Nonnull
-   private static final Message MESSAGE_CHANGED = Message.translation("server.commands.auth.persistence.changed").color(Color.GREEN);
-   @Nonnull
-   private static final Message MESSAGE_UNKNOWN_TYPE = Message.translation("server.commands.auth.persistence.unknownType").color(Color.RED);
 
    public AuthPersistenceCommand() {
       super("persistence", "server.commands.auth.persistence.desc");
@@ -36,9 +28,9 @@ public class AuthPersistenceCommand extends CommandBase {
       } else {
          AuthCredentialStoreProvider provider = HytaleServer.get().getConfig().getAuthCredentialStoreProvider();
          String typeName = AuthCredentialStoreProvider.CODEC.getIdFor((Class<? extends AuthCredentialStoreProvider>)provider.getClass());
-         context.sendMessage(MESSAGE_CURRENT.param("type", typeName));
+         context.sendMessage(Message.translation("server.commands.auth.persistence.current").color(Color.YELLOW).param("type", typeName));
          String availableTypes = String.join(", ", AuthCredentialStoreProvider.CODEC.getRegisteredIds());
-         context.sendMessage(MESSAGE_AVAILABLE.param("types", availableTypes));
+         context.sendMessage(Message.translation("server.commands.auth.persistence.available").color(Color.GRAY).param("types", availableTypes));
       }
    }
 
@@ -59,12 +51,12 @@ public class AuthPersistenceCommand extends CommandBase {
             String typeName = this.typeArg.get(context);
             BuilderCodec<? extends AuthCredentialStoreProvider> codec = AuthCredentialStoreProvider.CODEC.getCodecFor(typeName);
             if (codec == null) {
-               context.sendMessage(AuthPersistenceCommand.MESSAGE_UNKNOWN_TYPE.param("type", typeName));
+               context.sendMessage(Message.translation("server.commands.auth.persistence.unknownType").color(Color.RED).param("type", typeName));
             } else {
                AuthCredentialStoreProvider newProvider = codec.getDefaultValue();
                HytaleServer.get().getConfig().setAuthCredentialStoreProvider(newProvider);
                authManager.swapCredentialStoreProvider(newProvider);
-               context.sendMessage(AuthPersistenceCommand.MESSAGE_CHANGED.param("type", typeName));
+               context.sendMessage(Message.translation("server.commands.auth.persistence.changed").color(Color.GREEN).param("type", typeName));
             }
          }
       }

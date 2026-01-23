@@ -28,11 +28,7 @@ import javax.annotation.Nonnull;
 public class WorldGenBenchmarkCommand extends CommandBase {
    private static final AtomicBoolean IS_RUNNING = new AtomicBoolean(false);
    public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVING = Message.translation("server.commands.worldgenbenchmark.saving");
-   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_DONE = Message.translation("server.commands.worldgenbenchmark.done");
    public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_FAILED = Message.translation("server.commands.worldgenbenchmark.saveFailed");
-   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_DONE = Message.translation("server.commands.worldgenbenchmark.saveDone");
-   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_PROGRESS = Message.translation("server.commands.worldgenbenchmark.progress");
-   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_STARTED = Message.translation("server.commands.worldgenbenchmark.started");
    public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ABORT = Message.translation("server.commands.worldgenbenchmark.abort");
    public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_BENCHMARK_NOT_SUPPORTED = Message.translation(
       "server.commands.worldgenbenchmark.benchmarkNotSupported"
@@ -99,7 +95,10 @@ public class WorldGenBenchmarkCommand extends CommandBase {
                context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ABORT);
             } else {
                context.sendMessage(
-                  MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_STARTED.param("seed", seed).param("worldName", worldName).param("size", generatingChunks.size())
+                  Message.translation("server.commands.worldgenbenchmark.started")
+                     .param("seed", seed)
+                     .param("worldName", worldName)
+                     .param("size", generatingChunks.size())
                );
                benchmarkableWorldGen.getBenchmark().start();
                int chunkCount = generatingChunks.size();
@@ -115,9 +114,8 @@ public class WorldGenBenchmarkCommand extends CommandBase {
                               if (thisTime >= nextBroadcast) {
                                  world.execute(
                                     () -> world.sendMessage(
-                                       MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_PROGRESS.param(
-                                          "percent", Math.round((1.0 - (double)generatingChunks.size() / chunkCount) * 1000.0) / 10.0
-                                       )
+                                       Message.translation("server.commands.worldgenbenchmark.progress")
+                                          .param("percent", Math.round((1.0 - (double)generatingChunks.size() / chunkCount) * 1000.0) / 10.0)
                                     )
                                  );
                                  nextBroadcast = thisTime + 5000000000L;
@@ -135,7 +133,7 @@ public class WorldGenBenchmarkCommand extends CommandBase {
                            } while (!currentChunks.isEmpty());
 
                            String duration = FormatUtil.nanosToString(System.nanoTime() - startTime);
-                           world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_DONE.param("duration", duration)));
+                           world.execute(() -> world.sendMessage(Message.translation("server.commands.worldgenbenchmark.done").param("duration", duration)));
                            world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVING));
                            String fileName = "quant." + System.currentTimeMillis() + "." + (maxX - minX) + "x" + (maxZ - minZ) + "." + worldName + ".txt";
                            File folder = new File("quantification");
@@ -144,7 +142,9 @@ public class WorldGenBenchmarkCommand extends CommandBase {
 
                            try (FileWriter fw = new FileWriter(file)) {
                               fw.write(benchmarkableWorldGen.getBenchmark().buildReport().join());
-                              world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_DONE.param("fileName", fileName)));
+                              world.execute(
+                                 () -> world.sendMessage(Message.translation("server.commands.worldgenbenchmark.saveDone").param("fileName", fileName))
+                              );
                            } catch (Exception e) {
                               HytaleLogger.getLogger().at(Level.SEVERE).withCause(e).log("Failed to save worldgen benchmark report!");
                               world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_FAILED));

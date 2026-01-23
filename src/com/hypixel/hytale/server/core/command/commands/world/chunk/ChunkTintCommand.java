@@ -43,12 +43,6 @@ public class ChunkTintCommand extends AbstractPlayerCommand {
    private static final int BLUR_RADIUS = 5;
    private static final double BLUR_SIGMA = 1.5;
    @Nonnull
-   private static final Message MESSAGE_GENERAL_CHUNK_NOT_LOADED = Message.translation("server.general.chunkNotLoaded");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_TINT_SUCCESS = Message.translation("server.commands.chunk.tint.success");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_TINT_SUCCESS_BLUR = Message.translation("server.commands.chunk.tint.success.blur");
-   @Nonnull
    private final RequiredArg<Integer> colorArg = this.withRequiredArg("color", "server.commands.chunk.tint.color.desc", ArgTypes.COLOR);
    @Nonnull
    private final DefaultArg<Integer> radiusArg = this.withDefaultArg(
@@ -134,17 +128,18 @@ public class ChunkTintCommand extends AbstractPlayerCommand {
          updateChunks.forEach(chunkIndexxx -> world.getNotificationHandler().updateChunk(chunkIndexxx));
          if (this.blurArg.provided(context)) {
             context.sendMessage(
-               MESSAGE_COMMANDS_CHUNK_TINT_SUCCESS_BLUR.param("chunkX", chunkX)
+               Message.translation("server.commands.chunk.tint.success.blur")
+                  .param("chunkX", chunkX)
                   .param("chunkZ", chunkZ)
                   .param("chunksAffected", updateChunks.size())
                   .param("radius", radius)
                   .param("sigma", sigma)
             );
          } else {
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_TINT_SUCCESS.param("chunkX", chunkX).param("chunkZ", chunkZ));
+            context.sendMessage(Message.translation("server.commands.chunk.tint.success").param("chunkX", chunkX).param("chunkZ", chunkZ));
          }
       } else {
-         context.sendMessage(MESSAGE_GENERAL_CHUNK_NOT_LOADED.param("chunkX", chunkX).param("chunkZ", chunkZ));
+         context.sendMessage(Message.translation("server.general.chunkNotLoaded").param("chunkX", chunkX).param("chunkZ", chunkZ));
       }
    }
 

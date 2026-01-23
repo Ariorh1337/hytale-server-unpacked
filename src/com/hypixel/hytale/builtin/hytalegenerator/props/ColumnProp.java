@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ColumnProp extends Prop {
    private final int[] yPositions;
@@ -30,6 +31,9 @@ public class ColumnProp extends Prop {
    private final Scanner scanner;
    private final ContextDependency contextDependency;
    private final Directionality directionality;
+   @Nonnull
+   private final Bounds3i readBounds_voxelGrid;
+   @Nonnull
    private final Bounds3i writeBounds_voxelGrid;
 
    public ColumnProp(
@@ -66,7 +70,8 @@ public class ColumnProp extends Prop {
       Vector3i writeRange = writeSpace.getRange();
       Vector3i readRange = directionality.getReadRangeWith(scanner);
       this.contextDependency = new ContextDependency(readRange, writeRange);
-      this.writeBounds_voxelGrid = this.contextDependency.getTotalPropBounds_voxelGrid();
+      this.readBounds_voxelGrid = this.contextDependency.getReadBounds_voxelGrid();
+      this.writeBounds_voxelGrid = this.contextDependency.getWriteBounds_voxelGrid();
    }
 
    @Override
@@ -124,9 +129,15 @@ public class ColumnProp extends Prop {
       return this.contextDependency.clone();
    }
 
+   @NonNullDecl
+   @Override
+   public Bounds3i getReadBounds_voxelGrid() {
+      return this.readBounds_voxelGrid;
+   }
+
    @Nonnull
    @Override
-   public Bounds3i getWriteBounds() {
+   public Bounds3i getWriteBounds_voxelGrid() {
       return this.writeBounds_voxelGrid;
    }
 }

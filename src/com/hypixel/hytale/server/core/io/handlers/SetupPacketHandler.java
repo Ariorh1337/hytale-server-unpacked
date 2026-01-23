@@ -45,7 +45,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
@@ -126,7 +125,8 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
 
    @Override
    public void registered0(@Nonnull PacketHandler oldHandler) {
-      this.setTimeout("send-world-settings", () -> this.assets != null, 10L, TimeUnit.SECONDS);
+      HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+      this.enterStage("setup:world-settings", timeouts.getSetupWorldSettings(), () -> this.assets != null);
       PlayerSetupConnectEvent event = HytaleServer.get()
          .getEventBus()
          .<Void, PlayerSetupConnectEvent>dispatchFor(PlayerSetupConnectEvent.class)
@@ -173,7 +173,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             this.write(worldSettings);
             HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
             this.write(new ServerInfo(HytaleServer.get().getServerName(), serverConfig.getMotd(), serverConfig.getMaxPlayers()));
-            this.setTimeout("receive-assets-request", () -> this.receivedRequest, 120L, TimeUnit.SECONDS);
+            this.continueStage("setup:assets-request", timeouts.getSetupAssetsRequest(), () -> this.receivedRequest);
          }
       }
    }
@@ -267,7 +267,8 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                throw new RuntimeException("Exception when player was joining", throwable);
             })
       );
-      this.setTimeout("send-assets", () -> future.isDone() || !future.cancel(true), 120L, TimeUnit.SECONDS);
+      HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+      this.continueStage("setup:send-assets", timeouts.getSetupSendAssets(), () -> future.isDone() || !future.cancel(true));
    }
 
    public void handle(@Nonnull ViewRadius packet) {
@@ -285,7 +286,9 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             try {
                CosmeticsModule.get().validateSkin(packet.skin);
             } catch (CosmeticsModule.InvalidSkinException e) {
-               this.disconnect("Invalid skin! " + e.getMessage());
+               String msg = "Your skin contains parts that aren't available on this server.\nThis usually happens when assets are out of sync.\n\n"
+                  + e.getMessage();
+               this.disconnect(msg);
                return;
             }
          }
@@ -308,7 +311,8 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                   throw new RuntimeException("Exception when player adding to universe", throwable);
                })
          );
-         this.setTimeout("add-to-universe", () -> future.isDone() || !future.cancel(true), 60L, TimeUnit.SECONDS);
+         HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+         this.continueStage("setup:add-to-universe", timeouts.getSetupAddToUniverse(), () -> future.isDone() || !future.cancel(true));
       }
    }
 }

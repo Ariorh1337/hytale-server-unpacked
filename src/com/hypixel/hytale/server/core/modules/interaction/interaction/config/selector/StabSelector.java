@@ -36,6 +36,7 @@ import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 
 public class StabSelector extends SelectorType {
+   @Nonnull
    public static final BuilderCodec<StabSelector> CODEC = BuilderCodec.builder(StabSelector.class, StabSelector::new, BASE_CODEC)
       .documentation("A selector  that stabs in a straight line over a given period of time.")
       .<Double>appendInherited(
@@ -160,14 +161,19 @@ public class StabSelector extends SelectorType {
       protected OrthogonalProjectionProvider projectionProvider = new OrthogonalProjectionProvider();
       @Nonnull
       protected DirectionViewProvider viewProvider = new DirectionViewProvider();
-      protected float lastTime = 0.0F;
+      protected float lastTime;
       protected double runTimeDeltaPercentageSum;
 
       @Override
       public void tick(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> attacker, float time, float runTime) {
-         float yOffset = commandBuffer.getComponent(attacker, ModelComponent.getComponentType()).getModel().getEyeHeight(attacker, commandBuffer);
-         Vector3d position = commandBuffer.getComponent(attacker, TransformComponent.getComponentType()).getPosition();
-         HeadRotation look = commandBuffer.getComponent(attacker, HeadRotation.getComponentType());
+         ModelComponent modelComponent = commandBuffer.getComponent(attacker, ModelComponent.getComponentType());
+         assert modelComponent != null;
+         float yOffset = modelComponent.getModel().getEyeHeight(attacker, commandBuffer);
+         TransformComponent transformComponent = commandBuffer.getComponent(attacker, TransformComponent.getComponentType());
+         assert transformComponent != null;
+         Vector3d position = transformComponent.getPosition();
+         HeadRotation headRotationComponent = commandBuffer.getComponent(attacker, HeadRotation.getComponentType());
+         assert headRotationComponent != null;
          double posX = position.getX();
          double posY = position.getY() + yOffset;
          double posZ = position.getZ();
@@ -185,44 +191,51 @@ public class StabSelector extends SelectorType {
             .setBottom(StabSelector.this.extendBottom)
             .setTop(StabSelector.this.extendTop)
             .setRotation(StabSelector.this.yawOffset, StabSelector.this.pitchOffset, StabSelector.this.rollOffset);
-         this.viewProvider.setPosition(posX, posY, posZ).setDirection(look.getRotation().getYaw(), look.getRotation().getPitch());
+         this.viewProvider
+            .setPosition(posX, posY, posZ)
+            .setDirection(headRotationComponent.getRotation().getYaw(), headRotationComponent.getRotation().getPitch());
          this.executor.setOrigin(posX, posY, posZ).setProjectionProvider(this.projectionProvider).setViewProvider(this.viewProvider);
          if (StabSelector.this.testLineOfSight) {
-            this.executor
-               .setLineOfSightProvider(
-                  (fromX, fromY, fromZ, toX, toY, toZ) -> {
-                     LocalCachedChunkAccessor localAccessor = LocalCachedChunkAccessor.atWorldCoords(
-                        commandBuffer.getStore().getExternalData().getWorld(), (int)fromX, (int)fromZ, (int)(StabSelector.this.endDistance + 1.0)
-                     );
-                     return BlockIterator.iterateFromTo(fromX, fromY, fromZ, toX, toY, toZ, (x, y, z, px, py, pz, qx, qy, qz, accessor) -> {
-                        if (accessor.getBlockType(x, y, z).getMaterial() == BlockMaterial.Solid) {
-                           BlockType blockType = accessor.getBlockType(x, y, z);
-                           if (blockType == null) {
-                              return true;
-                           }
-
-                           BlockBoundingBoxes blockHitboxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
-                           if (blockHitboxes == null) {
-                              return true;
-                           }
-
-                           BlockBoundingBoxes.RotatedVariantBoxes rotatedHitboxes = blockHitboxes.get(accessor.getBlockRotationIndex(x, y, z));
-                           Vector3d lineFrom = new Vector3d(fromX, fromY, fromZ);
-                           Vector3d lineTo = new Vector3d(toX, toY, toZ);
-
-                           for (Box box : rotatedHitboxes.getDetailBoxes()) {
-                              Box offsetBox = box.clone().offset(x, y, z);
-                              boolean intersect = offsetBox.intersectsLine(lineFrom, lineTo);
-                              if (intersect) {
-                                 return false;
-                              }
-                           }
-                        }
-
-                        return true;
-                     }, localAccessor);
-                  }
+            World world = commandBuffer.getStore().getExternalData().getWorld();
+            LineOfSightProvider provider = (fromX, fromY, fromZ, toX, toY, toZ) -> {
+               LocalCachedChunkAccessor localAccessor = LocalCachedChunkAccessor.atWorldCoords(
+                  world, (int)fromX, (int)fromZ, (int)(StabSelector.this.endDistance + 1.0)
                );
+               return BlockIterator.iterateFromTo(fromX, fromY, fromZ, toX, toY, toZ, (x, y, z, px, py, pz, qx, qy, qz, accessor) -> {
+                  long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+                  WorldChunk worldChunk = accessor.getChunkIfInMemory(chunkIndex);
+                  if (worldChunk == null) {
+                     return true;
+                  }
+
+                  BlockType blockType = worldChunk.getBlockType(x, y, z);
+                  if (blockType == null) {
+                     return true;
+                  }
+
+                  if (blockType.getMaterial() == BlockMaterial.Solid) {
+                     int hitboxTypeIndex = blockType.getHitboxTypeIndex();
+                     BlockBoundingBoxes blockHitboxes = BlockBoundingBoxes.getAssetMap().getAsset(hitboxTypeIndex);
+                     if (blockHitboxes == null) {
+                        return true;
+                     }
+
+                     Vector3d lineFrom = new Vector3d(fromX, fromY, fromZ);
+                     Vector3d lineTo = new Vector3d(toX, toY, toZ);
+                     BlockBoundingBoxes.RotatedVariantBoxes rotatedHitboxes = blockHitboxes.get(accessor.getBlockRotationIndex(x, y, z));
+
+                     for (Box box : rotatedHitboxes.getDetailBoxes()) {
+                        Box offsetBox = box.clone().offset(x, y, z);
+                        if (offsetBox.intersectsLine(lineFrom, lineTo)) {
+                           return false;
+                        }
+                     }
+                  }
+
+                  return true;
+               }, localAccessor);
+            };
+            this.executor.setLineOfSightProvider(provider);
          } else {
             this.executor.setLineOfSightProvider(LineOfSightProvider.DEFAULT_TRUE);
          }
@@ -232,8 +245,8 @@ public class StabSelector extends SelectorType {
             Matrix4d matrix = new Matrix4d();
             matrix.identity()
                .translate(posX, posY, posZ)
-               .rotateAxis(-look.getRotation().getYaw(), 0.0, 1.0, 0.0, tmp)
-               .rotateAxis(-look.getRotation().getPitch(), 1.0, 0.0, 0.0, tmp);
+               .rotateAxis(-headRotationComponent.getRotation().getYaw(), 0.0, 1.0, 0.0, tmp)
+               .rotateAxis(-headRotationComponent.getRotation().getPitch(), 1.0, 0.0, 0.0, tmp);
             Vector3f color = new Vector3f(
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 11L),
@@ -252,17 +265,29 @@ public class StabSelector extends SelectorType {
          @Nonnull BiConsumer<Ref<EntityStore>, Vector4d> consumer,
          Predicate<Ref<EntityStore>> filter
       ) {
-         Selector.selectNearbyEntities(commandBuffer, attacker, StabSelector.this.endDistance + 3.0, entity -> {
-            BoundingBox hitboxComponent = commandBuffer.getComponent(entity, BoundingBox.getComponentType());
-            if (hitboxComponent != null) {
-               Box hitbox = hitboxComponent.getBoundingBox();
-               TransformComponent transform = commandBuffer.getComponent(entity, TransformComponent.getComponentType());
-               this.modelMatrix.identity().translate(transform.getPosition()).translate(hitbox.getMin()).scale(hitbox.width(), hitbox.height(), hitbox.depth());
-               if (this.executor.test(HitDetectionExecutor.CUBE_QUADS, this.modelMatrix)) {
-                  consumer.accept(entity, this.executor.getHitLocation());
+         Selector.selectNearbyEntities(
+            commandBuffer,
+            attacker,
+            StabSelector.this.endDistance + 3.0,
+            entity -> {
+               BoundingBox boundingBoxComponent = commandBuffer.getComponent(entity, BoundingBox.getComponentType());
+               if (boundingBoxComponent != null) {
+                  Box hitbox = boundingBoxComponent.getBoundingBox();
+                  TransformComponent transformComponent = commandBuffer.getComponent(entity, TransformComponent.getComponentType());
+                  if (transformComponent != null) {
+                     this.modelMatrix
+                        .identity()
+                        .translate(transformComponent.getPosition())
+                        .translate(hitbox.getMin())
+                        .scale(hitbox.width(), hitbox.height(), hitbox.depth());
+                     if (this.executor.test(HitDetectionExecutor.CUBE_QUADS, this.modelMatrix)) {
+                        consumer.accept(entity, this.executor.getHitLocation());
+                     }
+                  }
                }
-            }
-         }, filter);
+            },
+            filter
+         );
       }
 
       @Override
@@ -272,16 +297,20 @@ public class StabSelector extends SelectorType {
             WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
             if (chunk != null) {
                BlockType blockType = chunk.getBlockType(x, y, z);
-               if (blockType != BlockType.EMPTY) {
+               if (blockType != null && blockType != BlockType.EMPTY) {
                   int rotation = chunk.getRotationIndex(x, y, z);
-                  Box[] hitboxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex()).get(rotation).getDetailBoxes();
+                  int hitboxTypeIndex = blockType.getHitboxTypeIndex();
+                  BlockBoundingBoxes boundingBoxAsset = BlockBoundingBoxes.getAssetMap().getAsset(hitboxTypeIndex);
+                  if (boundingBoxAsset != null) {
+                     Box[] hitboxes = boundingBoxAsset.get(rotation).getDetailBoxes();
 
-                  for (int i = 0; i < hitboxes.length; i++) {
-                     Box hitbox = hitboxes[i];
-                     this.modelMatrix.identity().translate(x, y, z).translate(hitbox.getMin()).scale(hitbox.width(), hitbox.height(), hitbox.depth());
-                     if (this.executor.test(HitDetectionExecutor.CUBE_QUADS, this.modelMatrix)) {
-                        consumer.accept(x, y, z);
-                        break;
+                     for (int i = 0; i < hitboxes.length; i++) {
+                        Box hitbox = hitboxes[i];
+                        this.modelMatrix.identity().translate(x, y, z).translate(hitbox.getMin()).scale(hitbox.width(), hitbox.height(), hitbox.depth());
+                        if (this.executor.test(HitDetectionExecutor.CUBE_QUADS, this.modelMatrix)) {
+                           consumer.accept(x, y, z);
+                           break;
+                        }
                      }
                   }
                }

@@ -9,9 +9,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class WeatherResetCommand extends AbstractWorldCommand {
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_WEATHER_RESET_FORCED_WEATHER_RESET = Message.translation("server.commands.weather.reset.forcedWeatherReset");
-
    public WeatherResetCommand() {
       super("reset", "server.commands.weather.reset.desc");
       this.addAliases("clear");
@@ -20,6 +17,6 @@ public class WeatherResetCommand extends AbstractWorldCommand {
    @Override
    protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       WeatherSetCommand.setForcedWeather(world, null, store);
-      context.sendMessage(MESSAGE_COMMANDS_WEATHER_RESET_FORCED_WEATHER_RESET.param("worldName", world.getName()));
+      context.sendMessage(Message.translation("server.commands.weather.reset.forcedWeatherReset").param("worldName", world.getName()));
    }
 }

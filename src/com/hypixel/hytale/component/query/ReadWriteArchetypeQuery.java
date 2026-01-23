@@ -21,7 +21,7 @@ public interface ReadWriteArchetypeQuery<ECS_TYPE> extends Query<ECS_TYPE> {
    }
 
    @Override
-   default void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+   default void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
       this.getReadArchetype().validateRegistry(registry);
       this.getWriteArchetype().validateRegistry(registry);
    }

@@ -12,11 +12,7 @@ import javax.annotation.Nonnull;
 
 public class ServerStatsMemoryCommand extends CommandBase {
    @Nonnull
-   private static final Message MESSAGE_COMMANDS_SERVER_STATS_MEMORY_FULL_USAGE_INFO = Message.translation("server.commands.server.stats.memory.fullUsageInfo");
-   @Nonnull
    private static final Message MESSAGE_COMMANDS_SERVER_STATS_FULL_INFO_UNAVAILABLE = Message.translation("server.commands.server.stats.fullInfoUnavailable");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_SERVER_STATS_MEMORY_USAGE_INFO = Message.translation("server.commands.server.stats.memory.usageInfo");
 
    public ServerStatsMemoryCommand() {
       super("memory", "server.commands.server.stats.memory.desc");
@@ -27,7 +23,8 @@ public class ServerStatsMemoryCommand extends CommandBase {
    protected void executeSync(@Nonnull CommandContext context) {
       if (ManagementFactory.getOperatingSystemMXBean() instanceof OperatingSystemMXBean sunOSBean) {
          context.sendMessage(
-            MESSAGE_COMMANDS_SERVER_STATS_MEMORY_FULL_USAGE_INFO.param("totalPhysicalMemory", FormatUtil.bytesToString(sunOSBean.getTotalPhysicalMemorySize()))
+            Message.translation("server.commands.server.stats.memory.fullUsageInfo")
+               .param("totalPhysicalMemory", FormatUtil.bytesToString(sunOSBean.getTotalPhysicalMemorySize()))
                .param("freePhysicalMemory", FormatUtil.bytesToString(sunOSBean.getFreePhysicalMemorySize()))
                .param("totalSwapMemory", FormatUtil.bytesToString(sunOSBean.getTotalSwapSpaceSize()))
                .param("freeSwapMemory", FormatUtil.bytesToString(sunOSBean.getFreeSwapSpaceSize()))
@@ -38,7 +35,8 @@ public class ServerStatsMemoryCommand extends CommandBase {
 
       MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
       context.sendMessage(
-         MESSAGE_COMMANDS_SERVER_STATS_MEMORY_USAGE_INFO.param("heapMemoryUsage", formatMemoryUsage(memoryMXBean.getHeapMemoryUsage()))
+         Message.translation("server.commands.server.stats.memory.usageInfo")
+            .param("heapMemoryUsage", formatMemoryUsage(memoryMXBean.getHeapMemoryUsage()))
             .param("nonHeapMemoryUsage", formatMemoryUsage(memoryMXBean.getNonHeapMemoryUsage()))
             .param("objectsPendingFinalizationCount", memoryMXBean.getObjectPendingFinalizationCount())
       );

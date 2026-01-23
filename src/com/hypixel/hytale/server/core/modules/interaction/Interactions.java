@@ -24,6 +24,13 @@ public class Interactions implements Component<EntityStore> {
          (o, p) -> o.interactions = p.interactions
       )
       .add()
+      .appendInherited(
+         new KeyedCodec<>("InteractionHint", Codec.STRING),
+         (o, v) -> o.interactionHint = v,
+         o -> o.interactionHint,
+         (o, p) -> o.interactionHint = p.interactionHint
+      )
+      .add()
       .build();
    @Nonnull
    private Map<InteractionType, String> interactions = new EnumMap<>(InteractionType.class);

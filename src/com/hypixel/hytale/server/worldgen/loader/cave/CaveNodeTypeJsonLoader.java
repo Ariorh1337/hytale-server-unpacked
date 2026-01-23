@@ -77,7 +77,7 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
 
             for (int i = 0; i < childrenArray.size(); i++) {
                children[i] = new CaveNodeChildEntryJsonLoader(
-                     this.seed.append(String.format(".Child-%s", i)), this.dataFolder, childrenArray.get(i), this.storage
+                     this.seed.append(String.format(".Child-%s", i)), this.dataFolder, this.getOrLoad(childrenArray.get(i)), this.storage
                   )
                   .load();
             }
@@ -87,7 +87,8 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
 
          if (childrenElement.isJsonObject()) {
             return new CaveNodeType.CaveNodeChildEntry[]{
-               new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", 0)), this.dataFolder, childrenElement, this.storage).load()
+               new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", 0)), this.dataFolder, this.getOrLoad(childrenElement), this.storage)
+                  .load()
             };
          }
       }

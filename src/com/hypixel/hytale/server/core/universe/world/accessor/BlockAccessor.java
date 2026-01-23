@@ -204,13 +204,15 @@ public interface BlockAccessor {
    }
 
    default void setBlockInteractionState(int x, int y, int z, @Nonnull BlockType blockType, @Nonnull String state, boolean force) {
-      String currentState = getCurrentInteractionState(blockType);
-      if (force || currentState == null || !currentState.equals(state)) {
-         BlockType newState = blockType.getBlockForState(state);
-         if (newState != null) {
-            int settings = 198;
-            int currentRotation = this.getRotationIndex(x, y, z);
-            this.setBlock(x, y, z, BlockType.getAssetMap().getIndex(newState.getId()), newState, currentRotation, 0, 198);
+      if (blockType.getData() != null) {
+         String currentState = getCurrentInteractionState(blockType);
+         if (force || currentState == null || !currentState.equals(state)) {
+            BlockType newState = blockType.getBlockForState(state);
+            if (newState != null) {
+               int settings = 198;
+               int currentRotation = this.getRotationIndex(x, y, z);
+               this.setBlock(x, y, z, BlockType.getAssetMap().getIndex(newState.getId()), newState, currentRotation, 0, 198);
+            }
          }
       }
    }

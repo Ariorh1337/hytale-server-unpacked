@@ -37,7 +37,7 @@ public class Handle implements IWorldGen {
 
    @Override
    public Transform[] getSpawnPoints(int seed) {
-      return new Transform[]{this.profile.spawnPosition().clone()};
+      return new Transform[]{new Transform(0.0, 140.0, 0.0)};
    }
 
    @Nonnull

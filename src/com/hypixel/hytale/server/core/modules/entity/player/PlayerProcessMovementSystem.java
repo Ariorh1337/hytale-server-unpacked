@@ -62,7 +62,13 @@ public class PlayerProcessMovementSystem extends EntityTickingSystem<EntityStore
       this.transformComponentType = TransformComponent.getComponentType();
       this.positionDataComponentType = PositionDataComponent.getComponentType();
       this.query = Query.and(
-         playerComponentType, this.boundingBoxComponentType, velocityComponentType, collisionResultComponentType, this.positionDataComponentType
+         playerComponentType,
+         this.playerRefComponentType,
+         this.transformComponentType,
+         this.boundingBoxComponentType,
+         velocityComponentType,
+         collisionResultComponentType,
+         this.positionDataComponentType
       );
    }
 
@@ -94,63 +100,64 @@ public class PlayerProcessMovementSystem extends EntityTickingSystem<EntityStore
       CollisionResultComponent collisionResultComponent = archetypeChunk.getComponent(index, this.collisionResultComponentType);
       assert collisionResultComponent != null;
       InteractionManager interactionManagerComponent = archetypeChunk.getComponent(index, InteractionModule.get().getInteractionManagerComponent());
-      assert interactionManagerComponent != null;
-      PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
-      assert playerRefComponent != null;
-      TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
-      assert transformComponent != null;
-      boolean pendingCollisionCheck = collisionResultComponent.isPendingCollisionCheck();
-      collisionResultComponent.getCollisionStartPositionCopy()
-         .assign(pendingCollisionCheck ? collisionResultComponent.getCollisionStartPosition() : transformComponent.getPosition());
-      collisionResultComponent.getCollisionPositionOffsetCopy().assign(collisionResultComponent.getCollisionPositionOffset());
-      collisionResultComponent.resetLocationChange();
-      if (collisionResultComponent.getCollisionPositionOffsetCopy().squaredLength() >= 100.0) {
-         if (playerComponent.getGameMode() == GameMode.Adventure) {
-            Entity.LOGGER
-               .at(Level.WARNING)
-               .log(
-                  "%s, %s: Jump in location in processMovementBlockCollisions %s",
-                  playerRefComponent.getUsername(),
-                  playerRefComponent.getUuid(),
-                  collisionResultComponent.getCollisionPositionOffsetCopy().length()
-               );
-         }
-
-         playerComponent.resetVelocity(velocityComponent);
-      } else {
-         BoundingBox boundingBoxComponent = archetypeChunk.getComponent(index, this.boundingBoxComponentType);
-         assert boundingBoxComponent != null;
-         Box boundingBox = boundingBoxComponent.getBoundingBox();
-         if (pendingCollisionCheck) {
-         }
-
-         CollisionModule.get()
-            .findIntersections(
-               world, boundingBox, collisionResultComponent.getCollisionStartPositionCopy(), collisionResultComponent.getCollisionResult(), true, false
-            );
-         playerComponent.processVelocitySample(dt, collisionResultComponent.getCollisionPositionOffsetCopy(), velocityComponent);
-         Ref<ChunkStore> chunkRef = transformComponent.getChunkRef();
-         if (chunkRef != null && chunkRef.isValid()) {
-            Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-            WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
-            assert worldChunkComponent != null;
-            PositionDataComponent positionDataComponent = archetypeChunk.getComponent(index, this.positionDataComponentType);
-            assert positionDataComponent != null;
-            Vector3i blockPosition = transformComponent.getPosition().toVector3i();
-            positionDataComponent.setInsideBlockTypeId(worldChunkComponent.getBlock(blockPosition));
-            positionDataComponent.setStandingOnBlockTypeId(worldChunkComponent.getBlock(blockPosition.x, blockPosition.y - 1, blockPosition.z));
-         }
-
-         commandBuffer.run(
-            _store -> {
-               int damageToEntity = collisionResultComponent.getCollisionResult()
-                  .defaultTriggerBlocksProcessing(interactionManagerComponent, playerComponent, ref, playerComponent.executeTriggers, commandBuffer);
-               if (playerComponent.executeBlockDamage && damageToEntity > 0) {
-                  Damage damage = new Damage(Damage.NULL_SOURCE, DamageCause.ENVIRONMENT, damageToEntity);
-                  DamageSystems.executeDamage(index, archetypeChunk, commandBuffer, damage);
-               }
+      if (interactionManagerComponent != null) {
+         PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
+         assert playerRefComponent != null;
+         TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
+         assert transformComponent != null;
+         boolean pendingCollisionCheck = collisionResultComponent.isPendingCollisionCheck();
+         collisionResultComponent.getCollisionStartPositionCopy()
+            .assign(pendingCollisionCheck ? collisionResultComponent.getCollisionStartPosition() : transformComponent.getPosition());
+         collisionResultComponent.getCollisionPositionOffsetCopy().assign(collisionResultComponent.getCollisionPositionOffset());
+         collisionResultComponent.resetLocationChange();
+         if (collisionResultComponent.getCollisionPositionOffsetCopy().squaredLength() >= 100.0) {
+            if (playerComponent.getGameMode() == GameMode.Adventure) {
+               Entity.LOGGER
+                  .at(Level.WARNING)
+                  .log(
+                     "%s, %s: Jump in location in processMovementBlockCollisions %s",
+                     playerRefComponent.getUsername(),
+                     playerRefComponent.getUuid(),
+                     collisionResultComponent.getCollisionPositionOffsetCopy().length()
+                  );
             }
-         );
+
+            playerComponent.resetVelocity(velocityComponent);
+         } else {
+            BoundingBox boundingBoxComponent = archetypeChunk.getComponent(index, this.boundingBoxComponentType);
+            assert boundingBoxComponent != null;
+            Box boundingBox = boundingBoxComponent.getBoundingBox();
+            if (pendingCollisionCheck) {
+            }
+
+            CollisionModule.get()
+               .findIntersections(
+                  world, boundingBox, collisionResultComponent.getCollisionStartPositionCopy(), collisionResultComponent.getCollisionResult(), true, false
+               );
+            playerComponent.processVelocitySample(dt, collisionResultComponent.getCollisionPositionOffsetCopy(), velocityComponent);
+            Ref<ChunkStore> chunkRef = transformComponent.getChunkRef();
+            if (chunkRef != null && chunkRef.isValid()) {
+               Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+               WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+               assert worldChunkComponent != null;
+               PositionDataComponent positionDataComponent = archetypeChunk.getComponent(index, this.positionDataComponentType);
+               assert positionDataComponent != null;
+               Vector3i blockPosition = transformComponent.getPosition().toVector3i();
+               positionDataComponent.setInsideBlockTypeId(worldChunkComponent.getBlock(blockPosition));
+               positionDataComponent.setStandingOnBlockTypeId(worldChunkComponent.getBlock(blockPosition.x, blockPosition.y - 1, blockPosition.z));
+            }
+
+            commandBuffer.run(
+               _store -> {
+                  int damageToEntity = collisionResultComponent.getCollisionResult()
+                     .defaultTriggerBlocksProcessing(interactionManagerComponent, playerComponent, ref, playerComponent.executeTriggers, commandBuffer);
+                  if (playerComponent.executeBlockDamage && damageToEntity > 0) {
+                     Damage damage = new Damage(Damage.NULL_SOURCE, DamageCause.ENVIRONMENT, damageToEntity);
+                     DamageSystems.executeDamage(index, archetypeChunk, commandBuffer, damage);
+                  }
+               }
+            );
+         }
       }
    }
 }

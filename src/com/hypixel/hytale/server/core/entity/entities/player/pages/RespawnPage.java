@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.entity.entities.player.pages;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.common.util.CompletableFutureUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
@@ -22,6 +23,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -123,9 +125,23 @@ public class RespawnPage extends InteractiveCustomUIPage<RespawnPage.RespawnPage
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPage.RespawnPageEventData data) {
       if ("Respawn".equals(data.action)) {
-         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-         assert playerComponent != null;
-         playerComponent.getPageManager().setPage(ref, store, Page.None);
+         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+         assert playerRef != null;
+         UICommandBuilder commandBuilder = new UICommandBuilder();
+         commandBuilder.set("#RespawnButton.Disabled", true);
+         this.sendUpdate(commandBuilder);
+         CompletableFutureUtil._catch(DeathComponent.respawn(store, ref).thenCompose(v -> {
+            Ref<EntityStore> currentRef = playerRef.getReference();
+            return currentRef != null && currentRef.isValid() ? CompletableFuture.runAsync(() -> {
+               if (currentRef.isValid()) {
+                  Player playerComponent = currentRef.getStore().getComponent(currentRef, Player.getComponentType());
+                  assert playerComponent != null;
+                  if (playerComponent.getPageManager().getCustomPage() == this) {
+                     playerComponent.getPageManager().setPage(currentRef, currentRef.getStore(), Page.None);
+                  }
+               }
+            }, currentRef.getStore().getExternalData().getWorld()) : CompletableFuture.completedFuture(null);
+         }));
       }
    }
 
@@ -136,11 +152,7 @@ public class RespawnPage extends InteractiveCustomUIPage<RespawnPage.RespawnPage
       if (isDead) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         store.tryRemoveComponent(ref, DeathComponent.getComponentType());
-      } else {
-         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-         assert playerRefComponent != null;
-         playerRefComponent.getPacketHandler().disconnect("Attempted to respawn while alive!");
+         DeathComponent.respawn(store, ref);
       }
    }
 

@@ -3,7 +3,6 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -40,9 +39,10 @@ public class TeleportHomeCommand extends AbstractPlayerCommand {
       Vector3f previousHeadRotation = headRotationComponent.getRotation().clone();
       TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
       teleportHistoryComponent.append(world, previousPos, previousHeadRotation, "Home");
-      Transform homeTransform = Player.getRespawnPosition(ref, world.getName(), store);
-      Teleport teleportComponent = Teleport.createForPlayer(null, homeTransform);
-      store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
-      context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_SELF_HOME);
+      Player.getRespawnPosition(ref, world.getName(), store).thenAcceptAsync(homeTransform -> {
+         Teleport teleportComponent = Teleport.createForPlayer(null, homeTransform);
+         store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+         context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_SELF_HOME);
+      }, world);
    }
 }

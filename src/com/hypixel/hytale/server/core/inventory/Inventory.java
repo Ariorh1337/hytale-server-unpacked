@@ -394,11 +394,7 @@ public class Inventory implements NetworkSerializable<UpdatePlayerInventory> {
       if (targetContainer != null) {
          switch (moveType) {
             case EquipOrMergeStack:
-               ItemStack itemStack = targetContainer.getItemStack((short)fromSlotId);
-               Item item = itemStack.getItem();
-               ItemArmor itemArmor = item.getArmor();
-               if (itemArmor != null && fromSectionId != -3) {
-                  targetContainer.moveItemStackFromSlotToSlot((short)fromSlotId, quantity, this.armor, (short)itemArmor.getArmorSlot().ordinal());
+               if (this.tryEquipArmorPart(fromSectionId, (short)fromSlotId, quantity, targetContainer, true)) {
                   return;
                }
 
@@ -431,6 +427,10 @@ public class Inventory implements NetworkSerializable<UpdatePlayerInventory> {
                   }
                }
 
+               if (this.tryEquipArmorPart(fromSectionId, (short)fromSlotId, quantity, targetContainer, false)) {
+                  return;
+               }
+
                switch (fromSectionId) {
                   case -2:
                      targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, this.hotbar);
@@ -452,10 +452,22 @@ public class Inventory implements NetworkSerializable<UpdatePlayerInventory> {
       }
    }
 
+   private boolean tryEquipArmorPart(int fromSectionId, short fromSlotId, int quantity, ItemContainer targetContainer, boolean forceEquip) {
+      ItemStack itemStack = targetContainer.getItemStack(fromSlotId);
+      Item item = itemStack.getItem();
+      ItemArmor itemArmor = item.getArmor();
+      if (itemArmor == null || fromSectionId == -3 || !forceEquip && this.armor.getItemStack((short)itemArmor.getArmorSlot().ordinal()) != null) {
+         return false;
+      }
+
+      targetContainer.moveItemStackFromSlotToSlot(fromSlotId, quantity, this.armor, (short)itemArmor.getArmorSlot().ordinal());
+      return true;
+   }
+
    @Nullable
    public ListTransaction<MoveTransaction<ItemStackTransaction>> takeAll(int inventorySectionId) {
       ItemContainer sectionById = this.getSectionById(inventorySectionId);
-      return sectionById != null ? sectionById.moveAllItemStacksTo(this.combinedArmorHotbarStorage) : null;
+      return sectionById != null ? sectionById.moveAllItemStacksTo(this.combinedHotbarFirst) : null;
    }
 
    @Nullable

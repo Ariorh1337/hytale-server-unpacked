@@ -18,8 +18,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -30,7 +28,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -201,43 +198,6 @@ public class EntityChunk implements Component<ChunkStore> {
       boolean out = this.needsSaving;
       this.needsSaving = false;
       return out;
-   }
-
-   @Nonnull
-   @Deprecated(forRemoval = true)
-   public Iterable<Entity> getEntities() {
-      if (this.entityReferences.isEmpty()) {
-         return Collections.emptyList();
-      }
-
-      Ref<EntityStore>[] references = this.entityReferences.toArray(Ref[]::new);
-      return () -> new Iterator<Entity>() {
-         int index = references.length;
-
-         @Override
-         public boolean hasNext() {
-            if (this.index <= 0) {
-               return false;
-            }
-
-            for (Ref<EntityStore> reference = references[this.index - 1];
-               !reference.isValid() || EntityUtils.getEntity(reference, reference.getStore()) == null;
-               reference = references[this.index - 1]
-            ) {
-               this.index--;
-               if (this.index <= 0) {
-                  return false;
-               }
-            }
-
-            return true;
-         }
-
-         public Entity next() {
-            Ref<EntityStore> reference = references[--this.index];
-            return EntityUtils.getEntity(reference, reference.getStore());
-         }
-      };
    }
 
    public static class EntityChunkLoadingSystem extends RefChangeSystem<ChunkStore, NonTicking<ChunkStore>> {

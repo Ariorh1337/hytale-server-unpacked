@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.buildertools.objimport;
 
 import com.hypixel.hytale.builtin.buildertools.BlockColorIndex;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
+import com.hypixel.hytale.builtin.buildertools.utils.PasteToolUtil;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -12,19 +13,15 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
-import com.hypixel.hytale.protocol.packets.inventory.SetActiveSlot;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.Inventory;
-import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.ui.browser.FileBrowserConfig;
+import com.hypixel.hytale.server.core.ui.browser.FileBrowserEventData;
 import com.hypixel.hytale.server.core.ui.browser.ServerFileBrowser;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -54,8 +51,7 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
    private static final float DEFAULT_SCALE = 1.0F;
    private static final float MIN_SCALE = 0.01F;
    private static final float MAX_SCALE = 100.0F;
-   private static final String PASTE_TOOL_ID = "EditorTool_Paste";
-   private static final Path IMPORTS_DIR = Paths.get("imports", "models");
+   private static final String ASSET_PACK_SUB_PATH = "Server/Imports/Models";
    @Nonnull
    private String objPath = "";
    private int targetHeight = 20;
@@ -90,19 +86,13 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
          .listElementId("#BrowserPage #FileList")
          .searchInputId("#BrowserPage #SearchInput")
          .currentPathId("#BrowserPage #CurrentPath")
-         .roots(List.of(new FileBrowserConfig.RootEntry("Imports", IMPORTS_DIR)))
          .allowedExtensions(".obj")
          .enableRootSelector(false)
          .enableSearch(true)
          .enableDirectoryNav(true)
          .maxResults(50)
+         .assetPackMode(true, "Server/Imports/Models")
          .build();
-
-      try {
-         Files.createDirectories(IMPORTS_DIR);
-      } catch (IOException var4) {
-      }
-
       this.browser = new ServerFileBrowser(config);
    }
 
@@ -208,7 +198,6 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
    }
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull ObjImportPage.PageData data) {
-      boolean needsUpdate = false;
       if (data.browse != null && data.browse) {
          this.showBrowser = true;
          this.rebuild();
@@ -216,60 +205,10 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
          this.showBrowser = false;
          this.rebuild();
       } else if (data.browserSelect != null && data.browserSelect) {
-         if (!this.browser.getSelectedItems().isEmpty()) {
-            String selectedPath = this.browser.getSelectedItems().iterator().next();
-            this.objPath = this.browser.getRoot().resolve(selectedPath).toString();
-         }
-
          this.showBrowser = false;
          this.rebuild();
-      } else {
-         if (this.showBrowser && (data.file != null || data.searchQuery != null || data.searchResult != null)) {
-            boolean handled = false;
-            if (data.searchQuery != null) {
-               this.browser.setSearchQuery(data.searchQuery.trim().toLowerCase());
-               handled = true;
-            }
-
-            if (data.file != null) {
-               String fileName = data.file;
-               if ("..".equals(fileName)) {
-                  this.browser.navigateUp();
-                  handled = true;
-               } else {
-                  Path targetPath = this.browser.resolveFromCurrent(fileName);
-                  if (targetPath != null && Files.isDirectory(targetPath)) {
-                     this.browser.navigateTo(Paths.get(fileName));
-                     handled = true;
-                  } else if (targetPath != null && Files.isRegularFile(targetPath)) {
-                     this.objPath = targetPath.toString();
-                     this.showBrowser = false;
-                     this.rebuild();
-                     return;
-                  }
-               }
-            }
-
-            if (data.searchResult != null) {
-               Path resolvedPath = this.browser.resolveSecure(data.searchResult);
-               if (resolvedPath != null && Files.isRegularFile(resolvedPath)) {
-                  this.objPath = resolvedPath.toString();
-                  this.showBrowser = false;
-                  this.rebuild();
-                  return;
-               }
-            }
-
-            if (handled) {
-               UICommandBuilder commandBuilder = new UICommandBuilder();
-               UIEventBuilder eventBuilder = new UIEventBuilder();
-               this.browser.buildFileList(commandBuilder, eventBuilder);
-               this.browser.buildCurrentPath(commandBuilder);
-               this.sendUpdate(commandBuilder, eventBuilder, false);
-               return;
-            }
-         }
-
+      } else if (!this.showBrowser || !this.handleBrowserEvent(data)) {
+         boolean needsUpdate = false;
          if (data.objPath != null) {
             this.objPath = StringUtil.stripQuotes(data.objPath.trim());
             this.statusMessage = null;
@@ -344,6 +283,57 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
       }
    }
 
+   private boolean handleBrowserEvent(@Nonnull ObjImportPage.PageData data) {
+      if (data.searchQuery != null) {
+         this.browser.setSearchQuery(data.searchQuery.trim().toLowerCase());
+         this.rebuildBrowser();
+         return true;
+      }
+
+      if (data.file != null) {
+         String fileName = data.file;
+         if ("..".equals(fileName)) {
+            this.browser.navigateUp();
+            this.rebuildBrowser();
+            return true;
+         }
+
+         if (this.browser.handleEvent(FileBrowserEventData.file(fileName))) {
+            this.rebuildBrowser();
+            return true;
+         }
+
+         String virtualPath = this.browser.getAssetPackCurrentPath().isEmpty() ? fileName : this.browser.getAssetPackCurrentPath() + "/" + fileName;
+         Path resolvedPath = this.browser.resolveAssetPackPath(virtualPath);
+         if (resolvedPath != null && Files.isRegularFile(resolvedPath)) {
+            this.objPath = resolvedPath.toString();
+            this.showBrowser = false;
+            this.rebuild();
+            return true;
+         }
+      }
+
+      if (data.searchResult != null) {
+         Path resolvedPath = this.browser.resolveAssetPackPath(data.searchResult);
+         if (resolvedPath != null && Files.isRegularFile(resolvedPath)) {
+            this.objPath = resolvedPath.toString();
+            this.showBrowser = false;
+            this.rebuild();
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   private void rebuildBrowser() {
+      UICommandBuilder commandBuilder = new UICommandBuilder();
+      UIEventBuilder eventBuilder = new UIEventBuilder();
+      this.browser.buildFileList(commandBuilder, eventBuilder);
+      this.browser.buildCurrentPath(commandBuilder);
+      this.sendUpdate(commandBuilder, eventBuilder, false);
+   }
+
    @Nullable
    private List<ObjImportPage.WeightedBlock> parseBlockPattern(@Nonnull String pattern) {
       List<ObjImportPage.WeightedBlock> result = new ArrayList<>();
@@ -413,15 +403,6 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
          this.setError("Please enter a path to an OBJ file");
       } else {
          Path path = Paths.get(this.objPath);
-         if (!SingleplayerModule.isOwner(this.playerRef)) {
-            Path normalizedPath = path.toAbsolutePath().normalize();
-            Path normalizedImports = IMPORTS_DIR.toAbsolutePath().normalize();
-            if (!normalizedPath.startsWith(normalizedImports)) {
-               this.setError("Files must be in the server's imports/models directory");
-               return;
-            }
-         }
-
          if (!Files.exists(path)) {
             this.setError("File not found: " + this.objPath);
          } else if (!this.objPath.toLowerCase().endsWith(".obj")) {
@@ -567,7 +548,7 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
                                  .param("depth", result.sizeZ())
                            );
                            playerComponent.getPageManager().setPage(r, store, Page.None);
-                           this.switchToPasteTool(playerComponent, playerRefComponent);
+                           PasteToolUtil.switchToPasteTool(playerComponent, playerRefComponent);
                         } catch (ObjParser.ObjParseException e) {
                            BuilderToolsPlugin.get().getLogger().at(Level.WARNING).log("OBJ parse error: %s", e.getMessage());
                            this.setError("Parse error: " + e.getMessage());
@@ -584,61 +565,6 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
                   this.setError("Player not found");
                }
             }
-         }
-      }
-   }
-
-   private void switchToPasteTool(@Nonnull Player playerComponent, @Nonnull PlayerRef playerRef) {
-      Inventory inventory = playerComponent.getInventory();
-      ItemContainer hotbar = inventory.getHotbar();
-      ItemContainer storage = inventory.getStorage();
-      ItemContainer tools = inventory.getTools();
-      int hotbarSize = hotbar.getCapacity();
-
-      for (short slot = 0; slot < hotbarSize; slot++) {
-         ItemStack itemStack = hotbar.getItemStack(slot);
-         if (itemStack != null && !itemStack.isEmpty() && "EditorTool_Paste".equals(itemStack.getItemId())) {
-            inventory.setActiveHotbarSlot((byte)slot);
-            playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
-            return;
-         }
-      }
-
-      short emptySlot = -1;
-
-      for (short slot = 0; slot < hotbarSize; slot++) {
-         ItemStack itemStack = hotbar.getItemStack(slot);
-         if (itemStack == null || itemStack.isEmpty()) {
-            emptySlot = slot;
-            break;
-         }
-      }
-
-      if (emptySlot != -1) {
-         for (short slot = 0; slot < storage.getCapacity(); slot++) {
-            ItemStack itemStack = storage.getItemStack(slot);
-            if (itemStack != null && !itemStack.isEmpty() && "EditorTool_Paste".equals(itemStack.getItemId())) {
-               storage.moveItemStackFromSlotToSlot(slot, 1, hotbar, emptySlot);
-               inventory.setActiveHotbarSlot((byte)emptySlot);
-               playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
-               return;
-            }
-         }
-
-         ItemStack pasteToolStack = null;
-
-         for (short slot = 0; slot < tools.getCapacity(); slot++) {
-            ItemStack itemStack = tools.getItemStack(slot);
-            if (itemStack != null && !itemStack.isEmpty() && "EditorTool_Paste".equals(itemStack.getItemId())) {
-               pasteToolStack = itemStack;
-               break;
-            }
-         }
-
-         if (pasteToolStack != null) {
-            hotbar.setItemStackForSlot(emptySlot, new ItemStack(pasteToolStack.getItemId()));
-            inventory.setActiveHotbarSlot((byte)emptySlot);
-            playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
          }
       }
    }
@@ -736,39 +662,33 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
       static final String KEY_BROWSER_SELECT = "BrowserSelect";
       static final String KEY_BROWSER_CANCEL = "BrowserCancel";
       public static final BuilderCodec<ObjImportPage.PageData> CODEC = BuilderCodec.builder(ObjImportPage.PageData.class, ObjImportPage.PageData::new)
-         .addField(new KeyedCodec<>("@ObjPath", Codec.STRING), (entry, s) -> entry.objPath = s, entry -> entry.objPath)
-         .addField(new KeyedCodec<>("@Height", Codec.INTEGER), (entry, i) -> entry.height = i, entry -> entry.height)
-         .addField(new KeyedCodec<>("@Scale", Codec.FLOAT), (entry, f) -> entry.scale = f, entry -> entry.scale)
-         .addField(new KeyedCodec<>("SizeMode", Codec.STRING), (entry, s) -> entry.sizeMode = s, entry -> entry.sizeMode)
-         .addField(new KeyedCodec<>("@BlockPattern", Codec.STRING), (entry, s) -> entry.blockPattern = s, entry -> entry.blockPattern)
-         .addField(new KeyedCodec<>("@FillSolid", Codec.BOOLEAN), (entry, b) -> entry.fillSolid = b, entry -> entry.fillSolid)
-         .addField(new KeyedCodec<>("@UseMaterials", Codec.BOOLEAN), (entry, b) -> entry.useMaterials = b, entry -> entry.useMaterials)
-         .addField(new KeyedCodec<>("@AutoDetectTextures", Codec.BOOLEAN), (entry, b) -> entry.autoDetectTextures = b, entry -> entry.autoDetectTextures)
-         .addField(new KeyedCodec<>("@Origin", Codec.STRING), (entry, s) -> entry.origin = s, entry -> entry.origin)
-         .addField(new KeyedCodec<>("@Rotation", Codec.STRING), (entry, s) -> entry.rotation = s, entry -> entry.rotation)
+         .addField(new KeyedCodec<>("@ObjPath", Codec.STRING), (e, s) -> e.objPath = s, e -> e.objPath)
+         .addField(new KeyedCodec<>("@Height", Codec.INTEGER), (e, i) -> e.height = i, e -> e.height)
+         .addField(new KeyedCodec<>("@Scale", Codec.FLOAT), (e, f) -> e.scale = f, e -> e.scale)
+         .addField(new KeyedCodec<>("SizeMode", Codec.STRING), (e, s) -> e.sizeMode = s, e -> e.sizeMode)
+         .addField(new KeyedCodec<>("@BlockPattern", Codec.STRING), (e, s) -> e.blockPattern = s, e -> e.blockPattern)
+         .addField(new KeyedCodec<>("@FillSolid", Codec.BOOLEAN), (e, b) -> e.fillSolid = b, e -> e.fillSolid)
+         .addField(new KeyedCodec<>("@UseMaterials", Codec.BOOLEAN), (e, b) -> e.useMaterials = b, e -> e.useMaterials)
+         .addField(new KeyedCodec<>("@AutoDetectTextures", Codec.BOOLEAN), (e, b) -> e.autoDetectTextures = b, e -> e.autoDetectTextures)
+         .addField(new KeyedCodec<>("@Origin", Codec.STRING), (e, s) -> e.origin = s, e -> e.origin)
+         .addField(new KeyedCodec<>("@Rotation", Codec.STRING), (e, s) -> e.rotation = s, e -> e.rotation)
          .addField(
-            new KeyedCodec<>("Import", Codec.STRING),
-            (entry, s) -> entry.doImport = "true".equalsIgnoreCase(s),
-            entry -> entry.doImport != null && entry.doImport ? "true" : null
+            new KeyedCodec<>("Import", Codec.STRING), (e, s) -> e.doImport = "true".equalsIgnoreCase(s), e -> e.doImport != null && e.doImport ? "true" : null
          )
-         .addField(
-            new KeyedCodec<>("Browse", Codec.STRING),
-            (entry, s) -> entry.browse = "true".equalsIgnoreCase(s),
-            entry -> entry.browse != null && entry.browse ? "true" : null
-         )
+         .addField(new KeyedCodec<>("Browse", Codec.STRING), (e, s) -> e.browse = "true".equalsIgnoreCase(s), e -> e.browse != null && e.browse ? "true" : null)
          .addField(
             new KeyedCodec<>("BrowserSelect", Codec.STRING),
-            (entry, s) -> entry.browserSelect = "true".equalsIgnoreCase(s),
-            entry -> entry.browserSelect != null && entry.browserSelect ? "true" : null
+            (e, s) -> e.browserSelect = "true".equalsIgnoreCase(s),
+            e -> e.browserSelect != null && e.browserSelect ? "true" : null
          )
          .addField(
             new KeyedCodec<>("BrowserCancel", Codec.STRING),
-            (entry, s) -> entry.browserCancel = "true".equalsIgnoreCase(s),
-            entry -> entry.browserCancel != null && entry.browserCancel ? "true" : null
+            (e, s) -> e.browserCancel = "true".equalsIgnoreCase(s),
+            e -> e.browserCancel != null && e.browserCancel ? "true" : null
          )
-         .addField(new KeyedCodec<>("File", Codec.STRING), (entry, s) -> entry.file = s, entry -> entry.file)
-         .addField(new KeyedCodec<>("@SearchQuery", Codec.STRING), (entry, s) -> entry.searchQuery = s, entry -> entry.searchQuery)
-         .addField(new KeyedCodec<>("SearchResult", Codec.STRING), (entry, s) -> entry.searchResult = s, entry -> entry.searchResult)
+         .addField(new KeyedCodec<>("File", Codec.STRING), (e, s) -> e.file = s, e -> e.file)
+         .addField(new KeyedCodec<>("@SearchQuery", Codec.STRING), (e, s) -> e.searchQuery = s, e -> e.searchQuery)
+         .addField(new KeyedCodec<>("SearchResult", Codec.STRING), (e, s) -> e.searchResult = s, e -> e.searchResult)
          .build();
       @Nullable
       private String objPath;

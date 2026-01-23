@@ -14,7 +14,6 @@ import javax.annotation.Nonnull;
 public class WarpReloadCommand extends CommandBase {
    private static final HytaleLogger logger = HytaleLogger.forEnclosingClass();
    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED = Message.translation("server.commands.teleport.warp.notLoaded");
-   private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_RELOADED = Message.translation("server.commands.teleport.warp.reloaded");
    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_FAILED_TO_RELOAD = Message.translation("server.commands.teleport.warp.failedToReload");
 
    public WarpReloadCommand() {
@@ -31,7 +30,7 @@ public class WarpReloadCommand extends CommandBase {
 
          try {
             TeleportPlugin.get().loadWarps();
-            context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_RELOADED.param("count", warps.size()));
+            context.sendMessage(Message.translation("server.commands.teleport.warp.reloaded").param("count", warps.size()));
          } catch (Throwable t) {
             context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_FAILED_TO_RELOAD);
             logger.at(Level.SEVERE).withCause(t).log("Failed to reload warps:");

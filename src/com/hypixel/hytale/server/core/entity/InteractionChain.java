@@ -469,33 +469,32 @@ public class InteractionChain implements ChainSyncStorage {
    public void removeInteractionEntry(@Nonnull InteractionManager interactionManager, int index) {
       int oIndex = index - this.operationIndexOffset;
       if (oIndex != 0) {
-         throw new IllegalArgumentException("Trying to remove out of order");
+         this.flagDesync();
+      } else {
+         InteractionEntry entry = this.interactions.remove(oIndex);
+         this.operationIndexOffset++;
+         this.tempForkedChainData.values().removeIf(fork -> {
+            if (fork.baseForkedChainId.entryIndex != entry.getIndex()) {
+               return false;
+            }
+
+            interactionManager.sendCancelPacket(this.getChainId(), fork.forkedChainId);
+            return true;
+         });
       }
-
-      InteractionEntry entry = this.interactions.remove(oIndex);
-      this.operationIndexOffset++;
-      this.tempForkedChainData.values().removeIf(fork -> {
-         if (fork.baseForkedChainId.entryIndex != entry.getIndex()) {
-            return false;
-         }
-
-         interactionManager.sendCancelPacket(this.getChainId(), fork.forkedChainId);
-         return true;
-      });
    }
 
    @Override
    public void putInteractionSyncData(int index, InteractionSyncData data) {
       index -= this.tempSyncDataOffset;
-      if (index < 0) {
-         LOGGER.at(Level.SEVERE)
-            .log("Attempted to store sync data at %d. Offset: %d, Size: %d", index + this.tempSyncDataOffset, this.tempSyncDataOffset, this.tempSyncData.size());
-      } else if (index < this.tempSyncData.size()) {
-         this.tempSyncData.set(index, data);
-      } else if (index == this.tempSyncData.size()) {
-         this.tempSyncData.add(data);
-      } else {
-         LOGGER.at(Level.WARNING).log("Temp sync data sent out of order: " + index + " " + this.tempSyncData.size());
+      if (index >= 0) {
+         if (index < this.tempSyncData.size()) {
+            this.tempSyncData.set(index, data);
+         } else if (index == this.tempSyncData.size()) {
+            this.tempSyncData.add(data);
+         } else {
+            LOGGER.at(Level.WARNING).log("Temp sync data sent out of order: " + index + " " + this.tempSyncData.size());
+         }
       }
    }
 

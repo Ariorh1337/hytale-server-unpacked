@@ -21,7 +21,8 @@
   "Dependencies": {
     "Hytale:I18nModule": "*",
     "Hytale:BlockStateModule": "*",
-    "Hytale:BlockModule": "*"
+    "Hytale:BlockModule": "*",
+    "Hytale:BlockPhysics": "*"
   }
 }
 ,{

@@ -145,6 +145,7 @@ import com.hypixel.hytale.server.core.modules.entity.system.UpdateEntitySeedSyst
 import com.hypixel.hytale.server.core.modules.entity.system.UpdateLocationSystems;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.modules.entity.teleport.TeleportRecord;
 import com.hypixel.hytale.server.core.modules.entity.teleport.TeleportSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
@@ -242,6 +243,7 @@ public class EntityModule extends JavaPlugin {
    private ComponentType<EntityStore, Repulsion> repulsionComponentType;
    private ComponentType<EntityStore, Teleport> teleportComponentType;
    private ComponentType<EntityStore, PendingTeleport> pendingTeleportComponentType;
+   private ComponentType<EntityStore, TeleportRecord> teleportRecordComponentType;
    private ComponentType<EntityStore, ApplyRandomSkinPersistedComponent> applyRandomSkinPersistedComponent;
    private SystemGroup<EntityStore> preClearMarkersGroup;
    private ComponentType<EntityStore, PlayerInput> playerInputComponentType;
@@ -362,6 +364,7 @@ public class EntityModule extends JavaPlugin {
          throw new UnsupportedOperationException("Teleport must be created directly");
       });
       this.pendingTeleportComponentType = entityStoreRegistry.registerComponent(PendingTeleport.class, PendingTeleport::new);
+      this.teleportRecordComponentType = entityStoreRegistry.registerComponent(TeleportRecord.class, TeleportRecord::new);
       this.playerComponentType = entityStoreRegistry.registerComponent(Player.class, "Player", Player.CODEC);
       this.frozenComponentType = entityStoreRegistry.registerComponent(Frozen.class, "Frozen", Frozen.CODEC);
       entityStoreRegistry.registerSystem(new PlayerCollisionResultAddSystem(this.playerComponentType, this.collisionResultComponentType));
@@ -384,6 +387,7 @@ public class EntityModule extends JavaPlugin {
          throw new UnsupportedOperationException();
       });
       this.movementManagerComponentType = entityStoreRegistry.registerComponent(MovementManager.class, MovementManager::new);
+      this.displayNameComponentType = entityStoreRegistry.registerComponent(DisplayNameComponent.class, "DisplayName", DisplayNameComponent.CODEC);
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerSpawnedSystem());
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerAddedSystem(this.movementManagerComponentType));
       entityStoreRegistry.registerSystem(new PlayerSystems.EnsurePlayerInput());
@@ -403,7 +407,6 @@ public class EntityModule extends JavaPlugin {
       this.playerSkinComponentType = entityStoreRegistry.registerComponent(PlayerSkinComponent.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
-      this.displayNameComponentType = entityStoreRegistry.registerComponent(DisplayNameComponent.class, "DisplayName", DisplayNameComponent.CODEC);
       this.fromPrefabComponentType = entityStoreRegistry.registerComponent(FromPrefab.class, "FromPrefab", FromPrefab.CODEC);
       entityStoreRegistry.registerSystem(new EntitySystems.ClearFromPrefabMarker(this.fromPrefabComponentType, this.preClearMarkersGroup));
       this.hiddenFromAdventurePlayerComponentType = entityStoreRegistry.registerComponent(
@@ -435,7 +438,7 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new ItemSystems.EnsureRequiredComponents());
       entityStoreRegistry.registerSystem(new ItemSystems.TrackerSystem(this.visibleComponentType));
       this.prefabCopyableComponentType = entityStoreRegistry.registerComponent(PrefabCopyableComponent.class, "PrefabCopyable", PrefabCopyableComponent.CODEC);
-      this.pickupItemComponentType = entityStoreRegistry.registerComponent(PickupItemComponent.class, "PickupItem", PickupItemComponent.CODEC);
+      this.pickupItemComponentType = entityStoreRegistry.registerComponent(PickupItemComponent.class, PickupItemComponent::new);
       entityStoreRegistry.registerSystem(new DespawnSystem(this.despawnComponentComponentType));
       this.itemSpatialResourceType = entityStoreRegistry.registerSpatialResource(() -> new KDTree<>(Ref::isValid));
       entityStoreRegistry.registerSystem(new ItemSpatialSystem(this.itemSpatialResourceType));
@@ -810,6 +813,10 @@ public class EntityModule extends JavaPlugin {
 
    public ComponentType<EntityStore, PendingTeleport> getPendingTeleportComponentType() {
       return this.pendingTeleportComponentType;
+   }
+
+   public ComponentType<EntityStore, TeleportRecord> getTeleportRecordComponentType() {
+      return this.teleportRecordComponentType;
    }
 
    public ComponentType<EntityStore, ModelComponent> getModelComponentType() {

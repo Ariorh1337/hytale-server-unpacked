@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
 public class ScriptedBrushPage extends InteractiveCustomUIPage<FileBrowserEventData> {
-   private static final Message MESSAGE_BRUSH_LOADED = Message.translation("server.commands.brushConfig.loaded");
-   private static final Message MESSAGE_BRUSH_NOT_FOUND = Message.translation("server.commands.brushConfig.load.error.notFound");
-   private static final Message MESSAGE_BRUSH_LOAD_ERROR = Message.translation("server.commands.brushConfig.load.error.loadFailed");
    @Nonnull
    private final ServerFileBrowser browser;
 
@@ -82,7 +79,7 @@ public class ScriptedBrushPage extends InteractiveCustomUIPage<FileBrowserEventD
       assert playerRefComponent != null;
       ScriptedBrushAsset scriptedBrushAsset = ScriptedBrushAsset.get(brushName);
       if (scriptedBrushAsset == null) {
-         playerRefComponent.sendMessage(MESSAGE_BRUSH_NOT_FOUND.param("name", brushName));
+         playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.load.error.notFound").param("name", brushName));
          this.sendUpdate();
       } else {
          UUID playerUUID = playerRefComponent.getUuid();
@@ -94,10 +91,12 @@ public class ScriptedBrushPage extends InteractiveCustomUIPage<FileBrowserEventD
             prototypeSettings.setCurrentlyLoadedBrushConfigName(scriptedBrushAsset.getId());
             prototypeSettings.setUsePrototypeBrushConfigurations(true);
             playerComponent.getPageManager().setPage(ref, store, Page.None);
-            playerRefComponent.sendMessage(MESSAGE_BRUSH_LOADED.param("name", scriptedBrushAsset.getId()));
+            playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.loaded").param("name", scriptedBrushAsset.getId()));
          } catch (Exception e) {
             playerRefComponent.sendMessage(
-               MESSAGE_BRUSH_LOAD_ERROR.param("name", brushName).param("error", e.getMessage() != null ? e.getMessage() : "Unknown error")
+               Message.translation("server.commands.brushConfig.load.error.loadFailed")
+                  .param("name", brushName)
+                  .param("error", e.getMessage() != null ? e.getMessage() : "Unknown error")
             );
             this.sendUpdate();
          }
@@ -118,7 +117,7 @@ public class ScriptedBrushPage extends InteractiveCustomUIPage<FileBrowserEventD
          for (String name : assetMap.getAssetMap().keySet()) {
             int score = StringCompareUtil.getFuzzyDistance(name, searchQuery, Locale.ENGLISH);
             if (score > 0) {
-               results.add(new FileListProvider.FileEntry(name, name, false, score));
+               results.add(new FileListProvider.FileEntry(name, name, false, false, score));
             }
          }
 

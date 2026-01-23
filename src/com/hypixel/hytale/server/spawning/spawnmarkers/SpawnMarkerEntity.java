@@ -51,9 +51,12 @@ import javax.annotation.Nullable;
 
 public class SpawnMarkerEntity implements Component<EntityStore> {
    private static final double SPAWN_LOST_TIMEOUT = 35.0;
+   @Nonnull
+   private static final InvalidatablePersistentRef[] EMPTY_REFERENCES = new InvalidatablePersistentRef[0];
    public static final ArrayCodec<InvalidatablePersistentRef> NPC_REFERENCES_CODEC = new ArrayCodec<>(
       InvalidatablePersistentRef.CODEC, InvalidatablePersistentRef[]::new
    );
+   @Nonnull
    public static final BuilderCodec<SpawnMarkerEntity> CODEC = BuilderCodec.builder(SpawnMarkerEntity.class, SpawnMarkerEntity::new)
       .addField(
          new KeyedCodec<>("SpawnMarker", Codec.STRING),
@@ -126,13 +129,14 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
 
    public SpawnMarkerEntity() {
       this.context = new SpawningContext();
+      this.npcReferences = EMPTY_REFERENCES;
    }
 
    public SpawnMarker getCachedMarker() {
       return this.cachedMarker;
    }
 
-   public void setCachedMarker(SpawnMarker marker) {
+   public void setCachedMarker(@Nonnull SpawnMarker marker) {
       this.cachedMarker = marker;
    }
 
@@ -148,7 +152,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       this.respawnCounter = respawnCounter;
    }
 
-   public void setSpawnAfter(Instant spawnAfter) {
+   public void setSpawnAfter(@Nullable Instant spawnAfter) {
       this.spawnAfter = spawnAfter;
    }
 
@@ -157,7 +161,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       return this.spawnAfter;
    }
 
-   public void setGameTimeRespawn(Duration gameTimeRespawn) {
+   public void setGameTimeRespawn(@Nullable Duration gameTimeRespawn) {
       this.gameTimeRespawn = gameTimeRespawn;
    }
 
@@ -177,7 +181,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       return this.suppressedBy;
    }
 
-   public void setStoredFlock(StoredFlock storedFlock) {
+   public void setStoredFlock(@Nonnull StoredFlock storedFlock) {
       this.storedFlock = storedFlock;
    }
 
@@ -211,8 +215,8 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       return this.npcReferences;
    }
 
-   public void setNpcReferences(InvalidatablePersistentRef[] npcReferences) {
-      this.npcReferences = npcReferences;
+   public void setNpcReferences(@Nullable InvalidatablePersistentRef[] npcReferences) {
+      this.npcReferences = npcReferences != null ? npcReferences : EMPTY_REFERENCES;
    }
 
    @Nullable
@@ -220,7 +224,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       return this.tempStorageList;
    }
 
-   public void setTempStorageList(List<Pair<Ref<EntityStore>, NPCEntity>> tempStorageList) {
+   public void setTempStorageList(@Nonnull List<Pair<Ref<EntityStore>, NPCEntity>> tempStorageList) {
       this.tempStorageList = tempStorageList;
    }
 
@@ -238,6 +242,12 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
 
    public boolean spawnNPC(@Nonnull Ref<EntityStore> ref, @Nonnull SpawnMarker marker, @Nonnull Store<EntityStore> store) {
       SpawnMarker.SpawnConfiguration spawn = marker.getWeightedConfigurations().get(ThreadLocalRandom.current());
+      if (spawn == null) {
+         SpawningPlugin.get().getLogger().at(Level.SEVERE).log("Marker %s has no spawn configuration to spawn", ref);
+         this.refreshTimeout();
+         return false;
+      }
+
       boolean realtime = marker.isRealtimeRespawn();
       if (realtime) {
          this.respawnCounter = spawn.getRealtimeRespawnTime();
@@ -322,9 +332,9 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
             SpawnMarkerReference spawnMarkerReference = _store.ensureAndGetComponent(_ref, SpawnMarkerReference.getComponentType());
             spawnMarkerReference.getReference().setEntity(ref, _store);
             spawnMarkerReference.refreshTimeoutCounter();
-            WorldGenId worldgenIdComponent = _store.getComponent(ref, WorldGenId.getComponentType());
-            int worldgenId = worldgenIdComponent != null ? worldgenIdComponent.getWorldGenId() : 0;
-            _store.putComponent(_ref, WorldGenId.getComponentType(), new WorldGenId(worldgenId));
+            WorldGenId worldGenIdComponent = _store.getComponent(ref, WorldGenId.getComponentType());
+            int worldGenId = worldGenIdComponent != null ? worldGenIdComponent.getWorldGenId() : 0;
+            _store.putComponent(_ref, WorldGenId.getComponentType(), new WorldGenId(worldGenId));
          };
          Vector3f rotation = transformComponent.getRotation();
          Pair<Ref<EntityStore>, NPCEntity> npcPair = npcModule.spawnEntity(store, roleIndex, this.spawnPosition, rotation, null, postSpawn);
@@ -376,13 +386,18 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
    }
 
    private void fail(
-      @Nonnull Ref<EntityStore> self, UUID uuid, String npc, Vector3d position, @Nonnull Store<EntityStore> store, SpawnMarkerEntity.FailReason reason
+      @Nonnull Ref<EntityStore> self,
+      @Nonnull UUID uuid,
+      @Nonnull String role,
+      @Nonnull Vector3d position,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull SpawnMarkerEntity.FailReason reason
    ) {
       if (++this.failedSpawns >= 5) {
          SpawningPlugin.get()
             .getLogger()
             .at(Level.WARNING)
-            .log("Marker %s at %s removed due to repeated spawning fails of %s with reason: %s", uuid, position, npc, reason);
+            .log("Marker %s at %s removed due to repeated spawning fails of %s with reason: %s", uuid, position, role, reason);
          store.removeEntity(self, RemoveReason.REMOVE);
       } else {
          this.refreshTimeout();
@@ -417,7 +432,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       return this.cachedMarker.isManualTrigger() && this.spawnCount <= 0 ? this.spawnNPC(markerRef, this.cachedMarker, store) : false;
    }
 
-   public void suppress(UUID suppressor) {
+   public void suppress(@Nonnull UUID suppressor) {
       if (this.suppressedBy == null) {
          this.suppressedBy = new HashSet<>();
       }
@@ -425,8 +440,10 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       this.suppressedBy.add(suppressor);
    }
 
-   public void releaseSuppression(UUID suppressor) {
-      this.suppressedBy.remove(suppressor);
+   public void releaseSuppression(@Nonnull UUID suppressor) {
+      if (this.suppressedBy != null) {
+         this.suppressedBy.remove(suppressor);
+      }
    }
 
    public void clearAllSuppressions() {

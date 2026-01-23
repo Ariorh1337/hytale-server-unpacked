@@ -112,7 +112,9 @@ public class InteractionSystems {
 
    public static class PlayerAddManagerSystem extends HolderSystem<EntityStore> {
       @Nonnull
-      private final Query<EntityStore> query = Query.and(Player.getComponentType(), Query.not(InteractionModule.get().getInteractionManagerComponent()));
+      private final Query<EntityStore> query = Query.and(
+         Player.getComponentType(), PlayerRef.getComponentType(), Query.not(InteractionModule.get().getInteractionManagerComponent())
+      );
 
       @Nonnull
       @Override

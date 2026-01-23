@@ -22,14 +22,11 @@ public class GradientWarpDensityAsset extends DensityAsset {
       .add()
       .append(new KeyedCodec<>("YFor2D", Codec.DOUBLE, false), (t, k) -> t.y2d = k, t -> t.y2d)
       .add()
-      .append(new KeyedCodec<>("CacheSizeFor2D", Codec.INTEGER, false), (t, k) -> t._2dCacheSize = k, t -> t._2dCacheSize)
-      .add()
       .build();
    private double sampleRange = 1.0;
    private double warpFactor = 1.0;
    private boolean is2d = false;
    private double y2d = 0.0;
-   private int _2dCacheSize = 16;
 
    @Nonnull
    @Override

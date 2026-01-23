@@ -107,13 +107,13 @@ public class ApplicationEffects {
       obj.horizontalSpeedMultiplier = buf.getFloatLE(offset + 8);
       obj.soundEventIndexLocal = buf.getIntLE(offset + 12);
       obj.soundEventIndexWorld = buf.getIntLE(offset + 16);
-      if ((nullBits[0] & 128) != 0) {
+      if ((nullBits[0] & 4) != 0) {
          obj.movementEffects = MovementEffects.deserialize(buf, offset + 20);
       }
 
       obj.mouseSensitivityAdjustmentTarget = buf.getFloatLE(offset + 27);
       obj.mouseSensitivityAdjustmentDuration = buf.getFloatLE(offset + 31);
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 8) != 0) {
          int varPos0 = offset + 59 + buf.getIntLE(offset + 35);
          int entityAnimationIdLen = VarInt.peek(buf, varPos0);
          if (entityAnimationIdLen < 0) {
@@ -127,7 +127,7 @@ public class ApplicationEffects {
          obj.entityAnimationId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[0] & 16) != 0) {
          int varPos1 = offset + 59 + buf.getIntLE(offset + 39);
          int particlesCount = VarInt.peek(buf, varPos1);
          if (particlesCount < 0) {
@@ -152,7 +152,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 16) != 0) {
+      if ((nullBits[0] & 32) != 0) {
          int varPos2 = offset + 59 + buf.getIntLE(offset + 43);
          int firstPersonParticlesCount = VarInt.peek(buf, varPos2);
          if (firstPersonParticlesCount < 0) {
@@ -177,7 +177,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 32) != 0) {
+      if ((nullBits[0] & 64) != 0) {
          int varPos3 = offset + 59 + buf.getIntLE(offset + 47);
          int screenEffectLen = VarInt.peek(buf, varPos3);
          if (screenEffectLen < 0) {
@@ -191,7 +191,7 @@ public class ApplicationEffects {
          obj.screenEffect = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 64) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int varPos4 = offset + 59 + buf.getIntLE(offset + 51);
          int modelVFXIdLen = VarInt.peek(buf, varPos4);
          if (modelVFXIdLen < 0) {
@@ -216,7 +216,7 @@ public class ApplicationEffects {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       int maxEnd = 59;
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 35);
          int pos0 = offset + 59 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
@@ -226,7 +226,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[0] & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 39);
          int pos1 = offset + 59 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
@@ -241,7 +241,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 16) != 0) {
+      if ((nullBits[0] & 32) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 43);
          int pos2 = offset + 59 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
@@ -256,7 +256,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 32) != 0) {
+      if ((nullBits[0] & 64) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 47);
          int pos3 = offset + 59 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
@@ -266,7 +266,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 64) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 51);
          int pos4 = offset + 59 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
@@ -299,27 +299,27 @@ public class ApplicationEffects {
          nullBits[0] = (byte)(nullBits[0] | 2);
       }
 
-      if (this.entityAnimationId != null) {
+      if (this.movementEffects != null) {
          nullBits[0] = (byte)(nullBits[0] | 4);
       }
 
-      if (this.particles != null) {
+      if (this.entityAnimationId != null) {
          nullBits[0] = (byte)(nullBits[0] | 8);
       }
 
-      if (this.firstPersonParticles != null) {
+      if (this.particles != null) {
          nullBits[0] = (byte)(nullBits[0] | 16);
       }
 
-      if (this.screenEffect != null) {
+      if (this.firstPersonParticles != null) {
          nullBits[0] = (byte)(nullBits[0] | 32);
       }
 
-      if (this.modelVFXId != null) {
+      if (this.screenEffect != null) {
          nullBits[0] = (byte)(nullBits[0] | 64);
       }
 
-      if (this.movementEffects != null) {
+      if (this.modelVFXId != null) {
          nullBits[0] = (byte)(nullBits[0] | 128);
       }
 
@@ -470,7 +470,7 @@ public class ApplicationEffects {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 8) != 0) {
          int entityAnimationIdOffset = buffer.getIntLE(offset + 35);
          if (entityAnimationIdOffset < 0) {
             return ValidationResult.error("Invalid offset for EntityAnimationId");
@@ -497,7 +497,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[0] & 16) != 0) {
          int particlesOffset = buffer.getIntLE(offset + 39);
          if (particlesOffset < 0) {
             return ValidationResult.error("Invalid offset for Particles");
@@ -529,7 +529,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 16) != 0) {
+      if ((nullBits[0] & 32) != 0) {
          int firstPersonParticlesOffset = buffer.getIntLE(offset + 43);
          if (firstPersonParticlesOffset < 0) {
             return ValidationResult.error("Invalid offset for FirstPersonParticles");
@@ -561,7 +561,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 32) != 0) {
+      if ((nullBits[0] & 64) != 0) {
          int screenEffectOffset = buffer.getIntLE(offset + 47);
          if (screenEffectOffset < 0) {
             return ValidationResult.error("Invalid offset for ScreenEffect");
@@ -588,7 +588,7 @@ public class ApplicationEffects {
          }
       }
 
-      if ((nullBits[0] & 64) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int modelVFXIdOffset = buffer.getIntLE(offset + 51);
          if (modelVFXIdOffset < 0) {
             return ValidationResult.error("Invalid offset for ModelVFXId");

@@ -1,16 +1,15 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.delimiters.RangeDouble;
 import javax.annotation.Nonnull;
 
-public class VerticalEliminatorPositionProvider extends PositionProvider {
-   private final int maxY;
-   private final int minY;
+public class SimpleHorizontalPositionProvider extends PositionProvider {
+   private final RangeDouble rangeY;
    @Nonnull
    private final PositionProvider positionProvider;
 
-   public VerticalEliminatorPositionProvider(int minY, int maxY, @Nonnull PositionProvider positionProvider) {
-      this.minY = minY;
-      this.maxY = maxY;
+   public SimpleHorizontalPositionProvider(@Nonnull RangeDouble rangeY, @Nonnull PositionProvider positionProvider) {
+      this.rangeY = rangeY;
       this.positionProvider = positionProvider;
    }
 
@@ -18,7 +17,7 @@ public class VerticalEliminatorPositionProvider extends PositionProvider {
    public void positionsIn(@Nonnull PositionProvider.Context context) {
       PositionProvider.Context childContext = new PositionProvider.Context(context);
       childContext.consumer = positions -> {
-         if (!(positions.y < this.minY) && !(positions.y >= this.maxY)) {
+         if (this.rangeY.contains(positions.y)) {
             context.consumer.accept(positions);
          }
       };

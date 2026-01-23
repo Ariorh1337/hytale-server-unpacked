@@ -29,6 +29,7 @@ import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -51,7 +52,6 @@ public class NettyUtil {
    public static final String LOGGER_KEY = "logger";
    public static final LoggingHandler LOGGER = new LoggingHandler("PacketLogging", LogLevel.INFO);
    public static final String HANDLER = "handler";
-   public static final String TIMEOUT_HANDLER = "timeOut";
    public static final String RATE_LIMIT = "rateLimit";
 
    public static void init() {
@@ -238,6 +238,34 @@ public class NettyUtil {
             + ".class, "
             + this.family
             + ")";
+      }
+   }
+
+   public record TimeoutContext(@Nonnull String stage, long connectionStartNs, @Nonnull String playerIdentifier) {
+      public static final AttributeKey<NettyUtil.TimeoutContext> KEY = AttributeKey.newInstance("TIMEOUT_CONTEXT");
+
+      public static void init(@Nonnull Channel channel, @Nonnull String stage, @Nonnull String identifier) {
+         channel.attr(KEY).set(new NettyUtil.TimeoutContext(stage, System.nanoTime(), identifier));
+      }
+
+      public static void update(@Nonnull Channel channel, @Nonnull String stage, @Nonnull String identifier) {
+         NettyUtil.TimeoutContext existing = get(channel);
+         channel.attr(KEY).set(new NettyUtil.TimeoutContext(stage, existing.connectionStartNs, identifier));
+      }
+
+      public static void update(@Nonnull Channel channel, @Nonnull String stage) {
+         NettyUtil.TimeoutContext existing = get(channel);
+         channel.attr(KEY).set(new NettyUtil.TimeoutContext(stage, existing.connectionStartNs, existing.playerIdentifier));
+      }
+
+      @Nonnull
+      public static NettyUtil.TimeoutContext get(@Nonnull Channel channel) {
+         NettyUtil.TimeoutContext context = channel.attr(KEY).get();
+         if (context == null) {
+            throw new IllegalStateException("TimeoutContext not initialized - this indicates a bug in the connection flow");
+         } else {
+            return context;
+         }
       }
    }
 }

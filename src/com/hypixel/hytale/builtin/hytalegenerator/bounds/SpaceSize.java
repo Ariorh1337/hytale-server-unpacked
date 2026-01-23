@@ -58,6 +58,11 @@ public class SpaceSize {
    }
 
    @Nonnull
+   public Bounds3i toBounds3i() {
+      return new Bounds3i(this.minInclusive, this.maxExclusive);
+   }
+
+   @Nonnull
    public SpaceSize clone() {
       return new SpaceSize(this.minInclusive, this.maxExclusive);
    }

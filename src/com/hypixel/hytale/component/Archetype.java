@@ -117,6 +117,7 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
       return false;
    }
 
+   @Nonnull
    public Archetype<ECS_TYPE> getSerializableArchetype(@Nonnull ComponentRegistry.Data<ECS_TYPE> data) {
       if (this.isEmpty()) {
          return EMPTY;
@@ -281,7 +282,7 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
    }
 
    @Override
-   public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+   public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
       if (!this.isEmpty()) {
          this.componentTypes[this.minIndex].validateRegistry(registry);
       }

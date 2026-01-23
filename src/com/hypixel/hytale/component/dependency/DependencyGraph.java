@@ -15,8 +15,11 @@ import javax.annotation.Nullable;
 public class DependencyGraph<ECS_TYPE> {
    @Nonnull
    private final ISystem<ECS_TYPE>[] systems;
+   @Nonnull
    private final Map<ISystem<ECS_TYPE>, List<DependencyGraph.Edge<ECS_TYPE>>> beforeSystemEdges = new Object2ObjectOpenHashMap<>();
+   @Nonnull
    private final Map<ISystem<ECS_TYPE>, List<DependencyGraph.Edge<ECS_TYPE>>> afterSystemEdges = new Object2ObjectOpenHashMap<>();
+   @Nonnull
    private final Map<ISystem<ECS_TYPE>, Set<DependencyGraph.Edge<ECS_TYPE>>> afterSystemUnfulfilledEdges = new Object2ObjectOpenHashMap<>();
    private DependencyGraph.Edge<ECS_TYPE>[] edges = DependencyGraph.Edge.emptyArray();
 
@@ -102,7 +105,7 @@ public class DependencyGraph<ECS_TYPE> {
       }
    }
 
-   public void sort(ISystem<ECS_TYPE>[] sortedSystems) {
+   public void sort(@Nonnull ISystem<ECS_TYPE>[] sortedSystems) {
       int index = 0;
 
       label52:
@@ -135,7 +138,7 @@ public class DependencyGraph<ECS_TYPE> {
       }
    }
 
-   private boolean hasEdgeOfLaterPriority(ISystem<ECS_TYPE> system, int priority) {
+   private boolean hasEdgeOfLaterPriority(@Nonnull ISystem<ECS_TYPE> system, int priority) {
       for (DependencyGraph.Edge<ECS_TYPE> edge : this.afterSystemEdges.get(system)) {
          if (!edge.resolved && edge.priority > priority) {
             return true;
@@ -145,13 +148,13 @@ public class DependencyGraph<ECS_TYPE> {
       return false;
    }
 
-   private void resolveEdgesFor(ISystem<ECS_TYPE> system) {
+   private void resolveEdgesFor(@Nonnull ISystem<ECS_TYPE> system) {
       for (DependencyGraph.Edge<ECS_TYPE> edge : this.afterSystemEdges.get(system)) {
          edge.resolved = true;
       }
    }
 
-   private void fulfillEdgesFor(ISystem<ECS_TYPE> system) {
+   private void fulfillEdgesFor(@Nonnull ISystem<ECS_TYPE> system) {
       for (DependencyGraph.Edge<ECS_TYPE> edge : this.beforeSystemEdges.get(system)) {
          edge.fulfilled = true;
          this.afterSystemUnfulfilledEdges.get(edge.afterSystem).remove(edge);
@@ -165,6 +168,7 @@ public class DependencyGraph<ECS_TYPE> {
    }
 
    private static class Edge<ECS_TYPE> implements Comparable<DependencyGraph.Edge<ECS_TYPE>> {
+      @Nonnull
       private static final DependencyGraph.Edge<?>[] EMPTY_ARRAY = new DependencyGraph.Edge[0];
       @Nullable
       private final ISystem<ECS_TYPE> beforeSystem;
@@ -177,7 +181,7 @@ public class DependencyGraph<ECS_TYPE> {
          return (DependencyGraph.Edge<ECS_TYPE>[])EMPTY_ARRAY;
       }
 
-      public Edge(@Nullable ISystem<ECS_TYPE> beforeSystem, ISystem<ECS_TYPE> afterSystem, int priority) {
+      public Edge(@Nullable ISystem<ECS_TYPE> beforeSystem, @Nonnull ISystem<ECS_TYPE> afterSystem, int priority) {
          this.beforeSystem = beforeSystem;
          this.afterSystem = afterSystem;
          this.priority = priority;

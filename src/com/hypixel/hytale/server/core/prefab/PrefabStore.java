@@ -240,7 +240,7 @@ public class PrefabStore {
          }
 
          if (this.isBasePack()) {
-            return "Assets";
+            return "HytaleAssets";
          }
 
          PluginManifest manifest = this.pack.getManifest();

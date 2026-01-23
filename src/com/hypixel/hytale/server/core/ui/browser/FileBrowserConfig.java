@@ -4,6 +4,7 @@ import com.hypixel.hytale.server.core.ui.LocalizableString;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -19,7 +20,10 @@ public record FileBrowserConfig(
    boolean enableDirectoryNav,
    boolean enableMultiSelect,
    int maxResults,
-   @Nullable FileListProvider customProvider
+   @Nullable FileListProvider customProvider,
+   boolean assetPackMode,
+   @Nullable String assetPackSubPath,
+   @Nullable Predicate<Path> terminalDirectoryPredicate
 ) {
    public static FileBrowserConfig.Builder builder() {
       return new FileBrowserConfig.Builder();
@@ -38,6 +42,9 @@ public record FileBrowserConfig(
       private boolean enableMultiSelect = false;
       private int maxResults = 50;
       private FileListProvider customProvider = null;
+      private boolean assetPackMode = false;
+      private String assetPackSubPath = null;
+      private Predicate<Path> terminalDirectoryPredicate = null;
 
       public FileBrowserConfig.Builder listElementId(@Nonnull String listElementId) {
          this.listElementId = listElementId;
@@ -104,6 +111,21 @@ public record FileBrowserConfig(
          return this;
       }
 
+      public FileBrowserConfig.Builder assetPackMode(boolean enable, @Nullable String subPath) {
+         if (enable && subPath == null) {
+            throw new IllegalArgumentException("assetPackSubPath cannot be null when assetPackMode is enabled");
+         }
+
+         this.assetPackMode = enable;
+         this.assetPackSubPath = subPath;
+         return this;
+      }
+
+      public FileBrowserConfig.Builder terminalDirectoryPredicate(@Nullable Predicate<Path> predicate) {
+         this.terminalDirectoryPredicate = predicate;
+         return this;
+      }
+
       public FileBrowserConfig build() {
          return new FileBrowserConfig(
             this.listElementId,
@@ -117,7 +139,10 @@ public record FileBrowserConfig(
             this.enableDirectoryNav,
             this.enableMultiSelect,
             this.maxResults,
-            this.customProvider
+            this.customProvider,
+            this.assetPackMode,
+            this.assetPackSubPath,
+            this.terminalDirectoryPredicate
          );
       }
    }

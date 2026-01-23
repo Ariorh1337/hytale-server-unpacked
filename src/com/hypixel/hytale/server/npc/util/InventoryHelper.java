@@ -197,11 +197,11 @@ public class InventoryHelper {
       }
    }
 
-   public static void removeItemInHand(@Nonnull Inventory inventory) {
+   public static void removeItemInHand(@Nonnull Inventory inventory, int count) {
       if (!ItemStack.isEmpty(inventory.getItemInHand())) {
          byte activeHotbarSlot = inventory.getActiveHotbarSlot();
          if (activeHotbarSlot != -1) {
-            inventory.getHotbar().removeItemStackFromSlot(activeHotbarSlot);
+            inventory.getHotbar().removeItemStackFromSlot(activeHotbarSlot, count);
          }
       }
    }

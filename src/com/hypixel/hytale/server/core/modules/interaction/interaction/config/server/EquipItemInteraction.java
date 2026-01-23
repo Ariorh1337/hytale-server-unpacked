@@ -37,6 +37,7 @@ public class EquipItemInteraction extends SimpleInstantInteraction {
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      assert commandBuffer != null;
       Ref<EntityStore> ref = context.getEntity();
       if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
          Inventory var15 = livingEntity.getInventory();

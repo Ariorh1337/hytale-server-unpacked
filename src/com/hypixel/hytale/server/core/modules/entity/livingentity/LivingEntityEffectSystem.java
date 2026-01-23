@@ -13,6 +13,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
@@ -34,9 +35,18 @@ import javax.annotation.Nullable;
 
 public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> implements DisableProcessingAssert {
    @Nonnull
+   private static final Query<EntityStore> QUERY = Query.and(
+      EffectControllerComponent.getComponentType(), TransformComponent.getComponentType(), BoundingBox.getComponentType()
+   );
+   @Nonnull
+   private static final String EFFECT_NAME_BURN = "Burn";
+   @Nonnull
+   private static final String BLOCK_TYPE_FLUID_WATER = "Fluid_Water";
+
+   @Nonnull
    @Override
    public Query<EntityStore> getQuery() {
-      return EffectControllerComponent.getComponentType();
+      return QUERY;
    }
 
    @Override
@@ -60,43 +70,45 @@ public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> i
          Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
          ObjectIterator<ActiveEntityEffect> iterator = activeEffects.values().iterator();
          EntityStatMap entityStatMapComponent = commandBuffer.getComponent(entityRef, EntityStatMap.getComponentType());
-         boolean invalidated = false;
-         boolean invulnerable = false;
+         if (entityStatMapComponent != null) {
+            boolean invalidated = false;
+            boolean invulnerable = false;
 
-         while (iterator.hasNext()) {
-            ActiveEntityEffect activeEntityEffect = iterator.next();
-            int entityEffectIndex = activeEntityEffect.getEntityEffectIndex();
-            EntityEffect entityEffect = entityEffectAssetMap.getAsset(entityEffectIndex);
-            if (entityEffect == null) {
-               iterator.remove();
-               invalidated = true;
-            } else if (!canApplyEffect(entityRef, entityEffect, commandBuffer)) {
-               iterator.remove();
-               invalidated = true;
-            } else {
-               float tickDelta = Math.min(activeEntityEffect.getRemainingDuration(), dt);
-               activeEntityEffect.tick(commandBuffer, entityRef, entityEffect, entityStatMapComponent, tickDelta);
-               if (activeEffects.isEmpty()) {
-                  return;
-               }
-
-               if (!activeEntityEffect.isInfinite() && activeEntityEffect.getRemainingDuration() <= 0.0F) {
+            while (iterator.hasNext()) {
+               ActiveEntityEffect activeEntityEffect = iterator.next();
+               int entityEffectIndex = activeEntityEffect.getEntityEffectIndex();
+               EntityEffect entityEffect = entityEffectAssetMap.getAsset(entityEffectIndex);
+               if (entityEffect == null) {
                   iterator.remove();
-                  effectControllerComponent.tryResetModelChange(entityRef, activeEntityEffect.getEntityEffectIndex(), commandBuffer);
                   invalidated = true;
-               }
+               } else if (!canApplyEffect(entityRef, entityEffect, commandBuffer)) {
+                  iterator.remove();
+                  invalidated = true;
+               } else {
+                  float tickDelta = Math.min(activeEntityEffect.getRemainingDuration(), dt);
+                  activeEntityEffect.tick(commandBuffer, entityRef, entityEffect, entityStatMapComponent, tickDelta);
+                  if (activeEffects.isEmpty()) {
+                     return;
+                  }
 
-               if (activeEntityEffect.isInvulnerable()) {
-                  invulnerable = true;
+                  if (!activeEntityEffect.isInfinite() && activeEntityEffect.getRemainingDuration() <= 0.0F) {
+                     iterator.remove();
+                     effectControllerComponent.tryResetModelChange(entityRef, activeEntityEffect.getEntityEffectIndex(), commandBuffer);
+                     invalidated = true;
+                  }
+
+                  if (activeEntityEffect.isInvulnerable()) {
+                     invulnerable = true;
+                  }
                }
             }
-         }
 
-         effectControllerComponent.setInvulnerable(invulnerable);
-         if (invalidated) {
-            effectControllerComponent.invalidateCache();
-            if (EntityUtils.getEntity(index, archetypeChunk) instanceof LivingEntity livingEntity) {
-               livingEntity.getStatModifiersManager().setRecalculate(true);
+            effectControllerComponent.setInvulnerable(invulnerable);
+            if (invalidated) {
+               effectControllerComponent.invalidateCache();
+               if (EntityUtils.getEntity(index, archetypeChunk) instanceof LivingEntity livingEntity) {
+                  livingEntity.getStatModifiersManager().setRecalculate(true);
+               }
             }
          }
       }
@@ -111,23 +123,28 @@ public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> i
    public static boolean canApplyEffect(
       @Nonnull Ref<EntityStore> ownerRef, @Nonnull EntityEffect entityEffect, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      TransformComponent transformComponent = componentAccessor.getComponent(ownerRef, TransformComponent.getComponentType());
-      assert transformComponent != null;
-      BoundingBox boundingBoxComponent = componentAccessor.getComponent(ownerRef, BoundingBox.getComponentType());
-      assert boundingBoxComponent != null;
-      Vector3d position = transformComponent.getPosition();
-      Box boundingBox = boundingBoxComponent.getBoundingBox();
-      World world = componentAccessor.getExternalData().getWorld();
       if ("Burn".equals(entityEffect.getId())) {
+         TransformComponent transformComponent = componentAccessor.getComponent(ownerRef, TransformComponent.getComponentType());
+         assert transformComponent != null;
          Ref<ChunkStore> chunkRef = transformComponent.getChunkRef();
          if (chunkRef != null && chunkRef.isValid()) {
+            World world = componentAccessor.getExternalData().getWorld();
             Store<ChunkStore> chunkComponentStore = world.getChunkStore().getStore();
             WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
             assert worldChunkComponent != null;
+            BoundingBox boundingBoxComponent = componentAccessor.getComponent(ownerRef, BoundingBox.getComponentType());
+            assert boundingBoxComponent != null;
+            Vector3d position = transformComponent.getPosition();
+            Box boundingBox = boundingBoxComponent.getBoundingBox();
             LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atChunkCoords(world, worldChunkComponent.getX(), worldChunkComponent.getZ(), 1);
             return boundingBox.forEachBlock(position, chunkAccessor, (x, y, z, _chunkAccessor) -> {
                WorldChunk localChunk = _chunkAccessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
-               return localChunk == null ? true : !localChunk.getBlockType(x, y, z).getId().contains("Fluid_Water");
+               if (localChunk == null) {
+                  return true;
+               }
+
+               BlockType blockType = localChunk.getBlockType(x, y, z);
+               return blockType == null ? true : !blockType.getId().contains("Fluid_Water");
             });
          } else {
             return false;

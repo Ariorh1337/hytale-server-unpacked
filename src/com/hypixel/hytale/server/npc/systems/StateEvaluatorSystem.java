@@ -31,6 +31,8 @@ public class StateEvaluatorSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull
    private final ComponentType<EntityStore, NPCEntity> npcComponentType;
    @Nonnull
+   private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
+   @Nonnull
    private final Set<Dependency<EntityStore>> dependencies;
    @Nonnull
    private final Query<EntityStore> query;
@@ -44,7 +46,7 @@ public class StateEvaluatorSystem extends EntityTickingSystem<EntityStore> {
          new SystemDependency<>(Order.BEFORE, RoleSystems.BehaviourTickSystem.class),
          new SystemDependency<>(Order.AFTER, RoleSystems.PreBehaviourSupportTickSystem.class)
       );
-      this.query = Query.and(npcComponentType, stateEvaluatorComponent);
+      this.query = Query.and(npcComponentType, stateEvaluatorComponent, this.uuidComponentType);
    }
 
    @Nonnull
@@ -74,40 +76,42 @@ public class StateEvaluatorSystem extends EntityTickingSystem<EntityStore> {
    ) {
       NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
       assert npcComponent != null;
-      UUIDComponent uuidComponent = archetypeChunk.getComponent(index, UUIDComponent.getComponentType());
+      UUIDComponent uuidComponent = archetypeChunk.getComponent(index, this.uuidComponentType);
       assert uuidComponent != null;
       Role role = npcComponent.getRole();
-      StateSupport stateSupport = role.getStateSupport();
-      if (!stateSupport.isRunningTransitionActions()) {
-         StateEvaluator stateEvaluator = archetypeChunk.getComponent(index, this.stateEvaluatorComponent);
-         assert stateEvaluator != null;
-         if (stateEvaluator.isActive() && stateEvaluator.shouldExecute(dt)) {
-            HytaleLogger.Api logContext = LOGGER.at(Level.FINE);
-            if (logContext.isEnabled()) {
-               logContext.log("%s with uuid %s: Beginning state evaluation", npcComponent.getRoleName(), uuidComponent.getUuid());
-            }
+      if (role != null) {
+         StateSupport stateSupport = role.getStateSupport();
+         if (!stateSupport.isRunningTransitionActions()) {
+            StateEvaluator stateEvaluator = archetypeChunk.getComponent(index, this.stateEvaluatorComponent);
+            assert stateEvaluator != null;
+            if (stateEvaluator.isActive() && stateEvaluator.shouldExecute(dt)) {
+               HytaleLogger.Api logContext = LOGGER.at(Level.FINE);
+               if (logContext.isEnabled()) {
+                  logContext.log("%s with uuid %s: Beginning state evaluation", npcComponent.getRoleName(), uuidComponent.getUuid());
+               }
 
-            EvaluationContext evaluationContext = stateEvaluator.getEvaluationContext();
-            stateEvaluator.prepareEvaluationContext(evaluationContext);
-            Evaluator<StateOption>.OptionHolder chosenOption = stateEvaluator.evaluate(index, archetypeChunk, commandBuffer, evaluationContext);
-            evaluationContext.reset();
-            logContext = LOGGER.at(Level.FINE);
-            if (logContext.isEnabled()) {
-               logContext.log("%s with uuid %s: Chose state option %s", npcComponent.getRoleName(), uuidComponent.getUuid(), chosenOption);
-            }
+               EvaluationContext evaluationContext = stateEvaluator.getEvaluationContext();
+               stateEvaluator.prepareEvaluationContext(evaluationContext);
+               Evaluator<StateOption>.OptionHolder chosenOption = stateEvaluator.evaluate(index, archetypeChunk, commandBuffer, evaluationContext);
+               evaluationContext.reset();
+               logContext = LOGGER.at(Level.FINE);
+               if (logContext.isEnabled()) {
+                  logContext.log("%s with uuid %s: Chose state option %s", npcComponent.getRoleName(), uuidComponent.getUuid(), chosenOption);
+               }
 
-            if (chosenOption != null) {
-               StateOption action = (StateOption)chosenOption.getOption();
-               int targetState = action.getStateIndex();
-               int targetSubState = action.getSubStateIndex();
-               if (!stateSupport.inState(targetState) || !stateSupport.inSubState(targetSubState)) {
-                  stateSupport.setState(action.getStateIndex(), action.getSubStateIndex(), true, false);
-                  logContext = LOGGER.at(Level.FINE);
-                  if (logContext.isEnabled()) {
-                     logContext.log("%s with uuid %s: Setting state", npcComponent.getRoleName(), uuidComponent.getUuid());
+               if (chosenOption != null) {
+                  StateOption action = (StateOption)chosenOption.getOption();
+                  int targetState = action.getStateIndex();
+                  int targetSubState = action.getSubStateIndex();
+                  if (!stateSupport.inState(targetState) || !stateSupport.inSubState(targetSubState)) {
+                     stateSupport.setState(action.getStateIndex(), action.getSubStateIndex(), true, false);
+                     logContext = LOGGER.at(Level.FINE);
+                     if (logContext.isEnabled()) {
+                        logContext.log("%s with uuid %s: Setting state", npcComponent.getRoleName(), uuidComponent.getUuid());
+                     }
+
+                     stateEvaluator.onStateSwitched();
                   }
-
-                  stateEvaluator.onStateSwitched();
                }
             }
          }

@@ -164,7 +164,7 @@ public class NPropStage implements NStage {
                   position2d_voxelGrid.setY(0);
                   double distanceToBiomeEdge = biomeDistanceSpace.getContent(position2d_voxelGrid).distanceToClosestOtherBiome(biomeAtPosition);
                   Prop prop = propField.getPropDistribution().propAt(position, context.workerId, distanceToBiomeEdge);
-                  Bounds3i propWriteBounds = prop.getWriteBounds().clone();
+                  Bounds3i propWriteBounds = prop.getWriteBounds_voxelGrid().clone();
                   propWriteBounds.offset(positionInt_voxelGrid);
                   if (propWriteBounds.intersects(localOutputBounds_voxelGrid)) {
                      ScanResult scanResult = prop.scan(positionInt_voxelGrid, materialInputSpace, context.workerId);

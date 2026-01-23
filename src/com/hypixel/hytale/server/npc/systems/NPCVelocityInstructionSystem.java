@@ -42,37 +42,41 @@ public class NPCVelocityInstructionSystem extends EntityTickingSystem<EntityStor
    ) {
       NPCEntity npcComponent = archetypeChunk.getComponent(index, NPCEntity.getComponentType());
       assert npcComponent != null;
-      Velocity velocityComponent = archetypeChunk.getComponent(index, Velocity.getComponentType());
-      assert velocityComponent != null;
+      Role role = npcComponent.getRole();
+      if (role != null) {
+         Velocity velocityComponent = archetypeChunk.getComponent(index, Velocity.getComponentType());
+         assert velocityComponent != null;
 
-      for (Velocity.Instruction instruction : velocityComponent.getInstructions()) {
-         switch (instruction.getType()) {
-            case Set:
-               Vector3d velocityx = instruction.getVelocity();
-               VelocityConfig velocityConfigx = instruction.getConfig();
-               Role npcRole = npcComponent.getRole();
-               npcRole.processSetVelocityInstruction(velocityx, velocityConfigx);
-               if (DebugUtils.DISPLAY_FORCES) {
-                  TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-                  assert transformComponent != null;
-                  World world = commandBuffer.getExternalData().getWorld();
-                  DebugUtils.addForce(world, transformComponent.getPosition(), velocityx, velocityConfigx);
-               }
-               break;
-            case Add:
-               Vector3d velocity = instruction.getVelocity();
-               VelocityConfig velocityConfig = instruction.getConfig();
-               npcComponent.getRole().processAddVelocityInstruction(velocity, velocityConfig);
-               if (DebugUtils.DISPLAY_FORCES) {
-                  TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-                  assert transformComponent != null;
-                  World world = commandBuffer.getExternalData().getWorld();
-                  DebugUtils.addForce(world, transformComponent.getPosition(), velocity, velocityConfig);
-               }
+         for (Velocity.Instruction instruction : velocityComponent.getInstructions()) {
+            switch (instruction.getType()) {
+               case Set:
+                  Vector3d velocityx = instruction.getVelocity();
+                  VelocityConfig velocityConfigx = instruction.getConfig();
+                  role.processSetVelocityInstruction(velocityx, velocityConfigx);
+                  if (DebugUtils.DISPLAY_FORCES) {
+                     TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+                     if (transformComponent != null) {
+                        World world = commandBuffer.getExternalData().getWorld();
+                        DebugUtils.addForce(world, transformComponent.getPosition(), velocityx, velocityConfigx);
+                     }
+                  }
+                  break;
+               case Add:
+                  Vector3d velocity = instruction.getVelocity();
+                  VelocityConfig velocityConfig = instruction.getConfig();
+                  role.processAddVelocityInstruction(velocity, velocityConfig);
+                  if (DebugUtils.DISPLAY_FORCES) {
+                     TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+                     if (transformComponent != null) {
+                        World world = commandBuffer.getExternalData().getWorld();
+                        DebugUtils.addForce(world, transformComponent.getPosition(), velocity, velocityConfig);
+                     }
+                  }
+            }
          }
-      }
 
-      velocityComponent.getInstructions().clear();
+         velocityComponent.getInstructions().clear();
+      }
    }
 
    @Nonnull

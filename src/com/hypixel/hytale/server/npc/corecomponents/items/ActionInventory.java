@@ -69,7 +69,7 @@ public class ActionInventory extends ActionBase {
       }
 
       if (this.operation == ActionInventory.Operation.RemoveHeldItem) {
-         InventoryHelper.removeItemInHand(inventory);
+         InventoryHelper.removeItemInHand(inventory, this.count);
          return true;
       }
 

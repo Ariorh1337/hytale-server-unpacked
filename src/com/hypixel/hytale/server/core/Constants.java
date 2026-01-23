@@ -34,6 +34,7 @@ import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksModule;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
+import com.hypixel.hytale.server.core.update.UpdateModule;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
@@ -51,6 +52,7 @@ public final class Constants {
    public static final PluginManifest[] CORE_PLUGINS = new PluginManifest[]{
       ConsoleModule.MANIFEST,
       PermissionsModule.MANIFEST,
+      UpdateModule.MANIFEST,
       FlyCameraModule.MANIFEST,
       AssetModule.MANIFEST,
       CommonAssetModule.MANIFEST,

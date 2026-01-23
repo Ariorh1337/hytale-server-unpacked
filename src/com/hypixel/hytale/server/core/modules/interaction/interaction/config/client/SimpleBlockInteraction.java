@@ -177,7 +177,9 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
    protected void computeCurrentBlockSyncData(@Nonnull InteractionContext context) {
       BlockPosition targetBlockPos = context.getTargetBlock();
       if (targetBlockPos != null) {
-         World world = context.getCommandBuffer().getStore().getExternalData().getWorld();
+         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+         assert commandBuffer != null;
+         World world = commandBuffer.getStore().getExternalData().getWorld();
          ChunkStore chunkStore = world.getChunkStore();
          long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPos.x, targetBlockPos.z);
          Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);

@@ -24,8 +24,6 @@ public class OpSelfCommand extends AbstractPlayerCommand {
    private static final Message MESSAGE_COMMANDS_NON_VANILLA_PERMISSIONS = Message.translation("server.commands.op.self.nonVanillaPermissions");
    @Nonnull
    private static final Message MESSAGE_COMMANDS_SINGLEPLAYER_OWNER_REQ = Message.translation("server.commands.op.self.singleplayerOwnerReq");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_MULTIPLAYER_TIP = Message.translation("server.commands.op.self.multiplayerTip");
 
    public OpSelfCommand() {
       super("self", "server.commands.op.self.desc");
@@ -46,7 +44,10 @@ public class OpSelfCommand extends AbstractPlayerCommand {
          playerRef.sendMessage(MESSAGE_COMMANDS_SINGLEPLAYER_OWNER_REQ);
       } else if (!Constants.SINGLEPLAYER && !Constants.ALLOWS_SELF_OP_COMMAND) {
          playerRef.sendMessage(
-            MESSAGE_COMMANDS_MULTIPLAYER_TIP.param("uuidCommand", "uuid").param("permissionFile", "permissions.json").param("launchArg", "--allow-op")
+            Message.translation("server.commands.op.self.multiplayerTip")
+               .param("uuidCommand", "uuid")
+               .param("permissionFile", "permissions.json")
+               .param("launchArg", "--allow-op")
          );
       } else {
          UUID uuid = playerRef.getUuid();

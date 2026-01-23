@@ -43,6 +43,7 @@ public class ChangeStatWithModifierInteraction extends ChangeStatBaseInteraction
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       Ref<EntityStore> ref = context.getEntity();
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      assert commandBuffer != null;
       EntityStatMap entityStatMapComponent = commandBuffer.getComponent(ref, EntityStatMap.getComponentType());
       assert entityStatMapComponent != null;
       Int2FloatMap adjustedEntityStats = new Int2FloatOpenHashMap(this.entityStats);

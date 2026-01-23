@@ -32,6 +32,8 @@ public interface MotionController {
 
    double getGravity();
 
+   void setHeadPitchAngleRange(@Nullable float[] var1);
+
    void spawned();
 
    void activate();

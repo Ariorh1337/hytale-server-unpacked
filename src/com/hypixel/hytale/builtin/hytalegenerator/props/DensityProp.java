@@ -15,6 +15,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class DensityProp extends Prop {
    private final Vector3i range;
@@ -25,6 +26,7 @@ public class DensityProp extends Prop {
    private final ContextDependency contextDependency;
    private final BlockMask placementMask;
    private final Material defaultMaterial;
+   private final Bounds3i readBounds_voxelGrid;
    private final Bounds3i writeBounds_voxelGrid;
 
    public DensityProp(
@@ -48,7 +50,8 @@ public class DensityProp extends Prop {
       Vector3i writeRange = writeSpace.getRange();
       Vector3i readRange = scanner.readSpaceWith(pattern).getRange();
       this.contextDependency = new ContextDependency(readRange, writeRange);
-      this.writeBounds_voxelGrid = this.contextDependency.getTotalPropBounds_voxelGrid();
+      this.readBounds_voxelGrid = this.contextDependency.getReadBounds_voxelGrid();
+      this.writeBounds_voxelGrid = this.contextDependency.getWriteBounds_voxelGrid();
    }
 
    public PositionListScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
@@ -188,9 +191,15 @@ public class DensityProp extends Prop {
       return this.contextDependency.clone();
    }
 
+   @NonNullDecl
+   @Override
+   public Bounds3i getReadBounds_voxelGrid() {
+      return this.readBounds_voxelGrid;
+   }
+
    @Nonnull
    @Override
-   public Bounds3i getWriteBounds() {
+   public Bounds3i getWriteBounds_voxelGrid() {
       return this.writeBounds_voxelGrid;
    }
 }

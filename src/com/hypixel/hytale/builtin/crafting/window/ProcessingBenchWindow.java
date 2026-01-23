@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.hypixel.hytale.builtin.crafting.CraftingPlugin;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.builtin.crafting.state.ProcessingBenchState;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistration;
@@ -21,7 +22,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemContainerWindow;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -194,13 +194,11 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
    }
 
    @Override
-   protected boolean onOpen0() {
-      super.onOpen0();
-      PlayerRef playerRef = this.getPlayerRef();
-      Ref<EntityStore> ref = playerRef.getReference();
-      Store<EntityStore> store = ref.getStore();
-      Player player = store.getComponent(ref, Player.getComponentType());
-      Inventory inventory = player.getInventory();
+   protected boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+      super.onOpen0(ref, store);
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      assert playerComponent != null;
+      Inventory inventory = playerComponent.getInventory();
       this.inventoryRegistration = inventory.getCombinedHotbarFirst().registerChangeEvent(event -> {
          this.windowData.add("inventoryHints", generateInventoryHints(this.bench, inventory.getCombinedHotbarFirst()));
          this.invalidate();
@@ -241,8 +239,8 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
    }
 
    @Override
-   public void onClose0() {
-      super.onClose0();
+   public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      super.onClose0(ref, componentAccessor);
       if (this.inventoryRegistration != null) {
          this.inventoryRegistration.unregister();
          this.inventoryRegistration = null;

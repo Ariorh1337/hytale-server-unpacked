@@ -14,11 +14,25 @@ public record PlayerSettings(
    @Nonnull PickupLocation usableItemsItemsPreferredPickupLocation,
    @Nonnull PickupLocation solidBlockItemsPreferredPickupLocation,
    @Nonnull PickupLocation miscItemsPreferredPickupLocation,
-   PlayerCreativeSettings creativeSettings
+   PlayerCreativeSettings creativeSettings,
+   boolean hideHelmet,
+   boolean hideCuirass,
+   boolean hideGauntlets,
+   boolean hidePants
 ) implements Component<EntityStore> {
    @Nonnull
    private static final PlayerSettings INSTANCE = new PlayerSettings(
-      false, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, new PlayerCreativeSettings()
+      false,
+      PickupLocation.Hotbar,
+      PickupLocation.Hotbar,
+      PickupLocation.Hotbar,
+      PickupLocation.Hotbar,
+      PickupLocation.Hotbar,
+      new PlayerCreativeSettings(),
+      false,
+      false,
+      false,
+      false
    );
 
    @Nonnull
@@ -41,7 +55,11 @@ public record PlayerSettings(
          this.usableItemsItemsPreferredPickupLocation,
          this.solidBlockItemsPreferredPickupLocation,
          this.miscItemsPreferredPickupLocation,
-         this.creativeSettings.clone()
+         this.creativeSettings.clone(),
+         this.hideHelmet,
+         this.hideCuirass,
+         this.hideGauntlets,
+         this.hidePants
       );
    }
 }

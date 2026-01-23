@@ -15,9 +15,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
@@ -47,21 +45,20 @@ public class CombatViewSystems {
    }
 
    @Nonnull
-   public static List<InterpretedCombatData> getCombatData(@Nonnull Ref<EntityStore> reference) {
-      CombatViewSystems.CombatData combatData = reference.getStore().getComponent(reference, CombatViewSystems.CombatData.getComponentType());
-      if (combatData.interpreted) {
-         return combatData.unmodifiableCombatData;
+   public static List<InterpretedCombatData> getCombatData(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+      CombatViewSystems.CombatData combatDataComponent = store.getComponent(ref, CombatViewSystems.CombatData.getComponentType());
+      if (combatDataComponent.interpreted) {
+         return combatDataComponent.unmodifiableCombatData;
       }
 
-      InteractionManager interactionManager = reference.getStore().getComponent(reference, InteractionModule.get().getInteractionManagerComponent());
-      CombatViewSystems.CombatDataPool combatDataPool = reference.getStore().getResource(CombatViewSystems.CombatDataPool.getResourceType());
-      List<InterpretedCombatData> dataList = combatData.combatData;
+      InteractionManager interactionManager = store.getComponent(ref, InteractionModule.get().getInteractionManagerComponent());
+      CombatViewSystems.CombatDataPool combatDataPool = store.getResource(CombatViewSystems.CombatDataPool.getResourceType());
+      List<InterpretedCombatData> dataList = combatDataComponent.combatData;
       IndexedLookupTableAssetMap<String, RootInteraction> interactionAssetMap = RootInteraction.getAssetMap();
       Set<String> attackInteractions = interactionAssetMap.getKeysForTag(CombatSupport.ATTACK_TAG_INDEX);
       Set<String> meleeInteractions = interactionAssetMap.getKeysForTag(CombatSupport.MELEE_TAG_INDEX);
       Set<String> rangedInteractions = interactionAssetMap.getKeysForTag(CombatSupport.RANGED_TAG_INDEX);
       Set<String> blockInteractions = interactionAssetMap.getKeysForTag(CombatSupport.BLOCK_TAG_INDEX);
-      LivingEntity entity = (LivingEntity)EntityUtils.getEntity(reference, reference.getStore());
       interactionManager.forEachInteraction((chain, interaction, list) -> {
          String rootId = chain.getRootInteraction().getId();
          if (!attackInteractions.contains(rootId)) {
@@ -78,8 +75,8 @@ public class CombatViewSystems {
          list.add(entry);
          return list;
       }, dataList);
-      combatData.interpreted = true;
-      return combatData.unmodifiableCombatData;
+      combatDataComponent.interpreted = true;
+      return combatDataComponent.unmodifiableCombatData;
    }
 
    public static class CombatData implements Component<EntityStore> {

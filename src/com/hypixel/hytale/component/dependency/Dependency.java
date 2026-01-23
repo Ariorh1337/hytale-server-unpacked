@@ -35,6 +35,6 @@ public abstract class Dependency<ECS_TYPE> {
    @Nonnull
    @Override
    public String toString() {
-      return "Dependency{order=" + this.order + "}";
+      return "Dependency{order=" + this.order + ", priority=" + this.priority + "}";
    }
 }

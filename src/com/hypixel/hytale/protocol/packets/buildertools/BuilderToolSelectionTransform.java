@@ -77,27 +77,27 @@ public class BuilderToolSelectionTransform implements Packet {
    public static BuilderToolSelectionTransform deserialize(@Nonnull ByteBuf buf, int offset) {
       BuilderToolSelectionTransform obj = new BuilderToolSelectionTransform();
       byte nullBits = buf.getByte(offset);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.initialSelectionMin = BlockPosition.deserialize(buf, offset + 1);
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.initialSelectionMax = BlockPosition.deserialize(buf, offset + 13);
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          obj.initialRotationOrigin = Vector3f.deserialize(buf, offset + 25);
       }
 
       obj.cutOriginal = buf.getByte(offset + 37) != 0;
       obj.applyTransformationToSelectionMinMax = buf.getByte(offset + 38) != 0;
       obj.isExitingTransformMode = buf.getByte(offset + 39) != 0;
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 8) != 0) {
          obj.initialPastePointForClipboardPaste = BlockPosition.deserialize(buf, offset + 40);
       }
 
       int pos = offset + 52;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 16) != 0) {
          int transformationMatrixCount = VarInt.peek(buf, pos);
          if (transformationMatrixCount < 0) {
             throw ProtocolException.negativeLength("TransformationMatrix", transformationMatrixCount);
@@ -130,7 +130,7 @@ public class BuilderToolSelectionTransform implements Packet {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int pos = offset + 52;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 16) != 0) {
          int arrLen = VarInt.peek(buf, pos);
          pos += VarInt.length(buf, pos) + arrLen * 4;
       }
@@ -141,23 +141,23 @@ public class BuilderToolSelectionTransform implements Packet {
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
-      if (this.transformationMatrix != null) {
+      if (this.initialSelectionMin != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.initialSelectionMin != null) {
+      if (this.initialSelectionMax != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.initialSelectionMax != null) {
+      if (this.initialRotationOrigin != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.initialRotationOrigin != null) {
+      if (this.initialPastePointForClipboardPaste != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.initialPastePointForClipboardPaste != null) {
+      if (this.transformationMatrix != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
@@ -219,7 +219,7 @@ public class BuilderToolSelectionTransform implements Packet {
 
       byte nullBits = buffer.getByte(offset);
       int pos = offset + 52;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 16) != 0) {
          int transformationMatrixCount = VarInt.peek(buffer, pos);
          if (transformationMatrixCount < 0) {
             return ValidationResult.error("Invalid array count for TransformationMatrix");

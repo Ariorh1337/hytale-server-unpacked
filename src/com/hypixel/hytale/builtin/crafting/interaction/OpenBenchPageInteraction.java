@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.crafting.interaction;
 
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.builtin.crafting.state.BenchState;
+import com.hypixel.hytale.builtin.crafting.window.BenchWindow;
 import com.hypixel.hytale.builtin.crafting.window.DiagramCraftingWindow;
 import com.hypixel.hytale.builtin.crafting.window.SimpleCraftingWindow;
 import com.hypixel.hytale.builtin.crafting.window.StructuralCraftingWindow;
@@ -16,6 +17,7 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
@@ -23,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Roo
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -82,11 +85,19 @@ public class OpenBenchPageInteraction extends SimpleBlockInteraction {
          assert craftingManagerComponent != null;
          if (!craftingManagerComponent.hasBenchSet()) {
             if (world.getState(targetBlock.x, targetBlock.y, targetBlock.z, true) instanceof BenchState benchState) {
-               playerComponent.getPageManager().setPageWithWindows(ref, store, Page.Bench, true, switch (this.pageType) {
+               BenchWindow benchWindow = switch (this.pageType) {
                   case SIMPLE_CRAFTING -> new SimpleCraftingWindow(benchState);
-                  case DIAGRAM_CRAFTING -> new DiagramCraftingWindow(commandBuffer, benchState);
+                  case DIAGRAM_CRAFTING -> new DiagramCraftingWindow(ref, commandBuffer, benchState);
                   case STRUCTURAL_CRAFTING -> new StructuralCraftingWindow(benchState);
-               });
+               };
+               UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+               assert uuidComponent != null;
+               UUID uuid = uuidComponent.getUuid();
+               if (benchState.getWindows().putIfAbsent(uuid, benchWindow) == null) {
+                  benchWindow.registerCloseEvent(event -> benchState.getWindows().remove(uuid, benchWindow));
+               }
+
+               playerComponent.getPageManager().setPageWithWindows(ref, store, Page.Bench, true, benchWindow);
             }
          }
       }

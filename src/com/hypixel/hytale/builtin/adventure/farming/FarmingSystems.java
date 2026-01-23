@@ -48,6 +48,25 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class FarmingSystems {
+   private static boolean hasCropAbove(BlockChunk blockChunk, int x, int y, int z) {
+      if (y + 1 >= 320) {
+         return false;
+      }
+
+      BlockSection aboveBlockSection = blockChunk.getSectionAtBlockY(y + 1);
+      if (aboveBlockSection == null) {
+         return false;
+      }
+
+      BlockType aboveBlockType = BlockType.getAssetMap().getAsset(aboveBlockSection.get(x, y + 1, z));
+      if (aboveBlockType == null) {
+         return false;
+      }
+
+      FarmingData farmingConfig = aboveBlockType.getFarming();
+      return farmingConfig != null && farmingConfig.getStages() != null;
+   }
+
    private static boolean updateSoilDecayTime(CommandBuffer<ChunkStore> commandBuffer, TilledSoilBlock soilBlock, BlockType blockType) {
       if (blockType != null && blockType.getFarming() != null && blockType.getFarming().getSoilConfig() != null) {
          FarmingData.SoilConfig soilConfig = blockType.getFarming().getSoilConfig();
@@ -456,18 +475,11 @@ public class FarmingSystems {
          int y = ChunkUtil.yFromBlockInColumn(info.getIndex());
          int z = ChunkUtil.zFromBlockInColumn(info.getIndex());
          if (y < 320) {
-            int checkIndex = ChunkUtil.indexBlockInColumn(x, y + 1, z);
-            Ref<ChunkStore> aboveBlockRef = blockComponentChunk.getEntityReference(checkIndex);
-            boolean hasCrop = false;
-            if (aboveBlockRef != null) {
-               FarmingBlock farmingBlock = commandBuffer.getComponent(aboveBlockRef, FarmingBlock.getComponentType());
-               hasCrop = farmingBlock != null;
-            }
-
             assert info.getChunkRef() != null;
             BlockChunk blockChunk = commandBuffer.getComponent(info.getChunkRef(), BlockChunk.getComponentType());
             assert blockChunk != null;
             BlockSection blockSection = blockChunk.getSectionAtBlockY(y);
+            boolean hasCrop = FarmingSystems.hasCropAbove(blockChunk, x, y, z);
             BlockType blockType = BlockType.getAssetMap().getAsset(blockSection.get(x, y, z));
             Instant currentTime = commandBuffer.getExternalData()
                .getWorld()

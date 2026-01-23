@@ -15,9 +15,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ChunkTrackerCommand extends AbstractTargetPlayerCommand {
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_TRACKER_SUMMARY = Message.translation("server.commands.chunkTracker.summary");
-
    public ChunkTrackerCommand() {
       super("tracker", "server.commands.chunk.tracker.desc");
    }
@@ -38,7 +35,8 @@ public class ChunkTrackerCommand extends AbstractTargetPlayerCommand {
       ChunkStore chunkStore = world.getChunkStore();
       String loadedWorldChunks = Integer.toString(chunkStore.getLoadedChunksCount());
       context.sendMessage(
-         MESSAGE_COMMANDS_CHUNK_TRACKER_SUMMARY.param("maxChunksPerSecond", chunkTrackerComponent.getMaxChunksPerSecond())
+         Message.translation("server.commands.chunkTracker.summary")
+            .param("maxChunksPerSecond", chunkTrackerComponent.getMaxChunksPerSecond())
             .param("maxChunksPerTick", chunkTrackerComponent.getMaxChunksPerTick())
             .param("minChunkLoadedRadius", chunkTrackerComponent.getMinLoadedChunksRadius())
             .param("maxHotChunkLoadedRadius", chunkTrackerComponent.getMaxHotLoadedChunksRadius())

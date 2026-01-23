@@ -12,6 +12,7 @@ public class ShutdownReason {
    public static final ShutdownReason MISSING_REQUIRED_PLUGIN = new ShutdownReason(5);
    public static final ShutdownReason VALIDATE_ERROR = new ShutdownReason(6);
    public static final ShutdownReason MISSING_ASSETS = new ShutdownReason(7);
+   public static final ShutdownReason UPDATE = new ShutdownReason(8);
    private final int exitCode;
    private final String message;
 

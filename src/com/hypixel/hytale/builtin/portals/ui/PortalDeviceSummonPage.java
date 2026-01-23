@@ -309,10 +309,16 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
 
       Transform worldSpawnPoint = spawnProvider.getSpawnPoint(world, sampleUuid);
-      return DEFAULT_WORLDGEN_SPAWN.equals(worldSpawnPoint) && portalSpawn != null ? CompletableFuture.supplyAsync(() -> {
-         Transform computedSpawn = PortalSpawnFinder.computeSpawnTransform(world, portalSpawn);
-         return computedSpawn == null ? worldSpawnPoint : computedSpawn;
-      }, world) : CompletableFuture.completedFuture(worldSpawnPoint);
+      if (DEFAULT_WORLDGEN_SPAWN.equals(worldSpawnPoint) && portalSpawn != null) {
+         return CompletableFuture.supplyAsync(() -> {
+            Transform computedSpawn = PortalSpawnFinder.computeSpawnTransform(world, portalSpawn);
+            return computedSpawn == null ? worldSpawnPoint : computedSpawn;
+         }, world);
+      }
+
+      Transform uppedSpawnPoint = worldSpawnPoint.clone();
+      uppedSpawnPoint.getPosition().add(0.0, 0.5, 0.0);
+      return CompletableFuture.completedFuture(uppedSpawnPoint);
    }
 
    private PortalDeviceSummonPage.State computeState(@Nonnull Player player, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {

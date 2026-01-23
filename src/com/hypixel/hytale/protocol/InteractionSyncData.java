@@ -168,31 +168,31 @@ public class InteractionSyncData {
       obj.chargeValue = buf.getFloatLE(offset + 47);
       obj.chainingIndex = buf.getIntLE(offset + 51);
       obj.flagIndex = buf.getIntLE(offset + 55);
-      if ((nullBits[0] & 16) != 0) {
+      if ((nullBits[0] & 4) != 0) {
          obj.attackerPos = Position.deserialize(buf, offset + 59);
       }
 
-      if ((nullBits[0] & 32) != 0) {
+      if ((nullBits[0] & 8) != 0) {
          obj.attackerRot = Direction.deserialize(buf, offset + 83);
       }
 
-      if ((nullBits[0] & 64) != 0) {
+      if ((nullBits[0] & 16) != 0) {
          obj.raycastHit = Position.deserialize(buf, offset + 95);
       }
 
       obj.raycastDistance = buf.getFloatLE(offset + 119);
-      if ((nullBits[0] & 128) != 0) {
+      if ((nullBits[0] & 32) != 0) {
          obj.raycastNormal = Vector3f.deserialize(buf, offset + 123);
       }
 
       obj.movementDirection = MovementDirection.fromValue(buf.getByte(offset + 135));
       obj.applyForceState = ApplyForceState.fromValue(buf.getByte(offset + 136));
       obj.nextLabel = buf.getIntLE(offset + 137);
-      if ((nullBits[1] & 1) != 0) {
+      if ((nullBits[0] & 64) != 0) {
          obj.generatedUUID = PacketIO.readUUID(buf, offset + 141);
       }
 
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int varPos0 = offset + 165 + buf.getIntLE(offset + 157);
          int forkCountsCount = VarInt.peek(buf, varPos0);
          if (forkCountsCount < 0) {
@@ -217,7 +217,7 @@ public class InteractionSyncData {
          }
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[1] & 1) != 0) {
          int varPos1 = offset + 165 + buf.getIntLE(offset + 161);
          int hitEntitiesCount = VarInt.peek(buf, varPos1);
          if (hitEntitiesCount < 0) {
@@ -248,7 +248,7 @@ public class InteractionSyncData {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       int maxEnd = 165;
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 157);
          int pos0 = offset + 165 + fieldOffset0;
          int dictLen = VarInt.peek(buf, pos0);
@@ -263,7 +263,7 @@ public class InteractionSyncData {
          }
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[1] & 1) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 161);
          int pos1 = offset + 165 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
@@ -292,31 +292,31 @@ public class InteractionSyncData {
          nullBits[0] = (byte)(nullBits[0] | 2);
       }
 
-      if (this.forkCounts != null) {
+      if (this.attackerPos != null) {
          nullBits[0] = (byte)(nullBits[0] | 4);
       }
 
-      if (this.hitEntities != null) {
+      if (this.attackerRot != null) {
          nullBits[0] = (byte)(nullBits[0] | 8);
       }
 
-      if (this.attackerPos != null) {
+      if (this.raycastHit != null) {
          nullBits[0] = (byte)(nullBits[0] | 16);
       }
 
-      if (this.attackerRot != null) {
+      if (this.raycastNormal != null) {
          nullBits[0] = (byte)(nullBits[0] | 32);
       }
 
-      if (this.raycastHit != null) {
+      if (this.generatedUUID != null) {
          nullBits[0] = (byte)(nullBits[0] | 64);
       }
 
-      if (this.raycastNormal != null) {
+      if (this.forkCounts != null) {
          nullBits[0] = (byte)(nullBits[0] | 128);
       }
 
-      if (this.generatedUUID != null) {
+      if (this.hitEntities != null) {
          nullBits[1] = (byte)(nullBits[1] | 1);
       }
 
@@ -435,7 +435,7 @@ public class InteractionSyncData {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-      if ((nullBits[0] & 4) != 0) {
+      if ((nullBits[0] & 128) != 0) {
          int forkCountsOffset = buffer.getIntLE(offset + 157);
          if (forkCountsOffset < 0) {
             return ValidationResult.error("Invalid offset for ForkCounts");
@@ -465,7 +465,7 @@ public class InteractionSyncData {
          }
       }
 
-      if ((nullBits[0] & 8) != 0) {
+      if ((nullBits[1] & 1) != 0) {
          int hitEntitiesOffset = buffer.getIntLE(offset + 161);
          if (hitEntitiesOffset < 0) {
             return ValidationResult.error("Invalid offset for HitEntities");

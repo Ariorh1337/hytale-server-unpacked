@@ -119,8 +119,9 @@ public class CraftingPlugin extends JavaPlugin {
          );
       ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
       this.craftingManagerComponentType = entityStoreRegistry.registerComponent(CraftingManager.class, CraftingManager::new);
-      entityStoreRegistry.registerSystem(new PlayerCraftingSystems.PlayerCraftingSystem(this.craftingManagerComponentType));
-      entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingManagerAddSystem(this.craftingManagerComponentType));
+      entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingTickingSystem(this.craftingManagerComponentType));
+      entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingHolderSystem(this.craftingManagerComponentType));
+      entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingRefSystem(this.craftingManagerComponentType));
       this.getCodecRegistry(Interaction.CODEC)
          .register("OpenBenchPage", OpenBenchPageInteraction.class, OpenBenchPageInteraction.CODEC)
          .register("OpenProcessingBench", OpenProcessingBenchInteraction.class, OpenProcessingBenchInteraction.CODEC);

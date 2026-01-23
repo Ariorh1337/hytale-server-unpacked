@@ -30,10 +30,6 @@ public class ObjectiveStartCommand extends AbstractCommandCollection {
 
    public static class StartObjectiveCommand extends AbstractPlayerCommand {
       @Nonnull
-      private static final Message MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND = Message.translation("server.commands.objective.objectiveNotFound");
-      @Nonnull
-      private static final Message MESSAGE_GENERAL_FAILED_DID_YOU_MEAN = Message.translation("server.general.failed.didYouMean");
-      @Nonnull
       private final RequiredArg<String> objectiveArg = this.withRequiredArg(
          "objectiveId", "server.commands.objective.start.objective.arg.objectiveId.desc", ArgTypes.STRING
       );
@@ -49,12 +45,13 @@ public class ObjectiveStartCommand extends AbstractCommandCollection {
          String objectiveId = this.objectiveArg.get(context);
          ObjectiveAsset asset = ObjectiveAsset.getAssetMap().getAsset(objectiveId);
          if (asset == null) {
-            context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND.param("id", objectiveId));
+            context.sendMessage(Message.translation("server.commands.objective.objectiveNotFound").param("id", objectiveId));
             context.sendMessage(
-               MESSAGE_GENERAL_FAILED_DID_YOU_MEAN.param(
-                  "choices",
-                  StringUtil.sortByFuzzyDistance(objectiveId, ObjectiveAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT).toString()
-               )
+               Message.translation("server.general.failed.didYouMean")
+                  .param(
+                     "choices",
+                     StringUtil.sortByFuzzyDistance(objectiveId, ObjectiveAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT).toString()
+                  )
             );
          } else {
             HashSet<UUID> playerSet = new HashSet<>();
@@ -68,10 +65,6 @@ public class ObjectiveStartCommand extends AbstractCommandCollection {
    }
 
    public static class StartObjectiveLineCommand extends AbstractPlayerCommand {
-      @Nonnull
-      private static final Message MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_LINE_NOT_FOUND = Message.translation("server.commands.objective.objectiveLineNotFound");
-      @Nonnull
-      private static final Message MESSAGE_GENERAL_FAILED_DID_YOU_MEAN = Message.translation("server.general.failed.didYouMean");
       @Nonnull
       private final RequiredArg<String> objectiveLineArg = this.withRequiredArg(
          "objectiveLineId", "server.commands.objective.start.objectiveLine.arg.objectiveLineId.desc", ArgTypes.STRING
@@ -87,13 +80,14 @@ public class ObjectiveStartCommand extends AbstractCommandCollection {
       ) {
          String objectiveLineId = this.objectiveLineArg.get(context);
          if (ObjectiveLineAsset.getAssetMap().getAsset(objectiveLineId) == null) {
-            context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_LINE_NOT_FOUND.param("id", objectiveLineId));
+            context.sendMessage(Message.translation("server.commands.objective.objectiveLineNotFound").param("id", objectiveLineId));
             context.sendMessage(
-               MESSAGE_GENERAL_FAILED_DID_YOU_MEAN.param(
-                  "choices",
-                  StringUtil.sortByFuzzyDistance(objectiveLineId, ObjectiveLineAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT)
-                     .toString()
-               )
+               Message.translation("server.general.failed.didYouMean")
+                  .param(
+                     "choices",
+                     StringUtil.sortByFuzzyDistance(objectiveLineId, ObjectiveLineAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT)
+                        .toString()
+                  )
             );
          } else {
             HashSet<UUID> playerSet = new HashSet<>();

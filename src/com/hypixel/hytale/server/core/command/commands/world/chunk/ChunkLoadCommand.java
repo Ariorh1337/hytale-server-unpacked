@@ -18,12 +18,6 @@ import javax.annotation.Nonnull;
 
 public class ChunkLoadCommand extends AbstractWorldCommand {
    @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_LOAD_ALREADY_LOADED = Message.translation("server.commands.chunk.load.alreadyLoaded");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_LOAD_LOADING = Message.translation("server.commands.chunk.load.loading");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_CHUNK_LOAD_LOADED = Message.translation("server.commands.chunk.load.loaded");
-   @Nonnull
    private final RequiredArg<RelativeChunkPosition> chunkPosArg = this.withRequiredArg(
       "x z", "server.commands.chunk.load.position.desc", ArgTypes.RELATIVE_CHUNK_POSITION
    );
@@ -43,17 +37,35 @@ public class ChunkLoadCommand extends AbstractWorldCommand {
       Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
       if (chunkRef != null && chunkRef.isValid()) {
          context.sendMessage(
-            MESSAGE_COMMANDS_CHUNK_LOAD_ALREADY_LOADED.param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName())
+            Message.translation("server.commands.chunk.load.alreadyLoaded")
+               .param("chunkX", position.x)
+               .param("chunkZ", position.y)
+               .param("worldName", world.getName())
          );
       } else {
-         context.sendMessage(MESSAGE_COMMANDS_CHUNK_LOAD_LOADING.param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
-         world.getChunkAsync(position.x, position.y).thenAccept(worldChunk -> world.execute(() -> {
-            if (this.markDirtyArg.provided(context)) {
-               worldChunk.markNeedsSaving();
-            }
+         context.sendMessage(
+            Message.translation("server.commands.chunk.load.loading")
+               .param("chunkX", position.x)
+               .param("chunkZ", position.y)
+               .param("worldName", world.getName())
+         );
+         world.getChunkAsync(position.x, position.y)
+            .thenAccept(
+               worldChunk -> world.execute(
+                  () -> {
+                     if (this.markDirtyArg.provided(context)) {
+                        worldChunk.markNeedsSaving();
+                     }
 
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_LOAD_LOADED.param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
-         }));
+                     context.sendMessage(
+                        Message.translation("server.commands.chunk.load.loaded")
+                           .param("chunkX", position.x)
+                           .param("chunkZ", position.y)
+                           .param("worldName", world.getName())
+                     );
+                  }
+               )
+            );
       }
    }
 }

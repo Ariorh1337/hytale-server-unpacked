@@ -23,12 +23,6 @@ import javax.annotation.Nonnull;
 
 public class TeleportWorldCommand extends AbstractPlayerCommand {
    @Nonnull
-   private static final Message MESSAGE_WORLD_NOT_FOUND = Message.translation("server.world.notFound");
-   @Nonnull
-   private static final Message MESSAGE_WORLD_SPAWN_NOT_SET = Message.translation("server.world.spawn.notSet");
-   @Nonnull
-   private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_WORLD = Message.translation("server.commands.teleport.teleportedToWorld");
-   @Nonnull
    private final RequiredArg<String> worldNameArg = this.withRequiredArg("worldName", "server.commands.worldport.worldName.desc", ArgTypes.STRING);
 
    public TeleportWorldCommand() {
@@ -44,11 +38,11 @@ public class TeleportWorldCommand extends AbstractPlayerCommand {
       String worldName = this.worldNameArg.get(context);
       World targetWorld = Universe.get().getWorld(worldName);
       if (targetWorld == null) {
-         context.sendMessage(MESSAGE_WORLD_NOT_FOUND.param("worldName", worldName));
+         context.sendMessage(Message.translation("server.world.notFound").param("worldName", worldName));
       } else {
          Transform spawnPoint = targetWorld.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, store);
          if (spawnPoint == null) {
-            context.sendMessage(MESSAGE_WORLD_SPAWN_NOT_SET.param("worldName", worldName));
+            context.sendMessage(Message.translation("server.world.spawn.notSet").param("worldName", worldName));
          } else {
             TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
             HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
@@ -63,7 +57,8 @@ public class TeleportWorldCommand extends AbstractPlayerCommand {
             store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
             Vector3d spawnPos = spawnPoint.getPosition();
             context.sendMessage(
-               MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_WORLD.param("worldName", worldName)
+               Message.translation("server.commands.teleport.teleportedToWorld")
+                  .param("worldName", worldName)
                   .param("x", spawnPos.getX())
                   .param("y", spawnPos.getY())
                   .param("z", spawnPos.getZ())

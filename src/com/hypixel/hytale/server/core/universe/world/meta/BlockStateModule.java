@@ -241,8 +241,8 @@ public class BlockStateModule extends JavaPlugin {
          T blockState = holder.getComponent(this.componentType);
          switch (reason) {
             case REMOVE:
-               if (blockState instanceof DestroyableBlockState) {
-                  ((DestroyableBlockState)blockState).onDestroy();
+               if (blockState instanceof DestroyableBlockState destroyableBlockState) {
+                  destroyableBlockState.onDestroy();
                }
 
                blockState.unloadFromWorld();

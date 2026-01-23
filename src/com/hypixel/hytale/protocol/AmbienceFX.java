@@ -74,13 +74,13 @@ public class AmbienceFX {
    public static AmbienceFX deserialize(@Nonnull ByteBuf buf, int offset) {
       AmbienceFX obj = new AmbienceFX();
       byte nullBits = buf.getByte(offset);
-      if ((nullBits & 32) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.soundEffect = AmbienceFXSoundEffect.deserialize(buf, offset + 1);
       }
 
       obj.priority = buf.getIntLE(offset + 10);
       obj.audioCategoryIndex = buf.getIntLE(offset + 14);
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int varPos0 = offset + 42 + buf.getIntLE(offset + 18);
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
@@ -94,12 +94,12 @@ public class AmbienceFX {
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int varPos1 = offset + 42 + buf.getIntLE(offset + 22);
          obj.conditions = AmbienceFXConditions.deserialize(buf, varPos1);
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 8) != 0) {
          int varPos2 = offset + 42 + buf.getIntLE(offset + 26);
          int soundsCount = VarInt.peek(buf, varPos2);
          if (soundsCount < 0) {
@@ -124,12 +124,12 @@ public class AmbienceFX {
          }
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 16) != 0) {
          int varPos3 = offset + 42 + buf.getIntLE(offset + 30);
          obj.music = AmbienceFXMusic.deserialize(buf, varPos3);
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 32) != 0) {
          int varPos4 = offset + 42 + buf.getIntLE(offset + 34);
          obj.ambientBed = AmbienceFXAmbientBed.deserialize(buf, varPos4);
       }
@@ -163,7 +163,7 @@ public class AmbienceFX {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 42;
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 18);
          int pos0 = offset + 42 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
@@ -173,7 +173,7 @@ public class AmbienceFX {
          }
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 22);
          int pos1 = offset + 42 + fieldOffset1;
          pos1 += AmbienceFXConditions.computeBytesConsumed(buf, pos1);
@@ -182,7 +182,7 @@ public class AmbienceFX {
          }
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 26);
          int pos2 = offset + 42 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
@@ -197,7 +197,7 @@ public class AmbienceFX {
          }
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 16) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 30);
          int pos3 = offset + 42 + fieldOffset3;
          pos3 += AmbienceFXMusic.computeBytesConsumed(buf, pos3);
@@ -206,7 +206,7 @@ public class AmbienceFX {
          }
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 32) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 34);
          int pos4 = offset + 42 + fieldOffset4;
          pos4 += AmbienceFXAmbientBed.computeBytesConsumed(buf, pos4);
@@ -231,27 +231,27 @@ public class AmbienceFX {
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
-      if (this.id != null) {
+      if (this.soundEffect != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.conditions != null) {
+      if (this.id != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.sounds != null) {
+      if (this.conditions != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.music != null) {
+      if (this.sounds != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.ambientBed != null) {
+      if (this.music != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.soundEffect != null) {
+      if (this.ambientBed != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
@@ -375,7 +375,7 @@ public class AmbienceFX {
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 1) != 0) {
+      if ((nullBits & 2) != 0) {
          int idOffset = buffer.getIntLE(offset + 18);
          if (idOffset < 0) {
             return ValidationResult.error("Invalid offset for Id");
@@ -402,7 +402,7 @@ public class AmbienceFX {
          }
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 4) != 0) {
          int conditionsOffset = buffer.getIntLE(offset + 22);
          if (conditionsOffset < 0) {
             return ValidationResult.error("Invalid offset for Conditions");
@@ -421,7 +421,7 @@ public class AmbienceFX {
          pos += AmbienceFXConditions.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 8) != 0) {
          int soundsOffset = buffer.getIntLE(offset + 26);
          if (soundsOffset < 0) {
             return ValidationResult.error("Invalid offset for Sounds");
@@ -448,7 +448,7 @@ public class AmbienceFX {
          }
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 16) != 0) {
          int musicOffset = buffer.getIntLE(offset + 30);
          if (musicOffset < 0) {
             return ValidationResult.error("Invalid offset for Music");
@@ -467,7 +467,7 @@ public class AmbienceFX {
          pos += AmbienceFXMusic.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 32) != 0) {
          int ambientBedOffset = buffer.getIntLE(offset + 34);
          if (ambientBedOffset < 0) {
             return ValidationResult.error("Invalid offset for AmbientBed");

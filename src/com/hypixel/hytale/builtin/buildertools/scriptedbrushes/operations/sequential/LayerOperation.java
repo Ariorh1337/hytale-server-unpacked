@@ -70,6 +70,10 @@ public class LayerOperation extends SequenceBrushOperation {
             for (LayerEntryCodec entry : this.layerArgs) {
                depthTestingAt += entry.getDepth();
                if (depth < depthTestingAt) {
+                  if (entry.isSkip()) {
+                     return true;
+                  }
+
                   int blockId = this.resolveBlockId(entry, toolArgs, brushConfig);
                   if (blockId >= 0) {
                      edit.setBlock(x, y, z, blockId);

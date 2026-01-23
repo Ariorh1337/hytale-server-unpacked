@@ -18,7 +18,6 @@ import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
 import com.hypixel.hytale.protocol.packets.connection.Ping;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
-import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
 import com.hypixel.hytale.server.core.io.handlers.login.AuthenticationPacketHandler;
@@ -43,7 +42,6 @@ import java.net.SocketAddress;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -276,43 +274,59 @@ public abstract class PacketHandler implements IPacketReceiver {
       this.pingInfo[packet.type.ordinal()].handlePacket(packet);
    }
 
-   protected void setTimeout(@Nonnull String stageId, @Nonnull BooleanSupplier meets, long def, @Nonnull TimeUnit timeUnit) {
+   protected void initStage(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition) {
+      NettyUtil.TimeoutContext.init(this.channel, stage, this.getIdentifier());
+      this.setStageTimeout(stage, timeout, condition);
+   }
+
+   protected void enterStage(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition) {
+      NettyUtil.TimeoutContext.update(this.channel, stage, this.getIdentifier());
+      this.updatePacketTimeout(timeout);
+      this.setStageTimeout(stage, timeout, condition);
+   }
+
+   protected void enterStage(@Nonnull String stage, @Nonnull Duration timeout) {
+      NettyUtil.TimeoutContext.update(this.channel, stage, this.getIdentifier());
+      this.updatePacketTimeout(timeout);
+   }
+
+   protected void continueStage(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition) {
+      NettyUtil.TimeoutContext.update(this.channel, stage);
+      this.updatePacketTimeout(timeout);
+      this.setStageTimeout(stage, timeout, condition);
+   }
+
+   private void setStageTimeout(@Nonnull String stageId, @Nonnull Duration timeout, @Nonnull BooleanSupplier meets) {
       if (this.timeoutTask != null) {
          this.timeoutTask.cancel(false);
       }
 
       if (this instanceof AuthenticationPacketHandler || !(this instanceof PasswordPacketHandler) || this.auth != null) {
-         logConnectionTimings(this.channel, "setTimeout-" + stageId, Level.FINEST);
-         Map<String, Duration> timeouts = HytaleServer.get().getConfig().getConnectionTimeouts().getJoinTimeouts();
-         long timeout;
-         if (timeouts.containsKey(stageId)) {
-            timeout = timeouts.get(stageId).toMillis();
-         } else {
-            timeout = TimeUnit.MILLISECONDS.convert(def, timeUnit);
-         }
-
+         logConnectionTimings(this.channel, "Entering stage '" + stageId + "'", Level.FINEST);
+         long timeoutMillis = timeout.toMillis();
          this.timeoutTask = this.channel
             .eventLoop()
             .schedule(
                () -> {
                   if (this.channel.isOpen()) {
                      if (!meets.getAsBoolean()) {
-                        this.disconnect("Either you took too long to login or we took too long to process your request! Retry again in a moment.");
+                        NettyUtil.TimeoutContext context = this.channel.attr(NettyUtil.TimeoutContext.KEY).get();
+                        String duration = context != null ? FormatUtil.nanosToString(System.nanoTime() - context.connectionStartNs()) : "unknown";
                         HytaleLogger.getLogger()
                            .at(Level.WARNING)
-                           .log(
-                              "Took longer than %s for %s to log in at stage %s! Aborting!",
-                              FormatUtil.timeUnitToString(timeout, TimeUnit.MILLISECONDS),
-                              this.getIdentifier(),
-                              stageId
-                           );
+                           .log("Stage timeout for %s at stage '%s' after %s connected", this.getIdentifier(), stageId, duration);
+                        this.disconnect("Either you took too long to login or we took too long to process your request! Retry again in a moment.");
                      }
                   }
                },
-               timeout,
+               timeoutMillis,
                TimeUnit.MILLISECONDS
             );
       }
+   }
+
+   private void updatePacketTimeout(@Nonnull Duration timeout) {
+      this.channel.attr(ProtocolUtil.PACKET_TIMEOUT_KEY).set(timeout);
    }
 
    protected void clearTimeout() {
