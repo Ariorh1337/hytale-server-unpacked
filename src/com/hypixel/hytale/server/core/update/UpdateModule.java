@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.update;
 
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.util.SystemUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Constants;
@@ -32,6 +33,7 @@ import javax.annotation.Nullable;
 public class UpdateModule extends JavaPlugin {
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(UpdateModule.class).build();
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   public static final boolean KILL_SWITCH_ENABLED = SystemUtil.getEnvBoolean("HYTALE_DISABLE_UPDATES");
    private static UpdateModule instance;
    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
       Thread t = new Thread(r, "UpdateChecker");
@@ -64,22 +66,28 @@ public class UpdateModule extends JavaPlugin {
 
    @Override
    protected void setup() {
+      if (KILL_SWITCH_ENABLED) {
+         LOGGER.at(Level.INFO).log("Update commands disabled via HYTALE_DISABLE_UPDATES environment variable");
+      }
+
       this.getCommandRegistry().registerCommand(new UpdateCommand());
    }
 
    @Override
    protected void start() {
-      String stagedVersion = UpdateService.getStagedVersion();
-      if (stagedVersion != null) {
-         this.logStagedUpdateWarning(stagedVersion, true);
-         this.startAutoApplyTaskIfNeeded();
-      }
+      if (!KILL_SWITCH_ENABLED) {
+         String stagedVersion = UpdateService.getStagedVersion();
+         if (stagedVersion != null) {
+            this.logStagedUpdateWarning(stagedVersion, true);
+            this.startAutoApplyTaskIfNeeded();
+         }
 
-      if (this.shouldEnableUpdateChecker()) {
-         HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
-         int intervalSeconds = config.getCheckIntervalSeconds();
-         LOGGER.at(Level.INFO).log("Update checker enabled (interval: %ds)", (int)intervalSeconds);
-         this.updateCheckTask = this.scheduler.scheduleAtFixedRate(this::performUpdateCheck, 60L, intervalSeconds, TimeUnit.SECONDS);
+         if (this.shouldEnableUpdateChecker()) {
+            HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
+            int intervalSeconds = config.getCheckIntervalSeconds();
+            LOGGER.at(Level.INFO).log("Update checker enabled (interval: %ds)", (int)intervalSeconds);
+            this.updateCheckTask = this.scheduler.scheduleAtFixedRate(this::performUpdateCheck, 60L, intervalSeconds, TimeUnit.SECONDS);
+         }
       }
    }
 
@@ -108,9 +116,11 @@ public class UpdateModule extends JavaPlugin {
    }
 
    public void onServerReady() {
-      String stagedVersion = UpdateService.getStagedVersion();
-      if (stagedVersion != null) {
-         this.logStagedUpdateWarning(stagedVersion, false);
+      if (!KILL_SWITCH_ENABLED) {
+         String stagedVersion = UpdateService.getStagedVersion();
+         if (stagedVersion != null) {
+            this.logStagedUpdateWarning(stagedVersion, false);
+         }
       }
    }
 

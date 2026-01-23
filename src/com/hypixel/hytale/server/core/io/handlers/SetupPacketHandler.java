@@ -76,17 +76,6 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
       this.referralData = referralData;
       this.referralSource = referralSource;
       this.auth = null;
-      if (referralData != null && referralData.length > 0) {
-         HytaleLogger.getLogger()
-            .at(Level.INFO)
-            .log(
-               "Player %s connecting with %d bytes of referral data from %s:%d (unauthenticated - plugins must validate!)",
-               username,
-               referralData.length,
-               referralSource != null ? referralSource.host : "unknown",
-               referralSource != null ? referralSource.port : 0
-            );
-      }
    }
 
    public SetupPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull PlayerAuthentication auth) {
@@ -96,17 +85,6 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
       this.auth = auth;
       this.referralData = auth.getReferralData();
       this.referralSource = auth.getReferralSource();
-      if (this.referralData != null && this.referralData.length > 0) {
-         HytaleLogger.getLogger()
-            .at(Level.INFO)
-            .log(
-               "Player %s connecting with %d bytes of referral data from %s:%d (authenticated)",
-               this.username,
-               this.referralData.length,
-               this.referralSource != null ? this.referralSource.host : "unknown",
-               this.referralSource != null ? this.referralSource.port : 0
-            );
-      }
    }
 
    @Nonnull
@@ -127,6 +105,18 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
    public void registered0(@Nonnull PacketHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       this.enterStage("setup:world-settings", timeouts.getSetupWorldSettings(), () -> this.assets != null);
+      if (this.referralSource != null) {
+         HytaleLogger.getLogger()
+            .at(Level.INFO)
+            .log(
+               "Player %s referred from %s:%d with %d bytes of data",
+               this.username,
+               this.referralSource.host,
+               this.referralSource.port,
+               this.referralData != null ? this.referralData.length : 0
+            );
+      }
+
       PlayerSetupConnectEvent event = HytaleServer.get()
          .getEventBus()
          .<Void, PlayerSetupConnectEvent>dispatchFor(PlayerSetupConnectEvent.class)

@@ -112,6 +112,22 @@ public class InitialPacketHandler extends PacketHandler {
                   .log("Rejecting connection from %s - referral data too large: %d bytes (max: %d)", packet.username, packet.referralData.length, 4096);
                this.disconnect("Referral data exceeds maximum size of 4096 bytes");
             } else {
+               if (packet.referralData != null) {
+                  if (packet.referralSource == null) {
+                     HytaleLogger.getLogger()
+                        .at(Level.WARNING)
+                        .log("Rejecting connection from %s - referral data provided without source address", packet.username);
+                     this.disconnect("Referral connections must include source server address");
+                     return;
+                  }
+
+                  if (packet.referralSource.host == null || packet.referralSource.host.isEmpty()) {
+                     HytaleLogger.getLogger().at(Level.WARNING).log("Rejecting connection from %s - referral source has empty host", packet.username);
+                     this.disconnect("Referral source address is invalid");
+                     return;
+                  }
+               }
+
                boolean hasIdentityToken = packet.identityToken != null && !packet.identityToken.isEmpty();
                boolean isEditorClient = packet.clientType == ClientType.Editor;
                Options.AuthMode authMode = Options.getOptionSet().valueOf(Options.AUTH_MODE);
