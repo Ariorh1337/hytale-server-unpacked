@@ -7,14 +7,21 @@ import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ComponentRegistry;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.query.Query;
+import javax.annotation.Nonnull;
 
 public class AndQuery<ECS_TYPE>
 implements Query<ECS_TYPE> {
+    @Nonnull
     private final Query<ECS_TYPE>[] queries;
 
     @SafeVarargs
     public AndQuery(Query<ECS_TYPE> ... queries) {
         this.queries = queries;
+        for (int i = 0; i < queries.length; ++i) {
+            Query<ECS_TYPE> query = queries[i];
+            if (query != null) continue;
+            throw new IllegalArgumentException("Query in AndQuery cannot be null (Index: " + i + ")");
+        }
     }
 
     @Override
@@ -36,7 +43,7 @@ implements Query<ECS_TYPE> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
         for (Query<ECS_TYPE> query : this.queries) {
             query.validateRegistry(registry);
         }

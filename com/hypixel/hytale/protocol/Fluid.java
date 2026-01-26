@@ -88,15 +88,15 @@ public class Fluid {
         obj.maxFluidLevel = buf.getIntLE(offset + 1);
         obj.requiresAlphaBlending = buf.getByte(offset + 5) != 0;
         obj.opacity = Opacity.fromValue(buf.getByte(offset + 6));
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.light = ColorLight.deserialize(buf, offset + 7);
         }
         obj.fluidFXIndex = buf.getIntLE(offset + 11);
         obj.blockSoundSetIndex = buf.getIntLE(offset + 15);
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.particleColor = Color.deserialize(buf, offset + 19);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos0 = offset + 42 + buf.getIntLE(offset + 22);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -107,7 +107,7 @@ public class Fluid {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos1 = offset + 42 + buf.getIntLE(offset + 26);
             int cubeTexturesCount = VarInt.peek(buf, varPos1);
             if (cubeTexturesCount < 0) {
@@ -127,7 +127,7 @@ public class Fluid {
                 elemPos += BlockTextures.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos2 = offset + 42 + buf.getIntLE(offset + 30);
             int shaderEffectCount = VarInt.peek(buf, varPos2);
             if (shaderEffectCount < 0) {
@@ -147,7 +147,7 @@ public class Fluid {
                 ++elemPos;
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int varPos3 = offset + 42 + buf.getIntLE(offset + 34);
             int blockParticleSetIdLen = VarInt.peek(buf, varPos3);
             if (blockParticleSetIdLen < 0) {
@@ -184,7 +184,7 @@ public class Fluid {
         int sl;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 42;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 22);
             int pos0 = offset + 42 + fieldOffset0;
             sl = VarInt.peek(buf, pos0);
@@ -192,7 +192,7 @@ public class Fluid {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 26);
             int pos1 = offset + 42 + fieldOffset1;
             arrLen = VarInt.peek(buf, pos1);
@@ -204,7 +204,7 @@ public class Fluid {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 30);
             int pos2 = offset + 42 + fieldOffset2;
             arrLen = VarInt.peek(buf, pos2);
@@ -212,7 +212,7 @@ public class Fluid {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 34);
             int pos3 = offset + 42 + fieldOffset3;
             sl = VarInt.peek(buf, pos3);
@@ -234,22 +234,22 @@ public class Fluid {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.light != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.cubeTextures != null) {
+        if (this.particleColor != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.shaderEffect != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.light != null) {
+        if (this.cubeTextures != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.blockParticleSetId != null) {
+        if (this.shaderEffect != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
-        if (this.particleColor != null) {
+        if (this.blockParticleSetId != null) {
             nullBits = (byte)(nullBits | 0x20);
         }
         if (this.tagIndexes != null) {
@@ -362,7 +362,7 @@ public class Fluid {
             return ValidationResult.error("Buffer too small: expected at least 42 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int idOffset = buffer.getIntLE(offset + 22);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -383,7 +383,7 @@ public class Fluid {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int cubeTexturesOffset = buffer.getIntLE(offset + 26);
             if (cubeTexturesOffset < 0) {
                 return ValidationResult.error("Invalid offset for CubeTextures");
@@ -408,7 +408,7 @@ public class Fluid {
                 pos += BlockTextures.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int shaderEffectOffset = buffer.getIntLE(offset + 30);
             if (shaderEffectOffset < 0) {
                 return ValidationResult.error("Invalid offset for ShaderEffect");
@@ -429,7 +429,7 @@ public class Fluid {
                 return ValidationResult.error("Buffer overflow reading ShaderEffect");
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int blockParticleSetIdOffset = buffer.getIntLE(offset + 34);
             if (blockParticleSetIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for BlockParticleSetId");

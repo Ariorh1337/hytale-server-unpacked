@@ -33,16 +33,6 @@ extends CommandBase {
     @Nonnull
     private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_OR_ARG = Message.translation("server.commands.errors.playerOrArg");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_WITH_LOOK_NOTIFICATION = Message.translation("server.commands.teleport.teleportedWithLookNotification");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES_NOTIFICATION = Message.translation("server.commands.teleport.teleportedToCoordinatesNotification");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE_WITH_LOOK = Message.translation("server.commands.teleport.teleportEveryoneWithLook");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE = Message.translation("server.commands.teleport.teleportEveryone");
-    @Nonnull
     private final RequiredArg<Coord> xArg = this.withRequiredArg("x", "server.commands.teleport.x.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
     @Nonnull
     private final RequiredArg<Coord> yArg = this.withRequiredArg("y", "server.commands.teleport.y.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
@@ -79,7 +69,7 @@ extends CommandBase {
             }
             targetWorld = senderRef.getStore().getExternalData().getWorld();
         } else {
-            context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_OR_ARG.param("option", "world"));
+            context.sendMessage(Message.translation("server.commands.errors.playerOrArg").param("option", "world"));
             return;
         }
         targetWorld.execute(() -> {
@@ -126,18 +116,18 @@ extends CommandBase {
                     float displayYaw = Float.isNaN(yaw) ? previousHeadRotation.getYaw() * 57.295776f : yaw * 57.295776f;
                     float displayPitch = Float.isNaN(pitch) ? previousHeadRotation.getPitch() * 57.295776f : pitch * 57.295776f;
                     float displayRoll = Float.isNaN(roll) ? previousHeadRotation.getRoll() * 57.295776f : roll * 57.295776f;
-                    NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), MESSAGE_COMMANDS_TELEPORT_TELEPORTED_WITH_LOOK_NOTIFICATION.param("x", x).param("y", y).param("z", z).param("yaw", displayYaw).param("pitch", displayPitch).param("roll", displayRoll).param("sender", context.sender().getDisplayName()), null, "teleportation");
+                    NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), Message.translation("server.commands.teleport.teleportedWithLookNotification").param("x", x).param("y", y).param("z", z).param("yaw", displayYaw).param("pitch", displayPitch).param("roll", displayRoll).param("sender", context.sender().getDisplayName()), null, "teleportation");
                     continue;
                 }
-                NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES_NOTIFICATION.param("x", x).param("y", y).param("z", z).param("sender", context.sender().getDisplayName()), null, "teleportation");
+                NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), Message.translation("server.commands.teleport.teleportedToCoordinatesNotification").param("x", x).param("y", y).param("z", z).param("sender", context.sender().getDisplayName()), null, "teleportation");
             }
             if (hasRotation) {
                 float displayYaw = this.yawArg.provided(context) ? ((RelativeFloat)this.yawArg.get(context)).getRawValue() : 0.0f;
                 float displayPitch = this.pitchArg.provided(context) ? ((RelativeFloat)this.pitchArg.get(context)).getRawValue() : 0.0f;
                 float displayRoll = this.rollArg.provided(context) ? ((RelativeFloat)this.rollArg.get(context)).getRawValue() : 0.0f;
-                context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE_WITH_LOOK.param("world", targetWorld.getName()).param("x", x).param("y", y).param("z", z).param("yaw", displayYaw).param("pitch", displayPitch).param("roll", displayRoll));
+                context.sendMessage(Message.translation("server.commands.teleport.teleportEveryoneWithLook").param("world", targetWorld.getName()).param("x", x).param("y", y).param("z", z).param("yaw", displayYaw).param("pitch", displayPitch).param("roll", displayRoll));
             } else {
-                context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORT_EVERYONE.param("world", targetWorld.getName()).param("x", x).param("y", y).param("z", z));
+                context.sendMessage(Message.translation("server.commands.teleport.teleportEveryone").param("world", targetWorld.getName()).param("x", x).param("y", y).param("z", z));
             }
         });
     }

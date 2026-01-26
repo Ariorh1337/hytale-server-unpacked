@@ -54,10 +54,10 @@ public class WorldEnvironment {
         int varIntLen;
         WorldEnvironment obj = new WorldEnvironment();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.waterTint = Color.deserialize(buf, offset + 1);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 16 + buf.getIntLE(offset + 4);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -112,7 +112,7 @@ public class WorldEnvironment {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 16;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 4);
             int pos0 = offset + 16 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -147,10 +147,10 @@ public class WorldEnvironment {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.waterTint != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.waterTint != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 2);
         }
         if (this.fluidParticles != null) {
@@ -229,7 +229,7 @@ public class WorldEnvironment {
             return ValidationResult.error("Buffer too small: expected at least 16 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int idOffset = buffer.getIntLE(offset + 4);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");

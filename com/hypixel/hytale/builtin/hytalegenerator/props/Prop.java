@@ -12,6 +12,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.ScanResult;
 import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public abstract class Prop {
     public abstract ScanResult scan(@Nonnull Vector3i var1, @Nonnull VoxelSpace<Material> var2, @Nonnull WorkerIndexer.Id var3);
@@ -21,7 +22,10 @@ public abstract class Prop {
     public abstract ContextDependency getContextDependency();
 
     @Nonnull
-    public abstract Bounds3i getWriteBounds();
+    public abstract Bounds3i getReadBounds_voxelGrid();
+
+    @Nonnull
+    public abstract Bounds3i getWriteBounds_voxelGrid();
 
     @Nonnull
     public static Prop noProp() {
@@ -33,7 +37,7 @@ public abstract class Prop {
             }
         };
         final ContextDependency contextDependency = new ContextDependency(new Vector3i(), new Vector3i());
-        final Bounds3i writeBounds_voxelGrid = new Bounds3i();
+        final Bounds3i zeroBounds_voxelGrid = new Bounds3i();
         return new Prop(){
 
             @Override
@@ -53,9 +57,15 @@ public abstract class Prop {
             }
 
             @Override
+            @NonNullDecl
+            public Bounds3i getReadBounds_voxelGrid() {
+                return zeroBounds_voxelGrid;
+            }
+
+            @Override
             @Nonnull
-            public Bounds3i getWriteBounds() {
-                return writeBounds_voxelGrid;
+            public Bounds3i getWriteBounds_voxelGrid() {
+                return zeroBounds_voxelGrid;
             }
         };
     }

@@ -8,13 +8,15 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -24,10 +26,16 @@ public class PlayerChunkTrackerSystems {
     extends EntityTickingSystem<EntityStore> {
         @Nonnull
         private static final ComponentType<EntityStore, ChunkTracker> CHUNK_TRACKER_COMPONENT_TYPE = ChunkTracker.getComponentType();
+        @Nonnull
+        private static final ComponentType<EntityStore, Player> PLAYER_COMPONENT_TYPE = Player.getComponentType();
+        @Nonnull
+        private static final ComponentType<EntityStore, PlayerRef> PLAYER_REF_COMPONENT_TYPE = PlayerRef.getComponentType();
+        @Nonnull
+        private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
 
         @Override
         public Query<EntityStore> getQuery() {
-            return CHUNK_TRACKER_COMPONENT_TYPE;
+            return Query.and(CHUNK_TRACKER_COMPONENT_TYPE, PLAYER_COMPONENT_TYPE, PLAYER_REF_COMPONENT_TYPE, TRANSFORM_COMPONENT_TYPE);
         }
 
         @Override
@@ -37,10 +45,15 @@ public class PlayerChunkTrackerSystems {
 
         @Override
         public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
             ChunkTracker chunkTrackerComponent = archetypeChunk.getComponent(index, CHUNK_TRACKER_COMPONENT_TYPE);
             assert (chunkTrackerComponent != null);
-            chunkTrackerComponent.tick(ref, dt, commandBuffer);
+            Player playerComponent = archetypeChunk.getComponent(index, PLAYER_COMPONENT_TYPE);
+            assert (playerComponent != null);
+            PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PLAYER_REF_COMPONENT_TYPE);
+            assert (playerRefComponent != null);
+            TransformComponent transformComponent = archetypeChunk.getComponent(index, TRANSFORM_COMPONENT_TYPE);
+            assert (transformComponent != null);
+            chunkTrackerComponent.tick(playerComponent, playerRefComponent, transformComponent, dt, commandBuffer);
         }
     }
 

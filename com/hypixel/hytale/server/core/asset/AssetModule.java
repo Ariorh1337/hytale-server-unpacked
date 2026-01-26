@@ -186,7 +186,7 @@ extends JavaPlugin {
     public AssetPack findAssetPackForPath(Path path) {
         path = path.toAbsolutePath().normalize();
         for (AssetPack pack : this.assetPacks) {
-            if (!path.startsWith(pack.getRoot())) continue;
+            if (path.getFileSystem() != pack.getRoot().getFileSystem() || !path.startsWith(pack.getRoot())) continue;
             return pack;
         }
         return null;

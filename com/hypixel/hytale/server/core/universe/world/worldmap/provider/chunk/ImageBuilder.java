@@ -5,6 +5,7 @@ package com.hypixel.hytale.server.core.universe.world.worldmap.provider.chunk;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.protocol.ShaderType;
 import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
@@ -346,19 +347,22 @@ class ImageBuilder {
     }
 
     private static void getFluidColor(int fluidId, int environmentId, int fluidDepth, @Nonnull Color outColor) {
-        Fluid fluid;
         com.hypixel.hytale.protocol.Color partcileColor;
+        Environment environment;
+        com.hypixel.hytale.protocol.Color waterTint;
         int tintColorR = 255;
         int tintColorG = 255;
         int tintColorB = 255;
-        Environment environment = Environment.getAssetMap().getAsset(environmentId);
-        com.hypixel.hytale.protocol.Color waterTint = environment.getWaterTint();
-        if (waterTint != null) {
+        Fluid fluid = Fluid.getAssetMap().getAsset(fluidId);
+        if (fluid == null) {
+            return;
+        }
+        if (fluid.hasEffect(ShaderType.Water) && (waterTint = (environment = Environment.getAssetMap().getAsset(environmentId)).getWaterTint()) != null) {
             tintColorR = tintColorR * (waterTint.red & 0xFF) / 255;
             tintColorG = tintColorG * (waterTint.green & 0xFF) / 255;
             tintColorB = tintColorB * (waterTint.blue & 0xFF) / 255;
         }
-        if ((partcileColor = (fluid = Fluid.getAssetMap().getAsset(fluidId)).getParticleColor()) != null) {
+        if ((partcileColor = fluid.getParticleColor()) != null) {
             tintColorR = tintColorR * (partcileColor.red & 0xFF) / 255;
             tintColorG = tintColorG * (partcileColor.green & 0xFF) / 255;
             tintColorB = tintColorB * (partcileColor.blue & 0xFF) / 255;

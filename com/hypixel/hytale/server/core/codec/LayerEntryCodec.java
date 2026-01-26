@@ -10,16 +10,19 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class LayerEntryCodec {
-    public static final BuilderCodec<LayerEntryCodec> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(LayerEntryCodec.class, LayerEntryCodec::new).append(new KeyedCodec<Integer>("Left", Codec.INTEGER), (entry, depth) -> {
+    public static final BuilderCodec<LayerEntryCodec> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(LayerEntryCodec.class, LayerEntryCodec::new).append(new KeyedCodec<Integer>("Left", Codec.INTEGER), (entry, depth) -> {
         entry.depth = depth;
     }, entry -> entry.depth).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<String>("Right", Codec.STRING), (entry, material) -> {
         entry.material = material;
     }, entry -> entry.material).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<Boolean>("UseToolArg", Codec.BOOLEAN), (entry, useToolArg) -> {
         entry.useToolArg = useToolArg != null && useToolArg != false;
-    }, entry -> entry.useToolArg).add()).build();
+    }, entry -> entry.useToolArg).add()).append(new KeyedCodec<Boolean>("Skip", Codec.BOOLEAN), (entry, skip) -> {
+        entry.skip = skip != null && skip != false;
+    }, entry -> entry.skip).add()).build();
     private Integer depth;
     private String material;
     private boolean useToolArg = false;
+    private boolean skip = false;
 
     public LayerEntryCodec() {
     }
@@ -42,6 +45,10 @@ public class LayerEntryCodec {
 
     public boolean isUseToolArg() {
         return this.useToolArg;
+    }
+
+    public boolean isSkip() {
+        return this.skip;
     }
 }
 

@@ -54,6 +54,7 @@ public class QUICTransport
 implements Transport {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final AttributeKey<X509Certificate> CLIENT_CERTIFICATE_ATTR = AttributeKey.valueOf("CLIENT_CERTIFICATE");
+    public static final AttributeKey<Integer> ALPN_REJECT_ERROR_CODE_ATTR = AttributeKey.valueOf("ALPN_REJECT_ERROR_CODE");
     @Nonnull
     private final EventLoopGroup workerGroup = NettyUtil.getEventLoopGroup("ServerWorkerGroup");
     private final Bootstrap bootstrapIpv4;
@@ -69,7 +70,7 @@ implements Transport {
         }
         ServerAuthManager.getInstance().setServerCertificate(ssc.cert());
         LOGGER.at(Level.INFO).log("Server certificate registered for mutual auth, fingerprint: %s", CertificateUtil.computeCertificateFingerprint(ssc.cert()));
-        QuicSslContext sslContext = QuicSslContextBuilder.forServer(ssc.key(), null, ssc.cert()).applicationProtocols("hytale/1").earlyData(false).clientAuth(ClientAuth.REQUIRE).trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+        QuicSslContext sslContext = QuicSslContextBuilder.forServer(ssc.key(), null, ssc.cert()).applicationProtocols("hytale/2", "hytale/1").earlyData(false).clientAuth(ClientAuth.REQUIRE).trustManager(InsecureTrustManagerFactory.INSTANCE).build();
         NettyUtil.ReflectiveChannelFactory<? extends DatagramChannel> channelFactoryIpv4 = NettyUtil.getDatagramChannelFactory(SocketProtocolFamily.INET);
         LOGGER.at(Level.INFO).log("Using IPv4 Datagram Channel: %s...", channelFactoryIpv4.getSimpleName());
         this.bootstrapIpv4 = ((Bootstrap)((Bootstrap)((Bootstrap)((Bootstrap)((Bootstrap)new Bootstrap().group(this.workerGroup)).channelFactory(channelFactoryIpv4)).option(ChannelOption.SO_REUSEADDR, true)).option(NioChannelOption.of(ExtendedSocketOptions.IP_DONTFRAGMENT), true)).handler(new QuicChannelInboundHandlerAdapter(sslContext))).validate();
@@ -124,7 +125,7 @@ implements Transport {
 
         @Override
         public void channelActive(@Nonnull ChannelHandlerContext ctx) throws Exception {
-            Duration playTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getPlayTimeout();
+            Duration playTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getPlay();
             ChannelHandler quicHandler = ((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)((QuicServerCodecBuilder)new QuicServerCodecBuilder().sslContext(this.sslContext)).tokenHandler(InsecureQuicTokenHandler.INSTANCE).maxIdleTimeout(playTimeout.toMillis(), TimeUnit.MILLISECONDS)).ackDelayExponent(3L)).initialMaxData(524288L)).initialMaxStreamDataUnidirectional(0L)).initialMaxStreamsUnidirectional(0L)).initialMaxStreamDataBidirectionalLocal(131072L)).initialMaxStreamDataBidirectionalRemote(131072L)).initialMaxStreamsBidirectional(1L)).discoverPmtu(true)).congestionControlAlgorithm(QuicCongestionControlAlgorithm.BBR)).handler(new ChannelInboundHandlerAdapter(){
 
                 @Override
@@ -134,16 +135,34 @@ implements Transport {
 
                 @Override
                 public void channelActive(@Nonnull ChannelHandlerContext ctx) throws Exception {
+                    X509Certificate clientCert;
                     QuicChannel channel = (QuicChannel)ctx.channel();
                     LOGGER.at(Level.INFO).log("Received connection from %s to %s", (Object)NettyUtil.formatRemoteAddress(channel), (Object)NettyUtil.formatLocalAddress(channel));
-                    X509Certificate clientCert = this.extractClientCertificate(channel);
-                    if (clientCert == null) {
+                    String negotiatedAlpn = channel.sslEngine().getApplicationProtocol();
+                    int negotiatedVersion = this.parseProtocolVersion(negotiatedAlpn);
+                    if (negotiatedVersion < 2) {
+                        LOGGER.at(Level.INFO).log("Marking connection from %s for rejection: ALPN %s < required %d", NettyUtil.formatRemoteAddress(channel), negotiatedAlpn, 2);
+                        channel.attr(ALPN_REJECT_ERROR_CODE_ATTR).set(5);
+                    }
+                    if ((clientCert = this.extractClientCertificate(channel)) == null) {
                         LOGGER.at(Level.WARNING).log("Connection rejected: no client certificate from %s", NettyUtil.formatRemoteAddress(channel));
                         ProtocolUtil.closeConnection(channel);
                         return;
                     }
                     channel.attr(CLIENT_CERTIFICATE_ATTR).set(clientCert);
                     LOGGER.at(Level.FINE).log("Client certificate: %s", clientCert.getSubjectX500Principal().getName());
+                }
+
+                private int parseProtocolVersion(String alpn) {
+                    if (alpn != null && alpn.startsWith("hytale/")) {
+                        try {
+                            return Integer.parseInt(alpn.substring(7));
+                        }
+                        catch (NumberFormatException e) {
+                            return 0;
+                        }
+                    }
+                    return 0;
                 }
 
                 @Override

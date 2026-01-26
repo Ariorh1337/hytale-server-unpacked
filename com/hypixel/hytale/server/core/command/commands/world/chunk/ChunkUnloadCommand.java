@@ -22,10 +22,6 @@ import javax.annotation.Nonnull;
 public class ChunkUnloadCommand
 extends AbstractWorldCommand {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_UNLOAD_ALREADY_UNLOADED = Message.translation("server.commands.chunk.unload.alreadyUnloaded");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_UNLOAD_SUCCESS = Message.translation("server.commands.chunk.unload.success");
-    @Nonnull
     private final RequiredArg<RelativeChunkPosition> chunkPosArg = this.withRequiredArg("x z", "server.commands.chunk.unload.position.desc", ArgTypes.RELATIVE_CHUNK_POSITION);
 
     public ChunkUnloadCommand() {
@@ -40,12 +36,12 @@ extends AbstractWorldCommand {
         ChunkStore chunkComponentStore = world.getChunkStore();
         Ref<ChunkStore> chunkRef = chunkComponentStore.getChunkReference(indexChunk = ChunkUtil.indexChunk(position.x, position.y));
         if (chunkRef == null) {
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_UNLOAD_ALREADY_UNLOADED.param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
+            context.sendMessage(Message.translation("server.commands.chunk.unload.alreadyUnloaded").param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
             return;
         }
         chunkComponentStore.remove(chunkRef, RemoveReason.UNLOAD);
         world.getNotificationHandler().updateChunk(indexChunk);
-        context.sendMessage(MESSAGE_COMMANDS_CHUNK_UNLOAD_SUCCESS.param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
+        context.sendMessage(Message.translation("server.commands.chunk.unload.success").param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
     }
 }
 

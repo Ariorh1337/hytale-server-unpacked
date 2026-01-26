@@ -385,19 +385,21 @@ public class DamageSystems {
             if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Damage.EntitySource source2 = (Damage.EntitySource)source;
-            Ref<EntityStore> attackerRef = source2.getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            TransformComponent attackerTransformComponent = commandBuffer.getComponent(attackerRef, TRANSFORM_COMPONENT_TYPE);
-            assert (attackerTransformComponent != null);
+            TransformComponent sourceTransformComponent = commandBuffer.getComponent(sourceRef, TRANSFORM_COMPONENT_TYPE);
+            if (sourceTransformComponent == null) {
+                return;
+            }
             int damageCauseIndex = damage.getDamageCauseIndex();
             double angledWieldingModifier = 1.0;
             double wieldingModifier = knockbackModifiers.getOrDefault(damageCauseIndex, 1.0);
             if (angledWielding != null && (angledWieldingKnockbackModifiers = angledWielding.getKnockbackModifiers()).containsKey(damageCauseIndex)) {
                 Vector3d targetPos = transformComponent.getPosition();
-                Vector3d attackerPos = attackerTransformComponent.getPosition();
+                Vector3d attackerPos = sourceTransformComponent.getPosition();
                 float angleBetween = TrigMathUtil.atan2(attackerPos.x - targetPos.x, attackerPos.z - targetPos.z);
                 if (Math.abs(MathUtil.compareAngle(angleBetween = MathUtil.wrapAngle(angleBetween + (float)Math.PI - transformComponent.getRotation().getYaw()), angledWielding.getAngleRad())) < angledWielding.getAngleDistanceRad()) {
                     angledWieldingModifier = angledWieldingKnockbackModifiers.getOrDefault(damageCauseIndex, 1.0);
@@ -430,6 +432,7 @@ public class DamageSystems {
 
         @Override
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
+            NetworkId sourceNetworkIdComponent;
             Int2FloatMap angledWieldingDamageModifiers;
             DamageDataComponent damageDataComponent = archetypeChunk.getComponent(index, DamageDataComponent.getComponentType());
             assert (damageDataComponent != null);
@@ -449,13 +452,15 @@ public class DamageSystems {
             if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Damage.EntitySource source2 = (Damage.EntitySource)source;
-            Ref<EntityStore> attackerRef = source2.getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            TransformComponent attackerTransformComponent = commandBuffer.getComponent(attackerRef, TRANSFORM_COMPONENT_TYPE);
-            assert (attackerTransformComponent != null);
+            TransformComponent sourceTransformComponent = commandBuffer.getComponent(sourceRef, TRANSFORM_COMPONENT_TYPE);
+            if (sourceTransformComponent == null) {
+                return;
+            }
             int damageCauseIndex = damage.getDamageCauseIndex();
             float wieldingModifier = 1.0f;
             float angledWieldingModifier = 1.0f;
@@ -474,8 +479,8 @@ public class DamageSystems {
                 damage.putMetaObject(Damage.BLOCKED, Boolean.TRUE);
             }
             if (angledWielding != null && (angledWieldingDamageModifiers = angledWielding.getDamageModifiers()).containsKey(damageCauseIndex)) {
-                Vector3d attackerPosition = attackerTransformComponent.getPosition();
-                float angleBetween = TrigMathUtil.atan2(attackerPosition.x - targetPosition.x, attackerPosition.z - targetPosition.z);
+                Vector3d sourcePosition = sourceTransformComponent.getPosition();
+                float angleBetween = TrigMathUtil.atan2(sourcePosition.x - targetPosition.x, sourcePosition.z - targetPosition.z);
                 if (Math.abs(MathUtil.compareAngle(angleBetween = MathUtil.wrapAngle(angleBetween + (float)Math.PI - targetRotation.getYaw()), angledWielding.getAngleRad())) < angledWielding.getAngleDistanceRad()) {
                     String wieldingBlockedInteractions;
                     angledWieldingModifier = angledWieldingDamageModifiers.getOrDefault(damageCauseIndex, 1.0f);
@@ -490,14 +495,12 @@ public class DamageSystems {
                 }
             }
             damage.setAmount(damage.getAmount() * wieldingModifier * angledWieldingModifier);
-            if (blockedInteractions != null) {
+            if (blockedInteractions != null && (sourceNetworkIdComponent = commandBuffer.getComponent(sourceRef, NetworkId.getComponentType())) != null) {
                 InteractionContext context = InteractionContext.forInteraction(interactionManager, ref, InteractionType.Wielding, commandBuffer);
                 DynamicMetaStore<InteractionContext> contextMetaStore = context.getMetaStore();
-                contextMetaStore.putMetaObject(Interaction.TARGET_ENTITY, attackerRef);
+                contextMetaStore.putMetaObject(Interaction.TARGET_ENTITY, sourceRef);
                 contextMetaStore.putMetaObject(Interaction.DAMAGE, damage);
-                NetworkId attackerNetworkIdComponent = commandBuffer.getComponent(attackerRef, NetworkId.getComponentType());
-                assert (attackerNetworkIdComponent != null);
-                int networkId = attackerNetworkIdComponent.getId();
+                int networkId = sourceNetworkIdComponent.getId();
                 InteractionChain chain = interactionManager.initChain(InteractionType.Wielding, context, RootInteraction.getRootInteractionOrUnknown(blockedInteractions), networkId, null, false);
                 interactionManager.queueExecuteChain(chain);
             }
@@ -530,21 +533,24 @@ public class DamageSystems {
             if (damage.getAmount() <= 0.0f) {
                 return;
             }
-            if (!(damage.getSource() instanceof Damage.EntitySource)) {
+            Damage.Source source = damage.getSource();
+            if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerRef = ((Damage.EntitySource)damage.getSource()).getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            PlayerRef playerRef = commandBuffer.getComponent(attackerRef, PlayerRef.getComponentType());
-            if (playerRef == null || !playerRef.isValid()) {
+            PlayerRef sourcePlayerRef = commandBuffer.getComponent(sourceRef, PlayerRef.getComponentType());
+            if (sourcePlayerRef == null || !sourcePlayerRef.isValid()) {
                 return;
             }
-            EntityTrackerSystems.EntityViewer entityViewer = commandBuffer.getComponent(attackerRef, EntityTrackerSystems.EntityViewer.getComponentType());
-            assert (entityViewer != null);
-            Float hitAngleDeg = damage.getIfPresentMetaObject(Damage.HIT_ANGLE);
-            EntityUIEvents.queueUpdateFor(archetypeChunk.getReferenceTo(index), damage.getAmount(), hitAngleDeg, entityViewer);
+            EntityTrackerSystems.EntityViewer sourceEntityViewerComponent = commandBuffer.getComponent(sourceRef, EntityTrackerSystems.EntityViewer.getComponentType());
+            if (sourceEntityViewerComponent != null) {
+                Float hitAngleDeg = damage.getIfPresentMetaObject(Damage.HIT_ANGLE);
+                EntityUIEvents.queueUpdateFor(archetypeChunk.getReferenceTo(index), damage.getAmount(), hitAngleDeg, sourceEntityViewerComponent);
+            }
         }
 
         private static void queueUpdateFor(@Nonnull Ref<EntityStore> ref, float damageAmount, @Nullable Float hitAngleDeg, @Nonnull EntityTrackerSystems.EntityViewer viewer) {
@@ -583,18 +589,20 @@ public class DamageSystems {
             if (damage.getAmount() <= 0.0f) {
                 return;
             }
-            if (!(damage.getSource() instanceof Damage.EntitySource)) {
+            Damage.Source source = damage.getSource();
+            if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerRef = ((Damage.EntitySource)damage.getSource()).getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            PlayerRef playerRef = commandBuffer.getComponent(attackerRef, PlayerRef.getComponentType());
-            if (playerRef == null || !playerRef.isValid()) {
+            PlayerRef sourcePlayerRef = commandBuffer.getComponent(sourceRef, PlayerRef.getComponentType());
+            if (sourcePlayerRef == null || !sourcePlayerRef.isValid()) {
                 return;
             }
-            playerRef.getPacketHandler().writeNoCache(isDead ? ON_KILL : ON_HIT);
+            sourcePlayerRef.getPacketHandler().writeNoCache(isDead ? ON_KILL : ON_HIT);
         }
     }
 
@@ -620,22 +628,24 @@ public class DamageSystems {
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
             PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
-            if (!(damage.getSource() instanceof Damage.EntitySource)) {
+            Damage.Source source = damage.getSource();
+            if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerRef = ((Damage.EntitySource)damage.getSource()).getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
             DamageCause damageCause = damage.getCause();
             if (damageCause == null) {
                 return;
             }
-            TransformComponent attackerTransform = commandBuffer.getComponent(attackerRef, TRANSFORM_COMPONENT_TYPE);
-            if (attackerTransform == null) {
+            TransformComponent sourceTransformComponent = commandBuffer.getComponent(sourceRef, TRANSFORM_COMPONENT_TYPE);
+            if (sourceTransformComponent == null) {
                 return;
             }
-            Vector3d position = attackerTransform.getPosition();
+            Vector3d position = sourceTransformComponent.getPosition();
             playerRefComponent.getPacketHandler().writeNoCache(new DamageInfo(new com.hypixel.hytale.protocol.Vector3d(position.getX(), position.getY(), position.getZ()), damage.getAmount(), damageCause.toPacket()));
         }
     }
@@ -659,19 +669,21 @@ public class DamageSystems {
 
         @Override
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
-            LivingEntity attackerLivingEntity;
-            Inventory attackerInventory;
+            LivingEntity sourceLivingEntity;
+            Inventory sourceInventory;
             byte activeHotbarSlot;
-            if (!damage.getCause().isDurabilityLoss() || !(damage.getSource() instanceof Damage.EntitySource)) {
+            Damage.Source source;
+            if (!damage.getCause().isDurabilityLoss() || !((source = damage.getSource()) instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerRef = ((Damage.EntitySource)damage.getSource()).getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            Entity attackerEntity = EntityUtils.getEntity(attackerRef, commandBuffer);
-            if (attackerEntity instanceof LivingEntity && (activeHotbarSlot = (attackerInventory = (attackerLivingEntity = (LivingEntity)attackerEntity).getInventory()).getActiveHotbarSlot()) != -1) {
-                attackerLivingEntity.decreaseItemStackDurability(attackerRef, attackerInventory.getItemInHand(), -1, attackerInventory.getActiveHotbarSlot(), commandBuffer);
+            Entity sourceEntity = EntityUtils.getEntity(sourceRef, commandBuffer);
+            if (sourceEntity instanceof LivingEntity && (activeHotbarSlot = (sourceInventory = (sourceLivingEntity = (LivingEntity)sourceEntity).getInventory()).getActiveHotbarSlot()) != -1) {
+                sourceLivingEntity.decreaseItemStackDurability(sourceRef, sourceInventory.getItemInHand(), -1, sourceInventory.getActiveHotbarSlot(), commandBuffer);
             }
         }
     }
@@ -765,7 +777,9 @@ public class DamageSystems {
     public static class TrackLastDamage
     extends DamageEventSystem {
         @Nonnull
-        private static final Query<EntityStore> QUERY = AllLegacyLivingEntityTypesQuery.INSTANCE;
+        private static final ComponentType<EntityStore, DamageDataComponent> DAMAGE_DATA_COMPONENT_TYPE = DamageDataComponent.getComponentType();
+        @Nonnull
+        private static final Query<EntityStore> QUERY = Query.and(AllLegacyLivingEntityTypesQuery.INSTANCE, DAMAGE_DATA_COMPONENT_TYPE);
 
         @Override
         @Nullable
@@ -782,7 +796,7 @@ public class DamageSystems {
         @Override
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
             TimeResource timeResource = commandBuffer.getResource(TimeResource.getResourceType());
-            DamageDataComponent damageDataComponent = archetypeChunk.getComponent(index, DamageDataComponent.getComponentType());
+            DamageDataComponent damageDataComponent = archetypeChunk.getComponent(index, DAMAGE_DATA_COMPONENT_TYPE);
             assert (damageDataComponent != null);
             damageDataComponent.setLastDamageTime(timeResource.getNow());
         }
@@ -1270,7 +1284,9 @@ public class DamageSystems {
         @Nonnull
         private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
         @Nonnull
-        private static final Query<EntityStore> QUERY = TRANSFORM_COMPONENT_TYPE;
+        private static final ComponentType<EntityStore, NetworkId> NETWORK_ID_COMPONENT_TYPE = NetworkId.getComponentType();
+        @Nonnull
+        private static final Query<EntityStore> QUERY = Query.and(TRANSFORM_COMPONENT_TYPE, NETWORK_ID_COMPONENT_TYPE);
 
         @Override
         @Nonnull
@@ -1278,17 +1294,10 @@ public class DamageSystems {
             return QUERY;
         }
 
-        /*
-         * WARNING - void declaration
-         */
         @Override
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
             Object[] modelParticles;
-            TransformComponent transformComponent = archetypeChunk.getComponent(index, TRANSFORM_COMPONENT_TYPE);
-            assert (transformComponent != null);
-            NetworkId networkIdComponent = archetypeChunk.getComponent(index, NetworkId.getComponentType());
-            assert (networkIdComponent != null);
-            int targetNetworkId = networkIdComponent.getId();
+            TransformComponent sourceTransformComponent;
             Damage.Particles particles = damage.getIfPresentMetaObject(Damage.IMPACT_PARTICLES);
             if (particles == null) {
                 return;
@@ -1302,27 +1311,21 @@ public class DamageSystems {
             if (!sourceRef.isValid()) {
                 return;
             }
+            TransformComponent transformComponent = archetypeChunk.getComponent(index, TRANSFORM_COMPONENT_TYPE);
+            assert (transformComponent != null);
             Vector4d hitLocation = damage.getIfPresentMetaObject(Damage.HIT_LOCATION);
             Vector3d targetPosition = hitLocation == null ? transformComponent.getPosition() : new Vector3d(hitLocation.x, hitLocation.y, hitLocation.z);
             boolean damageCanBePredicted = damage.getMetaStore().getMetaObject(Damage.CAN_BE_PREDICTED);
             double particlesViewDistance = particles.getViewDistance();
             Object[] worldParticles = particles.getWorldParticles();
-            if (!Arrays.isNullOrEmpty(worldParticles)) {
-                void var25_29;
-                TransformComponent sourceTransformComponent = commandBuffer.getComponent(sourceRef, TransformComponent.getComponentType());
-                assert (sourceTransformComponent != null);
+            if (!Arrays.isNullOrEmpty(worldParticles) && (sourceTransformComponent = commandBuffer.getComponent(sourceRef, TransformComponent.getComponentType())) != null) {
                 float angleBetween = TrigMathUtil.atan2(sourceTransformComponent.getPosition().x - targetPosition.x, sourceTransformComponent.getPosition().z - targetPosition.z);
                 SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
                 ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                 playerSpatialResource.getSpatialStructure().collect(targetPosition, particlesViewDistance, results);
                 Ref<EntityStore> particleSource = damageCanBePredicted ? sourceRef : null;
-                Object[] objectArray = worldParticles;
-                int n = objectArray.length;
-                boolean bl = false;
-                while (var25_29 < n) {
-                    Object particle = objectArray[var25_29];
+                for (Object particle : worldParticles) {
                     ParticleUtil.spawnParticleEffect((WorldParticle)particle, targetPosition, angleBetween, 0.0f, 0.0f, particleSource, results, commandBuffer);
-                    ++var25_29;
                 }
             }
             if (!Arrays.isNullOrEmpty(modelParticles = particles.getModelParticles())) {
@@ -1330,6 +1333,9 @@ public class DamageSystems {
                 for (int j = 0; j < modelParticles.length; ++j) {
                     modelParticlesProtocol[j] = ((ModelParticle)modelParticles[j]).toPacket();
                 }
+                NetworkId networkIdComponent = archetypeChunk.getComponent(index, NETWORK_ID_COMPONENT_TYPE);
+                assert (networkIdComponent != null);
+                int targetNetworkId = networkIdComponent.getId();
                 SpawnModelParticles packet = new SpawnModelParticles(targetNetworkId, modelParticlesProtocol);
                 SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(PLAYER_SPATIAL_RESOURCE_TYPE);
                 SpatialStructure<Ref<EntityStore>> spatialStructure = spatialResource.getSpatialStructure();
@@ -1340,7 +1346,7 @@ public class DamageSystems {
                         return;
                     }
                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-                    assert (playerRefComponent != null);
+                    if (playerRefComponent == null) continue;
                     playerRefComponent.getPacketHandler().write((Packet)packet);
                 }
             }

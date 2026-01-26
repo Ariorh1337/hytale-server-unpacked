@@ -11,26 +11,31 @@ import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.iterator.BlockIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.BlockPosition;
-import com.hypixel.hytale.protocol.Interaction;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
+import com.hypixel.hytale.server.core.asset.type.fluid.FluidTicker;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionConfiguration;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -39,12 +44,14 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class RefillContainerInteraction
-extends SimpleBlockInteraction {
-    public static final BuilderCodec<RefillContainerInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RefillContainerInteraction.class, RefillContainerInteraction::new, SimpleBlockInteraction.CODEC).documentation("Refills a container item that is currently held.")).appendInherited(new KeyedCodec("States", new MapCodec<RefillState, HashMap>(RefillState.CODEC, HashMap::new)), (interaction, value) -> {
+extends SimpleInstantInteraction {
+    public static final BuilderCodec<RefillContainerInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RefillContainerInteraction.class, RefillContainerInteraction::new, SimpleInstantInteraction.CODEC).documentation("Refills a container item that is currently held.")).appendInherited(new KeyedCodec("States", new MapCodec<RefillState, HashMap>(RefillState.CODEC, HashMap::new)), (interaction, value) -> {
         interaction.refillStateMap = value;
     }, interaction -> interaction.refillStateMap, (o, p) -> {
         o.refillStateMap = p.refillStateMap;
@@ -80,107 +87,141 @@ extends SimpleBlockInteraction {
     }
 
     @Override
-    protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i targetBlock, @Nonnull CooldownHandler cooldownHandler) {
-        Ref<EntityStore> ref = context.getEntity();
-        Entity entity = EntityUtils.getEntity(ref, commandBuffer);
-        if (!(entity instanceof LivingEntity)) {
-            return;
-        }
-        LivingEntity livingEntity = (LivingEntity)entity;
-        BlockPosition blockPosition_ = context.getClientState().blockPosition;
+    protected void firstRun(@NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+        CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+        assert (commandBuffer != null);
         InteractionSyncData state = context.getState();
-        if (blockPosition_ == null) {
+        World world = commandBuffer.getExternalData().getWorld();
+        Ref<EntityStore> ref = context.getEntity();
+        Ref<EntityStore> targetRef = context.getTargetEntity();
+        if (targetRef != null) {
+            context.getState().state = InteractionState.Failed;
+            return;
+        }
+        Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+        if (playerComponent == null) {
             state.state = InteractionState.Failed;
             return;
         }
-        Ref<ChunkStore> section = world.getChunkStore().getChunkSectionReference(ChunkUtil.chunkCoordinate(blockPosition_.x), ChunkUtil.chunkCoordinate(blockPosition_.y), ChunkUtil.chunkCoordinate(blockPosition_.z));
-        if (section == null) {
-            return;
-        }
-        FluidSection fluidSection = section.getStore().getComponent(section, FluidSection.getComponentType());
-        if (fluidSection == null) {
-            return;
-        }
-        int fluidId = fluidSection.getFluidId(blockPosition_.x, blockPosition_.y, blockPosition_.z);
-        int[] allowedBlockIds = this.getAllowedFluidIds();
-        if (allowedBlockIds != null && Arrays.binarySearch(allowedBlockIds, fluidId) < 0) {
+        Inventory inventory = playerComponent.getInventory();
+        if (inventory == null) {
             state.state = InteractionState.Failed;
             return;
         }
-        String newState = (String)this.getFluidToState().get(fluidId);
-        if (newState == null) {
+        TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
+        if (transformComponent == null) {
             state.state = InteractionState.Failed;
             return;
         }
-        ItemStack current = context.getHeldItem();
-        Item newItemAsset = current.getItem().getItemForState(newState);
-        if (newItemAsset == null) {
+        HeadRotation headRotationComponent = commandBuffer.getComponent(ref, HeadRotation.getComponentType());
+        if (headRotationComponent == null) {
             state.state = InteractionState.Failed;
             return;
         }
-        RefillState refillState = this.refillStateMap.get(newState);
-        if (newItemAsset.getId().equals(current.getItemId())) {
-            if (refillState != null) {
-                double newDurability = MathUtil.maxValue(refillState.durability, current.getMaxDurability());
-                if (newDurability <= current.getDurability()) {
-                    state.state = InteractionState.Failed;
-                    return;
-                }
-                ItemStack newItem = current.withIncreasedDurability(newDurability);
-                ItemStackSlotTransaction transaction = context.getHeldItemContainer().setItemStackForSlot(context.getHeldItemSlot(), newItem);
-                if (!transaction.succeeded()) {
-                    state.state = InteractionState.Failed;
-                    return;
-                }
-                context.setHeldItem(newItem);
+        ModelComponent modelComponent = commandBuffer.getComponent(ref, ModelComponent.getComponentType());
+        if (modelComponent == null) {
+            state.state = InteractionState.Failed;
+            return;
+        }
+        ItemStack heldItem = context.getHeldItem();
+        if (heldItem == null) {
+            state.state = InteractionState.Failed;
+            return;
+        }
+        InteractionConfiguration heldItemInteractionConfig = heldItem.getItem().getInteractionConfig();
+        float distance = heldItemInteractionConfig.getUseDistance(playerComponent.getGameMode());
+        Vector3d fromPos = transformComponent.getPosition().clone();
+        fromPos.y += (double)modelComponent.getModel().getEyeHeight(ref, commandBuffer);
+        Vector3d lookDir = headRotationComponent.getDirection();
+        Vector3d toPos = fromPos.clone().add(lookDir.scale(distance));
+        AtomicBoolean refilled = new AtomicBoolean(false);
+        BlockIterator.iterateFromTo(fromPos, toPos, (x, y, z, px, py, pz, qx, qy, qz) -> {
+            Ref<ChunkStore> section = world.getChunkStore().getChunkSectionReference(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(y), ChunkUtil.chunkCoordinate(z));
+            if (section == null) {
+                return true;
             }
-        } else {
-            ItemStackSlotTransaction removeEmptyTransaction = context.getHeldItemContainer().removeItemStackFromSlot(context.getHeldItemSlot(), current, 1);
-            if (!removeEmptyTransaction.succeeded()) {
+            BlockSection blockSection = section.getStore().getComponent(section, BlockSection.getComponentType());
+            if (blockSection == null) {
+                return true;
+            }
+            if (FluidTicker.isSolid(BlockType.getAssetMap().getAsset(blockSection.get(x, y, z)))) {
                 state.state = InteractionState.Failed;
-                return;
+                return false;
             }
-            ItemStack refilledContainer = new ItemStack(newItemAsset.getId(), 1);
-            if (refillState != null && refillState.durability > 0.0) {
-                refilledContainer = refilledContainer.withDurability(refillState.durability);
+            FluidSection fluidSection = section.getStore().getComponent(section, FluidSection.getComponentType());
+            if (fluidSection == null) {
+                return true;
             }
-            if (current.getQuantity() == 1) {
-                ItemStackSlotTransaction addFilledTransaction = context.getHeldItemContainer().setItemStackForSlot(context.getHeldItemSlot(), refilledContainer);
-                if (!addFilledTransaction.succeeded()) {
-                    state.state = InteractionState.Failed;
-                    return;
+            int fluidId = fluidSection.getFluidId(x, y, z);
+            int[] allowedBlockIds = this.getAllowedFluidIds();
+            if (allowedBlockIds != null && Arrays.binarySearch(allowedBlockIds, fluidId) < 0) {
+                state.state = InteractionState.Failed;
+                return true;
+            }
+            String newState = (String)this.getFluidToState().get(fluidId);
+            if (newState == null) {
+                state.state = InteractionState.Failed;
+                return false;
+            }
+            ItemStack current = context.getHeldItem();
+            Item newItemAsset = current.getItem().getItemForState(newState);
+            if (newItemAsset == null) {
+                state.state = InteractionState.Failed;
+                return false;
+            }
+            RefillState refillState = this.refillStateMap.get(newState);
+            if (newItemAsset.getId().equals(current.getItemId())) {
+                if (refillState != null) {
+                    double newDurability = MathUtil.maxValue(refillState.durability, current.getMaxDurability());
+                    if (newDurability <= current.getDurability()) {
+                        state.state = InteractionState.Failed;
+                        return false;
+                    }
+                    ItemStack newItem = current.withIncreasedDurability(newDurability);
+                    ItemStackSlotTransaction transaction = context.getHeldItemContainer().setItemStackForSlot(context.getHeldItemSlot(), newItem);
+                    if (!transaction.succeeded()) {
+                        state.state = InteractionState.Failed;
+                        return false;
+                    }
+                    context.setHeldItem(newItem);
+                    refilled.set(true);
                 }
-                context.setHeldItem(refilledContainer);
             } else {
-                SimpleItemContainer.addOrDropItemStack(commandBuffer, ref, livingEntity.getInventory().getCombinedHotbarFirst(), refilledContainer);
-                context.setHeldItem(context.getHeldItemContainer().getItemStack(context.getHeldItemSlot()));
+                ItemStackSlotTransaction removeEmptyTransaction = context.getHeldItemContainer().removeItemStackFromSlot(context.getHeldItemSlot(), current, 1);
+                if (!removeEmptyTransaction.succeeded()) {
+                    state.state = InteractionState.Failed;
+                    return false;
+                }
+                ItemStack refilledContainer = new ItemStack(newItemAsset.getId(), 1);
+                if (refillState != null && refillState.durability > 0.0) {
+                    refilledContainer = refilledContainer.withDurability(refillState.durability);
+                }
+                if (current.getQuantity() == 1) {
+                    ItemStackSlotTransaction addFilledTransaction = context.getHeldItemContainer().setItemStackForSlot(context.getHeldItemSlot(), refilledContainer);
+                    if (!addFilledTransaction.succeeded()) {
+                        state.state = InteractionState.Failed;
+                        return false;
+                    }
+                    context.setHeldItem(refilledContainer);
+                } else {
+                    SimpleItemContainer.addOrDropItemStack(commandBuffer, ref, inventory.getCombinedHotbarFirst(), refilledContainer);
+                    context.setHeldItem(context.getHeldItemContainer().getItemStack(context.getHeldItemSlot()));
+                }
             }
-        }
-        if (refillState != null && refillState.getTransformFluid() != null) {
-            int transformedFluid = Fluid.getFluidIdOrUnknown(refillState.getTransformFluid(), "Unknown fluid %s", refillState.getTransformFluid());
-            boolean placed = fluidSection.setFluid(blockPosition_.x, blockPosition_.y, blockPosition_.z, transformedFluid, (byte)Fluid.getAssetMap().getAsset(transformedFluid).getMaxFluidLevel());
-            if (!placed) {
-                state.state = InteractionState.Failed;
+            if (refillState != null && refillState.getTransformFluid() != null) {
+                int transformedFluid = Fluid.getFluidIdOrUnknown(refillState.getTransformFluid(), "Unknown fluid %s", refillState.getTransformFluid());
+                boolean placed = fluidSection.setFluid(x, y, z, transformedFluid, (byte)Fluid.getAssetMap().getAsset(transformedFluid).getMaxFluidLevel());
+                if (!placed) {
+                    state.state = InteractionState.Failed;
+                }
+                world.performBlockUpdate(x, y, z);
+                refilled.set(true);
             }
-            world.performBlockUpdate(blockPosition_.x, blockPosition_.y, blockPosition_.z);
+            return false;
+        });
+        if (!refilled.get()) {
+            context.getState().state = InteractionState.Failed;
         }
-    }
-
-    @Override
-    protected void simulateInteractWithBlock(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock) {
-    }
-
-    @Override
-    @Nonnull
-    protected Interaction generatePacket() {
-        return new com.hypixel.hytale.protocol.RefillContainerInteraction();
-    }
-
-    @Override
-    protected void configurePacket(Interaction packet) {
-        super.configurePacket(packet);
-        com.hypixel.hytale.protocol.RefillContainerInteraction p = (com.hypixel.hytale.protocol.RefillContainerInteraction)packet;
-        p.refillFluids = this.getAllowedFluidIds();
     }
 
     @Override

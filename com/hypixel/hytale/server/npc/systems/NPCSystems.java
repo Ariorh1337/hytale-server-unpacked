@@ -353,7 +353,7 @@ public class NPCSystems {
             this.npcComponentType = npcComponentType;
             this.transformComponentType = TransformComponent.getComponentType();
             this.dependencies = Set.of(new SystemDependency(Order.AFTER, AddedSystem.class));
-            this.query = Query.and(npcComponentType, Query.or(FromWorldGen.getComponentType(), FromPrefab.getComponentType()));
+            this.query = Query.and(npcComponentType, this.transformComponentType, Query.or(FromWorldGen.getComponentType(), FromPrefab.getComponentType()));
         }
 
         @Override

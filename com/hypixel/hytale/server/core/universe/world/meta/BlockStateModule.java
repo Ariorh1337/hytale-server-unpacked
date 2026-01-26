@@ -283,7 +283,8 @@ extends JavaPlugin {
             switch (reason) {
                 case REMOVE: {
                     if (blockState instanceof DestroyableBlockState) {
-                        ((DestroyableBlockState)((Object)blockState)).onDestroy();
+                        DestroyableBlockState destroyableBlockState = (DestroyableBlockState)((Object)blockState);
+                        destroyableBlockState.onDestroy();
                     }
                     blockState.unloadFromWorld();
                     break;

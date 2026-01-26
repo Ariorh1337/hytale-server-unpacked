@@ -16,11 +16,7 @@ import javax.annotation.Nonnull;
 public class ServerStatsCpuCommand
 extends CommandBase {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_SERVER_STATS_CPU_FULL_USAGE_INFO = Message.translation("server.commands.server.stats.cpu.fullUsageInfo");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_SERVER_STATS_FULL_INFO_UNAVAILABLE = Message.translation("server.commands.server.stats.fullInfoUnavailable");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_SERVER_STATS_CPU_USAGE_INFO = Message.translation("server.commands.server.stats.cpu.usageInfo");
 
     public ServerStatsCpuCommand() {
         super("cpu", "server.commands.server.stats.cpu.desc");
@@ -32,11 +28,11 @@ extends CommandBase {
         java.lang.management.OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
         if (operatingSystemMXBean instanceof OperatingSystemMXBean) {
             OperatingSystemMXBean sunOSBean = (OperatingSystemMXBean)operatingSystemMXBean;
-            context.sendMessage(MESSAGE_COMMANDS_SERVER_STATS_CPU_FULL_USAGE_INFO.param("systemLoad", sunOSBean.getSystemCpuLoad()).param("processLoad", sunOSBean.getProcessCpuLoad()));
+            context.sendMessage(Message.translation("server.commands.server.stats.cpu.fullUsageInfo").param("systemLoad", sunOSBean.getSystemCpuLoad()).param("processLoad", sunOSBean.getProcessCpuLoad()));
         } else {
             context.sendMessage(MESSAGE_COMMANDS_SERVER_STATS_FULL_INFO_UNAVAILABLE);
         }
-        context.sendMessage(MESSAGE_COMMANDS_SERVER_STATS_CPU_USAGE_INFO.param("loadAverage", operatingSystemMXBean.getSystemLoadAverage()).param("processUptime", FormatUtil.timeUnitToString(runtimeMXBean.getUptime(), TimeUnit.MILLISECONDS)));
+        context.sendMessage(Message.translation("server.commands.server.stats.cpu.usageInfo").param("loadAverage", operatingSystemMXBean.getSystemLoadAverage()).param("processUptime", FormatUtil.timeUnitToString(runtimeMXBean.getUptime(), TimeUnit.MILLISECONDS)));
     }
 }
 

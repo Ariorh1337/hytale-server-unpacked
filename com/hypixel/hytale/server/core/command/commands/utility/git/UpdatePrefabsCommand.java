@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 public class UpdatePrefabsCommand
 extends AbstractCommandCollection {
     public UpdatePrefabsCommand() {
-        super("prefabs", "server.commands.update.prefabs.desc");
+        super("prefabs", "server.commands.git.prefabs.desc");
         this.addSubCommand(new UpdatePrefabsStatusCommand());
         this.addSubCommand(new UpdatePrefabsCommitCommand());
         this.addSubCommand(new UpdatePrefabsPullCommand());
@@ -33,7 +33,7 @@ extends AbstractCommandCollection {
     private static class UpdatePrefabsStatusCommand
     extends UpdatePrefabsGitCommand {
         public UpdatePrefabsStatusCommand() {
-            super("status", "server.commands.update.prefabs.status.desc");
+            super("status", "server.commands.git.prefabs.status.desc");
         }
 
         @Override
@@ -46,20 +46,20 @@ extends AbstractCommandCollection {
     private static class UpdatePrefabsCommitCommand
     extends UpdatePrefabsGitCommand {
         public UpdatePrefabsCommitCommand() {
-            super("commit", "server.commands.update.prefabs.commit.desc");
+            super("commit", "server.commands.git.prefabs.commit.desc");
         }
 
         @Override
         @Nonnull
         protected String[][] getCommands(@Nonnull String senderDisplayName) {
-            return new String[][]{{"git", "add", "--all", "."}, {"git", "commit", "-am", "\"Update prefabs by " + senderDisplayName + "\""}, {"git", "submodule", "foreach", "git", "add", "--all", "."}, {"git", "submodule", "foreach", "git", "commit", "-am", "\"Update prefabs by " + senderDisplayName + "\""}};
+            return new String[][]{{"git", "add", "--all", "."}, {"git", "commit", "-am", "Update prefabs by " + senderDisplayName}, {"git", "submodule", "foreach", "git", "add", "--all", "."}, {"git", "submodule", "foreach", "git", "commit", "-am", "\"Update prefabs by " + senderDisplayName + "\""}};
         }
     }
 
     private static class UpdatePrefabsPullCommand
     extends UpdatePrefabsGitCommand {
         public UpdatePrefabsPullCommand() {
-            super("pull", "server.commands.update.prefabs.pull.desc");
+            super("pull", "server.commands.git.prefabs.pull.desc");
         }
 
         @Override
@@ -72,7 +72,7 @@ extends AbstractCommandCollection {
     private static class UpdatePrefabsPushCommand
     extends UpdatePrefabsGitCommand {
         public UpdatePrefabsPushCommand() {
-            super("push", "server.commands.update.prefabs.push.desc");
+            super("push", "server.commands.git.prefabs.push.desc");
         }
 
         @Override
@@ -85,13 +85,13 @@ extends AbstractCommandCollection {
     private static class UpdatePrefabsAllCommand
     extends UpdatePrefabsGitCommand {
         public UpdatePrefabsAllCommand() {
-            super("all", "server.commands.update.prefabs.all.desc");
+            super("all", "server.commands.git.prefabs.all.desc");
         }
 
         @Override
         @Nonnull
         protected String[][] getCommands(@Nonnull String senderDisplayName) {
-            return new String[][]{{"git", "submodule", "foreach", "git", "add", "--all", "."}, {"git", "submodule", "foreach", "git", "commit", "-am", "\"Update prefabs by " + senderDisplayName + "\""}, {"git", "submodule", "foreach", "git", "pull"}, {"git", "submodule", "foreach", "git", "push"}, {"git", "add", "--all", "."}, {"git", "commit", "-am", "\"Update prefabs by " + senderDisplayName + "\""}, {"git", "pull"}, {"git", "push"}};
+            return new String[][]{{"git", "submodule", "foreach", "git", "add", "--all", "."}, {"git", "submodule", "foreach", "git", "commit", "-am", "\"Update prefabs by " + senderDisplayName + "\""}, {"git", "submodule", "foreach", "git", "pull"}, {"git", "submodule", "foreach", "git", "push"}, {"git", "add", "--all", "."}, {"git", "commit", "-am", "Update prefabs by " + senderDisplayName}, {"git", "pull"}, {"git", "push"}};
         }
     }
 
@@ -123,24 +123,28 @@ extends AbstractCommandCollection {
                     context.sendMessage(Message.translation("server.general.pathNotGitRepo").param("path", prefabsPath.toString()));
                     return;
                 }
-                String senderDisplayName = context.sender().getDisplayName();
-                for (CharSequence[] charSequenceArray : cmds = this.getCommands(senderDisplayName)) {
+                String senderDisplayName = context.sender().getDisplayName().replaceAll("[^a-zA-Z0-9 ._-]", "");
+                if (senderDisplayName.isEmpty()) {
+                    senderDisplayName = "Unknown";
+                }
+                String finalSenderDisplayName = senderDisplayName;
+                for (CharSequence[] charSequenceArray : cmds = this.getCommands(finalSenderDisplayName)) {
                     try {
                         String commandDisplay = String.join((CharSequence)" ", charSequenceArray);
-                        context.sendMessage(Message.translation("server.commands.update.runningCmd").param("cmd", commandDisplay));
+                        context.sendMessage(Message.translation("server.commands.git.runningCmd").param("cmd", commandDisplay));
                         Process process = new ProcessBuilder((String[])charSequenceArray).directory(gitPath.toFile()).start();
                         try {
                             String line;
                             process.waitFor();
                             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
                             while ((line = reader.readLine()) != null) {
-                                context.sendMessage(Message.translation("server.commands.update.runningStdOut").param("cmd", commandDisplay).param("line", line));
+                                context.sendMessage(Message.translation("server.commands.git.runningStdOut").param("cmd", commandDisplay).param("line", line));
                             }
                             reader = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
                             while ((line = reader.readLine()) != null) {
-                                context.sendMessage(Message.translation("server.commands.update.runningStdErr").param("cmd", commandDisplay).param("line", line));
+                                context.sendMessage(Message.translation("server.commands.git.runningStdErr").param("cmd", commandDisplay).param("line", line));
                             }
-                            context.sendMessage(Message.translation("server.commands.update.done").param("cmd", commandDisplay));
+                            context.sendMessage(Message.translation("server.commands.git.done").param("cmd", commandDisplay));
                             continue;
                         }
                         catch (InterruptedException e) {
@@ -148,7 +152,7 @@ extends AbstractCommandCollection {
                         }
                     }
                     catch (IOException e) {
-                        context.sendMessage(Message.translation("server.commands.update.failed").param("cmd", String.join((CharSequence)" ", charSequenceArray)).param("msg", e.getMessage()));
+                        context.sendMessage(Message.translation("server.commands.git.failed").param("cmd", String.join((CharSequence)" ", charSequenceArray)).param("msg", e.getMessage()));
                     }
                     break;
                 }

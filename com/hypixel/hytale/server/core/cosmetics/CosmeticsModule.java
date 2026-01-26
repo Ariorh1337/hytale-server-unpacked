@@ -89,67 +89,67 @@ extends JavaPlugin {
 
     public void validateSkin(@Nonnull PlayerSkin skin) throws InvalidSkinException {
         if (skin == null) {
-            throw new InvalidSkinException("Skin can't be null!");
+            throw new InvalidSkinException("skin", null);
         }
         if (skin.face == null || !this.registry.getFaces().containsKey(skin.face)) {
-            throw new InvalidSkinException("Invalid face attachment!");
+            throw new InvalidSkinException("face", skin.face);
         }
         if (skin.ears == null || !this.registry.getEars().containsKey(skin.ears)) {
-            throw new InvalidSkinException("Invalid ears attachment!");
+            throw new InvalidSkinException("ears", skin.ears);
         }
         if (skin.mouth == null || !this.registry.getMouths().containsKey(skin.mouth)) {
-            throw new InvalidSkinException("Invalid mouth attachment!");
+            throw new InvalidSkinException("mouth", skin.mouth);
         }
         if (!this.isValidAttachment(this.registry.getBodyCharacteristics(), skin.bodyCharacteristic, true)) {
-            throw new InvalidSkinException("Invalid body characteristic!");
+            throw new InvalidSkinException("body", skin.bodyCharacteristic);
         }
         if (!this.isValidAttachment(this.registry.getUnderwear(), skin.underwear, true)) {
-            throw new InvalidSkinException("Invalid underwear attachment!");
+            throw new InvalidSkinException("underwear", skin.underwear);
         }
         if (!this.isValidAttachment(this.registry.getEyes(), skin.eyes, true)) {
-            throw new InvalidSkinException("Invalid eye attachment!");
+            throw new InvalidSkinException("eyes", skin.eyes);
         }
         if (!this.isValidAttachment(this.registry.getSkinFeatures(), skin.skinFeature)) {
-            throw new InvalidSkinException("Invalid skin feature attachment!");
+            throw new InvalidSkinException("skin feature", skin.skinFeature);
         }
         if (!this.isValidAttachment(this.registry.getEyebrows(), skin.eyebrows)) {
-            throw new InvalidSkinException("Invalid eye brows attachment!");
+            throw new InvalidSkinException("eyebrows", skin.eyebrows);
         }
         if (!this.isValidAttachment(this.registry.getPants(), skin.pants)) {
-            throw new InvalidSkinException("Invalid pants attachment!");
+            throw new InvalidSkinException("pants", skin.pants);
         }
         if (!this.isValidAttachment(this.registry.getOverpants(), skin.overpants)) {
-            throw new InvalidSkinException("Invalid overpants attachment!");
+            throw new InvalidSkinException("overpants", skin.overpants);
         }
         if (!this.isValidAttachment(this.registry.getShoes(), skin.shoes)) {
-            throw new InvalidSkinException("Invalid shoes attachment!");
+            throw new InvalidSkinException("shoes", skin.shoes);
         }
         if (!this.isValidAttachment(this.registry.getUndertops(), skin.undertop)) {
-            throw new InvalidSkinException("Invalid under top attachment!");
+            throw new InvalidSkinException("undertop", skin.undertop);
         }
         if (!this.isValidAttachment(this.registry.getOvertops(), skin.overtop)) {
-            throw new InvalidSkinException("Invalid over top attachment!");
+            throw new InvalidSkinException("overtop", skin.overtop);
         }
         if (!this.isValidAttachment(this.registry.getGloves(), skin.gloves)) {
-            throw new InvalidSkinException("Invalid gloves attachment!");
+            throw new InvalidSkinException("gloves", skin.gloves);
         }
         if (!this.isValidAttachment(this.registry.getHeadAccessories(), skin.headAccessory)) {
-            throw new InvalidSkinException("Invalid head accessory attachment!");
+            throw new InvalidSkinException("head accessory", skin.headAccessory);
         }
         if (!this.isValidAttachment(this.registry.getFaceAccessories(), skin.faceAccessory)) {
-            throw new InvalidSkinException("Invalid face accessory attachment!");
+            throw new InvalidSkinException("face accessory", skin.faceAccessory);
         }
         if (!this.isValidAttachment(this.registry.getEarAccessories(), skin.earAccessory)) {
-            throw new InvalidSkinException("Invalid ear accessory attachment!");
+            throw new InvalidSkinException("ear accessory", skin.earAccessory);
         }
         if (!this.isValidHaircutAttachment(skin.haircut, skin.headAccessory)) {
-            throw new InvalidSkinException("Invalid haircut attachment!");
+            throw new InvalidSkinException("haircut", skin.haircut);
         }
         if (!this.isValidAttachment(this.registry.getFacialHairs(), skin.facialHair)) {
-            throw new InvalidSkinException("Invalid facial accessory attachment!");
+            throw new InvalidSkinException("facial hair", skin.facialHair);
         }
         if (!this.isValidAttachment(this.registry.getCapes(), skin.cape)) {
-            throw new InvalidSkinException("Invalid capes attachment!");
+            throw new InvalidSkinException("cape", skin.cape);
         }
     }
 
@@ -303,8 +303,29 @@ extends JavaPlugin {
 
     public static class InvalidSkinException
     extends Exception {
-        public InvalidSkinException(String message) {
-            super(message);
+        private final String partType;
+        private final String partId;
+
+        public InvalidSkinException(String partType, @Nullable String partId) {
+            super(InvalidSkinException.formatMessage(partType, partId));
+            this.partType = partType;
+            this.partId = partId;
+        }
+
+        private static String formatMessage(String partType, @Nullable String partId) {
+            if (partId == null) {
+                return "Missing required " + partType;
+            }
+            return "Unknown " + partType + ": " + partId;
+        }
+
+        public String getPartType() {
+            return this.partType;
+        }
+
+        @Nullable
+        public String getPartId() {
+            return this.partId;
         }
     }
 }

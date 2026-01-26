@@ -62,7 +62,7 @@ extends TickingSystem<EntityStore> {
         this.spawnBeaconComponentType = spawnBeaconComponentType;
         this.localSpawnStateResourceType = localSpawnStateResourceType;
         this.beaconSpatialComponent = beaconSpatialComponent;
-        this.controllerArchetype = Archetype.of(spawnControllerComponentType, PlayerRef.getComponentType());
+        this.controllerArchetype = Archetype.of(spawnControllerComponentType, PlayerRef.getComponentType(), transformComponentype, weatherTrackerComponentType);
     }
 
     @Override

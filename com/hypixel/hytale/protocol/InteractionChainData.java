@@ -66,15 +66,15 @@ public class InteractionChainData {
         if ((nullBits & 1) != 0) {
             obj.hitLocation = Vector3f.deserialize(buf, offset + 21);
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.blockPosition = BlockPosition.deserialize(buf, offset + 33);
         }
         obj.targetSlot = buf.getIntLE(offset + 45);
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 4) != 0) {
             obj.hitNormal = Vector3f.deserialize(buf, offset + 49);
         }
         int pos = offset + 61;
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int hitDetailLen = VarInt.peek(buf, pos);
             if (hitDetailLen < 0) {
                 throw ProtocolException.negativeLength("HitDetail", hitDetailLen);
@@ -92,7 +92,7 @@ public class InteractionChainData {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int pos = offset + 61;
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int sl = VarInt.peek(buf, pos);
             pos += VarInt.length(buf, pos) + sl;
         }
@@ -104,13 +104,13 @@ public class InteractionChainData {
         if (this.hitLocation != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.hitDetail != null) {
+        if (this.blockPosition != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.blockPosition != null) {
+        if (this.hitNormal != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.hitNormal != null) {
+        if (this.hitDetail != null) {
             nullBits = (byte)(nullBits | 8);
         }
         buf.writeByte(nullBits);
@@ -151,7 +151,7 @@ public class InteractionChainData {
         }
         byte nullBits = buffer.getByte(offset);
         int pos = offset + 61;
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int hitDetailLen = VarInt.peek(buffer, pos);
             if (hitDetailLen < 0) {
                 return ValidationResult.error("Invalid string length for HitDetail");

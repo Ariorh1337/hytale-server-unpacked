@@ -7,13 +7,22 @@ import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ComponentRegistry;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.query.Query;
+import javax.annotation.Nonnull;
 
 public class OrQuery<ECS_TYPE>
 implements Query<ECS_TYPE> {
+    @Nonnull
     private final Query<ECS_TYPE>[] queries;
 
     public OrQuery(Query<ECS_TYPE> ... queries) {
         this.queries = queries;
+        if (queries.length == 0) {
+            throw new IllegalArgumentException("At least one query must be provided for OrQuery");
+        }
+        for (int i = 0; i < queries.length; ++i) {
+            if (queries[i] != null) continue;
+            throw new NullPointerException("Query at index " + i + " for OrQuery cannot be null");
+        }
     }
 
     @Override
@@ -35,7 +44,7 @@ implements Query<ECS_TYPE> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
         for (Query<ECS_TYPE> query : this.queries) {
             query.validateRegistry(registry);
         }

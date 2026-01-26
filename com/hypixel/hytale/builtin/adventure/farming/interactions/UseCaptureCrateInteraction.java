@@ -22,6 +22,7 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
@@ -78,11 +79,16 @@ extends SimpleBlockInteraction {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        Ref<EntityStore> playerRef = context.getEntity();
-        LivingEntity playerEntity = (LivingEntity)EntityUtils.getEntity(playerRef, commandBuffer);
-        Inventory playerInventory = playerEntity.getInventory();
-        byte activeHotbarSlot = playerInventory.getActiveHotbarSlot();
-        ItemStack inHandItemStack = playerInventory.getActiveHotbarItem();
+        Ref<EntityStore> ref = context.getEntity();
+        Entity entity = EntityUtils.getEntity(ref, commandBuffer);
+        if (!(entity instanceof LivingEntity)) {
+            context.getState().state = InteractionState.Failed;
+            return;
+        }
+        LivingEntity livingEntity = (LivingEntity)entity;
+        Inventory inventory = livingEntity.getInventory();
+        byte activeHotbarSlot = inventory.getActiveHotbarSlot();
+        ItemStack inHandItemStack = inventory.getActiveHotbarItem();
         CapturedNPCMetadata existingMeta = item.getFromMetadataOrNull("CapturedEntity", CapturedNPCMetadata.CODEC);
         if (existingMeta == null) {
             Ref<EntityStore> targetEntity = context.getTargetEntity();
@@ -90,15 +96,15 @@ extends SimpleBlockInteraction {
                 context.getState().state = InteractionState.Failed;
                 return;
             }
-            NPCEntity npc = commandBuffer.getComponent(targetEntity, NPCEntity.getComponentType());
-            if (npc == null) {
+            NPCEntity npcComponent = commandBuffer.getComponent(targetEntity, NPCEntity.getComponentType());
+            if (npcComponent == null) {
                 context.getState().state = InteractionState.Failed;
                 return;
             }
             TagSetPlugin.TagSetLookup tagSetPlugin = TagSetPlugin.get(NPCGroup.class);
             boolean tagFound = false;
             for (int group : this.acceptedNpcGroupIndexes) {
-                if (!tagSetPlugin.tagInSet(group, npc.getRoleIndex())) continue;
+                if (!tagSetPlugin.tagInSet(group, npcComponent.getRoleIndex())) continue;
                 tagFound = true;
                 break;
             }
@@ -116,8 +122,8 @@ extends SimpleBlockInteraction {
             if (modelAsset != null) {
                 meta.setIconPath(modelAsset.getIcon());
             }
-            meta.setRoleIndex(npc.getRoleIndex());
-            String npcName = NPCPlugin.get().getName(npc.getRoleIndex());
+            meta.setRoleIndex(npcComponent.getRoleIndex());
+            String npcName = NPCPlugin.get().getName(npcComponent.getRoleIndex());
             if (npcName != null) {
                 meta.setNpcNameKey(npcName);
             }
@@ -125,7 +131,7 @@ extends SimpleBlockInteraction {
                 meta.setFullItemIcon(this.fullIcon);
             }
             ItemStack itemWithNPC = inHandItemStack.withMetadata(CapturedNPCMetadata.KEYED_CODEC, meta);
-            playerInventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
+            inventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
             commandBuffer.removeEntity(targetEntity, RemoveReason.REMOVE);
             return;
         }
@@ -142,10 +148,15 @@ extends SimpleBlockInteraction {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        Ref<EntityStore> playerRef = context.getEntity();
-        LivingEntity playerEntity = (LivingEntity)EntityUtils.getEntity(playerRef, commandBuffer);
-        Inventory playerInventory = playerEntity.getInventory();
-        byte activeHotbarSlot = playerInventory.getActiveHotbarSlot();
+        Ref<EntityStore> ref = context.getEntity();
+        Entity entity = EntityUtils.getEntity(ref, commandBuffer);
+        if (!(entity instanceof LivingEntity)) {
+            context.getState().state = InteractionState.Failed;
+            return;
+        }
+        LivingEntity livingEntity = (LivingEntity)entity;
+        Inventory inventory = livingEntity.getInventory();
+        byte activeHotbarSlot = inventory.getActiveHotbarSlot();
         CapturedNPCMetadata existingMeta = item.getFromMetadataOrNull("CapturedEntity", CapturedNPCMetadata.CODEC);
         if (existingMeta == null) {
             context.getState().state = InteractionState.Failed;
@@ -166,7 +177,7 @@ extends SimpleBlockInteraction {
             WorldTimeResource worldTimeResource = commandBuffer.getResource(WorldTimeResource.getResourceType());
             if (coopBlockState.tryPutResident(existingMeta, worldTimeResource)) {
                 world.execute(() -> coopBlockState.ensureSpawnResidentsInWorld(world, world.getEntityStore().getStore(), new Vector3d(pos.x, pos.y, pos.z), new Vector3d().assign(Vector3d.FORWARD)));
-                playerInventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
+                inventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
             } else {
                 context.getState().state = InteractionState.Failed;
             }
@@ -180,7 +191,7 @@ extends SimpleBlockInteraction {
         Store<EntityStore> store = context.getCommandBuffer().getStore();
         int roleIndex = existingMeta.getRoleIndex();
         commandBuffer.run(_store -> npcModule.spawnEntity(store, roleIndex, spawnPos, Vector3f.ZERO, null, null));
-        playerInventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
+        inventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
     }
 
     @Override

@@ -18,6 +18,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class BoxProp
 extends Prop {
@@ -26,6 +27,7 @@ extends Prop {
     private final Scanner scanner;
     private final Pattern pattern;
     private final ContextDependency contextDependency;
+    private final Bounds3i readBounds_voxelGrid;
     private final Bounds3i writeBounds_voxelGrid;
     private final Bounds3i boxBounds_voxelGrid;
 
@@ -42,7 +44,8 @@ extends Prop {
         Vector3i writeRange = writeSpace.getRange();
         Vector3i readRange = scanner.readSpaceWith(pattern).getRange();
         this.contextDependency = new ContextDependency(readRange, writeRange);
-        this.writeBounds_voxelGrid = this.contextDependency.getTotalPropBounds_voxelGrid();
+        this.readBounds_voxelGrid = this.contextDependency.getReadBounds_voxelGrid();
+        this.writeBounds_voxelGrid = this.contextDependency.getWriteBounds_voxelGrid();
         this.boxBounds_voxelGrid = GridUtils.createBounds_fromVector_originVoxelInclusive(range);
     }
 
@@ -86,8 +89,14 @@ extends Prop {
     }
 
     @Override
+    @NonNullDecl
+    public Bounds3i getReadBounds_voxelGrid() {
+        return this.readBounds_voxelGrid;
+    }
+
+    @Override
     @Nonnull
-    public Bounds3i getWriteBounds() {
+    public Bounds3i getWriteBounds_voxelGrid() {
         return this.writeBounds_voxelGrid;
     }
 }

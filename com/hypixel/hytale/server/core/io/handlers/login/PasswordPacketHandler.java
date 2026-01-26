@@ -12,21 +12,18 @@ import com.hypixel.hytale.protocol.packets.auth.PasswordRejected;
 import com.hypixel.hytale.protocol.packets.auth.PasswordResponse;
 import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.handlers.GenericConnectionPacketHandler;
 import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.handler.timeout.ReadTimeoutHandler;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,7 +31,6 @@ import javax.annotation.Nullable;
 public class PasswordPacketHandler
 extends GenericConnectionPacketHandler {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final int PASSWORD_TIMEOUT_SECONDS = 30;
     private static final int MAX_PASSWORD_ATTEMPTS = 3;
     private static final int CHALLENGE_LENGTH = 32;
     private final UUID playerUuid;
@@ -63,14 +59,13 @@ extends GenericConnectionPacketHandler {
 
     @Override
     public void registered0(PacketHandler oldHandler) {
-        Duration playTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getPlayTimeout();
-        this.channel.pipeline().replace("timeOut", "timeOut", (ChannelHandler)new ReadTimeoutHandler(playTimeout.toMillis(), TimeUnit.MILLISECONDS));
+        HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
         if (this.passwordChallenge == null || this.passwordChallenge.length == 0) {
             LOGGER.at(Level.FINE).log("No password required for %s, proceeding to setup", this.username);
             this.proceedToSetup();
         } else {
             LOGGER.at(Level.FINE).log("Waiting for password response from %s", this.username);
-            this.setTimeout("password-timeout", () -> !this.registered, 30L, TimeUnit.SECONDS);
+            this.enterStage("password", timeouts.getPassword(), () -> !this.registered);
         }
     }
 
@@ -131,7 +126,8 @@ extends GenericConnectionPacketHandler {
             }
             this.passwordChallenge = PasswordPacketHandler.generateChallenge();
             this.write((Packet)new PasswordRejected(this.passwordChallenge, this.attemptsRemaining));
-            this.setTimeout("password-timeout", () -> !this.registered, 30L, TimeUnit.SECONDS);
+            HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+            this.continueStage("password", timeouts.getPassword(), () -> !this.registered);
             return;
         }
         LOGGER.at(Level.INFO).log("Password accepted for %s (%s)", (Object)this.username, (Object)this.playerUuid);

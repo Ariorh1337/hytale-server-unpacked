@@ -55,17 +55,25 @@ import javax.annotation.Nullable;
 public class SelectInteraction
 extends SimpleInteraction {
     public static boolean SHOW_VISUAL_DEBUG;
+    @Nonnull
     public static SnapshotSource SNAPSHOT_SOURCE;
     @Nonnull
     public static final BuilderCodec<SelectInteraction> CODEC;
+    @Nonnull
     public static final MetaKey<IntSet> HIT_ENTITIES;
+    @Nonnull
     public static final MetaKey<Set<BlockPosition>> HIT_BLOCKS;
+    @Nonnull
     public static final MetaKey<DynamicMetaStore<Interaction>> SELECT_META_STORE;
     private static final MetaKey<Selector> ENTITY_SELECTOR;
     protected SelectorType selector;
+    @Nullable
     protected String hitEntity;
+    @Nullable
     protected HitEntity[] hitEntityRules;
+    @Nullable
     protected String hitBlock;
+    @Nonnull
     protected FailOnType failOn = FailOnType.Neither;
     protected boolean ignoreOwner = true;
 
@@ -83,28 +91,27 @@ extends SimpleInteraction {
     @Override
     protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         boolean checkEntities;
-        Player playerComponent;
         Ref<EntityStore> ref = context.getEntity();
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
         assert (commandBuffer != null);
+        DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();
+        Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
         if (firstRun) {
-            playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
             Selector selector = this.selector.newSelector();
             if (playerComponent != null && SNAPSHOT_SOURCE == SnapshotSource.CLIENT) {
                 selector = new ClientSourcedSelector(selector, context);
             }
-            context.getInstanceStore().putMetaObject(ENTITY_SELECTOR, selector);
+            instanceStore.putMetaObject(ENTITY_SELECTOR, selector);
             if ((playerComponent == null || SNAPSHOT_SOURCE != SnapshotSource.CLIENT) && time <= 0.0f && this.getRunTime() > 0.0f) {
                 return;
             }
         }
-        playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
         World world = commandBuffer.getExternalData().getWorld();
-        Selector selector = context.getInstanceStore().getMetaObject(ENTITY_SELECTOR);
+        Selector selector = instanceStore.getMetaObject(ENTITY_SELECTOR);
         selector.tick(commandBuffer, context.getEntity(), Math.min(time, this.getRunTime()), this.getRunTime());
         boolean bl = checkEntities = this.hitEntity != null || this.hitEntityRules != null;
         if (checkEntities) {
-            IntSet hitEntities = context.getInstanceStore().getMetaObject(HIT_ENTITIES);
+            IntSet hitEntities = instanceStore.getMetaObject(HIT_ENTITIES);
             selector.selectTargetEntities(commandBuffer, context.getEntity(), (targetRef, hit) -> {
                 NetworkId networkIdComponent = targetRef.getStore().getComponent((Ref<EntityStore>)targetRef, NetworkId.getComponentType());
                 if (networkIdComponent == null) {
@@ -144,7 +151,7 @@ extends SimpleInteraction {
                 DynamicMetaStore<InteractionContext> metaStore = subCtx.getMetaStore();
                 metaStore.putMetaObject(TARGET_ENTITY, targetRef);
                 metaStore.putMetaObject(HIT_LOCATION, hit);
-                metaStore.putMetaObject(SELECT_META_STORE, context.getInstanceStore());
+                metaStore.putMetaObject(SELECT_META_STORE, instanceStore);
                 metaStore.removeMetaObject(TARGET_BLOCK);
                 metaStore.removeMetaObject(TARGET_BLOCK_RAW);
                 if (playerComponent != null && SNAPSHOT_SOURCE == SnapshotSource.CLIENT) {
@@ -173,7 +180,7 @@ extends SimpleInteraction {
             }
         }
         if (this.hitBlock != null) {
-            Set<BlockPosition> hitBlocks = context.getInstanceStore().getMetaObject(HIT_BLOCKS);
+            Set<BlockPosition> hitBlocks = instanceStore.getMetaObject(HIT_BLOCKS);
             RootInteraction hitBlock = RootInteraction.getRootInteractionOrUnknown(this.hitBlock);
             selector.selectTargetBlocks(commandBuffer, context.getEntity(), (x, y, z) -> {
                 BlockPosition rawBlock = new BlockPosition(x, y, z);
@@ -185,7 +192,7 @@ extends SimpleInteraction {
                 DynamicMetaStore<InteractionContext> metaStore = subCtx.getMetaStore();
                 metaStore.putMetaObject(TARGET_BLOCK, targetBlock);
                 metaStore.putMetaObject(TARGET_BLOCK_RAW, rawBlock);
-                metaStore.putMetaObject(SELECT_META_STORE, context.getInstanceStore());
+                metaStore.putMetaObject(SELECT_META_STORE, instanceStore);
                 metaStore.removeMetaObject(TARGET_ENTITY);
                 context.fork(new InteractionChainData(), context.getChain().getType(), subCtx, hitBlock, false);
             });
@@ -287,6 +294,7 @@ extends SimpleInteraction {
 
     public static class HitEntity
     implements NetworkSerializable<com.hypixel.hytale.protocol.HitEntity> {
+        @Nonnull
         public static final BuilderCodec<HitEntity> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HitEntity.class, HitEntity::new).appendInherited(new KeyedCodec("Next", RootInteraction.CHILD_ASSET_CODEC), (o, i) -> {
             o.next = i;
         }, o -> o.next, (o, p) -> {
@@ -312,7 +320,9 @@ extends SimpleInteraction {
 
     public static abstract class EntityMatcher
     implements NetworkSerializable<com.hypixel.hytale.protocol.EntityMatcher> {
+        @Nonnull
         public static final CodecMapCodec<EntityMatcher> CODEC = new CodecMapCodec("Type");
+        @Nonnull
         public static final BuilderCodec<EntityMatcher> BASE_CODEC = ((BuilderCodec.Builder)BuilderCodec.abstractBuilder(EntityMatcher.class).appendInherited(new KeyedCodec<Boolean>("Invert", Codec.BOOLEAN), (o, i) -> {
             o.invert = i;
         }, o -> o.invert, (o, p) -> {
@@ -320,11 +330,11 @@ extends SimpleInteraction {
         }).documentation("Inverts the result of the matcher").add()).build();
         protected boolean invert;
 
-        public final boolean test(Ref<EntityStore> attacker, Ref<EntityStore> target, CommandBuffer<EntityStore> commandBuffer) {
-            return this.test0(attacker, target, commandBuffer) ^ this.invert;
+        public final boolean test(@Nonnull Ref<EntityStore> sourceRef, @Nonnull Ref<EntityStore> targetRef, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+            return this.test0(sourceRef, targetRef, commandBuffer) ^ this.invert;
         }
 
-        public abstract boolean test0(Ref<EntityStore> var1, Ref<EntityStore> var2, CommandBuffer<EntityStore> var3);
+        public abstract boolean test0(@Nonnull Ref<EntityStore> var1, @Nonnull Ref<EntityStore> var2, @Nonnull CommandBuffer<EntityStore> var3);
 
         @Override
         @Nonnull

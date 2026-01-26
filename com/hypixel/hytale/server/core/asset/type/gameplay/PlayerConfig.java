@@ -6,6 +6,7 @@ package com.hypixel.hytale.server.core.asset.type.gameplay;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementConfig;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfig;
@@ -13,7 +14,7 @@ import javax.annotation.Nonnull;
 
 public class PlayerConfig {
     @Nonnull
-    public static final BuilderCodec<PlayerConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PlayerConfig.class, PlayerConfig::new).appendInherited(new KeyedCodec<String>("HitboxCollisionConfig", Codec.STRING), (playerConfig, s) -> {
+    public static final BuilderCodec<PlayerConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PlayerConfig.class, PlayerConfig::new).appendInherited(new KeyedCodec<String>("HitboxCollisionConfig", Codec.STRING), (playerConfig, s) -> {
         playerConfig.hitboxCollisionConfigId = s;
     }, playerConfig -> playerConfig.hitboxCollisionConfigId, (playerConfig, parent) -> {
         playerConfig.hitboxCollisionConfigId = parent.hitboxCollisionConfigId;
@@ -29,6 +30,10 @@ public class PlayerConfig {
         playerConfig.maxDeployableEntities = s;
     }, playerConfig -> playerConfig.maxDeployableEntities, (playerConfig, parent) -> {
         playerConfig.maxDeployableEntities = parent.maxDeployableEntities;
+    }).add()).appendInherited(new KeyedCodec<ArmorVisibilityOption>("ArmorVisibilityOption", new EnumCodec<ArmorVisibilityOption>(ArmorVisibilityOption.class)), (playerConfig, armorVisibilityOption1) -> {
+        playerConfig.armorVisibilityOption = armorVisibilityOption1;
+    }, playerConfig -> playerConfig.armorVisibilityOption, (playerConfig, parent) -> {
+        playerConfig.armorVisibilityOption = parent.armorVisibilityOption;
     }).add()).afterDecode(playerConfig -> {
         if (playerConfig.hitboxCollisionConfigId != null) {
             playerConfig.hitboxCollisionConfigIndex = HitboxCollisionConfig.getAssetMap().getIndexOrDefault(playerConfig.hitboxCollisionConfigId, -1);
@@ -47,6 +52,7 @@ public class PlayerConfig {
     protected int repulsionConfigIndex = -1;
     protected int movementConfigIndex = 0;
     protected int maxDeployableEntities = -1;
+    protected ArmorVisibilityOption armorVisibilityOption = ArmorVisibilityOption.ALL;
 
     public int getHitboxCollisionConfigIndex() {
         return this.hitboxCollisionConfigIndex;
@@ -66,6 +72,44 @@ public class PlayerConfig {
 
     public int getMaxDeployableEntities() {
         return this.maxDeployableEntities;
+    }
+
+    public ArmorVisibilityOption getArmorVisibilityOption() {
+        return this.armorVisibilityOption;
+    }
+
+    public static enum ArmorVisibilityOption {
+        ALL(true, true, true, true),
+        HELMET_ONLY(true, false, false, false),
+        NONE(false, false, false, false);
+
+        private final boolean canHideHelmet;
+        private final boolean canHideCuirass;
+        private final boolean canHideGauntlets;
+        private final boolean canHidePants;
+
+        private ArmorVisibilityOption(boolean canHideHelmet, boolean canHideCuirass, boolean canHideGauntlets, boolean canHidePants) {
+            this.canHideHelmet = canHideHelmet;
+            this.canHideCuirass = canHideCuirass;
+            this.canHideGauntlets = canHideGauntlets;
+            this.canHidePants = canHidePants;
+        }
+
+        public boolean canHideHelmet() {
+            return this.canHideHelmet;
+        }
+
+        public boolean canHideCuirass() {
+            return this.canHideCuirass;
+        }
+
+        public boolean canHideGauntlets() {
+            return this.canHideGauntlets;
+        }
+
+        public boolean canHidePants() {
+            return this.canHidePants;
+        }
     }
 }
 

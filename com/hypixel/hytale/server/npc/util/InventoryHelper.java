@@ -176,7 +176,7 @@ public class InventoryHelper {
         return true;
     }
 
-    public static void removeItemInHand(@Nonnull Inventory inventory) {
+    public static void removeItemInHand(@Nonnull Inventory inventory, int count) {
         if (ItemStack.isEmpty(inventory.getItemInHand())) {
             return;
         }
@@ -184,7 +184,7 @@ public class InventoryHelper {
         if (activeHotbarSlot == -1) {
             return;
         }
-        inventory.getHotbar().removeItemStackFromSlot(activeHotbarSlot);
+        inventory.getHotbar().removeItemStackFromSlot((short)activeHotbarSlot, count);
     }
 
     public static boolean checkHotbarSlot(@Nonnull Inventory inventory, byte slot) {

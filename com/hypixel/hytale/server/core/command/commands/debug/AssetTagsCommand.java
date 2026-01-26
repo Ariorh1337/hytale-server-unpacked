@@ -22,8 +22,6 @@ import javax.annotation.Nonnull;
 public class AssetTagsCommand
 extends CommandBase {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_ASSETS_TAGS_TAG_NOT_FOUND = Message.translation("server.commands.assets.tags.tagNotFound");
-    @Nonnull
     private final RequiredArg<String> classArg = this.withRequiredArg("class", "server.commands.assets.tags.class.desc", ArgTypes.STRING);
     @Nonnull
     private final RequiredArg<String> tagArg = this.withRequiredArg("tag", "server.commands.assets.tags.tag.desc", ArgTypes.STRING);
@@ -38,7 +36,7 @@ extends CommandBase {
         String tag = (String)this.tagArg.get(context);
         int tagIndex = AssetRegistry.getTagIndex(tag);
         if (tagIndex == Integer.MIN_VALUE) {
-            context.sendMessage(MESSAGE_COMMANDS_ASSETS_TAGS_TAG_NOT_FOUND.param("tag", tag));
+            context.sendMessage(Message.translation("server.commands.assets.tags.tagNotFound").param("tag", tag));
             return;
         }
         for (Map.Entry<Class<JsonAssetWithMap>, AssetStore<?, ?, ?>> entry : AssetRegistry.getStoreMap().entrySet()) {

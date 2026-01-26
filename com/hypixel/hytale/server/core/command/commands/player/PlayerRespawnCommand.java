@@ -30,7 +30,7 @@ extends AbstractPlayerCommand {
 
     @Override
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
-        store.tryRemoveComponent(ref, DeathComponent.getComponentType());
+        DeathComponent.respawn(store, ref);
         context.sendMessage(MESSAGE_COMMANDS_PLAYER_RESPAWN_SUCCESS_SELF);
     }
 
@@ -61,7 +61,7 @@ extends AbstractPlayerCommand {
                     context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
                     return;
                 }
-                store.tryRemoveComponent(ref, DeathComponent.getComponentType());
+                DeathComponent.respawn(store, ref);
                 context.sendMessage(Message.translation("server.commands.player.respawn.success.other").param("username", playerRef.getUsername()));
             });
         }

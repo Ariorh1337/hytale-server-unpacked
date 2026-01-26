@@ -40,7 +40,6 @@ extends AbstractPlayerCommand {
     private static class PlayerEffectClearOtherCommand
     extends CommandBase {
         private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
-        private static final Message MESSAGE_EFFECTS_CLEARED_OTHER = Message.translation("server.commands.player.effect.clear.success.other");
         @Nonnull
         private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.argtype.player.desc", ArgTypes.PLAYER_REF);
 
@@ -70,7 +69,7 @@ extends AbstractPlayerCommand {
                 EffectControllerComponent effectControllerComponent = store.getComponent(ref, EffectControllerComponent.getComponentType());
                 assert (effectControllerComponent != null);
                 effectControllerComponent.clearEffects(ref, store);
-                context.sendMessage(MESSAGE_EFFECTS_CLEARED_OTHER.param("username", playerRefComponent.getUsername()));
+                context.sendMessage(Message.translation("server.commands.player.effect.clear.success.other").param("username", playerRefComponent.getUsername()));
             });
         }
     }

@@ -281,31 +281,31 @@ public class BlockType {
         obj.rotationYawPlacementOffset = Rotation.fromValue(buf.getByte(offset + 30));
         obj.blockSoundSetIndex = buf.getIntLE(offset + 31);
         obj.ambientSoundEventIndex = buf.getIntLE(offset + 35);
-        if ((nullBits[1] & 0x20) != 0) {
+        if ((nullBits[0] & 1) != 0) {
             obj.particleColor = Color.deserialize(buf, offset + 39);
         }
-        if ((nullBits[1] & 0x40) != 0) {
+        if ((nullBits[0] & 2) != 0) {
             obj.light = ColorLight.deserialize(buf, offset + 42);
         }
-        if ((nullBits[1] & 0x80) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             obj.tint = Tint.deserialize(buf, offset + 46);
         }
-        if ((nullBits[2] & 1) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             obj.biomeTint = Tint.deserialize(buf, offset + 70);
         }
         obj.group = buf.getIntLE(offset + 94);
-        if ((nullBits[2] & 8) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             obj.movementSettings = BlockMovementSettings.deserialize(buf, offset + 98);
         }
-        if ((nullBits[2] & 0x10) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             obj.flags = BlockFlags.deserialize(buf, offset + 140);
         }
-        if ((nullBits[2] & 0x80) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             obj.placementSettings = BlockPlacementSettings.deserialize(buf, offset + 142);
         }
         obj.ignoreSupportWhenPlaced = buf.getByte(offset + 158) != 0;
         obj.transitionToTag = buf.getIntLE(offset + 159);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int varPos0 = offset + 259 + buf.getIntLE(offset + 163);
             int itemLen = VarInt.peek(buf, varPos0);
             if (itemLen < 0) {
@@ -316,7 +316,7 @@ public class BlockType {
             }
             obj.item = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int varPos1 = offset + 259 + buf.getIntLE(offset + 167);
             int nameLen = VarInt.peek(buf, varPos1);
             if (nameLen < 0) {
@@ -327,7 +327,7 @@ public class BlockType {
             }
             obj.name = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int varPos2 = offset + 259 + buf.getIntLE(offset + 171);
             int shaderEffectCount = VarInt.peek(buf, varPos2);
             if (shaderEffectCount < 0) {
@@ -347,7 +347,7 @@ public class BlockType {
                 ++elemPos;
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int varPos3 = offset + 259 + buf.getIntLE(offset + 175);
             int modelLen = VarInt.peek(buf, varPos3);
             if (modelLen < 0) {
@@ -358,7 +358,7 @@ public class BlockType {
             }
             obj.model = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int varPos4 = offset + 259 + buf.getIntLE(offset + 179);
             int modelTextureCount = VarInt.peek(buf, varPos4);
             if (modelTextureCount < 0) {
@@ -378,7 +378,7 @@ public class BlockType {
                 elemPos += ModelTexture.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int varPos5 = offset + 259 + buf.getIntLE(offset + 183);
             int modelAnimationLen = VarInt.peek(buf, varPos5);
             if (modelAnimationLen < 0) {
@@ -389,7 +389,7 @@ public class BlockType {
             }
             obj.modelAnimation = PacketIO.readVarString(buf, varPos5, PacketIO.UTF8);
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int varPos6 = offset + 259 + buf.getIntLE(offset + 187);
             int supportCount = VarInt.peek(buf, varPos6);
             if (supportCount < 0) {
@@ -423,7 +423,7 @@ public class BlockType {
                 throw ProtocolException.duplicateKey("support", key);
             }
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int varPos7 = offset + 259 + buf.getIntLE(offset + 191);
             int supportingCount = VarInt.peek(buf, varPos7);
             if (supportingCount < 0) {
@@ -457,7 +457,7 @@ public class BlockType {
                 throw ProtocolException.duplicateKey("supporting", key);
             }
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int varPos8 = offset + 259 + buf.getIntLE(offset + 195);
             int cubeTexturesCount = VarInt.peek(buf, varPos8);
             if (cubeTexturesCount < 0) {
@@ -477,7 +477,7 @@ public class BlockType {
                 elemPos += BlockTextures.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[2] & 1) != 0) {
             int varPos9 = offset + 259 + buf.getIntLE(offset + 199);
             int cubeSideMaskTextureLen = VarInt.peek(buf, varPos9);
             if (cubeSideMaskTextureLen < 0) {
@@ -488,7 +488,7 @@ public class BlockType {
             }
             obj.cubeSideMaskTexture = PacketIO.readVarString(buf, varPos9, PacketIO.UTF8);
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[2] & 2) != 0) {
             int varPos10 = offset + 259 + buf.getIntLE(offset + 203);
             int particlesCount = VarInt.peek(buf, varPos10);
             if (particlesCount < 0) {
@@ -508,7 +508,7 @@ public class BlockType {
                 elemPos += ModelParticle.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[2] & 4) != 0) {
             int varPos11 = offset + 259 + buf.getIntLE(offset + 207);
             int blockParticleSetIdLen = VarInt.peek(buf, varPos11);
             if (blockParticleSetIdLen < 0) {
@@ -519,7 +519,7 @@ public class BlockType {
             }
             obj.blockParticleSetId = PacketIO.readVarString(buf, varPos11, PacketIO.UTF8);
         }
-        if ((nullBits[1] & 0x10) != 0) {
+        if ((nullBits[2] & 8) != 0) {
             int varPos12 = offset + 259 + buf.getIntLE(offset + 211);
             int blockBreakingDecalIdLen = VarInt.peek(buf, varPos12);
             if (blockBreakingDecalIdLen < 0) {
@@ -530,7 +530,7 @@ public class BlockType {
             }
             obj.blockBreakingDecalId = PacketIO.readVarString(buf, varPos12, PacketIO.UTF8);
         }
-        if ((nullBits[2] & 2) != 0) {
+        if ((nullBits[2] & 0x10) != 0) {
             int varPos13 = offset + 259 + buf.getIntLE(offset + 215);
             int transitionTextureLen = VarInt.peek(buf, varPos13);
             if (transitionTextureLen < 0) {
@@ -541,7 +541,7 @@ public class BlockType {
             }
             obj.transitionTexture = PacketIO.readVarString(buf, varPos13, PacketIO.UTF8);
         }
-        if ((nullBits[2] & 4) != 0) {
+        if ((nullBits[2] & 0x20) != 0) {
             int varPos14 = offset + 259 + buf.getIntLE(offset + 219);
             int transitionToGroupsCount = VarInt.peek(buf, varPos14);
             if (transitionToGroupsCount < 0) {
@@ -559,7 +559,7 @@ public class BlockType {
                 obj.transitionToGroups[i] = buf.getIntLE(varPos14 + varIntLen + i * 4);
             }
         }
-        if ((nullBits[2] & 0x20) != 0) {
+        if ((nullBits[2] & 0x40) != 0) {
             int varPos15 = offset + 259 + buf.getIntLE(offset + 223);
             int interactionHintLen = VarInt.peek(buf, varPos15);
             if (interactionHintLen < 0) {
@@ -570,7 +570,7 @@ public class BlockType {
             }
             obj.interactionHint = PacketIO.readVarString(buf, varPos15, PacketIO.UTF8);
         }
-        if ((nullBits[2] & 0x40) != 0) {
+        if ((nullBits[2] & 0x80) != 0) {
             int varPos16 = offset + 259 + buf.getIntLE(offset + 227);
             obj.gathering = BlockGathering.deserialize(buf, varPos16);
         }
@@ -668,7 +668,7 @@ public class BlockType {
         int sl;
         byte[] nullBits = PacketIO.readBytes(buf, offset, 4);
         int maxEnd = 259;
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 163);
             int pos0 = offset + 259 + fieldOffset0;
             sl = VarInt.peek(buf, pos0);
@@ -676,7 +676,7 @@ public class BlockType {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 167);
             int pos1 = offset + 259 + fieldOffset1;
             sl = VarInt.peek(buf, pos1);
@@ -684,7 +684,7 @@ public class BlockType {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 171);
             int pos2 = offset + 259 + fieldOffset2;
             arrLen = VarInt.peek(buf, pos2);
@@ -692,7 +692,7 @@ public class BlockType {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 175);
             int pos3 = offset + 259 + fieldOffset3;
             sl = VarInt.peek(buf, pos3);
@@ -700,7 +700,7 @@ public class BlockType {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 179);
             int pos4 = offset + 259 + fieldOffset4;
             arrLen = VarInt.peek(buf, pos4);
@@ -712,7 +712,7 @@ public class BlockType {
                 maxEnd = pos4 - offset;
             }
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int fieldOffset5 = buf.getIntLE(offset + 183);
             int pos5 = offset + 259 + fieldOffset5;
             sl = VarInt.peek(buf, pos5);
@@ -720,7 +720,7 @@ public class BlockType {
                 maxEnd = pos5 - offset;
             }
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int fieldOffset6 = buf.getIntLE(offset + 187);
             int pos6 = offset + 259 + fieldOffset6;
             dictLen = VarInt.peek(buf, pos6);
@@ -736,7 +736,7 @@ public class BlockType {
                 maxEnd = pos6 - offset;
             }
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int fieldOffset7 = buf.getIntLE(offset + 191);
             int pos7 = offset + 259 + fieldOffset7;
             dictLen = VarInt.peek(buf, pos7);
@@ -752,7 +752,7 @@ public class BlockType {
                 maxEnd = pos7 - offset;
             }
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int fieldOffset8 = buf.getIntLE(offset + 195);
             int pos8 = offset + 259 + fieldOffset8;
             arrLen = VarInt.peek(buf, pos8);
@@ -764,7 +764,7 @@ public class BlockType {
                 maxEnd = pos8 - offset;
             }
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[2] & 1) != 0) {
             int fieldOffset9 = buf.getIntLE(offset + 199);
             int pos9 = offset + 259 + fieldOffset9;
             sl = VarInt.peek(buf, pos9);
@@ -772,7 +772,7 @@ public class BlockType {
                 maxEnd = pos9 - offset;
             }
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[2] & 2) != 0) {
             int fieldOffset10 = buf.getIntLE(offset + 203);
             int pos10 = offset + 259 + fieldOffset10;
             arrLen = VarInt.peek(buf, pos10);
@@ -784,7 +784,7 @@ public class BlockType {
                 maxEnd = pos10 - offset;
             }
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[2] & 4) != 0) {
             int fieldOffset11 = buf.getIntLE(offset + 207);
             int pos11 = offset + 259 + fieldOffset11;
             sl = VarInt.peek(buf, pos11);
@@ -792,7 +792,7 @@ public class BlockType {
                 maxEnd = pos11 - offset;
             }
         }
-        if ((nullBits[1] & 0x10) != 0) {
+        if ((nullBits[2] & 8) != 0) {
             int fieldOffset12 = buf.getIntLE(offset + 211);
             int pos12 = offset + 259 + fieldOffset12;
             sl = VarInt.peek(buf, pos12);
@@ -800,7 +800,7 @@ public class BlockType {
                 maxEnd = pos12 - offset;
             }
         }
-        if ((nullBits[2] & 2) != 0) {
+        if ((nullBits[2] & 0x10) != 0) {
             int fieldOffset13 = buf.getIntLE(offset + 215);
             int pos13 = offset + 259 + fieldOffset13;
             sl = VarInt.peek(buf, pos13);
@@ -808,7 +808,7 @@ public class BlockType {
                 maxEnd = pos13 - offset;
             }
         }
-        if ((nullBits[2] & 4) != 0) {
+        if ((nullBits[2] & 0x20) != 0) {
             int fieldOffset14 = buf.getIntLE(offset + 219);
             int pos14 = offset + 259 + fieldOffset14;
             arrLen = VarInt.peek(buf, pos14);
@@ -816,7 +816,7 @@ public class BlockType {
                 maxEnd = pos14 - offset;
             }
         }
-        if ((nullBits[2] & 0x20) != 0) {
+        if ((nullBits[2] & 0x40) != 0) {
             int fieldOffset15 = buf.getIntLE(offset + 223);
             int pos15 = offset + 259 + fieldOffset15;
             sl = VarInt.peek(buf, pos15);
@@ -824,7 +824,7 @@ public class BlockType {
                 maxEnd = pos15 - offset;
             }
         }
-        if ((nullBits[2] & 0x40) != 0) {
+        if ((nullBits[2] & 0x80) != 0) {
             int fieldOffset16 = buf.getIntLE(offset + 227);
             int pos16 = offset + 259 + fieldOffset16;
             if ((pos16 += BlockGathering.computeBytesConsumed(buf, pos16)) - offset > maxEnd) {
@@ -901,76 +901,76 @@ public class BlockType {
         int n;
         int startPos = buf.writerIndex();
         byte[] nullBits = new byte[4];
-        if (this.item != null) {
+        if (this.particleColor != null) {
             nullBits[0] = (byte)(nullBits[0] | 1);
         }
-        if (this.name != null) {
+        if (this.light != null) {
             nullBits[0] = (byte)(nullBits[0] | 2);
         }
-        if (this.shaderEffect != null) {
+        if (this.tint != null) {
             nullBits[0] = (byte)(nullBits[0] | 4);
         }
-        if (this.model != null) {
+        if (this.biomeTint != null) {
             nullBits[0] = (byte)(nullBits[0] | 8);
         }
-        if (this.modelTexture != null) {
+        if (this.movementSettings != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x10);
         }
-        if (this.modelAnimation != null) {
+        if (this.flags != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x20);
         }
-        if (this.support != null) {
+        if (this.placementSettings != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x40);
         }
-        if (this.supporting != null) {
+        if (this.item != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x80);
         }
-        if (this.cubeTextures != null) {
+        if (this.name != null) {
             nullBits[1] = (byte)(nullBits[1] | 1);
         }
-        if (this.cubeSideMaskTexture != null) {
+        if (this.shaderEffect != null) {
             nullBits[1] = (byte)(nullBits[1] | 2);
         }
-        if (this.particles != null) {
+        if (this.model != null) {
             nullBits[1] = (byte)(nullBits[1] | 4);
         }
-        if (this.blockParticleSetId != null) {
+        if (this.modelTexture != null) {
             nullBits[1] = (byte)(nullBits[1] | 8);
         }
-        if (this.blockBreakingDecalId != null) {
+        if (this.modelAnimation != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x10);
         }
-        if (this.particleColor != null) {
+        if (this.support != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x20);
         }
-        if (this.light != null) {
+        if (this.supporting != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x40);
         }
-        if (this.tint != null) {
+        if (this.cubeTextures != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x80);
         }
-        if (this.biomeTint != null) {
+        if (this.cubeSideMaskTexture != null) {
             nullBits[2] = (byte)(nullBits[2] | 1);
         }
-        if (this.transitionTexture != null) {
+        if (this.particles != null) {
             nullBits[2] = (byte)(nullBits[2] | 2);
         }
-        if (this.transitionToGroups != null) {
+        if (this.blockParticleSetId != null) {
             nullBits[2] = (byte)(nullBits[2] | 4);
         }
-        if (this.movementSettings != null) {
+        if (this.blockBreakingDecalId != null) {
             nullBits[2] = (byte)(nullBits[2] | 8);
         }
-        if (this.flags != null) {
+        if (this.transitionTexture != null) {
             nullBits[2] = (byte)(nullBits[2] | 0x10);
         }
-        if (this.interactionHint != null) {
+        if (this.transitionToGroups != null) {
             nullBits[2] = (byte)(nullBits[2] | 0x20);
         }
-        if (this.gathering != null) {
+        if (this.interactionHint != null) {
             nullBits[2] = (byte)(nullBits[2] | 0x40);
         }
-        if (this.placementSettings != null) {
+        if (this.gathering != null) {
             nullBits[2] = (byte)(nullBits[2] | 0x80);
         }
         if (this.display != null) {
@@ -1442,7 +1442,7 @@ public class BlockType {
             return ValidationResult.error("Buffer too small: expected at least 259 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 4);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int itemOffset = buffer.getIntLE(offset + 163);
             if (itemOffset < 0) {
                 return ValidationResult.error("Invalid offset for Item");
@@ -1463,7 +1463,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading Item");
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int nameOffset = buffer.getIntLE(offset + 167);
             if (nameOffset < 0) {
                 return ValidationResult.error("Invalid offset for Name");
@@ -1484,7 +1484,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading Name");
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int shaderEffectOffset = buffer.getIntLE(offset + 171);
             if (shaderEffectOffset < 0) {
                 return ValidationResult.error("Invalid offset for ShaderEffect");
@@ -1505,7 +1505,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading ShaderEffect");
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int modelOffset = buffer.getIntLE(offset + 175);
             if (modelOffset < 0) {
                 return ValidationResult.error("Invalid offset for Model");
@@ -1526,7 +1526,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading Model");
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int modelTextureOffset = buffer.getIntLE(offset + 179);
             if (modelTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for ModelTexture");
@@ -1551,7 +1551,7 @@ public class BlockType {
                 pos += ModelTexture.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int modelAnimationOffset = buffer.getIntLE(offset + 183);
             if (modelAnimationOffset < 0) {
                 return ValidationResult.error("Invalid offset for ModelAnimation");
@@ -1572,7 +1572,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading ModelAnimation");
             }
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int supportOffset = buffer.getIntLE(offset + 187);
             if (supportOffset < 0) {
                 return ValidationResult.error("Invalid offset for Support");
@@ -1600,7 +1600,7 @@ public class BlockType {
                 }
             }
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int supportingOffset = buffer.getIntLE(offset + 191);
             if (supportingOffset < 0) {
                 return ValidationResult.error("Invalid offset for Supporting");
@@ -1628,7 +1628,7 @@ public class BlockType {
                 }
             }
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int cubeTexturesOffset = buffer.getIntLE(offset + 195);
             if (cubeTexturesOffset < 0) {
                 return ValidationResult.error("Invalid offset for CubeTextures");
@@ -1653,7 +1653,7 @@ public class BlockType {
                 pos += BlockTextures.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[2] & 1) != 0) {
             int cubeSideMaskTextureOffset = buffer.getIntLE(offset + 199);
             if (cubeSideMaskTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for CubeSideMaskTexture");
@@ -1674,7 +1674,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading CubeSideMaskTexture");
             }
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[2] & 2) != 0) {
             int particlesOffset = buffer.getIntLE(offset + 203);
             if (particlesOffset < 0) {
                 return ValidationResult.error("Invalid offset for Particles");
@@ -1699,7 +1699,7 @@ public class BlockType {
                 pos += ModelParticle.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[2] & 4) != 0) {
             int blockParticleSetIdOffset = buffer.getIntLE(offset + 207);
             if (blockParticleSetIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for BlockParticleSetId");
@@ -1720,7 +1720,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading BlockParticleSetId");
             }
         }
-        if ((nullBits[1] & 0x10) != 0) {
+        if ((nullBits[2] & 8) != 0) {
             int blockBreakingDecalIdOffset = buffer.getIntLE(offset + 211);
             if (blockBreakingDecalIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for BlockBreakingDecalId");
@@ -1741,7 +1741,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading BlockBreakingDecalId");
             }
         }
-        if ((nullBits[2] & 2) != 0) {
+        if ((nullBits[2] & 0x10) != 0) {
             int transitionTextureOffset = buffer.getIntLE(offset + 215);
             if (transitionTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for TransitionTexture");
@@ -1762,7 +1762,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading TransitionTexture");
             }
         }
-        if ((nullBits[2] & 4) != 0) {
+        if ((nullBits[2] & 0x20) != 0) {
             int transitionToGroupsOffset = buffer.getIntLE(offset + 219);
             if (transitionToGroupsOffset < 0) {
                 return ValidationResult.error("Invalid offset for TransitionToGroups");
@@ -1783,7 +1783,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading TransitionToGroups");
             }
         }
-        if ((nullBits[2] & 0x20) != 0) {
+        if ((nullBits[2] & 0x40) != 0) {
             int interactionHintOffset = buffer.getIntLE(offset + 223);
             if (interactionHintOffset < 0) {
                 return ValidationResult.error("Invalid offset for InteractionHint");
@@ -1804,7 +1804,7 @@ public class BlockType {
                 return ValidationResult.error("Buffer overflow reading InteractionHint");
             }
         }
-        if ((nullBits[2] & 0x40) != 0) {
+        if ((nullBits[2] & 0x80) != 0) {
             int gatheringOffset = buffer.getIntLE(offset + 227);
             if (gatheringOffset < 0) {
                 return ValidationResult.error("Invalid offset for Gathering");

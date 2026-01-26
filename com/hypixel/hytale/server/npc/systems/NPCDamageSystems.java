@@ -67,7 +67,9 @@ public class NPCDamageSystems {
             NPCEntity npcComponent = commandBuffer.getComponent(ref, NPCEntity.getComponentType());
             assert (npcComponent != null);
             Role role = npcComponent.getRole();
-            assert (role != null);
+            if (role == null) {
+                return;
+            }
             ObjectArrayList<ItemStack> itemsToDrop = new ObjectArrayList<ItemStack>();
             if (role.isPickupDropOnDeath()) {
                 Inventory inventory = npcComponent.getInventory();
@@ -121,18 +123,20 @@ public class NPCDamageSystems {
             assert (transformComponent != null);
             Blackboard blackboard = commandBuffer.getResource(this.blackboardResourceType);
             EntityEventView view = blackboard.getView(EntityEventView.class, ChunkUtil.chunkCoordinate(transformComponent.getPosition().x), ChunkUtil.chunkCoordinate(transformComponent.getPosition().z));
-            if (!(damage.getSource() instanceof Damage.EntitySource)) {
+            Damage.Source source = damage.getSource();
+            if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerRef = ((Damage.EntitySource)damage.getSource()).getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            Player attackerPlayerComponent = commandBuffer.getComponent(attackerRef, Player.getComponentType());
-            if (!(attackerPlayerComponent == null || attackerPlayerComponent.getGameMode() != GameMode.Creative || (playerSettingsComponent = commandBuffer.getComponent(attackerRef, PlayerSettings.getComponentType())) != null && playerSettingsComponent.creativeSettings().allowNPCDetection())) {
+            Player sourcePlayerComponent = commandBuffer.getComponent(sourceRef, Player.getComponentType());
+            if (!(sourcePlayerComponent == null || sourcePlayerComponent.getGameMode() != GameMode.Creative || (playerSettingsComponent = commandBuffer.getComponent(sourceRef, PlayerSettings.getComponentType())) != null && playerSettingsComponent.creativeSettings().allowNPCDetection())) {
                 return;
             }
-            view.processAttackedEvent(archetypeChunk.getReferenceTo(index), attackerRef, commandBuffer, EntityEventType.DAMAGE);
+            view.processAttackedEvent(archetypeChunk.getReferenceTo(index), sourceRef, commandBuffer, EntityEventType.DAMAGE);
         }
     }
 
@@ -152,16 +156,18 @@ public class NPCDamageSystems {
 
         @Override
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
-            if (!(damage.getSource() instanceof Damage.EntitySource)) {
+            Damage.Source source = damage.getSource();
+            if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerRef = ((Damage.EntitySource)damage.getSource()).getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            NPCEntity npcComponent = commandBuffer.getComponent(attackerRef, NPCEntity.getComponentType());
-            if (npcComponent != null) {
-                npcComponent.getDamageData().onInflictedDamage(archetypeChunk.getReferenceTo(index), damage.getAmount());
+            NPCEntity sourceNpcComponent = commandBuffer.getComponent(sourceRef, NPCEntity.getComponentType());
+            if (sourceNpcComponent != null) {
+                sourceNpcComponent.getDamageData().onInflictedDamage(archetypeChunk.getReferenceTo(index), damage.getAmount());
             }
         }
     }
@@ -213,14 +219,16 @@ public class NPCDamageSystems {
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
             NPCEntity npcComponent = archetypeChunk.getComponent(index, NPCEntity.getComponentType());
             assert (npcComponent != null);
-            if (!(damage.getSource() instanceof Damage.EntitySource)) {
+            Damage.Source source = damage.getSource();
+            if (!(source instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerRef = ((Damage.EntitySource)damage.getSource()).getRef();
-            if (!attackerRef.isValid()) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            if (!npcComponent.getCanCauseDamage(attackerRef, commandBuffer)) {
+            if (!npcComponent.getCanCauseDamage(sourceRef, commandBuffer)) {
                 damage.setCancelled(true);
             }
         }

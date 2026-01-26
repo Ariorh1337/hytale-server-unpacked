@@ -11,7 +11,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -19,7 +18,6 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -40,22 +38,6 @@ public class RespawnSystems {
             if (playerComponent.getInventory().containsBrokenItem()) {
                 playerComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
             }
-        }
-    }
-
-    public static class RespawnControllerRespawnSystem
-    extends OnRespawnSystem {
-        @Override
-        @Nonnull
-        public Query<EntityStore> getQuery() {
-            return Player.getComponentType();
-        }
-
-        @Override
-        public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            World world = store.getExternalData().getWorld();
-            RespawnController respawnController = world.getDeathConfig().getRespawnController();
-            respawnController.respawnPlayer(world, ref, commandBuffer);
         }
     }
 

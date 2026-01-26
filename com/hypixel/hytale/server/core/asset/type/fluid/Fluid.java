@@ -210,6 +210,17 @@ NetworkSerializable<com.hypixel.hytale.protocol.Fluid> {
         return this.maxFluidLevel;
     }
 
+    public boolean hasEffect(ShaderType shader) {
+        if (this.effect == null) {
+            return false;
+        }
+        for (ShaderType e : this.effect) {
+            if (e != shader) continue;
+            return true;
+        }
+        return false;
+    }
+
     public FluidTicker getTicker() {
         return this.ticker;
     }

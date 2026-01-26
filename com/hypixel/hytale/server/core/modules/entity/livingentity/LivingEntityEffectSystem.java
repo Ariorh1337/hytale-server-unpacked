@@ -16,6 +16,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
@@ -39,10 +40,17 @@ import javax.annotation.Nullable;
 public class LivingEntityEffectSystem
 extends EntityTickingSystem<EntityStore>
 implements DisableProcessingAssert {
+    @Nonnull
+    private static final Query<EntityStore> QUERY = Query.and(EffectControllerComponent.getComponentType(), TransformComponent.getComponentType(), BoundingBox.getComponentType());
+    @Nonnull
+    private static final String EFFECT_NAME_BURN = "Burn";
+    @Nonnull
+    private static final String BLOCK_TYPE_FLUID_WATER = "Fluid_Water";
+
     @Override
     @Nonnull
     public Query<EntityStore> getQuery() {
-        return EffectControllerComponent.getComponentType();
+        return QUERY;
     }
 
     @Override
@@ -62,6 +70,9 @@ implements DisableProcessingAssert {
         Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
         Iterator iterator = activeEffects.values().iterator();
         EntityStatMap entityStatMapComponent = commandBuffer.getComponent(entityRef, EntityStatMap.getComponentType());
+        if (entityStatMapComponent == null) {
+            return;
+        }
         boolean invalidated = false;
         boolean invulnerable = false;
         while (iterator.hasNext()) {
@@ -109,28 +120,32 @@ implements DisableProcessingAssert {
     }
 
     public static boolean canApplyEffect(@Nonnull Ref<EntityStore> ownerRef, @Nonnull EntityEffect entityEffect, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-        TransformComponent transformComponent = componentAccessor.getComponent(ownerRef, TransformComponent.getComponentType());
-        assert (transformComponent != null);
-        BoundingBox boundingBoxComponent = componentAccessor.getComponent(ownerRef, BoundingBox.getComponentType());
-        assert (boundingBoxComponent != null);
-        Vector3d position = transformComponent.getPosition();
-        Box boundingBox = boundingBoxComponent.getBoundingBox();
-        World world = componentAccessor.getExternalData().getWorld();
-        if ("Burn".equals(entityEffect.getId())) {
+        if (EFFECT_NAME_BURN.equals(entityEffect.getId())) {
+            TransformComponent transformComponent = componentAccessor.getComponent(ownerRef, TransformComponent.getComponentType());
+            assert (transformComponent != null);
             Ref<ChunkStore> chunkRef = transformComponent.getChunkRef();
             if (chunkRef == null || !chunkRef.isValid()) {
                 return false;
             }
+            World world = componentAccessor.getExternalData().getWorld();
             Store<ChunkStore> chunkComponentStore = world.getChunkStore().getStore();
             WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
             assert (worldChunkComponent != null);
+            BoundingBox boundingBoxComponent = componentAccessor.getComponent(ownerRef, BoundingBox.getComponentType());
+            assert (boundingBoxComponent != null);
+            Vector3d position = transformComponent.getPosition();
+            Box boundingBox = boundingBoxComponent.getBoundingBox();
             LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atChunkCoords(world, worldChunkComponent.getX(), worldChunkComponent.getZ(), 1);
             return boundingBox.forEachBlock(position, chunkAccessor, (x, y, z, _chunkAccessor) -> {
                 WorldChunk localChunk = _chunkAccessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
                 if (localChunk == null) {
                     return true;
                 }
-                return !localChunk.getBlockType(x, y, z).getId().contains("Fluid_Water");
+                BlockType blockType = localChunk.getBlockType(x, y, z);
+                if (blockType == null) {
+                    return true;
+                }
+                return !blockType.getId().contains(BLOCK_TYPE_FLUID_WATER);
             });
         }
         return true;

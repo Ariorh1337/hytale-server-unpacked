@@ -11,24 +11,30 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.DeathConfig;
+import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathItemLoss;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class DeathComponent
 implements Component<EntityStore> {
+    public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final BuilderCodec<DeathComponent> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DeathComponent.class, DeathComponent::new).append(new KeyedCodec<String>("DeathCause", Codec.STRING), (o, i) -> {
         o.deathCause = i;
     }, o -> o.deathCause).add()).append(new KeyedCodec("DeathMessage", Message.CODEC), (deathComponent, message) -> {
@@ -53,10 +59,11 @@ implements Component<EntityStore> {
     private double itemsDurabilityLossPercentage;
     private boolean displayDataOnDeathScreen;
     @Nullable
-    private Damage deathInfo;
-    private DeathConfig.ItemsLossMode itemsLossMode = DeathConfig.ItemsLossMode.ALL;
+    private transient Damage deathInfo;
+    private transient DeathConfig.ItemsLossMode itemsLossMode = DeathConfig.ItemsLossMode.ALL;
     @Nullable
-    private InteractionChain interactionChain;
+    private transient InteractionChain interactionChain;
+    private transient CompletableFuture<Void> respawnFuture = null;
 
     public static ComponentType<EntityStore, DeathComponent> getComponentType() {
         return DamageModule.get().getDeathComponentType();
@@ -178,6 +185,29 @@ implements Component<EntityStore> {
             return;
         }
         store.addComponent(ref, DeathComponent.getComponentType(), new DeathComponent(damage));
+    }
+
+    public static CompletableFuture<Void> respawn(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> ref) {
+        DeathComponent deathComponent = componentAccessor.getComponent(ref, DeathComponent.getComponentType());
+        if (deathComponent == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        if (deathComponent.respawnFuture != null) {
+            return deathComponent.respawnFuture;
+        }
+        World world = componentAccessor.getExternalData().getWorld();
+        RespawnController respawnController = world.getDeathConfig().getRespawnController();
+        deathComponent.respawnFuture = respawnController.respawnPlayer(world, ref, componentAccessor).whenComplete((ignore, ex) -> {
+            if (ex != null) {
+                ((HytaleLogger.Api)((HytaleLogger.Api)LOGGER.atSevere()).withCause((Throwable)ex)).log("Failed to respawn entity");
+            }
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            if (!ref.isValid()) {
+                return;
+            }
+            store.tryRemoveComponent(ref, DeathComponent.getComponentType());
+        });
+        return deathComponent.respawnFuture;
     }
 }
 

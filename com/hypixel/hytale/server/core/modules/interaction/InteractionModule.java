@@ -133,6 +133,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.ser
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenPageInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.PlacementCountConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.RefillContainerInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.RunOnBlockTypesInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.SpawnPrefabInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DirectionalKnockback;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.ForceKnockback;
@@ -251,6 +252,7 @@ extends JavaPlugin {
         Interaction.CODEC.register("AddItem", AddItemInteraction.class, AddItemInteraction.CODEC);
         Interaction.CODEC.register("Interrupt", InterruptInteraction.class, InterruptInteraction.CODEC);
         Interaction.CODEC.register("RunRootInteraction", RunRootInteraction.class, RunRootInteraction.CODEC);
+        Interaction.CODEC.register("RunOnBlockTypes", RunOnBlockTypesInteraction.class, RunOnBlockTypesInteraction.CODEC);
         Interaction.CODEC.register("Camera", CameraInteraction.class, CameraInteraction.CODEC);
         Interaction.CODEC.register("ToggleGlider", ToggleGliderInteraction.class, ToggleGliderInteraction.CODEC);
         OpenCustomUIInteraction.registerBlockEntityCustomPage(this, LaunchPad.LaunchPadSettingsPage.class, "LaunchPad", (playerRef, ref) -> {

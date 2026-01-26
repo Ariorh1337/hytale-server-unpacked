@@ -54,12 +54,12 @@ public class NPCDeathSystems {
                 return;
             }
             Damage.EntitySource entitySource = (Damage.EntitySource)source;
-            Ref<EntityStore> attackerRef = entitySource.getRef();
-            if (!attackerRef.isValid()) {
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
                 return;
             }
-            Player attackerPlayerComponent = commandBuffer.getComponent(attackerRef, Player.getComponentType());
-            if (!(attackerPlayerComponent == null || attackerPlayerComponent.getGameMode() != GameMode.Creative || (playerSettingsComponent = commandBuffer.getComponent(attackerRef, PlayerSettings.getComponentType())) != null && playerSettingsComponent.creativeSettings().allowNPCDetection())) {
+            Player sourcePlayerComponent = commandBuffer.getComponent(sourceRef, Player.getComponentType());
+            if (!(sourcePlayerComponent == null || sourcePlayerComponent.getGameMode() != GameMode.Creative || (playerSettingsComponent = commandBuffer.getComponent(sourceRef, PlayerSettings.getComponentType())) != null && playerSettingsComponent.creativeSettings().allowNPCDetection())) {
                 return;
             }
             TransformComponent transformComponent = store.getComponent(ref, this.transformComponentType);
@@ -67,7 +67,7 @@ public class NPCDeathSystems {
             Vector3d position = transformComponent.getPosition();
             Blackboard blackboardResource = store.getResource(this.blackboardResourceType);
             EntityEventView entityEventView = blackboardResource.getView(EntityEventView.class, ChunkUtil.chunkCoordinate(position.x), ChunkUtil.chunkCoordinate(position.z));
-            entityEventView.processAttackedEvent(ref, attackerRef, commandBuffer, EntityEventType.DEATH);
+            entityEventView.processAttackedEvent(ref, sourceRef, commandBuffer, EntityEventType.DEATH);
         }
     }
 
@@ -76,23 +76,29 @@ public class NPCDeathSystems {
         @Override
         @Nonnull
         public Query<EntityStore> getQuery() {
-            return AllLegacyLivingEntityTypesQuery.INSTANCE;
+            return Query.and(AllLegacyLivingEntityTypesQuery.INSTANCE, TransformComponent.getComponentType());
         }
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+            Damage.Source source;
+            ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
+            if (npcComponentType == null) {
+                return;
+            }
             Damage deathInfo = component.getDeathInfo();
-            if (deathInfo == null || !(deathInfo.getSource() instanceof Damage.EntitySource)) {
+            if (deathInfo == null || !((source = deathInfo.getSource()) instanceof Damage.EntitySource)) {
                 return;
             }
-            Ref<EntityStore> attackerReference = ((Damage.EntitySource)deathInfo.getSource()).getRef();
-            NPCEntity attackerNpcComponent = store.getComponent(attackerReference, NPCEntity.getComponentType());
-            if (attackerNpcComponent == null) {
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            NPCEntity sourceNpcComponent = store.getComponent(sourceRef, npcComponentType);
+            if (sourceNpcComponent == null) {
                 return;
             }
-            TransformComponent entityTransformComponent = store.getComponent(ref, TransformComponent.getComponentType());
-            assert (entityTransformComponent != null);
-            attackerNpcComponent.getDamageData().onKill(ref, entityTransformComponent.getPosition().clone());
+            TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+            assert (transformComponent != null);
+            sourceNpcComponent.getDamageData().onKill(ref, transformComponent.getPosition().clone());
         }
     }
 }

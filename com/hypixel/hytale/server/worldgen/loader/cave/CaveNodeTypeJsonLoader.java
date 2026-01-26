@@ -72,12 +72,12 @@ extends JsonLoader<SeedStringResource, CaveNodeType> {
                 JsonArray childrenArray = childrenElement.getAsJsonArray();
                 CaveNodeType.CaveNodeChildEntry[] children = new CaveNodeType.CaveNodeChildEntry[childrenArray.size()];
                 for (int i = 0; i < childrenArray.size(); ++i) {
-                    children[i] = new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", i)), this.dataFolder, childrenArray.get(i), this.storage).load();
+                    children[i] = new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", i)), this.dataFolder, this.getOrLoad(childrenArray.get(i)), this.storage).load();
                 }
                 return children;
             }
             if (childrenElement.isJsonObject()) {
-                CaveNodeType.CaveNodeChildEntry[] children = new CaveNodeType.CaveNodeChildEntry[]{new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", 0)), this.dataFolder, childrenElement, this.storage).load()};
+                CaveNodeType.CaveNodeChildEntry[] children = new CaveNodeType.CaveNodeChildEntry[]{new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", 0)), this.dataFolder, this.getOrLoad(childrenElement), this.storage).load()};
                 return children;
             }
         }

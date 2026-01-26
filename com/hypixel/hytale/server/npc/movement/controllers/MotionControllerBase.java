@@ -85,6 +85,8 @@ implements MotionController {
     protected double inertia;
     protected double knockbackScale;
     protected double gravity;
+    @Nullable
+    protected float[] headPitchAngleRange;
     protected boolean debugModeSteer;
     protected boolean debugModeMove;
     protected boolean debugModeCollisions;
@@ -186,6 +188,16 @@ implements MotionController {
     public void updateModelParameters(Ref<EntityStore> ref, Model model, @Nonnull Box boundingBox, ComponentAccessor<EntityStore> componentAccessor) {
         Objects.requireNonNull(boundingBox, "updateModelParameters: MotionController needs a bounding box");
         this.collisionBoundingBox.assign(boundingBox);
+    }
+
+    @Override
+    public void setHeadPitchAngleRange(float[] headPitchAngleRange) {
+        if (headPitchAngleRange == null) {
+            this.headPitchAngleRange = null;
+            return;
+        }
+        assert (headPitchAngleRange.length == 2);
+        this.headPitchAngleRange = (float[])headPitchAngleRange.clone();
     }
 
     protected void readEntityPosition(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -562,7 +574,10 @@ implements MotionController {
             float bodyPitch = this.pitch;
             float pitchOffset = MathUtil.wrapAngle(headSteering.getPitch() - bodyPitch);
             CameraSettings headRotationRestrictions = modelComponent.getModel().getCamera();
-            if (headRotationRestrictions != null && headRotationRestrictions.getPitch() != null && headRotationRestrictions.getPitch().getAngleRange() != null) {
+            if (this.headPitchAngleRange != null) {
+                pitchMin = this.headPitchAngleRange[0];
+                pitchMax = this.headPitchAngleRange[1];
+            } else if (headRotationRestrictions != null && headRotationRestrictions.getPitch() != null && headRotationRestrictions.getPitch().getAngleRange() != null) {
                 Rangef pitchRange = headRotationRestrictions.getPitch().getAngleRange();
                 pitchMin = pitchRange.min * ((float)Math.PI / 180);
                 pitchMax = pitchRange.max * ((float)Math.PI / 180);

@@ -8,9 +8,11 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 
 public class Frozen
 implements Component<EntityStore> {
+    @Nonnull
     public static final BuilderCodec<Frozen> CODEC = BuilderCodec.builder(Frozen.class, Frozen::get).build();
     private static final Frozen INSTANCE = new Frozen();
 

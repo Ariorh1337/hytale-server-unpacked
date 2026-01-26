@@ -30,6 +30,8 @@ public class ClearBlocksCommand
 extends AbstractPlayerCommand {
     @Nonnull
     private static final Message MESSAGE_COMMANDS_CLEAR_NO_SELECTION = Message.translation("server.commands.clear.noSelection");
+    @Nonnull
+    private static final Message MESSAGE_COMMANDS_CLEAR_SUCCESS = Message.translation("server.commands.clear.success");
 
     public ClearBlocksCommand() {
         super("clearBlocks", "server.commands.clear.desc");
@@ -59,6 +61,7 @@ extends AbstractPlayerCommand {
                 Vector3i min = Vector3i.min(posOne, posTwo);
                 Vector3i max = Vector3i.max(posOne, posTwo);
                 BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.clear(min.x, min.y, min.z, max.x, max.y, max.z, (ComponentAccessor<EntityStore>)componentAccessor));
+                playerRef.sendMessage(MESSAGE_COMMANDS_CLEAR_SUCCESS);
             }
         });
     }
@@ -76,6 +79,7 @@ extends AbstractPlayerCommand {
             return;
         }
         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.set(BlockPattern.EMPTY, (ComponentAccessor<EntityStore>)componentAccessor));
+        playerRef.sendMessage(MESSAGE_COMMANDS_CLEAR_SUCCESS);
     }
 }
 

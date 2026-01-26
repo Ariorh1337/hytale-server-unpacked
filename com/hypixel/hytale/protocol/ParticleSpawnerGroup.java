@@ -87,32 +87,32 @@ public class ParticleSpawnerGroup {
     public static ParticleSpawnerGroup deserialize(@Nonnull ByteBuf buf, int offset) {
         ParticleSpawnerGroup obj = new ParticleSpawnerGroup();
         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 1) != 0) {
             obj.positionOffset = Vector3f.deserialize(buf, offset + 2);
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 2) != 0) {
             obj.rotationOffset = Direction.deserialize(buf, offset + 14);
         }
         obj.fixedRotation = buf.getByte(offset + 26) != 0;
         obj.startDelay = buf.getFloatLE(offset + 27);
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             obj.spawnRate = Rangef.deserialize(buf, offset + 31);
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             obj.waveDelay = Rangef.deserialize(buf, offset + 39);
         }
         obj.totalSpawners = buf.getIntLE(offset + 47);
         obj.maxConcurrent = buf.getIntLE(offset + 51);
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             obj.initialVelocity = InitialVelocity.deserialize(buf, offset + 55);
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             obj.emitOffset = RangeVector3f.deserialize(buf, offset + 80);
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             obj.lifeSpan = Rangef.deserialize(buf, offset + 105);
         }
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int varPos0 = offset + 121 + buf.getIntLE(offset + 113);
             int spawnerIdLen = VarInt.peek(buf, varPos0);
             if (spawnerIdLen < 0) {
@@ -149,7 +149,7 @@ public class ParticleSpawnerGroup {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
         int maxEnd = 121;
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 113);
             int pos0 = offset + 121 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -175,28 +175,28 @@ public class ParticleSpawnerGroup {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte[] nullBits = new byte[2];
-        if (this.spawnerId != null) {
+        if (this.positionOffset != null) {
             nullBits[0] = (byte)(nullBits[0] | 1);
         }
-        if (this.positionOffset != null) {
+        if (this.rotationOffset != null) {
             nullBits[0] = (byte)(nullBits[0] | 2);
         }
-        if (this.rotationOffset != null) {
+        if (this.spawnRate != null) {
             nullBits[0] = (byte)(nullBits[0] | 4);
         }
-        if (this.spawnRate != null) {
+        if (this.waveDelay != null) {
             nullBits[0] = (byte)(nullBits[0] | 8);
         }
-        if (this.waveDelay != null) {
+        if (this.initialVelocity != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x10);
         }
-        if (this.initialVelocity != null) {
+        if (this.emitOffset != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x20);
         }
-        if (this.emitOffset != null) {
+        if (this.lifeSpan != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x40);
         }
-        if (this.lifeSpan != null) {
+        if (this.spawnerId != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x80);
         }
         if (this.attractors != null) {
@@ -284,7 +284,7 @@ public class ParticleSpawnerGroup {
             return ValidationResult.error("Buffer too small: expected at least 121 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int spawnerIdOffset = buffer.getIntLE(offset + 113);
             if (spawnerIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for SpawnerId");

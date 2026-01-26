@@ -86,26 +86,26 @@ public class Trail {
         byte nullBits = buf.getByte(offset);
         obj.lifeSpan = buf.getIntLE(offset + 1);
         obj.roll = buf.getFloatLE(offset + 5);
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.start = Edge.deserialize(buf, offset + 9);
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.end = Edge.deserialize(buf, offset + 18);
         }
         obj.lightInfluence = buf.getFloatLE(offset + 27);
         obj.renderMode = FXRenderMode.fromValue(buf.getByte(offset + 31));
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 4) != 0) {
             obj.intersectionHighlight = IntersectionHighlight.deserialize(buf, offset + 32);
         }
         boolean bl = obj.smooth = buf.getByte(offset + 40) != 0;
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 8) != 0) {
             obj.frameSize = Vector2i.deserialize(buf, offset + 41);
         }
-        if ((nullBits & 0x40) != 0) {
+        if ((nullBits & 0x10) != 0) {
             obj.frameRange = Range.deserialize(buf, offset + 49);
         }
         obj.frameLifeSpan = buf.getIntLE(offset + 57);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int varPos0 = offset + 69 + buf.getIntLE(offset + 61);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -116,7 +116,7 @@ public class Trail {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int varPos1 = offset + 69 + buf.getIntLE(offset + 65);
             int textureLen = VarInt.peek(buf, varPos1);
             if (textureLen < 0) {
@@ -134,7 +134,7 @@ public class Trail {
         int sl;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 69;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 61);
             int pos0 = offset + 69 + fieldOffset0;
             sl = VarInt.peek(buf, pos0);
@@ -142,7 +142,7 @@ public class Trail {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 65);
             int pos1 = offset + 69 + fieldOffset1;
             sl = VarInt.peek(buf, pos1);
@@ -156,25 +156,25 @@ public class Trail {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.start != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.texture != null) {
+        if (this.end != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.start != null) {
+        if (this.intersectionHighlight != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.end != null) {
+        if (this.frameSize != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.intersectionHighlight != null) {
+        if (this.frameRange != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
-        if (this.frameSize != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 0x20);
         }
-        if (this.frameRange != null) {
+        if (this.texture != null) {
             nullBits = (byte)(nullBits | 0x40);
         }
         buf.writeByte(nullBits);
@@ -245,7 +245,7 @@ public class Trail {
             return ValidationResult.error("Buffer too small: expected at least 69 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int idOffset = buffer.getIntLE(offset + 61);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -266,7 +266,7 @@ public class Trail {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int textureOffset = buffer.getIntLE(offset + 65);
             if (textureOffset < 0) {
                 return ValidationResult.error("Invalid offset for Texture");

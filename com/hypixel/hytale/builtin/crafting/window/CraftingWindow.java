@@ -10,6 +10,7 @@ import com.hypixel.hytale.builtin.crafting.CraftingPlugin;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.builtin.crafting.state.BenchState;
 import com.hypixel.hytale.builtin.crafting.window.BenchWindow;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -30,11 +31,12 @@ import javax.annotation.Nonnull;
 
 public abstract class CraftingWindow
 extends BenchWindow {
-    public static final int SET_BLOCK_SETTINGS = 6;
+    @Nonnull
     protected static final String CRAFT_COMPLETED = "CraftCompleted";
+    @Nonnull
     protected static final String CRAFT_COMPLETED_INSTANT = "CraftCompletedInstant";
 
-    public CraftingWindow(@Nonnull WindowType windowType, BenchState benchState) {
+    public CraftingWindow(@Nonnull WindowType windowType, @Nonnull BenchState benchState) {
         super(windowType, benchState);
         JsonArray categories = new JsonArray();
         CraftingBench.BenchCategory[] benchCategoryArray = this.bench;
@@ -72,12 +74,9 @@ extends BenchWindow {
     }
 
     @Override
-    protected boolean onOpen0() {
+    protected boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         int[] memoriesAmountPerLevel;
-        super.onOpen0();
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
+        super.onOpen0(ref, store);
         GameplayConfig gameplayConfig = store.getExternalData().getWorld().getGameplayConfig();
         MemoriesGameplayConfig memoriesConfig = MemoriesGameplayConfig.get(gameplayConfig);
         if (memoriesConfig != null && (memoriesAmountPerLevel = memoriesConfig.getMemoriesAmountPerLevel()) != null && memoriesAmountPerLevel.length > 1) {
@@ -94,21 +93,24 @@ extends BenchWindow {
     }
 
     @Override
-    public void onClose0() {
-        super.onClose0();
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        this.setBlockInteractionState(this.benchState.getTierStateName(), world, 6);
+    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        super.onClose0(ref, componentAccessor);
+        World world = componentAccessor.getExternalData().getWorld();
+        this.setBlockInteractionState(this.benchState.getTierStateName(), world);
         if (this.bench.getLocalCloseSoundEventIndex() != 0) {
-            SoundUtil.playSoundEvent2d(ref, this.bench.getLocalCloseSoundEventIndex(), SoundCategory.UI, store);
+            SoundUtil.playSoundEvent2d(ref, this.bench.getLocalCloseSoundEventIndex(), SoundCategory.UI, componentAccessor);
         }
     }
 
-    public void setBlockInteractionState(@Nonnull String state, @Nonnull World world, int setBlockSettings) {
+    public void setBlockInteractionState(@Nonnull String state, @Nonnull World world) {
         Object worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(this.x, this.z));
+        if (worldChunk == null) {
+            return;
+        }
         BlockType blockType = worldChunk.getBlockType(this.x, this.y, this.z);
+        if (blockType == null) {
+            return;
+        }
         worldChunk.setBlockInteractionState(this.x, this.y, this.z, blockType, state, true);
     }
 
@@ -121,11 +123,13 @@ extends BenchWindow {
         CraftingRecipe recipe = CraftingRecipe.getAssetMap().getAsset(recipeId);
         if (recipe == null) {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            assert (playerRef != null);
             playerRef.getPacketHandler().disconnect("Attempted to craft unknown recipe!");
             return false;
         }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        craftingManager.craftItem(ref, store, recipe, quantity, player.getInventory().getCombinedBackpackStorageHotbar());
+        Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
+        craftingManager.craftItem(ref, store, recipe, quantity, playerComponent.getInventory().getCombinedBackpackStorageHotbar());
         return true;
     }
 }

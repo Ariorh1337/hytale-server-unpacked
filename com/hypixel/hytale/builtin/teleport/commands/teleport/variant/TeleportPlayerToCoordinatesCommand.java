@@ -31,10 +31,6 @@ extends CommandBase {
     @Nonnull
     private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES_WITH_LOOK = Message.translation("server.commands.teleport.teleportedToCoordinatesWithLook");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES = Message.translation("server.commands.teleport.teleportedToCoordinates");
-    @Nonnull
     private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.teleport.targetPlayer.desc", ArgTypes.PLAYER_REF);
     @Nonnull
     private final RequiredArg<Coord> xArg = this.withRequiredArg("x", "server.commands.teleport.x.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
@@ -93,9 +89,9 @@ extends CommandBase {
                 float displayYaw = Float.isNaN(yaw) ? previousHeadRotation.getYaw() * 57.295776f : yaw * 57.295776f;
                 float displayPitch = Float.isNaN(pitch) ? previousHeadRotation.getPitch() * 57.295776f : pitch * 57.295776f;
                 float displayRoll = Float.isNaN(roll) ? previousHeadRotation.getRoll() * 57.295776f : roll * 57.295776f;
-                context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES_WITH_LOOK.param("x", x).param("y", y).param("z", z).param("yaw", displayYaw).param("pitch", displayPitch).param("roll", displayRoll));
+                context.sendMessage(Message.translation("server.commands.teleport.teleportedToCoordinatesWithLook").param("x", x).param("y", y).param("z", z).param("yaw", displayYaw).param("pitch", displayPitch).param("roll", displayRoll));
             } else {
-                context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_COORDINATES.param("x", x).param("y", y).param("z", z));
+                context.sendMessage(Message.translation("server.commands.teleport.teleportedToCoordinates").param("x", x).param("y", y).param("z", z));
             }
         });
     }

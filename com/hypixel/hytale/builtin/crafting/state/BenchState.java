@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.builtin.crafting.state;
 
+import com.hypixel.hytale.builtin.crafting.window.BenchWindow;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -15,6 +16,7 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.BenchUpgradeRequirement;
+import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManager;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -23,6 +25,9 @@ import com.hypixel.hytale.server.core.universe.world.meta.state.DestroyableBlock
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public class BenchState
@@ -40,6 +45,7 @@ implements DestroyableBlockState {
     private int tierLevel = 1;
     protected ItemStack[] upgradeItems = ItemStack.EMPTY_ARRAY;
     protected Bench bench;
+    protected final Map<UUID, BenchWindow> windows = new ConcurrentHashMap<UUID, BenchWindow>();
 
     public int getTierLevel() {
         return this.tierLevel;
@@ -116,7 +122,13 @@ implements DestroyableBlockState {
 
     @Override
     public void onDestroy() {
+        WindowManager.closeAndRemoveAll(this.windows);
         this.dropUpgradeItems();
+    }
+
+    @Nonnull
+    public Map<UUID, BenchWindow> getWindows() {
+        return this.windows;
     }
 }
 

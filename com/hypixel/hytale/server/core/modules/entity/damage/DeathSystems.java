@@ -213,7 +213,7 @@ public class DeathSystems {
         @Override
         @Nonnull
         public Query<EntityStore> getQuery() {
-            return Player.getComponentType();
+            return Query.and(Player.getComponentType(), TransformComponent.getComponentType());
         }
 
         @Override
@@ -336,7 +336,7 @@ public class DeathSystems {
         @Override
         @Nonnull
         public Query<EntityStore> getQuery() {
-            return Player.getComponentType();
+            return Query.and(Player.getComponentType(), PlayerRef.getComponentType());
         }
 
         @Override
@@ -357,7 +357,7 @@ public class DeathSystems {
     public static class DropPlayerDeathItems
     extends OnDeathSystem {
         @Nonnull
-        private static final Query<EntityStore> QUERY = Archetype.of(Player.getComponentType(), TransformComponent.getComponentType());
+        private static final Query<EntityStore> QUERY = Archetype.of(Player.getComponentType(), TransformComponent.getComponentType(), HeadRotation.getComponentType());
 
         @Override
         @Nonnull

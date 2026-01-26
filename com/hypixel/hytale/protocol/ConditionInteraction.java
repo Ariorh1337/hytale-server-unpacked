@@ -96,29 +96,29 @@ extends SimpleInteraction {
         obj.cancelOnItemChange = buf.getByte(offset + 11) != 0;
         obj.next = buf.getIntLE(offset + 12);
         obj.failed = buf.getIntLE(offset + 16);
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[0] & 1) != 0) {
             obj.requiredGameMode = GameMode.fromValue(buf.getByte(offset + 20));
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[0] & 2) != 0) {
             obj.jumping = buf.getByte(offset + 21) != 0;
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             obj.swimming = buf.getByte(offset + 22) != 0;
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             obj.crouching = buf.getByte(offset + 23) != 0;
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             obj.running = buf.getByte(offset + 24) != 0;
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             obj.flying = buf.getByte(offset + 25) != 0;
         }
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int varPos0 = offset + 46 + buf.getIntLE(offset + 26);
             obj.effects = InteractionEffects.deserialize(buf, varPos0);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int varPos1 = offset + 46 + buf.getIntLE(offset + 30);
             int settingsCount = VarInt.peek(buf, varPos1);
             if (settingsCount < 0) {
@@ -138,11 +138,11 @@ extends SimpleInteraction {
                 throw ProtocolException.duplicateKey("settings", (Object)key);
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int varPos2 = offset + 46 + buf.getIntLE(offset + 34);
             obj.rules = InteractionRules.deserialize(buf, varPos2);
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int varPos3 = offset + 46 + buf.getIntLE(offset + 38);
             int tagsCount = VarInt.peek(buf, varPos3);
             if (tagsCount < 0) {
@@ -160,7 +160,7 @@ extends SimpleInteraction {
                 obj.tags[i] = buf.getIntLE(varPos3 + varIntLen + i * 4);
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int varPos4 = offset + 46 + buf.getIntLE(offset + 42);
             obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
         }
@@ -170,14 +170,14 @@ extends SimpleInteraction {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
         int maxEnd = 46;
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 26);
             int pos0 = offset + 46 + fieldOffset0;
             if ((pos0 += InteractionEffects.computeBytesConsumed(buf, pos0)) - offset > maxEnd) {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 30);
             int pos1 = offset + 46 + fieldOffset1;
             int dictLen = VarInt.peek(buf, pos1);
@@ -190,14 +190,14 @@ extends SimpleInteraction {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 34);
             int pos2 = offset + 46 + fieldOffset2;
             if ((pos2 += InteractionRules.computeBytesConsumed(buf, pos2)) - offset > maxEnd) {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 38);
             int pos3 = offset + 46 + fieldOffset3;
             int arrLen = VarInt.peek(buf, pos3);
@@ -205,7 +205,7 @@ extends SimpleInteraction {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 42);
             int pos4 = offset + 46 + fieldOffset4;
             if ((pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4)) - offset > maxEnd) {
@@ -219,37 +219,37 @@ extends SimpleInteraction {
     public int serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte[] nullBits = new byte[2];
-        if (this.effects != null) {
+        if (this.requiredGameMode != null) {
             nullBits[0] = (byte)(nullBits[0] | 1);
         }
-        if (this.settings != null) {
+        if (this.jumping != null) {
             nullBits[0] = (byte)(nullBits[0] | 2);
         }
-        if (this.rules != null) {
+        if (this.swimming != null) {
             nullBits[0] = (byte)(nullBits[0] | 4);
         }
-        if (this.tags != null) {
+        if (this.crouching != null) {
             nullBits[0] = (byte)(nullBits[0] | 8);
         }
-        if (this.camera != null) {
+        if (this.running != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x10);
         }
-        if (this.requiredGameMode != null) {
+        if (this.flying != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x20);
         }
-        if (this.jumping != null) {
+        if (this.effects != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x40);
         }
-        if (this.swimming != null) {
+        if (this.settings != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x80);
         }
-        if (this.crouching != null) {
+        if (this.rules != null) {
             nullBits[1] = (byte)(nullBits[1] | 1);
         }
-        if (this.running != null) {
+        if (this.tags != null) {
             nullBits[1] = (byte)(nullBits[1] | 2);
         }
-        if (this.flying != null) {
+        if (this.camera != null) {
             nullBits[1] = (byte)(nullBits[1] | 4);
         }
         buf.writeBytes(nullBits);
@@ -373,7 +373,7 @@ extends SimpleInteraction {
             return ValidationResult.error("Buffer too small: expected at least 46 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int effectsOffset = buffer.getIntLE(offset + 26);
             if (effectsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Effects");
@@ -388,7 +388,7 @@ extends SimpleInteraction {
             }
             pos += InteractionEffects.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int settingsOffset = buffer.getIntLE(offset + 30);
             if (settingsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Settings");
@@ -410,7 +410,7 @@ extends SimpleInteraction {
                 ++pos;
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int rulesOffset = buffer.getIntLE(offset + 34);
             if (rulesOffset < 0) {
                 return ValidationResult.error("Invalid offset for Rules");
@@ -425,7 +425,7 @@ extends SimpleInteraction {
             }
             pos += InteractionRules.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int tagsOffset = buffer.getIntLE(offset + 38);
             if (tagsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Tags");
@@ -446,7 +446,7 @@ extends SimpleInteraction {
                 return ValidationResult.error("Buffer overflow reading Tags");
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int cameraOffset = buffer.getIntLE(offset + 42);
             if (cameraOffset < 0) {
                 return ValidationResult.error("Invalid offset for Camera");

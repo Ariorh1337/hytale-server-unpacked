@@ -34,7 +34,7 @@ extends SimpleInstantInteraction {
     @Nonnull
     public static final BuilderCodec<EffectConditionInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(EffectConditionInteraction.class, EffectConditionInteraction::new, SimpleInstantInteraction.CODEC).documentation("An interaction that is successful if the given effects exist (or don't) on the target entity.")).append(new KeyedCodec<T[]>("EntityEffectIds", Codec.STRING_ARRAY), (effectConditionInteraction, strings) -> {
         effectConditionInteraction.entityEffectIds = strings;
-    }, effectConditionInteraction -> effectConditionInteraction.entityEffectIds).addValidator(Validators.nonNull()).addValidator(Validators.nonEmptyArray()).addValidator(EntityEffect.VALIDATOR_CACHE.getArrayValidator()).add()).append(new KeyedCodec<Match>("Match", new EnumCodec<Match>(Match.class)), (effectConditionInteraction, aBoolean) -> {
+    }, effectConditionInteraction -> effectConditionInteraction.entityEffectIds).addValidator(Validators.nonNull()).addValidator(Validators.nonEmptyArray()).addValidatorLate(() -> EntityEffect.VALIDATOR_CACHE.getArrayValidator().late()).add()).append(new KeyedCodec<Match>("Match", new EnumCodec<Match>(Match.class)), (effectConditionInteraction, aBoolean) -> {
         effectConditionInteraction.match = aBoolean;
     }, effectConditionInteraction -> effectConditionInteraction.match).documentation("Field to specify whether the entity must have the specified effects (All), or must not have the specified effects (None). Default value is: All.").add()).appendInherited(new KeyedCodec<InteractionTarget>("Entity", InteractionTarget.CODEC), (o, i) -> {
         o.entityTarget = i;

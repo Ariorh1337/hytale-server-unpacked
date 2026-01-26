@@ -263,13 +263,12 @@ implements BoxBlockIterator.BoxIterationConsumer {
             int x = triggerCollision.x;
             int y = triggerCollision.y;
             int z = triggerCollision.z;
-            String blockTypeId = blockType.getId();
             if (filler != 0) {
                 x -= FillerBlockUtil.unpackX(filler);
                 y -= FillerBlockUtil.unpackY(filler);
                 z -= FillerBlockUtil.unpackZ(filler);
             }
-            if (!this.newTriggers.add(index = BlockUtil.pack(x, y, z))) continue;
+            if (!this.newTriggers.add(index = BlockUtil.packUnchecked(x, y, z))) continue;
             BlockPosition pos = new BlockPosition(x, y, z);
             if (!this.lastTriggers.remove(index) && interactionsEnter != null) {
                 this.doCollisionInteraction(manager, InteractionType.CollisionEnter, ref, interactionsEnter, pos, componentAccessor);

@@ -14,6 +14,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class NoPropAsset
 extends PropAsset {
@@ -23,7 +24,7 @@ extends PropAsset {
     @Nonnull
     public Prop build(@Nonnull PropAsset.Argument argument) {
         return new Prop(this){
-            final Bounds3i writeBounds_voxelGrid = new Bounds3i();
+            final Bounds3i emptyBounds_voxelGrid = new Bounds3i();
 
             @Override
             public ScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
@@ -40,9 +41,15 @@ extends PropAsset {
             }
 
             @Override
+            @NonNullDecl
+            public Bounds3i getReadBounds_voxelGrid() {
+                return this.emptyBounds_voxelGrid;
+            }
+
+            @Override
             @Nonnull
-            public Bounds3i getWriteBounds() {
-                return this.writeBounds_voxelGrid;
+            public Bounds3i getWriteBounds_voxelGrid() {
+                return this.emptyBounds_voxelGrid;
             }
         };
     }

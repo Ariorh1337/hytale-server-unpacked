@@ -151,13 +151,13 @@ public class DamageCalculatorSystems {
             DamageEntityInteraction.EntityStatOnHit[] entityStatsOnHit = damageSequence.getEntityStatOnHit();
             if (entityStatsOnHit != null && (source = damage.getSource()) instanceof Damage.EntitySource) {
                 Damage.EntitySource entitySource = (Damage.EntitySource)source;
-                Ref<EntityStore> attackerRef = entitySource.getRef();
-                EntityStatMap entityStatMapComponent = commandBuffer.getComponent(attackerRef, EntityStatMap.getComponentType());
-                if (entityStatMapComponent == null) {
+                Ref<EntityStore> sourceRef = entitySource.getRef();
+                EntityStatMap sourceEntityStatMapComponent = commandBuffer.getComponent(sourceRef, EntityStatMap.getComponentType());
+                if (sourceEntityStatMapComponent == null) {
                     return;
                 }
                 for (DamageEntityInteraction.EntityStatOnHit statOnHit : entityStatsOnHit) {
-                    statOnHit.processEntityStatsOnHit(damageSequence.getSequentialHits(), entityStatMapComponent);
+                    statOnHit.processEntityStatsOnHit(damageSequence.getSequentialHits(), sourceEntityStatMapComponent);
                 }
             }
         }

@@ -77,7 +77,7 @@ public class Particle {
     public static Particle deserialize(@Nonnull ByteBuf buf, int offset) {
         Particle obj = new Particle();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.frameSize = Size.deserialize(buf, offset + 1);
         }
         obj.uvOption = ParticleUVOption.fromValue(buf.getByte(offset + 9));
@@ -85,13 +85,13 @@ public class Particle {
         obj.softParticles = SoftParticle.fromValue(buf.getByte(offset + 11));
         obj.softParticlesFadeFactor = buf.getFloatLE(offset + 12);
         boolean bl = obj.useSpriteBlending = buf.getByte(offset + 16) != 0;
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.initialAnimationFrame = ParticleAnimationFrame.deserialize(buf, offset + 17);
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 4) != 0) {
             obj.collisionAnimationFrame = ParticleAnimationFrame.deserialize(buf, offset + 75);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos0 = offset + 141 + buf.getIntLE(offset + 133);
             int texturePathLen = VarInt.peek(buf, varPos0);
             if (texturePathLen < 0) {
@@ -128,7 +128,7 @@ public class Particle {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 141;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 133);
             int pos0 = offset + 141 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -155,16 +155,16 @@ public class Particle {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.texturePath != null) {
+        if (this.frameSize != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.frameSize != null) {
+        if (this.initialAnimationFrame != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.initialAnimationFrame != null) {
+        if (this.collisionAnimationFrame != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.collisionAnimationFrame != null) {
+        if (this.texturePath != null) {
             nullBits = (byte)(nullBits | 8);
         }
         if (this.animationFrames != null) {
@@ -234,7 +234,7 @@ public class Particle {
             return ValidationResult.error("Buffer too small: expected at least 141 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int texturePathOffset = buffer.getIntLE(offset + 133);
             if (texturePathOffset < 0) {
                 return ValidationResult.error("Invalid offset for TexturePath");

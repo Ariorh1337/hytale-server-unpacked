@@ -12,7 +12,10 @@ import com.hypixel.hytale.server.worldgen.loader.prefab.BlockPlacementMaskRegist
 import com.hypixel.hytale.server.worldgen.loader.util.FileMaskCache;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabStoreRoot;
 import com.hypixel.hytale.server.worldgen.util.LogUtil;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
@@ -26,12 +29,20 @@ implements SeedResource {
     protected Path dataFolder;
     @Nonnull
     protected WorldGenPrefabLoader loader;
+    @Nonnull
+    protected final Map<String, AtomicInteger> uniqueIds;
 
     public SeedStringResource(@Nonnull PrefabStoreRoot prefabStore, @Nonnull Path dataFolder) {
         this.dataFolder = dataFolder;
         this.loader = new WorldGenPrefabLoader(prefabStore, dataFolder);
         this.biomeMaskRegistry = new FileMaskCache();
         this.blockMaskRegistry = new BlockPlacementMaskRegistry();
+        this.uniqueIds = new Object2ObjectOpenHashMap<String, AtomicInteger>();
+    }
+
+    @Nonnull
+    public String getUniqueName(@Nonnull String prefix) {
+        return prefix + this.uniqueIds.computeIfAbsent(prefix, k -> new AtomicInteger(0)).getAndIncrement();
     }
 
     public WorldGenPrefabLoader getLoader() {

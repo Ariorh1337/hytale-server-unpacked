@@ -73,13 +73,13 @@ public class ItemAppearanceCondition {
         int varIntLen;
         ItemAppearanceCondition obj = new ItemAppearanceCondition();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.condition = FloatRange.deserialize(buf, offset + 1);
         }
         obj.conditionValueType = ValueType.fromValue(buf.getByte(offset + 9));
         obj.localSoundEventId = buf.getIntLE(offset + 10);
         obj.worldSoundEventId = buf.getIntLE(offset + 14);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 38 + buf.getIntLE(offset + 18);
             int particlesCount = VarInt.peek(buf, varPos0);
             if (particlesCount < 0) {
@@ -99,7 +99,7 @@ public class ItemAppearanceCondition {
                 elemPos += ModelParticle.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos1 = offset + 38 + buf.getIntLE(offset + 22);
             int firstPersonParticlesCount = VarInt.peek(buf, varPos1);
             if (firstPersonParticlesCount < 0) {
@@ -119,7 +119,7 @@ public class ItemAppearanceCondition {
                 elemPos += ModelParticle.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos2 = offset + 38 + buf.getIntLE(offset + 26);
             int modelLen = VarInt.peek(buf, varPos2);
             if (modelLen < 0) {
@@ -130,7 +130,7 @@ public class ItemAppearanceCondition {
             }
             obj.model = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos3 = offset + 38 + buf.getIntLE(offset + 30);
             int textureLen = VarInt.peek(buf, varPos3);
             if (textureLen < 0) {
@@ -141,7 +141,7 @@ public class ItemAppearanceCondition {
             }
             obj.texture = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int varPos4 = offset + 38 + buf.getIntLE(offset + 34);
             int modelVFXIdLen = VarInt.peek(buf, varPos4);
             if (modelVFXIdLen < 0) {
@@ -161,7 +161,7 @@ public class ItemAppearanceCondition {
         int arrLen;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 38;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 18);
             int pos0 = offset + 38 + fieldOffset0;
             arrLen = VarInt.peek(buf, pos0);
@@ -173,7 +173,7 @@ public class ItemAppearanceCondition {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 22);
             int pos1 = offset + 38 + fieldOffset1;
             arrLen = VarInt.peek(buf, pos1);
@@ -185,7 +185,7 @@ public class ItemAppearanceCondition {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 26);
             int pos2 = offset + 38 + fieldOffset2;
             sl = VarInt.peek(buf, pos2);
@@ -193,7 +193,7 @@ public class ItemAppearanceCondition {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 30);
             int pos3 = offset + 38 + fieldOffset3;
             sl = VarInt.peek(buf, pos3);
@@ -201,7 +201,7 @@ public class ItemAppearanceCondition {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 34);
             int pos4 = offset + 38 + fieldOffset4;
             sl = VarInt.peek(buf, pos4);
@@ -215,22 +215,22 @@ public class ItemAppearanceCondition {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.particles != null) {
+        if (this.condition != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.firstPersonParticles != null) {
+        if (this.particles != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.model != null) {
+        if (this.firstPersonParticles != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.texture != null) {
+        if (this.model != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.modelVFXId != null) {
+        if (this.texture != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
-        if (this.condition != null) {
+        if (this.modelVFXId != null) {
             nullBits = (byte)(nullBits | 0x20);
         }
         buf.writeByte(nullBits);
@@ -333,7 +333,7 @@ public class ItemAppearanceCondition {
             return ValidationResult.error("Buffer too small: expected at least 38 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int particlesOffset = buffer.getIntLE(offset + 18);
             if (particlesOffset < 0) {
                 return ValidationResult.error("Invalid offset for Particles");
@@ -358,7 +358,7 @@ public class ItemAppearanceCondition {
                 pos += ModelParticle.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int firstPersonParticlesOffset = buffer.getIntLE(offset + 22);
             if (firstPersonParticlesOffset < 0) {
                 return ValidationResult.error("Invalid offset for FirstPersonParticles");
@@ -383,7 +383,7 @@ public class ItemAppearanceCondition {
                 pos += ModelParticle.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int modelOffset = buffer.getIntLE(offset + 26);
             if (modelOffset < 0) {
                 return ValidationResult.error("Invalid offset for Model");
@@ -404,7 +404,7 @@ public class ItemAppearanceCondition {
                 return ValidationResult.error("Buffer overflow reading Model");
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int textureOffset = buffer.getIntLE(offset + 30);
             if (textureOffset < 0) {
                 return ValidationResult.error("Invalid offset for Texture");
@@ -425,7 +425,7 @@ public class ItemAppearanceCondition {
                 return ValidationResult.error("Buffer overflow reading Texture");
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int modelVFXIdOffset = buffer.getIntLE(offset + 34);
             if (modelVFXIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for ModelVFXId");

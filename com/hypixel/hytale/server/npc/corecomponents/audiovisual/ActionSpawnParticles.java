@@ -28,8 +28,8 @@ extends ActionBase {
     public ActionSpawnParticles(@Nonnull BuilderActionSpawnParticles builder, @Nonnull BuilderSupport support) {
         super(builder);
         this.particleSystem = builder.getParticleSystem(support);
-        this.offset = builder.getOffset();
-        this.range = builder.getRange();
+        this.offset = builder.getOffset(support);
+        this.range = builder.getRange(support);
     }
 
     @Override

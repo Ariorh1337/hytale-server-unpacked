@@ -36,7 +36,6 @@ import com.hypixel.hytale.protocol.ParallelInteraction;
 import com.hypixel.hytale.protocol.PickBlockInteraction;
 import com.hypixel.hytale.protocol.PlaceBlockInteraction;
 import com.hypixel.hytale.protocol.ProjectileInteraction;
-import com.hypixel.hytale.protocol.RefillContainerInteraction;
 import com.hypixel.hytale.protocol.RemoveEntityInteraction;
 import com.hypixel.hytale.protocol.RepeatInteraction;
 import com.hypixel.hytale.protocol.ReplaceInteraction;
@@ -104,7 +103,6 @@ public abstract class Interaction {
             case 16 -> ChangeBlockInteraction.deserialize(buf, offset + typeIdLen);
             case 17 -> ChangeStateInteraction.deserialize(buf, offset + typeIdLen);
             case 18 -> FirstClickInteraction.deserialize(buf, offset + typeIdLen);
-            case 19 -> RefillContainerInteraction.deserialize(buf, offset + typeIdLen);
             case 20 -> SelectInteraction.deserialize(buf, offset + typeIdLen);
             case 21 -> DamageEntityInteraction.deserialize(buf, offset + typeIdLen);
             case 22 -> RepeatInteraction.deserialize(buf, offset + typeIdLen);
@@ -157,7 +155,6 @@ public abstract class Interaction {
             case 16 -> ChangeBlockInteraction.computeBytesConsumed(buf, offset + typeIdLen);
             case 17 -> ChangeStateInteraction.computeBytesConsumed(buf, offset + typeIdLen);
             case 18 -> FirstClickInteraction.computeBytesConsumed(buf, offset + typeIdLen);
-            case 19 -> RefillContainerInteraction.computeBytesConsumed(buf, offset + typeIdLen);
             case 20 -> SelectInteraction.computeBytesConsumed(buf, offset + typeIdLen);
             case 21 -> DamageEntityInteraction.computeBytesConsumed(buf, offset + typeIdLen);
             case 22 -> RepeatInteraction.computeBytesConsumed(buf, offset + typeIdLen);
@@ -217,11 +214,6 @@ public abstract class Interaction {
         if (interaction instanceof ChangeStateInteraction) {
             ChangeStateInteraction sub = (ChangeStateInteraction)interaction;
             return 17;
-        }
-        interaction = this;
-        if (interaction instanceof RefillContainerInteraction) {
-            RefillContainerInteraction sub = (RefillContainerInteraction)interaction;
-            return 19;
         }
         interaction = this;
         if (interaction instanceof SimpleBlockInteraction) {
@@ -454,7 +446,6 @@ public abstract class Interaction {
             case 16 -> ChangeBlockInteraction.validateStructure(buffer, offset + typeIdLen);
             case 17 -> ChangeStateInteraction.validateStructure(buffer, offset + typeIdLen);
             case 18 -> FirstClickInteraction.validateStructure(buffer, offset + typeIdLen);
-            case 19 -> RefillContainerInteraction.validateStructure(buffer, offset + typeIdLen);
             case 20 -> SelectInteraction.validateStructure(buffer, offset + typeIdLen);
             case 21 -> DamageEntityInteraction.validateStructure(buffer, offset + typeIdLen);
             case 22 -> RepeatInteraction.validateStructure(buffer, offset + typeIdLen);

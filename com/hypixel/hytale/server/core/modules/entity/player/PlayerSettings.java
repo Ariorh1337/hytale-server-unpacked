@@ -11,10 +11,10 @@ import com.hypixel.hytale.server.core.modules.entity.player.PlayerCreativeSettin
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
-public record PlayerSettings(boolean showEntityMarkers, PickupLocation armorItemsPreferredPickupLocation, PickupLocation weaponAndToolItemsPreferredPickupLocation, PickupLocation usableItemsItemsPreferredPickupLocation, PickupLocation solidBlockItemsPreferredPickupLocation, PickupLocation miscItemsPreferredPickupLocation, PlayerCreativeSettings creativeSettings) implements Component<EntityStore>
+public record PlayerSettings(boolean showEntityMarkers, PickupLocation armorItemsPreferredPickupLocation, PickupLocation weaponAndToolItemsPreferredPickupLocation, PickupLocation usableItemsItemsPreferredPickupLocation, PickupLocation solidBlockItemsPreferredPickupLocation, PickupLocation miscItemsPreferredPickupLocation, PlayerCreativeSettings creativeSettings, boolean hideHelmet, boolean hideCuirass, boolean hideGauntlets, boolean hidePants) implements Component<EntityStore>
 {
     @Nonnull
-    private static final PlayerSettings INSTANCE = new PlayerSettings(false, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, new PlayerCreativeSettings());
+    private static final PlayerSettings INSTANCE = new PlayerSettings(false, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, PickupLocation.Hotbar, new PlayerCreativeSettings(), false, false, false, false);
 
     @Nonnull
     public static ComponentType<EntityStore, PlayerSettings> getComponentType() {
@@ -29,7 +29,7 @@ public record PlayerSettings(boolean showEntityMarkers, PickupLocation armorItem
     @Override
     @Nonnull
     public Component<EntityStore> clone() {
-        return new PlayerSettings(this.showEntityMarkers, this.armorItemsPreferredPickupLocation, this.weaponAndToolItemsPreferredPickupLocation, this.usableItemsItemsPreferredPickupLocation, this.solidBlockItemsPreferredPickupLocation, this.miscItemsPreferredPickupLocation, this.creativeSettings.clone());
+        return new PlayerSettings(this.showEntityMarkers, this.armorItemsPreferredPickupLocation, this.weaponAndToolItemsPreferredPickupLocation, this.usableItemsItemsPreferredPickupLocation, this.solidBlockItemsPreferredPickupLocation, this.miscItemsPreferredPickupLocation, this.creativeSettings.clone(), this.hideHelmet, this.hideCuirass, this.hideGauntlets, this.hidePants);
     }
 }
 

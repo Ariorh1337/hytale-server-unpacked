@@ -7,13 +7,12 @@ import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ComponentRegistry;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.query.Query;
+import javax.annotation.Nonnull;
 
-class AnyQuery<ECS_TYPE>
+public class AnyQuery<ECS_TYPE>
 implements Query<ECS_TYPE> {
+    @Nonnull
     static final AnyQuery<?> INSTANCE = new AnyQuery();
-
-    AnyQuery() {
-    }
 
     @Override
     public boolean test(Archetype<ECS_TYPE> archetype) {
@@ -26,7 +25,7 @@ implements Query<ECS_TYPE> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
     }
 
     @Override

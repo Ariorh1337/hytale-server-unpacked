@@ -61,10 +61,10 @@ public class EntityStatUpdate {
         obj.op = EntityStatOp.fromValue(buf.getByte(offset + 1));
         obj.predictable = buf.getByte(offset + 2) != 0;
         obj.value = buf.getFloatLE(offset + 3);
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.modifier = Modifier.deserialize(buf, offset + 7);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 21 + buf.getIntLE(offset + 13);
             int modifiersCount = VarInt.peek(buf, varPos0);
             if (modifiersCount < 0) {
@@ -92,7 +92,7 @@ public class EntityStatUpdate {
                 throw ProtocolException.duplicateKey("modifiers", key);
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos1 = offset + 21 + buf.getIntLE(offset + 17);
             int modifierKeyLen = VarInt.peek(buf, varPos1);
             if (modifierKeyLen < 0) {
@@ -109,7 +109,7 @@ public class EntityStatUpdate {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 21;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 13);
             int pos0 = offset + 21 + fieldOffset0;
             int dictLen = VarInt.peek(buf, pos0);
@@ -123,7 +123,7 @@ public class EntityStatUpdate {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 17);
             int pos1 = offset + 21 + fieldOffset1;
             int sl = VarInt.peek(buf, pos1);
@@ -137,13 +137,13 @@ public class EntityStatUpdate {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.modifiers != null) {
+        if (this.modifier != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.modifierKey != null) {
+        if (this.modifiers != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.modifier != null) {
+        if (this.modifierKey != null) {
             nullBits = (byte)(nullBits | 4);
         }
         buf.writeByte(nullBits);
@@ -202,7 +202,7 @@ public class EntityStatUpdate {
             return ValidationResult.error("Buffer too small: expected at least 21 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int modifiersOffset = buffer.getIntLE(offset + 13);
             if (modifiersOffset < 0) {
                 return ValidationResult.error("Invalid offset for Modifiers");
@@ -234,7 +234,7 @@ public class EntityStatUpdate {
                 pos += 6;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int modifierKeyOffset = buffer.getIntLE(offset + 17);
             if (modifierKeyOffset < 0) {
                 return ValidationResult.error("Invalid offset for ModifierKey");

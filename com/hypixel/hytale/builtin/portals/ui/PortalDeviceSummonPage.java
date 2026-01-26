@@ -340,7 +340,9 @@ extends InteractiveCustomUIPage<Data> {
         }
         Transform worldSpawnPoint = spawnProvider.getSpawnPoint(world, sampleUuid);
         if (!DEFAULT_WORLDGEN_SPAWN.equals(worldSpawnPoint) || portalSpawn == null) {
-            return CompletableFuture.completedFuture(worldSpawnPoint);
+            Transform uppedSpawnPoint = worldSpawnPoint.clone();
+            uppedSpawnPoint.getPosition().add(0.0, 0.5, 0.0);
+            return CompletableFuture.completedFuture(uppedSpawnPoint);
         }
         return CompletableFuture.supplyAsync(() -> {
             Transform computedSpawn = PortalSpawnFinder.computeSpawnTransform(world, portalSpawn);

@@ -67,18 +67,20 @@ implements BallisticDataProvider {
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
         assert (commandBuffer != null);
         World world = commandBuffer.getExternalData().getWorld();
-        Ref<EntityStore> attackerRef = context.getEntity();
-        Entity entity = EntityUtils.getEntity(attackerRef, commandBuffer);
+        Ref<EntityStore> sourceRef = context.getEntity();
+        Entity entity = EntityUtils.getEntity(sourceRef, commandBuffer);
         if (!(entity instanceof LivingEntity)) {
             return;
         }
         LivingEntity attackerLivingEntity = (LivingEntity)entity;
-        Transform lookVec = TargetUtil.getLook(attackerRef, commandBuffer);
+        Transform lookVec = TargetUtil.getLook(sourceRef, commandBuffer);
         Vector3d lookPosition = lookVec.getPosition();
         Vector3f lookRotation = lookVec.getRotation();
-        UUIDComponent attackerUuidComponent = commandBuffer.getComponent(attackerRef, UUIDComponent.getComponentType());
-        assert (attackerUuidComponent != null);
-        UUID attackerUuid = attackerUuidComponent.getUuid();
+        UUIDComponent sourceUuidComponent = commandBuffer.getComponent(sourceRef, UUIDComponent.getComponentType());
+        if (sourceUuidComponent == null) {
+            return;
+        }
+        UUID sourceUuid = sourceUuidComponent.getUuid();
         TimeResource timeResource = commandBuffer.getResource(TimeResource.getResourceType());
         Holder<EntityStore> holder = ProjectileComponent.assembleDefaultProjectile(timeResource, this.projectileId, lookPosition, lookRotation);
         ProjectileComponent projectileComponent = holder.getComponent(ProjectileComponent.getComponentType());
@@ -90,15 +92,15 @@ implements BallisticDataProvider {
                 return;
             }
         }
-        projectileComponent.shoot(holder, attackerUuid, lookPosition.getX(), lookPosition.getY(), lookPosition.getZ(), lookRotation.getYaw(), lookRotation.getPitch());
+        projectileComponent.shoot(holder, sourceUuid, lookPosition.getX(), lookPosition.getY(), lookPosition.getZ(), lookRotation.getYaw(), lookRotation.getPitch());
         commandBuffer.addEntity(holder, AddReason.SPAWN);
         ItemStack itemInHand = context.getHeldItem();
         if (itemInHand != null && !itemInHand.isEmpty()) {
             Inventory inventory;
             ItemContainer section;
             Item item = itemInHand.getItem();
-            if (attackerLivingEntity.canDecreaseItemStackDurability(attackerRef, commandBuffer) && !itemInHand.isUnbreakable() && item.getWeapon() != null && (section = (inventory = attackerLivingEntity.getInventory()).getSectionById(context.getHeldItemSectionId())) != null) {
-                attackerLivingEntity.updateItemStackDurability(attackerRef, itemInHand, section, context.getHeldItemSlot(), -item.getDurabilityLossOnHit(), commandBuffer);
+            if (attackerLivingEntity.canDecreaseItemStackDurability(sourceRef, commandBuffer) && !itemInHand.isUnbreakable() && item.getWeapon() != null && (section = (inventory = attackerLivingEntity.getInventory()).getSectionById(context.getHeldItemSectionId())) != null) {
+                attackerLivingEntity.updateItemStackDurability(sourceRef, itemInHand, section, context.getHeldItemSlot(), -item.getDurabilityLossOnHit(), commandBuffer);
             }
             if (itemInHand.isBroken()) {
                 BrokenPenalties brokenPenalties = world.getGameplayConfig().getItemDurabilityConfig().getBrokenPenalties();

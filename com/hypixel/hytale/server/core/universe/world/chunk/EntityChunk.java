@@ -21,8 +21,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -34,7 +32,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -190,43 +187,6 @@ implements Component<ChunkStore> {
         boolean out = this.needsSaving;
         this.needsSaving = false;
         return out;
-    }
-
-    @Nonnull
-    @Deprecated(forRemoval=true)
-    public Iterable<Entity> getEntities() {
-        if (this.entityReferences.isEmpty()) {
-            return Collections.emptyList();
-        }
-        final Ref[] references = (Ref[])this.entityReferences.toArray(Ref[]::new);
-        return () -> new Iterator<Entity>(this){
-            int index;
-            {
-                this.index = references.length;
-            }
-
-            @Override
-            public boolean hasNext() {
-                if (this.index <= 0) {
-                    return false;
-                }
-                Ref reference = references[this.index - 1];
-                while (!reference.isValid() || EntityUtils.getEntity(reference, reference.getStore()) == null) {
-                    --this.index;
-                    if (this.index <= 0) {
-                        return false;
-                    }
-                    reference = references[this.index - 1];
-                }
-                return true;
-            }
-
-            @Override
-            public Entity next() {
-                Ref reference = references[--this.index];
-                return EntityUtils.getEntity(reference, reference.getStore());
-            }
-        };
     }
 
     public static class EntityChunkLoadingSystem

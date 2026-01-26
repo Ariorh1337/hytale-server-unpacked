@@ -25,8 +25,6 @@ public class ClearEntitiesCommand
 extends AbstractPlayerCommand {
     @Nonnull
     private static final Message MESSAGE_NO_SELECTION = Message.translation("server.commands.clearEntities.noSelection");
-    @Nonnull
-    private static final Message MESSAGE_CLEARED = Message.translation("server.commands.clearEntities.cleared");
 
     public ClearEntitiesCommand() {
         super("clearEntities", "server.commands.clearEntities.desc");
@@ -58,7 +56,7 @@ extends AbstractPlayerCommand {
         for (Ref entityRef : entitiesToRemove) {
             entityStore.removeEntity(entityRef, RemoveReason.REMOVE);
         }
-        context.sendMessage(MESSAGE_CLEARED.param("count", entitiesToRemove.size()));
+        context.sendMessage(Message.translation("server.commands.clearEntities.cleared").param("count", entitiesToRemove.size()));
     }
 }
 

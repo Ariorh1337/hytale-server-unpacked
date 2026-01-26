@@ -124,7 +124,7 @@ public class InteractionEntry {
 
     public boolean setClientState(@Nullable InteractionSyncData clientState) {
         if (clientState != null && (clientState.operationCounter != this.serverState.operationCounter || clientState.rootInteraction != this.serverState.rootInteraction)) {
-            HytaleLogger.Api ctx = LOGGER.at(Level.WARNING);
+            HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
             if (ctx.isEnabled()) {
                 String info;
                 RootInteraction root = RootInteraction.getAssetMap().getAsset(this.serverState.rootInteraction);

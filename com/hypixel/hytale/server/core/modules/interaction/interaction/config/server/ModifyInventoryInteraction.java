@@ -93,6 +93,7 @@ extends SimpleInstantInteraction {
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
         if (playerComponent == null) {
+            context.getState().state = InteractionState.Failed;
             return;
         }
         boolean bl = hasRequiredGameMode = this.requiredGameMode == null || playerComponent.getGameMode() == this.requiredGameMode;

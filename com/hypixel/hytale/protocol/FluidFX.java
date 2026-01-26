@@ -87,24 +87,24 @@ public class FluidFX {
         byte nullBits = buf.getByte(offset);
         obj.shader = ShaderType.fromValue(buf.getByte(offset + 1));
         obj.fogMode = FluidFog.fromValue(buf.getByte(offset + 2));
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.fogColor = Color.deserialize(buf, offset + 3);
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.fogDistance = NearFar.deserialize(buf, offset + 6);
         }
         obj.fogDepthStart = buf.getFloatLE(offset + 14);
         obj.fogDepthFalloff = buf.getFloatLE(offset + 18);
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 4) != 0) {
             obj.colorFilter = Color.deserialize(buf, offset + 22);
         }
         obj.colorSaturation = buf.getFloatLE(offset + 25);
         obj.distortionAmplitude = buf.getFloatLE(offset + 29);
         obj.distortionFrequency = buf.getFloatLE(offset + 33);
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 8) != 0) {
             obj.movementSettings = FluidFXMovementSettings.deserialize(buf, offset + 37);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos0 = offset + 69 + buf.getIntLE(offset + 61);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -115,7 +115,7 @@ public class FluidFX {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int varPos1 = offset + 69 + buf.getIntLE(offset + 65);
             obj.particle = FluidParticle.deserialize(buf, varPos1);
         }
@@ -125,7 +125,7 @@ public class FluidFX {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 69;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 61);
             int pos0 = offset + 69 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -133,7 +133,7 @@ public class FluidFX {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 65);
             int pos1 = offset + 69 + fieldOffset1;
             if ((pos1 += FluidParticle.computeBytesConsumed(buf, pos1)) - offset > maxEnd) {
@@ -146,22 +146,22 @@ public class FluidFX {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.fogColor != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.fogColor != null) {
+        if (this.fogDistance != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.fogDistance != null) {
+        if (this.colorFilter != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.colorFilter != null) {
+        if (this.movementSettings != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.particle != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
-        if (this.movementSettings != null) {
+        if (this.particle != null) {
             nullBits = (byte)(nullBits | 0x20);
         }
         buf.writeByte(nullBits);
@@ -228,7 +228,7 @@ public class FluidFX {
             return ValidationResult.error("Buffer too small: expected at least 69 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int idOffset = buffer.getIntLE(offset + 61);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -249,7 +249,7 @@ public class FluidFX {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int particleOffset = buffer.getIntLE(offset + 65);
             if (particleOffset < 0) {
                 return ValidationResult.error("Invalid offset for Particle");

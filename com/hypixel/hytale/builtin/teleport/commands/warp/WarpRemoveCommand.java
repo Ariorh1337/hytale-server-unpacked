@@ -23,8 +23,6 @@ import javax.annotation.Nonnull;
 public class WarpRemoveCommand
 extends CommandBase {
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED = Message.translation("server.commands.teleport.warp.notLoaded");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_UNKNOWN_WARP = Message.translation("server.commands.teleport.warp.unknownWarp");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_REMOVED_WARP = Message.translation("server.commands.teleport.warp.removedWarp");
     @Nonnull
     private final RequiredArg<String> nameArg = this.withRequiredArg("name", "server.commands.warp.remove.name.desc", ArgTypes.STRING);
 
@@ -43,10 +41,10 @@ extends CommandBase {
         Map<String, Warp> warps = TeleportPlugin.get().getWarps();
         Warp old = warps.remove(warpName = ((String)this.nameArg.get(context)).toLowerCase());
         if (old == null) {
-            context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_UNKNOWN_WARP.param("name", warpName));
+            context.sendMessage(Message.translation("server.commands.teleport.warp.unknownWarp").param("name", warpName));
         } else {
             TeleportPlugin.get().saveWarps();
-            context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_REMOVED_WARP.param("name", warpName));
+            context.sendMessage(Message.translation("server.commands.teleport.warp.removedWarp").param("name", warpName));
             World targetWorld = Universe.get().getWorld(old.getWorld());
             if (targetWorld != null) {
                 ComponentType<EntityStore, TeleportPlugin.WarpComponent> warpComponentType = TeleportPlugin.WarpComponent.getComponentType();

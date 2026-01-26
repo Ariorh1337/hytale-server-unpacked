@@ -60,7 +60,7 @@ Query<ECS_TYPE> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
         if (!this.registry.equals(registry)) {
             throw new IllegalArgumentException("ComponentType is for a different registry! " + String.valueOf(this));
         }

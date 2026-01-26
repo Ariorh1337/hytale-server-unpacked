@@ -145,26 +145,26 @@ public class ComponentUpdate {
         obj.type = ComponentUpdateType.fromValue(buf.getByte(offset + 3));
         obj.blockId = buf.getIntLE(offset + 4);
         obj.entityScale = buf.getFloatLE(offset + 8);
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[0] & 1) != 0) {
             obj.transform = ModelTransform.deserialize(buf, offset + 12);
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[0] & 2) != 0) {
             obj.movementStates = MovementStates.deserialize(buf, offset + 61);
         }
-        if ((nullBits[1] & 0x10) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             obj.dynamicLight = ColorLight.deserialize(buf, offset + 83);
         }
         obj.hitboxCollisionConfigIndex = buf.getIntLE(offset + 87);
         obj.repulsionConfigIndex = buf.getIntLE(offset + 91);
         obj.predictionId = PacketIO.readUUID(buf, offset + 95);
-        if ((nullBits[1] & 0x80) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             obj.mounted = MountedUpdate.deserialize(buf, offset + 111);
         }
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             int varPos0 = offset + 211 + buf.getIntLE(offset + 159);
             obj.nameplate = Nameplate.deserialize(buf, varPos0);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             int varPos1 = offset + 211 + buf.getIntLE(offset + 163);
             int entityUIComponentsCount = VarInt.peek(buf, varPos1);
             if (entityUIComponentsCount < 0) {
@@ -182,27 +182,27 @@ public class ComponentUpdate {
                 obj.entityUIComponents[i2] = buf.getIntLE(varPos1 + varIntLen + i2 * 4);
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int varPos2 = offset + 211 + buf.getIntLE(offset + 167);
             obj.combatTextUpdate = CombatTextUpdate.deserialize(buf, varPos2);
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int varPos3 = offset + 211 + buf.getIntLE(offset + 171);
             obj.model = Model.deserialize(buf, varPos3);
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int varPos4 = offset + 211 + buf.getIntLE(offset + 175);
             obj.skin = PlayerSkin.deserialize(buf, varPos4);
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int varPos5 = offset + 211 + buf.getIntLE(offset + 179);
             obj.item = ItemWithAllMetadata.deserialize(buf, varPos5);
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int varPos6 = offset + 211 + buf.getIntLE(offset + 183);
             obj.equipment = Equipment.deserialize(buf, varPos6);
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int varPos7 = offset + 211 + buf.getIntLE(offset + 187);
             int entityStatUpdatesCount = VarInt.peek(buf, varPos7);
             if (entityStatUpdatesCount < 0) {
@@ -237,7 +237,7 @@ public class ComponentUpdate {
                 throw ProtocolException.duplicateKey("entityStatUpdates", key);
             }
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int varPos8 = offset + 211 + buf.getIntLE(offset + 191);
             int entityEffectUpdatesCount = VarInt.peek(buf, varPos8);
             if (entityEffectUpdatesCount < 0) {
@@ -257,7 +257,7 @@ public class ComponentUpdate {
                 elemPos += EntityEffectUpdate.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int varPos9 = offset + 211 + buf.getIntLE(offset + 195);
             int interactionsCount = VarInt.peek(buf, varPos9);
             if (interactionsCount < 0) {
@@ -277,7 +277,7 @@ public class ComponentUpdate {
                 throw ProtocolException.duplicateKey("interactions", (Object)key);
             }
         }
-        if ((nullBits[1] & 0x20) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int varPos10 = offset + 211 + buf.getIntLE(offset + 199);
             int soundEventIdsCount = VarInt.peek(buf, varPos10);
             if (soundEventIdsCount < 0) {
@@ -295,7 +295,7 @@ public class ComponentUpdate {
                 obj.soundEventIds[i2] = buf.getIntLE(varPos10 + varIntLen + i2 * 4);
             }
         }
-        if ((nullBits[1] & 0x40) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int varPos11 = offset + 211 + buf.getIntLE(offset + 203);
             int interactionHintLen = VarInt.peek(buf, varPos11);
             if (interactionHintLen < 0) {
@@ -343,14 +343,14 @@ public class ComponentUpdate {
         int arrLen;
         byte[] nullBits = PacketIO.readBytes(buf, offset, 3);
         int maxEnd = 211;
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 159);
             int pos0 = offset + 211 + fieldOffset0;
             if ((pos0 += Nameplate.computeBytesConsumed(buf, pos0)) - offset > maxEnd) {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 163);
             int pos1 = offset + 211 + fieldOffset1;
             arrLen = VarInt.peek(buf, pos1);
@@ -358,42 +358,42 @@ public class ComponentUpdate {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 167);
             int pos2 = offset + 211 + fieldOffset2;
             if ((pos2 += CombatTextUpdate.computeBytesConsumed(buf, pos2)) - offset > maxEnd) {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 171);
             int pos3 = offset + 211 + fieldOffset3;
             if ((pos3 += Model.computeBytesConsumed(buf, pos3)) - offset > maxEnd) {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 175);
             int pos4 = offset + 211 + fieldOffset4;
             if ((pos4 += PlayerSkin.computeBytesConsumed(buf, pos4)) - offset > maxEnd) {
                 maxEnd = pos4 - offset;
             }
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int fieldOffset5 = buf.getIntLE(offset + 179);
             int pos5 = offset + 211 + fieldOffset5;
             if ((pos5 += ItemWithAllMetadata.computeBytesConsumed(buf, pos5)) - offset > maxEnd) {
                 maxEnd = pos5 - offset;
             }
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int fieldOffset6 = buf.getIntLE(offset + 183);
             int pos6 = offset + 211 + fieldOffset6;
             if ((pos6 += Equipment.computeBytesConsumed(buf, pos6)) - offset > maxEnd) {
                 maxEnd = pos6 - offset;
             }
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int fieldOffset7 = buf.getIntLE(offset + 187);
             int pos7 = offset + 211 + fieldOffset7;
             dictLen = VarInt.peek(buf, pos7);
@@ -409,7 +409,7 @@ public class ComponentUpdate {
                 maxEnd = pos7 - offset;
             }
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int fieldOffset8 = buf.getIntLE(offset + 191);
             int pos8 = offset + 211 + fieldOffset8;
             arrLen = VarInt.peek(buf, pos8);
@@ -421,7 +421,7 @@ public class ComponentUpdate {
                 maxEnd = pos8 - offset;
             }
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int fieldOffset9 = buf.getIntLE(offset + 195);
             int pos9 = offset + 211 + fieldOffset9;
             dictLen = VarInt.peek(buf, pos9);
@@ -434,7 +434,7 @@ public class ComponentUpdate {
                 maxEnd = pos9 - offset;
             }
         }
-        if ((nullBits[1] & 0x20) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int fieldOffset10 = buf.getIntLE(offset + 199);
             int pos10 = offset + 211 + fieldOffset10;
             arrLen = VarInt.peek(buf, pos10);
@@ -442,7 +442,7 @@ public class ComponentUpdate {
                 maxEnd = pos10 - offset;
             }
         }
-        if ((nullBits[1] & 0x40) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int fieldOffset11 = buf.getIntLE(offset + 203);
             int pos11 = offset + 211 + fieldOffset11;
             int sl = VarInt.peek(buf, pos11);
@@ -474,52 +474,52 @@ public class ComponentUpdate {
         int n;
         int startPos = buf.writerIndex();
         byte[] nullBits = new byte[3];
-        if (this.nameplate != null) {
+        if (this.transform != null) {
             nullBits[0] = (byte)(nullBits[0] | 1);
         }
-        if (this.entityUIComponents != null) {
+        if (this.movementStates != null) {
             nullBits[0] = (byte)(nullBits[0] | 2);
         }
-        if (this.combatTextUpdate != null) {
+        if (this.dynamicLight != null) {
             nullBits[0] = (byte)(nullBits[0] | 4);
         }
-        if (this.model != null) {
+        if (this.mounted != null) {
             nullBits[0] = (byte)(nullBits[0] | 8);
         }
-        if (this.skin != null) {
+        if (this.nameplate != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x10);
         }
-        if (this.item != null) {
+        if (this.entityUIComponents != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x20);
         }
-        if (this.equipment != null) {
+        if (this.combatTextUpdate != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x40);
         }
-        if (this.entityStatUpdates != null) {
+        if (this.model != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x80);
         }
-        if (this.transform != null) {
+        if (this.skin != null) {
             nullBits[1] = (byte)(nullBits[1] | 1);
         }
-        if (this.movementStates != null) {
+        if (this.item != null) {
             nullBits[1] = (byte)(nullBits[1] | 2);
         }
-        if (this.entityEffectUpdates != null) {
+        if (this.equipment != null) {
             nullBits[1] = (byte)(nullBits[1] | 4);
         }
-        if (this.interactions != null) {
+        if (this.entityStatUpdates != null) {
             nullBits[1] = (byte)(nullBits[1] | 8);
         }
-        if (this.dynamicLight != null) {
+        if (this.entityEffectUpdates != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x10);
         }
-        if (this.soundEventIds != null) {
+        if (this.interactions != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x20);
         }
-        if (this.interactionHint != null) {
+        if (this.soundEventIds != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x40);
         }
-        if (this.mounted != null) {
+        if (this.interactionHint != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x80);
         }
         if (this.activeAnimations != null) {
@@ -780,7 +780,7 @@ public class ComponentUpdate {
             return ValidationResult.error("Buffer too small: expected at least 211 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 3);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             int nameplateOffset = buffer.getIntLE(offset + 159);
             if (nameplateOffset < 0) {
                 return ValidationResult.error("Invalid offset for Nameplate");
@@ -795,7 +795,7 @@ public class ComponentUpdate {
             }
             pos += Nameplate.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             int entityUIComponentsOffset = buffer.getIntLE(offset + 163);
             if (entityUIComponentsOffset < 0) {
                 return ValidationResult.error("Invalid offset for EntityUIComponents");
@@ -816,7 +816,7 @@ public class ComponentUpdate {
                 return ValidationResult.error("Buffer overflow reading EntityUIComponents");
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int combatTextUpdateOffset = buffer.getIntLE(offset + 167);
             if (combatTextUpdateOffset < 0) {
                 return ValidationResult.error("Invalid offset for CombatTextUpdate");
@@ -831,7 +831,7 @@ public class ComponentUpdate {
             }
             pos += CombatTextUpdate.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int modelOffset = buffer.getIntLE(offset + 171);
             if (modelOffset < 0) {
                 return ValidationResult.error("Invalid offset for Model");
@@ -846,7 +846,7 @@ public class ComponentUpdate {
             }
             pos += Model.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int skinOffset = buffer.getIntLE(offset + 175);
             if (skinOffset < 0) {
                 return ValidationResult.error("Invalid offset for Skin");
@@ -861,7 +861,7 @@ public class ComponentUpdate {
             }
             pos += PlayerSkin.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int itemOffset = buffer.getIntLE(offset + 179);
             if (itemOffset < 0) {
                 return ValidationResult.error("Invalid offset for Item");
@@ -876,7 +876,7 @@ public class ComponentUpdate {
             }
             pos += ItemWithAllMetadata.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int equipmentOffset = buffer.getIntLE(offset + 183);
             if (equipmentOffset < 0) {
                 return ValidationResult.error("Invalid offset for Equipment");
@@ -891,7 +891,7 @@ public class ComponentUpdate {
             }
             pos += Equipment.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int entityStatUpdatesOffset = buffer.getIntLE(offset + 187);
             if (entityStatUpdatesOffset < 0) {
                 return ValidationResult.error("Invalid offset for EntityStatUpdates");
@@ -922,7 +922,7 @@ public class ComponentUpdate {
                 }
             }
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int entityEffectUpdatesOffset = buffer.getIntLE(offset + 191);
             if (entityEffectUpdatesOffset < 0) {
                 return ValidationResult.error("Invalid offset for EntityEffectUpdates");
@@ -947,7 +947,7 @@ public class ComponentUpdate {
                 pos += EntityEffectUpdate.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int interactionsOffset = buffer.getIntLE(offset + 195);
             if (interactionsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Interactions");
@@ -970,7 +970,7 @@ public class ComponentUpdate {
                 return ValidationResult.error("Buffer overflow reading value");
             }
         }
-        if ((nullBits[1] & 0x20) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int soundEventIdsOffset = buffer.getIntLE(offset + 199);
             if (soundEventIdsOffset < 0) {
                 return ValidationResult.error("Invalid offset for SoundEventIds");
@@ -991,7 +991,7 @@ public class ComponentUpdate {
                 return ValidationResult.error("Buffer overflow reading SoundEventIds");
             }
         }
-        if ((nullBits[1] & 0x40) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int interactionHintOffset = buffer.getIntLE(offset + 203);
             if (interactionHintOffset < 0) {
                 return ValidationResult.error("Invalid offset for InteractionHint");

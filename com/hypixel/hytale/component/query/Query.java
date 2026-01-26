@@ -19,7 +19,7 @@ public interface Query<ECS_TYPE> {
     }
 
     @Nonnull
-    public static <ECS_TYPE> NotQuery<ECS_TYPE> not(Query<ECS_TYPE> query) {
+    public static <ECS_TYPE> NotQuery<ECS_TYPE> not(@Nonnull Query<ECS_TYPE> query) {
         return new NotQuery<ECS_TYPE>(query);
     }
 
@@ -39,7 +39,7 @@ public interface Query<ECS_TYPE> {
 
     public boolean requiresComponentType(ComponentType<ECS_TYPE, ?> var1);
 
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> var1);
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> var1);
 
     public void validate();
 }

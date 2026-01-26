@@ -33,9 +33,10 @@ extends ObjectiveCompletion {
     @Override
     public void handle(@Nonnull Objective objective, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         objective.forEachParticipant((participantReference, objectiveUuid) -> {
-            Entity entity = EntityUtils.getEntity(participantReference, componentAccessor);
-            if (entity instanceof LivingEntity) {
-                CombinedItemContainer inventory = ((LivingEntity)entity).getInventory().getCombinedHotbarFirst();
+            Entity patt0$temp = EntityUtils.getEntity(participantReference, componentAccessor);
+            if (patt0$temp instanceof LivingEntity) {
+                LivingEntity livingEntity = (LivingEntity)patt0$temp;
+                CombinedItemContainer inventory = livingEntity.getInventory().getCombinedHotbarFirst();
                 for (short i = 0; i < inventory.getCapacity(); i = (short)(i + 1)) {
                     UUID savedObjectiveUuid;
                     ItemStack itemStack = inventory.getItemStack(i);

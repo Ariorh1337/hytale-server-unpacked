@@ -16,11 +16,7 @@ import javax.annotation.Nonnull;
 public class ServerStatsMemoryCommand
 extends CommandBase {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_SERVER_STATS_MEMORY_FULL_USAGE_INFO = Message.translation("server.commands.server.stats.memory.fullUsageInfo");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_SERVER_STATS_FULL_INFO_UNAVAILABLE = Message.translation("server.commands.server.stats.fullInfoUnavailable");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_SERVER_STATS_MEMORY_USAGE_INFO = Message.translation("server.commands.server.stats.memory.usageInfo");
 
     public ServerStatsMemoryCommand() {
         super("memory", "server.commands.server.stats.memory.desc");
@@ -32,12 +28,12 @@ extends CommandBase {
         java.lang.management.OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
         if (operatingSystemMXBean instanceof OperatingSystemMXBean) {
             OperatingSystemMXBean sunOSBean = (OperatingSystemMXBean)operatingSystemMXBean;
-            context.sendMessage(MESSAGE_COMMANDS_SERVER_STATS_MEMORY_FULL_USAGE_INFO.param("totalPhysicalMemory", FormatUtil.bytesToString(sunOSBean.getTotalPhysicalMemorySize())).param("freePhysicalMemory", FormatUtil.bytesToString(sunOSBean.getFreePhysicalMemorySize())).param("totalSwapMemory", FormatUtil.bytesToString(sunOSBean.getTotalSwapSpaceSize())).param("freeSwapMemory", FormatUtil.bytesToString(sunOSBean.getFreeSwapSpaceSize())));
+            context.sendMessage(Message.translation("server.commands.server.stats.memory.fullUsageInfo").param("totalPhysicalMemory", FormatUtil.bytesToString(sunOSBean.getTotalPhysicalMemorySize())).param("freePhysicalMemory", FormatUtil.bytesToString(sunOSBean.getFreePhysicalMemorySize())).param("totalSwapMemory", FormatUtil.bytesToString(sunOSBean.getTotalSwapSpaceSize())).param("freeSwapMemory", FormatUtil.bytesToString(sunOSBean.getFreeSwapSpaceSize())));
         } else {
             context.sendMessage(MESSAGE_COMMANDS_SERVER_STATS_FULL_INFO_UNAVAILABLE);
         }
         MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
-        context.sendMessage(MESSAGE_COMMANDS_SERVER_STATS_MEMORY_USAGE_INFO.param("heapMemoryUsage", ServerStatsMemoryCommand.formatMemoryUsage(memoryMXBean.getHeapMemoryUsage())).param("nonHeapMemoryUsage", ServerStatsMemoryCommand.formatMemoryUsage(memoryMXBean.getNonHeapMemoryUsage())).param("objectsPendingFinalizationCount", memoryMXBean.getObjectPendingFinalizationCount()));
+        context.sendMessage(Message.translation("server.commands.server.stats.memory.usageInfo").param("heapMemoryUsage", ServerStatsMemoryCommand.formatMemoryUsage(memoryMXBean.getHeapMemoryUsage())).param("nonHeapMemoryUsage", ServerStatsMemoryCommand.formatMemoryUsage(memoryMXBean.getNonHeapMemoryUsage())).param("objectsPendingFinalizationCount", memoryMXBean.getObjectPendingFinalizationCount()));
     }
 
     @Nonnull

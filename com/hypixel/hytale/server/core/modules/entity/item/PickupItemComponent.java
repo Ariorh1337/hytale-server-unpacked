@@ -3,7 +3,6 @@
  */
 package com.hypixel.hytale.server.core.modules.entity.item;
 
-import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
@@ -16,13 +15,11 @@ import javax.annotation.Nullable;
 public class PickupItemComponent
 implements Component<EntityStore> {
     public static final float PICKUP_TRAVEL_TIME_DEFAULT = 0.15f;
-    @Nonnull
-    public static final BuilderCodec<PickupItemComponent> CODEC = BuilderCodec.builder(PickupItemComponent.class, PickupItemComponent::new).build();
     private Ref<EntityStore> targetRef;
     private Vector3d startPosition;
     private float originalLifeTime;
     private float lifeTime = 0.15f;
-    private boolean finished = false;
+    private boolean finished;
 
     @Nonnull
     public static ComponentType<EntityStore, PickupItemComponent> getComponentType() {

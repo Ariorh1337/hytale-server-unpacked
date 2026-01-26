@@ -41,7 +41,7 @@ extends SteppableTickingSystem {
     public SteeringSystem(@Nonnull ComponentType<EntityStore, NPCEntity> npcEntityComponent) {
         this.npcEntityComponent = npcEntityComponent;
         this.dependencies = Set.of(new SystemDependency(Order.AFTER, AvoidanceSystem.class), new SystemDependency(Order.AFTER, KnockbackSystems.ApplyKnockback.class), new SystemDependency(Order.BEFORE, TransformSystems.EntityTrackerUpdate.class));
-        this.query = Query.and(npcEntityComponent);
+        this.query = Query.and(npcEntityComponent, TransformComponent.getComponentType());
     }
 
     @Override
@@ -63,18 +63,21 @@ extends SteppableTickingSystem {
 
     @Override
     public void steppedTick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        NPCEntity npc = archetypeChunk.getComponent(index, this.npcEntityComponent);
-        assert (npc != null);
-        TransformComponent npcTransformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-        assert (npcTransformComponent != null);
-        Role role = npc.getRole();
+        NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcEntityComponent);
+        assert (npcComponent != null);
+        TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+        assert (transformComponent != null);
+        Role role = npcComponent.getRole();
+        if (role == null) {
+            return;
+        }
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
         try {
             if (role.getDebugSupport().isDebugMotionSteering()) {
-                Vector3d position = npcTransformComponent.getPosition();
+                Vector3d position = transformComponent.getPosition();
                 double x = position.getX();
                 double z = position.getZ();
-                float yaw = npcTransformComponent.getRotation().getYaw();
+                float yaw = transformComponent.getRotation().getYaw();
                 role.getActiveMotionController().steer(ref, role, role.getBodySteering(), role.getHeadSteering(), dt, commandBuffer);
                 x = position.getX() - x;
                 z = position.getZ() - z;

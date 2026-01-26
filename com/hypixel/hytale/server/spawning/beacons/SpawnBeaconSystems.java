@@ -466,7 +466,7 @@ public class SpawnBeaconSystems {
         public CheckDespawn(ComponentType<EntityStore, LegacySpawnBeaconEntity> componentType, ComponentType<EntityStore, InitialBeaconDelay> initialBeaconDelayComponentType) {
             this.componentType = componentType;
             this.npcComponentType = NPCEntity.getComponentType();
-            this.query = Query.and(componentType, Query.not(initialBeaconDelayComponentType));
+            this.query = Query.and(componentType, UUIDComponent.getComponentType(), Query.not(initialBeaconDelayComponentType));
         }
 
         @Override

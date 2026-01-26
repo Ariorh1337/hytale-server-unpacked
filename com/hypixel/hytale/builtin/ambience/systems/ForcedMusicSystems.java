@@ -60,17 +60,19 @@ public class ForcedMusicSystems {
 
         @Override
         public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-            AmbienceTracker tracker = holder.getComponent(AmbienceTracker.getComponentType());
-            PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
-            UpdateEnvironmentMusic pooledPacket = tracker.getMusicPacket();
+            AmbienceTracker ambienceTrackerComponent = holder.getComponent(AmbienceTracker.getComponentType());
+            assert (ambienceTrackerComponent != null);
+            PlayerRef playerRefComponent = holder.getComponent(PlayerRef.getComponentType());
+            assert (playerRefComponent != null);
+            UpdateEnvironmentMusic pooledPacket = ambienceTrackerComponent.getMusicPacket();
             pooledPacket.environmentIndex = 0;
-            playerRef.getPacketHandler().write((Packet)pooledPacket);
+            playerRefComponent.getPacketHandler().write((Packet)pooledPacket);
         }
 
         @Override
         @Nullable
         public Query<EntityStore> getQuery() {
-            return PlayerRef.getComponentType();
+            return Query.and(PlayerRef.getComponentType(), AmbienceTracker.getComponentType());
         }
     }
 }

@@ -115,8 +115,9 @@ extends JavaPlugin {
         AssetRegistry.getAssetStore(RootInteraction.class).loadAssets("Hytale:Hytale", List.of(OpenBenchPageInteraction.SIMPLE_CRAFTING_ROOT, OpenBenchPageInteraction.DIAGRAM_CRAFTING_ROOT, OpenBenchPageInteraction.STRUCTURAL_CRAFTING_ROOT));
         ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
         this.craftingManagerComponentType = entityStoreRegistry.registerComponent(CraftingManager.class, CraftingManager::new);
-        entityStoreRegistry.registerSystem(new PlayerCraftingSystems.PlayerCraftingSystem(this.craftingManagerComponentType));
-        entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingManagerAddSystem(this.craftingManagerComponentType));
+        entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingTickingSystem(this.craftingManagerComponentType));
+        entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingHolderSystem(this.craftingManagerComponentType));
+        entityStoreRegistry.registerSystem(new PlayerCraftingSystems.CraftingRefSystem(this.craftingManagerComponentType));
         this.getCodecRegistry(Interaction.CODEC).register("OpenBenchPage", OpenBenchPageInteraction.class, OpenBenchPageInteraction.CODEC).register("OpenProcessingBench", OpenProcessingBenchInteraction.class, OpenProcessingBenchInteraction.CODEC);
         Bench.registerRootInteraction(BenchType.Crafting, OpenBenchPageInteraction.SIMPLE_CRAFTING_ROOT);
         Bench.registerRootInteraction(BenchType.DiagramCrafting, OpenBenchPageInteraction.DIAGRAM_CRAFTING_ROOT);

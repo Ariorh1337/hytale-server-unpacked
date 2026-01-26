@@ -4,6 +4,7 @@
 package com.hypixel.hytale.builtin.crafting.interaction;
 
 import com.hypixel.hytale.builtin.crafting.state.ProcessingBenchState;
+import com.hypixel.hytale.builtin.crafting.window.BenchWindow;
 import com.hypixel.hytale.builtin.crafting.window.ProcessingBenchWindow;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
@@ -65,7 +66,7 @@ extends SimpleBlockInteraction {
         assert (uuidComponent != null);
         UUID uuid = uuidComponent.getUuid();
         ProcessingBenchWindow window = new ProcessingBenchWindow(benchState);
-        Map<UUID, ProcessingBenchWindow> windows = benchState.getWindows();
+        Map<UUID, BenchWindow> windows = benchState.getWindows();
         if (windows.putIfAbsent(uuid, window) == null) {
             benchState.updateFuelValues();
             if (playerComponent.getPageManager().setPageWithWindows(ref, store, Page.Bench, true, window)) {

@@ -61,7 +61,7 @@ extends EntityTickingSystem<EntityStore> {
         this.playerRefComponentType = PlayerRef.getComponentType();
         this.transformComponentType = TransformComponent.getComponentType();
         this.positionDataComponentType = PositionDataComponent.getComponentType();
-        this.query = Query.and(playerComponentType, this.boundingBoxComponentType, velocityComponentType, collisionResultComponentType, this.positionDataComponentType);
+        this.query = Query.and(playerComponentType, this.playerRefComponentType, this.transformComponentType, this.boundingBoxComponentType, velocityComponentType, collisionResultComponentType, this.positionDataComponentType);
     }
 
     @Override
@@ -86,7 +86,9 @@ extends EntityTickingSystem<EntityStore> {
         CollisionResultComponent collisionResultComponent = archetypeChunk.getComponent(index, this.collisionResultComponentType);
         assert (collisionResultComponent != null);
         InteractionManager interactionManagerComponent = archetypeChunk.getComponent(index, InteractionModule.get().getInteractionManagerComponent());
-        assert (interactionManagerComponent != null);
+        if (interactionManagerComponent == null) {
+            return;
+        }
         PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
         assert (playerRefComponent != null);
         TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);

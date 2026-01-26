@@ -20,12 +20,6 @@ import javax.annotation.Nullable;
 public class ChunkMaxSendRateCommand
 extends AbstractTargetPlayerCommand {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_MAXSENDRATE_SEC_SET = Message.translation("server.commands.chunk.maxsendrate.sec.set");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_MAXSENDRATE_TICK_SET = Message.translation("server.commands.chunk.maxsendrate.tick.set");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_MAXSENDRATE_SUMMARY = Message.translation("server.commands.chunk.maxsendrate.summary");
-    @Nonnull
     private final OptionalArg<Integer> secArg = this.withOptionalArg("sec", "server.commands.chunk.maxsendrate.sec.desc", ArgTypes.INTEGER);
     @Nonnull
     private final OptionalArg<Integer> tickArg = this.withOptionalArg("tick", "server.commands.chunk.maxsendrate.tick.desc", ArgTypes.INTEGER);
@@ -41,14 +35,14 @@ extends AbstractTargetPlayerCommand {
         if (this.secArg.provided(context)) {
             int sec = (Integer)this.secArg.get(context);
             chunkTracker.setMaxChunksPerSecond(sec);
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_MAXSENDRATE_SEC_SET.param("value", sec));
+            context.sendMessage(Message.translation("server.commands.chunk.maxsendrate.sec.set").param("value", sec));
         }
         if (this.tickArg.provided(context)) {
             int tick = (Integer)this.tickArg.get(context);
             chunkTracker.setMaxChunksPerTick(tick);
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_MAXSENDRATE_TICK_SET.param("value", tick));
+            context.sendMessage(Message.translation("server.commands.chunk.maxsendrate.tick.set").param("value", tick));
         }
-        context.sendMessage(MESSAGE_COMMANDS_CHUNK_MAXSENDRATE_SUMMARY.param("perSecond", chunkTracker.getMaxChunksPerSecond()).param("perTick", chunkTracker.getMaxChunksPerTick()));
+        context.sendMessage(Message.translation("server.commands.chunk.maxsendrate.summary").param("perSecond", chunkTracker.getMaxChunksPerSecond()).param("perTick", chunkTracker.getMaxChunksPerTick()));
     }
 }
 

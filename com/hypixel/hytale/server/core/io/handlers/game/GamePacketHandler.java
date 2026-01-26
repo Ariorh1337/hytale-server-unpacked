@@ -88,6 +88,7 @@ import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.BlockPlaceUtils;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
@@ -155,6 +156,12 @@ implements IPacketHandler {
     @Nonnull
     public String getIdentifier() {
         return "{Playing(" + NettyUtil.formatRemoteAddress(this.channel) + "), " + (String)(this.playerRef != null ? String.valueOf(this.playerRef.getUuid()) + ", " + this.playerRef.getUsername() : "null player") + "}";
+    }
+
+    @Override
+    protected void registered0(PacketHandler oldHandler) {
+        HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+        this.enterStage("play", timeouts.getPlay());
     }
 
     protected void registerHandlers() {
@@ -388,6 +395,7 @@ implements IPacketHandler {
             return;
         }
         this.playerRef.setLanguage(packet.language);
+        I18nModule.get().sendTranslations(this, packet.language);
     }
 
     protected void handle(@Nonnull ClientOpenWindow packet) {
@@ -404,7 +412,7 @@ implements IPacketHandler {
         world.execute(() -> {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert (playerComponent != null);
-            UpdateWindow updateWindowPacket = playerComponent.getWindowManager().clientOpenWindow((Window)supplier.get());
+            UpdateWindow updateWindowPacket = playerComponent.getWindowManager().clientOpenWindow(ref, (Window)supplier.get(), store);
             if (updateWindowPacket != null) {
                 this.writeNoCache(updateWindowPacket);
             }
@@ -419,14 +427,15 @@ implements IPacketHandler {
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
         world.execute(() -> {
+            ValidatedWindow validatedWindow;
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert (playerComponent != null);
             Window window = playerComponent.getWindowManager().getWindow(packet.id);
             if (window == null) {
                 return;
             }
-            if (window instanceof ValidatedWindow && !((ValidatedWindow)((Object)window)).validate()) {
-                window.close();
+            if (window instanceof ValidatedWindow && !(validatedWindow = (ValidatedWindow)((Object)window)).validate(ref, store)) {
+                window.close(ref, store);
                 return;
             }
             window.handleAction(this.playerRef.getReference(), store, packet.action);
@@ -442,7 +451,8 @@ implements IPacketHandler {
         World world = store.getExternalData().getWorld();
         world.execute(() -> {
             ComponentType<EntityStore, PlayerSettings> componentType = EntityModule.get().getPlayerSettingsComponentType();
-            store.putComponent(ref, componentType, new PlayerSettings(packet.showEntityMarkers, packet.armorItemsPreferredPickupLocation, packet.weaponAndToolItemsPreferredPickupLocation, packet.usableItemsItemsPreferredPickupLocation, packet.solidBlockItemsPreferredPickupLocation, packet.miscItemsPreferredPickupLocation, new PlayerCreativeSettings(packet.allowNPCDetection, packet.respondToHit)));
+            store.putComponent(ref, componentType, new PlayerSettings(packet.showEntityMarkers, packet.armorItemsPreferredPickupLocation, packet.weaponAndToolItemsPreferredPickupLocation, packet.usableItemsItemsPreferredPickupLocation, packet.solidBlockItemsPreferredPickupLocation, packet.miscItemsPreferredPickupLocation, new PlayerCreativeSettings(packet.allowNPCDetection, packet.respondToHit), packet.hideHelmet, packet.hideCuirass, packet.hideGauntlets, packet.hidePants));
+            store.getComponent(ref, Player.getComponentType()).invalidateEquipmentNetwork();
         });
     }
 
@@ -525,7 +535,7 @@ implements IPacketHandler {
         world.execute(() -> {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert (playerComponent != null);
-            playerComponent.getWindowManager().closeWindow(packet.id);
+            playerComponent.getWindowManager().closeWindow(ref, packet.id, store);
         });
     }
 

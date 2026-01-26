@@ -66,7 +66,7 @@ extends ActionBase {
             return true;
         }
         if (this.operation == Operation.RemoveHeldItem) {
-            InventoryHelper.removeItemInHand(inventory);
+            InventoryHelper.removeItemInHand(inventory, this.count);
             return true;
         }
         if (this.operation == Operation.EquipHotbar && (this.item == null || this.item.isEmpty())) {

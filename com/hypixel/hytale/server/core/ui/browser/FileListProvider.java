@@ -12,13 +12,17 @@ public interface FileListProvider {
     @Nonnull
     public List<FileEntry> getFiles(@Nonnull Path var1, @Nonnull String var2);
 
-    public record FileEntry(@Nonnull String name, @Nonnull String displayName, boolean isDirectory, int matchScore) {
+    public record FileEntry(@Nonnull String name, @Nonnull String displayName, boolean isDirectory, boolean isTerminal, int matchScore) {
         public FileEntry(@Nonnull String name, boolean isDirectory) {
-            this(name, name, isDirectory, 0);
+            this(name, name, isDirectory, false, 0);
         }
 
         public FileEntry(@Nonnull String name, @Nonnull String displayName, boolean isDirectory) {
-            this(name, displayName, isDirectory, 0);
+            this(name, displayName, isDirectory, false, 0);
+        }
+
+        public FileEntry(@Nonnull String name, @Nonnull String displayName, boolean isDirectory, boolean isTerminal) {
+            this(name, displayName, isDirectory, isTerminal, 0);
         }
     }
 }

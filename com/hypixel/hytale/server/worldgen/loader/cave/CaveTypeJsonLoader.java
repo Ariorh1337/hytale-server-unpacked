@@ -80,12 +80,20 @@ extends JsonLoader<SeedStringResource, CaveType> {
 
     @Nonnull
     protected CaveNodeType loadEntryNodeType() {
-        if (!this.has("Entry")) {
+        JsonElement entry = this.get("Entry");
+        if (entry == null) {
             throw new IllegalArgumentException("\"Entry\" is not defined. Define an entry node type");
         }
-        String entryNodeTypeString = this.get("Entry").getAsString();
         CaveNodeTypeStorage caveNodeTypeStorage = new CaveNodeTypeStorage(this.seed, this.dataFolder, this.caveFolder, this.zoneContext);
-        return caveNodeTypeStorage.loadCaveNodeType(entryNodeTypeString);
+        if (entry.isJsonObject()) {
+            String entryNodeTypeString = ((SeedStringResource)this.seed.get()).getUniqueName("CaveType#");
+            return caveNodeTypeStorage.loadCaveNodeType(entryNodeTypeString, entry.getAsJsonObject());
+        }
+        if (entry.isJsonPrimitive() && entry.getAsJsonPrimitive().isString()) {
+            String entryNodeTypeString = entry.getAsString();
+            return caveNodeTypeStorage.loadCaveNodeType(entryNodeTypeString);
+        }
+        throw CaveTypeJsonLoader.error("Invalid entry node type definition! Expected String or JsonObject: " + String.valueOf(entry), new Object[0]);
     }
 
     @Nonnull

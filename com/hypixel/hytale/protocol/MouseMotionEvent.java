@@ -42,11 +42,11 @@ public class MouseMotionEvent {
     public static MouseMotionEvent deserialize(@Nonnull ByteBuf buf, int offset) {
         MouseMotionEvent obj = new MouseMotionEvent();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.relativeMotion = Vector2i.deserialize(buf, offset + 1);
         }
         int pos = offset + 9;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int mouseButtonTypeCount = VarInt.peek(buf, pos);
             if (mouseButtonTypeCount < 0) {
                 throw ProtocolException.negativeLength("MouseButtonType", mouseButtonTypeCount);
@@ -71,7 +71,7 @@ public class MouseMotionEvent {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int pos = offset + 9;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int arrLen = VarInt.peek(buf, pos);
             pos += VarInt.length(buf, pos) + arrLen * 1;
         }
@@ -80,10 +80,10 @@ public class MouseMotionEvent {
 
     public void serialize(@Nonnull ByteBuf buf) {
         byte nullBits = 0;
-        if (this.mouseButtonType != null) {
+        if (this.relativeMotion != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.relativeMotion != null) {
+        if (this.mouseButtonType != null) {
             nullBits = (byte)(nullBits | 2);
         }
         buf.writeByte(nullBits);
@@ -117,7 +117,7 @@ public class MouseMotionEvent {
         }
         byte nullBits = buffer.getByte(offset);
         int pos = offset + 9;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int mouseButtonTypeCount = VarInt.peek(buffer, pos);
             if (mouseButtonTypeCount < 0) {
                 return ValidationResult.error("Invalid array count for MouseButtonType");

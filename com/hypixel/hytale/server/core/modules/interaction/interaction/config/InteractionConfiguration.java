@@ -77,6 +77,13 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.InteractionConfigurat
         return priority.getPriority(slot);
     }
 
+    public float getUseDistance(GameMode mode) {
+        if (this.useDistance == null) {
+            return DEFAULT_USE_DISTANCE.getOrDefault((Object)mode, 1.0f);
+        }
+        return this.useDistance.getOrDefault((Object)mode, 1.0f);
+    }
+
     @Override
     @Nonnull
     public com.hypixel.hytale.protocol.InteractionConfiguration toPacket() {

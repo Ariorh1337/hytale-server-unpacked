@@ -179,7 +179,7 @@ public final class WorldUtil {
                 int fluidId;
                 int blockId = chunkSection.get(x, y--, z);
                 int n = fluidId = fluidSectionComponent != null ? fluidSectionComponent.getFluidId(x, y, z) : 0;
-                if (blockId == 0 && fluidId != 0) continue;
+                if (blockId == 0 && fluidId == 0) continue;
                 BlockType blockType = assetMap.getAsset(blockId);
                 if (blockType == null || blockType.isUnknown()) {
                     return y + 2;

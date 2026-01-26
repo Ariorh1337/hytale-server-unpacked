@@ -10,17 +10,13 @@ import com.hypixel.hytale.common.util.CompletableFutureUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.iterator.CircleSpiralIterator;
 import com.hypixel.hytale.math.shape.Box2D;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector2d;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.Packet;
-import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.worldmap.ClearWorldMap;
 import com.hypixel.hytale.protocol.packets.worldmap.MapChunk;
@@ -39,6 +35,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapSettings;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.util.EventTitleUtil;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -49,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.logging.Level;
@@ -60,7 +56,6 @@ public class WorldMapTracker
 implements Tickable {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final float UPDATE_SPEED = 1.0f;
-    public static final float MIN_PLAYER_MARKER_UPDATE_SPEED = 10.0f;
     public static final int RADIUS_MAX = 512;
     public static final int EMPTY_UPDATE_WORLD_MAP_SIZE = 13;
     private static final int EMPTY_MAP_CHUNK_SIZE = 10;
@@ -73,9 +68,8 @@ implements Tickable {
     private final HLongSet loaded = new HLongOpenHashSet();
     private final HLongSet pendingReloadChunks = new HLongOpenHashSet();
     private final Long2ObjectOpenHashMap<CompletableFuture<MapImage>> pendingReloadFutures = new Long2ObjectOpenHashMap();
-    private final Map<String, MapMarker> sentMarkers = new ConcurrentHashMap<String, MapMarker>();
+    private final MapMarkerTracker markerTracker;
     private float updateTimer;
-    private float playerMarkersUpdateTimer;
     private Integer viewRadiusOverride;
     private boolean started;
     private int sentViewRadius;
@@ -85,21 +79,13 @@ implements Tickable {
     private String currentBiomeName;
     @Nullable
     private ZoneDiscoveryInfo currentZone;
-    private boolean allowTeleportToCoordinates = true;
-    private boolean allowTeleportToMarkers = true;
     private boolean clientHasWorldMapVisible;
-    private Predicate<PlayerRef> playerMapFilter;
-    @Nonnull
-    private final Set<String> tempToRemove = new HashSet<String>();
-    @Nonnull
-    private final Set<MapMarker> tempToAdd = new HashSet<MapMarker>();
-    @Nonnull
-    private final Set<String> tempTestedMarkers = new HashSet<String>();
     @Nullable
     private TransformComponent transformComponent;
 
     public WorldMapTracker(@Nonnull Player player) {
         this.player = player;
+        this.markerTracker = new MapMarkerTracker(this);
     }
 
     @Override
@@ -127,8 +113,7 @@ implements Tickable {
         int playerChunkX = playerX >> 5;
         int playerChunkZ = playerZ >> 5;
         if (world.isCompassUpdating()) {
-            this.playerMarkersUpdateTimer -= dt;
-            this.updatePointsOfInterest(world, viewRadius, playerChunkX, playerChunkZ);
+            this.markerTracker.updatePointsOfInterest(dt, world, viewRadius, playerChunkX, playerChunkZ);
         }
         if (worldMapManager.isWorldMapEnabled()) {
             this.updateWorldMap(world, dt, worldMapSettings, viewRadius, playerChunkX, playerChunkZ);
@@ -197,75 +182,6 @@ implements Tickable {
             }
             this.loadWorldMap(world, worldMapArea, 20);
         }
-    }
-
-    private void updatePointsOfInterest(@Nonnull World world, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
-        if (this.transformComponent == null) {
-            return;
-        }
-        WorldMapManager worldMapManager = world.getWorldMapManager();
-        Map<String, WorldMapManager.MarkerProvider> markerProviders = worldMapManager.getMarkerProviders();
-        this.tempToAdd.clear();
-        this.tempTestedMarkers.clear();
-        for (WorldMapManager.MarkerProvider provider : markerProviders.values()) {
-            provider.update(world, world.getGameplayConfig(), this, chunkViewRadius, playerChunkX, playerChunkZ);
-        }
-        this.tempToRemove.clear();
-        this.tempToRemove.addAll(this.sentMarkers.keySet());
-        if (!this.tempTestedMarkers.isEmpty()) {
-            this.tempToRemove.removeAll(this.tempTestedMarkers);
-        }
-        for (String removedMarkerId : this.tempToRemove) {
-            this.sentMarkers.remove(removedMarkerId);
-        }
-        if (!this.tempToAdd.isEmpty() || !this.tempToRemove.isEmpty()) {
-            MapMarker[] addedMarkers = !this.tempToAdd.isEmpty() ? (MapMarker[])this.tempToAdd.toArray(MapMarker[]::new) : null;
-            String[] removedMarkers = !this.tempToRemove.isEmpty() ? (String[])this.tempToRemove.toArray(String[]::new) : null;
-            this.player.getPlayerConnection().writeNoCache(new UpdateWorldMap(null, addedMarkers, removedMarkers));
-        }
-    }
-
-    public void trySendMarker(int chunkViewRadius, int playerChunkX, int playerChunkZ, @Nonnull MapMarker marker) {
-        this.trySendMarker(chunkViewRadius, playerChunkX, playerChunkZ, marker.transform.position.x, marker.transform.position.z, marker.transform.orientation.yaw, marker.id, marker.name, marker, (id, name, m) -> m);
-    }
-
-    public <T> void trySendMarker(int chunkViewRadius, int playerChunkX, int playerChunkZ, @Nonnull Vector3d markerPos, float markerYaw, @Nonnull String markerId, @Nonnull String markerDisplayName, @Nonnull T param, @Nonnull TriFunction<String, String, T, MapMarker> markerSupplier) {
-        this.trySendMarker(chunkViewRadius, playerChunkX, playerChunkZ, markerPos.x, markerPos.z, markerYaw, markerId, markerDisplayName, param, markerSupplier);
-    }
-
-    private <T> void trySendMarker(int chunkViewRadius, int playerChunkX, int playerChunkZ, double markerX, double markerZ, float markerYaw, @Nonnull String markerId, @Nonnull String markerName, @Nonnull T param, @Nonnull TriFunction<String, String, T, MapMarker> markerSupplier) {
-        boolean shouldBeVisible;
-        int markerXBlock = MathUtil.floor(markerX);
-        int markerZBlock = MathUtil.floor(markerZ);
-        boolean bl = shouldBeVisible = chunkViewRadius == -1 || WorldMapTracker.shouldBeVisible(chunkViewRadius, markerXBlock >> 5, markerZBlock >> 5, playerChunkX, playerChunkZ);
-        if (!shouldBeVisible) {
-            return;
-        }
-        this.tempTestedMarkers.add(markerId);
-        boolean needsUpdate = false;
-        MapMarker oldMarker = this.sentMarkers.get(markerId);
-        if (oldMarker != null) {
-            if (!markerName.equals(oldMarker.name)) {
-                needsUpdate = true;
-            }
-            if (!needsUpdate) {
-                double distance = Math.abs(oldMarker.transform.orientation.yaw - markerYaw);
-                boolean bl2 = needsUpdate = distance > 0.05 || this.playerMarkersUpdateTimer < 0.0f && distance > 0.001;
-            }
-            if (!needsUpdate) {
-                Position oldPosition = oldMarker.transform.position;
-                double distance = Vector2d.distance(oldPosition.x, oldPosition.z, markerX, markerZ);
-                needsUpdate = distance > 5.0 || this.playerMarkersUpdateTimer < 0.0f && distance > 0.1;
-            }
-        } else {
-            needsUpdate = true;
-        }
-        if (!needsUpdate) {
-            return;
-        }
-        MapMarker marker = markerSupplier.apply(markerId, markerName, (String)param);
-        this.sentMarkers.put(markerId, marker);
-        this.tempToAdd.add(marker);
     }
 
     /*
@@ -465,7 +381,7 @@ implements Tickable {
 
     @Nonnull
     public Map<String, MapMarker> getSentMarkers() {
-        return this.sentMarkers;
+        return this.markerTracker.getSentMarkers();
     }
 
     @Nonnull
@@ -473,12 +389,17 @@ implements Tickable {
         return this.player;
     }
 
+    @Nullable
+    public TransformComponent getTransformComponent() {
+        return this.transformComponent;
+    }
+
     public void clear() {
         this.loadedLock.writeLock().lock();
         try {
             this.loaded.clear();
             this.sentViewRadius = 0;
-            this.sentMarkers.clear();
+            this.markerTracker.getSentMarkers().clear();
         }
         finally {
             this.loadedLock.writeLock().unlock();
@@ -513,8 +434,8 @@ implements Tickable {
             assert (playerComponent != null);
             PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
-            worldMapSettingsPacket.allowTeleportToCoordinates = this.allowTeleportToCoordinates && playerComponent.getGameMode() != GameMode.Adventure;
-            worldMapSettingsPacket.allowTeleportToMarkers = this.allowTeleportToMarkers && playerComponent.getGameMode() != GameMode.Adventure;
+            worldMapSettingsPacket.allowTeleportToCoordinates = this.isAllowTeleportToCoordinates();
+            worldMapSettingsPacket.allowTeleportToMarkers = this.isAllowTeleportToMarkers();
             playerRefComponent.getPacketHandler().write((Packet)worldMapSettingsPacket);
         });
     }
@@ -572,41 +493,19 @@ implements Tickable {
     }
 
     public boolean isAllowTeleportToCoordinates() {
-        return this.allowTeleportToCoordinates;
-    }
-
-    public void setAllowTeleportToCoordinates(@Nonnull World world, boolean allowTeleportToCoordinates) {
-        this.allowTeleportToCoordinates = allowTeleportToCoordinates;
-        this.sendSettings(world);
+        return this.player.hasPermission("hytale.world_map.teleport.coordinate");
     }
 
     public boolean isAllowTeleportToMarkers() {
-        return this.allowTeleportToMarkers;
-    }
-
-    public void setAllowTeleportToMarkers(@Nonnull World world, boolean allowTeleportToMarkers) {
-        this.allowTeleportToMarkers = allowTeleportToMarkers;
-        this.sendSettings(world);
-    }
-
-    public Predicate<PlayerRef> getPlayerMapFilter() {
-        return this.playerMapFilter;
+        return this.player.hasPermission("hytale.world_map.teleport.marker");
     }
 
     public void setPlayerMapFilter(Predicate<PlayerRef> playerMapFilter) {
-        this.playerMapFilter = playerMapFilter;
+        this.markerTracker.setPlayerMapFilter(playerMapFilter);
     }
 
     public void setClientHasWorldMapVisible(boolean visible) {
         this.clientHasWorldMapVisible = visible;
-    }
-
-    public boolean shouldUpdatePlayerMarkers() {
-        return this.clientHasWorldMapVisible || this.playerMarkersUpdateTimer < 0.0f;
-    }
-
-    public void resetPlayerMarkersUpdateTimer() {
-        this.playerMarkersUpdateTimer = 10.0f;
     }
 
     @Nullable
@@ -648,18 +547,13 @@ implements Tickable {
         return WorldMapTracker.shouldBeVisible(chunkViewRadius, chunkX, chunkZ, x, z);
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
     public void copyFrom(@Nonnull WorldMapTracker worldMapTracker) {
         this.loadedLock.writeLock().lock();
         try {
             worldMapTracker.loadedLock.readLock().lock();
             try {
                 this.loaded.addAll(worldMapTracker.loaded);
-                for (Map.Entry<String, MapMarker> entry : worldMapTracker.sentMarkers.entrySet()) {
-                    this.sentMarkers.put(entry.getKey(), new MapMarker(entry.getValue()));
-                }
+                this.markerTracker.copyFrom(worldMapTracker.markerTracker);
             }
             finally {
                 worldMapTracker.loadedLock.readLock().unlock();
@@ -670,7 +564,7 @@ implements Tickable {
         }
     }
 
-    private static boolean shouldBeVisible(int chunkViewRadius, int chunkX, int chunkZ, int x, int z) {
+    public static boolean shouldBeVisible(int chunkViewRadius, int chunkX, int chunkZ, int x, int z) {
         int zDiff;
         int xDiff = Math.abs(x - chunkX);
         int distanceSq = xDiff * xDiff + (zDiff = Math.abs(z - chunkZ)) * zDiff;

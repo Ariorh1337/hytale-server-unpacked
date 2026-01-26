@@ -105,9 +105,9 @@ extends Entity {
         int concurrentSpawns = RandomExtra.randomRange(((BeaconNPCSpawn)this.spawnWrapper.getSpawn()).getConcurrentSpawnsRange());
         int spawnedCount = 0;
         for (int i = 0; i < concurrentSpawns; ++i) {
+            int roleIndex;
             RoleSpawnParameters roleSpawnParameters = this.spawnWrapper.pickRole(ThreadLocalRandom.current());
-            int roleIndex = NPCPlugin.get().getIndex(roleSpawnParameters.getId());
-            if (this.unspawnableRoles.contains(roleIndex)) continue;
+            if (roleSpawnParameters == null || this.unspawnableRoles.contains(roleIndex = NPCPlugin.get().getIndex(roleSpawnParameters.getId()))) continue;
             ISpawnableWithModel spawnable = (ISpawnableWithModel)((Object)NPCPlugin.get().tryGetCachedValidRole(roleIndex));
             this.spawningContext.setSpawnable(spawnable);
             if (!positionSelector.hasPositionsForRole(roleIndex)) {

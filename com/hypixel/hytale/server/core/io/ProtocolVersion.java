@@ -7,14 +7,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ProtocolVersion {
-    private final String hash;
+    private final int crc;
 
-    public ProtocolVersion(String hash) {
-        this.hash = hash;
+    public ProtocolVersion(int crc) {
+        this.crc = crc;
     }
 
-    public String getHash() {
-        return this.hash;
+    public int getCrc() {
+        return this.crc;
     }
 
     public boolean equals(@Nullable Object o) {
@@ -25,17 +25,16 @@ public class ProtocolVersion {
             return false;
         }
         ProtocolVersion that = (ProtocolVersion)o;
-        return this.hash != null ? this.hash.equals(that.hash) : that.hash == null;
+        return this.crc == that.crc;
     }
 
     public int hashCode() {
-        int result = 31 * (this.hash != null ? this.hash.hashCode() : 0);
-        return result;
+        return 31 * this.crc;
     }
 
     @Nonnull
     public String toString() {
-        return "ProtocolVersion{hash='" + this.hash + "'}";
+        return "ProtocolVersion{crc=" + this.crc + "}";
     }
 }
 

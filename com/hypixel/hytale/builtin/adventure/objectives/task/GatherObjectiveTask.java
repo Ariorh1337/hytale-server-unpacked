@@ -64,10 +64,18 @@ extends CountObjectiveTask {
                 return;
             }
             Ref<EntityStore> ref = livingEntity.getReference();
+            if (ref == null || !ref.isValid()) {
+                return;
+            }
             World refWorld = ((EntityStore)store.getExternalData()).getWorld();
             refWorld.execute(() -> {
+                if (!ref.isValid()) {
+                    return;
+                }
                 UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-                assert (uuidComponent != null);
+                if (uuidComponent == null) {
+                    return;
+                }
                 Set<UUID> activePlayerUUIDs = objective.getActivePlayerUUIDs();
                 if (!activePlayerUUIDs.contains(uuidComponent.getUuid())) {
                     return;

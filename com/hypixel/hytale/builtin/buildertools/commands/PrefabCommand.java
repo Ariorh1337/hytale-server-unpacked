@@ -11,6 +11,9 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -22,6 +25,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
@@ -43,6 +47,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class PrefabCommand
 extends AbstractCommandCollection {
@@ -61,13 +66,13 @@ extends AbstractCommandCollection {
         public PrefabSaveCommand() {
             super("save", "server.commands.prefab.save.desc");
             this.requirePermission("hytale.editor.prefab.manage");
+            this.addUsageVariant(new PrefabSaveDirectCommand());
         }
 
         @Override
         protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert (playerComponent != null);
-            BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
             playerComponent.getPageManager().openCustomPage(ref, store, new PrefabSavePage(playerRef));
         }
     }
@@ -298,6 +303,49 @@ extends AbstractCommandCollection {
 
         private static /* synthetic */ void lambda$execute$3(String finalName, BiFunction loader, Ref r, BuilderToolsPlugin.BuilderState s, ComponentAccessor componentAccessor) throws RuntimeException {
             s.load(finalName, (BlockSelection)loader.apply(finalName, s.getRandom()), componentAccessor);
+        }
+    }
+
+    private static class PrefabSaveDirectCommand
+    extends AbstractPlayerCommand {
+        @Nonnull
+        private final RequiredArg<String> nameArg = this.withRequiredArg("name", "server.commands.prefab.save.name.desc", ArgTypes.STRING);
+        @Nonnull
+        private final FlagArg overwriteFlag = this.withFlagArg("overwrite", "server.commands.prefab.save.overwrite.desc");
+        @Nonnull
+        private final FlagArg entitiesFlag = this.withFlagArg("entities", "server.commands.prefab.save.entities.desc");
+        @Nonnull
+        private final FlagArg emptyFlag = this.withFlagArg("empty", "server.commands.prefab.save.empty.desc");
+        @Nonnull
+        private final FlagArg playerAnchorFlag = this.withFlagArg("playerAnchor", "server.commands.prefab.save.playerAnchor.desc");
+
+        public PrefabSaveDirectCommand() {
+            super("server.commands.prefab.save.desc");
+        }
+
+        @Override
+        protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
+            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            assert (playerComponent != null);
+            String name = (String)this.nameArg.get(context);
+            boolean overwrite = (Boolean)this.overwriteFlag.get(context);
+            boolean entities = (Boolean)this.entitiesFlag.get(context);
+            boolean empty = (Boolean)this.emptyFlag.get(context);
+            Vector3i playerAnchor = this.getPlayerAnchor(ref, store, (Boolean)this.playerAnchorFlag.get(context));
+            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.saveFromSelection((Ref<EntityStore>)r, name, true, overwrite, entities, empty, playerAnchor, (ComponentAccessor<EntityStore>)componentAccessor));
+        }
+
+        @Nullable
+        private Vector3i getPlayerAnchor(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, boolean usePlayerAnchor) {
+            if (!usePlayerAnchor) {
+                return null;
+            }
+            TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transformComponent == null) {
+                return null;
+            }
+            Vector3d position = transformComponent.getPosition();
+            return new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ()));
         }
     }
 }

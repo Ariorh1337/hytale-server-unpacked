@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldDat
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.UUID;
@@ -66,9 +67,12 @@ implements Component<ChunkStore> {
 
     public static class OnRemove
     extends RefSystem<ChunkStore> {
-        public static final ComponentType<ChunkStore, RespawnBlock> COMPONENT_TYPE = RespawnBlock.getComponentType();
-        public static final ComponentType<ChunkStore, BlockModule.BlockStateInfo> BLOCK_INFO_TYPE = BlockModule.BlockStateInfo.getComponentType();
-        public static final Query<ChunkStore> QUERY = Query.and(COMPONENT_TYPE, BLOCK_INFO_TYPE);
+        @Nonnull
+        private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+        public static final ComponentType<ChunkStore, RespawnBlock> COMPONENT_TYPE_RESPAWN_BLOCK = RespawnBlock.getComponentType();
+        public static final ComponentType<ChunkStore, BlockModule.BlockStateInfo> COMPONENT_TYPE_BLOCK_STATE_INFO = BlockModule.BlockStateInfo.getComponentType();
+        @Nonnull
+        public static final Query<ChunkStore> QUERY = Query.and(COMPONENT_TYPE_RESPAWN_BLOCK, COMPONENT_TYPE_BLOCK_STATE_INFO);
 
         @Override
         public void onEntityAdded(@Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
@@ -79,30 +83,41 @@ implements Component<ChunkStore> {
             if (reason == RemoveReason.UNLOAD) {
                 return;
             }
-            RespawnBlock respawnState = commandBuffer.getComponent(ref, COMPONENT_TYPE);
+            RespawnBlock respawnState = commandBuffer.getComponent(ref, COMPONENT_TYPE_RESPAWN_BLOCK);
             assert (respawnState != null);
             if (respawnState.ownerUUID == null) {
                 return;
             }
-            BlockModule.BlockStateInfo blockInfo = commandBuffer.getComponent(ref, BLOCK_INFO_TYPE);
-            assert (blockInfo != null);
+            BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, COMPONENT_TYPE_BLOCK_STATE_INFO);
+            assert (blockStateInfoComponent != null);
             PlayerRef playerRef = Universe.get().getPlayer(respawnState.ownerUUID);
             if (playerRef == null) {
-                HytaleLogger.getLogger().at(Level.WARNING).log("Need to load PlayerConfig to remove RespawnPoint!");
+                LOGGER.at(Level.WARNING).log("Failed to fetch player ref during removal of respawn block entity.");
                 return;
             }
-            Player player = playerRef.getComponent(Player.getComponentType());
-            Ref<ChunkStore> chunkRef = blockInfo.getChunkRef();
-            if (chunkRef == null || !chunkRef.isValid()) {
+            Player playerComponent = playerRef.getComponent(Player.getComponentType());
+            if (playerComponent == null) {
+                LOGGER.at(Level.WARNING).log("Failed to fetch player component during removal of respawn block entity.");
                 return;
             }
-            PlayerWorldData playerWorldData = player.getPlayerConfigData().getPerWorldData(store.getExternalData().getWorld().getName());
+            Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
+            if (!chunkRef.isValid()) {
+                return;
+            }
+            World world = commandBuffer.getExternalData().getWorld();
+            PlayerWorldData playerWorldData = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());
             PlayerRespawnPointData[] respawnPoints = playerWorldData.getRespawnPoints();
-            WorldChunk wc = commandBuffer.getComponent(chunkRef, WorldChunk.getComponentType());
-            Vector3i blockPosition = new Vector3i(ChunkUtil.worldCoordFromLocalCoord(wc.getX(), ChunkUtil.xFromBlockInColumn(blockInfo.getIndex())), ChunkUtil.yFromBlockInColumn(blockInfo.getIndex()), ChunkUtil.worldCoordFromLocalCoord(wc.getZ(), ChunkUtil.zFromBlockInColumn(blockInfo.getIndex())));
+            if (respawnPoints == null) {
+                LOGGER.at(Level.WARNING).log("Failed to find valid respawn points for player " + String.valueOf(respawnState.ownerUUID) + " during removal of respawn block entity.");
+                return;
+            }
+            WorldChunk worldChunkComponent = commandBuffer.getComponent(chunkRef, WorldChunk.getComponentType());
+            assert (worldChunkComponent != null);
+            Vector3i blockPosition = new Vector3i(ChunkUtil.worldCoordFromLocalCoord(worldChunkComponent.getX(), ChunkUtil.xFromBlockInColumn(blockStateInfoComponent.getIndex())), ChunkUtil.yFromBlockInColumn(blockStateInfoComponent.getIndex()), ChunkUtil.worldCoordFromLocalCoord(worldChunkComponent.getZ(), ChunkUtil.zFromBlockInColumn(blockStateInfoComponent.getIndex())));
             for (int i = 0; i < respawnPoints.length; ++i) {
                 PlayerRespawnPointData respawnPoint = respawnPoints[i];
                 if (!respawnPoint.getBlockPosition().equals(blockPosition)) continue;
+                LOGGER.at(Level.INFO).log("Removing respawn point for player " + String.valueOf(respawnState.ownerUUID) + " at position " + String.valueOf(blockPosition) + " due to respawn block removal.");
                 playerWorldData.setRespawnPoints(ArrayUtil.remove(respawnPoints, i));
                 return;
             }

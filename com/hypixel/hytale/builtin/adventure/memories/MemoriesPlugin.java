@@ -57,7 +57,7 @@ import com.hypixel.hytale.server.npc.AllNPCsLoadedEvent;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -78,7 +78,7 @@ extends JavaPlugin {
     private static MemoriesPlugin instance;
     private final Config<MemoriesPluginConfig> config = this.withConfig(MemoriesPluginConfig.CODEC);
     private final List<MemoryProvider<?>> providers = new ObjectArrayList();
-    private final Map<String, Set<Memory>> allMemories = new Object2ObjectOpenHashMap<String, Set<Memory>>();
+    private final Map<String, Set<Memory>> allMemories = new Object2ObjectRBTreeMap<String, Set<Memory>>();
     private ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
     @Nullable
     private RecordedMemories recordedMemories;

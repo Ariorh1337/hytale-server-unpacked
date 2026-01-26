@@ -44,12 +44,12 @@ public class FluidParticle {
     public static FluidParticle deserialize(@Nonnull ByteBuf buf, int offset) {
         FluidParticle obj = new FluidParticle();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.color = Color.deserialize(buf, offset + 1);
         }
         obj.scale = buf.getFloatLE(offset + 4);
         int pos = offset + 8;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int systemIdLen = VarInt.peek(buf, pos);
             if (systemIdLen < 0) {
                 throw ProtocolException.negativeLength("SystemId", systemIdLen);
@@ -67,7 +67,7 @@ public class FluidParticle {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int pos = offset + 8;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int sl = VarInt.peek(buf, pos);
             pos += VarInt.length(buf, pos) + sl;
         }
@@ -76,10 +76,10 @@ public class FluidParticle {
 
     public void serialize(@Nonnull ByteBuf buf) {
         byte nullBits = 0;
-        if (this.systemId != null) {
+        if (this.color != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.color != null) {
+        if (this.systemId != null) {
             nullBits = (byte)(nullBits | 2);
         }
         buf.writeByte(nullBits);
@@ -108,7 +108,7 @@ public class FluidParticle {
         }
         byte nullBits = buffer.getByte(offset);
         int pos = offset + 8;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int systemIdLen = VarInt.peek(buffer, pos);
             if (systemIdLen < 0) {
                 return ValidationResult.error("Invalid string length for SystemId");

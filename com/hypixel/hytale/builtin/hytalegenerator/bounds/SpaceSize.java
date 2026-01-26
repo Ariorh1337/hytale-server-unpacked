@@ -4,6 +4,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.bounds;
 
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 
@@ -58,6 +59,11 @@ public class SpaceSize {
         Vector3i absMin = VectorUtil.fromOperation(value -> Math.abs(value.from(this.minInclusive)));
         Vector3i absMax = VectorUtil.fromOperation(value -> Math.abs(value.from(this.maxInclusive)));
         return Vector3i.max(absMin, absMax);
+    }
+
+    @Nonnull
+    public Bounds3i toBounds3i() {
+        return new Bounds3i(this.minInclusive, this.maxExclusive);
     }
 
     @Nonnull

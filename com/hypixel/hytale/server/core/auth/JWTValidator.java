@@ -17,6 +17,7 @@ import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -30,6 +31,8 @@ public class JWTValidator {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private static final long CLOCK_SKEW_SECONDS = 300L;
     private static final JWSAlgorithm SUPPORTED_ALGORITHM = JWSAlgorithm.EdDSA;
+    private static final int MIN_SIGNATURE_LENGTH = 80;
+    private static final int MAX_SIGNATURE_LENGTH = 90;
     private final SessionServiceClient sessionServiceClient;
     private final String expectedIssuer;
     private final String expectedAudience;
@@ -46,9 +49,29 @@ public class JWTValidator {
     }
 
     @Nullable
+    private static String validateJwtStructure(@Nonnull String token, @Nonnull String tokenType) {
+        if (token.isEmpty()) {
+            return tokenType + " is empty";
+        }
+        String[] parts = token.split("\\.", -1);
+        if (parts.length != 3) {
+            return String.format("%s has invalid format (expected 3 parts, got %d)", tokenType, parts.length);
+        }
+        if (parts[2].isEmpty()) {
+            return tokenType + " has empty signature - possible signature stripping attack";
+        }
+        int sigLen = parts[2].length();
+        if (sigLen < 80 || sigLen > 90) {
+            return String.format("%s has invalid signature length: %d (expected %d-%d)", tokenType, sigLen, 80, 90);
+        }
+        return null;
+    }
+
+    @Nullable
     public JWTClaims validateToken(@Nonnull String accessToken, @Nullable X509Certificate clientCert) {
-        if (accessToken.isEmpty()) {
-            LOGGER.at(Level.WARNING).log("Access token is empty");
+        String structError = JWTValidator.validateJwtStructure(accessToken, "Access token");
+        if (structError != null) {
+            LOGGER.at(Level.WARNING).log(structError);
             return null;
         }
         try {
@@ -85,7 +108,11 @@ public class JWTValidator {
                 return null;
             }
             long nowSeconds = Instant.now().getEpochSecond();
-            if (claims.expiresAt != null && nowSeconds >= claims.expiresAt + 300L) {
+            if (claims.expiresAt == null) {
+                LOGGER.at(Level.WARNING).log("Access token missing expiration claim");
+                return null;
+            }
+            if (nowSeconds >= claims.expiresAt + 300L) {
                 LOGGER.at(Level.WARNING).log("Token expired (exp: %d, now: %d)", (Object)claims.expiresAt, nowSeconds);
                 return null;
             }
@@ -99,6 +126,10 @@ public class JWTValidator {
             }
             if (!CertificateUtil.validateCertificateBinding(claims.certificateFingerprint, clientCert)) {
                 LOGGER.at(Level.WARNING).log("Certificate binding validation failed");
+                return null;
+            }
+            if (claims.getSubjectAsUUID() == null) {
+                LOGGER.at(Level.WARNING).log("Access token has invalid or missing subject UUID");
                 return null;
             }
             LOGGER.at(Level.INFO).log("JWT validated successfully for user %s (UUID: %s)", (Object)claims.username, (Object)claims.subject);
@@ -262,8 +293,9 @@ public class JWTValidator {
 
     @Nullable
     public IdentityTokenClaims validateIdentityToken(@Nonnull String identityToken) {
-        if (identityToken.isEmpty()) {
-            LOGGER.at(Level.WARNING).log("Identity token is empty");
+        String structError = JWTValidator.validateJwtStructure(identityToken, "Identity token");
+        if (structError != null) {
+            LOGGER.at(Level.WARNING).log(structError);
             return null;
         }
         try {
@@ -281,11 +313,20 @@ public class JWTValidator {
             IdentityTokenClaims claims = new IdentityTokenClaims();
             claims.issuer = claimsSet.getIssuer();
             claims.subject = claimsSet.getSubject();
-            claims.username = claimsSet.getStringClaim("username");
             claims.issuedAt = claimsSet.getIssueTime() != null ? Long.valueOf(claimsSet.getIssueTime().toInstant().getEpochSecond()) : null;
             claims.expiresAt = claimsSet.getExpirationTime() != null ? Long.valueOf(claimsSet.getExpirationTime().toInstant().getEpochSecond()) : null;
             claims.notBefore = claimsSet.getNotBeforeTime() != null ? Long.valueOf(claimsSet.getNotBeforeTime().toInstant().getEpochSecond()) : null;
             claims.scope = claimsSet.getStringClaim("scope");
+            Map<String, Object> profile = claimsSet.getJSONObjectClaim("profile");
+            if (profile != null) {
+                claims.username = (String)profile.get("username");
+                claims.skin = (String)profile.get("skin");
+                Object entitlements = profile.get("entitlements");
+                if (entitlements instanceof List) {
+                    List list = (List)entitlements;
+                    claims.entitlements = (String[])list.stream().filter(String.class::isInstance).map(String.class::cast).toArray(String[]::new);
+                }
+            }
             if (!this.expectedIssuer.equals(claims.issuer)) {
                 LOGGER.at(Level.WARNING).log("Invalid identity token issuer: expected %s, got %s", (Object)this.expectedIssuer, (Object)claims.issuer);
                 return null;
@@ -326,8 +367,9 @@ public class JWTValidator {
 
     @Nullable
     public SessionTokenClaims validateSessionToken(@Nonnull String sessionToken) {
-        if (sessionToken.isEmpty()) {
-            LOGGER.at(Level.WARNING).log("Session token is empty");
+        String structError = JWTValidator.validateJwtStructure(sessionToken, "Session token");
+        if (structError != null) {
+            LOGGER.at(Level.WARNING).log(structError);
             return null;
         }
         try {
@@ -347,7 +389,8 @@ public class JWTValidator {
             claims.subject = claimsSet.getSubject();
             claims.issuedAt = claimsSet.getIssueTime() != null ? Long.valueOf(claimsSet.getIssueTime().toInstant().getEpochSecond()) : null;
             claims.expiresAt = claimsSet.getExpirationTime() != null ? Long.valueOf(claimsSet.getExpirationTime().toInstant().getEpochSecond()) : null;
-            Long l = claims.notBefore = claimsSet.getNotBeforeTime() != null ? Long.valueOf(claimsSet.getNotBeforeTime().toInstant().getEpochSecond()) : null;
+            claims.notBefore = claimsSet.getNotBeforeTime() != null ? Long.valueOf(claimsSet.getNotBeforeTime().toInstant().getEpochSecond()) : null;
+            claims.scope = claimsSet.getStringClaim("scope");
             if (!this.expectedIssuer.equals(claims.issuer)) {
                 LOGGER.at(Level.WARNING).log("Invalid session token issuer: expected %s, got %s", (Object)this.expectedIssuer, (Object)claims.issuer);
                 return null;
@@ -369,7 +412,11 @@ public class JWTValidator {
                 LOGGER.at(Level.WARNING).log("Session token issued in the future (iat: %d, now: %d)", (Object)claims.issuedAt, nowSeconds);
                 return null;
             }
-            LOGGER.at(Level.INFO).log("Session token validated successfully");
+            if (claims.getSubjectAsUUID() == null) {
+                LOGGER.at(Level.WARNING).log("Session token has invalid or missing subject UUID");
+                return null;
+            }
+            LOGGER.at(Level.INFO).log("Session token validated successfully (UUID: %s)", claims.subject);
             return claims;
         }
         catch (ParseException e) {
@@ -411,6 +458,8 @@ public class JWTValidator {
         public String issuer;
         public String subject;
         public String username;
+        public String[] entitlements;
+        public String skin;
         public Long issuedAt;
         public Long expiresAt;
         public Long notBefore;
@@ -452,6 +501,36 @@ public class JWTValidator {
         public Long issuedAt;
         public Long expiresAt;
         public Long notBefore;
+        public String scope;
+
+        @Nullable
+        public UUID getSubjectAsUUID() {
+            if (this.subject == null) {
+                return null;
+            }
+            try {
+                return UUID.fromString(this.subject);
+            }
+            catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+
+        @Nonnull
+        public String[] getScopes() {
+            if (this.scope == null || this.scope.isEmpty()) {
+                return new String[0];
+            }
+            return this.scope.split(" ");
+        }
+
+        public boolean hasScope(@Nonnull String targetScope) {
+            for (String s : this.getScopes()) {
+                if (!s.equals(targetScope)) continue;
+                return true;
+            }
+            return false;
+        }
     }
 }
 

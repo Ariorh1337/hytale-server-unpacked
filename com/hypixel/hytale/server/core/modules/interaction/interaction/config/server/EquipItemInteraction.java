@@ -39,6 +39,7 @@ extends SimpleInstantInteraction {
     protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         ItemContainer armorContainer;
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+        assert (commandBuffer != null);
         Ref<EntityStore> ref = context.getEntity();
         Entity entity = EntityUtils.getEntity(ref, commandBuffer);
         if (!(entity instanceof LivingEntity)) {

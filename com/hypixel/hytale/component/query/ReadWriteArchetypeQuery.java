@@ -26,7 +26,7 @@ extends Query<ECS_TYPE> {
     }
 
     @Override
-    default public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    default public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
         this.getReadArchetype().validateRegistry(registry);
         this.getWriteArchetype().validateRegistry(registry);
     }

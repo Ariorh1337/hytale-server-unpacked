@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nonnull;
@@ -50,7 +51,6 @@ extends AbstractPlayerCommand {
     }
 
     private static void executeReplace(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nullable String fromValue, @Nonnull BlockPattern toPattern, boolean substringSwap, boolean regex) {
-        Material fromMaterial;
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
         assert (playerComponent != null);
         if (!PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
@@ -61,22 +61,25 @@ extends AbstractPlayerCommand {
             return;
         }
         String toValue = toPattern.toString();
-        Integer[] toBlockIds = toPattern.getResolvedKeys();
-        Material material = fromMaterial = fromValue != null ? Material.fromKey(fromValue) : null;
-        if (fromMaterial != null && fromMaterial.isFluid()) {
-            Material toMaterial = Material.fromKey(toValue);
-            if (toMaterial == null) {
-                context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", toValue).param("key", toValue));
+        Material fromMaterial = fromValue != null ? Material.fromKey(fromValue) : null;
+        Material toMaterial = Material.fromPattern(toPattern, ThreadLocalRandom.current());
+        if (toMaterial.isFluid() && !substringSwap && !regex) {
+            if (fromMaterial == null) {
+                context.sendMessage(Message.translation("server.commands.replace.fromRequired"));
                 return;
             }
             BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace((Ref<EntityStore>)r, fromMaterial, toMaterial, (ComponentAccessor<EntityStore>)componentAccessor));
             context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
             return;
         }
+        if (fromMaterial != null && fromMaterial.isFluid()) {
+            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace((Ref<EntityStore>)r, fromMaterial, toMaterial, (ComponentAccessor<EntityStore>)componentAccessor));
+            context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
+            return;
+        }
         BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
         if (fromValue == null && !substringSwap && !regex) {
-            int[] toIds = ReplaceCommand.toIntArray(toBlockIds);
-            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace((Ref<EntityStore>)r, null, toIds, (ComponentAccessor<EntityStore>)componentAccessor));
+            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace((Ref<EntityStore>)r, null, toPattern, (ComponentAccessor<EntityStore>)componentAccessor));
             context.sendMessage(Message.translation("server.builderTools.replace.replacementAllDone").param("to", toValue));
             return;
         }
@@ -93,12 +96,11 @@ extends AbstractPlayerCommand {
                 context.sendMessage(Message.translation("server.commands.replace.invalidRegex").param("error", e.getMessage()));
                 return;
             }
-            int[] toIds = ReplaceCommand.toIntArray(toBlockIds);
             BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
                 s.replace((Ref<EntityStore>)r, value -> {
                     String valueKey = ((BlockType)assetMap.getAsset(value)).getId();
                     return pattern.matcher(valueKey).matches();
-                }, toIds, (ComponentAccessor<EntityStore>)componentAccessor);
+                }, toPattern, (ComponentAccessor<EntityStore>)componentAccessor);
                 context.sendMessage(Message.translation("server.commands.replace.success").param("regex", fromValue).param("replacement", toValue));
             });
             return;
@@ -136,18 +138,9 @@ extends AbstractPlayerCommand {
             }
             return;
         }
-        int[] toIds = ReplaceCommand.toIntArray(toBlockIds);
         int fromBlockId = fromMaterial.getBlockId();
-        BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace((Ref<EntityStore>)r, block -> block == fromBlockId, toIds, (ComponentAccessor<EntityStore>)componentAccessor));
+        BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace((Ref<EntityStore>)r, block -> block == fromBlockId, toPattern, (ComponentAccessor<EntityStore>)componentAccessor));
         context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
-    }
-
-    private static int[] toIntArray(Integer[] arr) {
-        int[] result = new int[arr.length];
-        for (int i = 0; i < arr.length; ++i) {
-            result[i] = arr[i];
-        }
-        return result;
     }
 
     private static class ReplaceFromToCommand

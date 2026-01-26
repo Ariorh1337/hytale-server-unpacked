@@ -4,6 +4,7 @@
 package com.hypixel.hytale.server.core.entity.entities.player.windows;
 
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventPriority;
@@ -55,22 +56,22 @@ public abstract class Window {
     @Nonnull
     public abstract JsonObject getData();
 
-    protected abstract boolean onOpen0();
-
-    protected abstract void onClose0();
-
-    protected boolean onOpen() {
-        return this.onOpen0();
+    protected boolean onOpen(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        return this.onOpen0(ref, store);
     }
 
-    protected void onClose() {
+    protected abstract boolean onOpen0(@Nonnull Ref<EntityStore> var1, @Nonnull Store<EntityStore> var2);
+
+    protected void onClose(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         try {
-            this.onClose0();
+            this.onClose0(ref, componentAccessor);
         }
         finally {
             this.closeEventRegistry.dispatchFor(null).dispatch(new WindowCloseEvent());
         }
     }
+
+    protected abstract void onClose0(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
     public void handleAction(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull WindowAction action) {
     }
@@ -93,9 +94,9 @@ public abstract class Window {
         return this.playerRef;
     }
 
-    public void close() {
+    public void close(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         assert (this.manager != null);
-        this.manager.closeWindow(this.id);
+        this.manager.closeWindow(ref, this.id, componentAccessor);
     }
 
     protected void invalidate() {

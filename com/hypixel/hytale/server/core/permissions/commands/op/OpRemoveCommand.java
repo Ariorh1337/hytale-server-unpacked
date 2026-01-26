@@ -19,11 +19,7 @@ import javax.annotation.Nonnull;
 public class OpRemoveCommand
 extends CommandBase {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_OP_REMOVED = Message.translation("server.commands.op.removed");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_OP_REMOVED_TARGET = Message.translation("server.commands.op.removed.target");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OP_NOT_OP = Message.translation("server.commands.op.notOp");
     @Nonnull
     private final RequiredArg<UUID> playerArg = this.withRequiredArg("player", "server.commands.op.remove.player.desc", ArgTypes.PLAYER_UUID);
 
@@ -43,12 +39,12 @@ extends CommandBase {
         Set<String> groups = permissionsModule.getGroupsForUser(uuid);
         if (groups.contains("OP")) {
             permissionsModule.removeUserFromGroup(uuid, "OP");
-            context.sendMessage(MESSAGE_COMMANDS_OP_REMOVED.param("username", displayMessage));
+            context.sendMessage(Message.translation("server.commands.op.removed").param("username", displayMessage));
             if (playerRef != null) {
                 playerRef.sendMessage(MESSAGE_COMMANDS_OP_REMOVED_TARGET);
             }
         } else {
-            context.sendMessage(MESSAGE_COMMANDS_OP_NOT_OP.param("username", displayMessage));
+            context.sendMessage(Message.translation("server.commands.op.notOp").param("username", displayMessage));
         }
     }
 }

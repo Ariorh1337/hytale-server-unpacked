@@ -114,6 +114,7 @@ extends DelayedEntitySystem<EntityStore> {
     private SleepMultiplayer createSleepMultiplayer(@Nonnull Store<EntityStore> store) {
         World world = store.getExternalData().getWorld();
         ArrayList<PlayerRef> playerRefs = new ArrayList<PlayerRef>(world.getPlayerRefs());
+        playerRefs.removeIf(playerRef -> playerRef.getReference() == null);
         if (playerRefs.size() <= 1) {
             return null;
         }
@@ -121,15 +122,15 @@ extends DelayedEntitySystem<EntityStore> {
         int sleepersCount = 0;
         int awakeCount = 0;
         ArrayList<UUID> awakeSampleList = new ArrayList<UUID>(playerRefs.size());
-        for (PlayerRef playerRef : playerRefs) {
-            Ref<EntityStore> ref2 = playerRef.getReference();
+        for (PlayerRef playerRef2 : playerRefs) {
+            Ref<EntityStore> ref2 = playerRef2.getReference();
             boolean readyToSleep = StartSlumberSystem.isReadyToSleep(store, ref2);
             if (readyToSleep) {
                 ++sleepersCount;
                 continue;
             }
             ++awakeCount;
-            awakeSampleList.add(playerRef.getUuid());
+            awakeSampleList.add(playerRef2.getUuid());
         }
         UUID[] awakeSample = awakeSampleList.size() > 5 ? EMPTY_UUIDS : (UUID[])awakeSampleList.toArray(UUID[]::new);
         return new SleepMultiplayer(sleepersCount, awakeCount, awakeSample);

@@ -36,6 +36,8 @@ extends EntityTickingSystem<EntityStore> {
     @Nonnull
     private final ComponentType<EntityStore, NPCEntity> npcComponentType;
     @Nonnull
+    private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
+    @Nonnull
     private final Set<Dependency<EntityStore>> dependencies;
     @Nonnull
     private final Query<EntityStore> query;
@@ -44,7 +46,7 @@ extends EntityTickingSystem<EntityStore> {
         this.stateEvaluatorComponent = stateEvaluatorComponent;
         this.npcComponentType = npcComponentType;
         this.dependencies = Set.of(new SystemDependency(Order.BEFORE, RoleSystems.BehaviourTickSystem.class), new SystemDependency(Order.AFTER, RoleSystems.PreBehaviourSupportTickSystem.class));
-        this.query = Query.and(npcComponentType, stateEvaluatorComponent);
+        this.query = Query.and(npcComponentType, stateEvaluatorComponent, this.uuidComponentType);
     }
 
     @Override
@@ -68,9 +70,12 @@ extends EntityTickingSystem<EntityStore> {
     public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
         assert (npcComponent != null);
-        UUIDComponent uuidComponent = archetypeChunk.getComponent(index, UUIDComponent.getComponentType());
+        UUIDComponent uuidComponent = archetypeChunk.getComponent(index, this.uuidComponentType);
         assert (uuidComponent != null);
         Role role = npcComponent.getRole();
+        if (role == null) {
+            return;
+        }
         StateSupport stateSupport = role.getStateSupport();
         if (stateSupport.isRunningTransitionActions()) {
             return;

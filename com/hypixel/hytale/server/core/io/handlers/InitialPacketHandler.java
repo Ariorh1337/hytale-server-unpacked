@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.server.core.io.handlers;
 
+import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
@@ -12,6 +13,7 @@ import com.hypixel.hytale.protocol.packets.connection.Connect;
 import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
@@ -24,9 +26,7 @@ import com.hypixel.hytale.server.core.plugin.PluginManager;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,8 +50,8 @@ extends PacketHandler {
 
     @Override
     public void registered0(PacketHandler oldHandler) {
-        Duration initialTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getInitialTimeout();
-        this.setTimeout("initial", () -> !this.registered, initialTimeout.toMillis(), TimeUnit.MILLISECONDS);
+        HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+        this.initStage("initial", timeouts.getInitial(), () -> !this.registered);
         PacketHandler.logConnectionTimings(this.channel, "Registered", Level.FINE);
     }
 
@@ -81,14 +81,12 @@ extends PacketHandler {
         this.receivedConnect = true;
         this.clearTimeout();
         PacketHandler.logConnectionTimings(this.channel, "Connect", Level.FINE);
-        String clientProtocolHash = packet.protocolHash;
-        if (clientProtocolHash.length() > 64) {
-            this.disconnect("Invalid Protocol Hash! " + clientProtocolHash.length());
-            return;
-        }
-        String expectedHash = "6708f121966c1c443f4b0eb525b2f81d0a8dc61f5003a692a8fa157e5e02cea9";
-        if (!clientProtocolHash.equals(expectedHash)) {
-            this.disconnect("Incompatible protocol!\nServer: " + expectedHash + "\nClient: " + clientProtocolHash);
+        if (packet.protocolCrc != 1789265863) {
+            int clientBuild = packet.protocolBuildNumber;
+            int serverBuild = 2;
+            int errorCode = clientBuild < serverBuild ? 5 : 6;
+            String serverVersion = ManifestUtil.getImplementationVersion();
+            ProtocolUtil.closeApplicationConnection(this.channel, errorCode, serverVersion != null ? serverVersion : "unknown");
             return;
         }
         if (HytaleServer.get().isShuttingDown()) {
@@ -99,7 +97,7 @@ extends PacketHandler {
             this.disconnect("Server is booting up! Please try again in a moment. [" + String.valueOf((Object)PluginManager.get().getState()) + "]");
             return;
         }
-        ProtocolVersion protocolVersion = new ProtocolVersion(clientProtocolHash);
+        ProtocolVersion protocolVersion = new ProtocolVersion(packet.protocolCrc);
         String language = packet.language;
         if (language == null) {
             language = "en-US";
@@ -120,6 +118,18 @@ extends PacketHandler {
             HytaleLogger.getLogger().at(Level.WARNING).log("Rejecting connection from %s - referral data too large: %d bytes (max: %d)", packet.username, packet.referralData.length, 4096);
             this.disconnect("Referral data exceeds maximum size of 4096 bytes");
             return;
+        }
+        if (packet.referralData != null) {
+            if (packet.referralSource == null) {
+                HytaleLogger.getLogger().at(Level.WARNING).log("Rejecting connection from %s - referral data provided without source address", packet.username);
+                this.disconnect("Referral connections must include source server address");
+                return;
+            }
+            if (packet.referralSource.host == null || packet.referralSource.host.isEmpty()) {
+                HytaleLogger.getLogger().at(Level.WARNING).log("Rejecting connection from %s - referral source has empty host", packet.username);
+                this.disconnect("Referral source address is invalid");
+                return;
+            }
         }
         boolean hasIdentityToken = packet.identityToken != null && !packet.identityToken.isEmpty();
         boolean isEditorClient = packet.clientType == ClientType.Editor;

@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.server.core;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.thread.HytaleForkJoinThreadFactory;
@@ -24,6 +25,7 @@ import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.AssetRegistryLoader;
 import com.hypixel.hytale.server.core.asset.LoadAssetEvent;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
@@ -43,11 +45,13 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.datastore.DataStoreProvider;
 import com.hypixel.hytale.server.core.universe.datastore.DiskDataStoreProvider;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.update.UpdateModule;
 import com.hypixel.hytale.server.core.util.concurrent.ThreadUtil;
 import io.netty.handler.codec.quic.Quic;
 import io.sentry.Sentry;
 import io.sentry.SentryOptions;
 import io.sentry.protocol.Contexts;
+import io.sentry.protocol.OperatingSystem;
 import io.sentry.protocol.User;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
@@ -152,6 +156,20 @@ public class HytaleServer {
                     pluginsContext.put(plugin.getIdentifier().toString(), pluginInfo);
                 }
                 contexts.put("plugins", pluginsContext);
+                AssetModule assetModule = AssetModule.get();
+                if (assetModule != null) {
+                    HashMap packsContext = new HashMap();
+                    for (AssetPack pack : assetModule.getAssetPacks()) {
+                        HashMap<String, Object> packInfo = new HashMap<String, Object>();
+                        PluginManifest manifest = pack.getManifest();
+                        if (manifest != null && manifest.getVersion() != null) {
+                            packInfo.put("version", manifest.getVersion().toString());
+                        }
+                        packInfo.put("immutable", pack.isImmutable());
+                        packsContext.put(pack.getName(), packInfo);
+                    }
+                    contexts.put("packs", packsContext);
+                }
                 User user = new User();
                 HashMap<String, Object> unknown = new HashMap<String, Object>();
                 user.setUnknown(unknown);
@@ -176,6 +194,10 @@ public class HytaleServer {
                 if (hardwareUUID != null) {
                     scope.setContexts("hardware", Map.of("uuid", hardwareUUID.toString()));
                 }
+                OperatingSystem os = new OperatingSystem();
+                os.setName(System.getProperty("os.name"));
+                os.setVersion(System.getProperty("os.version"));
+                scope.getContexts().setOperatingSystem(os);
                 scope.setContexts("build", Map.of("version", String.valueOf(ManifestUtil.getImplementationVersion()), "revision-id", String.valueOf(ManifestUtil.getImplementationRevisionId()), "patchline", String.valueOf(ManifestUtil.getPatchline()), "environment", "release"));
                 if (Constants.SINGLEPLAYER) {
                     scope.setContexts("singleplayer", Map.of("owner-uuid", String.valueOf(SingleplayerModule.getUuid()), "owner-name", SingleplayerModule.getUsername()));
@@ -183,6 +205,7 @@ public class HytaleServer {
             });
             HytaleLogger.getLogger().setSentryClient(Sentry.getCurrentScopes());
         }
+        ServerAuthManager.getInstance().checkPendingFatalError();
         NettyUtil.init();
         float sin = TrigMathUtil.sin(0.0f);
         float atan2 = TrigMathUtil.atan2(0.0f, 0.0f);
@@ -231,6 +254,7 @@ public class HytaleServer {
     }
 
     private void boot() {
+        ServerAuthManager authManager;
         if (this.booting.getAndSet(true)) {
             return;
         }
@@ -322,8 +346,11 @@ public class HytaleServer {
         LOGGER.at(Level.INFO).log("\u001b[0;32m===============================================================================================");
         LOGGER.at(Level.INFO).log("%s         Hytale Server Booted! [%s] took %s", "\u001b[0;32m", String.join((CharSequence)", ", tags), FormatUtil.nanosToString(System.nanoTime() - this.bootStart));
         LOGGER.at(Level.INFO).log("\u001b[0;32m===============================================================================================");
-        ServerAuthManager authManager = ServerAuthManager.getInstance();
-        if (!authManager.isSingleplayer() && authManager.getAuthMode() == ServerAuthManager.AuthMode.NONE) {
+        UpdateModule updateModule = UpdateModule.get();
+        if (updateModule != null) {
+            updateModule.onServerReady();
+        }
+        if (!(authManager = ServerAuthManager.getInstance()).isSingleplayer() && authManager.getAuthMode() == ServerAuthManager.AuthMode.NONE) {
             LOGGER.at(Level.WARNING).log("%sNo server tokens configured. Use /auth login to authenticate.", "\u001b[0;31m");
         }
         this.sendSingleplayerSignal(">> Singleplayer Ready <<");

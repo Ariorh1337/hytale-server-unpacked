@@ -58,18 +58,18 @@ implements Packet {
     public static AssetEditorUpdateModelPreview deserialize(@Nonnull ByteBuf buf, int offset) {
         AssetEditorUpdateModelPreview obj = new AssetEditorUpdateModelPreview();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.camera = AssetEditorPreviewCameraSettings.deserialize(buf, offset + 1);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 42 + buf.getIntLE(offset + 30);
             obj.assetPath = AssetPath.deserialize(buf, varPos0);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos1 = offset + 42 + buf.getIntLE(offset + 34);
             obj.model = Model.deserialize(buf, varPos1);
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos2 = offset + 42 + buf.getIntLE(offset + 38);
             obj.block = BlockType.deserialize(buf, varPos2);
         }
@@ -79,21 +79,21 @@ implements Packet {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 42;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 30);
             int pos0 = offset + 42 + fieldOffset0;
             if ((pos0 += AssetPath.computeBytesConsumed(buf, pos0)) - offset > maxEnd) {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 34);
             int pos1 = offset + 42 + fieldOffset1;
             if ((pos1 += Model.computeBytesConsumed(buf, pos1)) - offset > maxEnd) {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 38);
             int pos2 = offset + 42 + fieldOffset2;
             if ((pos2 += BlockType.computeBytesConsumed(buf, pos2)) - offset > maxEnd) {
@@ -107,16 +107,16 @@ implements Packet {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.assetPath != null) {
+        if (this.camera != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.model != null) {
+        if (this.assetPath != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.block != null) {
+        if (this.model != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.camera != null) {
+        if (this.block != null) {
             nullBits = (byte)(nullBits | 8);
         }
         buf.writeByte(nullBits);
@@ -173,7 +173,7 @@ implements Packet {
             return ValidationResult.error("Buffer too small: expected at least 42 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int assetPathOffset = buffer.getIntLE(offset + 30);
             if (assetPathOffset < 0) {
                 return ValidationResult.error("Invalid offset for AssetPath");
@@ -188,7 +188,7 @@ implements Packet {
             }
             pos += AssetPath.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int modelOffset = buffer.getIntLE(offset + 34);
             if (modelOffset < 0) {
                 return ValidationResult.error("Invalid offset for Model");
@@ -203,7 +203,7 @@ implements Packet {
             }
             pos += Model.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int blockOffset = buffer.getIntLE(offset + 38);
             if (blockOffset < 0) {
                 return ValidationResult.error("Invalid offset for Block");

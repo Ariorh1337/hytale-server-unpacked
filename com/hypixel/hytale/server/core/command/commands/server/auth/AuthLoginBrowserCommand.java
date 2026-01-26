@@ -34,10 +34,6 @@ extends CommandBase {
     private static final Message MESSAGE_FAILED = Message.translation("server.commands.auth.login.browser.failed").color(Color.RED);
     @Nonnull
     private static final Message MESSAGE_PENDING = Message.translation("server.commands.auth.login.pending").color(Color.YELLOW);
-    @Nonnull
-    private static final Message MESSAGE_PERSISTENCE_MEMORY = Message.translation("server.commands.auth.login.persistence.memory").color(Color.ORANGE);
-    @Nonnull
-    private static final Message MESSAGE_PERSISTENCE_SAVED = Message.translation("server.commands.auth.login.persistence.saved").color(Color.GREEN);
 
     public AuthLoginBrowserCommand() {
         super("browser", "server.commands.auth.login.browser.desc");
@@ -80,10 +76,10 @@ extends CommandBase {
         AuthCredentialStoreProvider provider = HytaleServer.get().getConfig().getAuthCredentialStoreProvider();
         if (provider instanceof MemoryAuthCredentialStoreProvider) {
             String availableTypes = String.join((CharSequence)", ", AuthCredentialStoreProvider.CODEC.getRegisteredIds());
-            context.sendMessage(MESSAGE_PERSISTENCE_MEMORY.param("types", availableTypes));
+            context.sendMessage(Message.translation("server.commands.auth.login.persistence.memory").color(Color.ORANGE).param("types", availableTypes));
         } else {
             String typeName = (String)AuthCredentialStoreProvider.CODEC.getIdFor(provider.getClass());
-            context.sendMessage(MESSAGE_PERSISTENCE_SAVED.param("type", typeName));
+            context.sendMessage(Message.translation("server.commands.auth.login.persistence.saved").color(Color.GREEN).param("type", typeName));
         }
     }
 

@@ -104,12 +104,13 @@ public class ModelSystems {
     extends RefChangeSystem<EntityStore, ModelComponent> {
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
         private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        private final Query<EntityStore> query = Query.and(this.playerComponentType, MovementManager.getComponentType());
         private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency(Order.AFTER, UpdateBoundingBox.class));
 
         @Override
         @Nonnull
         public Query<EntityStore> getQuery() {
-            return this.playerComponentType;
+            return this.query;
         }
 
         @Override

@@ -5,6 +5,7 @@ package com.hypixel.hytale.builtin.crafting.interaction;
 
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.builtin.crafting.state.BenchState;
+import com.hypixel.hytale.builtin.crafting.window.CraftingWindow;
 import com.hypixel.hytale.builtin.crafting.window.DiagramCraftingWindow;
 import com.hypixel.hytale.builtin.crafting.window.SimpleCraftingWindow;
 import com.hypixel.hytale.builtin.crafting.window.StructuralCraftingWindow;
@@ -19,9 +20,8 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
-import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
@@ -29,6 +29,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.cli
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -73,15 +74,19 @@ extends SimpleBlockInteraction {
         BlockState blockState = world.getState(targetBlock.x, targetBlock.y, targetBlock.z, true);
         if (blockState instanceof BenchState) {
             BenchState benchState = (BenchState)blockState;
-            PageManager pageManager = playerComponent.getPageManager();
-            Window[] windowArray = new Window[1];
-            windowArray[0] = switch (this.pageType.ordinal()) {
+            CraftingWindow benchWindow = switch (this.pageType.ordinal()) {
                 default -> throw new MatchException(null, null);
                 case 0 -> new SimpleCraftingWindow(benchState);
-                case 1 -> new DiagramCraftingWindow(commandBuffer, benchState);
+                case 1 -> new DiagramCraftingWindow(ref, commandBuffer, benchState);
                 case 2 -> new StructuralCraftingWindow(benchState);
             };
-            pageManager.setPageWithWindows(ref, store, Page.Bench, true, windowArray);
+            UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+            assert (uuidComponent != null);
+            UUID uuid = uuidComponent.getUuid();
+            if (benchState.getWindows().putIfAbsent(uuid, benchWindow) == null) {
+                benchWindow.registerCloseEvent(event -> benchState.getWindows().remove(uuid, benchWindow));
+            }
+            playerComponent.getPageManager().setPageWithWindows(ref, store, Page.Bench, true, benchWindow);
         }
     }
 

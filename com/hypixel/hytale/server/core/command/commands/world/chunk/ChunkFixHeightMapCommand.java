@@ -27,19 +27,11 @@ import javax.annotation.Nonnull;
 public class ChunkFixHeightMapCommand
 extends AbstractWorldCommand {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED = Message.translation("server.commands.errors.chunkNotLoaded");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_STARTED = Message.translation("server.commands.chunk.fixHeightMap.started");
     @Nonnull
     private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_DONE = Message.translation("server.commands.chunk.fixHeightMap.done");
     @Nonnull
     private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_INVALIDATING_LIGHTING = Message.translation("server.commands.chunk.fixHeightMap.invalidatingLighting");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_WAITING_FOR_LIGHTING = Message.translation("server.commands.chunk.fixHeightMap.waitingForLighting");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_FINISHED = Message.translation("server.commands.chunk.fixHeightMap.lightingFinished");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_ERROR = Message.translation("server.commands.chunk.fixHeightMap.lightingError");
     @Nonnull
     private final RequiredArg<RelativeChunkPosition> chunkPosArg = this.withRequiredArg("x z", "server.commands.chunk.fixheight.position.desc", ArgTypes.RELATIVE_CHUNK_POSITION);
 
@@ -62,7 +54,7 @@ extends AbstractWorldCommand {
         long chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ);
         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
         if (chunkRef == null || !chunkRef.isValid()) {
-            context.sendMessage(MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED.param("chunkX", chunkX).param("chunkZ", chunkZ).param("world", world.getName()));
+            context.sendMessage(Message.translation("server.commands.errors.chunkNotLoaded").param("chunkX", chunkX).param("chunkZ", chunkZ).param("world", world.getName()));
             return;
         }
         WorldChunk worldChunkComponent = chunkStoreStore.getComponent(chunkRef, WorldChunk.getComponentType());
@@ -78,7 +70,7 @@ extends AbstractWorldCommand {
         }
         chunkLighting.invalidateLightInChunk(worldChunkComponent);
         context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_DONE);
-        context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_WAITING_FOR_LIGHTING.param("x", chunkX).param("z", chunkZ));
+        context.sendMessage(Message.translation("server.commands.chunk.fixHeightMap.waitingForLighting").param("x", chunkX).param("z", chunkZ));
         int[] count = new int[]{0};
         scheduledFuture = new ScheduledFuture[]{HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
             if (chunkLighting.isQueued(chunkX, chunkZ)) {
@@ -86,12 +78,12 @@ extends AbstractWorldCommand {
                 count[0] = n + 1;
                 if (n > 60) {
                     scheduledFuture[0].cancel(false);
-                    context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_ERROR.param("x", chunkX).param("z", chunkZ));
+                    context.sendMessage(Message.translation("server.commands.chunk.fixHeightMap.lightingError").param("x", chunkX).param("z", chunkZ));
                 }
                 return;
             }
             world.getNotificationHandler().updateChunk(chunkIndex);
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_FIXHEIGHTMAP_LIGHTING_FINISHED.param("x", chunkX).param("z", chunkZ));
+            context.sendMessage(Message.translation("server.commands.chunk.fixHeightMap.lightingFinished").param("x", chunkX).param("z", chunkZ));
             scheduledFuture[0].cancel(false);
         }, 1L, 1L, TimeUnit.SECONDS)};
     }

@@ -18,7 +18,6 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
@@ -26,16 +25,16 @@ import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldDat
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.IWorldMap;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapSettings;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.DeathMarkerProvider;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.POIMarkerProvider;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.PlayerIconMarkerProvider;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.PlayerMarkersProvider;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.RespawnMarkerProvider;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.SpawnMarkerProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers.DeathMarkerProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers.POIMarkerProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers.PerWorldDataMarkerProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers.PlayerIconMarkerProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers.RespawnMarkerProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers.SpawnMarkerProvider;
 import com.hypixel.hytale.server.core.util.thread.TickingThread;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
@@ -77,7 +76,7 @@ extends TickingThread {
         this.addMarkerProvider("playerIcons", PlayerIconMarkerProvider.INSTANCE);
         this.addMarkerProvider("death", DeathMarkerProvider.INSTANCE);
         this.addMarkerProvider("respawn", RespawnMarkerProvider.INSTANCE);
-        this.addMarkerProvider("playerMarkers", PlayerMarkersProvider.INSTANCE);
+        this.addMarkerProvider("playerMarkers", PerWorldDataMarkerProvider.INSTANCE);
         this.addMarkerProvider("poi", POIMarkerProvider.INSTANCE);
     }
 
@@ -296,7 +295,7 @@ extends TickingThread {
     }
 
     public static interface MarkerProvider {
-        public void update(World var1, GameplayConfig var2, WorldMapTracker var3, int var4, int var5, int var6);
+        public void update(World var1, MapMarkerTracker var2, int var3, int var4, int var5);
     }
 
     public static class ImageEntry {

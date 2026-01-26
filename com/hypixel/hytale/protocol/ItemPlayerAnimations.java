@@ -61,14 +61,14 @@ public class ItemPlayerAnimations {
     public static ItemPlayerAnimations deserialize(@Nonnull ByteBuf buf, int offset) {
         ItemPlayerAnimations obj = new ItemPlayerAnimations();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.wiggleWeights = WiggleWeights.deserialize(buf, offset + 1);
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.pullbackConfig = ItemPullbackConfiguration.deserialize(buf, offset + 41);
         }
         boolean bl = obj.useFirstPersonOverride = buf.getByte(offset + 90) != 0;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos0 = offset + 103 + buf.getIntLE(offset + 91);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -79,7 +79,7 @@ public class ItemPlayerAnimations {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos1 = offset + 103 + buf.getIntLE(offset + 95);
             int animationsCount = VarInt.peek(buf, varPos1);
             if (animationsCount < 0) {
@@ -107,7 +107,7 @@ public class ItemPlayerAnimations {
                 throw ProtocolException.duplicateKey("animations", key);
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos2 = offset + 103 + buf.getIntLE(offset + 99);
             obj.camera = CameraSettings.deserialize(buf, varPos2);
         }
@@ -117,7 +117,7 @@ public class ItemPlayerAnimations {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 103;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 91);
             int pos0 = offset + 103 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -125,7 +125,7 @@ public class ItemPlayerAnimations {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 95);
             int pos1 = offset + 103 + fieldOffset1;
             int dictLen = VarInt.peek(buf, pos1);
@@ -139,7 +139,7 @@ public class ItemPlayerAnimations {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 99);
             int pos2 = offset + 103 + fieldOffset2;
             if ((pos2 += CameraSettings.computeBytesConsumed(buf, pos2)) - offset > maxEnd) {
@@ -152,19 +152,19 @@ public class ItemPlayerAnimations {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.wiggleWeights != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.animations != null) {
+        if (this.pullbackConfig != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.wiggleWeights != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.camera != null) {
+        if (this.animations != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.pullbackConfig != null) {
+        if (this.camera != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
         buf.writeByte(nullBits);
@@ -237,7 +237,7 @@ public class ItemPlayerAnimations {
             return ValidationResult.error("Buffer too small: expected at least 103 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int idOffset = buffer.getIntLE(offset + 91);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -258,7 +258,7 @@ public class ItemPlayerAnimations {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int animationsOffset = buffer.getIntLE(offset + 95);
             if (animationsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Animations");
@@ -290,7 +290,7 @@ public class ItemPlayerAnimations {
                 pos += ItemAnimation.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int cameraOffset = buffer.getIntLE(offset + 99);
             if (cameraOffset < 0) {
                 return ValidationResult.error("Invalid offset for Camera");

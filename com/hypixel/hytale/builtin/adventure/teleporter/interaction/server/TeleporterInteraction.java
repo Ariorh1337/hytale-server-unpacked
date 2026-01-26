@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.modules.entity.teleport.TeleportRecord;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
@@ -34,6 +35,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.time.Duration;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -45,6 +47,7 @@ extends SimpleBlockInteraction {
     }, interaction -> interaction.particle, (interaction, parent) -> {
         interaction.particle = parent.particle;
     }).documentation("The particle to play on the entity when teleporting.").add()).build();
+    private static final Duration TELEPORT_GLOBAL_COOLDOWN = Duration.ofMillis(250L);
     @Nullable
     private String particle;
 
@@ -56,6 +59,8 @@ extends SimpleBlockInteraction {
 
     @Override
     protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i targetBlock, @Nonnull CooldownHandler cooldownHandler) {
+        BlockType variantBlockType;
+        String currentState;
         long chunkIndex;
         ChunkStore chunkStore = world.getChunkStore();
         BlockComponentChunk blockComponentChunk = chunkStore.getChunkComponent(chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.getX(), targetBlock.getZ()), BlockComponentChunk.getComponentType());
@@ -88,20 +93,20 @@ extends SimpleBlockInteraction {
         if (archetype.contains(Teleport.getComponentType()) || archetype.contains(PendingTeleport.getComponentType())) {
             return;
         }
-        if (!teleporter.isValid()) {
-            BlockType variantBlockType;
-            WorldChunk worldChunkComponent = chunkRef.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
-            assert (worldChunkComponent != null);
-            BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
-            String currentState = blockType.getStateForBlock(blockType);
-            if (!"default".equals(currentState) && (variantBlockType = blockType.getBlockForState("default")) != null) {
-                worldChunkComponent.setBlockInteractionState(targetBlock.x, targetBlock.y, targetBlock.z, variantBlockType, "default", true);
-            }
+        WorldChunk worldChunkComponent = chunkRef.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
+        assert (worldChunkComponent != null);
+        BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
+        if (!teleporter.isValid() && !"default".equals(currentState = blockType.getStateForBlock(blockType)) && (variantBlockType = blockType.getBlockForState("default")) != null) {
+            worldChunkComponent.setBlockInteractionState(targetBlock.x, targetBlock.y, targetBlock.z, variantBlockType, "default", true);
         }
         TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
         assert (transformComponent != null);
         Teleport teleportComponent = teleporter.toTeleport(transformComponent.getPosition(), transformComponent.getRotation(), targetBlock);
         if (teleportComponent == null) {
+            return;
+        }
+        TeleportRecord recorder = commandBuffer.getComponent(ref, TeleportRecord.getComponentType());
+        if (recorder != null && !recorder.hasElapsedSinceLastTeleport(TELEPORT_GLOBAL_COOLDOWN)) {
             return;
         }
         commandBuffer.addComponent(ref, Teleport.getComponentType(), teleportComponent);

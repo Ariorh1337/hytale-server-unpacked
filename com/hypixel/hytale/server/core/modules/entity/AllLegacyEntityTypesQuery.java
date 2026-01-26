@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 @Deprecated
 public class AllLegacyEntityTypesQuery
 implements Query<EntityStore> {
+    @Nonnull
     public static final AllLegacyEntityTypesQuery INSTANCE = new AllLegacyEntityTypesQuery();
 
     @Override
@@ -27,7 +28,7 @@ implements Query<EntityStore> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<EntityStore> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<EntityStore> registry) {
     }
 
     @Override

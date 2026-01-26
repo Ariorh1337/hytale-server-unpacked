@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 public class UpdateAssetsCommand
 extends AbstractCommandCollection {
     public UpdateAssetsCommand() {
-        super("assets", "server.commands.update.assets.desc");
+        super("assets", "server.commands.git.assets.desc");
         this.addSubCommand(new UpdateAssetsStatusCommand());
         this.addSubCommand(new UpdateAssetsResetCommand());
         this.addSubCommand(new UpdateAssetsPullCommand());
@@ -31,7 +31,7 @@ extends AbstractCommandCollection {
     private static class UpdateAssetsStatusCommand
     extends UpdateAssetsGitCommand {
         public UpdateAssetsStatusCommand() {
-            super("status", "server.commands.update.assets.status.desc");
+            super("status", "server.commands.git.assets.status.desc");
         }
 
         @Override
@@ -44,7 +44,7 @@ extends AbstractCommandCollection {
     private static class UpdateAssetsResetCommand
     extends UpdateAssetsGitCommand {
         public UpdateAssetsResetCommand() {
-            super("reset", "server.commands.update.assets.reset.desc");
+            super("reset", "server.commands.git.assets.reset.desc");
         }
 
         @Override
@@ -57,7 +57,7 @@ extends AbstractCommandCollection {
     private static class UpdateAssetsPullCommand
     extends UpdateAssetsGitCommand {
         public UpdateAssetsPullCommand() {
-            super("pull", "server.commands.update.assets.pull.desc");
+            super("pull", "server.commands.git.assets.pull.desc");
         }
 
         @Override
@@ -102,27 +102,27 @@ extends AbstractCommandCollection {
                 CharSequence[] processCommand = this.getCommand(gitPath);
                 String commandDisplay = String.join((CharSequence)" ", processCommand);
                 try {
-                    context.sendMessage(Message.translation("server.commands.update.running").param("cmd", commandDisplay));
+                    context.sendMessage(Message.translation("server.commands.git.running").param("cmd", commandDisplay));
                     Process process = new ProcessBuilder((String[])processCommand).directory(gitPath.toFile()).start();
                     try {
                         String line;
                         process.waitFor();
                         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
                         while ((line = reader.readLine()) != null) {
-                            context.sendMessage(Message.translation("server.commands.update.runningStdOut").param("cmd", commandDisplay).param("line", line));
+                            context.sendMessage(Message.translation("server.commands.git.runningStdOut").param("cmd", commandDisplay).param("line", line));
                         }
                         reader = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
                         while ((line = reader.readLine()) != null) {
-                            context.sendMessage(Message.translation("server.commands.update.runningStdErr").param("cmd", commandDisplay).param("line", line));
+                            context.sendMessage(Message.translation("server.commands.git.runningStdErr").param("cmd", commandDisplay).param("line", line));
                         }
-                        context.sendMessage(Message.translation("server.commands.update.done").param("cmd", commandDisplay));
+                        context.sendMessage(Message.translation("server.commands.git.done").param("cmd", commandDisplay));
                     }
                     catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
                 }
                 catch (IOException e) {
-                    context.sendMessage(Message.translation("server.commands.update.failed").param("cmd", commandDisplay).param("msg", e.getMessage()));
+                    context.sendMessage(Message.translation("server.commands.git.failed").param("cmd", commandDisplay).param("msg", e.getMessage()));
                 }
             });
         }

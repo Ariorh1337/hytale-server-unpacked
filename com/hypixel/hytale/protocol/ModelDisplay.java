@@ -53,16 +53,16 @@ public class ModelDisplay {
     public static ModelDisplay deserialize(@Nonnull ByteBuf buf, int offset) {
         ModelDisplay obj = new ModelDisplay();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.translation = Vector3f.deserialize(buf, offset + 1);
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.rotation = Vector3f.deserialize(buf, offset + 13);
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 4) != 0) {
             obj.scale = Vector3f.deserialize(buf, offset + 25);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos0 = offset + 45 + buf.getIntLE(offset + 37);
             int nodeLen = VarInt.peek(buf, varPos0);
             if (nodeLen < 0) {
@@ -73,7 +73,7 @@ public class ModelDisplay {
             }
             obj.node = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos1 = offset + 45 + buf.getIntLE(offset + 41);
             int attachToLen = VarInt.peek(buf, varPos1);
             if (attachToLen < 0) {
@@ -91,7 +91,7 @@ public class ModelDisplay {
         int sl;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 45;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 37);
             int pos0 = offset + 45 + fieldOffset0;
             sl = VarInt.peek(buf, pos0);
@@ -99,7 +99,7 @@ public class ModelDisplay {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 41);
             int pos1 = offset + 45 + fieldOffset1;
             sl = VarInt.peek(buf, pos1);
@@ -113,19 +113,19 @@ public class ModelDisplay {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.node != null) {
+        if (this.translation != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.attachTo != null) {
+        if (this.rotation != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.translation != null) {
+        if (this.scale != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.rotation != null) {
+        if (this.node != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.scale != null) {
+        if (this.attachTo != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
         buf.writeByte(nullBits);
@@ -180,7 +180,7 @@ public class ModelDisplay {
             return ValidationResult.error("Buffer too small: expected at least 45 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int nodeOffset = buffer.getIntLE(offset + 37);
             if (nodeOffset < 0) {
                 return ValidationResult.error("Invalid offset for Node");
@@ -201,7 +201,7 @@ public class ModelDisplay {
                 return ValidationResult.error("Buffer overflow reading Node");
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int attachToOffset = buffer.getIntLE(offset + 41);
             if (attachToOffset < 0) {
                 return ValidationResult.error("Invalid offset for AttachTo");

@@ -100,28 +100,28 @@ public class AmbienceFXConditions {
         obj.never = buf.getByte(offset + 2) != 0;
         obj.environmentTagPatternIndex = buf.getIntLE(offset + 3);
         obj.weatherTagPatternIndex = buf.getIntLE(offset + 7);
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[0] & 1) != 0) {
             obj.altitude = Range.deserialize(buf, offset + 11);
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[0] & 2) != 0) {
             obj.walls = Rangeb.deserialize(buf, offset + 19);
         }
         obj.roof = buf.getByte(offset + 21) != 0;
         obj.roofMaterialTagPatternIndex = buf.getIntLE(offset + 22);
         boolean bl = obj.floor = buf.getByte(offset + 26) != 0;
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             obj.sunLightLevel = Rangeb.deserialize(buf, offset + 27);
         }
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             obj.torchLightLevel = Rangeb.deserialize(buf, offset + 29);
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             obj.globalLightLevel = Rangeb.deserialize(buf, offset + 31);
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             obj.dayTime = Rangef.deserialize(buf, offset + 33);
         }
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int varPos0 = offset + 57 + buf.getIntLE(offset + 41);
             int environmentIndicesCount = VarInt.peek(buf, varPos0);
             if (environmentIndicesCount < 0) {
@@ -139,7 +139,7 @@ public class AmbienceFXConditions {
                 obj.environmentIndices[i] = buf.getIntLE(varPos0 + varIntLen + i * 4);
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int varPos1 = offset + 57 + buf.getIntLE(offset + 45);
             int weatherIndicesCount = VarInt.peek(buf, varPos1);
             if (weatherIndicesCount < 0) {
@@ -157,7 +157,7 @@ public class AmbienceFXConditions {
                 obj.weatherIndices[i] = buf.getIntLE(varPos1 + varIntLen + i * 4);
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int varPos2 = offset + 57 + buf.getIntLE(offset + 49);
             int fluidFXIndicesCount = VarInt.peek(buf, varPos2);
             if (fluidFXIndicesCount < 0) {
@@ -175,7 +175,7 @@ public class AmbienceFXConditions {
                 obj.fluidFXIndices[i] = buf.getIntLE(varPos2 + varIntLen + i * 4);
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int varPos3 = offset + 57 + buf.getIntLE(offset + 53);
             int surroundingBlockSoundSetsCount = VarInt.peek(buf, varPos3);
             if (surroundingBlockSoundSetsCount < 0) {
@@ -202,7 +202,7 @@ public class AmbienceFXConditions {
         int arrLen;
         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
         int maxEnd = 57;
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 41);
             int pos0 = offset + 57 + fieldOffset0;
             arrLen = VarInt.peek(buf, pos0);
@@ -210,7 +210,7 @@ public class AmbienceFXConditions {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 45);
             int pos1 = offset + 57 + fieldOffset1;
             arrLen = VarInt.peek(buf, pos1);
@@ -218,7 +218,7 @@ public class AmbienceFXConditions {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 49);
             int pos2 = offset + 57 + fieldOffset2;
             arrLen = VarInt.peek(buf, pos2);
@@ -226,7 +226,7 @@ public class AmbienceFXConditions {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 53);
             int pos3 = offset + 57 + fieldOffset3;
             arrLen = VarInt.peek(buf, pos3);
@@ -244,34 +244,34 @@ public class AmbienceFXConditions {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte[] nullBits = new byte[2];
-        if (this.environmentIndices != null) {
+        if (this.altitude != null) {
             nullBits[0] = (byte)(nullBits[0] | 1);
         }
-        if (this.weatherIndices != null) {
+        if (this.walls != null) {
             nullBits[0] = (byte)(nullBits[0] | 2);
         }
-        if (this.fluidFXIndices != null) {
+        if (this.sunLightLevel != null) {
             nullBits[0] = (byte)(nullBits[0] | 4);
         }
-        if (this.surroundingBlockSoundSets != null) {
+        if (this.torchLightLevel != null) {
             nullBits[0] = (byte)(nullBits[0] | 8);
         }
-        if (this.altitude != null) {
+        if (this.globalLightLevel != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x10);
         }
-        if (this.walls != null) {
+        if (this.dayTime != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x20);
         }
-        if (this.sunLightLevel != null) {
+        if (this.environmentIndices != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x40);
         }
-        if (this.torchLightLevel != null) {
+        if (this.weatherIndices != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x80);
         }
-        if (this.globalLightLevel != null) {
+        if (this.fluidFXIndices != null) {
             nullBits[1] = (byte)(nullBits[1] | 1);
         }
-        if (this.dayTime != null) {
+        if (this.surroundingBlockSoundSets != null) {
             nullBits[1] = (byte)(nullBits[1] | 2);
         }
         buf.writeBytes(nullBits);
@@ -393,7 +393,7 @@ public class AmbienceFXConditions {
             return ValidationResult.error("Buffer too small: expected at least 57 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int environmentIndicesOffset = buffer.getIntLE(offset + 41);
             if (environmentIndicesOffset < 0) {
                 return ValidationResult.error("Invalid offset for EnvironmentIndices");
@@ -414,7 +414,7 @@ public class AmbienceFXConditions {
                 return ValidationResult.error("Buffer overflow reading EnvironmentIndices");
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int weatherIndicesOffset = buffer.getIntLE(offset + 45);
             if (weatherIndicesOffset < 0) {
                 return ValidationResult.error("Invalid offset for WeatherIndices");
@@ -435,7 +435,7 @@ public class AmbienceFXConditions {
                 return ValidationResult.error("Buffer overflow reading WeatherIndices");
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int fluidFXIndicesOffset = buffer.getIntLE(offset + 49);
             if (fluidFXIndicesOffset < 0) {
                 return ValidationResult.error("Invalid offset for FluidFXIndices");
@@ -456,7 +456,7 @@ public class AmbienceFXConditions {
                 return ValidationResult.error("Buffer overflow reading FluidFXIndices");
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int surroundingBlockSoundSetsOffset = buffer.getIntLE(offset + 53);
             if (surroundingBlockSoundSetsOffset < 0) {
                 return ValidationResult.error("Invalid offset for SurroundingBlockSoundSets");

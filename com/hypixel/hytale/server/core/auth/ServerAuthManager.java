@@ -9,6 +9,7 @@ import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.AuthCredentialStoreProvider;
 import com.hypixel.hytale.server.core.auth.CertificateUtil;
 import com.hypixel.hytale.server.core.auth.DefaultAuthCredentialStore;
@@ -63,6 +64,7 @@ public class ServerAuthManager {
     });
     private ScheduledFuture<?> refreshTask;
     private Runnable cancelActiveFlow;
+    private volatile String pendingFatalError;
 
     private ServerAuthManager() {
     }
@@ -146,7 +148,8 @@ public class ServerAuthManager {
                 this.gameSession.set(session);
                 hasCliTokens = true;
             } else {
-                LOGGER.at(Level.WARNING).log("Token validation failed. Server starting unauthenticated. Use /auth login to authenticate.");
+                this.pendingFatalError = "Token validation failed. Provided tokens may be expired, tampered, or malformed. Remove invalid tokens or provide valid ones.";
+                LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
             }
         }
         if (hasCliTokens) {
@@ -163,6 +166,13 @@ public class ServerAuthManager {
         }
         LOGGER.at(Level.INFO).log("Server session ID: %s", this.serverSessionId);
         LOGGER.at(Level.FINE).log("ServerAuthManager initialized - session token: %s, identity token: %s, auth mode: %s", this.hasSessionToken() ? "present" : "missing", this.hasIdentityToken() ? "present" : "missing", (Object)this.authMode);
+    }
+
+    public void checkPendingFatalError() {
+        if (this.pendingFatalError == null) {
+            return;
+        }
+        HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(this.pendingFatalError));
     }
 
     public void initializeCredentialStore() {
@@ -185,13 +195,13 @@ public class ServerAuthManager {
     }
 
     public void shutdown() {
+        String currentSessionToken;
         this.cancelActiveFlow();
         if (this.refreshTask != null) {
             this.refreshTask.cancel(false);
         }
         this.refreshScheduler.shutdown();
-        String currentSessionToken = this.getSessionToken();
-        if (currentSessionToken != null && !currentSessionToken.isEmpty()) {
+        if (this.isSingleplayer() && (currentSessionToken = this.getSessionToken()) != null && !currentSessionToken.isEmpty()) {
             if (this.sessionServiceClient == null) {
                 this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
             }
@@ -245,6 +255,15 @@ public class ServerAuthManager {
     public boolean hasSessionToken() {
         SessionServiceClient.GameSessionResponse session = this.gameSession.get();
         return session != null && session.sessionToken != null;
+    }
+
+    @Nullable
+    public String getOAuthAccessToken() {
+        if (!this.refreshOAuthTokens()) {
+            return null;
+        }
+        IAuthCredentialStore store = this.credentialStore.get();
+        return store.getTokens().accessToken();
     }
 
     public void setServerCertificate(@Nonnull X509Certificate certificate) {
@@ -449,7 +468,9 @@ public class ServerAuthManager {
     }
 
     private boolean validateInitialTokens(@Nullable String sessionToken, @Nullable String identityToken) {
+        UUID tokenUuid;
         Object claims;
+        String expectedOwnerName;
         if (sessionToken == null && identityToken == null) {
             return false;
         }
@@ -458,6 +479,9 @@ public class ServerAuthManager {
         }
         JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.hytale.com", "");
         boolean valid = true;
+        OptionSet optionSet = Options.getOptionSet();
+        UUID expectedOwnerUuid = optionSet != null && optionSet.has(Options.OWNER_UUID) ? optionSet.valueOf(Options.OWNER_UUID) : null;
+        String string = expectedOwnerName = optionSet != null && optionSet.has(Options.OWNER_NAME) ? optionSet.valueOf(Options.OWNER_NAME) : null;
         if (identityToken != null) {
             claims = validator.validateIdentityToken(identityToken);
             if (claims == null) {
@@ -467,7 +491,17 @@ public class ServerAuthManager {
                 LOGGER.at(Level.WARNING).log("Identity token missing required scope: expected %s, got %s", (Object)"hytale:server", (Object)((JWTValidator.IdentityTokenClaims)claims).scope);
                 valid = false;
             } else {
-                LOGGER.at(Level.INFO).log("Identity token validated for %s (%s)", (Object)((JWTValidator.IdentityTokenClaims)claims).username, (Object)((JWTValidator.IdentityTokenClaims)claims).subject);
+                if (!(expectedOwnerUuid == null || (tokenUuid = ((JWTValidator.IdentityTokenClaims)claims).getSubjectAsUUID()) != null && tokenUuid.equals(expectedOwnerUuid))) {
+                    LOGGER.at(Level.WARNING).log("Identity token UUID mismatch: token has %s, expected %s", (Object)((JWTValidator.IdentityTokenClaims)claims).subject, (Object)expectedOwnerUuid);
+                    valid = false;
+                }
+                if (expectedOwnerName != null && ((JWTValidator.IdentityTokenClaims)claims).username != null && !((JWTValidator.IdentityTokenClaims)claims).username.equals(expectedOwnerName)) {
+                    LOGGER.at(Level.WARNING).log("Identity token username mismatch: token has '%s', expected '%s'", (Object)((JWTValidator.IdentityTokenClaims)claims).username, (Object)expectedOwnerName);
+                    valid = false;
+                }
+                if (valid) {
+                    LOGGER.at(Level.INFO).log("Identity token validated for %s (%s)", (Object)((JWTValidator.IdentityTokenClaims)claims).username, (Object)((JWTValidator.IdentityTokenClaims)claims).subject);
+                }
             }
         }
         if (sessionToken != null) {
@@ -476,7 +510,13 @@ public class ServerAuthManager {
                 LOGGER.at(Level.WARNING).log("Session token validation failed");
                 valid = false;
             } else {
-                LOGGER.at(Level.INFO).log("Session token validated");
+                if (!(expectedOwnerUuid == null || (tokenUuid = ((JWTValidator.SessionTokenClaims)claims).getSubjectAsUUID()) != null && tokenUuid.equals(expectedOwnerUuid))) {
+                    LOGGER.at(Level.WARNING).log("Session token UUID mismatch: token has %s, expected %s", (Object)((JWTValidator.SessionTokenClaims)claims).subject, (Object)expectedOwnerUuid);
+                    valid = false;
+                }
+                if (valid) {
+                    LOGGER.at(Level.INFO).log("Session token validated");
+                }
             }
         }
         return valid;

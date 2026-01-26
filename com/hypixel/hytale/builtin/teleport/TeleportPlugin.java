@@ -37,7 +37,6 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.events.AddWorldEvent;
@@ -45,6 +44,7 @@ import com.hypixel.hytale.server.core.universe.world.events.AllWorldsLoadedEvent
 import com.hypixel.hytale.server.core.universe.world.events.ChunkPreLoadProcessEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import com.hypixel.hytale.server.core.util.BsonUtil;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import java.io.IOException;
@@ -252,11 +252,12 @@ extends JavaPlugin {
         public static final WarpMarkerProvider INSTANCE = new WarpMarkerProvider();
 
         @Override
-        public void update(@Nonnull World world, @Nonnull GameplayConfig gameplayConfig, @Nonnull WorldMapTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
+        public void update(@Nonnull World world, @Nonnull MapMarkerTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
             Map<String, Warp> warps = TeleportPlugin.get().getWarps();
             if (warps.isEmpty()) {
                 return;
             }
+            GameplayConfig gameplayConfig = world.getGameplayConfig();
             if (!gameplayConfig.getWorldMapConfig().isDisplayWarps()) {
                 return;
             }

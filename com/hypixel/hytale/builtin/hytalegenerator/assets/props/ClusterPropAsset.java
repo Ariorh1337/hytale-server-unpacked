@@ -7,6 +7,7 @@ import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.ConstantCurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.CurveAsset;
@@ -25,6 +26,8 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector3i;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class ClusterPropAsset
@@ -57,6 +60,17 @@ extends PropAsset {
         }
         WeightedMap<Prop> weightedMap = new WeightedMap<Prop>();
         for (WeightedPropAsset entry : this.weightedPropAssets) {
+            Prop columnProp = entry.propAsset.build(argument);
+            Vector3i readSize = columnProp.getReadBounds_voxelGrid().getSize();
+            Vector3i writeSize = columnProp.getWriteBounds_voxelGrid().getSize();
+            if (readSize.x != 1 || readSize.z != 1) {
+                LoggerUtil.getLogger().log(Level.WARNING, "Cluster Prop child has a read area larger than a column.");
+                continue;
+            }
+            if (writeSize.x != 1 || writeSize.z != 1) {
+                LoggerUtil.getLogger().log(Level.WARNING, "Cluster Prop child has a write area larger than a column.");
+                continue;
+            }
             weightedMap.add(entry.propAsset.build(argument), entry.weight);
         }
         Pattern pattern = this.patternAsset == null ? Pattern.yesPattern() : this.patternAsset.build(PatternAsset.argumentFrom(argument));

@@ -31,7 +31,12 @@ extends ToolOperation {
 
     @Override
     public void execute(ComponentAccessor<EntityStore> componentAccessor) {
-        this.builderState.tint(this.x, this.y, this.z, this.tintColor, this.shape, this.shapeRange, componentAccessor);
+        this.builderState.tint(this.x, this.y, this.z, this.tintColor, this.shape, this.shapeRange, this.shapeHeight, componentAccessor);
+    }
+
+    @Override
+    public void executeAt(int posX, int posY, int posZ, ComponentAccessor<EntityStore> componentAccessor) {
+        this.builderState.tint(posX, posY, posZ, this.tintColor, this.shape, this.shapeRange, this.shapeHeight, componentAccessor);
     }
 
     @Override

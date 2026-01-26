@@ -159,17 +159,17 @@ public class BuilderToolBrushData {
         if ((nullBits[1] & 2) != 0) {
             obj.mirrorAxis = BuilderToolBrushAxisArg.deserialize(buf, offset + 45);
         }
-        if ((nullBits[2] & 8) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             obj.useMaskCommands = BuilderToolBoolArg.deserialize(buf, offset + 46);
         }
-        if ((nullBits[2] & 0x10) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             obj.invertMask = BuilderToolBoolArg.deserialize(buf, offset + 47);
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int varPos0 = offset + 84 + buf.getIntLE(offset + 48);
             obj.material = BuilderToolBlockArg.deserialize(buf, varPos0);
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int varPos1 = offset + 84 + buf.getIntLE(offset + 52);
             int favoriteMaterialsCount = VarInt.peek(buf, varPos1);
             if (favoriteMaterialsCount < 0) {
@@ -189,31 +189,31 @@ public class BuilderToolBrushData {
                 elemPos += BuilderToolBlockArg.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits[1] & 0x10) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int varPos2 = offset + 84 + buf.getIntLE(offset + 56);
             obj.mask = BuilderToolMaskArg.deserialize(buf, varPos2);
         }
-        if ((nullBits[1] & 0x20) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int varPos3 = offset + 84 + buf.getIntLE(offset + 60);
             obj.maskAbove = BuilderToolMaskArg.deserialize(buf, varPos3);
         }
-        if ((nullBits[1] & 0x40) != 0) {
+        if ((nullBits[2] & 1) != 0) {
             int varPos4 = offset + 84 + buf.getIntLE(offset + 64);
             obj.maskNot = BuilderToolMaskArg.deserialize(buf, varPos4);
         }
-        if ((nullBits[1] & 0x80) != 0) {
+        if ((nullBits[2] & 2) != 0) {
             int varPos5 = offset + 84 + buf.getIntLE(offset + 68);
             obj.maskBelow = BuilderToolMaskArg.deserialize(buf, varPos5);
         }
-        if ((nullBits[2] & 1) != 0) {
+        if ((nullBits[2] & 4) != 0) {
             int varPos6 = offset + 84 + buf.getIntLE(offset + 72);
             obj.maskAdjacent = BuilderToolMaskArg.deserialize(buf, varPos6);
         }
-        if ((nullBits[2] & 2) != 0) {
+        if ((nullBits[2] & 8) != 0) {
             int varPos7 = offset + 84 + buf.getIntLE(offset + 76);
             obj.maskNeighbor = BuilderToolMaskArg.deserialize(buf, varPos7);
         }
-        if ((nullBits[2] & 4) != 0) {
+        if ((nullBits[2] & 0x10) != 0) {
             int varPos8 = offset + 84 + buf.getIntLE(offset + 80);
             int maskCommandsCount = VarInt.peek(buf, varPos8);
             if (maskCommandsCount < 0) {
@@ -241,14 +241,14 @@ public class BuilderToolBrushData {
         int arrLen;
         byte[] nullBits = PacketIO.readBytes(buf, offset, 3);
         int maxEnd = 84;
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 48);
             int pos0 = offset + 84 + fieldOffset0;
             if ((pos0 += BuilderToolBlockArg.computeBytesConsumed(buf, pos0)) - offset > maxEnd) {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 52);
             int pos1 = offset + 84 + fieldOffset1;
             arrLen = VarInt.peek(buf, pos1);
@@ -260,49 +260,49 @@ public class BuilderToolBrushData {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits[1] & 0x10) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 56);
             int pos2 = offset + 84 + fieldOffset2;
             if ((pos2 += BuilderToolMaskArg.computeBytesConsumed(buf, pos2)) - offset > maxEnd) {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits[1] & 0x20) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 60);
             int pos3 = offset + 84 + fieldOffset3;
             if ((pos3 += BuilderToolMaskArg.computeBytesConsumed(buf, pos3)) - offset > maxEnd) {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits[1] & 0x40) != 0) {
+        if ((nullBits[2] & 1) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 64);
             int pos4 = offset + 84 + fieldOffset4;
             if ((pos4 += BuilderToolMaskArg.computeBytesConsumed(buf, pos4)) - offset > maxEnd) {
                 maxEnd = pos4 - offset;
             }
         }
-        if ((nullBits[1] & 0x80) != 0) {
+        if ((nullBits[2] & 2) != 0) {
             int fieldOffset5 = buf.getIntLE(offset + 68);
             int pos5 = offset + 84 + fieldOffset5;
             if ((pos5 += BuilderToolMaskArg.computeBytesConsumed(buf, pos5)) - offset > maxEnd) {
                 maxEnd = pos5 - offset;
             }
         }
-        if ((nullBits[2] & 1) != 0) {
+        if ((nullBits[2] & 4) != 0) {
             int fieldOffset6 = buf.getIntLE(offset + 72);
             int pos6 = offset + 84 + fieldOffset6;
             if ((pos6 += BuilderToolMaskArg.computeBytesConsumed(buf, pos6)) - offset > maxEnd) {
                 maxEnd = pos6 - offset;
             }
         }
-        if ((nullBits[2] & 2) != 0) {
+        if ((nullBits[2] & 8) != 0) {
             int fieldOffset7 = buf.getIntLE(offset + 76);
             int pos7 = offset + 84 + fieldOffset7;
             if ((pos7 += BuilderToolMaskArg.computeBytesConsumed(buf, pos7)) - offset > maxEnd) {
                 maxEnd = pos7 - offset;
             }
         }
-        if ((nullBits[2] & 4) != 0) {
+        if ((nullBits[2] & 0x10) != 0) {
             int fieldOffset8 = buf.getIntLE(offset + 80);
             int pos8 = offset + 84 + fieldOffset8;
             arrLen = VarInt.peek(buf, pos8);
@@ -350,37 +350,37 @@ public class BuilderToolBrushData {
         if (this.mirrorAxis != null) {
             nullBits[1] = (byte)(nullBits[1] | 2);
         }
-        if (this.material != null) {
+        if (this.useMaskCommands != null) {
             nullBits[1] = (byte)(nullBits[1] | 4);
         }
-        if (this.favoriteMaterials != null) {
+        if (this.invertMask != null) {
             nullBits[1] = (byte)(nullBits[1] | 8);
         }
-        if (this.mask != null) {
+        if (this.material != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x10);
         }
-        if (this.maskAbove != null) {
+        if (this.favoriteMaterials != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x20);
         }
-        if (this.maskNot != null) {
+        if (this.mask != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x40);
         }
-        if (this.maskBelow != null) {
+        if (this.maskAbove != null) {
             nullBits[1] = (byte)(nullBits[1] | 0x80);
         }
-        if (this.maskAdjacent != null) {
+        if (this.maskNot != null) {
             nullBits[2] = (byte)(nullBits[2] | 1);
         }
-        if (this.maskNeighbor != null) {
+        if (this.maskBelow != null) {
             nullBits[2] = (byte)(nullBits[2] | 2);
         }
-        if (this.maskCommands != null) {
+        if (this.maskAdjacent != null) {
             nullBits[2] = (byte)(nullBits[2] | 4);
         }
-        if (this.useMaskCommands != null) {
+        if (this.maskNeighbor != null) {
             nullBits[2] = (byte)(nullBits[2] | 8);
         }
-        if (this.invertMask != null) {
+        if (this.maskCommands != null) {
             nullBits[2] = (byte)(nullBits[2] | 0x10);
         }
         buf.writeBytes(nullBits);
@@ -579,7 +579,7 @@ public class BuilderToolBrushData {
             return ValidationResult.error("Buffer too small: expected at least 84 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 3);
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 0x10) != 0) {
             int materialOffset = buffer.getIntLE(offset + 48);
             if (materialOffset < 0) {
                 return ValidationResult.error("Invalid offset for Material");
@@ -594,7 +594,7 @@ public class BuilderToolBrushData {
             }
             pos += BuilderToolBlockArg.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[1] & 0x20) != 0) {
             int favoriteMaterialsOffset = buffer.getIntLE(offset + 52);
             if (favoriteMaterialsOffset < 0) {
                 return ValidationResult.error("Invalid offset for FavoriteMaterials");
@@ -619,7 +619,7 @@ public class BuilderToolBrushData {
                 pos += BuilderToolBlockArg.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits[1] & 0x10) != 0) {
+        if ((nullBits[1] & 0x40) != 0) {
             int maskOffset = buffer.getIntLE(offset + 56);
             if (maskOffset < 0) {
                 return ValidationResult.error("Invalid offset for Mask");
@@ -634,7 +634,7 @@ public class BuilderToolBrushData {
             }
             pos += BuilderToolMaskArg.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[1] & 0x20) != 0) {
+        if ((nullBits[1] & 0x80) != 0) {
             int maskAboveOffset = buffer.getIntLE(offset + 60);
             if (maskAboveOffset < 0) {
                 return ValidationResult.error("Invalid offset for MaskAbove");
@@ -649,7 +649,7 @@ public class BuilderToolBrushData {
             }
             pos += BuilderToolMaskArg.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[1] & 0x40) != 0) {
+        if ((nullBits[2] & 1) != 0) {
             int maskNotOffset = buffer.getIntLE(offset + 64);
             if (maskNotOffset < 0) {
                 return ValidationResult.error("Invalid offset for MaskNot");
@@ -664,7 +664,7 @@ public class BuilderToolBrushData {
             }
             pos += BuilderToolMaskArg.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[1] & 0x80) != 0) {
+        if ((nullBits[2] & 2) != 0) {
             int maskBelowOffset = buffer.getIntLE(offset + 68);
             if (maskBelowOffset < 0) {
                 return ValidationResult.error("Invalid offset for MaskBelow");
@@ -679,7 +679,7 @@ public class BuilderToolBrushData {
             }
             pos += BuilderToolMaskArg.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[2] & 1) != 0) {
+        if ((nullBits[2] & 4) != 0) {
             int maskAdjacentOffset = buffer.getIntLE(offset + 72);
             if (maskAdjacentOffset < 0) {
                 return ValidationResult.error("Invalid offset for MaskAdjacent");
@@ -694,7 +694,7 @@ public class BuilderToolBrushData {
             }
             pos += BuilderToolMaskArg.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[2] & 2) != 0) {
+        if ((nullBits[2] & 8) != 0) {
             int maskNeighborOffset = buffer.getIntLE(offset + 76);
             if (maskNeighborOffset < 0) {
                 return ValidationResult.error("Invalid offset for MaskNeighbor");
@@ -709,7 +709,7 @@ public class BuilderToolBrushData {
             }
             pos += BuilderToolMaskArg.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[2] & 4) != 0) {
+        if ((nullBits[2] & 0x10) != 0) {
             int maskCommandsOffset = buffer.getIntLE(offset + 80);
             if (maskCommandsOffset < 0) {
                 return ValidationResult.error("Invalid offset for MaskCommands");

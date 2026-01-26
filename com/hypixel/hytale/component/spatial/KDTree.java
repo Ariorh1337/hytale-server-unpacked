@@ -389,7 +389,7 @@ implements SpatialStructure<T> {
         this._internal_ordered3DAxis(results, primary, center, xSearchRadius, ySearchRadius, zSearchRadius, newDepth);
         double plane = KDTree.get(node.vector, axis);
         double component = KDTree.get(center, axis);
-        double d = axis == 0 ? xSearchRadius : (radius = axis == 1 ? ySearchRadius : zSearchRadius);
+        double d = axis == 0 ? xSearchRadius : (radius = axis == 1 ? zSearchRadius : ySearchRadius);
         if (Math.abs(component - plane) <= radius) {
             this._internal_ordered3DAxis(results, secondary, center, xSearchRadius, ySearchRadius, zSearchRadius, newDepth);
         }

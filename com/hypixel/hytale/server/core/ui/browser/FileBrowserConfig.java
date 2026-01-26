@@ -8,10 +8,11 @@ import com.hypixel.hytale.server.core.ui.browser.FileListProvider;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public record FileBrowserConfig(@Nonnull String listElementId, @Nullable String rootSelectorId, @Nullable String searchInputId, @Nullable String currentPathId, @Nonnull List<RootEntry> roots, @Nonnull Set<String> allowedExtensions, boolean enableRootSelector, boolean enableSearch, boolean enableDirectoryNav, boolean enableMultiSelect, int maxResults, @Nullable FileListProvider customProvider) {
+public record FileBrowserConfig(@Nonnull String listElementId, @Nullable String rootSelectorId, @Nullable String searchInputId, @Nullable String currentPathId, @Nonnull List<RootEntry> roots, @Nonnull Set<String> allowedExtensions, boolean enableRootSelector, boolean enableSearch, boolean enableDirectoryNav, boolean enableMultiSelect, int maxResults, @Nullable FileListProvider customProvider, boolean assetPackMode, @Nullable String assetPackSubPath, @Nullable Predicate<Path> terminalDirectoryPredicate) {
     public static Builder builder() {
         return new Builder();
     }
@@ -29,6 +30,9 @@ public record FileBrowserConfig(@Nonnull String listElementId, @Nullable String 
         private boolean enableMultiSelect = false;
         private int maxResults = 50;
         private FileListProvider customProvider = null;
+        private boolean assetPackMode = false;
+        private String assetPackSubPath = null;
+        private Predicate<Path> terminalDirectoryPredicate = null;
 
         public Builder listElementId(@Nonnull String listElementId) {
             this.listElementId = listElementId;
@@ -95,8 +99,22 @@ public record FileBrowserConfig(@Nonnull String listElementId, @Nullable String 
             return this;
         }
 
+        public Builder assetPackMode(boolean enable, @Nullable String subPath) {
+            if (enable && subPath == null) {
+                throw new IllegalArgumentException("assetPackSubPath cannot be null when assetPackMode is enabled");
+            }
+            this.assetPackMode = enable;
+            this.assetPackSubPath = subPath;
+            return this;
+        }
+
+        public Builder terminalDirectoryPredicate(@Nullable Predicate<Path> predicate) {
+            this.terminalDirectoryPredicate = predicate;
+            return this;
+        }
+
         public FileBrowserConfig build() {
-            return new FileBrowserConfig(this.listElementId, this.rootSelectorId, this.searchInputId, this.currentPathId, this.roots, this.allowedExtensions, this.enableRootSelector, this.enableSearch, this.enableDirectoryNav, this.enableMultiSelect, this.maxResults, this.customProvider);
+            return new FileBrowserConfig(this.listElementId, this.rootSelectorId, this.searchInputId, this.currentPathId, this.roots, this.allowedExtensions, this.enableRootSelector, this.enableSearch, this.enableDirectoryNav, this.enableMultiSelect, this.maxResults, this.customProvider, this.assetPackMode, this.assetPackSubPath, this.terminalDirectoryPredicate);
         }
     }
 

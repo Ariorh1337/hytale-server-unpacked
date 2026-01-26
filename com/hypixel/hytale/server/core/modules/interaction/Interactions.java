@@ -21,10 +21,14 @@ import javax.annotation.Nullable;
 public class Interactions
 implements Component<EntityStore> {
     @Nonnull
-    public static final BuilderCodec<Interactions> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(Interactions.class, Interactions::new).appendInherited(new KeyedCodec("Interactions", new EnumMapCodec<InteractionType, String>(InteractionType.class, Codec.STRING, false)), (o, v) -> {
+    public static final BuilderCodec<Interactions> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Interactions.class, Interactions::new).appendInherited(new KeyedCodec("Interactions", new EnumMapCodec<InteractionType, String>(InteractionType.class, Codec.STRING, false)), (o, v) -> {
         o.interactions = v;
     }, o -> o.interactions, (o, p) -> {
         o.interactions = p.interactions;
+    }).add()).appendInherited(new KeyedCodec<String>("InteractionHint", Codec.STRING), (o, v) -> {
+        o.interactionHint = v;
+    }, o -> o.interactionHint, (o, p) -> {
+        o.interactionHint = p.interactionHint;
     }).add()).build();
     @Nonnull
     private Map<InteractionType, String> interactions = new EnumMap<InteractionType, String>(InteractionType.class);

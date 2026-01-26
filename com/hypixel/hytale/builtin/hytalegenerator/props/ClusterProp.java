@@ -23,6 +23,7 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ClusterProp
 extends Prop {
@@ -33,6 +34,7 @@ extends Prop {
     private final ContextDependency contextDependency;
     private final Pattern pattern;
     private final Scanner scanner;
+    private final Bounds3i readBounds_voxelGrid;
     private final Bounds3i writeBounds_voxelGrid;
 
     public ClusterProp(int range, @Nonnull Double2DoubleFunction weightCurve, int seed, @Nonnull WeightedMap<Prop> propWeightedMap, @Nonnull Pattern pattern, @Nonnull Scanner scanner) {
@@ -55,9 +57,10 @@ extends Prop {
             this.propWeightedMap.add((Prop)prop, propWeightedMap.get((Prop)prop));
         });
         Vector3i readRange = scanner.readSpaceWith(pattern).getRange();
+        this.readBounds_voxelGrid = scanner.readSpaceWith(pattern).toBounds3i();
         Vector3i writeRange = new Vector3i(range + readRange.x, 0, range + readRange.z);
         this.contextDependency = new ContextDependency(readRange, writeRange);
-        this.writeBounds_voxelGrid = this.contextDependency.getTotalPropBounds_voxelGrid();
+        this.writeBounds_voxelGrid = this.contextDependency.getWriteBounds_voxelGrid();
     }
 
     @Override
@@ -102,8 +105,14 @@ extends Prop {
     }
 
     @Override
+    @NonNullDecl
+    public Bounds3i getReadBounds_voxelGrid() {
+        return this.readBounds_voxelGrid;
+    }
+
+    @Override
     @Nonnull
-    public Bounds3i getWriteBounds() {
+    public Bounds3i getWriteBounds_voxelGrid() {
         return this.writeBounds_voxelGrid;
     }
 }

@@ -174,7 +174,7 @@ extends SimpleChannelInboundHandler<Packet> {
     @Override
     public void channelActive(@Nonnull ChannelHandlerContext ctx) {
         UUID uuid = UUID.nameUUIDFromBytes(("BOT|" + this.name).getBytes(StandardCharsets.UTF_8));
-        ctx.writeAndFlush(new Connect("6708f121966c1c443f4b0eb525b2f81d0a8dc61f5003a692a8fa157e5e02cea9", ClientType.Game, "en", null, uuid, this.name, null, null));
+        ctx.writeAndFlush(new Connect(1789265863, 2, "bot", ClientType.Game, uuid, this.name, null, "en", null, null));
         this.logger.at(Level.INFO).log("Connected!");
     }
 

@@ -9,6 +9,7 @@ import com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin;
 import com.hypixel.hytale.builtin.crafting.CraftingPlugin;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.builtin.crafting.window.CraftingWindow;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchType;
@@ -18,7 +19,6 @@ import com.hypixel.hytale.protocol.packets.window.WindowAction;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.asset.type.item.config.FieldcraftCategory;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -60,10 +60,7 @@ extends Window {
     }
 
     @Override
-    public boolean onOpen0() {
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
+    public boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         World world = store.getExternalData().getWorld();
         this.windowData.addProperty("worldMemoriesLevel", MemoriesPlugin.get().getMemoriesLevel(world.getGameplayConfig()));
         this.invalidate();
@@ -71,7 +68,7 @@ extends Window {
     }
 
     @Override
-    public void onClose0() {
+    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
     }
 
     @Override

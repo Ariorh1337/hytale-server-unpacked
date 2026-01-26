@@ -30,10 +30,13 @@ import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.IntHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.NumberArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
+import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleArrayValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
+import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSequenceValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.IntRangeValidator;
@@ -82,6 +85,7 @@ import javax.annotation.Nullable;
 public class BuilderRole
 extends SpawnableWithModelBuilder<Role>
 implements SpawnEffect {
+    protected static final double[] DEFAULT_HEAD_PITCH_RANGE = new double[]{-89.0, 89.0};
     protected String[] displayNames;
     protected final AssetHolder appearance = new AssetHolder();
     protected final AssetHolder dropListId = new AssetHolder();
@@ -159,6 +163,8 @@ implements SpawnEffect {
     protected final StringHolder memoriesCategory = new StringHolder();
     protected final StringHolder memoriesNameOverride = new StringHolder();
     protected final StringHolder nameTranslationKey = new StringHolder();
+    protected final NumberArrayHolder headPitchAngleRange = new NumberArrayHolder();
+    protected final BooleanHolder overrideHeadPitchAngle = new BooleanHolder();
 
     @Override
     @Nonnull
@@ -360,6 +366,8 @@ implements SpawnEffect {
         this.getBoolean(data, "CorpseStaysInFlock", (boolean b) -> {
             this.corpseStaysInFlock = b;
         }, false, BuilderDescriptorState.Stable, "Whether the NPC should stay in the flock until corpse removal or be removed at the moment of death", null);
+        this.getBoolean(data, "OverrideHeadPitchAngle", this.overrideHeadPitchAngle, true, BuilderDescriptorState.Experimental, "Whether to override the head pitch angle range", null);
+        this.getDoubleRange(data, "HeadPitchAngleRange", this.headPitchAngleRange, DEFAULT_HEAD_PITCH_RANGE, (DoubleArrayValidator)DoubleSequenceValidator.betweenWeaklyMonotonic(-90.0, 90.0), BuilderDescriptorState.Experimental, "Head rotation pitch range to be used instead of model camera settings", null);
         this.validateAny(this.breathesInAir, this.breathesInWater);
         this.registerStateSetter(this.startState, this.defaultSubState, (m, s) -> {
             this.startStateIndex = m;
@@ -594,6 +602,16 @@ implements SpawnEffect {
 
     public double getEntityAvoidanceStrength() {
         return this.entityAvoidanceStrength;
+    }
+
+    public boolean isOverridingHeadPitchAngle(@Nonnull BuilderSupport support) {
+        return this.overrideHeadPitchAngle.get(support.getExecutionContext());
+    }
+
+    public float[] getHeadPitchAngleRange(@Nonnull BuilderSupport support) {
+        double[] range = this.headPitchAngleRange.get(support.getExecutionContext());
+        float[] floatRange = new float[]{(float)(range[0] * 0.01745329238474369), (float)(range[1] * 0.01745329238474369)};
+        return floatRange;
     }
 
     @Nullable

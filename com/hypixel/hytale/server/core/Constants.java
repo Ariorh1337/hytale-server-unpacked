@@ -38,6 +38,7 @@ import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksModule;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
+import com.hypixel.hytale.server.core.update.UpdateModule;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -53,7 +54,7 @@ public final class Constants {
     public static final boolean FORCE_NETWORK_FLUSH = OPTION_SET.valueOf(Options.FORCE_NETWORK_FLUSH);
     public static final Path UNIVERSE_PATH = Constants.getUniversePath();
     @Nonnull
-    public static final PluginManifest[] CORE_PLUGINS = new PluginManifest[]{ConsoleModule.MANIFEST, PermissionsModule.MANIFEST, FlyCameraModule.MANIFEST, AssetModule.MANIFEST, CommonAssetModule.MANIFEST, CosmeticsModule.MANIFEST, ServerManager.MANIFEST, I18nModule.MANIFEST, ItemModule.MANIFEST, BlockTypeModule.MANIFEST, LegacyModule.MANIFEST, BlockModule.MANIFEST, BlockStateModule.MANIFEST, CollisionModule.MANIFEST, BlockSetModule.MANIFEST, MigrationModule.MANIFEST, BlockHealthModule.MANIFEST, PrefabSpawnerModule.MANIFEST, TimeModule.MANIFEST, InteractionModule.MANIFEST, EntityModule.MANIFEST, EntityStatsModule.MANIFEST, EntityUIModule.MANIFEST, DamageModule.MANIFEST, SplitVelocity.MANIFEST, StaminaModule.MANIFEST, DebugPlugin.MANIFEST, ProjectileModule.MANIFEST, ServerPlayerListModule.MANIFEST, AccessControlModule.MANIFEST, SingleplayerModule.MANIFEST, Universe.MANIFEST, ConnectedBlocksModule.MANIFEST};
+    public static final PluginManifest[] CORE_PLUGINS = new PluginManifest[]{ConsoleModule.MANIFEST, PermissionsModule.MANIFEST, UpdateModule.MANIFEST, FlyCameraModule.MANIFEST, AssetModule.MANIFEST, CommonAssetModule.MANIFEST, CosmeticsModule.MANIFEST, ServerManager.MANIFEST, I18nModule.MANIFEST, ItemModule.MANIFEST, BlockTypeModule.MANIFEST, LegacyModule.MANIFEST, BlockModule.MANIFEST, BlockStateModule.MANIFEST, CollisionModule.MANIFEST, BlockSetModule.MANIFEST, MigrationModule.MANIFEST, BlockHealthModule.MANIFEST, PrefabSpawnerModule.MANIFEST, TimeModule.MANIFEST, InteractionModule.MANIFEST, EntityModule.MANIFEST, EntityStatsModule.MANIFEST, EntityUIModule.MANIFEST, DamageModule.MANIFEST, SplitVelocity.MANIFEST, StaminaModule.MANIFEST, DebugPlugin.MANIFEST, ProjectileModule.MANIFEST, ServerPlayerListModule.MANIFEST, AccessControlModule.MANIFEST, SingleplayerModule.MANIFEST, Universe.MANIFEST, ConnectedBlocksModule.MANIFEST};
 
     public static void init() {
     }

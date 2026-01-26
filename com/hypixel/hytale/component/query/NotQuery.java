@@ -7,13 +7,17 @@ import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ComponentRegistry;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.query.Query;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
 public class NotQuery<ECS_TYPE>
 implements Query<ECS_TYPE> {
+    @Nonnull
     private final Query<ECS_TYPE> query;
 
-    public NotQuery(Query<ECS_TYPE> query) {
+    public NotQuery(@Nonnull Query<ECS_TYPE> query) {
         this.query = query;
+        Objects.requireNonNull(query, "Sub-query for NotQuery cannot be null");
     }
 
     @Override
@@ -27,7 +31,7 @@ implements Query<ECS_TYPE> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
         this.query.validateRegistry(registry);
     }
 

@@ -17,8 +17,6 @@ import javax.annotation.Nonnull;
 public class MemoriesSetCountCommand
 extends AbstractWorldCommand {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_MEMORIES_SETCOUNT_SUCCESS = Message.translation("server.commands.memories.setCount.success");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_MEMORIES_SETCOUNT_INVALID = Message.translation("server.commands.memories.setCount.invalid");
     @Nonnull
     private final RequiredArg<Integer> countArg = this.withRequiredArg("count", "server.commands.memories.setCount.count.desc", ArgTypes.INTEGER);
@@ -35,7 +33,7 @@ extends AbstractWorldCommand {
             return;
         }
         int actualCount = MemoriesPlugin.get().setRecordedMemoriesCount(count);
-        context.sendMessage(MESSAGE_COMMANDS_MEMORIES_SETCOUNT_SUCCESS.param("requested", count).param("actual", actualCount));
+        context.sendMessage(Message.translation("server.commands.memories.setCount.success").param("requested", count).param("actual", actualCount));
     }
 }
 

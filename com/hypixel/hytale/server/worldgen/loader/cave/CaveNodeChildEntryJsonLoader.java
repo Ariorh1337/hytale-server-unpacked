@@ -59,13 +59,13 @@ extends JsonLoader<SeedStringResource, CaveNodeType.CaveNodeChildEntry> {
                 weightsArray = null;
             }
             for (int i = 0; i < nodeArray.size(); ++i) {
-                JsonElement nodeEntryElement = nodeArray.get(i);
-                CaveNodeType caveNodeType = this.loadCaveNodeType(nodeEntryElement);
+                JsonElement nodeEntryElement = this.getOrLoad(nodeArray.get(i));
+                CaveNodeType caveNodeType = this.loadCaveNodeType(i, nodeEntryElement);
                 double weight = weightsArray != null ? weightsArray.get(i).getAsDouble() : 1.0;
                 builder.put(caveNodeType, weight);
             }
-        } else if (nodeElement.isJsonPrimitive()) {
-            CaveNodeType caveNodeType = this.loadCaveNodeType(nodeElement);
+        } else if (nodeElement.isJsonObject() || nodeElement.isJsonPrimitive()) {
+            CaveNodeType caveNodeType = this.loadCaveNodeType(0, nodeElement);
             builder.put(caveNodeType, 1.0);
         }
         if (builder.size() <= 0) {
@@ -75,9 +75,16 @@ extends JsonLoader<SeedStringResource, CaveNodeType.CaveNodeChildEntry> {
     }
 
     @Nonnull
-    protected CaveNodeType loadCaveNodeType(@Nonnull JsonElement element) {
-        String caveNodeTypeName = element.getAsString();
-        return this.storage.getOrLoadCaveNodeType(caveNodeTypeName);
+    protected CaveNodeType loadCaveNodeType(int index, @Nonnull JsonElement element) {
+        if (element.isJsonObject()) {
+            String caveNodeTypeName = ((SeedStringResource)this.seed.get()).getUniqueName("ChildCaveType#");
+            return this.storage.loadCaveNodeType(caveNodeTypeName, element.getAsJsonObject());
+        }
+        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+            String caveNodeTypeName = element.getAsString();
+            return this.storage.getOrLoadCaveNodeType(caveNodeTypeName);
+        }
+        throw CaveNodeChildEntryJsonLoader.error("Invalid cave node type entry: %d", index);
     }
 
     @Nonnull
@@ -223,6 +230,7 @@ extends JsonLoader<SeedStringResource, CaveNodeType.CaveNodeChildEntry> {
 
     public static interface Constants {
         public static final String KEY_NODE = "Node";
+        public static final String KEY_SEED = "Seed";
         public static final String KEY_WEIGHTS = "Weights";
         public static final String KEY_ANCHOR = "Anchor";
         public static final String KEY_OFFSET = "Offset";

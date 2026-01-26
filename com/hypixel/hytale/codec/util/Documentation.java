@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.codec.util;
 
+import it.unimi.dsi.fastutil.chars.CharArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import javax.annotation.Nullable;
 
@@ -13,14 +14,20 @@ public class Documentation {
         }
         StringBuilder output = new StringBuilder();
         IntArrayList counts = new IntArrayList();
+        CharArrayList expectedChars = new CharArrayList();
         block3: for (int i = 0; i < markdown.length(); ++i) {
             char c = markdown.charAt(i);
             switch (c) {
                 case '*': 
                 case '_': {
                     int targetCount;
+                    boolean isEnding;
                     int start = i;
-                    boolean isEnding = start >= 1 && !Character.isWhitespace(markdown.charAt(start - 1));
+                    boolean bl = isEnding = start >= 1 && !Character.isWhitespace(markdown.charAt(start - 1));
+                    if (isEnding && (expectedChars.isEmpty() || expectedChars.getChar(expectedChars.size() - 1) != c)) {
+                        output.append(markdown.charAt(i));
+                        continue block3;
+                    }
                     int n = targetCount = !counts.isEmpty() && isEnding ? counts.getInt(counts.size() - 1) : -1;
                     while (i < markdown.length() && markdown.charAt(i) == c && i - start != targetCount) {
                         ++i;
@@ -32,6 +39,7 @@ public class Documentation {
                             continue block3;
                         }
                         counts.removeInt(counts.size() - 1);
+                        expectedChars.removeChar(expectedChars.size() - 1);
                     } else {
                         if (i < markdown.length() && Character.isWhitespace(markdown.charAt(i))) {
                             output.append(String.valueOf(c).repeat(matchingCount));
@@ -39,6 +47,7 @@ public class Documentation {
                             continue block3;
                         }
                         counts.add(matchingCount);
+                        expectedChars.add(c);
                     }
                     --i;
                     continue block3;

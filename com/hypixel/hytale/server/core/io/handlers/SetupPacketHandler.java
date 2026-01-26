@@ -49,7 +49,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
@@ -74,9 +73,6 @@ extends GenericConnectionPacketHandler {
         this.referralData = referralData;
         this.referralSource = referralSource;
         this.auth = null;
-        if (referralData != null && referralData.length > 0) {
-            HytaleLogger.getLogger().at(Level.INFO).log("Player %s connecting with %d bytes of referral data from %s:%d (unauthenticated - plugins must validate!)", username, referralData.length, referralSource != null ? referralSource.host : "unknown", referralSource != null ? referralSource.port : (short)0);
-        }
     }
 
     public SetupPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull PlayerAuthentication auth) {
@@ -86,9 +82,6 @@ extends GenericConnectionPacketHandler {
         this.auth = auth;
         this.referralData = auth.getReferralData();
         this.referralSource = auth.getReferralSource();
-        if (this.referralData != null && this.referralData.length > 0) {
-            HytaleLogger.getLogger().at(Level.INFO).log("Player %s connecting with %d bytes of referral data from %s:%d (authenticated)", this.username, this.referralData.length, this.referralSource != null ? this.referralSource.host : "unknown", this.referralSource != null ? this.referralSource.port : (short)0);
-        }
     }
 
     @Override
@@ -99,9 +92,13 @@ extends GenericConnectionPacketHandler {
 
     @Override
     public void registered0(@Nonnull PacketHandler oldHandler) {
-        this.setTimeout("send-world-settings", () -> this.assets != null, 10L, TimeUnit.SECONDS);
-        PlayerSetupConnectEvent event = HytaleServer.get().getEventBus().dispatchFor(PlayerSetupConnectEvent.class).dispatch(new PlayerSetupConnectEvent(this, this.username, this.uuid, this.auth, this.referralData, this.referralSource));
-        if (event.isCancelled()) {
+        PlayerSetupConnectEvent event;
+        HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+        this.enterStage("setup:world-settings", timeouts.getSetupWorldSettings(), () -> this.assets != null);
+        if (this.referralSource != null) {
+            HytaleLogger.getLogger().at(Level.INFO).log("Player %s referred from %s:%d with %d bytes of data", this.username, this.referralSource.host, this.referralSource.port, this.referralData != null ? this.referralData.length : 0);
+        }
+        if ((event = HytaleServer.get().getEventBus().dispatchFor(PlayerSetupConnectEvent.class).dispatch(new PlayerSetupConnectEvent(this, this.username, this.uuid, this.auth, this.referralData, this.referralSource))).isCancelled()) {
             this.disconnect(event.getReason());
             return;
         }
@@ -144,7 +141,7 @@ extends GenericConnectionPacketHandler {
         this.write((Packet)worldSettings);
         HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
         this.write((Packet)new ServerInfo(HytaleServer.get().getServerName(), serverConfig.getMotd(), serverConfig.getMaxPlayers()));
-        this.setTimeout("receive-assets-request", () -> this.receivedRequest, 120L, TimeUnit.SECONDS);
+        this.continueStage("setup:assets-request", timeouts.getSetupAssetsRequest(), () -> this.receivedRequest);
     }
 
     @Override
@@ -224,7 +221,8 @@ extends GenericConnectionPacketHandler {
             this.disconnect("An exception occurred while trying to login!");
             throw new RuntimeException("Exception when player was joining", (Throwable)throwable);
         }));
-        this.setTimeout("send-assets", () -> future.isDone() || !future.cancel(true), 120L, TimeUnit.SECONDS);
+        HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+        this.continueStage("setup:send-assets", timeouts.getSetupSendAssets(), () -> future.isDone() || !future.cancel(true));
     }
 
     public void handle(@Nonnull ViewRadius packet) {
@@ -244,7 +242,8 @@ extends GenericConnectionPacketHandler {
                 CosmeticsModule.get().validateSkin(packet.skin);
             }
             catch (CosmeticsModule.InvalidSkinException e) {
-                this.disconnect("Invalid skin! " + e.getMessage());
+                String msg = "Your skin contains parts that aren't available on this server.\nThis usually happens when assets are out of sync.\n\n" + e.getMessage();
+                this.disconnect(msg);
                 return;
             }
         }
@@ -261,7 +260,8 @@ extends GenericConnectionPacketHandler {
             this.disconnect("An exception occurred when adding to the universe!");
             throw new RuntimeException("Exception when player adding to universe", (Throwable)throwable);
         }));
-        this.setTimeout("add-to-universe", () -> future.isDone() || !future.cancel(true), 60L, TimeUnit.SECONDS);
+        HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+        this.continueStage("setup:add-to-universe", timeouts.getSetupAddToUniverse(), () -> future.isDone() || !future.cancel(true));
     }
 }
 

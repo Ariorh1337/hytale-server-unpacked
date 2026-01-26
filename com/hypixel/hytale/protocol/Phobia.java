@@ -7,7 +7,8 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 
 public enum Phobia {
     None(0),
-    Arachnophobia(1);
+    Arachnophobia(1),
+    Ophidiophobia(2);
 
     public static final Phobia[] VALUES;
     private final int value;

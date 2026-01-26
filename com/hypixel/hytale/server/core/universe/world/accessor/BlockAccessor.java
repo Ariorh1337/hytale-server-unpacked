@@ -200,6 +200,9 @@ public interface BlockAccessor {
     }
 
     default public void setBlockInteractionState(int x, int y, int z, @Nonnull BlockType blockType, @Nonnull String state, boolean force) {
+        if (blockType.getData() == null) {
+            return;
+        }
         String currentState = BlockAccessor.getCurrentInteractionState(blockType);
         if (!force && currentState != null && currentState.equals(state)) {
             return;

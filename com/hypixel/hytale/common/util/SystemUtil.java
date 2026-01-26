@@ -26,6 +26,14 @@ public class SystemUtil {
         return SystemType.OTHER;
     }
 
+    public static boolean getEnvBoolean(@Nonnull String name) {
+        String value = System.getenv(name);
+        if (value == null) {
+            return false;
+        }
+        return !"false".equalsIgnoreCase(value) && !"0".equals(value) && !"no".equalsIgnoreCase(value);
+    }
+
     public static enum SystemType {
         WINDOWS,
         MACOS,

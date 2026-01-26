@@ -74,13 +74,13 @@ public class ItemQuality {
     public static ItemQuality deserialize(@Nonnull ByteBuf buf, int offset) {
         ItemQuality obj = new ItemQuality();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 0x40) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.textColor = Color.deserialize(buf, offset + 1);
         }
         obj.visibleQualityLabel = buf.getByte(offset + 4) != 0;
         obj.renderSpecialSlot = buf.getByte(offset + 5) != 0;
         boolean bl = obj.hideFromSearch = buf.getByte(offset + 6) != 0;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 35 + buf.getIntLE(offset + 7);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -91,7 +91,7 @@ public class ItemQuality {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos1 = offset + 35 + buf.getIntLE(offset + 11);
             int itemTooltipTextureLen = VarInt.peek(buf, varPos1);
             if (itemTooltipTextureLen < 0) {
@@ -102,7 +102,7 @@ public class ItemQuality {
             }
             obj.itemTooltipTexture = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos2 = offset + 35 + buf.getIntLE(offset + 15);
             int itemTooltipArrowTextureLen = VarInt.peek(buf, varPos2);
             if (itemTooltipArrowTextureLen < 0) {
@@ -113,7 +113,7 @@ public class ItemQuality {
             }
             obj.itemTooltipArrowTexture = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos3 = offset + 35 + buf.getIntLE(offset + 19);
             int slotTextureLen = VarInt.peek(buf, varPos3);
             if (slotTextureLen < 0) {
@@ -124,7 +124,7 @@ public class ItemQuality {
             }
             obj.slotTexture = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int varPos4 = offset + 35 + buf.getIntLE(offset + 23);
             int blockSlotTextureLen = VarInt.peek(buf, varPos4);
             if (blockSlotTextureLen < 0) {
@@ -135,7 +135,7 @@ public class ItemQuality {
             }
             obj.blockSlotTexture = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
         }
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int varPos5 = offset + 35 + buf.getIntLE(offset + 27);
             int specialSlotTextureLen = VarInt.peek(buf, varPos5);
             if (specialSlotTextureLen < 0) {
@@ -164,7 +164,7 @@ public class ItemQuality {
         int sl;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 35;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 7);
             int pos0 = offset + 35 + fieldOffset0;
             sl = VarInt.peek(buf, pos0);
@@ -172,7 +172,7 @@ public class ItemQuality {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 11);
             int pos1 = offset + 35 + fieldOffset1;
             sl = VarInt.peek(buf, pos1);
@@ -180,7 +180,7 @@ public class ItemQuality {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 15);
             int pos2 = offset + 35 + fieldOffset2;
             sl = VarInt.peek(buf, pos2);
@@ -188,7 +188,7 @@ public class ItemQuality {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 19);
             int pos3 = offset + 35 + fieldOffset3;
             sl = VarInt.peek(buf, pos3);
@@ -196,7 +196,7 @@ public class ItemQuality {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 23);
             int pos4 = offset + 35 + fieldOffset4;
             sl = VarInt.peek(buf, pos4);
@@ -204,7 +204,7 @@ public class ItemQuality {
                 maxEnd = pos4 - offset;
             }
         }
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int fieldOffset5 = buf.getIntLE(offset + 27);
             int pos5 = offset + 35 + fieldOffset5;
             sl = VarInt.peek(buf, pos5);
@@ -226,25 +226,25 @@ public class ItemQuality {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.textColor != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.itemTooltipTexture != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.itemTooltipArrowTexture != null) {
+        if (this.itemTooltipTexture != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.slotTexture != null) {
+        if (this.itemTooltipArrowTexture != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.blockSlotTexture != null) {
+        if (this.slotTexture != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
-        if (this.specialSlotTexture != null) {
+        if (this.blockSlotTexture != null) {
             nullBits = (byte)(nullBits | 0x20);
         }
-        if (this.textColor != null) {
+        if (this.specialSlotTexture != null) {
             nullBits = (byte)(nullBits | 0x40);
         }
         if (this.localizationKey != null) {
@@ -350,7 +350,7 @@ public class ItemQuality {
             return ValidationResult.error("Buffer too small: expected at least 35 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int idOffset = buffer.getIntLE(offset + 7);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -371,7 +371,7 @@ public class ItemQuality {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int itemTooltipTextureOffset = buffer.getIntLE(offset + 11);
             if (itemTooltipTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for ItemTooltipTexture");
@@ -392,7 +392,7 @@ public class ItemQuality {
                 return ValidationResult.error("Buffer overflow reading ItemTooltipTexture");
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int itemTooltipArrowTextureOffset = buffer.getIntLE(offset + 15);
             if (itemTooltipArrowTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for ItemTooltipArrowTexture");
@@ -413,7 +413,7 @@ public class ItemQuality {
                 return ValidationResult.error("Buffer overflow reading ItemTooltipArrowTexture");
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int slotTextureOffset = buffer.getIntLE(offset + 19);
             if (slotTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for SlotTexture");
@@ -434,7 +434,7 @@ public class ItemQuality {
                 return ValidationResult.error("Buffer overflow reading SlotTexture");
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int blockSlotTextureOffset = buffer.getIntLE(offset + 23);
             if (blockSlotTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for BlockSlotTexture");
@@ -455,7 +455,7 @@ public class ItemQuality {
                 return ValidationResult.error("Buffer overflow reading BlockSlotTexture");
             }
         }
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int specialSlotTextureOffset = buffer.getIntLE(offset + 27);
             if (specialSlotTextureOffset < 0) {
                 return ValidationResult.error("Invalid offset for SpecialSlotTexture");

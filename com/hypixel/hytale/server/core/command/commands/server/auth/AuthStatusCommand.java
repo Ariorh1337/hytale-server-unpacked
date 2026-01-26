@@ -17,8 +17,6 @@ import javax.annotation.Nonnull;
 public class AuthStatusCommand
 extends CommandBase {
     @Nonnull
-    private static final Message MESSAGE_STATUS_HEADER = Message.translation("server.commands.auth.status.format");
-    @Nonnull
     private static final Message MESSAGE_STATUS_CONNECTION_MODE_AUTHENTICATED = Message.translation("server.commands.auth.status.connectionMode.authenticated").color(Color.GREEN);
     @Nonnull
     private static final Message MESSAGE_STATUS_CONNECTION_MODE_OFFLINE = Message.translation("server.commands.auth.status.connectionMode.offline").color(Color.YELLOW);
@@ -91,7 +89,7 @@ extends CommandBase {
             }
         }
         Object certificateStatus = authManager.getServerCertificate() != null ? ((fingerprint = authManager.getServerCertificateFingerprint()) != null ? fingerprint.substring(0, 16) + "..." : "Unknown") : "Not loaded";
-        context.sendMessage(MESSAGE_STATUS_HEADER.param("connectionMode", connectionModeMessage).param("tokenMode", modeMessage).param("profile", (String)profileInfo).param("sessionToken", sessionTokenStatus).param("identityToken", identityTokenStatus).param("expiry", expiryStatus).param("certificate", (String)certificateStatus));
+        context.sendMessage(Message.translation("server.commands.auth.status.format").param("connectionMode", connectionModeMessage).param("tokenMode", modeMessage).param("profile", (String)profileInfo).param("sessionToken", sessionTokenStatus).param("identityToken", identityTokenStatus).param("expiry", expiryStatus).param("certificate", (String)certificateStatus));
         if (mode == ServerAuthManager.AuthMode.NONE && !authManager.isSingleplayer()) {
             if (authManager.hasPendingProfiles()) {
                 context.sendMessage(MESSAGE_STATUS_PENDING);

@@ -45,6 +45,7 @@ import javax.annotation.Nonnull;
 
 public class HorizontalSelector
 extends SelectorType {
+    @Nonnull
     public static final BuilderCodec<HorizontalSelector> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HorizontalSelector.class, HorizontalSelector::new, BASE_CODEC).documentation("A selector that swings in a horizontal arc over a given period of time.")).appendInherited(new KeyedCodec<Double>("Length", Codec.DOUBLE), (selector, value) -> {
         selector.yawLength = Math.toRadians(value);
     }, selector -> Math.toDegrees(selector.yawLength), (selector, parent) -> {
@@ -133,7 +134,7 @@ extends SelectorType {
         protected FrustumProjectionProvider projectionProvider = new FrustumProjectionProvider();
         @Nonnull
         protected DirectionViewProvider viewProvider = new DirectionViewProvider();
-        protected float lastTime = 0.0f;
+        protected float lastTime;
         protected double runTimeDeltaPercentageSum;
 
         private RuntimeSelector() {
@@ -141,9 +142,14 @@ extends SelectorType {
 
         @Override
         public void tick(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> attacker, float time, float runTime) {
-            float yOffset = commandBuffer.getComponent(attacker, ModelComponent.getComponentType()).getModel().getEyeHeight(attacker, commandBuffer);
-            Vector3d position = commandBuffer.getComponent(attacker, TransformComponent.getComponentType()).getPosition();
-            HeadRotation look = commandBuffer.getComponent(attacker, HeadRotation.getComponentType());
+            ModelComponent modelComponent = commandBuffer.getComponent(attacker, ModelComponent.getComponentType());
+            assert (modelComponent != null);
+            float yOffset = modelComponent.getModel().getEyeHeight(attacker, commandBuffer);
+            TransformComponent transformComponent = commandBuffer.getComponent(attacker, TransformComponent.getComponentType());
+            assert (transformComponent != null);
+            Vector3d position = transformComponent.getPosition();
+            HeadRotation headRotationComponent = commandBuffer.getComponent(attacker, HeadRotation.getComponentType());
+            assert (headRotationComponent != null);
             double posX = position.getX();
             double posY = position.getY() + (double)yOffset;
             double posZ = position.getZ();
@@ -157,28 +163,34 @@ extends SelectorType {
             double yawOffset = (yawDeltaSum + yawDelta + HorizontalSelector.this.yawStartOffset) * HorizontalSelector.this.direction.yawModifier;
             double extendHorizontal = yawArcLength * stretchFactor;
             this.projectionProvider.setNear(HorizontalSelector.this.startDistance).setFar(HorizontalSelector.this.endDistance).setLeft(extendHorizontal).setRight(extendHorizontal).setBottom(HorizontalSelector.this.extendBottom * stretchFactor).setRotation(yawOffset, HorizontalSelector.this.pitchOffset, HorizontalSelector.this.rollOffset).setTop(HorizontalSelector.this.extendTop * stretchFactor);
-            this.viewProvider.setPosition(posX, posY, posZ).setDirection(look.getRotation().getYaw(), look.getRotation().getPitch());
+            this.viewProvider.setPosition(posX, posY, posZ).setDirection(headRotationComponent.getRotation().getYaw(), headRotationComponent.getRotation().getPitch());
             this.executor.setOrigin(posX, posY, posZ).setProjectionProvider(this.projectionProvider).setViewProvider(this.viewProvider);
             if (HorizontalSelector.this.testLineOfSight) {
+                World world = commandBuffer.getStore().getExternalData().getWorld();
                 LineOfSightProvider provider = (fromX, fromY, fromZ, toX, toY, toZ) -> {
-                    LocalCachedChunkAccessor localAccessor = LocalCachedChunkAccessor.atWorldCoords(((EntityStore)commandBuffer.getStore().getExternalData()).getWorld(), (int)fromX, (int)fromZ, (int)(HorizontalSelector.this.endDistance + 1.0));
+                    LocalCachedChunkAccessor localAccessor = LocalCachedChunkAccessor.atWorldCoords(world, (int)fromX, (int)fromZ, (int)(HorizontalSelector.this.endDistance + 1.0));
                     return BlockIterator.iterateFromTo(fromX, fromY, fromZ, toX, toY, toZ, (x, y, z, px, py, pz, qx, qy, qz, accessor) -> {
-                        if (accessor.getBlockType(x, y, z).getMaterial() == BlockMaterial.Solid) {
-                            BlockType blockType = accessor.getBlockType(x, y, z);
-                            if (blockType == null) {
-                                return true;
-                            }
-                            BlockBoundingBoxes blockHitboxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+                        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+                        WorldChunk worldChunk = accessor.getChunkIfInMemory(chunkIndex);
+                        if (worldChunk == null) {
+                            return true;
+                        }
+                        BlockType blockType = worldChunk.getBlockType(x, y, z);
+                        if (blockType == null) {
+                            return true;
+                        }
+                        if (blockType.getMaterial() == BlockMaterial.Solid) {
+                            int hitboxTypeIndex = blockType.getHitboxTypeIndex();
+                            BlockBoundingBoxes blockHitboxes = BlockBoundingBoxes.getAssetMap().getAsset(hitboxTypeIndex);
                             if (blockHitboxes == null) {
                                 return true;
                             }
-                            BlockBoundingBoxes.RotatedVariantBoxes rotatedHitboxes = blockHitboxes.get(accessor.getBlockRotationIndex(x, y, z));
                             Vector3d lineFrom = new Vector3d(fromX, fromY, fromZ);
                             Vector3d lineTo = new Vector3d(toX, toY, toZ);
+                            BlockBoundingBoxes.RotatedVariantBoxes rotatedHitboxes = blockHitboxes.get(accessor.getBlockRotationIndex(x, y, z));
                             for (Box box : rotatedHitboxes.getDetailBoxes()) {
                                 Box offsetBox = box.clone().offset(x, y, z);
-                                boolean intersect = offsetBox.intersectsLine(lineFrom, lineTo);
-                                if (!intersect) continue;
+                                if (!offsetBox.intersectsLine(lineFrom, lineTo)) continue;
                                 return false;
                             }
                         }
@@ -192,7 +204,7 @@ extends SelectorType {
             if (SelectInteraction.SHOW_VISUAL_DEBUG) {
                 Matrix4d tmp = new Matrix4d();
                 Matrix4d matrix = new Matrix4d();
-                matrix.identity().translate(posX, posY, posZ).rotateAxis(-look.getRotation().getYaw(), 0.0, 1.0, 0.0, tmp).rotateAxis(-look.getRotation().getPitch(), 1.0, 0.0, 0.0, tmp);
+                matrix.identity().translate(posX, posY, posZ).rotateAxis(-headRotationComponent.getRotation().getYaw(), 0.0, 1.0, 0.0, tmp).rotateAxis(-headRotationComponent.getRotation().getPitch(), 1.0, 0.0, 0.0, tmp);
                 Vector3f color = new Vector3f((float)HashUtil.random(attacker.getIndex(), this.hashCode(), 10L), (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 11L), (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 12L));
                 DebugUtils.addFrustum(commandBuffer.getExternalData().getWorld(), matrix, this.projectionProvider.getMatrix(), color, 5.0f, true);
             }
@@ -202,13 +214,16 @@ extends SelectorType {
         @Override
         public void selectTargetEntities(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> attacker, @Nonnull BiConsumer<Ref<EntityStore>, Vector4d> consumer, Predicate<Ref<EntityStore>> filter) {
             Selector.selectNearbyEntities(commandBuffer, attacker, HorizontalSelector.this.endDistance + 3.0, (Ref<EntityStore> entity) -> {
-                BoundingBox hitboxComponent = commandBuffer.getComponent((Ref<EntityStore>)entity, BoundingBox.getComponentType());
-                if (hitboxComponent == null) {
+                BoundingBox boundingBoxComponent = commandBuffer.getComponent((Ref<EntityStore>)entity, BoundingBox.getComponentType());
+                if (boundingBoxComponent == null) {
                     return;
                 }
-                Box hitbox = hitboxComponent.getBoundingBox();
-                TransformComponent transform = commandBuffer.getComponent((Ref<EntityStore>)entity, TransformComponent.getComponentType());
-                this.modelMatrix.identity().translate(transform.getPosition()).translate(hitbox.getMin()).scale(hitbox.width(), hitbox.height(), hitbox.depth());
+                Box hitbox = boundingBoxComponent.getBoundingBox();
+                TransformComponent transformComponent = commandBuffer.getComponent((Ref<EntityStore>)entity, TransformComponent.getComponentType());
+                if (transformComponent == null) {
+                    return;
+                }
+                this.modelMatrix.identity().translate(transformComponent.getPosition()).translate(hitbox.getMin()).scale(hitbox.width(), hitbox.height(), hitbox.depth());
                 if (this.executor.test(HitDetectionExecutor.CUBE_QUADS, this.modelMatrix)) {
                     consumer.accept((Ref<EntityStore>)entity, this.executor.getHitLocation());
                 }
@@ -224,11 +239,16 @@ extends SelectorType {
                     return;
                 }
                 BlockType blockType = chunk.getBlockType(x, y, z);
-                if (blockType == BlockType.EMPTY) {
+                if (blockType == null || blockType == BlockType.EMPTY) {
                     return;
                 }
                 int rotation = chunk.getRotationIndex(x, y, z);
-                Box[] hitboxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex()).get(rotation).getDetailBoxes();
+                int hitboxTypeIndex = blockType.getHitboxTypeIndex();
+                BlockBoundingBoxes boundingBoxAsset = BlockBoundingBoxes.getAssetMap().getAsset(hitboxTypeIndex);
+                if (boundingBoxAsset == null) {
+                    return;
+                }
+                Box[] hitboxes = boundingBoxAsset.get(rotation).getDetailBoxes();
                 for (int i = 0; i < hitboxes.length; ++i) {
                     Box hitbox = hitboxes[i];
                     this.modelMatrix.identity().translate(x, y, z).translate(hitbox.getMin()).scale(hitbox.width(), hitbox.height(), hitbox.depth());
@@ -244,6 +264,7 @@ extends SelectorType {
         TO_RIGHT(-1.0),
         TO_LEFT(1.0);
 
+        @Nonnull
         public static final EnumCodec<Direction> CODEC;
         private final double yawModifier;
 

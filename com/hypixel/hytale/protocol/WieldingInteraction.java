@@ -111,18 +111,18 @@ extends ChargingInteraction {
         obj.failOnDamage = buf.getByte(offset + 19) != 0;
         obj.mouseSensitivityAdjustmentTarget = buf.getFloatLE(offset + 20);
         obj.mouseSensitivityAdjustmentDuration = buf.getFloatLE(offset + 24);
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[0] & 1) != 0) {
             obj.chargingDelay = ChargingDelay.deserialize(buf, offset + 28);
         }
         boolean bl = obj.hasModifiers = buf.getByte(offset + 48) != 0;
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[0] & 2) != 0) {
             obj.angledWielding = AngledWielding.deserialize(buf, offset + 49);
         }
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             int varPos0 = offset + 90 + buf.getIntLE(offset + 58);
             obj.effects = InteractionEffects.deserialize(buf, varPos0);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             int varPos1 = offset + 90 + buf.getIntLE(offset + 62);
             int settingsCount = VarInt.peek(buf, varPos1);
             if (settingsCount < 0) {
@@ -142,11 +142,11 @@ extends ChargingInteraction {
                 throw ProtocolException.duplicateKey("settings", (Object)key);
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             int varPos2 = offset + 90 + buf.getIntLE(offset + 66);
             obj.rules = InteractionRules.deserialize(buf, varPos2);
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             int varPos3 = offset + 90 + buf.getIntLE(offset + 70);
             int tagsCount = VarInt.peek(buf, varPos3);
             if (tagsCount < 0) {
@@ -164,11 +164,11 @@ extends ChargingInteraction {
                 obj.tags[i2] = buf.getIntLE(varPos3 + varIntLen + i2 * 4);
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int varPos4 = offset + 90 + buf.getIntLE(offset + 74);
             obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int varPos5 = offset + 90 + buf.getIntLE(offset + 78);
             int chargedNextCount = VarInt.peek(buf, varPos5);
             if (chargedNextCount < 0) {
@@ -188,7 +188,7 @@ extends ChargingInteraction {
                 throw ProtocolException.duplicateKey("chargedNext", Float.valueOf(key));
             }
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int varPos6 = offset + 90 + buf.getIntLE(offset + 82);
             int forksCount = VarInt.peek(buf, varPos6);
             if (forksCount < 0) {
@@ -208,7 +208,7 @@ extends ChargingInteraction {
                 throw ProtocolException.duplicateKey("forks", (Object)key);
             }
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int varPos7 = offset + 90 + buf.getIntLE(offset + 86);
             obj.blockedEffects = DamageEffects.deserialize(buf, varPos7);
         }
@@ -220,14 +220,14 @@ extends ChargingInteraction {
         int dictLen;
         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
         int maxEnd = 90;
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 58);
             int pos0 = offset + 90 + fieldOffset0;
             if ((pos0 += InteractionEffects.computeBytesConsumed(buf, pos0)) - offset > maxEnd) {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 62);
             int pos1 = offset + 90 + fieldOffset1;
             dictLen = VarInt.peek(buf, pos1);
@@ -240,14 +240,14 @@ extends ChargingInteraction {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 66);
             int pos2 = offset + 90 + fieldOffset2;
             if ((pos2 += InteractionRules.computeBytesConsumed(buf, pos2)) - offset > maxEnd) {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 70);
             int pos3 = offset + 90 + fieldOffset3;
             int arrLen = VarInt.peek(buf, pos3);
@@ -255,14 +255,14 @@ extends ChargingInteraction {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 74);
             int pos4 = offset + 90 + fieldOffset4;
             if ((pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4)) - offset > maxEnd) {
                 maxEnd = pos4 - offset;
             }
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int fieldOffset5 = buf.getIntLE(offset + 78);
             int pos5 = offset + 90 + fieldOffset5;
             dictLen = VarInt.peek(buf, pos5);
@@ -275,7 +275,7 @@ extends ChargingInteraction {
                 maxEnd = pos5 - offset;
             }
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int fieldOffset6 = buf.getIntLE(offset + 82);
             int pos6 = offset + 90 + fieldOffset6;
             dictLen = VarInt.peek(buf, pos6);
@@ -288,7 +288,7 @@ extends ChargingInteraction {
                 maxEnd = pos6 - offset;
             }
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int fieldOffset7 = buf.getIntLE(offset + 86);
             int pos7 = offset + 90 + fieldOffset7;
             if ((pos7 += DamageEffects.computeBytesConsumed(buf, pos7)) - offset > maxEnd) {
@@ -302,34 +302,34 @@ extends ChargingInteraction {
     public int serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte[] nullBits = new byte[2];
-        if (this.effects != null) {
+        if (this.chargingDelay != null) {
             nullBits[0] = (byte)(nullBits[0] | 1);
         }
-        if (this.settings != null) {
+        if (this.angledWielding != null) {
             nullBits[0] = (byte)(nullBits[0] | 2);
         }
-        if (this.rules != null) {
+        if (this.effects != null) {
             nullBits[0] = (byte)(nullBits[0] | 4);
         }
-        if (this.tags != null) {
+        if (this.settings != null) {
             nullBits[0] = (byte)(nullBits[0] | 8);
         }
-        if (this.camera != null) {
+        if (this.rules != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x10);
         }
-        if (this.chargedNext != null) {
+        if (this.tags != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x20);
         }
-        if (this.forks != null) {
+        if (this.camera != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x40);
         }
-        if (this.chargingDelay != null) {
+        if (this.chargedNext != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x80);
         }
-        if (this.blockedEffects != null) {
+        if (this.forks != null) {
             nullBits[1] = (byte)(nullBits[1] | 1);
         }
-        if (this.angledWielding != null) {
+        if (this.blockedEffects != null) {
             nullBits[1] = (byte)(nullBits[1] | 2);
         }
         buf.writeBytes(nullBits);
@@ -487,7 +487,7 @@ extends ChargingInteraction {
             return ValidationResult.error("Buffer too small: expected at least 90 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             int effectsOffset = buffer.getIntLE(offset + 58);
             if (effectsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Effects");
@@ -502,7 +502,7 @@ extends ChargingInteraction {
             }
             pos += InteractionEffects.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             int settingsOffset = buffer.getIntLE(offset + 62);
             if (settingsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Settings");
@@ -524,7 +524,7 @@ extends ChargingInteraction {
                 ++pos;
             }
         }
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             int rulesOffset = buffer.getIntLE(offset + 66);
             if (rulesOffset < 0) {
                 return ValidationResult.error("Invalid offset for Rules");
@@ -539,7 +539,7 @@ extends ChargingInteraction {
             }
             pos += InteractionRules.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             int tagsOffset = buffer.getIntLE(offset + 70);
             if (tagsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Tags");
@@ -560,7 +560,7 @@ extends ChargingInteraction {
                 return ValidationResult.error("Buffer overflow reading Tags");
             }
         }
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             int cameraOffset = buffer.getIntLE(offset + 74);
             if (cameraOffset < 0) {
                 return ValidationResult.error("Invalid offset for Camera");
@@ -575,7 +575,7 @@ extends ChargingInteraction {
             }
             pos += InteractionCameraSettings.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             int chargedNextOffset = buffer.getIntLE(offset + 78);
             if (chargedNextOffset < 0) {
                 return ValidationResult.error("Invalid offset for ChargedNext");
@@ -600,7 +600,7 @@ extends ChargingInteraction {
                 return ValidationResult.error("Buffer overflow reading value");
             }
         }
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int forksOffset = buffer.getIntLE(offset + 82);
             if (forksOffset < 0) {
                 return ValidationResult.error("Invalid offset for Forks");
@@ -623,7 +623,7 @@ extends ChargingInteraction {
                 return ValidationResult.error("Buffer overflow reading value");
             }
         }
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int blockedEffectsOffset = buffer.getIntLE(offset + 86);
             if (blockedEffectsOffset < 0) {
                 return ValidationResult.error("Invalid offset for BlockedEffects");

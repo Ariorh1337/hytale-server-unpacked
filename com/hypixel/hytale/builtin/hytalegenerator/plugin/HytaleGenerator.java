@@ -30,16 +30,18 @@ import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NEnvironmentS
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NPropStage;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NTerrainStage;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NTintStage;
+import com.hypixel.hytale.builtin.hytalegenerator.plugin.Handle;
 import com.hypixel.hytale.builtin.hytalegenerator.plugin.HandleProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
 import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
+import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -103,9 +105,16 @@ extends JavaPlugin {
     @Override
     protected void setup() {
         this.assetManager = new AssetManager(this.getEventRegistry(), this.getLogger());
-        BuilderCodec generatorProvider = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HandleProvider.class, () -> new HandleProvider(this)).documentation("The standard generator for Hytale.")).append(new KeyedCodec<String>("WorldStructure", Codec.STRING), HandleProvider::setWorldStructureName, HandleProvider::getWorldStructureName).documentation("The world structure to be used for this world.").add()).append(new KeyedCodec<Transform>("PlayerSpawn", Transform.CODEC), HandleProvider::setPlayerSpawn, HandleProvider::getPlayerSpawn).add()).build();
+        BuilderCodec generatorProvider = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HandleProvider.class, () -> new HandleProvider(this)).documentation("The standard generator for Hytale.")).append(new KeyedCodec<String>("WorldStructure", Codec.STRING), HandleProvider::setWorldStructureName, HandleProvider::getWorldStructureName).documentation("The world structure to be used for this world.").add()).build();
         IWorldGenProvider.CODEC.register("HytaleGenerator", HandleProvider.class, generatorProvider);
         this.getCommandRegistry().registerCommand(new ViewportCommand(this.assetManager));
+        this.getEventRegistry().registerGlobal(RemoveWorldEvent.class, event -> {
+            IWorldGen generator = event.getWorld().getChunkStore().getGenerator();
+            if (generator instanceof Handle) {
+                Handle handle = (Handle)generator;
+                this.generators.remove(handle.getProfile());
+            }
+        });
     }
 
     @Nonnull

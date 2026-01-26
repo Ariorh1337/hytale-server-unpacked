@@ -67,18 +67,18 @@ public class ModelParticle {
         ModelParticle obj = new ModelParticle();
         byte nullBits = buf.getByte(offset);
         obj.scale = buf.getFloatLE(offset + 1);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.color = Color.deserialize(buf, offset + 5);
         }
         obj.targetEntityPart = EntityPart.fromValue(buf.getByte(offset + 8));
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.positionOffset = Vector3f.deserialize(buf, offset + 9);
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 4) != 0) {
             obj.rotationOffset = Direction.deserialize(buf, offset + 21);
         }
         boolean bl = obj.detachedFromModel = buf.getByte(offset + 33) != 0;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos0 = offset + 42 + buf.getIntLE(offset + 34);
             int systemIdLen = VarInt.peek(buf, varPos0);
             if (systemIdLen < 0) {
@@ -89,7 +89,7 @@ public class ModelParticle {
             }
             obj.systemId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos1 = offset + 42 + buf.getIntLE(offset + 38);
             int targetNodeNameLen = VarInt.peek(buf, varPos1);
             if (targetNodeNameLen < 0) {
@@ -107,7 +107,7 @@ public class ModelParticle {
         int sl;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 42;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 34);
             int pos0 = offset + 42 + fieldOffset0;
             sl = VarInt.peek(buf, pos0);
@@ -115,7 +115,7 @@ public class ModelParticle {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 38);
             int pos1 = offset + 42 + fieldOffset1;
             sl = VarInt.peek(buf, pos1);
@@ -129,19 +129,19 @@ public class ModelParticle {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.systemId != null) {
+        if (this.color != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.color != null) {
+        if (this.positionOffset != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.targetNodeName != null) {
+        if (this.rotationOffset != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.positionOffset != null) {
+        if (this.systemId != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.rotationOffset != null) {
+        if (this.targetNodeName != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
         buf.writeByte(nullBits);
@@ -199,7 +199,7 @@ public class ModelParticle {
             return ValidationResult.error("Buffer too small: expected at least 42 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int systemIdOffset = buffer.getIntLE(offset + 34);
             if (systemIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for SystemId");
@@ -220,7 +220,7 @@ public class ModelParticle {
                 return ValidationResult.error("Buffer overflow reading SystemId");
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int targetNodeNameOffset = buffer.getIntLE(offset + 38);
             if (targetNodeNameOffset < 0) {
                 return ValidationResult.error("Invalid offset for TargetNodeName");

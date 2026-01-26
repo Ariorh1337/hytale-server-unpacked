@@ -68,12 +68,12 @@ implements Packet {
         DisplayDebug obj = new DisplayDebug();
         byte nullBits = buf.getByte(offset);
         obj.shape = DebugShape.fromValue(buf.getByte(offset + 1));
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.color = Vector3f.deserialize(buf, offset + 2);
         }
         obj.time = buf.getFloatLE(offset + 14);
         boolean bl = obj.fade = buf.getByte(offset + 18) != 0;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 27 + buf.getIntLE(offset + 19);
             int matrixCount = VarInt.peek(buf, varPos0);
             if (matrixCount < 0) {
@@ -116,7 +116,7 @@ implements Packet {
         int arrLen;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 27;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 19);
             int pos0 = offset + 27 + fieldOffset0;
             arrLen = VarInt.peek(buf, pos0);
@@ -139,10 +139,10 @@ implements Packet {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.matrix != null) {
+        if (this.color != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.color != null) {
+        if (this.matrix != null) {
             nullBits = (byte)(nullBits | 2);
         }
         if (this.frustumProjection != null) {
@@ -206,7 +206,7 @@ implements Packet {
             return ValidationResult.error("Buffer too small: expected at least 27 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int matrixOffset = buffer.getIntLE(offset + 19);
             if (matrixOffset < 0) {
                 return ValidationResult.error("Invalid offset for Matrix");

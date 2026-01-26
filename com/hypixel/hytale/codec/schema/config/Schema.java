@@ -49,7 +49,12 @@ public class Schema {
         o.title = i;
     }, o -> o.title)).addField(new KeyedCodec<String>("description", Codec.STRING, false, true), (o, i) -> {
         o.description = i;
-    }, o -> o.description)).addField(new KeyedCodec<String>("markdownDescription", Codec.STRING, false, true), (o, i) -> {
+    }, o -> {
+        if (o.description == null && o.markdownDescription != null) {
+            return Documentation.stripMarkdown(o.markdownDescription);
+        }
+        return o.description;
+    })).addField(new KeyedCodec<String>("markdownDescription", Codec.STRING, false, true), (o, i) -> {
         o.markdownDescription = i;
     }, o -> o.markdownDescription)).addField(new KeyedCodec<T[]>("enumDescriptions", Codec.STRING_ARRAY, false, true), (o, i) -> {
         o.enumDescriptions = i;

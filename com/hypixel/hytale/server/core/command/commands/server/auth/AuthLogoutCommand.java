@@ -16,8 +16,6 @@ extends CommandBase {
     private static final Message MESSAGE_SINGLEPLAYER = Message.translation("server.commands.auth.logout.singleplayer").color(Color.RED);
     @Nonnull
     private static final Message MESSAGE_NOT_AUTHENTICATED = Message.translation("server.commands.auth.logout.notAuthenticated").color(Color.YELLOW);
-    @Nonnull
-    private static final Message MESSAGE_SUCCESS = Message.translation("server.commands.auth.logout.success").color(Color.GREEN);
 
     public AuthLogoutCommand() {
         super("logout", "server.commands.auth.logout.desc");
@@ -36,7 +34,7 @@ extends CommandBase {
         }
         ServerAuthManager.AuthMode previousMode = authManager.getAuthMode();
         authManager.logout();
-        context.sendMessage(MESSAGE_SUCCESS.param("previousMode", previousMode.name()));
+        context.sendMessage(Message.translation("server.commands.auth.logout.success").color(Color.GREEN).param("previousMode", previousMode.name()));
     }
 }
 

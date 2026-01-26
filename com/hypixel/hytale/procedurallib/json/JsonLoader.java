@@ -14,6 +14,7 @@ import com.hypixel.hytale.procedurallib.json.SeedString;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
@@ -33,15 +34,25 @@ extends Loader<K, T> {
         return this.json != null && this.json.isJsonObject() && this.json.getAsJsonObject().has(name);
     }
 
+    @Nonnull
+    public JsonElement getOrLoad(@Nonnull JsonElement element) {
+        JsonObject obj;
+        JsonElement path;
+        if (element.isJsonObject() && (path = (obj = element.getAsJsonObject()).get("File")) != null && path.isJsonPrimitive() && path.getAsJsonPrimitive().isString()) {
+            JsonElement loaded = this.loadFileElem(path.getAsString());
+            element = Objects.requireNonNullElse(loaded, element);
+        }
+        return element;
+    }
+
     @Nullable
     public JsonElement get(String name) {
-        JsonObject object;
         if (this.json == null || !this.json.isJsonObject()) {
             return null;
         }
         JsonElement element = this.json.getAsJsonObject().get(name);
-        if (element != null && element.isJsonObject() && (object = element.getAsJsonObject()).has("File")) {
-            element = this.loadFileElem(object.get("File").getAsString());
+        if (element != null && element.isJsonObject()) {
+            element = this.getOrLoad(element);
         }
         return element;
     }

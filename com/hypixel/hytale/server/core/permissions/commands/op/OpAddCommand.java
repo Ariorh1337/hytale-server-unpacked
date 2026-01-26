@@ -19,11 +19,7 @@ import javax.annotation.Nonnull;
 public class OpAddCommand
 extends CommandBase {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_OP_ADDED = Message.translation("server.commands.op.added");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_OP_ADDED_TARGET = Message.translation("server.commands.op.added.target");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OP_ALREADY = Message.translation("server.commands.op.already");
     @Nonnull
     private final RequiredArg<UUID> playerArg = this.withRequiredArg("player", "server.commands.op.add.player.desc", ArgTypes.PLAYER_UUID);
 
@@ -42,10 +38,10 @@ extends CommandBase {
         Message displayMessage = Message.raw(displayName).bold(true);
         Set<String> groups = permissionsModule.getGroupsForUser(uuid);
         if (groups.contains("OP")) {
-            context.sendMessage(MESSAGE_COMMANDS_OP_ALREADY.param("username", displayMessage));
+            context.sendMessage(Message.translation("server.commands.op.already").param("username", displayMessage));
         } else {
             permissionsModule.addUserToGroup(uuid, "OP");
-            context.sendMessage(MESSAGE_COMMANDS_OP_ADDED.param("username", displayMessage));
+            context.sendMessage(Message.translation("server.commands.op.added").param("username", displayMessage));
             if (playerRef != null) {
                 playerRef.sendMessage(MESSAGE_COMMANDS_OP_ADDED_TARGET);
             }

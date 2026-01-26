@@ -7,14 +7,17 @@ import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ComponentRegistry;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.query.Query;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class ExactArchetypeQuery<ECS_TYPE>
 implements Query<ECS_TYPE> {
+    @Nonnull
     private final Archetype<ECS_TYPE> archetype;
 
-    public ExactArchetypeQuery(Archetype<ECS_TYPE> archetype) {
+    public ExactArchetypeQuery(@Nonnull Archetype<ECS_TYPE> archetype) {
         this.archetype = archetype;
+        Objects.requireNonNull(archetype, "Archetype for ExactArchetypeQuery cannot be null");
     }
 
     public Archetype<ECS_TYPE> getArchetype() {
@@ -32,7 +35,7 @@ implements Query<ECS_TYPE> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
         this.archetype.validateRegistry(registry);
     }
 

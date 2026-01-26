@@ -9,6 +9,8 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
@@ -19,6 +21,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -26,6 +29,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class CopyCommand
 extends AbstractPlayerCommand {
@@ -39,6 +43,8 @@ extends AbstractPlayerCommand {
     private final FlagArg emptyFlag = this.withFlagArg("empty", "server.commands.copy.empty.desc");
     @Nonnull
     private final FlagArg keepAnchorsFlag = this.withFlagArg("keepanchors", "server.commands.copy.keepanchors.desc");
+    @Nonnull
+    private final FlagArg playerAnchorFlag = this.withFlagArg("playerAnchor", "server.commands.copy.playerAnchor.desc");
 
     public CopyCommand() {
         super("copy", "server.commands.copy.desc");
@@ -71,6 +77,7 @@ extends AbstractPlayerCommand {
             settings |= 0x10;
         }
         int settingsFinal = settings;
+        Vector3i playerAnchor = CopyCommand.getPlayerAnchor(ref, store, (Boolean)this.playerAnchorFlag.get(context));
         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
             try {
                 BlockSelection selection = builderState.getSelection();
@@ -80,12 +87,25 @@ extends AbstractPlayerCommand {
                 }
                 Vector3i min = selection.getSelectionMin();
                 Vector3i max = selection.getSelectionMax();
-                builderState.copyOrCut((Ref<EntityStore>)r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settingsFinal, (ComponentAccessor<EntityStore>)componentAccessor);
+                builderState.copyOrCut((Ref<EntityStore>)r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settingsFinal, playerAnchor, (ComponentAccessor<EntityStore>)componentAccessor);
             }
             catch (PrefabCopyException e) {
                 context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));
             }
         });
+    }
+
+    @Nullable
+    private static Vector3i getPlayerAnchor(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, boolean usePlayerAnchor) {
+        if (!usePlayerAnchor) {
+            return null;
+        }
+        TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+        if (transformComponent == null) {
+            return null;
+        }
+        Vector3d position = transformComponent.getPosition();
+        return new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ()));
     }
 
     public static void copySelection(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -140,6 +160,8 @@ extends AbstractPlayerCommand {
         private final FlagArg emptyFlag = this.withFlagArg("empty", "server.commands.copy.empty.desc");
         @Nonnull
         private final FlagArg keepAnchorsFlag = this.withFlagArg("keepanchors", "server.commands.copy.keepanchors.desc");
+        @Nonnull
+        private final FlagArg playerAnchorFlag = this.withFlagArg("playerAnchor", "server.commands.copy.playerAnchor.desc");
 
         public CopyRegionCommand() {
             super("server.commands.copy.desc");
@@ -175,9 +197,10 @@ extends AbstractPlayerCommand {
             int yMax = (Integer)this.yMaxArg.get(context);
             int zMax = (Integer)this.zMaxArg.get(context);
             int copySettings = settings;
+            Vector3i playerAnchor = CopyCommand.getPlayerAnchor(ref, store, (Boolean)this.playerAnchorFlag.get(context));
             BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
                 try {
-                    builderState.copyOrCut((Ref<EntityStore>)r, xMin, yMin, zMin, xMax, yMax, zMax, copySettings, (ComponentAccessor<EntityStore>)componentAccessor);
+                    builderState.copyOrCut((Ref<EntityStore>)r, xMin, yMin, zMin, xMax, yMax, zMax, copySettings, playerAnchor, (ComponentAccessor<EntityStore>)componentAccessor);
                 }
                 catch (PrefabCopyException e) {
                     context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));

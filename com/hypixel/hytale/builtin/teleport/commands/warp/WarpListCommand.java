@@ -32,10 +32,7 @@ extends CommandBase {
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED = Message.translation("server.commands.teleport.warp.notLoaded");
     private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NO_WARPS = Message.translation("server.commands.teleport.warp.noWarps");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_PAGE_NUM_TOO_LOW = Message.translation("server.commands.teleport.warp.pageNumTooLow");
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_PAGE_NUM_TOO_HIGH = Message.translation("server.commands.teleport.warp.pageNumTooHigh");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_LIST_HEADER = Message.translation("server.commands.teleport.warp.listHeader");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_LIST_ENTRY = Message.translation("server.commands.teleport.warp.listEntry");
     @Nonnull
     private final OptionalArg<Integer> pageArg = this.withOptionalArg("page", "server.commands.warp.list.page.desc", ArgTypes.INTEGER);
 
@@ -82,7 +79,7 @@ extends CommandBase {
         }
         int n = pageNumber = this.pageArg.provided(context) ? (Integer)this.pageArg.get(context) : 1;
         if (pageNumber < 1) {
-            context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_PAGE_NUM_TOO_LOW.param("page", pageNumber));
+            context.sendMessage(Message.translation("server.commands.teleport.warp.pageNumTooLow").param("page", pageNumber));
             return;
         }
         ObjectArrayList<Warp> innerWarps = new ObjectArrayList<Warp>(warps.values());
@@ -91,12 +88,12 @@ extends CommandBase {
         if (paginated.size() < pageNumber) {
             context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_PAGE_NUM_TOO_HIGH);
         } else {
-            context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_LIST_HEADER.param("page", pageNumber).param("pages", paginated.size()));
+            context.sendMessage(Message.translation("server.commands.teleport.warp.listHeader").param("page", pageNumber).param("pages", paginated.size()));
             int startIndex = (pageNumber - 1) * 8;
             List<Warp> page = paginated.get(pageNumber - 1);
             int i = 1;
             for (Warp w : page) {
-                context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_LIST_ENTRY.param("index", startIndex + i).param("name", w.getId()).param("creator", w.getCreator()));
+                context.sendMessage(Message.translation("server.commands.teleport.warp.listEntry").param("index", startIndex + i).param("name", w.getId()).param("creator", w.getCreator()));
                 ++i;
             }
         }

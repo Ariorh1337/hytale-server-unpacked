@@ -12,6 +12,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeIntPosition;
@@ -26,6 +27,9 @@ import javax.annotation.Nonnull;
 
 public class PasteCommand
 extends AbstractPlayerCommand {
+    @Nonnull
+    private final FlagArg technicalFlag = this.withFlagArg("technical", "server.commands.paste.technical.desc");
+
     public PasteCommand() {
         super("paste", "server.commands.paste.desc");
         this.setPermissionGroup(GameMode.Creative);
@@ -44,13 +48,16 @@ extends AbstractPlayerCommand {
         int x = MathUtil.floor(position.x);
         int y = MathUtil.floor(position.y);
         int z = MathUtil.floor(position.z);
-        BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.paste((Ref<EntityStore>)r, x, y, z, (ComponentAccessor<EntityStore>)componentAccessor));
+        boolean technical = (Boolean)this.technicalFlag.get(context);
+        BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.paste((Ref<EntityStore>)r, x, y, z, technical, (ComponentAccessor<EntityStore>)componentAccessor));
     }
 
     private static class PasteAtPositionCommand
     extends AbstractPlayerCommand {
         @Nonnull
         private final RequiredArg<RelativeIntPosition> positionArg = this.withRequiredArg("position", "server.commands.paste.position.desc", ArgTypes.RELATIVE_BLOCK_POSITION);
+        @Nonnull
+        private final FlagArg technicalFlag = this.withFlagArg("technical", "server.commands.paste.technical.desc");
 
         public PasteAtPositionCommand() {
             super("server.commands.paste.desc");
@@ -66,7 +73,8 @@ extends AbstractPlayerCommand {
             Vector3d position = transformComponent.getPosition();
             RelativeIntPosition relativePos = (RelativeIntPosition)this.positionArg.get(context);
             Vector3i blockPos = relativePos.getBlockPosition(position, chunkStore);
-            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.paste((Ref<EntityStore>)r, blockPos.x, blockPos.y, blockPos.z, (ComponentAccessor<EntityStore>)componentAccessor));
+            boolean technical = (Boolean)this.technicalFlag.get(context);
+            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.paste((Ref<EntityStore>)r, blockPos.x, blockPos.y, blockPos.z, technical, (ComponentAccessor<EntityStore>)componentAccessor));
         }
     }
 }

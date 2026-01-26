@@ -33,13 +33,6 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveReachLocationMarkerCommand
 extends AbstractCommandCollection {
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_NOT_FOUND = Message.translation("server.commands.objective.reachLocationMarker.notFound");
-    @Nonnull
-    private static final Message MESSAGE_GENERAL_FAILED_DID_YOU_MEAN = Message.translation("server.general.failed.didYouMean");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_ADDED = Message.translation("server.commands.objective.reachLocationMarker.added");
-
     public ObjectiveReachLocationMarkerCommand() {
         super("reachlocationmarker", "server.commands.objective.reachLocationMarker");
         this.addSubCommand(new AddReachLocationMarkerCommand());
@@ -58,8 +51,8 @@ extends AbstractCommandCollection {
         protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
             String reachLocationMarkerId = (String)this.reachLocationMarkerArg.get(context);
             if (ReachLocationMarkerAsset.getAssetMap().getAsset(reachLocationMarkerId) == null) {
-                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_NOT_FOUND.param("id", reachLocationMarkerId));
-                context.sendMessage(MESSAGE_GENERAL_FAILED_DID_YOU_MEAN.param("choices", StringUtil.sortByFuzzyDistance(reachLocationMarkerId, ReachLocationMarkerAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT).toString()));
+                context.sendMessage(Message.translation("server.commands.objective.reachLocationMarker.notFound").param("id", reachLocationMarkerId));
+                context.sendMessage(Message.translation("server.general.failed.didYouMean").param("choices", StringUtil.sortByFuzzyDistance(reachLocationMarkerId, ReachLocationMarkerAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT).toString()));
                 return;
             }
             Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
@@ -76,7 +69,7 @@ extends AbstractCommandCollection {
             holder.ensureComponent(Intangible.getComponentType());
             holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
             store.addEntity(holder, AddReason.SPAWN);
-            context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_REACH_LOCATION_MARKER_ADDED.param("id", reachLocationMarkerId));
+            context.sendMessage(Message.translation("server.commands.objective.reachLocationMarker.added").param("id", reachLocationMarkerId));
         }
     }
 }

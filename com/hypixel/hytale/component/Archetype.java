@@ -113,6 +113,7 @@ implements Query<ECS_TYPE> {
         return false;
     }
 
+    @Nonnull
     public Archetype<ECS_TYPE> getSerializableArchetype(@Nonnull ComponentRegistry.Data<ECS_TYPE> data) {
         int serializableMinIndex;
         if (this.isEmpty()) {
@@ -246,7 +247,7 @@ implements Query<ECS_TYPE> {
     }
 
     @Override
-    public void validateRegistry(ComponentRegistry<ECS_TYPE> registry) {
+    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
         if (this.isEmpty()) {
             return;
         }

@@ -88,16 +88,24 @@ public class BlockHarvestUtils {
         if (item != null && (item.getWeapon() != null || item.getBuilderToolData() != null)) {
             return null;
         }
+        int requiredQuality = breaking.getQuality();
         if (tool != null) {
             if (tool.getSpecs() != null) {
                 for (ItemToolSpec spec : tool.getSpecs()) {
                     if (!Objects.equals(spec.getGatherType(), gatherType)) continue;
+                    if (spec.getQuality() < requiredQuality) {
+                        return null;
+                    }
                     return spec;
                 }
             }
             return null;
         }
-        return ItemToolSpec.getAssetMap().getAsset(gatherType);
+        ItemToolSpec defaultSpec = ItemToolSpec.getAssetMap().getAsset(gatherType);
+        if (defaultSpec != null && defaultSpec.getQuality() < requiredQuality) {
+            return null;
+        }
+        return defaultSpec;
     }
 
     public static double calculateDurabilityUse(@Nonnull Item item, @Nullable BlockType blockType) {

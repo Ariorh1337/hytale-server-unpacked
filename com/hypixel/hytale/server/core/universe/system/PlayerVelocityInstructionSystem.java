@@ -44,23 +44,21 @@ extends EntityTickingSystem<EntityStore> {
         block4: for (Velocity.Instruction instruction : velocityComponent.getInstructions()) {
             switch (instruction.getType()) {
                 case Set: {
+                    TransformComponent transformComponent;
                     Vector3d velocity = instruction.getVelocity();
                     VelocityConfig velocityConfig = instruction.getConfig();
                     playerRefComponent.getPacketHandler().writeNoCache(new ChangeVelocity((float)velocity.x, (float)velocity.y, (float)velocity.z, ChangeVelocityType.Set, velocityConfig != null ? velocityConfig.toPacket() : null));
-                    if (!DebugUtils.DISPLAY_FORCES) continue block4;
-                    TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-                    assert (transformComponent != null);
+                    if (!DebugUtils.DISPLAY_FORCES || (transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType())) == null) continue block4;
                     World world = commandBuffer.getExternalData().getWorld();
                     DebugUtils.addForce(world, transformComponent.getPosition(), velocity, velocityConfig);
                     break;
                 }
                 case Add: {
+                    TransformComponent transformComponent;
                     Vector3d velocity = instruction.getVelocity();
                     VelocityConfig velocityConfig = instruction.getConfig();
                     playerRefComponent.getPacketHandler().writeNoCache(new ChangeVelocity((float)velocity.x, (float)velocity.y, (float)velocity.z, ChangeVelocityType.Add, velocityConfig != null ? velocityConfig.toPacket() : null));
-                    if (!DebugUtils.DISPLAY_FORCES) break;
-                    TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-                    assert (transformComponent != null);
+                    if (!DebugUtils.DISPLAY_FORCES || (transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType())) == null) break;
                     World world = commandBuffer.getExternalData().getWorld();
                     DebugUtils.addForce(world, transformComponent.getPosition(), new Vector3d(velocity.x, velocity.y, velocity.z), velocityConfig);
                 }

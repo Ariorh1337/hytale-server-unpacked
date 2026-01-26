@@ -35,17 +35,6 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveLocationMarkerCommand
 extends AbstractCommandCollection {
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_NOT_FOUND = Message.translation("server.commands.objective.locationMarker.notFound");
-    @Nonnull
-    private static final Message MESSAGE_GENERAL_FAILED_DID_YOU_MEAN = Message.translation("server.general.failed.didYouMean");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_ADDED = Message.translation("server.commands.objective.locationMarker.added");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_ENABLED = Message.translation("server.commands.objective.locationMarker.enabled");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_DISABLED = Message.translation("server.commands.objective.locationMarker.disabled");
-
     public ObjectiveLocationMarkerCommand() {
         super("locationmarker", "server.commands.objective.locationMarker");
         this.addAliases("marker");
@@ -70,8 +59,8 @@ extends AbstractCommandCollection {
             assert (playerTransformComponent != null);
             String objectiveLocationMarkerId = (String)this.locationMarkerArg.get(context);
             if (ObjectiveLocationMarkerAsset.getAssetMap().getAsset(objectiveLocationMarkerId) == null) {
-                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_NOT_FOUND.param("id", objectiveLocationMarkerId));
-                context.sendMessage(MESSAGE_GENERAL_FAILED_DID_YOU_MEAN.param("choices", StringUtil.sortByFuzzyDistance(objectiveLocationMarkerId, ObjectiveLocationMarkerAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT).toString()));
+                context.sendMessage(Message.translation("server.commands.objective.locationMarker.notFound").param("id", objectiveLocationMarkerId));
+                context.sendMessage(Message.translation("server.general.failed.didYouMean").param("choices", StringUtil.sortByFuzzyDistance(objectiveLocationMarkerId, ObjectiveLocationMarkerAsset.getAssetMap().getAssetMap().keySet(), CommandUtil.RECOMMEND_COUNT).toString()));
                 return;
             }
             Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
@@ -86,7 +75,7 @@ extends AbstractCommandCollection {
             holder.ensureComponent(Intangible.getComponentType());
             holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
             store.addEntity(holder, AddReason.SPAWN);
-            context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_ADDED.param("id", objectiveLocationMarkerId));
+            context.sendMessage(Message.translation("server.commands.objective.locationMarker.added").param("id", objectiveLocationMarkerId));
         }
     }
 
@@ -101,7 +90,7 @@ extends AbstractCommandCollection {
             WorldConfig worldConfig = world.getWorldConfig();
             worldConfig.setObjectiveMarkersEnabled(true);
             worldConfig.markChanged();
-            context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_ENABLED.param("worldName", world.getName()));
+            context.sendMessage(Message.translation("server.commands.objective.locationMarker.enabled").param("worldName", world.getName()));
         }
     }
 
@@ -116,7 +105,7 @@ extends AbstractCommandCollection {
             WorldConfig worldConfig = world.getWorldConfig();
             worldConfig.setObjectiveMarkersEnabled(false);
             worldConfig.markChanged();
-            context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_LOCATION_MARKER_DISABLED.param("worldName", world.getName()));
+            context.sendMessage(Message.translation("server.commands.objective.locationMarker.disabled").param("worldName", world.getName()));
         }
     }
 }

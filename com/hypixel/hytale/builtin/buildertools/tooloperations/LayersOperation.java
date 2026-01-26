@@ -31,6 +31,9 @@ extends ToolOperation {
     private boolean failed;
     private final int layerTwoDepthEnd;
     private final int layerThreeDepthEnd;
+    private final boolean skipLayerOne;
+    private final boolean skipLayerTwo;
+    private final boolean skipLayerThree;
 
     public LayersOperation(@Nonnull Ref<EntityStore> ref, @Nonnull Player player, @Nonnull BuilderToolOnUseInteraction packet, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         super(ref, packet, componentAccessor);
@@ -78,6 +81,9 @@ extends ToolOperation {
         this.layerThreeBlockPattern = (BlockPattern)this.args.tool().get("iLayerThreeMaterial");
         this.enableLayerTwo = (Boolean)this.args.tool().get("dEnableLayerTwo");
         this.enableLayerThree = (Boolean)this.args.tool().get("gEnableLayerThree");
+        this.skipLayerOne = (Boolean)this.args.tool().getOrDefault("kSkipLayerOne", false);
+        this.skipLayerTwo = (Boolean)this.args.tool().getOrDefault("lSkipLayerTwo", false);
+        this.skipLayerThree = (Boolean)this.args.tool().getOrDefault("mSkipLayerThree", false);
         this.maxDepthNecessary = this.layerOneLength + (this.enableLayerTwo ? this.layerTwoLength : 0) + (this.enableLayerThree ? this.layerThreeLength : 0);
         this.layerTwoDepthEnd = this.layerOneLength + this.layerTwoLength;
         this.layerThreeDepthEnd = this.layerTwoDepthEnd + this.layerThreeLength;
@@ -151,15 +157,21 @@ extends ToolOperation {
 
     public boolean attemptSetBlock(int x, int y, int z, int depth) {
         if (depth < this.layerOneLength) {
-            this.edit.setBlock(x, y, z, this.layerOneBlockPattern.nextBlock(this.random));
+            if (!this.skipLayerOne) {
+                this.edit.setBlock(x, y, z, this.layerOneBlockPattern.nextBlock(this.random));
+            }
             return true;
         }
-        if (this.enableLayerTwo && depth < this.layerTwoDepthEnd && !this.layerThreeBlockPattern.isEmpty()) {
-            this.edit.setBlock(x, y, z, this.layerTwoBlockPattern.nextBlock(this.random));
+        if (this.enableLayerTwo && depth < this.layerTwoDepthEnd) {
+            if (!this.skipLayerTwo && !this.layerTwoBlockPattern.isEmpty()) {
+                this.edit.setBlock(x, y, z, this.layerTwoBlockPattern.nextBlock(this.random));
+            }
             return true;
         }
-        if (this.enableLayerThree && depth < this.layerThreeDepthEnd && !this.layerThreeBlockPattern.isEmpty()) {
-            this.edit.setBlock(x, y, z, this.layerThreeBlockPattern.nextBlock(this.random));
+        if (this.enableLayerThree && depth < this.layerThreeDepthEnd) {
+            if (!this.skipLayerThree && !this.layerThreeBlockPattern.isEmpty()) {
+                this.edit.setBlock(x, y, z, this.layerThreeBlockPattern.nextBlock(this.random));
+            }
             return true;
         }
         return false;

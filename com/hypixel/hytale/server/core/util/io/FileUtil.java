@@ -5,12 +5,14 @@ package com.hypixel.hytale.server.core.util.io;
 
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.CopyOption;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Comparator;
@@ -82,6 +84,29 @@ public class FileUtil {
     public static void deleteDirectory(@Nonnull Path path) throws IOException {
         try (Stream<Path> stream = Files.walk(path, new FileVisitOption[0]);){
             stream.sorted(Comparator.reverseOrder()).forEach(SneakyThrow.sneakyConsumer(Files::delete));
+        }
+    }
+
+    public static void extractZip(@Nonnull Path zipFile, @Nonnull Path destDir) throws IOException {
+        FileUtil.extractZip(Files.newInputStream(zipFile, new OpenOption[0]), destDir);
+    }
+
+    public static void extractZip(@Nonnull InputStream inputStream, @Nonnull Path destDir) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(inputStream);){
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                Path destPath = destDir.resolve(entry.getName()).normalize();
+                if (!destPath.startsWith(destDir)) {
+                    throw new ZipException("Zip entry outside target directory: " + entry.getName());
+                }
+                if (entry.isDirectory()) {
+                    Files.createDirectories(destPath, new FileAttribute[0]);
+                } else {
+                    Files.createDirectories(destPath.getParent(), new FileAttribute[0]);
+                    Files.copy(zis, destPath, StandardCopyOption.REPLACE_EXISTING);
+                }
+                zis.closeEntry();
+            }
         }
     }
 }

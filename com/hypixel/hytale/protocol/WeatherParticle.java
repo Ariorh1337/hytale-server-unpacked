@@ -50,14 +50,14 @@ public class WeatherParticle {
     public static WeatherParticle deserialize(@Nonnull ByteBuf buf, int offset) {
         WeatherParticle obj = new WeatherParticle();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.color = Color.deserialize(buf, offset + 1);
         }
         obj.scale = buf.getFloatLE(offset + 4);
         obj.isOvergroundOnly = buf.getByte(offset + 8) != 0;
         obj.positionOffsetMultiplier = buf.getFloatLE(offset + 9);
         int pos = offset + 13;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int systemIdLen = VarInt.peek(buf, pos);
             if (systemIdLen < 0) {
                 throw ProtocolException.negativeLength("SystemId", systemIdLen);
@@ -75,7 +75,7 @@ public class WeatherParticle {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int pos = offset + 13;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int sl = VarInt.peek(buf, pos);
             pos += VarInt.length(buf, pos) + sl;
         }
@@ -84,10 +84,10 @@ public class WeatherParticle {
 
     public void serialize(@Nonnull ByteBuf buf) {
         byte nullBits = 0;
-        if (this.systemId != null) {
+        if (this.color != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.color != null) {
+        if (this.systemId != null) {
             nullBits = (byte)(nullBits | 2);
         }
         buf.writeByte(nullBits);
@@ -118,7 +118,7 @@ public class WeatherParticle {
         }
         byte nullBits = buffer.getByte(offset);
         int pos = offset + 13;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int systemIdLen = VarInt.peek(buffer, pos);
             if (systemIdLen < 0) {
                 return ValidationResult.error("Invalid string length for SystemId");

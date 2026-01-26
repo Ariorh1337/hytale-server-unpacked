@@ -40,7 +40,7 @@ public abstract class Dependency<ECS_TYPE> {
 
     @Nonnull
     public String toString() {
-        return "Dependency{order=" + String.valueOf((Object)this.order) + "}";
+        return "Dependency{order=" + String.valueOf((Object)this.order) + ", priority=" + this.priority + "}";
     }
 }
 

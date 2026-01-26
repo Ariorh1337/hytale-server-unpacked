@@ -17,7 +17,7 @@ public class SchemaFile {
     public static final int FIXED_BLOCK_SIZE = 1;
     public static final int VARIABLE_FIELD_COUNT = 1;
     public static final int VARIABLE_BLOCK_START = 1;
-    public static final int MAX_SIZE = 16384006;
+    public static final int MAX_SIZE = 0x4000002;
     @Nullable
     public String content;
 
@@ -42,8 +42,8 @@ public class SchemaFile {
             if (contentLen < 0) {
                 throw ProtocolException.negativeLength("Content", contentLen);
             }
-            if (contentLen > 4096000) {
-                throw ProtocolException.stringTooLong("Content", contentLen, 4096000);
+            if (contentLen > 0xFFFFFF) {
+                throw ProtocolException.stringTooLong("Content", contentLen, 0xFFFFFF);
             }
             int contentVarLen = VarInt.length(buf, pos);
             obj.content = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
@@ -69,7 +69,7 @@ public class SchemaFile {
         }
         buf.writeByte(nullBits);
         if (this.content != null) {
-            PacketIO.writeVarString(buf, this.content, 4096000);
+            PacketIO.writeVarString(buf, this.content, 0xFFFFFF);
         }
     }
 
@@ -92,8 +92,8 @@ public class SchemaFile {
             if (contentLen < 0) {
                 return ValidationResult.error("Invalid string length for Content");
             }
-            if (contentLen > 4096000) {
-                return ValidationResult.error("Content exceeds max length 4096000");
+            if (contentLen > 0xFFFFFF) {
+                return ValidationResult.error("Content exceeds max length 16777215");
             }
             pos += VarInt.length(buffer, pos);
             if ((pos += contentLen) > buffer.writerIndex()) {

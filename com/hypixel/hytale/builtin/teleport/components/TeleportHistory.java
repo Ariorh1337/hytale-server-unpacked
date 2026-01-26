@@ -25,10 +25,6 @@ implements Component<EntityStore> {
     private static final int MAX_TELEPORT_HISTORY = 100;
     private static final Message MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER = Message.translation("server.commands.teleport.notFurther");
     private static final Message MESSAGE_COMMANDS_TELEPORT_WORLD_NOT_LOADED = Message.translation("server.commands.teleport.worldNotLoaded");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_FORWARD_TO_WAYPOINT = Message.translation("server.commands.teleport.teleportedForwardToWaypoint");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_BACK_TO_WAYPOINT = Message.translation("server.commands.teleport.teleportedBackToWaypoint");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_FORWARD_TO_COORDINATES = Message.translation("server.commands.teleport.teleportedForwardToCoordinates");
-    private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_BACK_TO_COORDINATES = Message.translation("server.commands.teleport.teleportedBackToCoordinates");
     @Nonnull
     private final Deque<Waypoint> back = new ArrayDeque<Waypoint>();
     @Nonnull
@@ -87,9 +83,9 @@ implements Component<EntityStore> {
             int remainingInDirection = from.size();
             int totalInOtherDirection = to.size() - 1;
             if (point.message != null && !point.message.isEmpty()) {
-                playerRef.sendMessage(isForward ? MESSAGE_COMMANDS_TELEPORT_TELEPORTED_FORWARD_TO_WAYPOINT : MESSAGE_COMMANDS_TELEPORT_TELEPORTED_BACK_TO_WAYPOINT.param("name", point.message).param("x", pos.getX()).param("y", pos.getY()).param("z", pos.getZ()).param("remaining", remainingInDirection).param("otherDirection", totalInOtherDirection));
+                playerRef.sendMessage((isForward ? Message.translation("server.commands.teleport.teleportedForwardToWaypoint") : Message.translation("server.commands.teleport.teleportedBackToWaypoint")).param("name", point.message).param("x", pos.getX()).param("y", pos.getY()).param("z", pos.getZ()).param("remaining", remainingInDirection).param("otherDirection", totalInOtherDirection));
             } else {
-                playerRef.sendMessage(isForward ? MESSAGE_COMMANDS_TELEPORT_TELEPORTED_FORWARD_TO_COORDINATES : MESSAGE_COMMANDS_TELEPORT_TELEPORTED_BACK_TO_COORDINATES.param("x", pos.getX()).param("y", pos.getY()).param("z", pos.getZ()).param("remaining", remainingInDirection).param("otherDirection", totalInOtherDirection));
+                playerRef.sendMessage((isForward ? Message.translation("server.commands.teleport.teleportedForwardToCoordinates") : Message.translation("server.commands.teleport.teleportedBackToCoordinates")).param("x", pos.getX()).param("y", pos.getY()).param("z", pos.getZ()).param("remaining", remainingInDirection).param("otherDirection", totalInOtherDirection));
             }
         }
     }

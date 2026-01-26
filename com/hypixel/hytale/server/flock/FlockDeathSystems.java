@@ -42,15 +42,15 @@ public class FlockDeathSystems {
                 commandBuffer.tryRemoveComponent(ref, FlockMembership.getComponentType());
             }
             Damage damageInfo = component.getDeathInfo();
-            Ref<EntityStore> attackerRef = null;
+            Ref<EntityStore> sourceRef = null;
             if (damageInfo != null && (source = damageInfo.getSource()) instanceof Damage.EntitySource) {
                 Damage.EntitySource entitySource = (Damage.EntitySource)source;
-                attackerRef = entitySource.getRef();
+                sourceRef = entitySource.getRef();
             }
-            if (attackerRef == null) {
+            if (sourceRef == null) {
                 return;
             }
-            Flock attackerFlock = FlockPlugin.getFlock(commandBuffer, attackerRef);
+            Flock attackerFlock = FlockPlugin.getFlock(commandBuffer, sourceRef);
             if (attackerFlock != null) {
                 attackerFlock.onTargetKilled(commandBuffer, ref);
             }

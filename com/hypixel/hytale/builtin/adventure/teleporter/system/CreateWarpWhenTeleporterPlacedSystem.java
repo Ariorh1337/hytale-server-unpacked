@@ -17,7 +17,6 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
@@ -36,9 +35,6 @@ import javax.annotation.Nullable;
 
 public class CreateWarpWhenTeleporterPlacedSystem
 extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
-    @Nonnull
-    public static final Vector3d WARP_OFFSET = new Vector3d(-3.5, 0.0, -3.5);
-
     @Override
     public void onComponentAdded(@Nonnull Ref<ChunkStore> ref, @Nonnull PlacedByInteractionComponent placedBy, @Nonnull Store<ChunkStore> chunkStore, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
         String language;
@@ -87,10 +83,8 @@ extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
         int rotationIndex = section.getRotationIndex(x, y, z);
         RotationTuple rotationTuple = RotationTuple.get(rotationIndex);
         Rotation rotationYaw = rotationTuple.yaw();
-        Vector3i rotationTupleAxis = rotationTuple.yaw().getAxisDirection();
-        Vector3d warpOffset = new Vector3d(WARP_OFFSET.getX() * (double)rotationTupleAxis.x, 0.0, WARP_OFFSET.getZ() * (double)rotationTupleAxis.z);
         float warpRotationYaw = (float)rotationYaw.getRadians() + (float)Math.toRadians(180.0);
-        Vector3d warpPosition = new Vector3d(x, y, z).add(warpOffset).add(0.5, 0.0, 0.5);
+        Vector3d warpPosition = new Vector3d(x, y, z).add(0.5, 0.65, 0.5);
         Transform warpTransform = new Transform(warpPosition, new Vector3f(Float.NaN, warpRotationYaw, Float.NaN));
         String warpId = name.toLowerCase();
         Warp warp = new Warp(warpTransform, name, worldChunk.getWorld(), "*Teleporter", Instant.now());

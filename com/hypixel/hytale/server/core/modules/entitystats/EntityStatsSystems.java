@@ -221,15 +221,18 @@ public class EntityStatsSystems {
     extends EntityTickingSystem<EntityStore> {
         @Nonnull
         private final ComponentType<EntityStore, EntityStatMap> entityStatMapComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
 
         public Recalculate(@Nonnull ComponentType<EntityStore, EntityStatMap> entityStatMapComponentType) {
             this.entityStatMapComponentType = entityStatMapComponentType;
+            this.query = Query.and(AllLegacyLivingEntityTypesQuery.INSTANCE, entityStatMapComponentType);
         }
 
         @Override
         @Nonnull
         public Query<EntityStore> getQuery() {
-            return AllLegacyLivingEntityTypesQuery.INSTANCE;
+            return this.query;
         }
 
         @Override

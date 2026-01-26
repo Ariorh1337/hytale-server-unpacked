@@ -206,14 +206,15 @@ extends Memory {
             }
             PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
+            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
             MemoriesPlugin memoriesPlugin = MemoriesPlugin.get();
             PlayerMemories playerMemoriesComponent = archetypeChunk.getComponent(index, PlayerMemories.getComponentType());
             assert (playerMemoriesComponent != null);
             NPCMemory temp = new NPCMemory();
             World world = commandBuffer.getExternalData().getWorld();
             String foundLocationZoneNameKey = GatherMemoriesSystem.findLocationZoneName(world, position);
-            for (Ref ref : results) {
-                NPCEntity npcComponent = commandBuffer.getComponent(ref, NPCEntity.getComponentType());
+            for (Ref ref2 : results) {
+                NPCEntity npcComponent = commandBuffer.getComponent(ref2, NPCEntity.getComponentType());
                 if (npcComponent == null) continue;
                 Role role = npcComponent.getRole();
                 assert (role != null);
@@ -228,21 +229,23 @@ extends Memory {
                 if (!playerMemoriesComponent.recordMemory(temp)) continue;
                 NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), Message.translation("server.memories.general.collected").param("memoryTitle", Message.translation(temp.getTitle())), null, "NotificationIcons/MemoriesIcon.png");
                 temp = new NPCMemory();
-                TransformComponent npcTransformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
+                TransformComponent npcTransformComponent = commandBuffer.getComponent(ref2, TransformComponent.getComponentType());
                 assert (npcTransformComponent != null);
                 MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(store.getExternalData().getWorld().getGameplayConfig());
                 if (memoriesGameplayConfig == null) continue;
                 ItemStack memoryItemStack = new ItemStack(memoriesGameplayConfig.getMemoriesCatchItemId());
                 Vector3d memoryItemHolderPosition = npcTransformComponent.getPosition().clone();
-                BoundingBox boundingBox = commandBuffer.getComponent(ref, BoundingBox.getComponentType());
-                if (boundingBox != null) {
-                    memoryItemHolderPosition.y += boundingBox.getBoundingBox().middleY();
+                BoundingBox boundingBoxComponent = commandBuffer.getComponent(ref2, BoundingBox.getComponentType());
+                if (boundingBoxComponent != null) {
+                    memoryItemHolderPosition.y += boundingBoxComponent.getBoundingBox().middleY();
                 }
-                Holder<EntityStore> memoryItemHolder = ItemComponent.generatePickedUpItem(memoryItemStack, memoryItemHolderPosition, commandBuffer, playerRefComponent.getReference());
+                Holder<EntityStore> memoryItemHolder = ItemComponent.generatePickedUpItem(memoryItemStack, memoryItemHolderPosition, commandBuffer, ref);
                 float memoryCatchItemLifetimeS = 0.62f;
-                memoryItemHolder.getComponent(PickupItemComponent.getComponentType()).setInitialLifeTime(memoryCatchItemLifetimeS);
+                PickupItemComponent pickupItemComponent = memoryItemHolder.getComponent(PickupItemComponent.getComponentType());
+                assert (pickupItemComponent != null);
+                pickupItemComponent.setInitialLifeTime(0.62f);
                 commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
-                GatherMemoriesSystem.displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, ref, commandBuffer);
+                GatherMemoriesSystem.displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, ref2, commandBuffer);
             }
         }
 

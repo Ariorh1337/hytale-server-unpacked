@@ -34,6 +34,7 @@ import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -56,7 +57,6 @@ public class NettyUtil {
     public static final String LOGGER_KEY = "logger";
     public static final LoggingHandler LOGGER;
     public static final String HANDLER = "handler";
-    public static final String TIMEOUT_HANDLER = "timeOut";
     public static final String RATE_LIMIT = "rateLimit";
 
     public static void init() {
@@ -246,6 +246,33 @@ public class NettyUtil {
         @Nonnull
         public String toString() {
             return StringUtil.simpleClassName(io.netty.channel.ReflectiveChannelFactory.class) + "(" + StringUtil.simpleClassName(this.constructor.getDeclaringClass()) + ".class, " + String.valueOf(this.family) + ")";
+        }
+    }
+
+    public record TimeoutContext(@Nonnull String stage, long connectionStartNs, @Nonnull String playerIdentifier) {
+        public static final AttributeKey<TimeoutContext> KEY = AttributeKey.newInstance("TIMEOUT_CONTEXT");
+
+        public static void init(@Nonnull Channel channel, @Nonnull String stage, @Nonnull String identifier) {
+            channel.attr(KEY).set(new TimeoutContext(stage, System.nanoTime(), identifier));
+        }
+
+        public static void update(@Nonnull Channel channel, @Nonnull String stage, @Nonnull String identifier) {
+            TimeoutContext existing = TimeoutContext.get(channel);
+            channel.attr(KEY).set(new TimeoutContext(stage, existing.connectionStartNs, identifier));
+        }
+
+        public static void update(@Nonnull Channel channel, @Nonnull String stage) {
+            TimeoutContext existing = TimeoutContext.get(channel);
+            channel.attr(KEY).set(new TimeoutContext(stage, existing.connectionStartNs, existing.playerIdentifier));
+        }
+
+        @Nonnull
+        public static TimeoutContext get(@Nonnull Channel channel) {
+            TimeoutContext context = channel.attr(KEY).get();
+            if (context == null) {
+                throw new IllegalStateException("TimeoutContext not initialized - this indicates a bug in the connection flow");
+            }
+            return context;
         }
     }
 }

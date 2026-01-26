@@ -1716,7 +1716,7 @@ MetricProvider {
             this.sendFeedback(Message.translation("server.builderTools.setColumnsTint").param("count", count), componentAccessor);
         }
 
-        public void tint(int x, int y, int z, int color, @Nonnull BrushShape shape, int shapeRange, ComponentAccessor<EntityStore> componentAccessor) {
+        public void tint(int x, int y, int z, int color, @Nonnull BrushShape shape, int shapeRange, int shapeHeight, ComponentAccessor<EntityStore> componentAccessor) {
             if (y < 0 || y >= 320) {
                 return;
             }
@@ -1738,7 +1738,8 @@ MetricProvider {
                 block0 : switch (shape) {
                     case Cube: 
                     case Pyramid: 
-                    case InvertedPyramid: {
+                    case InvertedPyramid: 
+                    case Diamond: {
                         for (int px2 = -radiusXZ; px2 <= radiusXZ; ++px2) {
                             for (int pz2 = -radiusXZ; pz2 <= radiusXZ; ++pz2) {
                                 if (!tintBlock.test(x + px2, y, z + pz2, null)) break block0;
@@ -1749,8 +1750,26 @@ MetricProvider {
                     case Sphere: 
                     case Cylinder: 
                     case Cone: 
-                    case InvertedCone: {
+                    case InvertedCone: 
+                    case Dome: 
+                    case InvertedDome: {
                         BlockSphereUtil.forEachBlock(x, y, z, radiusXZ, 1, radiusXZ, null, tintBlock);
+                        break;
+                    }
+                    case Torus: {
+                        int minorRadius = Math.max(1, shapeHeight / 4);
+                        int outerRadius = radiusXZ;
+                        int majorRadius = Math.max(1, outerRadius - minorRadius);
+                        int sizeXZ = majorRadius + minorRadius;
+                        float minorRadiusAdjusted = (float)minorRadius + 0.5f;
+                        for (int px3 = -sizeXZ; px3 <= sizeXZ; ++px3) {
+                            for (int pz3 = -sizeXZ; pz3 <= sizeXZ; ++pz3) {
+                                double distFromCenter = Math.sqrt(px3 * px3 + pz3 * pz3);
+                                double distFromRing = Math.abs(distFromCenter - (double)majorRadius);
+                                if (!(distFromRing <= (double)minorRadiusAdjusted)) continue;
+                                tintBlock.test(x + px3, y, z + pz3, null);
+                            }
+                        }
                         break;
                     }
                     default: {
@@ -1790,6 +1809,10 @@ MetricProvider {
         }
 
         public int copyOrCut(@Nonnull Ref<EntityStore> ref, int xMin, int yMin, int zMin, int xMax, int yMax, int zMax, int settings, @Nonnull ComponentAccessor<EntityStore> componentAccessor) throws PrefabCopyException {
+            return this.copyOrCut(ref, xMin, yMin, zMin, xMax, yMax, zMax, settings, null, componentAccessor);
+        }
+
+        public int copyOrCut(@Nonnull Ref<EntityStore> ref, int xMin, int yMin, int zMin, int xMax, int yMax, int zMax, int settings, @Nullable Vector3i playerAnchor, @Nonnull ComponentAccessor<EntityStore> componentAccessor) throws PrefabCopyException {
             int entityCount;
             World world = componentAccessor.getExternalData().getWorld();
             long start = System.nanoTime();
@@ -1862,7 +1885,7 @@ MetricProvider {
                             before.copyFromAtWorld(x, y, z, chunk, blockPhysics);
                             after.addEmptyAtWorldPos(x, y, z);
                         }
-                        if (block == editorBlockPrefabAnchor && !keepAnchors) {
+                        if (block == editorBlockPrefabAnchor && !keepAnchors && playerAnchor == null) {
                             anchors.add(new Vector3i(x, y, z));
                             this.selection.setAnchorAtWorldPos(x, y, z);
                             if (blocks) {
@@ -1887,7 +1910,7 @@ MetricProvider {
                     }
                 }
             }
-            if (anchors.size() > 1) {
+            if (anchors.size() > 1 && playerAnchor == null) {
                 StringBuilder sb = new StringBuilder("Anchors: ");
                 boolean first = true;
                 for (Vector3i anchor : anchors) {
@@ -1898,6 +1921,9 @@ MetricProvider {
                     sb.append('[').append(anchor.getX()).append(", ").append(anchor.getY()).append(", ").append(anchor.getZ()).append(']');
                 }
                 throw new PrefabCopyException("Prefab has multiple anchor blocks!\n" + String.valueOf(sb));
+            }
+            if (playerAnchor != null) {
+                this.selection.setAnchorAtWorldPos(playerAnchor.getX(), playerAnchor.getY(), playerAnchor.getZ());
             }
             if (entities) {
                 List<SelectionSnapshot<?>> snapshotsList = snapshots;
@@ -2011,9 +2037,11 @@ MetricProvider {
             return bestRot;
         }
 
-        public void transformThenPasteClipboard(@Nonnull BlockChange[] blockChanges, @Nullable PrototypePlayerBuilderToolSettings.FluidChange[] fluidChanges, @Nonnull Matrix4d transformationMatrix, @Nonnull Vector3f rotationOrigin, @Nonnull Vector3i initialPastePoint, ComponentAccessor<EntityStore> componentAccessor) {
+        public void transformThenPasteClipboard(@Nonnull BlockChange[] blockChanges, @Nullable PrototypePlayerBuilderToolSettings.FluidChange[] fluidChanges, @Nonnull Matrix4d transformationMatrix, @Nonnull Vector3f rotationOrigin, @Nonnull Vector3i initialPastePoint, boolean keepEmptyBlocks, ComponentAccessor<EntityStore> componentAccessor) {
             World world = componentAccessor.getExternalData().getWorld();
             long start = System.nanoTime();
+            BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+            int editorBlockPrefabAir = keepEmptyBlocks ? assetMap.getIndex(BuilderToolsPlugin.EDITOR_BLOCK_PREFAB_AIR) : 0;
             int yOffsetOutOfGround = 0;
             for (BlockChange blockChange : blockChanges) {
                 if (blockChange.y >= 0 || Math.abs(blockChange.y) <= yOffsetOutOfGround) continue;
@@ -2037,6 +2065,7 @@ MetricProvider {
             Vector4d mutable4d = new Vector4d(0.0, 0.0, 0.0, 1.0);
             for (BlockChange blockChange : blockChanges) {
                 BlockBoundingBoxes hitbox;
+                BlockType blockType;
                 mutable4d.assign((double)((float)blockChange.x - rotationOrigin.x + (float)initialPastePoint.x) + 0.5, (double)((float)blockChange.y - rotationOrigin.y + (float)initialPastePoint.y) + 0.5 + (double)yOffsetOutOfGround, (double)((float)blockChange.z - rotationOrigin.z + (float)initialPastePoint.z) + 0.5, 1.0);
                 transformationMatrix.multiply(mutable4d);
                 Vector3i rotatedLocation = new Vector3i((int)Math.floor(mutable4d.x + 0.1 + (double)rotationOrigin.x - 0.5), (int)Math.floor(mutable4d.y + 0.1 + (double)rotationOrigin.y - 0.5), (int)Math.floor(mutable4d.z + 0.1 + (double)rotationOrigin.z - 0.5));
@@ -2056,13 +2085,17 @@ MetricProvider {
                 byte originalFluidLevel = currentChunk.getFluidLevel(rotatedLocation.x, rotatedLocation.y, rotatedLocation.z);
                 before.addFluidAtWorldPos(rotatedLocation.x, rotatedLocation.y, rotatedLocation.z, originalFluidId, originalFluidLevel);
                 int newRotation = BuilderState.transformRotation(RotationTuple.get(blockChange.rotation), transformationMatrix).index();
-                BlockType blockType = BlockType.getAssetMap().getAsset(blockChange.block);
-                if (blockType == null || (hitbox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex())) == null) continue;
+                int blockIdToPlace = blockChange.block;
+                if (blockChange.block == 0 && keepEmptyBlocks) {
+                    blockIdToPlace = editorBlockPrefabAir;
+                }
+                if ((blockType = assetMap.getAsset(blockIdToPlace)) == null || (hitbox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex())) == null) continue;
+                int finalBlockIdToPlace = blockIdToPlace;
                 if (hitbox.protrudesUnitBox()) {
-                    FillerBlockUtil.forEachFillerBlock(hitbox.get(newRotation), (x, y, z) -> after.addBlockAtWorldPos(rotatedLocation.x + x, rotatedLocation.y + y, rotatedLocation.z + z, blockChange.block, newRotation, FillerBlockUtil.pack(x, y, z), 0, holder));
+                    FillerBlockUtil.forEachFillerBlock(hitbox.get(newRotation), (x, y, z) -> after.addBlockAtWorldPos(rotatedLocation.x + x, rotatedLocation.y + y, rotatedLocation.z + z, finalBlockIdToPlace, newRotation, FillerBlockUtil.pack(x, y, z), 0, holder));
                     continue;
                 }
-                after.addBlockAtWorldPos(rotatedLocation.x, rotatedLocation.y, rotatedLocation.z, blockChange.block, newRotation, 0, 0, holder);
+                after.addBlockAtWorldPos(rotatedLocation.x, rotatedLocation.y, rotatedLocation.z, blockIdToPlace, newRotation, 0, 0, holder);
             }
             int finalYOffsetOutOfGround = yOffsetOutOfGround;
             if (fluidChanges != null) {
@@ -2102,6 +2135,10 @@ MetricProvider {
         }
 
         public int paste(@Nonnull Ref<EntityStore> ref, int x, int y, int z, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+            return this.paste(ref, x, y, z, false, componentAccessor);
+        }
+
+        public int paste(@Nonnull Ref<EntityStore> ref, int x, int y, int z, boolean technicalPaste, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
             World world = componentAccessor.getExternalData().getWorld();
             if (this.selection != null) {
                 long start = System.nanoTime();
@@ -2115,36 +2152,59 @@ MetricProvider {
                 int offsetZ = z - origPosZ;
                 Vector3i pasteMin = new Vector3i(selMin.x + offsetX, selMin.y + offsetY, selMin.z + offsetZ);
                 Vector3i pasteMax = new Vector3i(selMax.x + offsetX, selMax.y + offsetY, selMax.z + offsetZ);
-                this.selection.setPosition(x, y, z);
+                BlockSelection selectionToPlace = this.selection;
+                if (technicalPaste) {
+                    selectionToPlace = this.convertEmptyBlocksToEditorEmpty(this.selection);
+                }
+                selectionToPlace.setPosition(x, y, z);
                 int prefabId = PrefabUtil.getNextPrefabId();
-                this.selection.setPrefabId(prefabId);
+                selectionToPlace.setPrefabId(prefabId);
                 if (!BuilderToolsPlugin.onPasteStart(prefabId, componentAccessor)) {
                     this.sendErrorFeedback(ref, Message.translation("server.builderTools.pasteCancelledByEvent"), componentAccessor);
                     return 0;
                 }
-                int entityCount = this.selection.getEntityCount();
+                int entityCount = selectionToPlace.getEntityCount();
                 ObjectArrayList snapshots = new ObjectArrayList(entityCount + 1);
                 Consumer<Ref<EntityStore>> collector = BlockSelection.DEFAULT_ENTITY_CONSUMER;
                 if (entityCount > 0) {
                     collector = e -> snapshots.add(new EntityAddSnapshot((Ref<EntityStore>)e));
                 }
-                BlockSelection before = this.selection.place(this.player, world, Vector3i.ZERO, this.globalMask, collector);
+                BlockSelection before = selectionToPlace.place(this.player, world, Vector3i.ZERO, this.globalMask, collector);
                 before.setSelectionArea(pasteMin, pasteMax);
                 snapshots.add(new BlockSelectionSnapshot(before));
                 this.pushHistory(Action.PASTE, snapshots);
                 BuilderToolsPlugin.invalidateWorldMapForBounds(pasteMin, pasteMax, world);
                 BuilderToolsPlugin.get().onPasteEnd(prefabId, componentAccessor);
-                this.selection.setPrefabId(-1);
-                this.selection.setPosition(0, 0, 0);
+                selectionToPlace.setPrefabId(-1);
+                selectionToPlace.setPosition(0, 0, 0);
                 long end = System.nanoTime();
                 long diff = end - start;
-                int size = this.selection.getBlockCount();
+                int size = selectionToPlace.getBlockCount();
                 BuilderToolsPlugin.get().getLogger().at(Level.FINE).log("Took: %dns (%dms) to execute paste of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), size);
                 this.sendFeedback(Message.translation("server.builderTools.pastedBlocks").param("count", size), componentAccessor);
                 return size;
             }
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionClipboardEmpty"), componentAccessor);
             return 0;
+        }
+
+        private BlockSelection convertEmptyBlocksToEditorEmpty(@Nonnull BlockSelection original) {
+            BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+            int editorBlockPrefabAir = assetMap.getIndex(BuilderToolsPlugin.EDITOR_BLOCK_PREFAB_AIR);
+            if (editorBlockPrefabAir == Integer.MIN_VALUE) {
+                return original;
+            }
+            BlockSelection converted = new BlockSelection(original.getBlockCount(), original.getEntityCount());
+            converted.setPosition(original.getX(), original.getY(), original.getZ());
+            converted.setAnchor(original.getAnchorX(), original.getAnchorY(), original.getAnchorZ());
+            converted.setSelectionArea(original.getSelectionMin(), original.getSelectionMax());
+            original.forEachBlock((x, y, z, block) -> {
+                int blockId = block.blockId() == 0 ? editorBlockPrefabAir : block.blockId();
+                converted.addBlockAtLocalPos(x, y, z, blockId, block.rotation(), block.filler(), block.supportValue(), block.holder());
+            });
+            original.forEachFluid((x, y, z, fluidId, fluidLevel) -> converted.addFluidAtLocalPos(x, y, z, fluidId, fluidLevel));
+            original.forEachEntity(holder -> converted.addEntityHolderRaw((Holder<EntityStore>)holder.clone()));
+            return converted;
         }
 
         public void rotate(@Nonnull Ref<EntityStore> ref, @Nonnull Axis axis, int angle, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -2676,11 +2736,7 @@ MetricProvider {
             }
         }
 
-        public void replace(@Nonnull Ref<EntityStore> ref, @Nullable IntPredicate doReplace, int to, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-            this.replace(ref, doReplace, new int[]{to}, componentAccessor);
-        }
-
-        public void replace(@Nonnull Ref<EntityStore> ref, @Nullable IntPredicate doReplace, @Nonnull int[] toBlockIds, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        public void replace(@Nonnull Ref<EntityStore> ref, @Nullable IntPredicate doReplace, @Nonnull BlockPattern toPattern, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
             if (this.selection == null) {
                 this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelection"), componentAccessor);
                 return;
@@ -2723,12 +2779,14 @@ MetricProvider {
                         int block = chunk.getBlock(x, y, z);
                         if (doReplace == null && block != 0 || doReplace != null && doReplace.test(block)) {
                             Holder<ChunkStore> holder = chunk.getBlockComponentHolder(x, y, z);
-                            int newBlockId = toBlockIds.length == 1 ? toBlockIds[0] : toBlockIds[this.random.nextInt(toBlockIds.length)];
+                            Material material = Material.fromPattern(toPattern, this.random);
+                            int newBlockId = material.getBlockId();
+                            int newRotation = material.hasRotation() ? material.getRotation() : chunk.getRotationIndex(x, y, z);
                             Holder<ChunkStore> newHolder = BuilderToolsPlugin.createBlockComponent(chunk, x, y, z, newBlockId, block, holder, true);
                             int rotationIndex = chunk.getRotationIndex(x, y, z);
                             before.addBlockAtWorldPos(x, y, z, block, rotationIndex, filler, chunk.getSupportValue(x, y, z), chunk.getBlockComponentHolder(x, y, z));
-                            after.addBlockAtWorldPos(x, y, z, newBlockId, rotationIndex, 0, 0, newHolder);
-                            this.replaceMultiBlockStructure(x, y, z, block, newBlockId, rotationIndex, accessor, before, after);
+                            after.addBlockAtWorldPos(x, y, z, newBlockId, newRotation, 0, 0, newHolder);
+                            this.replaceMultiBlockStructure(x, y, z, block, newBlockId, newRotation, accessor, before, after);
                             if (newBlockId == 0) {
                                 int fluidId = chunk.getFluidId(x, y, z);
                                 byte fluidLevel = chunk.getFluidLevel(x, y, z);
@@ -3299,6 +3357,10 @@ MetricProvider {
         }
 
         public void saveFromSelection(@Nonnull Ref<EntityStore> ref, @Nonnull String name, boolean relativize, boolean overwrite, boolean includeEntities, boolean includeEmpty, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+            this.saveFromSelection(ref, name, relativize, overwrite, includeEntities, includeEmpty, null, componentAccessor);
+        }
+
+        public void saveFromSelection(@Nonnull Ref<EntityStore> ref, @Nonnull String name, boolean relativize, boolean overwrite, boolean includeEntities, boolean includeEmpty, @Nullable Vector3i playerAnchor, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
             PrefabStore prefabStore;
             Path serverPrefabsPath;
             if (this.selection == null || this.selection.getSelectionMin().equals(Vector3i.ZERO) && this.selection.getSelectionMax().equals(Vector3i.ZERO)) {
@@ -3353,7 +3415,7 @@ MetricProvider {
                             Ref<ChunkStore> section = chunkColumn.getSection(lastSection);
                             blockPhysics = section != null ? store.getComponent(section, BlockPhysics.getComponentType()) : null;
                         }
-                        if (block == editorBlockPrefabAnchor) {
+                        if (block == editorBlockPrefabAnchor && playerAnchor == null) {
                             tempSelection.setAnchorAtWorldPos(x, y, z);
                             int id = BuilderToolsPlugin.getNonEmptyNeighbourBlock(accessor, x, y, z);
                             if (id > 0 && id != editorBlockPrefabAir) {
@@ -3375,6 +3437,9 @@ MetricProvider {
                         ++count;
                     }
                 }
+            }
+            if (playerAnchor != null) {
+                tempSelection.setAnchorAtWorldPos(playerAnchor.getX(), playerAnchor.getY(), playerAnchor.getZ());
             }
             if (includeEntities) {
                 Store<EntityStore> entityStore = world.getEntityStore().getStore();

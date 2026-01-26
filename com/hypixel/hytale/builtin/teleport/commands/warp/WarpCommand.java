@@ -31,12 +31,6 @@ public class WarpCommand
 extends AbstractCommandCollection {
     @Nonnull
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED = Message.translation("server.commands.teleport.warp.notLoaded");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_UNKNOWN_WARP = Message.translation("server.commands.teleport.warp.unknownWarp");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_WORLD_NAME_FOR_WARP_NOT_FOUND = Message.translation("server.commands.teleport.warp.worldNameForWarpNotFound");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_WARPED_TO = Message.translation("server.commands.teleport.warp.warpedTo");
 
     public WarpCommand() {
         super("warp", "server.commands.warp.desc");
@@ -55,14 +49,14 @@ extends AbstractCommandCollection {
         }
         Warp targetWarp = TeleportPlugin.get().getWarps().get(warp.toLowerCase());
         if (targetWarp == null) {
-            context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_UNKNOWN_WARP.param("name", warp));
+            context.sendMessage(Message.translation("server.commands.teleport.warp.unknownWarp").param("name", warp));
             return;
         }
         String worldName = targetWarp.getWorld();
         World world = Universe.get().getWorld(worldName);
         Teleport teleportComponent = targetWarp.toTeleport();
         if (world == null || teleportComponent == null) {
-            context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_WORLD_NAME_FOR_WARP_NOT_FOUND.param("worldName", worldName).param("warp", warp));
+            context.sendMessage(Message.translation("server.commands.teleport.warp.worldNameForWarpNotFound").param("worldName", worldName).param("warp", warp));
             return;
         }
         TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
@@ -73,7 +67,7 @@ extends AbstractCommandCollection {
         Vector3f playerHeadRotation = headRotationComponent.getRotation();
         store.ensureAndGetComponent(ref, TeleportHistory.getComponentType()).append(world, playerPosition.clone(), playerHeadRotation.clone(), "Warp '" + warp + "'");
         store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
-        context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_WARPED_TO.param("name", warp));
+        context.sendMessage(Message.translation("server.commands.teleport.warp.warpedTo").param("name", warp));
     }
 }
 

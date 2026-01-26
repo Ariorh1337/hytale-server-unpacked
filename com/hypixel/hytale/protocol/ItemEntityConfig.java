@@ -44,12 +44,12 @@ public class ItemEntityConfig {
     public static ItemEntityConfig deserialize(@Nonnull ByteBuf buf, int offset) {
         ItemEntityConfig obj = new ItemEntityConfig();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.particleColor = Color.deserialize(buf, offset + 1);
         }
         obj.showItemParticles = buf.getByte(offset + 4) != 0;
         int pos = offset + 5;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int particleSystemIdLen = VarInt.peek(buf, pos);
             if (particleSystemIdLen < 0) {
                 throw ProtocolException.negativeLength("ParticleSystemId", particleSystemIdLen);
@@ -67,7 +67,7 @@ public class ItemEntityConfig {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int pos = offset + 5;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int sl = VarInt.peek(buf, pos);
             pos += VarInt.length(buf, pos) + sl;
         }
@@ -76,10 +76,10 @@ public class ItemEntityConfig {
 
     public void serialize(@Nonnull ByteBuf buf) {
         byte nullBits = 0;
-        if (this.particleSystemId != null) {
+        if (this.particleColor != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.particleColor != null) {
+        if (this.particleSystemId != null) {
             nullBits = (byte)(nullBits | 2);
         }
         buf.writeByte(nullBits);
@@ -108,7 +108,7 @@ public class ItemEntityConfig {
         }
         byte nullBits = buffer.getByte(offset);
         int pos = offset + 5;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int particleSystemIdLen = VarInt.peek(buffer, pos);
             if (particleSystemIdLen < 0) {
                 return ValidationResult.error("Invalid string length for ParticleSystemId");

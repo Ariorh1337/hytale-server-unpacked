@@ -43,6 +43,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.gameplay.CombatConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.DeathConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
+import com.hypixel.hytale.server.core.asset.type.gameplay.PlayerConfig;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.console.ConsoleModule;
 import com.hypixel.hytale.server.core.entity.Entity;
@@ -190,9 +191,15 @@ IMessageReceiver {
         for (ClientFeature feature : ClientFeature.VALUES) {
             this.features.put(feature, true);
         }
-        CombatConfig combatConfig = this.getGameplayConfig().getCombatConfig();
+        GameplayConfig gameplayConfig = this.getGameplayConfig();
+        CombatConfig combatConfig = gameplayConfig.getCombatConfig();
         this.features.put(ClientFeature.DisplayHealthBars, combatConfig.isDisplayHealthBars());
         this.features.put(ClientFeature.DisplayCombatText, combatConfig.isDisplayCombatText());
+        PlayerConfig.ArmorVisibilityOption armorVisibilityOption = gameplayConfig.getPlayerConfig().getArmorVisibilityOption();
+        this.features.put(ClientFeature.CanHideHelmet, armorVisibilityOption.canHideHelmet());
+        this.features.put(ClientFeature.CanHideCuirass, armorVisibilityOption.canHideCuirass());
+        this.features.put(ClientFeature.CanHideGauntlets, armorVisibilityOption.canHideGauntlets());
+        this.features.put(ClientFeature.CanHidePants, armorVisibilityOption.canHidePants());
         this.logger.at(Level.INFO).log("Added world '%s' - Seed: %s, GameTime: %s", name, Long.toString(worldConfig.getSeed()), worldConfig.getGameTime());
     }
 
@@ -572,8 +579,8 @@ IMessageReceiver {
         if (!this.isInThread()) {
             return CompletableFuture.supplyAsync(() -> this.getEntity(uuid), this).join();
         }
-        Ref<EntityStore> reference = this.entityStore.getRefFromUUID(uuid);
-        return EntityUtils.getEntity(reference, this.entityStore.getStore());
+        Ref<EntityStore> ref = this.entityStore.getRefFromUUID(uuid);
+        return EntityUtils.getEntity(ref, this.entityStore.getStore());
     }
 
     @Nullable

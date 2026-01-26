@@ -48,10 +48,10 @@ public class BlockSoundSet {
     public static BlockSoundSet deserialize(@Nonnull ByteBuf buf, int offset) {
         BlockSoundSet obj = new BlockSoundSet();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.moveInRepeatRange = FloatRange.deserialize(buf, offset + 1);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 17 + buf.getIntLE(offset + 9);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -62,7 +62,7 @@ public class BlockSoundSet {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos1 = offset + 17 + buf.getIntLE(offset + 13);
             int soundEventIndicesCount = VarInt.peek(buf, varPos1);
             if (soundEventIndicesCount < 0) {
@@ -88,7 +88,7 @@ public class BlockSoundSet {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 17;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 9);
             int pos0 = offset + 17 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -96,7 +96,7 @@ public class BlockSoundSet {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 13);
             int pos1 = offset + 17 + fieldOffset1;
             int dictLen = VarInt.peek(buf, pos1);
@@ -115,13 +115,13 @@ public class BlockSoundSet {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.moveInRepeatRange != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.soundEventIndices != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.moveInRepeatRange != null) {
+        if (this.soundEventIndices != null) {
             nullBits = (byte)(nullBits | 4);
         }
         buf.writeByte(nullBits);
@@ -173,7 +173,7 @@ public class BlockSoundSet {
             return ValidationResult.error("Buffer too small: expected at least 17 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int idOffset = buffer.getIntLE(offset + 9);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -194,7 +194,7 @@ public class BlockSoundSet {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int soundEventIndicesOffset = buffer.getIntLE(offset + 13);
             if (soundEventIndicesOffset < 0) {
                 return ValidationResult.error("Invalid offset for SoundEventIndices");

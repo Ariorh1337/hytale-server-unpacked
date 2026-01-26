@@ -14,6 +14,7 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
+import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -22,11 +23,12 @@ import javax.annotation.Nonnull;
 
 public class PlayerCraftingSystems {
 
-    public static class PlayerCraftingSystem
+    public static class CraftingTickingSystem
     extends EntityTickingSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
 
-        public PlayerCraftingSystem(ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
+        public CraftingTickingSystem(@Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
             this.craftingManagerComponentType = craftingManagerComponentType;
         }
 
@@ -42,49 +44,65 @@ public class PlayerCraftingSystems {
 
         @Override
         public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
             CraftingManager craftingManagerComponent = archetypeChunk.getComponent(index, this.craftingManagerComponentType);
+            assert (craftingManagerComponent != null);
+            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
             craftingManagerComponent.tick(ref, commandBuffer, dt);
         }
     }
 
-    public static class CraftingManagerAddSystem
-    extends HolderSystem<EntityStore> {
+    public static class CraftingRefSystem
+    extends RefSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
 
-        public CraftingManagerAddSystem(ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
+        public CraftingRefSystem(@Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
+            this.craftingManagerComponentType = craftingManagerComponentType;
+        }
+
+        @Override
+        @Nonnull
+        public Query<EntityStore> getQuery() {
+            return Query.and(this.playerComponentType, this.craftingManagerComponentType);
+        }
+
+        @Override
+        public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+        }
+
+        @Override
+        public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+            CraftingManager craftingManagerComponent = commandBuffer.getComponent(ref, CraftingManager.getComponentType());
+            assert (craftingManagerComponent != null);
+            craftingManagerComponent.cancelAllCrafting(ref, store);
+        }
+    }
+
+    public static class CraftingHolderSystem
+    extends HolderSystem<EntityStore> {
+        @Nonnull
+        private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        @Nonnull
+        private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
+
+        public CraftingHolderSystem(@Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
             this.craftingManagerComponentType = craftingManagerComponentType;
         }
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            Player player = holder.getComponent(Player.getComponentType());
-            if (player == null) {
-                throw new UnsupportedOperationException("Cannot have null player component during crafting system creation");
-            }
             holder.ensureComponent(this.craftingManagerComponentType);
         }
 
-        /*
-         * WARNING - Removed try catching itself - possible behaviour change.
-         */
         @Override
         public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-            CraftingManager craftingManager = holder.getComponent(this.craftingManagerComponentType);
-            if (craftingManager == null) {
-                return;
-            }
-            Player player = holder.getComponent(this.playerComponentType);
-            try {
-                Ref<EntityStore> ref = player.getReference();
-                craftingManager.cancelAllCrafting(ref, store);
-            }
-            finally {
-                World world = store.getExternalData().getWorld();
-                if (world.getWorldConfig().isSavingPlayers() && player != null) {
-                    player.saveConfig(world, holder);
-                }
+            World world = store.getExternalData().getWorld();
+            if (world.getWorldConfig().isSavingPlayers()) {
+                Player playerComponent = holder.getComponent(this.playerComponentType);
+                assert (playerComponent != null);
+                playerComponent.saveConfig(world, holder);
             }
         }
 

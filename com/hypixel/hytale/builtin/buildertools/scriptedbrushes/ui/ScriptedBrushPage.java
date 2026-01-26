@@ -35,9 +35,6 @@ import javax.annotation.Nonnull;
 
 public class ScriptedBrushPage
 extends InteractiveCustomUIPage<FileBrowserEventData> {
-    private static final Message MESSAGE_BRUSH_LOADED = Message.translation("server.commands.brushConfig.loaded");
-    private static final Message MESSAGE_BRUSH_NOT_FOUND = Message.translation("server.commands.brushConfig.load.error.notFound");
-    private static final Message MESSAGE_BRUSH_LOAD_ERROR = Message.translation("server.commands.brushConfig.load.error.loadFailed");
     @Nonnull
     private final ServerFileBrowser browser;
 
@@ -77,7 +74,7 @@ extends InteractiveCustomUIPage<FileBrowserEventData> {
         assert (playerRefComponent != null);
         ScriptedBrushAsset scriptedBrushAsset = ScriptedBrushAsset.get(brushName);
         if (scriptedBrushAsset == null) {
-            playerRefComponent.sendMessage(MESSAGE_BRUSH_NOT_FOUND.param("name", brushName));
+            playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.load.error.notFound").param("name", brushName));
             this.sendUpdate();
             return;
         }
@@ -89,10 +86,10 @@ extends InteractiveCustomUIPage<FileBrowserEventData> {
             prototypeSettings.setCurrentlyLoadedBrushConfigName(scriptedBrushAsset.getId());
             prototypeSettings.setUsePrototypeBrushConfigurations(true);
             playerComponent.getPageManager().setPage(ref, store, Page.None);
-            playerRefComponent.sendMessage(MESSAGE_BRUSH_LOADED.param("name", scriptedBrushAsset.getId()));
+            playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.loaded").param("name", scriptedBrushAsset.getId()));
         }
         catch (Exception e) {
-            playerRefComponent.sendMessage(MESSAGE_BRUSH_LOAD_ERROR.param("name", brushName).param("error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
+            playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.load.error.loadFailed").param("name", brushName).param("error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
             this.sendUpdate();
         }
     }
@@ -113,7 +110,7 @@ extends InteractiveCustomUIPage<FileBrowserEventData> {
             for (String name2 : assetMap.getAssetMap().keySet()) {
                 int score = StringCompareUtil.getFuzzyDistance(name2, searchQuery, Locale.ENGLISH);
                 if (score <= 0) continue;
-                results.add(new FileListProvider.FileEntry(name2, name2, false, score));
+                results.add(new FileListProvider.FileEntry(name2, name2, false, false, score));
             }
             results.sort(Comparator.comparingInt(FileListProvider.FileEntry::matchScore).reversed());
             if (results.size() > 50) {

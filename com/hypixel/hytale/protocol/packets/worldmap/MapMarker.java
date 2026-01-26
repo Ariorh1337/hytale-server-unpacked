@@ -55,10 +55,10 @@ public class MapMarker {
     public static MapMarker deserialize(@Nonnull ByteBuf buf, int offset) {
         MapMarker obj = new MapMarker();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.transform = Transform.deserialize(buf, offset + 1);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int varPos0 = offset + 54 + buf.getIntLE(offset + 38);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -69,7 +69,7 @@ public class MapMarker {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos1 = offset + 54 + buf.getIntLE(offset + 42);
             int nameLen = VarInt.peek(buf, varPos1);
             if (nameLen < 0) {
@@ -80,7 +80,7 @@ public class MapMarker {
             }
             obj.name = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos2 = offset + 54 + buf.getIntLE(offset + 46);
             int markerImageLen = VarInt.peek(buf, varPos2);
             if (markerImageLen < 0) {
@@ -118,7 +118,7 @@ public class MapMarker {
         int sl;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 54;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 38);
             int pos0 = offset + 54 + fieldOffset0;
             sl = VarInt.peek(buf, pos0);
@@ -126,7 +126,7 @@ public class MapMarker {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 42);
             int pos1 = offset + 54 + fieldOffset1;
             sl = VarInt.peek(buf, pos1);
@@ -134,7 +134,7 @@ public class MapMarker {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 46);
             int pos2 = offset + 54 + fieldOffset2;
             sl = VarInt.peek(buf, pos2);
@@ -160,16 +160,16 @@ public class MapMarker {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.transform != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.name != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.markerImage != null) {
+        if (this.name != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.transform != null) {
+        if (this.markerImage != null) {
             nullBits = (byte)(nullBits | 8);
         }
         if (this.contextMenuItems != null) {
@@ -249,7 +249,7 @@ public class MapMarker {
             return ValidationResult.error("Buffer too small: expected at least 54 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int idOffset = buffer.getIntLE(offset + 38);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -270,7 +270,7 @@ public class MapMarker {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 4) != 0) {
             int nameOffset = buffer.getIntLE(offset + 42);
             if (nameOffset < 0) {
                 return ValidationResult.error("Invalid offset for Name");
@@ -291,7 +291,7 @@ public class MapMarker {
                 return ValidationResult.error("Buffer overflow reading Name");
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 8) != 0) {
             int markerImageOffset = buffer.getIntLE(offset + 46);
             if (markerImageOffset < 0) {
                 return ValidationResult.error("Invalid offset for MarkerImage");

@@ -40,6 +40,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigDa
 import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialExtraResourcesSection;
 import com.hypixel.hytale.server.core.event.events.ecs.CraftRecipeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerCraftEvent;
+import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
@@ -133,8 +134,8 @@ implements Component<EntityStore> {
         this.blockType = blockType;
     }
 
-    public boolean clearBench(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        boolean result = this.cancelAllCrafting(ref, store);
+    public boolean clearBench(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        boolean result = this.cancelAllCrafting(ref, componentAccessor);
         this.x = 0;
         this.y = 0;
         this.z = 0;
@@ -143,82 +144,88 @@ implements Component<EntityStore> {
         return result;
     }
 
-    public boolean craftItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull CraftingRecipe recipe, int quantity, @Nonnull ItemContainer itemContainer) {
+    public boolean craftItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingRecipe recipe, int quantity, @Nonnull ItemContainer itemContainer) {
         if (this.upgradingJob != null) {
             return false;
         }
         Objects.requireNonNull(recipe, "Recipe can't be null");
         CraftRecipeEvent.Pre preEvent = new CraftRecipeEvent.Pre(recipe, quantity);
-        store.invoke(ref, preEvent);
+        componentAccessor.invoke(ref, preEvent);
         if (preEvent.isCancelled()) {
             return false;
         }
-        if (!this.isValidBenchForRecipe(ref, store, recipe)) {
+        if (!this.isValidBenchForRecipe(ref, componentAccessor, recipe)) {
             return false;
         }
-        World world = store.getExternalData().getWorld();
-        Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        World world = componentAccessor.getExternalData().getWorld();
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
         assert (playerComponent != null);
         if (playerComponent.getGameMode() == GameMode.Creative || CraftingManager.removeInputFromInventory(itemContainer, recipe, quantity)) {
             CraftRecipeEvent.Post postEvent = new CraftRecipeEvent.Post(recipe, quantity);
-            store.invoke(ref, postEvent);
+            componentAccessor.invoke(ref, postEvent);
             if (postEvent.isCancelled()) {
                 return true;
             }
-            CraftingManager.giveOutput(ref, store, recipe, quantity);
+            CraftingManager.giveOutput(ref, componentAccessor, recipe, quantity);
             IEventDispatcher<PlayerCraftEvent, PlayerCraftEvent> dispatcher = HytaleServer.get().getEventBus().dispatchFor(PlayerCraftEvent.class, world.getName());
             if (dispatcher.hasListener()) {
                 dispatcher.dispatch(new PlayerCraftEvent(ref, playerComponent, recipe, quantity));
             }
             return true;
         }
-        PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+        PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
         assert (playerRefComponent != null);
         String translationKey = CraftingManager.getRecipeOutputTranslationKey(recipe);
-        NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), Message.translation("server.general.crafting.missingIngredient").param("item", Message.translation(translationKey)), NotificationStyle.Danger);
+        if (translationKey != null) {
+            NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), Message.translation("server.general.crafting.missingIngredient").param("item", Message.translation(translationKey)), NotificationStyle.Danger);
+        }
         LOGGER.at(Level.FINE).log("Missing items required to craft the item: %s", recipe);
         return false;
     }
 
-    private static String getRecipeOutputTranslationKey(CraftingRecipe recipe) {
+    @Nullable
+    private static String getRecipeOutputTranslationKey(@Nonnull CraftingRecipe recipe) {
         String itemId = recipe.getPrimaryOutput().getItemId();
-        Item item = Item.getAssetMap().getAsset(itemId);
-        return item != null ? item.getTranslationKey() : null;
+        if (itemId == null) {
+            return null;
+        }
+        Item itemAsset = Item.getAssetMap().getAsset(itemId);
+        return itemAsset != null ? itemAsset.getTranslationKey() : null;
     }
 
-    public boolean queueCraft(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull CraftingWindow window, int transactionId, @Nonnull CraftingRecipe recipe, int quantity, @Nonnull ItemContainer inputItemContainer, @Nonnull InputRemovalType inputRemovalType) {
+    public boolean queueCraft(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingWindow window, int transactionId, @Nonnull CraftingRecipe recipe, int quantity, @Nonnull ItemContainer inputItemContainer, @Nonnull InputRemovalType inputRemovalType) {
         BenchTierLevel tierLevelData;
         int level;
         if (this.upgradingJob != null) {
             return false;
         }
         Objects.requireNonNull(recipe, "Recipe can't be null");
-        if (!this.isValidBenchForRecipe(ref, store, recipe)) {
+        if (!this.isValidBenchForRecipe(ref, componentAccessor, recipe)) {
             return false;
         }
         float recipeTime = recipe.getTimeSeconds();
-        if (recipeTime > 0.0f && (level = this.getBenchTierLevel(store)) > 1 && (tierLevelData = this.getBenchTierLevelData(level)) != null) {
+        if (recipeTime > 0.0f && (level = this.getBenchTierLevel(componentAccessor)) > 1 && (tierLevelData = this.getBenchTierLevelData(level)) != null) {
             recipeTime -= recipeTime * tierLevelData.getCraftingTimeReductionModifier();
         }
         this.queuedCraftingJobs.offer(new CraftingJob(window, transactionId, recipe, quantity, recipeTime, inputItemContainer, inputRemovalType));
         return true;
     }
 
-    public void tick(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, float dt) {
+    public void tick(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, float dt) {
         if (this.upgradingJob != null) {
             if (dt > 0.0f) {
                 this.upgradingJob.timeSecondsCompleted += dt;
             }
             this.upgradingJob.window.updateBenchUpgradeJob(this.upgradingJob.computeLoadingPercent());
             if (this.upgradingJob.timeSecondsCompleted >= this.upgradingJob.timeSeconds) {
-                this.upgradingJob.window.updateBenchTierLevel(this.finishTierUpgrade(ref, store));
+                this.upgradingJob.window.updateBenchTierLevel(this.finishTierUpgrade(ref, componentAccessor));
                 this.upgradingJob = null;
             }
             return;
         }
-        Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
         assert (playerComponent != null);
-        PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+        PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
         assert (playerRefComponent != null);
         while (dt > 0.0f && !this.queuedCraftingJobs.isEmpty()) {
             float percent;
@@ -231,7 +238,9 @@ implements Component<EntityStore> {
                 ++currentJob.quantityStarted;
                 if (!isCreativeMode && !CraftingManager.removeInputFromInventory(currentJob, currentItemId)) {
                     String translationKey = CraftingManager.getRecipeOutputTranslationKey(currentJob.recipe);
-                    NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), Message.translation("server.general.crafting.missingIngredient").param("item", Message.translation(translationKey)), NotificationStyle.Danger);
+                    if (translationKey != null) {
+                        NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), Message.translation("server.general.crafting.missingIngredient").param("item", Message.translation(translationKey)), NotificationStyle.Danger);
+                    }
                     LOGGER.at(Level.FINE).log("Missing items required to craft the item: %s", currentJob);
                     currentJob = null;
                     this.queuedCraftingJobs.poll();
@@ -258,7 +267,7 @@ implements Component<EntityStore> {
             currentJob.timeSecondsCompleted = 0.0f;
             LOGGER.at(Level.FINE).log("Crafted 1 Quantity: %s", currentJob);
             if (currentJob.quantityCompleted == currentJob.quantity) {
-                CraftingManager.giveOutput(ref, store, currentJob, currentCompletedItemId);
+                CraftingManager.giveOutput(ref, componentAccessor, currentJob, currentCompletedItemId);
                 LOGGER.at(Level.FINE).log("Crafting Finished: %s", currentJob);
                 this.queuedCraftingJobs.poll();
             } else {
@@ -266,29 +275,29 @@ implements Component<EntityStore> {
                     this.queuedCraftingJobs.poll();
                     throw new RuntimeException("QuantityCompleted is greater than the Quality! " + String.valueOf(currentJob));
                 }
-                CraftingManager.giveOutput(ref, store, currentJob, currentCompletedItemId);
+                CraftingManager.giveOutput(ref, componentAccessor, currentJob, currentCompletedItemId);
             }
             if (!this.queuedCraftingJobs.isEmpty()) continue;
-            currentJob.window.setBlockInteractionState("default", store.getExternalData().getWorld(), 6);
+            currentJob.window.setBlockInteractionState("default", componentAccessor.getExternalData().getWorld());
         }
     }
 
-    public boolean cancelAllCrafting(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store) {
+    public boolean cancelAllCrafting(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         LOGGER.at(Level.FINE).log("Cancel Crafting!");
         ObjectArrayList oldJobs = new ObjectArrayList(this.queuedCraftingJobs.size());
         this.queuedCraftingJobs.drainTo(oldJobs);
         if (!oldJobs.isEmpty()) {
             CraftingJob currentJob = (CraftingJob)oldJobs.getFirst();
             LOGGER.at(Level.FINE).log("Refunding Items for: %s", currentJob);
-            CraftingManager.refundInputToInventory(ref, store, currentJob, currentJob.quantityStarted - 1);
+            CraftingManager.refundInputToInventory(ref, componentAccessor, currentJob, currentJob.quantityStarted - 1);
             return true;
         }
         return false;
     }
 
-    private boolean isValidBenchForRecipe(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull CraftingRecipe recipe) {
+    private boolean isValidBenchForRecipe(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingRecipe recipe) {
         String primaryOutputItemId;
-        Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
         assert (playerComponent != null);
         PlayerConfigData playerConfigData = playerComponent.getPlayerConfigData();
         String string = primaryOutputItemId = recipe.getPrimaryOutput() != null ? recipe.getPrimaryOutput().getItemId() : null;
@@ -296,7 +305,7 @@ implements Component<EntityStore> {
             LOGGER.at(Level.WARNING).log("%s - Attempted to craft %s but doesn't know the recipe!", recipe.getId());
             return false;
         }
-        World world = store.getExternalData().getWorld();
+        World world = componentAccessor.getExternalData().getWorld();
         if (recipe.getRequiredMemoriesLevel() > 1 && MemoriesPlugin.get().getMemoriesLevel(world.getGameplayConfig()) < recipe.getRequiredMemoriesLevel()) {
             LOGGER.at(Level.WARNING).log("Attempted to craft %s but doesn't have the required world memories level!", recipe.getId());
             return false;
@@ -325,20 +334,25 @@ implements Component<EntityStore> {
         return true;
     }
 
-    private static void giveOutput(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull CraftingJob job, int currentItemId) {
+    private static void giveOutput(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingJob job, int currentItemId) {
         job.removedItems.remove(currentItemId);
         String recipeId = job.recipe.getId();
         CraftingRecipe recipeAsset = CraftingRecipe.getAssetMap().getAsset(recipeId);
         if (recipeAsset == null) {
             throw new RuntimeException("A non-existent item ID was provided! " + recipeId);
         }
-        CraftingManager.giveOutput(ref, store, recipeAsset, 1);
+        CraftingManager.giveOutput(ref, componentAccessor, recipeAsset, 1);
     }
 
-    private static void giveOutput(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull CraftingRecipe craftingRecipe, int quantity) {
-        Player player = store.getComponent(ref, Player.getComponentType());
+    private static void giveOutput(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingRecipe craftingRecipe, int quantity) {
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+        if (playerComponent == null) {
+            LOGGER.at(Level.WARNING).log("Attempted to give output to a non-player entity: %s", ref);
+            return;
+        }
         List<ItemStack> itemStacks = CraftingManager.getOutputItemStacks(craftingRecipe, quantity);
-        SimpleItemContainer.addOrDropItemStacks(store, ref, player.getInventory().getCombinedArmorHotbarStorage(), itemStacks);
+        Inventory inventory = playerComponent.getInventory();
+        SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, inventory.getCombinedArmorHotbarStorage(), itemStacks);
     }
 
     private static boolean removeInputFromInventory(@Nonnull CraftingJob job, int currentItemId) {
@@ -387,14 +401,15 @@ implements Component<EntityStore> {
         return materialTransactions.succeeded();
     }
 
-    private static void refundInputToInventory(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull CraftingJob job, int currentItemId) {
+    private static void refundInputToInventory(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingJob job, int currentItemId) {
         Objects.requireNonNull(job, "Job can't be null!");
         List itemStacks = (List)job.removedItems.get(currentItemId);
         if (itemStacks == null) {
             return;
         }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        SimpleItemContainer.addOrDropItemStacks(store, ref, player.getInventory().getCombinedHotbarFirst(), itemStacks);
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
+        SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
     }
 
     @Nonnull
@@ -411,19 +426,24 @@ implements Component<EntityStore> {
         }
         ObjectArrayList<ItemStack> outputItemStacks = new ObjectArrayList<ItemStack>();
         for (MaterialQuantity outputMaterial : output) {
-            outputItemStacks.add(CraftingManager.getOutputItemStack(outputMaterial, quantity));
+            ItemStack outputItemStack = CraftingManager.getOutputItemStack(outputMaterial, quantity);
+            if (outputItemStack == null) continue;
+            outputItemStacks.add(outputItemStack);
         }
         return outputItemStacks;
     }
 
-    @Nonnull
+    @Nullable
     public static ItemStack getOutputItemStack(@Nonnull MaterialQuantity outputMaterial, @Nonnull String id) {
         return CraftingManager.getOutputItemStack(outputMaterial, 1);
     }
 
-    @Nonnull
+    @Nullable
     public static ItemStack getOutputItemStack(@Nonnull MaterialQuantity outputMaterial, int quantity) {
         String itemId = outputMaterial.getItemId();
+        if (itemId == null) {
+            return null;
+        }
         int materialQuantity = outputMaterial.getQuantity() <= 0 ? 1 : outputMaterial.getQuantity();
         return new ItemStack(itemId, materialQuantity * quantity, outputMaterial.getMetadata());
     }
@@ -468,7 +488,7 @@ implements Component<EntityStore> {
         String resourceTypeId = craftingMaterial.getResourceTypeId();
         if (resourceTypeId != null && itemStack.getItem().getResourceTypes() != null) {
             for (ItemResourceType itemResourceType : itemStack.getItem().getResourceTypes()) {
-                if (!itemResourceType.id.equals(resourceTypeId)) continue;
+                if (!resourceTypeId.equals(itemResourceType.id)) continue;
                 return true;
             }
         }
@@ -504,12 +524,12 @@ implements Component<EntityStore> {
         return false;
     }
 
-    public boolean startTierUpgrade(Ref<EntityStore> ref, ComponentAccessor<EntityStore> store, @Nonnull BenchWindow window) {
+    public boolean startTierUpgrade(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull BenchWindow window) {
         CombinedItemContainer combined;
         if (this.upgradingJob != null) {
             return false;
         }
-        BenchUpgradeRequirement requirements = this.getBenchUpgradeRequierement(this.getBenchTierLevel(store));
+        BenchUpgradeRequirement requirements = this.getBenchUpgradeRequirement(this.getBenchTierLevel(componentAccessor));
         if (requirements == null) {
             return false;
         }
@@ -517,27 +537,29 @@ implements Component<EntityStore> {
         if (input.isEmpty()) {
             return false;
         }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player.getGameMode() != GameMode.Creative && !(combined = new CombinedItemContainer(player.getInventory().getCombinedBackpackStorageHotbar(), window.getExtraResourcesSection().getItemContainer())).canRemoveMaterials(input)) {
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
+        if (playerComponent.getGameMode() != GameMode.Creative && !(combined = new CombinedItemContainer(playerComponent.getInventory().getCombinedBackpackStorageHotbar(), window.getExtraResourcesSection().getItemContainer())).canRemoveMaterials(input)) {
             return false;
         }
         this.upgradingJob = new BenchUpgradingJob(window, requirements.getTimeSeconds());
-        this.cancelAllCrafting(ref, store);
+        this.cancelAllCrafting(ref, componentAccessor);
         return true;
     }
 
-    private int finishTierUpgrade(Ref<EntityStore> ref, ComponentAccessor<EntityStore> store) {
+    private int finishTierUpgrade(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         boolean canUpgrade;
         BenchState benchState;
         if (this.upgradingJob == null) {
             return 0;
         }
-        BlockState state = store.getExternalData().getWorld().getState(this.x, this.y, this.z, true);
+        World world = componentAccessor.getExternalData().getWorld();
+        BlockState state = world.getState(this.x, this.y, this.z, true);
         BenchState benchState2 = benchState = state instanceof BenchState ? (BenchState)state : null;
         if (benchState == null || benchState.getTierLevel() == 0) {
             return 0;
         }
-        BenchUpgradeRequirement requirements = this.getBenchUpgradeRequierement(benchState.getTierLevel());
+        BenchUpgradeRequirement requirements = this.getBenchUpgradeRequirement(benchState.getTierLevel());
         if (requirements == null) {
             return benchState.getTierLevel();
         }
@@ -545,10 +567,11 @@ implements Component<EntityStore> {
         if (input.isEmpty()) {
             return benchState.getTierLevel();
         }
-        Player player = store.getComponent(ref, Player.getComponentType());
-        boolean bl = canUpgrade = player.getGameMode() == GameMode.Creative;
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
+        boolean bl = canUpgrade = playerComponent.getGameMode() == GameMode.Creative;
         if (!canUpgrade) {
-            CombinedItemContainer combined = new CombinedItemContainer(player.getInventory().getCombinedBackpackStorageHotbar(), this.upgradingJob.window.getExtraResourcesSection().getItemContainer());
+            CombinedItemContainer combined = new CombinedItemContainer(playerComponent.getInventory().getCombinedBackpackStorageHotbar(), this.upgradingJob.window.getExtraResourcesSection().getItemContainer());
             ListTransaction<MaterialTransaction> materialTransactions = (combined = new CombinedItemContainer(combined, this.upgradingJob.window.getExtraResourcesSection().getItemContainer())).removeMaterials(input);
             if (materialTransactions.succeeded()) {
                 ObjectArrayList<ItemStack> consumed = new ObjectArrayList<ItemStack>();
@@ -564,12 +587,13 @@ implements Component<EntityStore> {
         if (canUpgrade) {
             benchState.setTierLevel(benchState.getTierLevel() + 1);
             if (benchState.getBench().getBenchUpgradeCompletedSoundEventIndex() != 0) {
-                SoundUtil.playSoundEvent3d(benchState.getBench().getBenchUpgradeCompletedSoundEventIndex(), SoundCategory.SFX, (double)this.x + 0.5, (double)this.y + 0.5, (double)this.z + 0.5, store);
+                SoundUtil.playSoundEvent3d(benchState.getBench().getBenchUpgradeCompletedSoundEventIndex(), SoundCategory.SFX, (double)this.x + 0.5, (double)this.y + 0.5, (double)this.z + 0.5, componentAccessor);
             }
         }
         return benchState.getTierLevel();
     }
 
+    @Nullable
     private BenchTierLevel getBenchTierLevelData(int level) {
         if (this.blockType == null) {
             return null;
@@ -578,57 +602,22 @@ implements Component<EntityStore> {
         return bench == null ? null : bench.getTierLevel(level);
     }
 
-    private BenchUpgradeRequirement getBenchUpgradeRequierement(int tierLevel) {
+    @Nullable
+    private BenchUpgradeRequirement getBenchUpgradeRequirement(int tierLevel) {
         BenchTierLevel tierData = this.getBenchTierLevelData(tierLevel);
         return tierData == null ? null : tierData.getUpgradeRequirement();
     }
 
-    private int getBenchTierLevel(ComponentAccessor<EntityStore> store) {
-        BlockState state = store.getExternalData().getWorld().getState(this.x, this.y, this.z, true);
+    private int getBenchTierLevel(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        World world = componentAccessor.getExternalData().getWorld();
+        BlockState state = world.getState(this.x, this.y, this.z, true);
         return state instanceof BenchState ? ((BenchState)state).getTierLevel() : 0;
     }
 
-    protected static List<ItemContainer> getContainersAroundBench(@Nonnull BenchState benchState) {
-        ObjectArrayList<ItemContainer> containers = new ObjectArrayList<ItemContainer>();
-        World world = benchState.getChunk().getWorld();
-        Store<ChunkStore> store = world.getChunkStore().getStore();
-        int limit = world.getGameplayConfig().getCraftingConfig().getBenchMaterialChestLimit();
-        double horizontalRadius = world.getGameplayConfig().getCraftingConfig().getBenchMaterialHorizontalChestSearchRadius();
-        double verticalRadius = world.getGameplayConfig().getCraftingConfig().getBenchMaterialVerticalChestSearchRadius();
-        Vector3d blockPos = benchState.getBlockPosition().toVector3d();
-        BlockBoundingBoxes hitboxAsset = BlockBoundingBoxes.getAssetMap().getAsset(benchState.getBlockType().getHitboxTypeIndex());
-        BlockBoundingBoxes.RotatedVariantBoxes rotatedHitbox = hitboxAsset.get(benchState.getRotationIndex());
-        Box boundingBox = rotatedHitbox.getBoundingBox();
-        double benchWidth = boundingBox.width();
-        double benchHeight = boundingBox.height();
-        double benchDepth = boundingBox.depth();
-        double extraSearchRadius = Math.max(benchWidth, Math.max(benchDepth, benchHeight)) - 1.0;
-        SpatialResource<Ref<ChunkStore>, ChunkStore> blockStateSpatialStructure = store.getResource(BlockStateModule.get().getItemContainerSpatialResourceType());
-        ObjectList results = SpatialResource.getThreadLocalReferenceList();
-        blockStateSpatialStructure.getSpatialStructure().ordered3DAxis(blockPos, horizontalRadius + extraSearchRadius, verticalRadius + extraSearchRadius, horizontalRadius + extraSearchRadius, results);
-        if (!results.isEmpty()) {
-            double minX = blockPos.x + boundingBox.min.x - horizontalRadius;
-            double minY = blockPos.y + boundingBox.min.y - verticalRadius;
-            double minZ = blockPos.z + boundingBox.min.z - horizontalRadius;
-            double maxX = blockPos.x + boundingBox.max.x + horizontalRadius;
-            double maxY = blockPos.y + boundingBox.max.y + verticalRadius;
-            double maxZ = blockPos.z + boundingBox.max.z + horizontalRadius;
-            for (Ref ref : results) {
-                BlockState state = BlockState.getBlockState(ref, ref.getStore());
-                if (!(state instanceof ItemContainerState)) continue;
-                ItemContainerState chest = (ItemContainerState)state;
-                Vector3d chestPos = chest.getCenteredBlockPosition();
-                if (!(chestPos.x >= minX) || !(chestPos.x <= maxX) || !(chestPos.y >= minY) || !(chestPos.y <= maxY) || !(chestPos.z >= minZ) || !(chestPos.z <= maxZ)) continue;
-                containers.add(chest.getItemContainer());
-                if (containers.size() < limit) continue;
-                break;
-            }
-        }
-        return containers;
-    }
-
-    public static void feedExtraResourcesSection(BenchState benchState, MaterialExtraResourcesSection extraResourcesSection) {
-        List<ItemContainer> chests = CraftingManager.getContainersAroundBench(benchState);
+    public static int feedExtraResourcesSection(@Nonnull BenchState benchState, @Nonnull MaterialExtraResourcesSection extraResourcesSection) {
+        ChestLookupResult result = CraftingManager.getContainersAroundBench(benchState);
+        List<ItemContainer> chests = result.containers;
+        List<ItemContainerState> chestStates = result.states;
         ItemContainer itemContainer = EmptyItemContainer.INSTANCE;
         if (!chests.isEmpty()) {
             itemContainer = new CombinedItemContainer((ItemContainer[])chests.stream().map(container -> {
@@ -649,6 +638,62 @@ implements Component<EntityStore> {
         extraResourcesSection.setItemContainer(itemContainer);
         extraResourcesSection.setExtraMaterials(materials.values().toArray(new ItemQuantity[0]));
         extraResourcesSection.setValid(true);
+        return chestStates.size();
+    }
+
+    @Nonnull
+    protected static ChestLookupResult getContainersAroundBench(@Nonnull BenchState benchState) {
+        ObjectArrayList<ItemContainer> containers = new ObjectArrayList<ItemContainer>();
+        ObjectArrayList<ItemContainerState> states = new ObjectArrayList<ItemContainerState>();
+        ObjectArrayList<ItemContainerState> spatialResults = new ObjectArrayList<ItemContainerState>();
+        ObjectArrayList<ItemContainerState> filteredOut = new ObjectArrayList<ItemContainerState>();
+        World world = benchState.getChunk().getWorld();
+        Store<ChunkStore> store = world.getChunkStore().getStore();
+        int limit = world.getGameplayConfig().getCraftingConfig().getBenchMaterialChestLimit();
+        double horizontalRadius = world.getGameplayConfig().getCraftingConfig().getBenchMaterialHorizontalChestSearchRadius();
+        double verticalRadius = world.getGameplayConfig().getCraftingConfig().getBenchMaterialVerticalChestSearchRadius();
+        Vector3d blockPos = benchState.getBlockPosition().toVector3d();
+        BlockBoundingBoxes hitboxAsset = BlockBoundingBoxes.getAssetMap().getAsset(benchState.getBlockType().getHitboxTypeIndex());
+        BlockBoundingBoxes.RotatedVariantBoxes rotatedHitbox = hitboxAsset.get(benchState.getRotationIndex());
+        Box boundingBox = rotatedHitbox.getBoundingBox();
+        double benchWidth = boundingBox.width();
+        double benchHeight = boundingBox.height();
+        double benchDepth = boundingBox.depth();
+        double extraSearchRadius = Math.max(benchWidth, Math.max(benchDepth, benchHeight)) - 1.0;
+        SpatialResource<Ref<ChunkStore>, ChunkStore> blockStateSpatialStructure = store.getResource(BlockStateModule.get().getItemContainerSpatialResourceType());
+        ObjectList results = SpatialResource.getThreadLocalReferenceList();
+        blockStateSpatialStructure.getSpatialStructure().ordered3DAxis(blockPos, horizontalRadius + extraSearchRadius, verticalRadius + extraSearchRadius, horizontalRadius + extraSearchRadius, results);
+        if (!results.isEmpty()) {
+            int benchMinBlockX = (int)Math.floor(boundingBox.min.x);
+            int benchMinBlockY = (int)Math.floor(boundingBox.min.y);
+            int benchMinBlockZ = (int)Math.floor(boundingBox.min.z);
+            int benchMaxBlockX = (int)Math.ceil(boundingBox.max.x) - 1;
+            int benchMaxBlockY = (int)Math.ceil(boundingBox.max.y) - 1;
+            int benchMaxBlockZ = (int)Math.ceil(boundingBox.max.z) - 1;
+            double minX = blockPos.x + (double)benchMinBlockX - horizontalRadius;
+            double minY = blockPos.y + (double)benchMinBlockY - verticalRadius;
+            double minZ = blockPos.z + (double)benchMinBlockZ - horizontalRadius;
+            double maxX = blockPos.x + (double)benchMaxBlockX + horizontalRadius;
+            double maxY = blockPos.y + (double)benchMaxBlockY + verticalRadius;
+            double maxZ = blockPos.z + (double)benchMaxBlockZ + horizontalRadius;
+            for (Ref ref : results) {
+                BlockState state = BlockState.getBlockState(ref, ref.getStore());
+                if (!(state instanceof ItemContainerState)) continue;
+                ItemContainerState chest = (ItemContainerState)state;
+                spatialResults.add(chest);
+            }
+            for (ItemContainerState itemContainerState : spatialResults) {
+                Vector3d chestBlockPos = itemContainerState.getBlockPosition().toVector3d();
+                if (chestBlockPos.x >= minX && chestBlockPos.x <= maxX && chestBlockPos.y >= minY && chestBlockPos.y <= maxY && chestBlockPos.z >= minZ && chestBlockPos.z <= maxZ) {
+                    containers.add(itemContainerState.getItemContainer());
+                    states.add(itemContainerState);
+                    if (containers.size() < limit) continue;
+                    break;
+                }
+                filteredOut.add(itemContainerState);
+            }
+        }
+        return new ChestLookupResult(containers, states, spatialResults, filteredOut, blockPos);
     }
 
     @Nonnull
@@ -725,6 +770,9 @@ implements Component<EntityStore> {
         NORMAL,
         ORDERED;
 
+    }
+
+    protected record ChestLookupResult(List<ItemContainer> containers, List<ItemContainerState> states, List<ItemContainerState> spatialResults, List<ItemContainerState> filteredOut, Vector3d benchCenteredPos) {
     }
 }
 

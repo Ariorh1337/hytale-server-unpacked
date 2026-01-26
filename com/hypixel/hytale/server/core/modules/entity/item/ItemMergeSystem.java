@@ -44,7 +44,7 @@ extends EntityTickingSystem<EntityStore> {
         this.itemComponentComponentType = itemComponentComponentType;
         this.itemSpatialComponent = itemSpatialComponent;
         this.interactableComponentType = interactableComponentType;
-        this.query = Query.and(itemComponentComponentType, Query.not(interactableComponentType), Query.not(PreventItemMerging.getComponentType()));
+        this.query = Query.and(itemComponentComponentType, TransformComponent.getComponentType(), Query.not(interactableComponentType), Query.not(PreventItemMerging.getComponentType()));
     }
 
     @Override

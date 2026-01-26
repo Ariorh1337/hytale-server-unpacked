@@ -91,14 +91,14 @@ public class InteractionEffects {
         obj.waitForAnimationToFinish = buf.getByte(offset + 9) != 0;
         obj.clearAnimationOnFinish = buf.getByte(offset + 10) != 0;
         boolean bl = obj.clearSoundEventOnFinish = buf.getByte(offset + 11) != 0;
-        if ((nullBits & 0x20) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.cameraShake = CameraShakeEffect.deserialize(buf, offset + 12);
         }
-        if ((nullBits & 0x40) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.movementEffects = MovementEffects.deserialize(buf, offset + 21);
         }
         obj.startDelay = buf.getFloatLE(offset + 28);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int varPos0 = offset + 52 + buf.getIntLE(offset + 32);
             int particlesCount = VarInt.peek(buf, varPos0);
             if (particlesCount < 0) {
@@ -118,7 +118,7 @@ public class InteractionEffects {
                 elemPos += ModelParticle.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos1 = offset + 52 + buf.getIntLE(offset + 36);
             int firstPersonParticlesCount = VarInt.peek(buf, varPos1);
             if (firstPersonParticlesCount < 0) {
@@ -138,7 +138,7 @@ public class InteractionEffects {
                 elemPos += ModelParticle.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int varPos2 = offset + 52 + buf.getIntLE(offset + 40);
             int trailsCount = VarInt.peek(buf, varPos2);
             if (trailsCount < 0) {
@@ -158,7 +158,7 @@ public class InteractionEffects {
                 elemPos += ModelTrail.computeBytesConsumed(buf, elemPos);
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int varPos3 = offset + 52 + buf.getIntLE(offset + 44);
             int itemPlayerAnimationsIdLen = VarInt.peek(buf, varPos3);
             if (itemPlayerAnimationsIdLen < 0) {
@@ -169,7 +169,7 @@ public class InteractionEffects {
             }
             obj.itemPlayerAnimationsId = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int varPos4 = offset + 52 + buf.getIntLE(offset + 48);
             int itemAnimationIdLen = VarInt.peek(buf, varPos4);
             if (itemAnimationIdLen < 0) {
@@ -189,7 +189,7 @@ public class InteractionEffects {
         int arrLen;
         byte nullBits = buf.getByte(offset);
         int maxEnd = 52;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 32);
             int pos0 = offset + 52 + fieldOffset0;
             arrLen = VarInt.peek(buf, pos0);
@@ -201,7 +201,7 @@ public class InteractionEffects {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 36);
             int pos1 = offset + 52 + fieldOffset1;
             arrLen = VarInt.peek(buf, pos1);
@@ -213,7 +213,7 @@ public class InteractionEffects {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 40);
             int pos2 = offset + 52 + fieldOffset2;
             arrLen = VarInt.peek(buf, pos2);
@@ -225,7 +225,7 @@ public class InteractionEffects {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 44);
             int pos3 = offset + 52 + fieldOffset3;
             sl = VarInt.peek(buf, pos3);
@@ -233,7 +233,7 @@ public class InteractionEffects {
                 maxEnd = pos3 - offset;
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int fieldOffset4 = buf.getIntLE(offset + 48);
             int pos4 = offset + 52 + fieldOffset4;
             sl = VarInt.peek(buf, pos4);
@@ -247,25 +247,25 @@ public class InteractionEffects {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.particles != null) {
+        if (this.cameraShake != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.firstPersonParticles != null) {
+        if (this.movementEffects != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.trails != null) {
+        if (this.particles != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.itemPlayerAnimationsId != null) {
+        if (this.firstPersonParticles != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.itemAnimationId != null) {
+        if (this.trails != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
-        if (this.cameraShake != null) {
+        if (this.itemPlayerAnimationsId != null) {
             nullBits = (byte)(nullBits | 0x20);
         }
-        if (this.movementEffects != null) {
+        if (this.itemAnimationId != null) {
             nullBits = (byte)(nullBits | 0x40);
         }
         buf.writeByte(nullBits);
@@ -386,7 +386,7 @@ public class InteractionEffects {
             return ValidationResult.error("Buffer too small: expected at least 52 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 4) != 0) {
             int particlesOffset = buffer.getIntLE(offset + 32);
             if (particlesOffset < 0) {
                 return ValidationResult.error("Invalid offset for Particles");
@@ -411,7 +411,7 @@ public class InteractionEffects {
                 pos += ModelParticle.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 8) != 0) {
             int firstPersonParticlesOffset = buffer.getIntLE(offset + 36);
             if (firstPersonParticlesOffset < 0) {
                 return ValidationResult.error("Invalid offset for FirstPersonParticles");
@@ -436,7 +436,7 @@ public class InteractionEffects {
                 pos += ModelParticle.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 0x10) != 0) {
             int trailsOffset = buffer.getIntLE(offset + 40);
             if (trailsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Trails");
@@ -461,7 +461,7 @@ public class InteractionEffects {
                 pos += ModelTrail.computeBytesConsumed(buffer, pos);
             }
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 0x20) != 0) {
             int itemPlayerAnimationsIdOffset = buffer.getIntLE(offset + 44);
             if (itemPlayerAnimationsIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for ItemPlayerAnimationsId");
@@ -482,7 +482,7 @@ public class InteractionEffects {
                 return ValidationResult.error("Buffer overflow reading ItemPlayerAnimationsId");
             }
         }
-        if ((nullBits & 0x10) != 0) {
+        if ((nullBits & 0x40) != 0) {
             int itemAnimationIdOffset = buffer.getIntLE(offset + 48);
             if (itemAnimationIdOffset < 0) {
                 return ValidationResult.error("Invalid offset for ItemAnimationId");

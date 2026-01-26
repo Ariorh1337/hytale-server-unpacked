@@ -15,11 +15,12 @@ import javax.annotation.Nonnull;
 
 public class PlayerMatcher
 extends SelectInteraction.EntityMatcher {
+    @Nonnull
     public static final BuilderCodec<PlayerMatcher> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(PlayerMatcher.class, PlayerMatcher::new, BASE_CODEC).documentation("Matches only players")).build();
 
     @Override
-    public boolean test0(Ref<EntityStore> attacker, @Nonnull Ref<EntityStore> target, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        return commandBuffer.getArchetype(target).contains(Player.getComponentType());
+    public boolean test0(@Nonnull Ref<EntityStore> sourceRef, @Nonnull Ref<EntityStore> targetRef, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+        return commandBuffer.getArchetype(targetRef).contains(Player.getComponentType());
     }
 
     @Override

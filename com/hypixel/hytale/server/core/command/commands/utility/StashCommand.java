@@ -30,8 +30,6 @@ import javax.annotation.Nullable;
 public class StashCommand
 extends AbstractPlayerCommand {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED = Message.translation("server.commands.errors.chunkNotLoaded");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_STASH_DROP_LIST_SET = Message.translation("server.commands.stash.droplistSet");
     @Nonnull
     private static final Message MESSAGE_COMMANDS_STASH_NO_DROP_LIST = Message.translation("server.commands.stash.noDroplist");
@@ -79,7 +77,7 @@ extends AbstractPlayerCommand {
         if (chunkRef == null || !chunkRef.isValid()) {
             int chunkX = ChunkUtil.chunkCoordinate(block.x);
             int chunkZ = ChunkUtil.chunkCoordinate(block.z);
-            context.sendMessage(MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED.param("chunkX", chunkX).param("chunkZ", chunkZ).param("world", world.getName()));
+            context.sendMessage(Message.translation("server.commands.errors.chunkNotLoaded").param("chunkX", chunkX).param("chunkZ", chunkZ).param("world", world.getName()));
             return null;
         }
         Store<ChunkStore> chunkStoreStore = chunkStore.getStore();

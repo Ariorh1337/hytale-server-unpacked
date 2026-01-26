@@ -544,8 +544,16 @@ extends InteractiveCustomUIPage<PageData> {
     }
 
     private void buildAssetsBrowserList(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+        Object displayPath;
         String currentDirStr = this.assetsCurrentDir.toString().replace('\\', '/');
-        Object displayPath = currentDirStr.isEmpty() ? ASSETS_ROOT_KEY : "Assets/" + currentDirStr;
+        if (currentDirStr.isEmpty()) {
+            displayPath = ASSETS_ROOT_KEY;
+        } else {
+            String[] parts = currentDirStr.split("/", 2);
+            String packName = parts[0];
+            String subPath = parts.length > 1 ? "/" + parts[1] : "";
+            displayPath = "HytaleAssets".equals(packName) ? packName + subPath : "Mods/" + packName + subPath;
+        }
         commandBuilder.set("#BrowserPage #CurrentPath.Text", (String)displayPath);
         List<FileListProvider.FileEntry> entries = this.assetProvider.getFiles(this.assetsCurrentDir, this.browserSearchQuery);
         int buttonIndex = 0;
@@ -688,7 +696,7 @@ extends InteractiveCustomUIPage<PageData> {
         }
         AssetPack pack = this.findAssetPackForPath(rootStr);
         if (pack != null) {
-            String packPrefix = pack.equals(AssetModule.get().getBaseAssetPack()) ? ASSETS_ROOT_KEY : "[" + pack.getName() + "]";
+            String packPrefix = pack.equals(AssetModule.get().getBaseAssetPack()) ? "HytaleAssets" : "[" + pack.getName() + "]";
             Path parent = root.getParent();
             if (parent != null && parent.getFileName() != null) {
                 return packPrefix + "/" + String.valueOf(parent.getFileName()) + "/" + String.valueOf(root.getFileName());

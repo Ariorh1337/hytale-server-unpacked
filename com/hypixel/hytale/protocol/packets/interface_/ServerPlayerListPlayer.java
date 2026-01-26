@@ -49,12 +49,12 @@ public class ServerPlayerListPlayer {
         ServerPlayerListPlayer obj = new ServerPlayerListPlayer();
         byte nullBits = buf.getByte(offset);
         obj.uuid = PacketIO.readUUID(buf, offset + 1);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.worldUuid = PacketIO.readUUID(buf, offset + 17);
         }
         obj.ping = buf.getIntLE(offset + 33);
         int pos = offset + 37;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int usernameLen = VarInt.peek(buf, pos);
             if (usernameLen < 0) {
                 throw ProtocolException.negativeLength("Username", usernameLen);
@@ -72,7 +72,7 @@ public class ServerPlayerListPlayer {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int pos = offset + 37;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int sl = VarInt.peek(buf, pos);
             pos += VarInt.length(buf, pos) + sl;
         }
@@ -81,10 +81,10 @@ public class ServerPlayerListPlayer {
 
     public void serialize(@Nonnull ByteBuf buf) {
         byte nullBits = 0;
-        if (this.username != null) {
+        if (this.worldUuid != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.worldUuid != null) {
+        if (this.username != null) {
             nullBits = (byte)(nullBits | 2);
         }
         buf.writeByte(nullBits);
@@ -114,7 +114,7 @@ public class ServerPlayerListPlayer {
         }
         byte nullBits = buffer.getByte(offset);
         int pos = offset + 37;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 2) != 0) {
             int usernameLen = VarInt.peek(buffer, pos);
             if (usernameLen < 0) {
                 return ValidationResult.error("Invalid string length for Username");

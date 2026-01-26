@@ -586,8 +586,22 @@ public final class ArgTypes {
         @Override
         @Nullable
         public String parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
+            int blockId;
+            int pipeIndex;
             if (input.isEmpty()) {
                 parseResult.fail(Message.raw("Block entry cannot be empty"));
+                return null;
+            }
+            String blockName = input;
+            int percentIndex = blockName.indexOf(37);
+            if (percentIndex != -1) {
+                blockName = blockName.substring(percentIndex + 1);
+            }
+            if ((pipeIndex = blockName.indexOf(124)) != -1) {
+                blockName = blockName.substring(0, pipeIndex);
+            }
+            if ((blockId = BlockType.getAssetMap().getIndex(blockName)) == Integer.MIN_VALUE) {
+                parseResult.fail(Message.translation("server.builderTools.invalidBlockType").param("name", "").param("key", blockName));
                 return null;
             }
             return input;

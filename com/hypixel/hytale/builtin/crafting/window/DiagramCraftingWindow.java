@@ -54,15 +54,16 @@ implements ItemContainerWindow {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private String category;
     private String itemCategory;
+    @Nullable
     private CraftingBench.BenchItemCategory benchItemCategory;
     private SimpleItemContainer inputPrimaryContainer;
     private SimpleItemContainer inputSecondaryContainer;
     private CombinedItemContainer combinedInputItemContainer;
     private SimpleItemContainer outputContainer;
     private CombinedItemContainer combinedItemContainer;
-    private EventRegistration inventoryRegistration;
+    private EventRegistration<?, ?> inventoryRegistration;
 
-    public DiagramCraftingWindow(@Nonnull ComponentAccessor<EntityStore> store, BenchState benchState) {
+    public DiagramCraftingWindow(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull BenchState benchState) {
         super(WindowType.DiagramCrafting, benchState);
         DiagramCraftingBench bench = (DiagramCraftingBench)this.bench;
         if (bench.getCategories() != null && bench.getCategories().length > 0) {
@@ -76,7 +77,7 @@ implements ItemContainerWindow {
         if (this.benchItemCategory == null) {
             throw new IllegalArgumentException("Failed to get category!");
         }
-        this.updateInventory(store, this.benchItemCategory);
+        this.updateInventory(ref, store, this.benchItemCategory);
     }
 
     protected void finalize() {
@@ -86,14 +87,12 @@ implements ItemContainerWindow {
     }
 
     @Override
-    public boolean onOpen0() {
-        boolean result = super.onOpen0();
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
-        Inventory inventory = player.getInventory();
-        this.updateInput((ItemContainer)null);
+    public boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        boolean result = super.onOpen0(ref, store);
+        Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
+        Inventory inventory = playerComponent.getInventory();
+        this.updateInput(null, ref, store);
         this.inventoryRegistration = inventory.getCombinedHotbarFirst().registerChangeEvent(event -> {
             ObjectArrayList<CraftingRecipe> recipes = new ObjectArrayList<CraftingRecipe>();
             this.windowData.add("slots", this.generateSlots(inventory.getCombinedHotbarFirst(), recipes));
@@ -103,24 +102,25 @@ implements ItemContainerWindow {
     }
 
     @Override
-    public void onClose0() {
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
+    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
         List<ItemStack> itemStacks = this.combinedInputItemContainer.dropAllItemStacks();
-        SimpleItemContainer.addOrDropItemStacks(store, ref, player.getInventory().getCombinedHotbarFirst(), itemStacks);
-        CraftingManager craftingManager = store.getComponent(ref, CraftingManager.getComponentType());
-        craftingManager.cancelAllCrafting(ref, store);
+        SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
+        CraftingManager craftingManagerComponent = componentAccessor.getComponent(ref, CraftingManager.getComponentType());
+        assert (craftingManagerComponent != null);
+        craftingManagerComponent.cancelAllCrafting(ref, componentAccessor);
         this.inventoryRegistration.unregister();
-        super.onClose0();
+        super.onClose0(ref, componentAccessor);
     }
 
     @Override
     public void handleAction(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull WindowAction action) {
         World world = store.getExternalData().getWorld();
-        PlayerRef playerRef = this.getPlayerRef();
-        CraftingManager craftingManager = store.getComponent(ref, CraftingManager.getComponentType());
+        PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+        assert (playerRefComponent != null);
+        CraftingManager craftingManagerComponent = store.getComponent(ref, CraftingManager.getComponentType());
+        assert (craftingManagerComponent != null);
         WindowAction windowAction = action;
         Objects.requireNonNull(windowAction);
         WindowAction windowAction2 = windowAction;
@@ -128,7 +128,7 @@ implements ItemContainerWindow {
         switch (SwitchBootstraps.typeSwitch("typeSwitch", new Object[]{CancelCraftingAction.class, UpdateCategoryAction.class, CraftItemAction.class}, (Object)windowAction2, n)) {
             case 0: {
                 CancelCraftingAction ignored = (CancelCraftingAction)windowAction2;
-                craftingManager.cancelAllCrafting(ref, store);
+                craftingManagerComponent.cancelAllCrafting(ref, store);
                 break;
             }
             case 1: {
@@ -137,35 +137,35 @@ implements ItemContainerWindow {
                 this.itemCategory = updateAction.itemCategory;
                 this.benchItemCategory = this.getBenchItemCategory(this.category, this.itemCategory);
                 if (this.benchItemCategory != null) {
-                    this.updateInventory(store, this.benchItemCategory);
+                    this.updateInventory(ref, store, this.benchItemCategory);
                     break;
                 }
-                this.getPlayerRef().sendMessage(Message.translation("server.ui.diagramcraftingwindow.invalidCategory"));
-                this.close();
+                playerRefComponent.sendMessage(Message.translation("server.ui.diagramcraftingwindow.invalidCategory"));
+                this.close(ref, store);
                 break;
             }
             case 2: {
                 CraftItemAction ignored = (CraftItemAction)windowAction2;
                 ItemStack itemStack = this.outputContainer.getItemStack((short)0);
                 if (itemStack == null || itemStack.isEmpty()) {
-                    playerRef.sendMessage(Message.translation("server.ui.diagramcraftingwindow.noOutputItem"));
+                    playerRefComponent.sendMessage(Message.translation("server.ui.diagramcraftingwindow.noOutputItem"));
                     return;
                 }
                 ObjectArrayList<CraftingRecipe> recipes = new ObjectArrayList<CraftingRecipe>();
-                boolean allSlotsFull = this.collectRecipes(recipes);
+                boolean allSlotsFull = this.collectRecipes(ref, recipes, store);
                 if (recipes.size() != 1 || !allSlotsFull) {
-                    playerRef.sendMessage(Message.translation("server.ui.diagramcraftingwindow.failedVerifyRecipy"));
+                    playerRefComponent.sendMessage(Message.translation("server.ui.diagramcraftingwindow.failedVerifyRecipy"));
                     return;
                 }
                 CraftingRecipe recipe = (CraftingRecipe)recipes.getFirst();
-                craftingManager.queueCraft(ref, store, this, 0, recipe, 1, this.combinedInputItemContainer, CraftingManager.InputRemovalType.ORDERED);
+                craftingManagerComponent.queueCraft(ref, store, this, 0, recipe, 1, this.combinedInputItemContainer, CraftingManager.InputRemovalType.ORDERED);
                 String completedState = recipe.getTimeSeconds() > 0.0f ? "CraftCompleted" : "CraftCompletedInstant";
-                this.setBlockInteractionState(completedState, world, 70);
+                this.setBlockInteractionState(completedState, world);
                 if (this.bench.getCompletedSoundEventIndex() != 0) {
                     SoundUtil.playSoundEvent3d(this.bench.getCompletedSoundEventIndex(), SoundCategory.SFX, (double)this.x + 0.5, (double)this.y + 0.5, (double)this.z + 0.5, store);
                 }
                 if (!CraftingPlugin.learnRecipe(ref, recipe.getId(), store)) break;
-                this.updateInput(this.outputContainer);
+                this.updateInput(this.outputContainer, ref, store);
                 break;
             }
         }
@@ -177,6 +177,7 @@ implements ItemContainerWindow {
         return this.combinedItemContainer;
     }
 
+    @Nullable
     private CraftingBench.BenchItemCategory getBenchItemCategory(@Nullable String category, @Nullable String itemCategory) {
         if (category == null || itemCategory == null) {
             return null;
@@ -192,13 +193,12 @@ implements ItemContainerWindow {
         return null;
     }
 
-    private void updateInventory(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull CraftingBench.BenchItemCategory benchItemCategory) {
+    private void updateInventory(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingBench.BenchItemCategory benchItemCategory) {
         if (this.combinedInputItemContainer != null) {
-            PlayerRef playerRef = this.getPlayerRef();
-            Ref<EntityStore> ref = playerRef.getReference();
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+            assert (playerComponent != null);
             List<ItemStack> itemStacks = this.combinedInputItemContainer.dropAllItemStacks();
-            SimpleItemContainer.addOrDropItemStacks(store, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
+            SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
         }
         this.inputPrimaryContainer = new SimpleItemContainer(1);
         this.inputSecondaryContainer = new SimpleItemContainer((short)(benchItemCategory.getSlots() + (benchItemCategory.isSpecialSlot() ? 1 : 0)));
@@ -211,16 +211,23 @@ implements ItemContainerWindow {
     }
 
     private void updateInput(@Nonnull ItemContainer.ItemContainerChangeEvent event) {
-        this.updateInput(event.container());
+        PlayerRef playerRef = this.getPlayerRef();
+        if (playerRef == null) {
+            return;
+        }
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        this.updateInput(event.container(), ref, store);
     }
 
-    private void updateInput(@Nullable ItemContainer container) {
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
+    private void updateInput(@Nullable ItemContainer container, @Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
         ItemStack primaryItemStack = this.inputPrimaryContainer.getItemStack((short)0);
-        CombinedItemContainer combinedStorage = player.getInventory().getCombinedHotbarFirst();
+        CombinedItemContainer combinedStorage = playerComponent.getInventory().getCombinedHotbarFirst();
         if (primaryItemStack != null && !primaryItemStack.isEmpty()) {
             this.inputSecondaryContainer.setGlobalFilter(FilterType.ALLOW_ALL);
             boolean needsDropSlot = true;
@@ -245,12 +252,12 @@ implements ItemContainerWindow {
             }
         }
         ObjectArrayList<CraftingRecipe> recipes = new ObjectArrayList<CraftingRecipe>();
-        boolean allSlotsFull = this.collectRecipes(recipes);
+        boolean allSlotsFull = this.collectRecipes(ref, recipes, store);
         this.windowData.add("slots", this.generateSlots(combinedStorage, recipes));
         if (recipes.size() == 1 && allSlotsFull) {
             CraftingRecipe recipe = (CraftingRecipe)recipes.getFirst();
             ItemStack output = CraftingManager.getOutputItemStacks(recipe).getFirst();
-            if (player.getPlayerConfigData().getKnownRecipes().contains(recipe.getId())) {
+            if (playerComponent.getPlayerConfigData().getKnownRecipes().contains(recipe.getId())) {
                 this.outputContainer.setItemStackForSlot((short)0, output);
             } else {
                 this.outputContainer.setItemStackForSlot((short)0, new ItemStack("Unknown", 1));
@@ -264,16 +271,15 @@ implements ItemContainerWindow {
         this.invalidate();
     }
 
-    private boolean collectRecipes(@Nonnull List<CraftingRecipe> recipes) {
+    private boolean collectRecipes(@Nonnull Ref<EntityStore> ref, @Nonnull List<CraftingRecipe> recipes, @Nonnull Store<EntityStore> store) {
+        assert (this.benchItemCategory != null);
         ItemStack primaryItemStack = this.inputPrimaryContainer.getItemStack((short)0);
         if (primaryItemStack == null || primaryItemStack.isEmpty()) {
             return false;
         }
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
-        Set<String> knownRecipes = player.getPlayerConfigData().getKnownRecipes();
+        Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        assert (playerComponent != null);
+        Set<String> knownRecipes = playerComponent.getPlayerConfigData().getKnownRecipes();
         short inputCapacity = this.combinedInputItemContainer.getCapacity();
         boolean allSlotsFull = true;
         block0: for (CraftingRecipe recipe : this.getBenchRecipes()) {

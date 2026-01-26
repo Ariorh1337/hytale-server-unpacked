@@ -11,7 +11,9 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ForkedChainId;
 import com.hypixel.hytale.protocol.GameMode;
@@ -26,6 +28,7 @@ import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.protocol.packets.interaction.CancelInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChain;
 import com.hypixel.hytale.protocol.packets.inventory.SetActiveSlot;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.ChainSyncStorage;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -46,8 +49,14 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.UUIDUtil;
+import io.sentry.Sentry;
+import io.sentry.SentryEvent;
+import io.sentry.SentryLevel;
+import io.sentry.protocol.Message;
+import io.sentry.protocol.SentryId;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -55,6 +64,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -539,7 +549,40 @@ implements Component<EntityStore> {
             }
             long threshold = this.getOperationTimeoutThreshold();
             if (tickTimeDilation == 1.0f && waitMillis > threshold) {
-                throw new RuntimeException("Client took too long to send clientData! Millis: " + waitMillis + ", Threshold: " + threshold + ",\nChain: " + String.valueOf(chain) + ",\nEntry: " + chain.getOperationIndex() + ", " + String.valueOf(entry) + ",\nWaiting for data from: " + String.valueOf((Object)operation.getWaitForDataFrom()));
+                SentryEvent event = new SentryEvent();
+                event.setLevel(SentryLevel.ERROR);
+                Message message = new Message();
+                message.setMessage("Client failed to send client data, ending early to prevent desync");
+                HashMap<String, Object> unknown = new HashMap<String, Object>();
+                unknown.put("Threshold", threshold);
+                unknown.put("Wait Millis", waitMillis);
+                unknown.put("Current Root", chain.getRootInteraction() != null ? chain.getRootInteraction().getId() : "<null>");
+                Operation innerOp = operation.getInnerOperation();
+                unknown.put("Current Op", innerOp.getClass().getName());
+                if (innerOp instanceof Interaction) {
+                    Interaction interaction = (Interaction)innerOp;
+                    unknown.put("Current Interaction", interaction.getId());
+                }
+                unknown.put("Current Index", chain.getOperationIndex());
+                unknown.put("Current Op Counter", chain.getOperationCounter());
+                HistoricMetric metric = ref.getStore().getExternalData().getWorld().getBufferedTickLengthMetricSet();
+                long[] periods = metric.getPeriodsNanos();
+                for (int i = 0; i < periods.length; ++i) {
+                    String length = FormatUtil.timeUnitToString(periods[i], TimeUnit.NANOSECONDS, true);
+                    double average = metric.getAverage(i);
+                    long min = metric.calculateMin(i);
+                    long max = metric.calculateMax(i);
+                    String value = FormatUtil.simpleTimeUnitFormat(min, average, max, TimeUnit.NANOSECONDS, TimeUnit.MILLISECONDS, 3);
+                    unknown.put(String.format("World Perf %s", length), value);
+                }
+                event.setExtras(unknown);
+                event.setMessage(message);
+                SentryId eventId = Sentry.captureEvent(event);
+                ((HytaleLogger.Api)LOGGER.atWarning()).log("Client failed to send client data, ending early to prevent desync. %s", eventId);
+                chain.setServerState(InteractionState.Failed);
+                chain.setClientState(InteractionState.Failed);
+                this.sendCancelPacket(chain);
+                return null;
             }
             if (entry.consumeSendInitial() || wasWrong) {
                 returnData = entry.getServerState();
@@ -768,6 +811,22 @@ implements Component<EntityStore> {
             BlockPosition targetBlock = world.getBaseBlock(packet.data.blockPosition);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK, targetBlock);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK_RAW, packet.data.blockPosition);
+            if (!packet.data.blockPosition.equals(targetBlock)) {
+                int otherBlockId;
+                WorldChunk otherChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(packet.data.blockPosition.x, packet.data.blockPosition.z));
+                if (otherChunk == null) {
+                    HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
+                    if (ctx.isEnabled()) {
+                        ctx.log("Unloaded chunk interacted with: %d, %s", index, (Object)type);
+                    }
+                    this.sendCancelPacket(index, packet.forkedId);
+                    return true;
+                }
+                int blockId = world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z);
+                if (blockId != (otherBlockId = world.getBlock(packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z))) {
+                    otherChunk.setBlock(packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z, 0, BlockType.EMPTY, 0, 0, 1052);
+                }
+            }
         }
         if (packet.data.entityId >= 0 && (entityReference = (entityComponentStore = world.getEntityStore()).getRefFromNetworkId(packet.data.entityId)) != null) {
             context.getMetaStore().putMetaObject(Interaction.TARGET_ENTITY, entityReference);
@@ -977,9 +1036,28 @@ implements Component<EntityStore> {
         }
         GameMode gameMode = (playerComponent = this.commandBuffer.getComponent(ref, Player.getComponentType())) != null ? playerComponent.getGameMode() : GameMode.Adventure;
         RootInteractionSettings settings = root.getSettings().get((Object)gameMode);
-        if (settings != null && settings.allowSkipChainOnClick && remote) {
-            this.cooldownHandler.resetCooldown(cooldownId, cooldownTime, cooldownChargeTimes, interruptRecharge);
-            return false;
+        if (settings != null) {
+            cooldown = settings.cooldown;
+            if (cooldown != null) {
+                cooldownTime = cooldown.cooldown;
+                if (cooldown.chargeTimes != null && cooldown.chargeTimes.length > 0) {
+                    cooldownChargeTimes = cooldown.chargeTimes;
+                }
+                if (cooldown.cooldownId != null) {
+                    cooldownId = cooldown.cooldownId;
+                }
+                if (cooldown.interruptRecharge) {
+                    interruptRecharge = true;
+                }
+                if (cooldown.clickBypass && remote) {
+                    this.cooldownHandler.resetCooldown(cooldownId, cooldownTime, cooldownChargeTimes, interruptRecharge);
+                    return false;
+                }
+            }
+            if (settings.allowSkipChainOnClick && remote) {
+                this.cooldownHandler.resetCooldown(cooldownId, cooldownTime, cooldownChargeTimes, interruptRecharge);
+                return false;
+            }
         }
         return this.cooldownHandler.isOnCooldown(root, cooldownId, cooldownTime, cooldownChargeTimes, interruptRecharge);
     }

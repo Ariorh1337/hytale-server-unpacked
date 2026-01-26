@@ -10,7 +10,9 @@ import com.hypixel.hytale.builtin.adventure.memories.component.PlayerMemories;
 import com.hypixel.hytale.builtin.adventure.memories.memories.Memory;
 import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.codec.ExtraInfo;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
@@ -36,13 +38,12 @@ extends Window {
     }
 
     @Override
-    public boolean onOpen0() {
+    public boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         JsonArray array = new JsonArray();
-        Ref<EntityStore> ref = this.getPlayerRef().getReference();
-        PlayerMemories playerMemories = ref.getStore().getComponent(ref, PlayerMemories.getComponentType());
-        if (playerMemories != null) {
-            this.windowData.addProperty("capacity", playerMemories.getMemoriesCapacity());
-            for (Memory memory : playerMemories.getRecordedMemories()) {
+        PlayerMemories playerMemoriesComponent = store.getComponent(ref, PlayerMemories.getComponentType());
+        if (playerMemoriesComponent != null) {
+            this.windowData.addProperty("capacity", playerMemoriesComponent.getMemoriesCapacity());
+            for (Memory memory : playerMemoriesComponent.getRecordedMemories()) {
                 String category;
                 JsonObject obj = new JsonObject();
                 obj.addProperty("title", memory.getTitle());
@@ -76,7 +77,7 @@ extends Window {
     }
 
     @Override
-    public void onClose0() {
+    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
     }
 }
 

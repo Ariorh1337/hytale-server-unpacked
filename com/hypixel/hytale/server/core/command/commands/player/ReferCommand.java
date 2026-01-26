@@ -45,9 +45,8 @@ extends AbstractTargetPlayerCommand {
             context.sendMessage(Message.translation("server.commands.refer.invalidPort"));
             return;
         }
-        byte[] testData = "Test referral".getBytes();
         try {
-            playerRef.referToServer(host, port, testData);
+            playerRef.referToServer(host, port);
             if (isTargetingOther) {
                 context.sendMessage(Message.translation("server.commands.refer.success.other").param("username", playerRef.getUsername()).param("host", host).param("port", port));
             } else {

@@ -8,6 +8,8 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.NumberArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleValidator;
@@ -19,8 +21,8 @@ import javax.annotation.Nonnull;
 public class BuilderActionSpawnParticles
 extends BuilderActionBase {
     protected final AssetHolder particleSystem = new AssetHolder();
-    protected double range;
-    protected double[] offset;
+    protected final DoubleHolder range = new DoubleHolder();
+    protected final NumberArrayHolder offset = new NumberArrayHolder();
 
     @Override
     @Nonnull
@@ -49,12 +51,8 @@ extends BuilderActionBase {
     @Nonnull
     public BuilderActionSpawnParticles readConfig(@Nonnull JsonElement data) {
         this.requireAsset(data, "ParticleSystem", this.particleSystem, (AssetValidator)ParticleSystemExistsValidator.required(), BuilderDescriptorState.Stable, "Particle system to spawn", null);
-        this.getDouble(data, "Range", (double v) -> {
-            this.range = v;
-        }, 75.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "Maximum visibility range", null);
-        this.getVector3d(data, "Offset", (double[] v) -> {
-            this.offset = v;
-        }, null, null, BuilderDescriptorState.Stable, "Offset relative to footpoint in view direction of NPC", null);
+        this.getDouble(data, "Range", this.range, 75.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "Maximum visibility range", null);
+        this.getVector3d(data, "Offset", this.offset, null, null, BuilderDescriptorState.Stable, "Offset relative to footpoint in view direction of NPC", null);
         return this;
     }
 
@@ -62,12 +60,12 @@ extends BuilderActionBase {
         return this.particleSystem.get(support.getExecutionContext());
     }
 
-    public double getRange() {
-        return this.range;
+    public double getRange(BuilderSupport support) {
+        return this.range.get(support.getExecutionContext());
     }
 
-    public Vector3d getOffset() {
-        return BuilderActionSpawnParticles.createVector3d(this.offset, Vector3d.ZERO::clone);
+    public Vector3d getOffset(BuilderSupport support) {
+        return BuilderActionSpawnParticles.createVector3d(this.offset.get(support.getExecutionContext()), Vector3d.ZERO::clone);
     }
 }
 

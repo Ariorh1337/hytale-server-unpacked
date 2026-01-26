@@ -22,6 +22,9 @@ public class HytalePermissions {
     public static final String EDITOR_SELECTION_MODIFY = "hytale.editor.selection.modify";
     public static final String EDITOR_HISTORY = "hytale.editor.history";
     public static final String FLY_CAM = "hytale.camera.flycam";
+    public static final String WORLD_MAP_COORDINATE_TELEPORT = "hytale.world_map.teleport.coordinate";
+    public static final String WORLD_MAP_MARKER_TELEPORT = "hytale.world_map.teleport.marker";
+    public static final String UPDATE_NOTIFY = "hytale.system.update.notify";
 
     @Nonnull
     public static String fromCommand(@Nonnull String name) {

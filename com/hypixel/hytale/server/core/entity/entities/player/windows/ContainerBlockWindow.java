@@ -4,6 +4,7 @@
 package com.hypixel.hytale.server.core.entity.entities.player.windows;
 
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.window.SortItemsAction;
@@ -42,12 +43,12 @@ implements ItemContainerWindow {
     }
 
     @Override
-    public boolean onOpen0() {
+    public boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         return true;
     }
 
     @Override
-    public void onClose0() {
+    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
     }
 
     @Override

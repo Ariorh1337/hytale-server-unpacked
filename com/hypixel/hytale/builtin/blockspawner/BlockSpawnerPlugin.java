@@ -6,6 +6,7 @@ package com.hypixel.hytale.builtin.blockspawner;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.codec.AssetCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.builtin.blockphysics.PrefabBufferValidator;
 import com.hypixel.hytale.builtin.blockspawner.BlockSpawnerEntry;
 import com.hypixel.hytale.builtin.blockspawner.BlockSpawnerTable;
 import com.hypixel.hytale.builtin.blockspawner.command.BlockSpawnerCommand;
@@ -64,6 +65,30 @@ extends JavaPlugin {
         this.blockSpawnerComponentType = this.getChunkStoreRegistry().registerComponent(BlockSpawner.class, "BlockSpawner", BlockSpawner.CODEC);
         this.getChunkStoreRegistry().registerSystem(new BlockSpawnerSystem());
         this.getChunkStoreRegistry().registerSystem(new MigrateBlockSpawner());
+        this.getEventRegistry().registerGlobal(PrefabBufferValidator.ValidateBlockEvent.class, BlockSpawnerPlugin::validatePrefabBlock);
+    }
+
+    private static void validatePrefabBlock(PrefabBufferValidator.ValidateBlockEvent validateBlockEvent) {
+        Holder<ChunkStore> holder = validateBlockEvent.holder();
+        if (holder == null) {
+            return;
+        }
+        BlockSpawner spawner = holder.getComponent(BlockSpawner.getComponentType());
+        if (spawner == null) {
+            return;
+        }
+        BlockType blockType = BlockType.getAssetMap().getAsset(validateBlockEvent.blockId());
+        if (blockType == null) {
+            return;
+        }
+        if (spawner.getBlockSpawnerId() == null) {
+            validateBlockEvent.reason().append("\t Block ").append(blockType.getId()).append(" at ").append(validateBlockEvent.x()).append(", ").append(validateBlockEvent.y()).append(", ").append(validateBlockEvent.z()).append(" has no defined block spawner id").append('\n');
+            return;
+        }
+        BlockSpawnerTable blockSpawner = BlockSpawnerTable.getAssetMap().getAsset(spawner.getBlockSpawnerId());
+        if (blockSpawner == null) {
+            validateBlockEvent.reason().append("\t Block ").append(blockType.getId()).append(" at ").append(validateBlockEvent.x()).append(", ").append(validateBlockEvent.y()).append(", ").append(validateBlockEvent.z()).append(" has an invalid spawner id ").append(spawner.getBlockSpawnerId()).append('\n');
+        }
     }
 
     public ComponentType<ChunkStore, BlockSpawner> getBlockSpawnerComponentType() {

@@ -100,10 +100,9 @@ public class RepulsionSystems {
             spatialResource.getSpatialStructure().ordered(transformComponent.getPosition(), radius, results);
             for (Ref entityRef : results) {
                 double distance;
-                TransformComponent entityTransformComponent = store.getComponent(entityRef, this.transformComponentComponentType);
-                assert (entityTransformComponent != null);
-                Vector2d entityPosition = new Vector2d(entityTransformComponent.getPosition().x, entityTransformComponent.getPosition().z);
-                if (entityPosition.equals(position) || (distance = position.distanceTo(entityPosition)) < 0.1) continue;
+                Vector2d entityPosition;
+                TransformComponent entityTransformComponent = commandBuffer.getComponent(entityRef, this.transformComponentComponentType);
+                if (entityTransformComponent == null || (entityPosition = new Vector2d(entityTransformComponent.getPosition().x, entityTransformComponent.getPosition().z)).equals(position) || (distance = position.distanceTo(entityPosition)) < 0.1) continue;
                 double fraction = ((double)radius - distance) / (double)radius;
                 float maxForce = repulsion.maxForce;
                 int flip = 1;
@@ -116,7 +115,7 @@ public class RepulsionSystems {
                 push.normalize();
                 push.scale(force *= (double)flip);
                 Velocity entityVelocityComponent = commandBuffer.getComponent(entityRef, Velocity.getComponentType());
-                assert (entityVelocityComponent != null);
+                if (entityVelocityComponent == null) continue;
                 Vector3d addedVelocity = new Vector3d((float)push.x, 0.0, (float)push.y);
                 entityVelocityComponent.addInstruction(addedVelocity, null, ChangeVelocityType.Add);
             }

@@ -274,10 +274,9 @@ implements IBlockCollisionConsumer {
         }
         double maxRelativeDistance = 1.0;
         if (this.provideCharacterCollisions) {
-            Entity creator;
             Ref<EntityStore> creatorReference = null;
-            if (this.creatorUuid != null && (creator = entityWorld.getEntity(this.creatorUuid)) != null) {
-                creatorReference = creator.getReference();
+            if (this.creatorUuid != null) {
+                creatorReference = entityWorld.getEntityRef(this.creatorUuid);
             }
             if ((maxRelativeDistance = this.entityCollisionProvider.computeNearest(this.boundingBox.getBoundingBox(), this.position, this.movement, selfRef, creatorReference, componentAccessor)) < 0.0 || maxRelativeDistance > 1.0) {
                 maxRelativeDistance = 1.0;

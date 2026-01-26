@@ -31,7 +31,12 @@ public class ContextDependency {
     }
 
     @Nonnull
-    public Bounds3i getTotalPropBounds_voxelGrid() {
+    public Bounds3i getReadBounds_voxelGrid() {
+        return new Bounds3i(this.getReadRange().clone().scale(-1), this.getReadRange().clone().add(Vector3i.ALL_ONES));
+    }
+
+    @Nonnull
+    public Bounds3i getWriteBounds_voxelGrid() {
         Vector3i readMin_voxelGrid = this.getReadRange().scale(-1);
         Vector3i readMax_voxelGrid = this.getReadRange().add(Vector3i.ALL_ONES);
         Vector3i writeMin_voxelGrid = this.getWriteRange().scale(-1);
@@ -175,6 +180,19 @@ public class ContextDependency {
         Vector3i read = Vector3i.max(a.readRange, b.readRange);
         Vector3i write = Vector3i.max(a.writeRange, b.writeRange);
         return new ContextDependency(read, write);
+    }
+
+    @Nonnull
+    public static ContextDependency from(@Nonnull Bounds3i readBounds, @Nonnull Bounds3i writeBounds) {
+        return new ContextDependency(ContextDependency.rangeFromBounds(readBounds), ContextDependency.rangeFromBounds(writeBounds));
+    }
+
+    private static Vector3i rangeFromBounds(@Nonnull Bounds3i readBounds) {
+        Vector3i readRange = new Vector3i();
+        readRange.x = Math.max(Math.abs(readBounds.min.x), Math.abs(readBounds.max.x - 1));
+        readRange.y = Math.max(Math.abs(readBounds.min.y), Math.abs(readBounds.max.y - 1));
+        readRange.z = Math.max(Math.abs(readBounds.min.z), Math.abs(readBounds.max.z - 1));
+        return readRange;
     }
 
     @Nonnull

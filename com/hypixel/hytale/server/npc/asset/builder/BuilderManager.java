@@ -9,6 +9,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.JsonReader;
 import com.hypixel.fastutil.ints.Int2ObjectConcurrentHashMap;
 import com.hypixel.hytale.assetstore.AssetExtraInfo;
@@ -71,6 +72,7 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -79,6 +81,8 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Duration;
+import java.time.Period;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -725,6 +729,8 @@ public class BuilderManager {
     public static void saveDescriptors(List<BuilderDescriptor> builderDescriptors, @Nonnull Path fileName) {
         try (BufferedWriter fileWriter = Files.newBufferedWriter(fileName, new OpenOption[0]);){
             GsonBuilder gsonBuilder = new GsonBuilder().setPrettyPrinting().serializeNulls().setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE);
+            gsonBuilder.registerTypeAdapter((Type)((Object)Duration.class), (src, typeOfSrc, context) -> new JsonPrimitive(src.toString()));
+            gsonBuilder.registerTypeAdapter((Type)((Object)Period.class), (src, typeOfSrc, context) -> new JsonPrimitive(src.toString()));
             ValidatorTypeRegistry.registerTypes(gsonBuilder);
             ProviderEvaluatorTypeRegistry.registerTypes(gsonBuilder);
             Gson gson = gsonBuilder.create();

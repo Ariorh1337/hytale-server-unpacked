@@ -153,7 +153,7 @@ implements NStage {
                 position2d_voxelGrid.setY(0);
                 double distanceToBiomeEdge = ((NBiomeDistanceStage.BiomeDistanceEntries)biomeDistanceSpace.getContent(position2d_voxelGrid)).distanceToClosestOtherBiome(biomeAtPosition);
                 Prop prop = propField.getPropDistribution().propAt((Vector3d)position, context.workerId, distanceToBiomeEdge);
-                Bounds3i propWriteBounds = prop.getWriteBounds().clone();
+                Bounds3i propWriteBounds = prop.getWriteBounds_voxelGrid().clone();
                 propWriteBounds.offset(positionInt_voxelGrid);
                 if (!propWriteBounds.intersects(localOutputBounds_voxelGrid)) {
                     return;

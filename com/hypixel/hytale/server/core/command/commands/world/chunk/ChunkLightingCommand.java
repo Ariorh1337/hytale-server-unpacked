@@ -26,10 +26,6 @@ import javax.annotation.Nonnull;
 public class ChunkLightingCommand
 extends AbstractWorldCommand {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED = Message.translation("server.commands.errors.chunkNotLoaded");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNKINFO_LOAD_USAGE = Message.translation("server.commands.chunkinfo.load.usage");
-    @Nonnull
     private static final Message MESSAGE_COMMANDS_CHUNKINFO_SERIALIZED = Message.translation("server.commands.chunkinfo.serialized");
     @Nonnull
     private static final Message MESSAGE_COMMANDS_CHUNKINFO_SERIALIZED_FAILED = Message.translation("server.commands.chunkinfo.serialized.failed");
@@ -49,8 +45,8 @@ extends AbstractWorldCommand {
         long chunkIndex = ChunkUtil.indexChunk(chunkPos.x, chunkPos.y);
         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
         if (chunkRef == null || !chunkRef.isValid()) {
-            context.sendMessage(MESSAGE_COMMANDS_ERRORS_CHUNK_NOT_LOADED.param("chunkX", chunkPos.x).param("chunkZ", chunkPos.y).param("world", world.getName()));
-            context.sendMessage(MESSAGE_COMMANDS_CHUNKINFO_LOAD_USAGE.param("chunkX", chunkPos.x).param("chunkZ", chunkPos.y));
+            context.sendMessage(Message.translation("server.commands.errors.chunkNotLoaded").param("chunkX", chunkPos.x).param("chunkZ", chunkPos.y).param("world", world.getName()));
+            context.sendMessage(Message.translation("server.commands.chunkinfo.load.usage").param("chunkX", chunkPos.x).param("chunkZ", chunkPos.y));
             return;
         }
         BlockChunk blockChunkComponent = chunkStoreStore.getComponent(chunkRef, BlockChunk.getComponentType());

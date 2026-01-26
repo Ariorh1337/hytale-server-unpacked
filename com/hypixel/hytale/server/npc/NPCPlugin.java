@@ -860,7 +860,7 @@ extends JavaPlugin {
     }
 
     @Nullable
-    public Pair<Ref<EntityStore>, NPCEntity> spawnEntity(@Nonnull Store<EntityStore> store, int roleIndex, @Nonnull Vector3d position, Vector3f rotation, Model spawnModel, TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn) {
+    public Pair<Ref<EntityStore>, NPCEntity> spawnEntity(@Nonnull Store<EntityStore> store, int roleIndex, @Nonnull Vector3d position, @Nullable Vector3f rotation, @Nullable Model spawnModel, @Nullable TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn) {
         return this.spawnEntity(store, roleIndex, position, rotation, spawnModel, null, postSpawn);
     }
 

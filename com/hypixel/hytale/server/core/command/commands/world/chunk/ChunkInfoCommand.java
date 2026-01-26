@@ -27,10 +27,6 @@ import javax.annotation.Nonnull;
 public class ChunkInfoCommand
 extends AbstractWorldCommand {
     @Nonnull
-    private static final Message MESSAGE_GENERAL_CHUNK_NOT_LOADED = Message.translation("server.general.chunkNotLoaded");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNKINFO_LOAD_USAGE = Message.translation("server.commands.chunkinfo.load.usage");
-    @Nonnull
     private final RequiredArg<RelativeChunkPosition> chunkPosArg = this.withRequiredArg("x z", "server.commands.chunk.info.position.desc", ArgTypes.RELATIVE_CHUNK_POSITION);
 
     public ChunkInfoCommand() {
@@ -46,8 +42,8 @@ extends AbstractWorldCommand {
         long chunkIndex = ChunkUtil.indexChunk(position.x, position.y);
         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
         if (chunkRef == null || !chunkRef.isValid()) {
-            context.sendMessage(MESSAGE_GENERAL_CHUNK_NOT_LOADED.param("chunkX", position.x).param("chunkZ", position.y));
-            context.sendMessage(MESSAGE_COMMANDS_CHUNKINFO_LOAD_USAGE.param("chunkX", position.x).param("chunkZ", position.y));
+            context.sendMessage(Message.translation("server.general.chunkNotLoaded").param("chunkX", position.x).param("chunkZ", position.y));
+            context.sendMessage(Message.translation("server.commands.chunkinfo.load.usage").param("chunkX", position.x).param("chunkZ", position.y));
             return;
         }
         WorldChunk worldChunkComponent = chunkStoreStore.getComponent(chunkRef, WorldChunk.getComponentType());

@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
 
 public class GradientWarpDensityAsset
 extends DensityAsset {
-    public static final BuilderCodec<GradientWarpDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(GradientWarpDensityAsset.class, GradientWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("SampleRange", Codec.DOUBLE, false), (t, k) -> {
+    public static final BuilderCodec<GradientWarpDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(GradientWarpDensityAsset.class, GradientWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("SampleRange", Codec.DOUBLE, false), (t, k) -> {
         t.sampleRange = k;
     }, t -> t.sampleRange).addValidator(Validators.greaterThan(0.0)).add()).append(new KeyedCodec<Double>("WarpFactor", Codec.DOUBLE, false), (t, k) -> {
         t.warpFactor = k;
@@ -23,14 +23,11 @@ extends DensityAsset {
         t.is2d = k;
     }, t -> t.is2d).add()).append(new KeyedCodec<Double>("YFor2D", Codec.DOUBLE, false), (t, k) -> {
         t.y2d = k;
-    }, t -> t.y2d).add()).append(new KeyedCodec<Integer>("CacheSizeFor2D", Codec.INTEGER, false), (t, k) -> {
-        t._2dCacheSize = k;
-    }, t -> t._2dCacheSize).add()).build();
+    }, t -> t.y2d).add()).build();
     private double sampleRange = 1.0;
     private double warpFactor = 1.0;
     private boolean is2d = false;
     private double y2d = 0.0;
-    private int _2dCacheSize = 16;
 
     @Override
     @Nonnull

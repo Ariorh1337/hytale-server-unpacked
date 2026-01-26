@@ -48,9 +48,9 @@ extends HeadMotionBase {
 
     public HeadMotionAim(@Nonnull BuilderHeadMotionAim builder, @Nonnull BuilderSupport support) {
         super(builder);
-        this.spread = builder.getSpread();
-        this.hitProbability = builder.getHitProbability();
-        this.deflection = builder.isDeflection();
+        this.spread = builder.getSpread(support);
+        this.hitProbability = builder.getHitProbability(support);
+        this.deflection = builder.isDeflection(support);
         this.relativeTurnSpeed = builder.getRelativeTurnSpeed(support);
     }
 

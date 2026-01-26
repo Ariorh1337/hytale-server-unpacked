@@ -142,24 +142,24 @@ public class ParticleSpawner {
         ParticleSpawner obj = new ParticleSpawner();
         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
         obj.shape = EmitShape.fromValue(buf.getByte(offset + 2));
-        if ((nullBits[0] & 4) != 0) {
+        if ((nullBits[0] & 1) != 0) {
             obj.emitOffset = RangeVector3f.deserialize(buf, offset + 3);
         }
         obj.cameraOffset = buf.getFloatLE(offset + 28);
         obj.useEmitDirection = buf.getByte(offset + 32) != 0;
         obj.lifeSpan = buf.getFloatLE(offset + 33);
-        if ((nullBits[0] & 8) != 0) {
+        if ((nullBits[0] & 2) != 0) {
             obj.spawnRate = Rangef.deserialize(buf, offset + 37);
         }
         boolean bl = obj.spawnBurst = buf.getByte(offset + 45) != 0;
-        if ((nullBits[0] & 0x10) != 0) {
+        if ((nullBits[0] & 4) != 0) {
             obj.waveDelay = Rangef.deserialize(buf, offset + 46);
         }
-        if ((nullBits[0] & 0x20) != 0) {
+        if ((nullBits[0] & 8) != 0) {
             obj.totalParticles = Range.deserialize(buf, offset + 54);
         }
         obj.maxConcurrentParticles = buf.getIntLE(offset + 62);
-        if ((nullBits[0] & 0x40) != 0) {
+        if ((nullBits[0] & 0x10) != 0) {
             obj.initialVelocity = InitialVelocity.deserialize(buf, offset + 66);
         }
         obj.velocityStretchMultiplier = buf.getFloatLE(offset + 91);
@@ -168,19 +168,19 @@ public class ParticleSpawner {
         obj.isLowRes = buf.getByte(offset + 97) != 0;
         obj.trailSpawnerPositionMultiplier = buf.getFloatLE(offset + 98);
         obj.trailSpawnerRotationMultiplier = buf.getFloatLE(offset + 102);
-        if ((nullBits[0] & 0x80) != 0) {
+        if ((nullBits[0] & 0x20) != 0) {
             obj.particleCollision = ParticleCollision.deserialize(buf, offset + 106);
         }
         obj.renderMode = FXRenderMode.fromValue(buf.getByte(offset + 109));
         obj.lightInfluence = buf.getFloatLE(offset + 110);
         boolean bl2 = obj.linearFiltering = buf.getByte(offset + 114) != 0;
-        if ((nullBits[1] & 1) != 0) {
+        if ((nullBits[0] & 0x40) != 0) {
             obj.particleLifeSpan = Rangef.deserialize(buf, offset + 115);
         }
-        if ((nullBits[1] & 8) != 0) {
+        if ((nullBits[0] & 0x80) != 0) {
             obj.intersectionHighlight = IntersectionHighlight.deserialize(buf, offset + 123);
         }
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int varPos0 = offset + 147 + buf.getIntLE(offset + 131);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -191,15 +191,15 @@ public class ParticleSpawner {
             }
             obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int varPos1 = offset + 147 + buf.getIntLE(offset + 135);
             obj.particle = Particle.deserialize(buf, varPos1);
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int varPos2 = offset + 147 + buf.getIntLE(offset + 139);
             obj.uvMotion = UVMotion.deserialize(buf, varPos2);
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int varPos3 = offset + 147 + buf.getIntLE(offset + 143);
             int attractorsCount = VarInt.peek(buf, varPos3);
             if (attractorsCount < 0) {
@@ -225,7 +225,7 @@ public class ParticleSpawner {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
         int maxEnd = 147;
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 131);
             int pos0 = offset + 147 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -233,21 +233,21 @@ public class ParticleSpawner {
                 maxEnd = pos0 - offset;
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int fieldOffset1 = buf.getIntLE(offset + 135);
             int pos1 = offset + 147 + fieldOffset1;
             if ((pos1 += Particle.computeBytesConsumed(buf, pos1)) - offset > maxEnd) {
                 maxEnd = pos1 - offset;
             }
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int fieldOffset2 = buf.getIntLE(offset + 139);
             int pos2 = offset + 147 + fieldOffset2;
             if ((pos2 += UVMotion.computeBytesConsumed(buf, pos2)) - offset > maxEnd) {
                 maxEnd = pos2 - offset;
             }
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int fieldOffset3 = buf.getIntLE(offset + 143);
             int pos3 = offset + 147 + fieldOffset3;
             int arrLen = VarInt.peek(buf, pos3);
@@ -265,40 +265,40 @@ public class ParticleSpawner {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte[] nullBits = new byte[2];
-        if (this.id != null) {
+        if (this.emitOffset != null) {
             nullBits[0] = (byte)(nullBits[0] | 1);
         }
-        if (this.particle != null) {
+        if (this.spawnRate != null) {
             nullBits[0] = (byte)(nullBits[0] | 2);
         }
-        if (this.emitOffset != null) {
+        if (this.waveDelay != null) {
             nullBits[0] = (byte)(nullBits[0] | 4);
         }
-        if (this.spawnRate != null) {
+        if (this.totalParticles != null) {
             nullBits[0] = (byte)(nullBits[0] | 8);
         }
-        if (this.waveDelay != null) {
+        if (this.initialVelocity != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x10);
         }
-        if (this.totalParticles != null) {
+        if (this.particleCollision != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x20);
         }
-        if (this.initialVelocity != null) {
+        if (this.particleLifeSpan != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x40);
         }
-        if (this.particleCollision != null) {
+        if (this.intersectionHighlight != null) {
             nullBits[0] = (byte)(nullBits[0] | 0x80);
         }
-        if (this.particleLifeSpan != null) {
+        if (this.id != null) {
             nullBits[1] = (byte)(nullBits[1] | 1);
         }
-        if (this.uvMotion != null) {
+        if (this.particle != null) {
             nullBits[1] = (byte)(nullBits[1] | 2);
         }
-        if (this.attractors != null) {
+        if (this.uvMotion != null) {
             nullBits[1] = (byte)(nullBits[1] | 4);
         }
-        if (this.intersectionHighlight != null) {
+        if (this.attractors != null) {
             nullBits[1] = (byte)(nullBits[1] | 8);
         }
         buf.writeBytes(nullBits);
@@ -421,7 +421,7 @@ public class ParticleSpawner {
             return ValidationResult.error("Buffer too small: expected at least 147 bytes");
         }
         byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-        if ((nullBits[0] & 1) != 0) {
+        if ((nullBits[1] & 1) != 0) {
             int idOffset = buffer.getIntLE(offset + 131);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");
@@ -442,7 +442,7 @@ public class ParticleSpawner {
                 return ValidationResult.error("Buffer overflow reading Id");
             }
         }
-        if ((nullBits[0] & 2) != 0) {
+        if ((nullBits[1] & 2) != 0) {
             int particleOffset = buffer.getIntLE(offset + 135);
             if (particleOffset < 0) {
                 return ValidationResult.error("Invalid offset for Particle");
@@ -457,7 +457,7 @@ public class ParticleSpawner {
             }
             pos += Particle.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[1] & 2) != 0) {
+        if ((nullBits[1] & 4) != 0) {
             int uvMotionOffset = buffer.getIntLE(offset + 139);
             if (uvMotionOffset < 0) {
                 return ValidationResult.error("Invalid offset for UvMotion");
@@ -472,7 +472,7 @@ public class ParticleSpawner {
             }
             pos += UVMotion.computeBytesConsumed(buffer, pos);
         }
-        if ((nullBits[1] & 4) != 0) {
+        if ((nullBits[1] & 8) != 0) {
             int attractorsOffset = buffer.getIntLE(offset + 143);
             if (attractorsOffset < 0) {
                 return ValidationResult.error("Invalid offset for Attractors");

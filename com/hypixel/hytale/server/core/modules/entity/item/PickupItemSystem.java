@@ -51,7 +51,9 @@ extends EntityTickingSystem<EntityStore> {
         assert (transformComponent != null);
         Vector3d position = transformComponent.getPosition();
         TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, this.transformComponentType);
-        assert (targetTransformComponent != null);
+        if (targetTransformComponent == null) {
+            return;
+        }
         Vector3d targetPosition = targetTransformComponent.getPosition().clone();
         ModelComponent targetModelComponent = commandBuffer.getComponent(targetRef, ModelComponent.getComponentType());
         if (targetModelComponent != null) {

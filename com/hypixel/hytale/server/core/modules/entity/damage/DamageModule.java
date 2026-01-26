@@ -102,7 +102,6 @@ extends JavaPlugin {
         entityStoreRegistry.registerSystem(new RespawnSystems.ResetPlayerRespawnSystem());
         entityStoreRegistry.registerSystem(new RespawnSystems.ClearEntityEffectsRespawnSystem());
         entityStoreRegistry.registerSystem(new RespawnSystems.ClearInteractionsRespawnSystem());
-        entityStoreRegistry.registerSystem(new RespawnSystems.RespawnControllerRespawnSystem());
         entityStoreRegistry.registerSystem(new RespawnSystems.CheckBrokenItemsRespawnSystem());
         entityStoreRegistry.registerSystem(new DamageCalculatorSystems.SequenceModifier());
         this.getCommandRegistry().registerCommand(new DesyncDamageCommand());

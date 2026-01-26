@@ -7,16 +7,17 @@ import com.google.gson.JsonObject;
 import com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.builtin.crafting.state.BenchState;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
+import com.hypixel.hytale.server.core.asset.type.gameplay.CraftingConfig;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.BlockWindow;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialContainerWindow;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialExtraResourcesSection;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -34,13 +35,16 @@ implements MaterialContainerWindow {
     protected final BenchState benchState;
     protected final JsonObject windowData = new JsonObject();
     @Nonnull
-    private MaterialExtraResourcesSection extraResourcesSection = new MaterialExtraResourcesSection();
+    private final MaterialExtraResourcesSection extraResourcesSection = new MaterialExtraResourcesSection();
 
     public BenchWindow(@Nonnull WindowType windowType, @Nonnull BenchState benchState) {
         super(windowType, benchState.getBlockX(), benchState.getBlockY(), benchState.getBlockZ(), benchState.getRotationIndex(), benchState.getBlockType());
         this.bench = this.blockType.getBench();
         this.benchState = benchState;
         Item item = this.blockType.getItem();
+        if (item == null) {
+            throw new IllegalStateException("Bench block type " + this.blockType.getId() + " does not have an associated item!");
+        }
         this.windowData.addProperty("type", this.bench.getType().ordinal());
         this.windowData.addProperty("id", this.bench.getId());
         this.windowData.addProperty("name", item.getTranslationKey());
@@ -55,14 +59,24 @@ implements MaterialContainerWindow {
     }
 
     @Override
-    protected boolean onOpen0() {
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
-        CraftingManager craftingManager = store.getComponent(ref, CraftingManager.getComponentType());
-        craftingManager.setBench(this.x, this.y, this.z, this.blockType);
+    protected boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        CraftingManager craftingManagerComponent = store.getComponent(ref, CraftingManager.getComponentType());
+        if (craftingManagerComponent == null) {
+            return false;
+        }
+        craftingManagerComponent.setBench(this.x, this.y, this.z, this.blockType);
         World world = store.getExternalData().getWorld();
-        this.windowData.addProperty("worldMemoriesLevel", MemoriesPlugin.get().getMemoriesLevel(world.getGameplayConfig()));
+        int memoriesLevel = MemoriesPlugin.get().getMemoriesLevel(world.getGameplayConfig());
+        this.windowData.addProperty("worldMemoriesLevel", memoriesLevel);
+        int chestCount = CraftingManager.feedExtraResourcesSection(this.benchState, this.extraResourcesSection);
+        CraftingConfig craftingConfig = world.getGameplayConfig().getCraftingConfig();
+        int maxChestCount = craftingConfig.getBenchMaterialChestLimit();
+        int horizontalRadius = craftingConfig.getBenchMaterialHorizontalChestSearchRadius();
+        int verticalRadius = craftingConfig.getBenchMaterialVerticalChestSearchRadius();
+        this.windowData.addProperty("nearbyChestCount", chestCount);
+        this.windowData.addProperty("maxChestCount", maxChestCount);
+        this.windowData.addProperty("chestHorizontalRadius", horizontalRadius);
+        this.windowData.addProperty("chestVerticalRadius", verticalRadius);
         return true;
     }
 
@@ -71,14 +85,13 @@ implements MaterialContainerWindow {
     }
 
     @Override
-    public void onClose0() {
-        PlayerRef playerRef = this.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        Store<EntityStore> store = ref.getStore();
-        CraftingManager craftingManagerComponent = store.getComponent(ref, CraftingManager.getComponentType());
-        assert (craftingManagerComponent != null);
-        if (craftingManagerComponent.clearBench(ref, store) && this.bench.getFailedSoundEventIndex() != 0) {
-            SoundUtil.playSoundEvent2d(ref, this.bench.getFailedSoundEventIndex(), SoundCategory.UI, store);
+    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        CraftingManager craftingManagerComponent = componentAccessor.getComponent(ref, CraftingManager.getComponentType());
+        if (craftingManagerComponent == null) {
+            return;
+        }
+        if (craftingManagerComponent.clearBench(ref, componentAccessor) && this.bench.getFailedSoundEventIndex() != 0) {
+            SoundUtil.playSoundEvent2d(ref, this.bench.getFailedSoundEventIndex(), SoundCategory.UI, componentAccessor);
         }
     }
 

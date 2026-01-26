@@ -443,7 +443,8 @@ implements ChainSyncStorage {
     public void removeInteractionEntry(@Nonnull InteractionManager interactionManager, int index) {
         int oIndex = index - this.operationIndexOffset;
         if (oIndex != 0) {
-            throw new IllegalArgumentException("Trying to remove out of order");
+            this.flagDesync();
+            return;
         }
         InteractionEntry entry = this.interactions.remove(oIndex);
         ++this.operationIndexOffset;
@@ -458,14 +459,14 @@ implements ChainSyncStorage {
 
     @Override
     public void putInteractionSyncData(int index, InteractionSyncData data) {
-        if ((index -= this.tempSyncDataOffset) < 0) {
-            LOGGER.at(Level.SEVERE).log("Attempted to store sync data at %d. Offset: %d, Size: %d", index + this.tempSyncDataOffset, this.tempSyncDataOffset, this.tempSyncData.size());
-        } else if (index < this.tempSyncData.size()) {
-            this.tempSyncData.set(index, data);
-        } else if (index == this.tempSyncData.size()) {
-            this.tempSyncData.add(data);
-        } else {
-            LOGGER.at(Level.WARNING).log("Temp sync data sent out of order: " + index + " " + this.tempSyncData.size());
+        if ((index -= this.tempSyncDataOffset) >= 0) {
+            if (index < this.tempSyncData.size()) {
+                this.tempSyncData.set(index, data);
+            } else if (index == this.tempSyncData.size()) {
+                this.tempSyncData.add(data);
+            } else {
+                LOGGER.at(Level.WARNING).log("Temp sync data sent out of order: " + index + " " + this.tempSyncData.size());
+            }
         }
     }
 

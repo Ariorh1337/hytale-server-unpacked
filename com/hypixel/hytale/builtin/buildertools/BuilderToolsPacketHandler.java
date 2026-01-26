@@ -220,6 +220,11 @@ implements SubPacketHandler {
                 playerComponent.sendMessage(Message.translation("server.general.entityNotFound").param("id", entityId));
                 return;
             }
+            Player targetPlayerComponent = store.getComponent(entityReference, Player.getComponentType());
+            if (targetPlayerComponent != null) {
+                playerComponent.sendMessage(Message.translation("server.builderTools.entityTool.cannotTargetPlayer"));
+                return;
+            }
             LOGGER.at(Level.INFO).log("%s: %s", (Object)this.packetHandler.getIdentifier(), (Object)packet);
             switch (packet.action) {
                 case Freeze: {
@@ -378,11 +383,18 @@ implements SubPacketHandler {
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
         world.execute(() -> {
+            BuilderTool.ArgData args;
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             if (!BuilderToolsPacketHandler.hasPermission(playerComponent, "hytale.editor.selection.clipboard")) {
                 return;
             }
             LOGGER.at(Level.INFO).log("%s: %s", (Object)this.packetHandler.getIdentifier(), (Object)packet);
+            boolean keepEmptyBlocks = true;
+            BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
+            if (builderTool != null && builderTool.getId().equals("Selection") && (args = builderTool.getItemArgData(playerComponent.getInventory().getItemInHand())) != null && args.tool() != null) {
+                keepEmptyBlocks = (Boolean)args.tool().getOrDefault("KeepEmptyBlocks", true);
+            }
+            boolean finalKeepEmptyBlocks = keepEmptyBlocks;
             float[] tmx = new float[16];
             for (int i = 0; i < packet.transformationMatrix.length; ++i) {
                 tmx[i] = this.toInt(packet.transformationMatrix[i]);
@@ -425,7 +437,7 @@ implements SubPacketHandler {
                     playerComponent.sendMessage(Message.translation("server.builderTools.selection.noBlockChangeOffsetOrigin"));
                     return;
                 }
-                s.transformThenPasteClipboard(prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode(), prototypeSettings.getFluidChangesForPlaySelectionToolPasteMode(), transformationMatrix, rotationOrigin, blockChangeOffsetOrigin, (ComponentAccessor<EntityStore>)componentAccessor);
+                s.transformThenPasteClipboard(prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode(), prototypeSettings.getFluidChangesForPlaySelectionToolPasteMode(), transformationMatrix, rotationOrigin, blockChangeOffsetOrigin, finalKeepEmptyBlocks, (ComponentAccessor<EntityStore>)componentAccessor);
                 s.select(initialSelectionMin, initialSelectionMax, "SelectionTranslatePacket", (ComponentAccessor<EntityStore>)componentAccessor);
                 s.transformSelectionPoints(transformationMatrix, rotationOrigin);
                 if (large) {

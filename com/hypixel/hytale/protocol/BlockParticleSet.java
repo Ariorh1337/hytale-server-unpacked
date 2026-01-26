@@ -61,17 +61,17 @@ public class BlockParticleSet {
     public static BlockParticleSet deserialize(@Nonnull ByteBuf buf, int offset) {
         BlockParticleSet obj = new BlockParticleSet();
         byte nullBits = buf.getByte(offset);
-        if ((nullBits & 2) != 0) {
+        if ((nullBits & 1) != 0) {
             obj.color = Color.deserialize(buf, offset + 1);
         }
         obj.scale = buf.getFloatLE(offset + 4);
-        if ((nullBits & 4) != 0) {
+        if ((nullBits & 2) != 0) {
             obj.positionOffset = Vector3f.deserialize(buf, offset + 8);
         }
-        if ((nullBits & 8) != 0) {
+        if ((nullBits & 4) != 0) {
             obj.rotationOffset = Direction.deserialize(buf, offset + 20);
         }
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int varPos0 = offset + 40 + buf.getIntLE(offset + 32);
             int idLen = VarInt.peek(buf, varPos0);
             if (idLen < 0) {
@@ -116,7 +116,7 @@ public class BlockParticleSet {
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
         int maxEnd = 40;
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int fieldOffset0 = buf.getIntLE(offset + 32);
             int pos0 = offset + 40 + fieldOffset0;
             int sl = VarInt.peek(buf, pos0);
@@ -143,16 +143,16 @@ public class BlockParticleSet {
     public void serialize(@Nonnull ByteBuf buf) {
         int startPos = buf.writerIndex();
         byte nullBits = 0;
-        if (this.id != null) {
+        if (this.color != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.color != null) {
+        if (this.positionOffset != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.positionOffset != null) {
+        if (this.rotationOffset != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.rotationOffset != null) {
+        if (this.id != null) {
             nullBits = (byte)(nullBits | 8);
         }
         if (this.particleSystemIds != null) {
@@ -222,7 +222,7 @@ public class BlockParticleSet {
             return ValidationResult.error("Buffer too small: expected at least 40 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        if ((nullBits & 1) != 0) {
+        if ((nullBits & 8) != 0) {
             int idOffset = buffer.getIntLE(offset + 32);
             if (idOffset < 0) {
                 return ValidationResult.error("Invalid offset for Id");

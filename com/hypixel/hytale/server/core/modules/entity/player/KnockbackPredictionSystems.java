@@ -70,7 +70,7 @@ public class KnockbackPredictionSystems {
     public static class SimulateKnockback
     extends EntityTickingSystem<EntityStore> {
         private static final ComponentType<EntityStore, BoundingBox> BOUNDING_BOX_COMPONENT_TYPE = BoundingBox.getComponentType();
-        private static final Query<EntityStore> QUERY = Query.and(Player.getComponentType(), TransformComponent.getComponentType(), KnockbackSimulation.getComponentType(), BOUNDING_BOX_COMPONENT_TYPE, MovementStatesComponent.getComponentType());
+        private static final Query<EntityStore> QUERY = Query.and(Player.getComponentType(), TransformComponent.getComponentType(), KnockbackSimulation.getComponentType(), BOUNDING_BOX_COMPONENT_TYPE, MovementStatesComponent.getComponentType(), MovementManager.getComponentType(), PlayerRef.getComponentType());
         private static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(new SystemDependency(Order.AFTER, PlayerSystems.ProcessPlayerInput.class));
 
         @Override

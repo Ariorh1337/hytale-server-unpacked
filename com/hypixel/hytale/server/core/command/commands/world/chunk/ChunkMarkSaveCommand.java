@@ -22,12 +22,6 @@ import javax.annotation.Nonnull;
 public class ChunkMarkSaveCommand
 extends AbstractWorldCommand {
     @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_MARKSAVE_MARKING_ALREADY_LOADED = Message.translation("server.commands.chunk.marksave.markingAlreadyLoaded");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_LOAD_LOADING = Message.translation("server.commands.chunk.load.loading");
-    @Nonnull
-    private static final Message MESSAGE_COMMANDS_CHUNK_MARKSAVE_LOADED = Message.translation("server.commands.chunk.marksave.loaded");
-    @Nonnull
     private final RequiredArg<RelativeChunkPosition> chunkPosArg = this.withRequiredArg("x z", "server.commands.chunk.marksave.position.desc", ArgTypes.RELATIVE_CHUNK_POSITION);
 
     public ChunkMarkSaveCommand() {
@@ -46,13 +40,13 @@ extends AbstractWorldCommand {
             WorldChunk worldChunkComponent = chunkStoreStore.getComponent(chunkRef, WorldChunk.getComponentType());
             assert (worldChunkComponent != null);
             worldChunkComponent.markNeedsSaving();
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_MARKSAVE_MARKING_ALREADY_LOADED.param("x", position.x).param("z", position.y).param("worldName", world.getName()));
+            context.sendMessage(Message.translation("server.commands.chunk.marksave.markingAlreadyLoaded").param("x", position.x).param("z", position.y).param("worldName", world.getName()));
             return;
         }
-        context.sendMessage(MESSAGE_COMMANDS_CHUNK_LOAD_LOADING.param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
+        context.sendMessage(Message.translation("server.commands.chunk.load.loading").param("chunkX", position.x).param("chunkZ", position.y).param("worldName", world.getName()));
         world.getChunkAsync(position.x, position.y).thenAccept(worldChunk -> world.execute(() -> {
             worldChunk.markNeedsSaving();
-            context.sendMessage(MESSAGE_COMMANDS_CHUNK_MARKSAVE_LOADED.param("x", position.x).param("z", position.y).param("worldName", world.getName()));
+            context.sendMessage(Message.translation("server.commands.chunk.marksave.loaded").param("x", position.x).param("z", position.y).param("worldName", world.getName()));
         }));
     }
 }

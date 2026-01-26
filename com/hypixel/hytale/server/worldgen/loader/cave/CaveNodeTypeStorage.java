@@ -65,7 +65,7 @@ public class CaveNodeTypeStorage {
         JsonReader reader = new JsonReader(Files.newBufferedReader(file));
         try {
             JsonObject caveNodeJson = JsonParser.parseReader(reader).getAsJsonObject();
-            caveNodeType = new CaveNodeTypeJsonLoader(this.seed, this.dataFolder, caveNodeJson, name, this, this.zoneContext).load();
+            caveNodeType = this.loadCaveNodeType(name, caveNodeJson);
         }
         catch (Throwable throwable) {
             try {
@@ -83,6 +83,11 @@ public class CaveNodeTypeStorage {
         }
         reader.close();
         return caveNodeType;
+    }
+
+    @Nonnull
+    public CaveNodeType loadCaveNodeType(@Nonnull String name, @Nonnull JsonObject json) {
+        return new CaveNodeTypeJsonLoader(this.seed, this.dataFolder, json, name, this, this.zoneContext).load();
     }
 
     public static interface Constants {

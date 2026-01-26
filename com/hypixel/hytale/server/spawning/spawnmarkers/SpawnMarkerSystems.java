@@ -59,6 +59,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.StoredFlock;
 import com.hypixel.hytale.server.npc.components.SpawnMarkerReference;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import com.hypixel.hytale.server.spawning.spawnmarkers.SpawnMarkerEntity;
 import it.unimi.dsi.fastutil.Pair;
@@ -73,29 +74,37 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
 public class SpawnMarkerSystems {
+    @Nonnull
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     public static class Ticking
     extends EntityTickingSystem<EntityStore> {
-        private final ComponentType<EntityStore, SpawnMarkerEntity> componentType;
+        @Nonnull
+        private final ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerEntityComponentType;
         @Nullable
         private final ComponentType<EntityStore, NPCEntity> npcComponentType;
+        @Nonnull
         private final ComponentType<EntityStore, PersistentRefCount> referenceIdComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
+        @Nonnull
+        private final ComponentType<EntityStore, HeadRotation> headRotationComponentType = HeadRotation.getComponentType();
+        @Nonnull
+        private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent;
         @Nonnull
         private final Set<Dependency<EntityStore>> dependencies;
+        @Nonnull
         private final Query<EntityStore> query;
-        private final ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
-        private final ComponentType<EntityStore, HeadRotation> headRotationComponentType = HeadRotation.getComponentType();
-        private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
 
-        public Ticking(ComponentType<EntityStore, SpawnMarkerEntity> componentType, ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent) {
-            this.componentType = componentType;
+        public Ticking(@Nonnull ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerEntityComponentType, @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent) {
+            this.spawnMarkerEntityComponentType = spawnMarkerEntityComponentType;
             this.npcComponentType = NPCEntity.getComponentType();
             this.referenceIdComponentType = PersistentRefCount.getComponentType();
             this.playerSpatialComponent = playerSpatialComponent;
             this.dependencies = Set.of(new SystemDependency(Order.AFTER, PlayerSpatialSystem.class, OrderPriority.CLOSEST));
-            this.query = Archetype.of(componentType, this.transformComponentType);
+            this.query = Archetype.of(spawnMarkerEntityComponentType, this.transformComponentType);
         }
 
         @Override
@@ -105,6 +114,7 @@ public class SpawnMarkerSystems {
         }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
             return this.query;
         }
@@ -116,54 +126,59 @@ public class SpawnMarkerSystems {
 
         @Override
         public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            SpawnMarkerEntity entity = archetypeChunk.getComponent(index, this.componentType);
-            TransformComponent transform = archetypeChunk.getComponent(index, this.transformComponentType);
+            SpawnMarkerEntity spawnMarkerEntityComponent = archetypeChunk.getComponent(index, this.spawnMarkerEntityComponentType);
+            assert (spawnMarkerEntityComponent != null);
+            TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
+            assert (transformComponent != null);
             World world = store.getExternalData().getWorld();
-            SpawnMarker cachedMarker = entity.getCachedMarker();
-            if (entity.getSpawnCount() > 0) {
-                StoredFlock storedFlock = entity.getStoredFlock();
+            SpawnMarker cachedMarker = spawnMarkerEntityComponent.getCachedMarker();
+            if (spawnMarkerEntityComponent.getSpawnCount() > 0) {
+                StoredFlock storedFlock = spawnMarkerEntityComponent.getStoredFlock();
                 if (storedFlock != null) {
                     boolean hasPlayersInRange;
                     SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
                     ObjectList results = SpatialResource.getThreadLocalReferenceList();
-                    spatialResource.getSpatialStructure().collect(transform.getPosition(), cachedMarker.getDeactivationDistance(), results);
+                    spatialResource.getSpatialStructure().collect(transformComponent.getPosition(), cachedMarker.getDeactivationDistance(), results);
                     boolean bl = hasPlayersInRange = !results.isEmpty();
                     if (hasPlayersInRange) {
                         if (storedFlock.hasStoredNPCs()) {
                             commandBuffer.run(_store -> {
                                 ObjectList<Ref<EntityStore>> tempStorageList = SpatialResource.getThreadLocalReferenceList();
                                 storedFlock.restoreNPCs((List<Ref<EntityStore>>)tempStorageList, (Store<EntityStore>)_store);
-                                entity.setSpawnCount(tempStorageList.size());
-                                Vector3d position = entity.getSpawnPosition();
-                                Vector3f rotation = transform.getRotation();
+                                spawnMarkerEntityComponent.setSpawnCount(tempStorageList.size());
+                                Vector3d position = spawnMarkerEntityComponent.getSpawnPosition();
+                                Vector3f rotation = transformComponent.getRotation();
                                 InvalidatablePersistentRef[] npcReferences = new InvalidatablePersistentRef[tempStorageList.size()];
                                 int bound = tempStorageList.size();
                                 for (int i = 0; i < bound; ++i) {
                                     Ref ref = (Ref)tempStorageList.get(i);
-                                    NPCEntity npc = _store.getComponent(ref, this.npcComponentType);
+                                    NPCEntity npcComponent = _store.getComponent(ref, this.npcComponentType);
+                                    assert (npcComponent != null);
                                     TransformComponent npcTransform = _store.getComponent(ref, this.transformComponentType);
+                                    assert (npcTransform != null);
                                     HeadRotation npcHeadRotation = _store.getComponent(ref, this.headRotationComponentType);
+                                    assert (npcHeadRotation != null);
                                     InvalidatablePersistentRef reference = new InvalidatablePersistentRef();
                                     reference.setEntity((Ref<EntityStore>)ref, (ComponentAccessor<EntityStore>)_store);
                                     npcReferences[i] = reference;
                                     npcTransform.getPosition().assign(position);
                                     npcTransform.getRotation().assign(rotation);
                                     npcHeadRotation.setRotation(rotation);
-                                    npc.playAnimation(ref, AnimationSlot.Status, null, commandBuffer);
+                                    npcComponent.playAnimation(ref, AnimationSlot.Status, null, commandBuffer);
                                 }
-                                entity.setNpcReferences(npcReferences);
-                                entity.setDespawnStarted(false);
-                                entity.setTimeToDeactivation(cachedMarker.getDeactivationTime());
+                                spawnMarkerEntityComponent.setNpcReferences(npcReferences);
+                                spawnMarkerEntityComponent.setDespawnStarted(false);
+                                spawnMarkerEntityComponent.setTimeToDeactivation(cachedMarker.getDeactivationTime());
                             });
                         }
                     } else {
-                        if (!storedFlock.hasStoredNPCs() && entity.tickTimeToDeactivation(dt)) {
-                            InvalidatablePersistentRef[] npcReferences = entity.getNpcReferences();
+                        if (!storedFlock.hasStoredNPCs() && spawnMarkerEntityComponent.tickTimeToDeactivation(dt)) {
+                            InvalidatablePersistentRef[] npcReferences = spawnMarkerEntityComponent.getNpcReferences();
                             if (npcReferences == null) {
                                 return;
                             }
-                            if (!entity.isDespawnStarted()) {
-                                List<Pair<Ref<EntityStore>, NPCEntity>> tempStorageList = entity.getTempStorageList();
+                            if (!spawnMarkerEntityComponent.isDespawnStarted()) {
+                                List<Pair<Ref<EntityStore>, NPCEntity>> tempStorageList = spawnMarkerEntityComponent.getTempStorageList();
                                 for (InvalidatablePersistentRef reference : npcReferences) {
                                     Ref<EntityStore> npcRef = reference.getEntity(commandBuffer);
                                     if (npcRef == null) continue;
@@ -172,7 +187,7 @@ public class SpawnMarkerSystems {
                                     tempStorageList.add(Pair.of(npcRef, npcComponent));
                                     boolean isDead = commandBuffer.getArchetype(npcRef).contains(DeathComponent.getComponentType());
                                     if (!isDead && !npcComponent.getRole().getStateSupport().isInBusyState()) continue;
-                                    entity.setTimeToDeactivation(cachedMarker.getDeactivationTime());
+                                    spawnMarkerEntityComponent.setTimeToDeactivation(cachedMarker.getDeactivationTime());
                                     tempStorageList.clear();
                                     return;
                                 }
@@ -182,13 +197,15 @@ public class SpawnMarkerSystems {
                                     NPCEntity npcComponent = npcPair.second();
                                     ModelComponent modelComponent = commandBuffer.getComponent(npcRef, this.modelComponentType);
                                     if (modelComponent == null || !modelComponent.getModel().getAnimationSetMap().containsKey("Despawn")) continue;
-                                    double despawnAnimationTime = npcComponent.getRole().getDespawnAnimationTime();
-                                    if (despawnAnimationTime > entity.getTimeToDeactivation()) {
-                                        entity.setTimeToDeactivation(despawnAnimationTime);
+                                    Role role = npcComponent.getRole();
+                                    assert (role != null);
+                                    double despawnAnimationTime = role.getDespawnAnimationTime();
+                                    if (despawnAnimationTime > spawnMarkerEntityComponent.getTimeToDeactivation()) {
+                                        spawnMarkerEntityComponent.setTimeToDeactivation(despawnAnimationTime);
                                     }
                                     npcComponent.playAnimation(npcRef, AnimationSlot.Status, "Despawn", commandBuffer);
                                 }
-                                entity.setDespawnStarted(true);
+                                spawnMarkerEntityComponent.setDespawnStarted(true);
                                 tempStorageList.clear();
                                 return;
                             }
@@ -201,8 +218,8 @@ public class SpawnMarkerSystems {
                                 ObjectList<Ref<EntityStore>> tempStorageList = SpatialResource.getThreadLocalReferenceList();
                                 for (InvalidatablePersistentRef reference : npcReferences) {
                                     Ref<EntityStore> npcRef = reference.getEntity((ComponentAccessor<EntityStore>)_store);
-                                    if (npcRef == null) {
-                                        ((HytaleLogger.Api)LOGGER.atWarning()).log("Connection with NPC from marker at %s lost due to being invalid/already unloaded", transform.getPosition());
+                                    if (npcRef == null || !npcRef.isValid()) {
+                                        ((HytaleLogger.Api)LOGGER.atWarning()).log("Connection with NPC from marker at %s lost due to being invalid/already unloaded", transformComponent.getPosition());
                                         continue;
                                     }
                                     SpawnMarkerReference spawnMarkerReference = _store.ensureAndGetComponent(npcRef, SpawnMarkerReference.getComponentType());
@@ -210,43 +227,47 @@ public class SpawnMarkerSystems {
                                     tempStorageList.add(npcRef);
                                 }
                                 storedFlock.storeNPCs((List<Ref<EntityStore>>)tempStorageList, (Store<EntityStore>)_store);
-                                entity.setNpcReferences(null);
+                                spawnMarkerEntityComponent.setNpcReferences(null);
                             });
                         }
                         return;
                     }
                 }
-                if (entity.tickSpawnLostTimeout(dt)) {
+                if (spawnMarkerEntityComponent.tickSpawnLostTimeout(dt)) {
                     PersistentRefCount refId = archetypeChunk.getComponent(index, this.referenceIdComponentType);
                     if (refId != null) {
                         refId.increment();
                         LOGGER.at(Level.FINE).log("Marker lost spawned NPC and changed reference ID to %s", refId.get());
                     }
                     Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-                    commandBuffer.run(_store -> entity.spawnNPC(ref, cachedMarker, (Store<EntityStore>)_store));
+                    commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, (Store<EntityStore>)_store));
                 }
                 return;
             }
-            if (!world.getWorldConfig().isSpawnMarkersEnabled() || cachedMarker.isManualTrigger() || entity.getSuppressedBy() != null && !entity.getSuppressedBy().isEmpty()) {
+            if (!world.getWorldConfig().isSpawnMarkersEnabled() || cachedMarker.isManualTrigger() || spawnMarkerEntityComponent.getSuppressedBy() != null && !spawnMarkerEntityComponent.getSuppressedBy().isEmpty()) {
                 return;
             }
             Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
             WorldTimeResource worldTimeResource = commandBuffer.getResource(WorldTimeResource.getResourceType());
             if (cachedMarker.isRealtimeRespawn()) {
-                if (entity.tickRespawnTimer(dt)) {
-                    commandBuffer.run(_store -> entity.spawnNPC(ref, cachedMarker, (Store<EntityStore>)_store));
+                if (spawnMarkerEntityComponent.tickRespawnTimer(dt)) {
+                    commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, (Store<EntityStore>)_store));
                 }
-            } else if (entity.getSpawnAfter() == null || worldTimeResource.getGameTime().isAfter(entity.getSpawnAfter())) {
-                commandBuffer.run(_store -> entity.spawnNPC(ref, cachedMarker, (Store<EntityStore>)_store));
+            } else if (spawnMarkerEntityComponent.getSpawnAfter() == null || worldTimeResource.getGameTime().isAfter(spawnMarkerEntityComponent.getSpawnAfter())) {
+                commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, (Store<EntityStore>)_store));
             }
         }
     }
 
     public static class AddedFromWorldGen
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, SpawnMarkerEntity> componentType = SpawnMarkerEntity.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, WorldGenId> worldGenIdComponentType = WorldGenId.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, FromWorldGen> fromWorldGenComponentType = FromWorldGen.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.componentType, this.fromWorldGenComponentType);
 
         @Override
@@ -263,7 +284,9 @@ public class SpawnMarkerSystems {
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            holder.putComponent(this.worldGenIdComponentType, new WorldGenId(holder.getComponent(this.fromWorldGenComponentType).getWorldGenId()));
+            FromWorldGen fromWorldGenComponent = holder.getComponent(this.fromWorldGenComponentType);
+            assert (fromWorldGenComponent != null);
+            holder.putComponent(this.worldGenIdComponentType, new WorldGenId(fromWorldGenComponent.getWorldGenId()));
         }
 
         @Override
@@ -275,25 +298,27 @@ public class SpawnMarkerSystems {
     extends RefSystem<EntityStore> {
         @Nonnull
         private final Query<EntityStore> query;
-        private final ComponentType<EntityStore, SpawnMarkerEntity> componentType;
+        @Nonnull
+        private final ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerEntityComponentType;
         @Nonnull
         private final Set<Dependency<EntityStore>> dependencies;
 
-        public EntityAddedFromExternal(ComponentType<EntityStore, SpawnMarkerEntity> componentType) {
-            this.query = Query.and(componentType, Query.or(FromPrefab.getComponentType(), FromWorldGen.getComponentType()));
-            this.componentType = componentType;
+        public EntityAddedFromExternal(@Nonnull ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerEntityComponentType) {
+            this.query = Query.and(spawnMarkerEntityComponentType, Query.or(FromPrefab.getComponentType(), FromWorldGen.getComponentType()));
+            this.spawnMarkerEntityComponentType = spawnMarkerEntityComponentType;
             this.dependencies = Set.of(new SystemDependency(Order.BEFORE, EntityAdded.class), new SystemDependency(Order.AFTER, CacheMarker.class));
         }
 
         @Override
         public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            SpawnMarkerEntity entity = store.getComponent(ref, this.componentType);
-            entity.setSpawnCount(0);
-            entity.setRespawnCounter(0.0);
-            entity.setSpawnAfter(null);
-            entity.setGameTimeRespawn(null);
-            if (entity.getCachedMarker().getDeactivationDistance() > 0.0) {
-                entity.setStoredFlock(new StoredFlock());
+            SpawnMarkerEntity spawnMarkerEntityComponent = store.getComponent(ref, this.spawnMarkerEntityComponentType);
+            assert (spawnMarkerEntityComponent != null);
+            spawnMarkerEntityComponent.setSpawnCount(0);
+            spawnMarkerEntityComponent.setRespawnCounter(0.0);
+            spawnMarkerEntityComponent.setSpawnAfter(null);
+            spawnMarkerEntityComponent.setGameTimeRespawn(null);
+            if (spawnMarkerEntityComponent.getCachedMarker().getDeactivationDistance() > 0.0) {
+                spawnMarkerEntityComponent.setStoredFlock(new StoredFlock());
             }
         }
 
@@ -322,7 +347,8 @@ public class SpawnMarkerSystems {
 
     public static class EntityAdded
     extends RefSystem<EntityStore> {
-        private final ComponentType<EntityStore, SpawnMarkerEntity> componentType;
+        @Nonnull
+        private final ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerEntityComponentType;
         @Nonnull
         private final ComponentType<EntityStore, UUIDComponent> uuidComponentType;
         @Nonnull
@@ -330,11 +356,11 @@ public class SpawnMarkerSystems {
         @Nonnull
         private final Query<EntityStore> query;
 
-        public EntityAdded(ComponentType<EntityStore, SpawnMarkerEntity> componentType) {
-            this.componentType = componentType;
+        public EntityAdded(@Nonnull ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerEntityComponentType) {
+            this.spawnMarkerEntityComponentType = spawnMarkerEntityComponentType;
             this.uuidComponentType = UUIDComponent.getComponentType();
             this.dependencies = Set.of(new SystemDependency(Order.AFTER, CacheMarker.class));
-            this.query = Query.and(componentType, this.uuidComponentType);
+            this.query = Query.and(spawnMarkerEntityComponentType, this.uuidComponentType);
         }
 
         @Override
@@ -351,16 +377,17 @@ public class SpawnMarkerSystems {
 
         @Override
         public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            SpawnMarkerEntity entity = store.getComponent(ref, this.componentType);
+            SpawnMarkerEntity spawnMarkerEntityComponent = store.getComponent(ref, this.spawnMarkerEntityComponentType);
+            assert (spawnMarkerEntityComponent != null);
             HytaleLogger.Api context = LOGGER.at(Level.FINE);
             if (context.isEnabled()) {
                 context.log("Loaded marker %s", store.getComponent(ref, this.uuidComponentType));
             }
-            if (entity.getStoredFlock() != null) {
-                entity.setTempStorageList(new ObjectArrayList<Pair<Ref<EntityStore>, NPCEntity>>());
+            if (spawnMarkerEntityComponent.getStoredFlock() != null) {
+                spawnMarkerEntityComponent.setTempStorageList(new ObjectArrayList<Pair<Ref<EntityStore>, NPCEntity>>());
             }
-            if (entity.getSpawnCount() != 0) {
-                entity.refreshTimeout();
+            if (spawnMarkerEntityComponent.getSpawnCount() != 0) {
+                spawnMarkerEntityComponent.refreshTimeout();
             }
             commandBuffer.ensureComponent(ref, PrefabCopyableComponent.getComponentType());
         }
@@ -372,27 +399,28 @@ public class SpawnMarkerSystems {
 
     public static class CacheMarker
     extends RefSystem<EntityStore> {
-        private final ComponentType<EntityStore, SpawnMarkerEntity> componentType;
+        private final ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerComponentType;
 
-        public CacheMarker(ComponentType<EntityStore, SpawnMarkerEntity> componentType) {
-            this.componentType = componentType;
+        public CacheMarker(@Nonnull ComponentType<EntityStore, SpawnMarkerEntity> spawnMarkerComponentType) {
+            this.spawnMarkerComponentType = spawnMarkerComponentType;
         }
 
         @Override
         public Query<EntityStore> getQuery() {
-            return this.componentType;
+            return this.spawnMarkerComponentType;
         }
 
         @Override
         public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            SpawnMarkerEntity entity = store.getComponent(ref, this.componentType);
-            SpawnMarker marker = SpawnMarker.getAssetMap().getAsset(entity.getSpawnMarkerId());
-            if (marker == null) {
-                LOGGER.at(Level.SEVERE).log("Marker %s removed due to missing spawn marker type: %s", ref, (Object)entity.getSpawnMarkerId());
+            SpawnMarkerEntity spawnMarkerEntityComponent = store.getComponent(ref, this.spawnMarkerComponentType);
+            assert (spawnMarkerEntityComponent != null);
+            SpawnMarker spawnMarker = SpawnMarker.getAssetMap().getAsset(spawnMarkerEntityComponent.getSpawnMarkerId());
+            if (spawnMarker == null) {
+                LOGGER.at(Level.SEVERE).log("Marker %s removed due to missing spawn marker type: %s", ref, (Object)spawnMarkerEntityComponent.getSpawnMarkerId());
                 commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
                 return;
             }
-            entity.setCachedMarker(marker);
+            spawnMarkerEntityComponent.setCachedMarker(spawnMarker);
         }
 
         @Override
@@ -402,12 +430,16 @@ public class SpawnMarkerSystems {
 
     public static class EnsureNetworkSendable
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final Query<EntityStore> query = SpawnMarkerEntity.getComponentType();
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            if (!holder.getArchetype().contains(NetworkId.getComponentType())) {
-                holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
+            Archetype<EntityStore> archetype = holder.getArchetype();
+            assert (archetype != null);
+            ComponentType<EntityStore, NetworkId> networkIdComponentType = NetworkId.getComponentType();
+            if (!archetype.contains(networkIdComponentType)) {
+                holder.addComponent(networkIdComponentType, new NetworkId(store.getExternalData().takeNextNetworkId()));
             }
             holder.ensureComponent(Intangible.getComponentType());
         }
@@ -417,6 +449,7 @@ public class SpawnMarkerSystems {
         }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
             return this.query;
         }
@@ -425,33 +458,42 @@ public class SpawnMarkerSystems {
     @Deprecated(forRemoval=true)
     public static class LegacyEntityMigration
     extends EntityModule.MigrationSystem {
+        @Nonnull
         private final ComponentType<EntityStore, PersistentModel> persistentModelComponentType = PersistentModel.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, Nameplate> nameplateComponentType = Nameplate.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, UnknownComponents<EntityStore>> unknownComponentsComponentType = EntityStore.REGISTRY.getUnknownComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.unknownComponentsComponentType, Query.not(AllLegacyEntityTypesQuery.INSTANCE));
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            Map<String, BsonDocument> unknownComponents = holder.getComponent(this.unknownComponentsComponentType).getUnknownComponents();
+            UnknownComponents<EntityStore> unknownComponentsComponent = holder.getComponent(this.unknownComponentsComponentType);
+            assert (unknownComponentsComponent != null);
+            Map<String, BsonDocument> unknownComponents = unknownComponentsComponent.getUnknownComponents();
             BsonDocument spawnMarker = unknownComponents.remove("SpawnMarker");
             if (spawnMarker == null) {
                 return;
             }
-            if (!holder.getArchetype().contains(this.persistentModelComponentType)) {
+            Archetype<EntityStore> archetype = holder.getArchetype();
+            assert (archetype != null);
+            if (!archetype.contains(this.persistentModelComponentType)) {
                 Model.ModelReference modelReference = Entity.MODEL.get(spawnMarker).get();
                 holder.addComponent(this.persistentModelComponentType, new PersistentModel(modelReference));
             }
-            if (!holder.getArchetype().contains(this.nameplateComponentType)) {
+            if (!archetype.contains(this.nameplateComponentType)) {
                 holder.addComponent(this.nameplateComponentType, new Nameplate(Entity.DISPLAY_NAME.get(spawnMarker).get()));
             }
-            if (!holder.getArchetype().contains(this.uuidComponentType)) {
+            if (!archetype.contains(this.uuidComponentType)) {
                 holder.addComponent(this.uuidComponentType, new UUIDComponent(Entity.UUID.get(spawnMarker).get()));
             }
             holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
-            int worldgenId = (Integer)Codec.INTEGER.decode(spawnMarker.get("WorldgenId"));
-            if (worldgenId != 0) {
-                holder.addComponent(WorldGenId.getComponentType(), new WorldGenId(worldgenId));
+            int worldGenId = (Integer)Codec.INTEGER.decode(spawnMarker.get("WorldgenId"));
+            if (worldGenId != 0) {
+                holder.addComponent(WorldGenId.getComponentType(), new WorldGenId(worldGenId));
             }
             SpawnMarkerEntity marker = SpawnMarkerEntity.CODEC.decode(spawnMarker, new ExtraInfo(5));
             holder.addComponent(SpawnMarkerEntity.getComponentType(), marker);

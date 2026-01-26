@@ -173,7 +173,9 @@ extends SimpleInteraction {
         if (targetBlockPos == null) {
             return;
         }
-        World world = context.getCommandBuffer().getStore().getExternalData().getWorld();
+        CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+        assert (commandBuffer != null);
+        World world = commandBuffer.getStore().getExternalData().getWorld();
         ChunkStore chunkStore = world.getChunkStore();
         Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPos.x, targetBlockPos.z));
         if (chunkReference == null || !chunkReference.isValid()) {
