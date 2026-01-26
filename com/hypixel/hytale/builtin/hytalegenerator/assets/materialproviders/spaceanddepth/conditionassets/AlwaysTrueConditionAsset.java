@@ -1,0 +1,22 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.spaceanddepth.conditionassets;
+
+import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.spaceanddepth.conditionassets.ConditionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions.AlwaysTrueCondition;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
+
+public class AlwaysTrueConditionAsset
+extends ConditionAsset {
+    public static final BuilderCodec<AlwaysTrueConditionAsset> CODEC = BuilderCodec.builder(AlwaysTrueConditionAsset.class, AlwaysTrueConditionAsset::new, ConditionAsset.ABSTRACT_CODEC).build();
+
+    @Override
+    @Nonnull
+    public SpaceAndDepthMaterialProvider.Condition build() {
+        return AlwaysTrueCondition.INSTANCE;
+    }
+}
+

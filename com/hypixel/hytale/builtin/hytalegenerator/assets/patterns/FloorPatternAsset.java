@@ -1,0 +1,41 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
+
+import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.ConstantPatternAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.PatternAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.SurfacePattern;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
+
+public class FloorPatternAsset
+extends PatternAsset {
+    public static final BuilderCodec<FloorPatternAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FloorPatternAsset.class, FloorPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Floor", PatternAsset.CODEC, true), (t, k) -> {
+        t.floor = k;
+    }, k -> k.floor).add()).append(new KeyedCodec("Origin", PatternAsset.CODEC, true), (t, k) -> {
+        t.origin = k;
+    }, k -> k.origin).add()).build();
+    private PatternAsset floor = new ConstantPatternAsset();
+    private PatternAsset origin = new ConstantPatternAsset();
+
+    @Override
+    @Nonnull
+    public Pattern build(@Nonnull PatternAsset.Argument argument) {
+        if (super.isSkipped()) {
+            return Pattern.noPattern();
+        }
+        Pattern floorPattern = this.floor.build(argument);
+        Pattern originPattern = this.origin.build(argument);
+        return new SurfacePattern(floorPattern, originPattern, 0.0, 0.0, SurfacePattern.Facing.U, 0, 0);
+    }
+
+    @Override
+    public void cleanUp() {
+        this.floor.cleanUp();
+        this.origin.cleanUp();
+    }
+}
+

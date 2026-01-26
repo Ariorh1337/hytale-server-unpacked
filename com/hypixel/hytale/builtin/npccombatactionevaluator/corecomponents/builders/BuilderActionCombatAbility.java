@@ -1,0 +1,38 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.npccombatactionevaluator.corecomponents.builders;
+
+import com.hypixel.hytale.builtin.npccombatactionevaluator.corecomponents.ActionCombatAbility;
+import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
+import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
+import javax.annotation.Nonnull;
+
+public class BuilderActionCombatAbility
+extends BuilderActionBase {
+    @Override
+    @Nonnull
+    public ActionCombatAbility build(@Nonnull BuilderSupport builderSupport) {
+        return new ActionCombatAbility(this, builderSupport);
+    }
+
+    @Override
+    @Nonnull
+    public String getShortDescription() {
+        return "Starts the combat ability selected by the combat action evaluator.";
+    }
+
+    @Override
+    @Nonnull
+    public String getLongDescription() {
+        return this.getShortDescription();
+    }
+
+    @Override
+    @Nonnull
+    public BuilderDescriptorState getBuilderDescriptorState() {
+        return BuilderDescriptorState.Stable;
+    }
+}
+

@@ -1,0 +1,149 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.google.crypto.tink.streamingaead;
+
+import com.google.crypto.tink.StreamingAead;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.NonWritableChannelException;
+import java.nio.channels.SeekableByteChannel;
+import java.security.GeneralSecurityException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.List;
+import javax.annotation.concurrent.GuardedBy;
+
+final class SeekableByteChannelDecrypter
+implements SeekableByteChannel {
+    @GuardedBy(value="this")
+    SeekableByteChannel attemptingChannel = null;
+    @GuardedBy(value="this")
+    SeekableByteChannel matchingChannel = null;
+    @GuardedBy(value="this")
+    SeekableByteChannel ciphertextChannel;
+    @GuardedBy(value="this")
+    long cachedPosition;
+    @GuardedBy(value="this")
+    long startingPosition;
+    Deque<StreamingAead> remainingPrimitives = new ArrayDeque<StreamingAead>();
+    byte[] associatedData;
+
+    public SeekableByteChannelDecrypter(List<StreamingAead> allPrimitives, SeekableByteChannel ciphertextChannel, byte[] associatedData) throws IOException {
+        for (StreamingAead primitive : allPrimitives) {
+            this.remainingPrimitives.add(primitive);
+        }
+        this.ciphertextChannel = ciphertextChannel;
+        this.cachedPosition = -1L;
+        this.startingPosition = ciphertextChannel.position();
+        this.associatedData = (byte[])associatedData.clone();
+    }
+
+    @GuardedBy(value="this")
+    private synchronized SeekableByteChannel nextAttemptingChannel() throws IOException {
+        while (!this.remainingPrimitives.isEmpty()) {
+            this.ciphertextChannel.position(this.startingPosition);
+            StreamingAead streamingAead = this.remainingPrimitives.removeFirst();
+            try {
+                SeekableByteChannel decChannel = streamingAead.newSeekableDecryptingChannel(this.ciphertextChannel, this.associatedData);
+                if (this.cachedPosition >= 0L) {
+                    decChannel.position(this.cachedPosition);
+                }
+                return decChannel;
+            }
+            catch (GeneralSecurityException generalSecurityException) {
+            }
+        }
+        throw new IOException("No matching key found for the ciphertext in the stream.");
+    }
+
+    @Override
+    @GuardedBy(value="this")
+    public synchronized int read(ByteBuffer dst) throws IOException {
+        if (dst.remaining() == 0) {
+            return 0;
+        }
+        if (this.matchingChannel != null) {
+            return this.matchingChannel.read(dst);
+        }
+        if (this.attemptingChannel == null) {
+            this.attemptingChannel = this.nextAttemptingChannel();
+        }
+        while (true) {
+            try {
+                int retValue = this.attemptingChannel.read(dst);
+                if (retValue == 0) {
+                    return 0;
+                }
+                this.matchingChannel = this.attemptingChannel;
+                this.attemptingChannel = null;
+                return retValue;
+            }
+            catch (IOException e) {
+                this.attemptingChannel = this.nextAttemptingChannel();
+                continue;
+            }
+            break;
+        }
+    }
+
+    @Override
+    @CanIgnoreReturnValue
+    @GuardedBy(value="this")
+    public synchronized SeekableByteChannel position(long newPosition) throws IOException {
+        if (this.matchingChannel != null) {
+            this.matchingChannel.position(newPosition);
+        } else {
+            if (newPosition < 0L) {
+                throw new IllegalArgumentException("Position must be non-negative");
+            }
+            this.cachedPosition = newPosition;
+            if (this.attemptingChannel != null) {
+                this.attemptingChannel.position(this.cachedPosition);
+            }
+        }
+        return this;
+    }
+
+    @Override
+    @GuardedBy(value="this")
+    public synchronized long position() throws IOException {
+        if (this.matchingChannel != null) {
+            return this.matchingChannel.position();
+        }
+        return this.cachedPosition;
+    }
+
+    @Override
+    @GuardedBy(value="this")
+    public synchronized long size() throws IOException {
+        if (this.matchingChannel != null) {
+            return this.matchingChannel.size();
+        }
+        throw new IOException("Cannot determine size before first read()-call.");
+    }
+
+    @Override
+    public SeekableByteChannel truncate(long size) throws IOException {
+        throw new NonWritableChannelException();
+    }
+
+    @Override
+    public int write(ByteBuffer src) throws IOException {
+        throw new NonWritableChannelException();
+    }
+
+    @Override
+    @GuardedBy(value="this")
+    public synchronized void close() throws IOException {
+        this.ciphertextChannel.close();
+    }
+
+    @Override
+    @GuardedBy(value="this")
+    public synchronized boolean isOpen() {
+        return this.ciphertextChannel.isOpen();
+    }
+}
+

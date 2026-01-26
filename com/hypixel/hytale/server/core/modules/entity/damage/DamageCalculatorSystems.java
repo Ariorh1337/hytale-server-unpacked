@@ -1,0 +1,166 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.server.core.modules.entity.damage;
+
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Archetype;
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.dependency.Dependency;
+import com.hypixel.hytale.component.dependency.Order;
+import com.hypixel.hytale.component.dependency.SystemDependency;
+import com.hypixel.hytale.component.dependency.SystemGroupDependency;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.server.core.asset.type.gameplay.BrokenPenalties;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.meta.MetaKey;
+import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.Object2FloatMap;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class DamageCalculatorSystems {
+    @Nonnull
+    public static MetaKey<DamageSequence> DAMAGE_SEQUENCE = Damage.META_REGISTRY.registerMetaObject();
+
+    @Nonnull
+    public static Damage[] queueDamageCalculator(@Nonnull World world, @Nonnull Object2FloatMap<DamageCause> relativeDamage, @Nonnull Ref<EntityStore> ref, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage.Source source, @Nullable ItemStack itemInHand) {
+        Damage[] results = new Damage[relativeDamage.size()];
+        int offset = 0;
+        for (DamageCause damageCause : relativeDamage.keySet()) {
+            float damageAmount = relativeDamage.getFloat(damageCause);
+            if (damageCause == DamageCause.PHYSICAL && itemInHand != null && itemInHand.isBroken()) {
+                BrokenPenalties brokenPenalties = world.getGameplayConfig().getItemDurabilityConfig().getBrokenPenalties();
+                damageAmount *= (float)(1.0 - brokenPenalties.getWeapon(0.0));
+            }
+            Damage damage = new Damage(source, damageCause, damageAmount);
+            damage.getMetaStore().putMetaObject(Damage.CAN_BE_PREDICTED, Boolean.TRUE);
+            results[offset++] = damage;
+        }
+        return results;
+    }
+
+    public static class Sequence {
+        @Nonnull
+        public static final BuilderCodec<Sequence> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(Sequence.class, Sequence::new).append(new KeyedCodec<Integer>("Hits", Codec.INTEGER), (entityEffect, x) -> {
+            entityEffect.hits = x;
+        }, entityEffect -> entityEffect.hits).add()).build();
+        private int hits;
+
+        public Sequence() {
+        }
+
+        public Sequence(int hits) {
+            this.hits = hits;
+        }
+
+        public int getHits() {
+            return this.hits;
+        }
+
+        @Nonnull
+        public String toString() {
+            return "Sequence{hits=" + this.hits + "}";
+        }
+    }
+
+    public static class DamageSequence {
+        @Nonnull
+        private final Sequence sequence;
+        @Nonnull
+        private final DamageCalculator damageCalculator;
+        @Nullable
+        private DamageEntityInteraction.EntityStatOnHit[] entityStatOnHit;
+
+        public DamageSequence(@Nonnull Sequence sequence, @Nonnull DamageCalculator damageCalculator) {
+            this.sequence = sequence;
+            this.damageCalculator = damageCalculator;
+        }
+
+        public int getSequentialHits() {
+            return this.sequence.hits;
+        }
+
+        public void addSequentialHit() {
+            ++this.sequence.hits;
+        }
+
+        @Nonnull
+        public DamageCalculator getDamageCalculator() {
+            return this.damageCalculator;
+        }
+
+        @Nullable
+        public DamageEntityInteraction.EntityStatOnHit[] getEntityStatOnHit() {
+            return this.entityStatOnHit;
+        }
+
+        public void setEntityStatOnHit(@Nullable DamageEntityInteraction.EntityStatOnHit[] entityStatOnHit) {
+            this.entityStatOnHit = entityStatOnHit;
+        }
+    }
+
+    public static class SequenceModifier
+    extends DamageEventSystem {
+        @Nonnull
+        private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemGroupDependency<EntityStore>(Order.AFTER, DamageModule.get().getGatherDamageGroup()), new SystemGroupDependency<EntityStore>(Order.AFTER, DamageModule.get().getFilterDamageGroup()), new SystemDependency(Order.BEFORE, DamageSystems.ApplyDamage.class));
+
+        @Override
+        @Nonnull
+        public Set<Dependency<EntityStore>> getDependencies() {
+            return this.dependencies;
+        }
+
+        @Override
+        @Nonnull
+        public Query<EntityStore> getQuery() {
+            return Archetype.empty();
+        }
+
+        @Override
+        public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
+            Damage.Source source;
+            if (damage.getAmount() <= 0.0f) {
+                return;
+            }
+            DamageSequence damageSequence = damage.getIfPresentMetaObject(DAMAGE_SEQUENCE);
+            if (damageSequence == null) {
+                return;
+            }
+            DamageCalculator damageCalculator = damageSequence.getDamageCalculator();
+            if (damageSequence.getSequentialHits() > 0) {
+                float sequentialModifier = Math.max(1.0f - damageCalculator.getSequentialModifierStep() * (float)damageSequence.getSequentialHits(), damageCalculator.getSequentialModifierMinimum());
+                damage.setAmount(damage.getAmount() * sequentialModifier);
+            }
+            damageSequence.addSequentialHit();
+            DamageEntityInteraction.EntityStatOnHit[] entityStatsOnHit = damageSequence.getEntityStatOnHit();
+            if (entityStatsOnHit != null && (source = damage.getSource()) instanceof Damage.EntitySource) {
+                Damage.EntitySource entitySource = (Damage.EntitySource)source;
+                Ref<EntityStore> attackerRef = entitySource.getRef();
+                EntityStatMap entityStatMapComponent = commandBuffer.getComponent(attackerRef, EntityStatMap.getComponentType());
+                if (entityStatMapComponent == null) {
+                    return;
+                }
+                for (DamageEntityInteraction.EntityStatOnHit statOnHit : entityStatsOnHit) {
+                    statOnHit.processEntityStatsOnHit(damageSequence.getSequentialHits(), entityStatMapComponent);
+                }
+            }
+        }
+    }
+}
+

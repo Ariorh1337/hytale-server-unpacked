@@ -1,0 +1,40 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.hytalegenerator.environmentproviders;
+
+import com.hypixel.hytale.builtin.hytalegenerator.delimiters.DelimiterDouble;
+import com.hypixel.hytale.builtin.hytalegenerator.delimiters.RangeDouble;
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.EnvironmentProvider;
+import java.util.ArrayList;
+import java.util.List;
+import javax.annotation.Nonnull;
+
+public class DensityDelimitedEnvironmentProvider
+extends EnvironmentProvider {
+    @Nonnull
+    private final List<DelimiterDouble<EnvironmentProvider>> delimiters = new ArrayList<DelimiterDouble<EnvironmentProvider>>();
+    @Nonnull
+    private final Density density;
+
+    public DensityDelimitedEnvironmentProvider(@Nonnull List<DelimiterDouble<EnvironmentProvider>> delimiters, @Nonnull Density density) {
+        for (DelimiterDouble<EnvironmentProvider> delimiter : delimiters) {
+            RangeDouble range = delimiter.getRange();
+            if (range.min() >= range.max()) continue;
+            this.delimiters.add(delimiter);
+        }
+        this.density = density;
+    }
+
+    @Override
+    public int getValue(@Nonnull EnvironmentProvider.Context context) {
+        double densityValue = this.density.process(new Density.Context(context));
+        for (DelimiterDouble<EnvironmentProvider> delimiter : this.delimiters) {
+            if (!delimiter.getRange().contains(densityValue)) continue;
+            return delimiter.getValue().getValue(context);
+        }
+        return 0;
+    }
+}
+

@@ -1,0 +1,166 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.deployables.config;
+
+import com.hypixel.hytale.builtin.deployables.component.DeployableComponent;
+import com.hypixel.hytale.builtin.deployables.config.DeployableAoeConfig;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.time.TimeResource;
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.TargetUtil;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.function.Consumer;
+import javax.annotation.Nonnull;
+
+public class DeployableTrapConfig
+extends DeployableAoeConfig {
+    public static final BuilderCodec<DeployableTrapConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DeployableTrapConfig.class, DeployableTrapConfig::new, DeployableAoeConfig.CODEC).appendInherited(new KeyedCodec<Float>("FuzeDuration", Codec.FLOAT), (o, i) -> {
+        o.fuzeDuration = i.floatValue();
+    }, o -> Float.valueOf(o.fuzeDuration), (o, p) -> {
+        o.fuzeDuration = p.fuzeDuration;
+    }).documentation("The time it will take for the trap to become active").add()).appendInherited(new KeyedCodec<Float>("ActiveDuration", Codec.FLOAT), (o, i) -> {
+        o.activeDuration = i.floatValue();
+    }, o -> Float.valueOf(o.activeDuration), (o, p) -> {
+        o.activeDuration = p.activeDuration;
+    }).documentation("The time the trap will stay alive after getting triggered").add()).appendInherited(new KeyedCodec<Boolean>("DestroyOnTriggered", Codec.BOOLEAN), (o, i) -> {
+        o.destroyOnTriggered = i;
+    }, o -> o.destroyOnTriggered, (o, p) -> {
+        o.destroyOnTriggered = p.destroyOnTriggered;
+    }).documentation("Whether the trap will disappear when it's triggered by a players").add()).build();
+    protected float fuzeDuration = 0.0f;
+    protected float activeDuration = 1.0f;
+    protected boolean destroyOnTriggered = false;
+
+    protected DeployableTrapConfig() {
+    }
+
+    @Override
+    public void tick(@Nonnull DeployableComponent deployableComponent, float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+        Vector3d pos = archetypeChunk.getComponent(index, TransformComponent.getComponentType()).getPosition();
+        World world = store.getExternalData().getWorld();
+        Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
+        if (!deployableComponent.getOwner().isValid()) {
+            world.execute(() -> {
+                if (entityRef.isValid()) {
+                    DespawnComponent despawn = store.ensureAndGetComponent(entityRef, DespawnComponent.getComponentType());
+                    WorldTimeResource timeManager = commandBuffer.getResource(WorldTimeResource.getResourceType());
+                    despawn.setDespawn(timeManager.getGameTime());
+                }
+            });
+            return;
+        }
+        float radius = this.getRadius(store, deployableComponent.getSpawnInstant());
+        this.handleDebugGraphics(world, deployableComponent.getDebugColor(), pos, radius * 2.0f);
+        switch (deployableComponent.getFlag(DeployableComponent.DeployableFlag.STATE)) {
+            case 0: {
+                deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 1);
+                break;
+            }
+            case 1: {
+                deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 2);
+                DeployableTrapConfig.playAnimation(store, entityRef, this, "Grow");
+                break;
+            }
+            case 2: {
+                if (!(radius >= this.endRadius)) break;
+                deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 3);
+                DeployableTrapConfig.playAnimation(store, entityRef, this, "Looping");
+            }
+        }
+        Ref<EntityStore> trapRef = archetypeChunk.getReferenceTo(index);
+        deployableComponent.setTimeSinceLastAttack(deployableComponent.getTimeSinceLastAttack() + dt);
+        if (deployableComponent.getTimeSinceLastAttack() > this.damageInterval && this.isLive(store, deployableComponent)) {
+            deployableComponent.setTimeSinceLastAttack(0.0f);
+            this.handleDetection(store, commandBuffer, trapRef, deployableComponent, pos, radius, DamageCause.PHYSICAL);
+        }
+    }
+
+    @Override
+    protected void handleDetection(final Store<EntityStore> store, final CommandBuffer<EntityStore> commandBuffer, final Ref<EntityStore> deployableRef, final DeployableComponent deployableComponent, Vector3d position, float radius, final DamageCause damageCause) {
+        World world = store.getExternalData().getWorld();
+        var consumer = new Consumer<Ref<EntityStore>>(){
+            final /* synthetic */ DeployableTrapConfig this$0;
+            {
+                this.this$0 = this$0;
+            }
+
+            @Override
+            public void accept(Ref<EntityStore> entityStoreRef) {
+                if (entityStoreRef == deployableRef) {
+                    return;
+                }
+                if (store.getComponent(entityStoreRef, DeployableComponent.getComponentType()) != null) {
+                    return;
+                }
+                this.this$0.attackTarget(entityStoreRef, deployableRef, damageCause, commandBuffer);
+                if (this.this$0.destroyOnTriggered && deployableComponent.getFlag(DeployableComponent.DeployableFlag.TRIGGERED) == 0) {
+                    this.this$0.onTriggered(store, deployableRef);
+                    deployableComponent.setFlag(DeployableComponent.DeployableFlag.TRIGGERED, 1);
+                }
+                this.this$0.applyEffectToTarget(store, entityStoreRef);
+            }
+        };
+        switch (this.shape) {
+            case Sphere: {
+                List<Ref<EntityStore>> targetRefs = TargetUtil.getAllEntitiesInSphere(position, radius, store);
+                for (Ref<EntityStore> targetRef : targetRefs) {
+                    consumer.accept(targetRef);
+                }
+                break;
+            }
+            case Cylinder: {
+                List<Ref<EntityStore>> targetRefs = TargetUtil.getAllEntitiesInCylinder(position, radius, this.height, store);
+                for (Ref<EntityStore> targetRef : targetRefs) {
+                    consumer.accept(targetRef);
+                }
+                break;
+            }
+        }
+    }
+
+    protected boolean isLive(@Nonnull Store<EntityStore> store, @Nonnull DeployableComponent comp) {
+        if (comp.getFlag(DeployableComponent.DeployableFlag.LIVE) == 1) {
+            return true;
+        }
+        if (this.fuzeDuration == 0.0f) {
+            comp.setFlag(DeployableComponent.DeployableFlag.LIVE, 1);
+            return true;
+        }
+        Instant now = store.getResource(TimeResource.getResourceType()).getNow();
+        Instant spawnTime = comp.getSpawnInstant();
+        float timeDiff = (float)Duration.between(spawnTime, now).toMillis() / 1000.0f;
+        if (timeDiff >= this.fuzeDuration) {
+            comp.setFlag(DeployableComponent.DeployableFlag.LIVE, 1);
+            return true;
+        }
+        return false;
+    }
+
+    protected void onTriggered(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
+        Instant now = store.getResource(TimeResource.getResourceType()).getNow();
+        DespawnComponent despawnComponent = store.getComponent(ref, DespawnComponent.getComponentType());
+        despawnComponent.setDespawn(now.plus((long)this.activeDuration, ChronoUnit.SECONDS));
+    }
+
+    @Override
+    public String toString() {
+        return "DeployableTrapConfig{}" + super.toString();
+    }
+}
+

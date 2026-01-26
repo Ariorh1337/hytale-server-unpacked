@@ -1,0 +1,21 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package io.netty.handler.codec.quic;
+
+import io.netty.handler.codec.quic.QuicException;
+
+public final class QuicStreamResetException
+extends QuicException {
+    private final long applicationProtocolCode;
+
+    public QuicStreamResetException(String message, long applicationProtocolCode) {
+        super(message);
+        this.applicationProtocolCode = applicationProtocolCode;
+    }
+
+    public long applicationProtocolCode() {
+        return this.applicationProtocolCode;
+    }
+}
+

@@ -1,0 +1,16 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.server.core.event.events;
+
+import com.hypixel.hytale.event.IEvent;
+import javax.annotation.Nonnull;
+
+public class BootEvent
+implements IEvent<Void> {
+    @Nonnull
+    public String toString() {
+        return "BootEvent{}";
+    }
+}
+

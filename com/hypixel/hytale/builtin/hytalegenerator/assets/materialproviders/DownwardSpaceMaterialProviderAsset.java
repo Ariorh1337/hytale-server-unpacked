@@ -1,0 +1,40 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
+
+import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.ConstantMaterialProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.MaterialProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.DownwardSpaceMaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
+
+public class DownwardSpaceMaterialProviderAsset
+extends MaterialProviderAsset {
+    public static final BuilderCodec<DownwardSpaceMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DownwardSpaceMaterialProviderAsset.class, DownwardSpaceMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("Space", Codec.INTEGER, true), (t, k) -> {
+        t.space = k;
+    }, k -> k.space).add()).append(new KeyedCodec("Material", MaterialProviderAsset.CODEC, true), (t, k) -> {
+        t.materialProviderAsset = k;
+    }, k -> k.materialProviderAsset).add()).build();
+    private int space = 0;
+    private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
+
+    @Override
+    @Nonnull
+    public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
+        if (super.skip()) {
+            return MaterialProvider.noMaterialProvider();
+        }
+        return new DownwardSpaceMaterialProvider<Material>(this.materialProviderAsset.build(argument), this.space);
+    }
+
+    @Override
+    public void cleanUp() {
+        this.materialProviderAsset.cleanUp();
+    }
+}
+

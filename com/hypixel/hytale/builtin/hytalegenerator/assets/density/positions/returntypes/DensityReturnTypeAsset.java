@@ -1,0 +1,81 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density.positions.returntypes;
+
+import com.hypixel.hytale.assetstore.AssetExtraInfo;
+import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.CacheDensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ConstantDensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.positions.returntypes.ReturnTypeAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.FieldFunctionMaterialProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.MultiCacheDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.DensityReturnType;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
+import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
+import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.math.Range;
+import java.util.HashMap;
+import javax.annotation.Nonnull;
+
+public class DensityReturnTypeAsset
+extends ReturnTypeAsset {
+    public static final BuilderCodec<DensityReturnTypeAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DensityReturnTypeAsset.class, DensityReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC).append(new KeyedCodec("ChoiceDensity", DensityAsset.CODEC, true), (t, k) -> {
+        t.choiceDensityAsset = k;
+    }, t -> t.choiceDensityAsset).add()).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (t, k) -> {
+        t.delimiterAssets = k;
+    }, t -> t.delimiterAssets).add()).append(new KeyedCodec<Double>("DefaultValue", Codec.DOUBLE, false), (t, k) -> {
+        t.defaultValue = k;
+    }, t -> t.defaultValue).add()).build();
+    private DensityAsset choiceDensityAsset = new ConstantDensityAsset();
+    private DelimiterAsset[] delimiterAssets = new DelimiterAsset[0];
+    private double defaultValue = 0.0;
+
+    @Override
+    @Nonnull
+    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+        DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer);
+        Density choiceDensity = this.choiceDensityAsset.build(densityArgument);
+        HashMap<Range, Density> delimiterMap = new HashMap<Range, Density>(this.delimiterAssets.length);
+        for (DelimiterAsset delimiter : this.delimiterAssets) {
+            delimiterMap.put(new Range((float)delimiter.from, (float)delimiter.to), delimiter.densityAsset.build(densityArgument));
+        }
+        MultiCacheDensity cache = new MultiCacheDensity(choiceDensity, workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+        return new DensityReturnType(cache, delimiterMap, true, this.defaultValue, workerIndexer.getWorkerCount());
+    }
+
+    public static class DelimiterAsset
+    implements JsonAssetWithMap<String, DefaultAssetMap<String, FieldFunctionMaterialProviderAsset.DelimiterAsset>> {
+        public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
+            asset.id = id;
+        }, config -> config.id, (config, data) -> {
+            config.data = data;
+        }, config -> config.data).append(new KeyedCodec<Double>("From", Codec.DOUBLE, true), (t, y) -> {
+            t.from = y;
+        }, t -> t.from).add()).append(new KeyedCodec<Double>("To", Codec.DOUBLE, true), (t, out) -> {
+            t.to = out;
+        }, t -> t.to).add()).append(new KeyedCodec("Density", DensityAsset.CODEC, true), (t, out) -> {
+            t.densityAsset = out;
+        }, t -> t.densityAsset).add()).build();
+        private String id;
+        private AssetExtraInfo.Data data;
+        private double from = 0.0;
+        private double to = 0.0;
+        private DensityAsset densityAsset = new ConstantDensityAsset();
+
+        @Override
+        public String getId() {
+            return this.id;
+        }
+    }
+}
+

@@ -1,0 +1,24 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.server.core.io.netty;
+
+import com.hypixel.hytale.protocol.Packet;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToMessageEncoder;
+import java.util.List;
+import javax.annotation.Nonnull;
+
+@ChannelHandler.Sharable
+public class PacketArrayEncoder
+extends MessageToMessageEncoder<Packet[]> {
+    @Override
+    protected void encode(ChannelHandlerContext ctx, @Nonnull Packet[] packets, @Nonnull List<Object> out) {
+        for (Packet packet : packets) {
+            if (packet == null) continue;
+            out.add(packet);
+        }
+    }
+}
+

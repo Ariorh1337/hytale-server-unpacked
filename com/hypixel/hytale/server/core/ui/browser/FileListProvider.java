@@ -1,0 +1,25 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.server.core.ui.browser;
+
+import java.nio.file.Path;
+import java.util.List;
+import javax.annotation.Nonnull;
+
+@FunctionalInterface
+public interface FileListProvider {
+    @Nonnull
+    public List<FileEntry> getFiles(@Nonnull Path var1, @Nonnull String var2);
+
+    public record FileEntry(@Nonnull String name, @Nonnull String displayName, boolean isDirectory, int matchScore) {
+        public FileEntry(@Nonnull String name, boolean isDirectory) {
+            this(name, name, isDirectory, 0);
+        }
+
+        public FileEntry(@Nonnull String name, @Nonnull String displayName, boolean isDirectory) {
+            this(name, displayName, isDirectory, 0);
+        }
+    }
+}
+

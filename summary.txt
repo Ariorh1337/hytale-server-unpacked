@@ -1,0 +1,359 @@
+Summary for HytaleServer.jar
+Decompiled with CFR 0.152
+
+
+com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.BreakBlockInteraction
+----------------------------
+
+interactWithBlock(com.hypixel.hytale.server.core.universe.world.World com.hypixel.hytale.component.CommandBuffer<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> com.hypixel.hytale.protocol.InteractionType com.hypixel.hytale.server.core.entity.InteractionContext com.hypixel.hytale.server.core.inventory.ItemStack com.hypixel.hytale.math.vector.Vector3i com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=12,441
+
+
+com.hypixel.hytale.server.core.entity.StatModifiersManager
+----------------------------
+
+applyEffectModifiers(com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap it.unimi.dsi.fastutil.ints.Int2ObjectMap<it.unimi.dsi.fastutil.objects.Object2FloatMap<com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier$CalculationType>> )
+  Could not resolve type clashes
+applyStatModifiers(com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap it.unimi.dsi.fastutil.ints.Int2ObjectMap<it.unimi.dsi.fastutil.objects.Object2FloatMap<com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier$CalculationType>> )
+  Could not resolve type clashes
+
+
+com.hypixel.hytale.server.core.universe.world.lighting.FloodLightCalculation
+----------------------------
+
+floodEmptyChunkSection(com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk short int )
+  Unable to fully structure code
+propagateLight(java.util.BitSet com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkLightDataBuilder )
+  Unable to fully structure code
+
+
+com.hypixel.hytale.server.core.universe.world.WorldNotificationHandler
+----------------------------
+
+updateState(int int int com.hypixel.hytale.server.core.universe.world.meta.BlockState com.hypixel.hytale.server.core.universe.world.meta.BlockState java.util.function.Predicate<com.hypixel.hytale.server.core.universe.PlayerRef> )
+  Unable to fully structure code
+
+
+com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
+----------------------------
+
+forEachTicking(T V int com.hypixel.hytale.function.predicate.ObjectPositionBlockFunction<T, V, com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy> )
+  Unable to fully structure code
+
+
+com.hypixel.hytale.server.core.asset.type.weather.config.Weather
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.core.asset.type.fluidfx.config.FluidFX
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockPlacementSettings
+----------------------------
+
+toPacket()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=18,277
+
+
+com.hypixel.hytale.server.core.asset.type.responsecurve.ScaledXResponseCurve
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.core.asset.type.responsecurve.ScaledXYResponseCurve
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.core.plugin.PluginManager
+----------------------------
+
+loadManifest(java.nio.file.Path )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 3 blocks at once
+
+
+com.hypixel.hytale.server.core.command.system.arguments.types.Coord
+----------------------------
+
+parse(java.lang.String )
+  Unable to fully structure code
+
+
+com.hypixel.hytale.server.core.command.system.arguments.types.IntCoord
+----------------------------
+
+parse(java.lang.String )
+  Unable to fully structure code
+
+
+io.netty.handler.codec.quic.SockaddrIn
+----------------------------
+
+getIPv6(java.nio.ByteBuffer byte[] byte[] )
+  Loose catch block
+
+
+io.sentry.util.FileUtils
+----------------------------
+
+readBytesFromFile(java.lang.String long )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+it.unimi.dsi.fastutil.io.FastBufferedInputStream
+----------------------------
+
+readLine(byte[] int int java.util.EnumSet<it.unimi.dsi.fastutil.io.FastBufferedInputStream$LineTerminator> )
+  Unable to fully structure code
+
+
+org.bouncycastle.cms.jcajce.JceKeyAgreeRecipient
+----------------------------
+
+extractSecretKey(org.bouncycastle.asn1.x509.AlgorithmIdentifier org.bouncycastle.asn1.x509.AlgorithmIdentifier org.bouncycastle.asn1.x509.SubjectPublicKeyInfo org.bouncycastle.asn1.ASN1OctetString byte[] )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 3 blocks at once
+
+
+org.bouncycastle.est.ESTService
+----------------------------
+
+getCSRAttributes()
+  Unable to fully structure code
+
+
+org.bouncycastle.crypto.generators.DSAParametersGenerator
+----------------------------
+
+generateParameters_FIPS186_2()
+  Unable to fully structure code
+generateParameters_FIPS186_3()
+  Unable to fully structure code
+
+
+org.bouncycastle.crypto.generators.GOST3410ParametersGenerator
+----------------------------
+
+procedure_B(int int java.math.BigInteger[] )
+  Unable to fully structure code
+procedure_Bb(long long java.math.BigInteger[] )
+  Unable to fully structure code
+
+
+org.bouncycastle.jcajce.provider.asymmetric.mlkem.MLKEMCipherSpi
+----------------------------
+
+engineUnwrap(byte[] java.lang.String int )
+  Loose catch block
+
+
+org.bouncycastle.jcajce.provider.symmetric.util.BaseWrapCipher
+----------------------------
+
+engineDoFinal(byte[] int int )
+  Loose catch block
+
+
+org.bouncycastle.pqc.jcajce.provider.kyber.KyberCipherSpi
+----------------------------
+
+engineUnwrap(byte[] java.lang.String int )
+  Loose catch block
+
+
+org.bouncycastle.pqc.jcajce.provider.ntru.NTRUCipherSpi
+----------------------------
+
+engineUnwrap(byte[] java.lang.String int )
+  Loose catch block
+
+
+com.nimbusds.jose.shaded.gson.internal.GsonTypes
+----------------------------
+
+resolve(java.lang.reflect.Type java.lang.Class<?> java.lang.reflect.Type java.util.Map<java.lang.reflect.TypeVariable<?>, java.lang.reflect.Type> )
+  Unable to fully structure code
+
+
+com.google.gson.internal.GsonTypes
+----------------------------
+
+resolve(java.lang.reflect.Type java.lang.Class<?> java.lang.reflect.Type java.util.Map<java.lang.reflect.TypeVariable<?>, java.lang.reflect.Type> )
+  Unable to fully structure code
+
+
+com.google.protobuf.CodedInputStreamReader
+----------------------------
+
+readMap(java.util.Map<K, V> com.google.protobuf.MapEntryLite$Metadata<K, V> com.google.protobuf.ExtensionRegistryLite )
+  Unable to fully structure code
+
+
+org.jline.builtins.Less
+----------------------------
+
+run(java.util.List<org.jline.builtins.Source> )
+  Loose catch block
+
+
+org.jline.builtins.Nano
+----------------------------
+
+run()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 3 blocks at once
+
+
+org.jline.console.impl.SystemRegistryImpl
+----------------------------
+
+execute(java.lang.String )
+  Loose catch block
+
+
+org.jline.reader.impl.LineReaderImpl
+----------------------------
+
+readLine(java.lang.String java.lang.String org.jline.reader.MaskingCallback java.lang.String )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [3[TRYBLOCK], 1[TRYBLOCK]], but top level block is 13[CASE]
+
+
+org.jline.terminal.impl.ExternalTerminal
+----------------------------
+
+pump()
+  Unable to fully structure code
+
+
+org.jline.utils.NonBlockingInputStreamImpl
+----------------------------
+
+run()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [29[UNCONDITIONALDOLOOP]], but top level block is 9[TRYBLOCK]
+
+
+org.jline.utils.NonBlockingReaderImpl
+----------------------------
+
+run()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [25[UNCONDITIONALDOLOOP]], but top level block is 4[TRYBLOCK]
+
+
+io.netty.util.concurrent.SingleThreadEventExecutor
+----------------------------
+
+run()
+  Loose catch block
+
+
+io.netty.util.NetUtil
+----------------------------
+
+sysctlGetInt(java.lang.String )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [10[FORLOOP]], but top level block is 3[TRYBLOCK]
+
+
+io.netty.util.internal.NativeLibraryLoader
+----------------------------
+
+loadLibrary(java.lang.ClassLoader java.lang.String boolean )
+  Loose catch block
+
+
+io.netty.handler.codec.MessageToMessageDecoder
+----------------------------
+
+channelRead(io.netty.channel.ChannelHandlerContext java.lang.Object )
+  Loose catch block
+
+
+io.netty.handler.codec.compression.SnappyFrameDecoder
+----------------------------
+
+decode(io.netty.channel.ChannelHandlerContext io.netty.buffer.ByteBuf java.util.List<java.lang.Object> )
+  Unable to fully structure code
+
+
+io.netty.handler.codec.compression.LzfDecoder
+----------------------------
+
+decode(io.netty.channel.ChannelHandlerContext io.netty.buffer.ByteBuf java.util.List<java.lang.Object> )
+  Unable to fully structure code
+
+
+io.netty.handler.ssl.SslHandler
+----------------------------
+
+unwrap(io.netty.channel.ChannelHandlerContext io.netty.buffer.ByteBuf int )
+  Unable to fully structure code
+runDelegatedTasks(boolean )
+  Unable to fully structure code
+
+
+io.netty.handler.ssl.PemPrivateKey
+----------------------------
+
+toPEM(io.netty.buffer.ByteBufAllocator boolean byte[] )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 2 blocks at once
+
+
+io.netty.channel.epoll.EpollDatagramChannel
+----------------------------
+
+epollInReady()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [7[DOLOOP]], but top level block is 13[SIMPLE_IF_TAKEN]
+
+
+io.netty.channel.epoll.AbstractEpollServerChannel
+----------------------------
+
+epollInReady()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [5[DOLOOP]], but top level block is 10[SIMPLE_IF_TAKEN]
+
+
+com.hypixel.hytale.server.spawning.assets.spawns.config.NPCSpawn
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector
+----------------------------
+
+findPositions(int int )
+  Unable to fully structure code
+
+
+com.hypixel.hytale.server.npc.util.expression.compile.ast.ASTOperand
+----------------------------
+
+createFromScopeConstant(com.hypixel.hytale.server.npc.util.expression.compile.Token int com.hypixel.hytale.server.npc.util.expression.Scope java.lang.String )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=4,189
+createFromOperand(com.hypixel.hytale.server.npc.util.expression.compile.Token int com.hypixel.hytale.server.npc.util.expression.ExecutionContext$Operand )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=4,189
+
+
+com.hypixel.hytale.builtin.hytalegenerator.newsystem.NStagedChunkGenerator
+----------------------------
+
+generate(com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkRequest$Arguments )
+  Could not resolve type clashes
+
+
+com.hypixel.hytale.builtin.beds.sleep.systems.player.EnterBedSystem
+----------------------------
+
+getMessage(com.hypixel.hytale.builtin.beds.sleep.systems.world.CanSleepInWorld$Result )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,310
