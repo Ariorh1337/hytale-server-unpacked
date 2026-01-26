@@ -161,10 +161,10 @@ extends MotionControllerBase {
         this.jumpDescentSteepness = builder.getJumpDescentSteepness(builderSupport);
         this.jumpBlending = builder.getJumpBlending(builderSupport);
         this.jumpDescentBlending = builder.getJumpDescentBlending(builderSupport);
-        this.ascentAnimationType = builder.getAscentAnimationType();
-        this.climbSpeedMult = builder.getClimbSpeedMult();
-        this.climbSpeedPow = builder.getClimbSpeedPow();
-        this.climbSpeedConst = builder.getClimbSpeedConst();
+        this.ascentAnimationType = builder.getAscentAnimationType(builderSupport);
+        this.climbSpeedMult = builder.getClimbSpeedMult(builderSupport);
+        this.climbSpeedPow = builder.getClimbSpeedPow(builderSupport);
+        this.climbSpeedConst = builder.getClimbSpeedConst(builderSupport);
         this.minDescentAnimationHeight = builder.getMinDescentAnimationHeight(builderSupport);
         this.descendFlatness = builder.getDescendForwardAmount(builderSupport);
         this.descendSpeedCompensation = builder.getDescendSpeedCompensation(builderSupport);
@@ -178,7 +178,7 @@ extends MotionControllerBase {
         this.hoverFreq = builder.getHoverFreq();
         this.hoverCycle = this.hoverFreq > 0.0 ? 1.0f / (float)this.hoverFreq : 0.0f;
         this.maxWalkSpeedAfterHitMultiplier = builder.getMaxWalkSpeedAfterHitMultiplier();
-        this.descentAnimationType = builder.getDescentAnimationType();
+        this.descentAnimationType = builder.getDescentAnimationType(builderSupport);
         this.descentSteepness = builder.getDescentSteepness(builderSupport);
         this.descentBlending = builder.getDescentBlending(builderSupport);
     }

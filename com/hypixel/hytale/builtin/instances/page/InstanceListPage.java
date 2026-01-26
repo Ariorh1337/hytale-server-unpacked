@@ -14,7 +14,6 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.AssetModule;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -85,14 +84,14 @@ extends InteractiveCustomUIPage<PageData> {
     }
 
     private void load(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
         InstancesPlugin.get();
         ((CompletableFuture)InstancesPlugin.loadInstanceAssetForEdit(this.selectedInstance).thenAccept(world -> {
             Store playerStore = ref.getStore();
             World playerWorld = ((EntityStore)playerStore.getExternalData()).getWorld();
             playerWorld.execute(() -> {
-                Transform spawn = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, playerStore);
-                playerStore.addComponent(ref, Teleport.getComponentType(), new Teleport((World)world, spawn));
+                Transform spawnTransform = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, playerStore);
+                Teleport teleportComponent = Teleport.createForPlayer(world, spawnTransform);
+                playerStore.addComponent(ref, Teleport.getComponentType(), teleportComponent);
             });
         })).exceptionally(ex -> {
             ex.printStackTrace();

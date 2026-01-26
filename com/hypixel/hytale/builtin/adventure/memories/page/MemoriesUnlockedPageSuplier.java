@@ -3,7 +3,7 @@
  */
 package com.hypixel.hytale.builtin.adventure.memories.page;
 
-import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesPage;
+import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesUnlockedPage;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -13,12 +13,12 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nullable;
 
-public class MemoriesPageSupplier
+public class MemoriesUnlockedPageSuplier
 implements OpenCustomUIInteraction.CustomPageSupplier {
     @Override
     @Nullable
     public CustomUIPage tryCreate(Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor, PlayerRef playerRef, InteractionContext context) {
-        return new MemoriesPage(playerRef, context.getTargetBlock());
+        return new MemoriesUnlockedPage(playerRef, context.getTargetBlock());
     }
 }
 

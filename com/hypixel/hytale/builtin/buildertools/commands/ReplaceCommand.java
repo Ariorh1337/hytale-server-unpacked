@@ -84,6 +84,25 @@ extends AbstractPlayerCommand {
             context.sendMessage(Message.translation("server.commands.replace.fromRequired"));
             return;
         }
+        if (regex) {
+            Pattern pattern;
+            try {
+                pattern = Pattern.compile(fromValue);
+            }
+            catch (PatternSyntaxException e) {
+                context.sendMessage(Message.translation("server.commands.replace.invalidRegex").param("error", e.getMessage()));
+                return;
+            }
+            int[] toIds = ReplaceCommand.toIntArray(toBlockIds);
+            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+                s.replace((Ref<EntityStore>)r, value -> {
+                    String valueKey = ((BlockType)assetMap.getAsset(value)).getId();
+                    return pattern.matcher(valueKey).matches();
+                }, toIds, (ComponentAccessor<EntityStore>)componentAccessor);
+                context.sendMessage(Message.translation("server.commands.replace.success").param("regex", fromValue).param("replacement", toValue));
+            });
+            return;
+        }
         if (fromMaterial == null) {
             context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", fromValue).param("key", fromValue));
             return;
@@ -115,25 +134,6 @@ extends AbstractPlayerCommand {
             } else {
                 context.sendMessage(Message.translation("server.commands.replace.noMatchingBlocks").param("blockType", fromValue));
             }
-            return;
-        }
-        if (regex) {
-            Pattern pattern;
-            try {
-                pattern = Pattern.compile(fromValue);
-            }
-            catch (PatternSyntaxException e) {
-                context.sendMessage(Message.translation("server.commands.replace.invalidRegex").param("error", e.getMessage()));
-                return;
-            }
-            int[] toIds = ReplaceCommand.toIntArray(toBlockIds);
-            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
-                s.replace((Ref<EntityStore>)r, value -> {
-                    String valueKey = ((BlockType)assetMap.getAsset(value)).getId();
-                    return pattern.matcher(valueKey).matches();
-                }, toIds, (ComponentAccessor<EntityStore>)componentAccessor);
-                context.sendMessage(Message.translation("server.commands.replace.success").param("regex", fromValue).param("to", toValue));
-            });
             return;
         }
         int[] toIds = ReplaceCommand.toIntArray(toBlockIds);

@@ -19,7 +19,7 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import javax.annotation.Nonnull;
 
 public class DebugPlayerPositionCommand
 extends AbstractPlayerCommand {
@@ -28,9 +28,13 @@ extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(@NonNullDecl CommandContext context, @NonNullDecl Store<EntityStore> store, @NonNullDecl Ref<EntityStore> ref, @NonNullDecl PlayerRef playerRef, @NonNullDecl World world) {
-        Transform transform = store.getComponent(ref, TransformComponent.getComponentType()).getTransform();
-        Vector3f headRotation = store.getComponent(ref, HeadRotation.getComponentType()).getRotation();
+    protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
+        TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+        assert (transformComponent != null);
+        Transform transform = transformComponent.getTransform();
+        HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
+        assert (headRotationComponent != null);
+        Vector3f headRotation = headRotationComponent.getRotation();
         Teleport teleport = store.getComponent(ref, Teleport.getComponentType());
         PendingTeleport pendingTeleport = store.getComponent(ref, PendingTeleport.getComponentType());
         String teleportFmt = teleport == null ? "none" : DebugPlayerPositionCommand.fmtPos(teleport.getPosition());
@@ -42,12 +46,12 @@ extends AbstractPlayerCommand {
         playerRef.sendMessage(Message.translation("server.commands.debugplayerposition.notify").color("#23DDE1"));
     }
 
-    private static String fmtPos(Vector3d vector) {
+    private static String fmtPos(@Nonnull Vector3d vector) {
         String fmt = "%.1f";
         return String.format("%.1f", vector.getX()) + ", " + String.format("%.1f", vector.getY()) + ", " + String.format("%.1f", vector.getZ());
     }
 
-    private static String fmtRot(Vector3f vector) {
+    private static String fmtRot(@Nonnull Vector3f vector) {
         return "Pitch=" + DebugPlayerPositionCommand.fmtDegrees(vector.getPitch()) + ", Yaw=" + DebugPlayerPositionCommand.fmtDegrees(vector.getYaw()) + ", Roll=" + DebugPlayerPositionCommand.fmtDegrees(vector.getRoll());
     }
 

@@ -130,7 +130,7 @@ public class OAuthClient {
                         return;
                     }
                     flow.onFlowInfo(deviceAuth.userCode(), deviceAuth.verificationUri(), deviceAuth.verificationUriComplete(), deviceAuth.expiresIn());
-                    int pollInterval = Math.max(deviceAuth.interval, 5);
+                    int pollInterval = Math.max(deviceAuth.interval, 15);
                     long deadline = System.currentTimeMillis() + (long)deviceAuth.expiresIn * 1000L;
                     while (System.currentTimeMillis() < deadline && !cancelled.get()) {
                         Thread.sleep((long)pollInterval * 1000L);

@@ -12,22 +12,22 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class RegisterTrackerSystem
 extends HolderSystem<EntityStore> {
     @Override
-    public void onEntityAdd(@NonNullDecl Holder<EntityStore> holder, @NonNullDecl AddReason reason, @NonNullDecl Store<EntityStore> store) {
+    public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
         holder.ensureComponent(SleepTracker.getComponentType());
     }
 
     @Override
-    public void onEntityRemoved(@NonNullDecl Holder<EntityStore> holder, @NonNullDecl RemoveReason reason, @NonNullDecl Store<EntityStore> store) {
+    public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
     }
 
     @Override
-    @NullableDecl
+    @Nullable
     public Query<EntityStore> getQuery() {
         return PlayerRef.getComponentType();
     }

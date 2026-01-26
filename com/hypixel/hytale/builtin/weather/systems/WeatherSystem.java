@@ -38,8 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class WeatherSystem {
     private static final float JOIN_TRANSITION_SECONDS = 0.5f;
@@ -47,36 +46,40 @@ public class WeatherSystem {
 
     public static class InvalidateWeatherAfterTeleport
     extends RefChangeSystem<EntityStore, Teleport> {
+        @Nonnull
         private static final Query<EntityStore> QUERY = WeatherTracker.getComponentType();
+        @Nonnull
         private static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(new SystemDependency(Order.AFTER, TeleportSystems.PlayerMoveSystem.class));
 
         @Override
-        @NonNullDecl
+        @Nonnull
         public ComponentType<EntityStore, Teleport> componentType() {
             return Teleport.getComponentType();
         }
 
         @Override
-        public void onComponentAdded(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl Teleport component, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
-            commandBuffer.getComponent(ref, WeatherTracker.getComponentType()).clear();
+        public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull Teleport component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+            WeatherTracker weatherTrackerComponent = commandBuffer.getComponent(ref, WeatherTracker.getComponentType());
+            assert (weatherTrackerComponent != null);
+            weatherTrackerComponent.clear();
         }
 
         @Override
-        public void onComponentSet(@NonNullDecl Ref<EntityStore> ref, @NullableDecl Teleport oldComponent, @NonNullDecl Teleport newComponent, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void onComponentSet(@Nonnull Ref<EntityStore> ref, @Nullable Teleport oldComponent, @Nonnull Teleport newComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         }
 
         @Override
-        public void onComponentRemoved(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl Teleport component, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull Teleport component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         }
 
         @Override
-        @NullableDecl
+        @Nullable
         public Query<EntityStore> getQuery() {
             return QUERY;
         }
 
         @Override
-        @NonNullDecl
+        @Nonnull
         public Set<Dependency<EntityStore>> getDependencies() {
             return DEPENDENCIES;
         }

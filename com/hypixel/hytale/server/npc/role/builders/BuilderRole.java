@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.npc.asset.builder.SpawnableWithModelBuilder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.IntHolder;
@@ -77,7 +78,6 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class BuilderRole
 extends SpawnableWithModelBuilder<Role>
@@ -93,7 +93,7 @@ implements SpawnEffect {
     protected final EnumSet<RoleDebugFlags> parsedDebugFlags = EnumSet.noneOf(RoleDebugFlags.class);
     protected String debugFlags;
     protected double inertia;
-    protected double knockbackScale;
+    protected final DoubleHolder knockbackScale = new DoubleHolder();
     protected String opaqueBlockSet;
     protected boolean applyAvoidance;
     protected double entityAvoidanceStrength;
@@ -240,9 +240,7 @@ implements SpawnEffect {
         this.getDouble(data, "Inertia", (double d) -> {
             this.inertia = d;
         }, 1.0, (DoubleValidator)DoubleSingleValidator.greater(0.1), BuilderDescriptorState.Experimental, "Inertia", null);
-        this.getDouble(data, "KnockbackScale", (double v) -> {
-            this.knockbackScale = v;
-        }, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Stable, "Scale factor for knockback", "Scale factor for knockback. Values greater 1 increase knockback. Smaller values decrease it.");
+        this.getDouble(data, "KnockbackScale", this.knockbackScale, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Stable, "Scale factor for knockback", "Scale factor for knockback. Values greater 1 increase knockback. Smaller values decrease it.");
         this.getInt(data, "InventorySize", (int v) -> {
             this.inventorySlots = v;
         }, 0, (IntValidator)IntRangeValidator.between(0, 36), BuilderDescriptorState.Stable, "Number of available inventory slots", null);
@@ -500,8 +498,8 @@ implements SpawnEffect {
         return this.inertia;
     }
 
-    public double getKnockbackScale() {
-        return this.knockbackScale;
+    public double getKnockbackScale(@Nonnull BuilderSupport support) {
+        return this.knockbackScale.get(support.getExecutionContext());
     }
 
     @Nullable
@@ -775,13 +773,13 @@ implements SpawnEffect {
     }
 
     @Override
-    public String getMemoriesNameOverride(ExecutionContext context, @NullableDecl Scope modifierScope) {
+    public String getMemoriesNameOverride(ExecutionContext context, @Nullable Scope modifierScope) {
         return this.memoriesNameOverride.get(context);
     }
 
     @Override
     @Nonnull
-    public String getNameTranslationKey(ExecutionContext context, @NullableDecl Scope modifierScope) {
+    public String getNameTranslationKey(ExecutionContext context, @Nullable Scope modifierScope) {
         return this.nameTranslationKey.get(context);
     }
 

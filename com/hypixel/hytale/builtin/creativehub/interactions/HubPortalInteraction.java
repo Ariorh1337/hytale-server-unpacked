@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class HubPortalInteraction
 extends SimpleInstantInteraction {
@@ -64,7 +63,7 @@ extends SimpleInstantInteraction {
     private String instanceTemplate;
 
     @Override
-    @NonNullDecl
+    @Nonnull
     public WaitForDataFrom getWaitForDataFrom() {
         return WaitForDataFrom.Server;
     }
@@ -116,7 +115,8 @@ extends SimpleInstantInteraction {
             ISpawnProvider spawnProvider = targetWorld.getWorldConfig().getSpawnProvider();
             spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(targetWorld, uuidComponent.getUuid()) : new Transform();
         }
-        componentAccessor.addComponent(playerRef, Teleport.getComponentType(), new Teleport(targetWorld, spawnPoint));
+        Teleport teleportComponent = Teleport.createForPlayer(targetWorld, spawnPoint);
+        componentAccessor.addComponent(playerRef, Teleport.getComponentType(), teleportComponent);
     }
 
     private void teleportToLoadingWorld(@Nonnull Ref<EntityStore> playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CompletableFuture<World> worldFuture, @Nonnull World originalWorld, @Nonnull Player playerComponent) {

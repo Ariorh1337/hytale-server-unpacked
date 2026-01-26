@@ -93,6 +93,7 @@ implements WorldProvider {
     private IWorldGen generator;
     @Nonnull
     private CompletableFuture<Void> generatorLoaded = new CompletableFuture();
+    private final StampedLock generatorLock = new StampedLock();
     private final AtomicInteger totalGeneratedChunksCount = new AtomicInteger();
     private final AtomicInteger totalLoadedChunksCount = new AtomicInteger();
 
@@ -121,20 +122,43 @@ implements WorldProvider {
         return this.saver;
     }
 
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
     @Nullable
     public IWorldGen getGenerator() {
-        return this.generator;
+        long readStamp = this.generatorLock.readLock();
+        try {
+            IWorldGen iWorldGen = this.generator;
+            return iWorldGen;
+        }
+        finally {
+            this.generatorLock.unlockRead(readStamp);
+        }
     }
 
+    public void shutdownGenerator() {
+        this.setGenerator(null);
+    }
+
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
     public void setGenerator(@Nullable IWorldGen generator) {
-        if (this.generator != null) {
-            this.generator.shutdown();
+        long writeStamp = this.generatorLock.writeLock();
+        try {
+            if (this.generator != null) {
+                this.generator.shutdown();
+            }
+            this.totalGeneratedChunksCount.set(0);
+            this.generator = generator;
+            if (generator != null) {
+                this.generatorLoaded.complete(null);
+                this.generatorLoaded = new CompletableFuture();
+            }
         }
-        this.totalGeneratedChunksCount.set(0);
-        this.generator = generator;
-        if (generator != null) {
-            this.generatorLoaded.complete(null);
-            this.generatorLoaded = new CompletableFuture();
+        finally {
+            this.generatorLock.unlockWrite(writeStamp);
         }
     }
 
@@ -357,7 +381,7 @@ implements WorldProvider {
     public CompletableFuture<Ref<ChunkStore>> getChunkReferenceAsync(long index, int flags) {
         long stamp;
         ChunkLoadState chunkState;
-        block32: {
+        block35: {
             if (this.store.isShutdown()) {
                 return CompletableFuture.completedFuture(null);
             }
@@ -380,7 +404,7 @@ implements WorldProvider {
                         CompletableFuture<Ref<ChunkStore>> completableFuture = chunkState.future;
                         return completableFuture;
                     }
-                    break block32;
+                    break block35;
                 }
                 finally {
                     chunkState.lock.unlockRead(stamp);
@@ -464,7 +488,14 @@ implements WorldProvider {
             if ((isNew || (chunkState.flags & 2) != 0) && (flags & 2) == 0) {
                 int seed = (int)this.world.getWorldConfig().getSeed();
                 if (chunkState.future == null) {
-                    CompletableFuture<GeneratedChunk> future = this.generator == null ? this.generatorLoaded.thenCompose(aVoid -> this.generator.generate(seed, index, x, z, (flags & 0x10) != 0 ? this::isChunkStillNeeded : null)) : this.generator.generate(seed, index, x, z, (flags & 0x10) != 0 ? this::isChunkStillNeeded : null);
+                    CompletableFuture<GeneratedChunk> future;
+                    long readStamp = this.generatorLock.readLock();
+                    try {
+                        future = this.generator == null ? this.generatorLoaded.thenCompose(aVoid -> this.generator.generate(seed, index, x, z, (flags & 0x10) != 0 ? this::isChunkStillNeeded : null)) : this.generator.generate(seed, index, x, z, (flags & 0x10) != 0 ? this::isChunkStillNeeded : null);
+                    }
+                    finally {
+                        this.generatorLock.unlockRead(readStamp);
+                    }
                     chunkState.future = ((CompletableFuture)((CompletableFuture)future.thenApplyAsync(generatedChunk -> {
                         if (generatedChunk == null || this.store.isShutdown()) {
                             return null;
@@ -479,10 +510,17 @@ implements WorldProvider {
                 } else {
                     chunkState.flags &= 0xFFFFFFFD;
                     chunkState.future = chunkState.future.thenCompose(reference -> {
+                        CompletionStage<GeneratedChunk> future;
                         if (reference != null) {
                             return CompletableFuture.completedFuture(reference);
                         }
-                        CompletionStage<GeneratedChunk> future = this.generator == null ? this.generatorLoaded.thenCompose(aVoid -> this.generator.generate(seed, index, x, z, null)) : this.generator.generate(seed, index, x, z, null);
+                        long readStamp = this.generatorLock.readLock();
+                        try {
+                            future = this.generator == null ? this.generatorLoaded.thenCompose(aVoid -> this.generator.generate(seed, index, x, z, null)) : this.generator.generate(seed, index, x, z, null);
+                        }
+                        finally {
+                            this.generatorLock.unlockRead(readStamp);
+                        }
                         return ((CompletableFuture)((CompletableFuture)future.thenApplyAsync(generatedChunk -> {
                             if (generatedChunk == null || this.store.isShutdown()) {
                                 return null;

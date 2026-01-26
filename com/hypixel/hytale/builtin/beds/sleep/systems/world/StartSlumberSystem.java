@@ -25,7 +25,7 @@ import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import javax.annotation.Nonnull;
 
 public class StartSlumberSystem
 extends DelayedSystem<EntityStore> {
@@ -37,7 +37,7 @@ extends DelayedSystem<EntityStore> {
     }
 
     @Override
-    public void delayedTick(float dt, int systemIndex, @NonNullDecl Store<EntityStore> store) {
+    public void delayedTick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
         this.checkIfEveryoneIsReadyToSleep(store);
     }
 
@@ -51,8 +51,8 @@ extends DelayedSystem<EntityStore> {
             return;
         }
         float wakeUpHour = world.getGameplayConfig().getWorldConfig().getSleepConfig().getWakeUpHour();
-        WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
-        WorldSleep worldState = worldSomnolence.getState();
+        WorldSomnolence worldSomnolenceResource = store.getResource(WorldSomnolence.getResourceType());
+        WorldSleep worldState = worldSomnolenceResource.getState();
         if (worldState != WorldSleep.Awake.INSTANCE) {
             return;
         }
@@ -61,7 +61,7 @@ extends DelayedSystem<EntityStore> {
             Instant now = timeResource.getGameTime();
             Instant target = this.computeWakeupInstant(now, wakeUpHour);
             float irlSeconds = StartSlumberSystem.computeIrlSeconds(now, target);
-            worldSomnolence.setState(new WorldSlumber(now, target, irlSeconds));
+            worldSomnolenceResource.setState(new WorldSlumber(now, target, irlSeconds));
             store.forEachEntityParallel(PlayerSomnolence.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
                 Ref ref = archetypeChunk.getReferenceTo(index);
                 commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.Slumber.createComponent(timeResource));
@@ -69,7 +69,7 @@ extends DelayedSystem<EntityStore> {
         }
     }
 
-    private Instant computeWakeupInstant(Instant now, float wakeUpHour) {
+    private Instant computeWakeupInstant(@Nonnull Instant now, float wakeUpHour) {
         LocalDateTime ldt = LocalDateTime.ofInstant(now, ZoneOffset.UTC);
         int hours = (int)wakeUpHour;
         float fractionalHour = wakeUpHour - (float)hours;

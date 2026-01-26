@@ -444,6 +444,13 @@ public class InteractionContext {
                         }
                     } else if (prioPrimary < prioSecondary) {
                         selectedInventory = -5;
+                    } else {
+                        if (type == InteractionType.Primary && !primary.getItem().getInteractions().containsKey((Object)InteractionType.Primary)) {
+                            selectedInventory = -5;
+                        }
+                        if (type == InteractionType.Secondary && !primary.getItem().getInteractions().containsKey((Object)InteractionType.Secondary)) {
+                            selectedInventory = -5;
+                        }
                     }
                 }
                 if (selectedInventory == -5) {

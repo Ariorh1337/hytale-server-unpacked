@@ -69,6 +69,12 @@ public abstract class FluidTicker {
     public BlockTickStrategy tick(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull CachedAccessor cachedAccessor, @Nonnull FluidSection fluidSection, @Nonnull BlockSection blockSection, @Nonnull Fluid fluid, int fluidId, int worldX, int worldY, int worldZ) {
         int flowRateLimitTicks;
         long tick;
+        int block = blockSection.get(worldX, worldY, worldZ);
+        if (FluidTicker.isFullySolid(BlockType.getAssetMap().getAsset(block))) {
+            fluidSection.setFluid(worldX, worldY, worldZ, 0, (byte)0);
+            FluidTicker.setTickingSurrounding(cachedAccessor, blockSection, worldX, worldY, worldZ);
+            return BlockTickStrategy.SLEEP;
+        }
         World world = commandBuffer.getExternalData().getWorld();
         long hash = HashUtil.rehash(worldX, worldY, worldZ, 4030921250L);
         if ((hash + (tick = commandBuffer.getExternalData().getWorld().getTick())) % (long)(flowRateLimitTicks = Math.round(this.flowRate * (float)world.getTps())) != 0L) {
@@ -79,12 +85,6 @@ public abstract class FluidTicker {
 
     public BlockTickStrategy process(World world, long tick, @Nonnull Accessor accessor, @Nonnull FluidSection fluidSection, @Nonnull BlockSection blockSection, @Nonnull Fluid fluid, int fluidId, int worldX, int worldY, int worldZ) {
         int fluidLevel = fluidSection.getFluidLevel(worldX, worldY, worldZ);
-        int block = blockSection.get(worldX, worldY, worldZ);
-        if (FluidTicker.isFullySolid(BlockType.getAssetMap().getAsset(block))) {
-            fluidSection.setFluid(worldX, worldY, worldZ, 0, (byte)0);
-            FluidTicker.setTickingSurrounding(accessor, blockSection, worldX, worldY, worldZ);
-            return BlockTickStrategy.SLEEP;
-        }
         switch (this.isAlive(accessor, fluidSection, blockSection, fluid, fluidId, (byte)fluidLevel, worldX, worldY, worldZ).ordinal()) {
             case 2: {
                 return BlockTickStrategy.WAIT_FOR_ADJACENT_CHUNK_LOAD;
@@ -215,6 +215,7 @@ public abstract class FluidTicker {
         }
         int curX = worldX;
         int curZ = worldZ;
+        int supportedById = this.getSupportedById();
         for (int i = 1; i < maxDropDistance; ++i) {
             int blockX = worldX + ox * i;
             int blockZ = worldZ + oz * i;
@@ -236,7 +237,7 @@ public abstract class FluidTicker {
             }
             int otherFluidId = fluidSection.getFluidId(blockX, worldY, blockZ);
             BlockType block = blockMap.getAsset(blockSection.get(blockX, worldY, blockZ));
-            if (otherFluidId != 0 && !this.isSelfFluid(fluidId, otherFluidId) || otherFluidId == 0 && FluidTicker.isSolid(block)) break;
+            if (otherFluidId != 0 && (otherFluidId != fluidId || otherFluidId == supportedById || supportedById == Integer.MIN_VALUE) || otherFluidId == 0 && FluidTicker.isSolid(block)) break;
             BlockType belowBlock = blockMap.getAsset(belowBlockSection.get(blockX, yMinus1, blockZ));
             if (FluidTicker.isSolid(belowBlock)) continue;
             return i;

@@ -63,7 +63,6 @@ import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class NPCSystems {
 
@@ -74,7 +73,7 @@ public class NPCSystems {
         }
 
         @Override
-        public void handle(@NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer, @NonNullDecl PrefabPlaceEntityEvent event) {
+        public void handle(@Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull PrefabPlaceEntityEvent event) {
             Holder<EntityStore> holder = event.getHolder();
             FlockMembership flockMembershipComponent = holder.getComponent(FlockMembership.getComponentType());
             if (flockMembershipComponent == null) {
@@ -98,7 +97,7 @@ public class NPCSystems {
         }
 
         @Override
-        public void handle(int index, @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer, @NonNullDecl KillFeedEvent.DecedentMessage event) {
+        public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull KillFeedEvent.DecedentMessage event) {
             event.setCancelled(true);
         }
 
@@ -121,7 +120,7 @@ public class NPCSystems {
         }
 
         @Override
-        public void handle(int index, @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer, @NonNullDecl KillFeedEvent.KillerMessage event) {
+        public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull KillFeedEvent.KillerMessage event) {
             Message displayName;
             Ref<EntityStore> targetRef = event.getTargetRef();
             if (!targetRef.isValid()) {

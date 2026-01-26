@@ -165,16 +165,16 @@ implements Component<ChunkStore> {
                 if (this.relativeMask != 0) {
                     Transform teleportTransform = this.transform.clone();
                     Transform.applyMaskedRelativeTransform(teleportTransform, this.relativeMask, currentPosition, currentRotation, blockPosition);
-                    return new Teleport(world, teleportTransform);
+                    return Teleport.createForPlayer(world, teleportTransform);
                 }
-                return new Teleport(world, this.transform);
+                return Teleport.createForPlayer(world, this.transform);
             }
             if (this.relativeMask != 0) {
                 Transform teleportTransform = this.transform.clone();
                 Transform.applyMaskedRelativeTransform(teleportTransform, this.relativeMask, currentPosition, currentRotation, blockPosition);
-                return new Teleport(teleportTransform);
+                return Teleport.createForPlayer(teleportTransform);
             }
-            return new Teleport(this.transform);
+            return Teleport.createForPlayer(this.transform);
         }
         return null;
     }

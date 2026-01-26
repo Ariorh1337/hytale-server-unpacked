@@ -74,9 +74,9 @@ extends AbstractWorldCommand {
         } else {
             rotation = (Vector3f)this.rotationArg.get(context);
         }
-        Transform transform = new Transform(position, rotation);
+        Transform spawnTransform = new Transform(position.clone(), rotation.clone());
         WorldConfig worldConfig = world.getWorldConfig();
-        worldConfig.setSpawnProvider(new GlobalSpawnProvider(transform));
+        worldConfig.setSpawnProvider(new GlobalSpawnProvider(spawnTransform));
         worldConfig.markChanged();
         world.getLogger().at(Level.INFO).log("Set spawn provider to: %s", worldConfig.getSpawnProvider());
         context.sendMessage(Message.translation("server.universe.setspawn.info").param("posX", DECIMAL.format(position.getX())).param("posY", DECIMAL.format(position.getY())).param("posZ", DECIMAL.format(position.getZ())).param("rotX", DECIMAL.format(rotation.getX())).param("rotY", DECIMAL.format(rotation.getY())).param("rotZ", DECIMAL.format(rotation.getZ())));

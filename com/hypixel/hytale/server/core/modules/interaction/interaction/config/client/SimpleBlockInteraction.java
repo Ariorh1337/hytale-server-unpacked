@@ -37,7 +37,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public abstract class SimpleBlockInteraction
 extends SimpleInteraction {
@@ -120,7 +119,7 @@ extends SimpleInteraction {
     protected abstract void interactWithBlock(@Nonnull World var1, @Nonnull CommandBuffer<EntityStore> var2, @Nonnull InteractionType var3, @Nonnull InteractionContext var4, @Nullable ItemStack var5, @Nonnull Vector3i var6, @Nonnull CooldownHandler var7);
 
     @Override
-    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         Vector3i targetBlock;
         if (!firstRun) {
             return;

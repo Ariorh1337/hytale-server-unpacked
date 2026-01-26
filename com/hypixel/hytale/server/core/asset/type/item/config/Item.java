@@ -837,7 +837,7 @@ NetworkSerializable<ItemBase> {
         if (this.qualityId != null) {
             this.qualityIndex = indexedLookupTableAssetMap.getIndexOrDefault(this.qualityId, 0);
             ItemQuality itemQuality = indexedLookupTableAssetMap.getAsset(this.qualityIndex);
-            if (this.itemEntityConfig == null && itemQuality != null) {
+            if (itemQuality != null) {
                 this.itemEntityConfig = itemQuality.getItemEntityConfig();
             }
         }

@@ -26,18 +26,18 @@ implements ISpawnProvider {
     public IndividualSpawnProvider() {
     }
 
-    public IndividualSpawnProvider(Transform spawnPoint) {
+    public IndividualSpawnProvider(@Nonnull Transform spawnPoint) {
         this.spawnPoints = new Transform[1];
         this.spawnPoints[0] = spawnPoint;
     }
 
-    public IndividualSpawnProvider(Transform[] spawnPoints) {
+    public IndividualSpawnProvider(@Nonnull Transform[] spawnPoints) {
         this.spawnPoints = spawnPoints;
     }
 
     @Override
     public Transform getSpawnPoint(@Nonnull World world, @Nonnull UUID uuid) {
-        return this.spawnPoints[Math.abs((int)HashUtil.hashUuid(uuid)) % this.spawnPoints.length];
+        return this.spawnPoints[Math.abs((int)HashUtil.hashUuid(uuid)) % this.spawnPoints.length].clone();
     }
 
     @Override

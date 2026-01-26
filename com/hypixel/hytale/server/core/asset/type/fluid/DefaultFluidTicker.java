@@ -70,7 +70,7 @@ extends FluidTicker {
         int spreadFluidId = this.getSpreadFluidId(fluidId);
         int blockIdBelow = blockSectionBelow.get(worldX, worldY - 1, worldZ);
         BlockType blockBelow = blockMap.getAsset(blockIdBelow);
-        if (!DefaultFluidTicker.isSolid(blockBelow)) {
+        if (!(DefaultFluidTicker.isSolid(blockBelow) || fluidBelowId != 0 && fluidBelowId != spreadFluidId && fluidBelowId == fluidId)) {
             Fluid spreadFluid;
             int spreadId;
             boolean changed;
@@ -83,7 +83,7 @@ extends FluidTicker {
             }
             return BlockTickStrategy.SLEEP;
         }
-        if (fluidBelowId == 0) {
+        if (fluidBelowId == 0 || fluidBelowId != spreadFluidId) {
             if (fluidLevel == 1 && fluid.getMaxFluidLevel() != 1) {
                 return BlockTickStrategy.SLEEP;
             }

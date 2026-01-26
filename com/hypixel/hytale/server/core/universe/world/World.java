@@ -959,7 +959,7 @@ IMessageReceiver {
                                 Holder<ChunkStore> holder = chunk.getBlockComponentHolder(x, worldY, z);
                                 int worldX = ChunkUtil.minBlock(chunk.getX()) + x;
                                 int worldZ = ChunkUtil.minBlock(chunk.getZ()) + z;
-                                blockValidator.accept(worldX, y, worldZ, blockId, 0, 1.0f, holder, blockPhys != null ? blockPhys.get(x, y, z) : 0, rotation, filler, null);
+                                blockValidator.accept(worldX, worldY, worldZ, blockId, 0, 1.0f, holder, blockPhys != null ? blockPhys.get(x, y, z) : 0, rotation, filler, null);
                                 if (!options.contains((Object)ValidationOption.BLOCK_FILLER)) continue;
                                 FillerBlockUtil.FillerFetcher<BlockSection, ChunkStore> fetcher = new FillerBlockUtil.FillerFetcher<BlockSection, ChunkStore>(){
                                     final /* synthetic */ World this$0;

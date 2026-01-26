@@ -48,7 +48,6 @@ import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class StructuralCraftingWindow
 extends CraftingWindow
@@ -291,7 +290,7 @@ implements ItemContainerWindow {
         this.windowData.add("optionSlotRecipes", optionSlotRecipes);
     }
 
-    @NullableDecl
+    @Nullable
     private ObjectList<CraftingRecipe> getMatchingRecipes(@Nullable ItemStack inputStack) {
         if (inputStack == null) {
             return null;

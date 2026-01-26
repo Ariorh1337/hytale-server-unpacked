@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.protocol.packets.world.UpdateSleepState;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class SleepTracker
 implements Component<EntityStore> {
@@ -29,7 +28,7 @@ implements Component<EntityStore> {
     }
 
     @Override
-    @NullableDecl
+    @Nullable
     public Component<EntityStore> clone() {
         return new SleepTracker();
     }

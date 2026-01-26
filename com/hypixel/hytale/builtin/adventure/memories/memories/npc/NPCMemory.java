@@ -21,17 +21,23 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
+import com.hypixel.hytale.component.spatial.SpatialStructure;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PickupItemComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -236,6 +242,7 @@ extends Memory {
                 float memoryCatchItemLifetimeS = 0.62f;
                 memoryItemHolder.getComponent(PickupItemComponent.getComponentType()).setInitialLifeTime(memoryCatchItemLifetimeS);
                 commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
+                GatherMemoriesSystem.displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, ref, commandBuffer);
             }
         }
 
@@ -253,6 +260,28 @@ extends Memory {
                 return discovery.getTitleKey();
             }
             return "???";
+        }
+
+        private static void displayCatchEntityParticles(MemoriesGameplayConfig memoriesGameplayConfig, Vector3d targetPosition, Ref<EntityStore> targetRef, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+            ModelParticle particle = memoriesGameplayConfig.getMemoriesCatchEntityParticle();
+            if (particle == null) {
+                return;
+            }
+            NetworkId networkIdComponent = commandBuffer.getComponent(targetRef, NetworkId.getComponentType());
+            if (networkIdComponent == null) {
+                return;
+            }
+            com.hypixel.hytale.protocol.ModelParticle[] modelParticlesProtocol = new com.hypixel.hytale.protocol.ModelParticle[]{particle.toPacket()};
+            SpawnModelParticles packet = new SpawnModelParticles(networkIdComponent.getId(), modelParticlesProtocol);
+            SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
+            SpatialStructure<Ref<EntityStore>> spatialStructure = spatialResource.getSpatialStructure();
+            ObjectList results = SpatialResource.getThreadLocalReferenceList();
+            spatialStructure.ordered(targetPosition, memoriesGameplayConfig.getMemoriesCatchParticleViewDistance(), results);
+            for (Ref ref : results) {
+                PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+                assert (playerRefComponent != null);
+                playerRefComponent.getPacketHandler().write((Packet)packet);
+            }
         }
 
         @Override

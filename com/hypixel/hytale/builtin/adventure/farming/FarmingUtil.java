@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
@@ -38,13 +39,14 @@ import com.hypixel.hytale.server.npc.metadata.CapturedNPCMetadata;
 import java.time.Instant;
 import java.util.Map;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class FarmingUtil {
     private static final int MAX_SECONDS_BETWEEN_TICKS = 15;
     private static final int BETWEEN_RANDOM = 10;
 
-    public static void tickFarming(CommandBuffer<ChunkStore> commandBuffer, BlockSection blockSection, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, FarmingBlock farmingBlock, int x, int y, int z, boolean initialTick) {
+    public static void tickFarming(CommandBuffer<ChunkStore> commandBuffer, BlockChunk blockChunk, BlockSection blockSection, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, FarmingBlock farmingBlock, int x, int y, int z, boolean initialTick) {
+        FarmingStageData[] stages;
         BlockType blockType;
         World world = commandBuffer.getExternalData().getWorld();
         WorldTimeResource worldTimeResource = world.getEntityStore().getStore().getResource(WorldTimeResource.getResourceType());
@@ -63,7 +65,16 @@ public class FarmingUtil {
         float currentProgress = farmingBlock.getGrowthProgress();
         int currentStage = (int)currentProgress;
         String currentStageSet = farmingBlock.getCurrentStageSet();
-        FarmingStageData[] stages = farmingConfig.getStages().get(currentStageSet);
+        FarmingStageData[] farmingStageDataArray = stages = currentStageSet != null ? farmingConfig.getStages().get(currentStageSet) : null;
+        if (stages == null) {
+            currentStageSet = farmingConfig.getStartingStageSet();
+            if (currentStageSet == null) {
+                return;
+            }
+            farmingBlock.setCurrentStageSet(currentStageSet);
+            stages = farmingConfig.getStages().get(currentStageSet);
+            blockChunk.markNeedsSaving();
+        }
         if (stages == null) {
             return;
         }
@@ -84,12 +95,14 @@ public class FarmingUtil {
         while (currentStage < stages.length) {
             FarmingStageData stage = stages[currentStage];
             if (stage.shouldStop(commandBuffer, sectionRef, blockRef, x, y, z)) {
+                blockChunk.markNeedsSaving();
                 farmingBlock.setGrowthProgress(stages.length);
                 commandBuffer.removeEntity(blockRef, RemoveReason.REMOVE);
                 break;
             }
             Rangef range = stage.getDuration();
             if (range == null) {
+                blockChunk.markNeedsSaving();
                 commandBuffer.removeEntity(blockRef, RemoveReason.REMOVE);
                 break;
             }
@@ -115,6 +128,7 @@ public class FarmingUtil {
             remainingTimeSeconds -= remainingDurationSeconds;
             currentProgress = ++currentStage;
             farmingBlock.setGrowthProgress(currentProgress);
+            blockChunk.markNeedsSaving();
             farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
             if (currentStage >= stages.length) {
                 if (stages[currentStage - 1].implementsShouldStop()) {
@@ -139,8 +153,8 @@ public class FarmingUtil {
         }
     }
 
-    @NullableDecl
-    public static CapturedNPCMetadata generateCapturedNPCMetadata(ComponentAccessor<EntityStore> componentAccessor, Ref<EntityStore> entityRef, int roleIndex) {
+    @Nullable
+    public static CapturedNPCMetadata generateCapturedNPCMetadata(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> entityRef, int roleIndex) {
         PersistentModel persistentModel = componentAccessor.getComponent(entityRef, PersistentModel.getComponentType());
         if (persistentModel == null) {
             return null;

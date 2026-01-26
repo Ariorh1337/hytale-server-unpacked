@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
 
 public class CombatBalanceAsset
 extends BalanceAsset {
-    public static final BuilderCodec<CombatBalanceAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CombatBalanceAsset.class, CombatBalanceAsset::new, ABSTRACT_CODEC).documentation("A balance asset which also configures a combat action evaluator.")).appendInherited(new KeyedCodec<Float>("TargetMemoryDuration", Codec.FLOAT), (balanceAsset, f) -> {
+    public static final BuilderCodec<CombatBalanceAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CombatBalanceAsset.class, CombatBalanceAsset::new, BASE_CODEC).documentation("A balance asset which also configures a combat action evaluator.")).appendInherited(new KeyedCodec<Float>("TargetMemoryDuration", Codec.FLOAT), (balanceAsset, f) -> {
         balanceAsset.targetMemoryDuration = f.floatValue();
     }, balanceAsset -> Float.valueOf(balanceAsset.targetMemoryDuration), (balanceAsset, parent) -> {
         balanceAsset.targetMemoryDuration = parent.targetMemoryDuration;

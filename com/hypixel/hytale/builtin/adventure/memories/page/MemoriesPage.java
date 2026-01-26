@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin;
 import com.hypixel.hytale.builtin.adventure.memories.component.PlayerMemories;
 import com.hypixel.hytale.builtin.adventure.memories.memories.Memory;
 import com.hypixel.hytale.builtin.adventure.memories.memories.npc.NPCMemory;
+import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesUnlockedPage;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -74,6 +75,7 @@ extends InteractiveCustomUIPage<PageEventData> {
             commandBuilder.set("#MemoriesProgressBarTexture.Value", (float)recordedMemories.size() / (float)totalMemories);
             commandBuilder.set("#TotalCollected.Text", String.valueOf(recordedMemories.size()));
             commandBuilder.set("#MemoriesTotal.Text", String.valueOf(totalMemories));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MemoriesInfoButton", new EventData().append("Action", PageAction.MemoriesInfo));
             GameplayConfig gameplayConfig = store.getExternalData().getWorld().getGameplayConfig();
             PlayerMemories playerMemories = store.getComponent(ref, PlayerMemories.getComponentType());
             int i = 0;
@@ -240,6 +242,11 @@ extends InteractiveCustomUIPage<PageEventData> {
                 break;
             }
             case 3: {
+                BlockPosition blockPostion = new BlockPosition((int)this.recordMemoriesParticlesPosition.x, (int)this.recordMemoriesParticlesPosition.y, (int)this.recordMemoriesParticlesPosition.z);
+                player.getPageManager().openCustomPage(ref, store, new MemoriesUnlockedPage(this.playerRef, blockPostion));
+                break;
+            }
+            case 4: {
                 int newIndex;
                 int previousIndex;
                 if (data.memoryId == null || this.currentCategory == null) {
@@ -335,6 +342,7 @@ extends InteractiveCustomUIPage<PageEventData> {
         Record,
         ViewCategory,
         Back,
+        MemoriesInfo,
         SelectMemory;
 
         public static final Codec<PageAction> CODEC;

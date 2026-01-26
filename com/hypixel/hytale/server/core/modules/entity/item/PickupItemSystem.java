@@ -43,7 +43,7 @@ extends EntityTickingSystem<EntityStore> {
             return;
         }
         Ref<EntityStore> targetRef = pickupItemComponent.getTargetRef();
-        if (!targetRef.isValid()) {
+        if (targetRef == null || !targetRef.isValid()) {
             commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
             return;
         }

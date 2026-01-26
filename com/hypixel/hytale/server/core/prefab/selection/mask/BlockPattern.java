@@ -145,19 +145,23 @@ public class BlockPattern {
 
     public static int parseBlock(@Nonnull String blockText) {
         int blockId;
-        try {
-            blockId = Integer.parseInt(blockText);
-            if (BlockType.getAssetMap().getAsset(blockId) == null) {
-                throw new IllegalArgumentException("Block with id '" + blockText + "' doesn't exist!");
+        block4: {
+            try {
+                blockId = Integer.parseInt(blockText);
+                if (BlockType.getAssetMap().getAsset(blockId) == null) {
+                    throw new IllegalArgumentException("Block with id '" + blockText + "' doesn't exist!");
+                }
             }
-        }
-        catch (NumberFormatException ignored) {
-            blockText = blockText.replace(ALT_BLOCK_SEPARATOR, BLOCK_SEPARATOR);
-            int oldData = blockText.indexOf(124);
-            if (oldData != -1) {
-                blockText = blockText.substring(0, oldData);
+            catch (NumberFormatException ignored) {
+                blockText = blockText.replace(ALT_BLOCK_SEPARATOR, BLOCK_SEPARATOR);
+                int oldData = blockText.indexOf(124);
+                if (oldData != -1) {
+                    blockText = blockText.substring(0, oldData);
+                }
+                if ((blockId = BlockType.getAssetMap().getIndex(blockText)) != Integer.MIN_VALUE) break block4;
+                LOGGER.at(Level.WARNING).log("Invalid block name '%s' - using empty block", blockText);
+                return 0;
             }
-            blockId = BlockType.getAssetMap().getIndex(blockText);
         }
         return blockId;
     }

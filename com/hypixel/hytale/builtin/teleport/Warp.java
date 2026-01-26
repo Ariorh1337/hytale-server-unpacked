@@ -49,10 +49,10 @@ public class Warp {
     public Warp() {
     }
 
-    public Warp(double locX, double locY, double locZ, float yaw, float pitch, float roll, String id, @Nonnull World world, String creator, Instant creationDate) {
+    public Warp(@Nonnull Transform transform, @Nonnull String id, @Nonnull World world, @Nonnull String creator, @Nonnull Instant creationDate) {
         this.id = id;
         this.world = world.getName();
-        this.transform = new Transform(locX, locY, locZ, pitch, yaw, roll);
+        this.transform = transform;
         this.creator = creator;
         this.creationDate = creationDate;
     }
@@ -121,7 +121,7 @@ public class Warp {
         if (worldInstance == null) {
             return null;
         }
-        return new Teleport(worldInstance, this.transform);
+        return Teleport.createForPlayer(worldInstance, this.transform);
     }
 }
 

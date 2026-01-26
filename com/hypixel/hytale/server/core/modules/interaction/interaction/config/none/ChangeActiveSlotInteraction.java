@@ -26,7 +26,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Roo
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ChangeActiveSlotInteraction
 extends Interaction {
@@ -62,7 +61,7 @@ extends Interaction {
     }
 
     @Override
-    protected void tick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         byte slot;
         if (!firstRun) {
             context.getState().state = InteractionState.Finished;
@@ -106,7 +105,7 @@ extends Interaction {
     }
 
     @Override
-    protected void simulateTick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         context.getState().state = context.getServerState().state;
     }
 

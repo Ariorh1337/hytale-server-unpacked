@@ -26,7 +26,7 @@ implements ISpawnProvider {
     protected FitToHeightMapSpawnProvider() {
     }
 
-    public FitToHeightMapSpawnProvider(ISpawnProvider spawnProvider) {
+    public FitToHeightMapSpawnProvider(@Nonnull ISpawnProvider spawnProvider) {
         this.spawnProvider = spawnProvider;
     }
 

@@ -4,12 +4,13 @@
 package com.hypixel.hytale.server.core.modules.accesscontrol.commands;
 
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.auth.ProfileServiceClient;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleWhitelistProvider;
-import com.hypixel.hytale.server.core.util.AuthUtil;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
@@ -18,7 +19,7 @@ extends AbstractAsyncCommand {
     @Nonnull
     private final HytaleWhitelistProvider whitelistProvider;
     @Nonnull
-    private final RequiredArg<String> usernameArg = this.withRequiredArg("username", "server.commands.whitelist.add.username.desc", ArgTypes.STRING);
+    private final RequiredArg<ProfileServiceClient.PublicGameProfile> playerArg = this.withRequiredArg("player", "server.commands.whitelist.add.player.desc", ArgTypes.GAME_PROFILE_LOOKUP);
 
     public WhitelistAddCommand(@Nonnull HytaleWhitelistProvider whitelistProvider) {
         super("add", "server.commands.whitelist.add.desc");
@@ -28,18 +29,18 @@ extends AbstractAsyncCommand {
     @Override
     @Nonnull
     protected CompletableFuture<Void> executeAsync(@Nonnull CommandContext context) {
-        String username = (String)this.usernameArg.get(context);
-        return ((CompletableFuture)AuthUtil.lookupUuid(username).thenAccept(uuid -> {
-            if (this.whitelistProvider.modify(list -> list.add(uuid))) {
-                context.sendMessage(Message.translation("server.modules.whitelist.addSuccess").param("name", username));
-            } else {
-                context.sendMessage(Message.translation("server.modules.whitelist.alreadyWhitelisted").param("name", username));
-            }
-        })).exceptionally(ex -> {
-            context.sendMessage(Message.translation("server.modules.ban.lookupFailed").param("name", username));
-            ex.printStackTrace();
-            return null;
-        });
+        ProfileServiceClient.PublicGameProfile profile = (ProfileServiceClient.PublicGameProfile)this.playerArg.get(context);
+        if (profile == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        UUID uuid = profile.getUuid();
+        Message displayMessage = Message.raw(profile.getUsername()).bold(true);
+        if (this.whitelistProvider.modify(list -> list.add(uuid))) {
+            context.sendMessage(Message.translation("server.modules.whitelist.addSuccess").param("name", displayMessage));
+        } else {
+            context.sendMessage(Message.translation("server.modules.whitelist.alreadyWhitelisted").param("name", displayMessage));
+        }
+        return CompletableFuture.completedFuture(null);
     }
 }
 

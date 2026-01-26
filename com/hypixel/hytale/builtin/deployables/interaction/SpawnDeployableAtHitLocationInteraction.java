@@ -20,7 +20,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class SpawnDeployableAtHitLocationInteraction
 extends SimpleInstantInteraction {
@@ -36,7 +35,7 @@ extends SimpleInstantInteraction {
     }
 
     @Override
-    protected void firstRun(@NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         InteractionChain contextChain = context.getChain();
         assert (contextChain != null);
         InteractionChainData chainData = contextChain.getChainData();

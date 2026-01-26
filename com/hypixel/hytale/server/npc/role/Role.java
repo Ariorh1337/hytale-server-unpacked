@@ -195,7 +195,7 @@ implements IAnnotatedComponentCollection {
         for (MotionController motionController : this.motionControllers.values()) {
             motionController.setInertia(this.inertia);
         }
-        this.knockbackScale = builder.getKnockbackScale();
+        this.knockbackScale = builder.getKnockbackScale(builderSupport);
         for (MotionController motionController : this.motionControllers.values()) {
             motionController.setKnockbackScale(this.knockbackScale);
         }

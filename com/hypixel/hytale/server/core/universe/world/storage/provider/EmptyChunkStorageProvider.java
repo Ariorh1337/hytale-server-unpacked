@@ -14,7 +14,6 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSets;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class EmptyChunkStorageProvider
 implements IChunkStorageProvider {
@@ -29,14 +28,14 @@ implements IChunkStorageProvider {
     public static final EmptyChunkSaver EMPTY_CHUNK_SAVER = new EmptyChunkSaver();
 
     @Override
-    @NonNullDecl
-    public IChunkLoader getLoader(@NonNullDecl Store<ChunkStore> store) {
+    @Nonnull
+    public IChunkLoader getLoader(@Nonnull Store<ChunkStore> store) {
         return EMPTY_CHUNK_LOADER;
     }
 
     @Override
     @Nonnull
-    public IChunkSaver getSaver(@NonNullDecl Store<ChunkStore> store) {
+    public IChunkSaver getSaver(@Nonnull Store<ChunkStore> store) {
         return EMPTY_CHUNK_SAVER;
     }
 

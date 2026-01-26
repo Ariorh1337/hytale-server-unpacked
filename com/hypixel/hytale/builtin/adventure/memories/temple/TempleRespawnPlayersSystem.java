@@ -21,8 +21,8 @@ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class TempleRespawnPlayersSystem
 extends DelayedEntitySystem<EntityStore> {
@@ -33,27 +33,30 @@ extends DelayedEntitySystem<EntityStore> {
     }
 
     @Override
-    public void tick(float dt, int index, @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+    public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         World world = store.getExternalData().getWorld();
         GameplayConfig gameplayConfig = world.getGameplayConfig();
         ForgottenTempleConfig config = gameplayConfig.getPluginConfig().get(ForgottenTempleConfig.class);
         if (config == null) {
             return;
         }
-        Vector3d position = archetypeChunk.getComponent(index, TransformComponent.getComponentType()).getPosition();
+        TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+        assert (transformComponent != null);
+        Vector3d position = transformComponent.getPosition();
         if (position.getY() > config.getMinYRespawn()) {
             return;
         }
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
         ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
-        Transform spawnPoint = spawnProvider.getSpawnPoint(ref, commandBuffer);
-        commandBuffer.addComponent(ref, Teleport.getComponentType(), new Teleport(null, spawnPoint));
+        Transform spawnTransform = spawnProvider.getSpawnPoint(ref, commandBuffer);
+        Teleport teleportComponent = Teleport.createForPlayer(null, spawnTransform);
+        commandBuffer.addComponent(ref, Teleport.getComponentType(), teleportComponent);
         PlayerRef playerRef = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
         SoundUtil.playSoundEvent2dToPlayer(playerRef, config.getRespawnSoundIndex(), SoundCategory.SFX);
     }
 
     @Override
-    @NullableDecl
+    @Nullable
     public Query<EntityStore> getQuery() {
         return QUERY;
     }

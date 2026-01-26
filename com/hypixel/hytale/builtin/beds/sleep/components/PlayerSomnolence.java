@@ -8,7 +8,7 @@ import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSleep;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class PlayerSomnolence
 implements Component<EntityStore> {
@@ -31,7 +31,7 @@ implements Component<EntityStore> {
     }
 
     @Override
-    @NullableDecl
+    @Nullable
     public Component<EntityStore> clone() {
         PlayerSomnolence clone = new PlayerSomnolence();
         clone.state = this.state;

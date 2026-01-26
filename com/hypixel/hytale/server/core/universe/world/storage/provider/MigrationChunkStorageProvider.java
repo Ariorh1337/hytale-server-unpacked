@@ -21,7 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class MigrationChunkStorageProvider
 implements IChunkStorageProvider {
@@ -45,7 +44,7 @@ implements IChunkStorageProvider {
 
     @Override
     @Nonnull
-    public IChunkLoader getLoader(@NonNullDecl Store<ChunkStore> store) throws IOException {
+    public IChunkLoader getLoader(@Nonnull Store<ChunkStore> store) throws IOException {
         IChunkLoader[] loaders = new IChunkLoader[this.from.length];
         for (int i = 0; i < this.from.length; ++i) {
             loaders[i] = this.from[i].getLoader(store);
@@ -55,7 +54,7 @@ implements IChunkStorageProvider {
 
     @Override
     @Nonnull
-    public IChunkSaver getSaver(@NonNullDecl Store<ChunkStore> store) throws IOException {
+    public IChunkSaver getSaver(@Nonnull Store<ChunkStore> store) throws IOException {
         return this.to.getSaver(store);
     }
 

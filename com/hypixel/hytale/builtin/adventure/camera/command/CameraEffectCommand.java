@@ -22,8 +22,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class CameraEffectCommand
 extends AbstractCommandCollection {
@@ -52,7 +51,7 @@ extends AbstractCommandCollection {
         }
 
         @Override
-        protected void execute(@NonNullDecl CommandContext context, @NullableDecl Ref<EntityStore> sourceRef, @NonNullDecl Ref<EntityStore> ref, @NonNullDecl PlayerRef playerRef, @NonNullDecl World world, @NonNullDecl Store<EntityStore> store) {
+        protected void execute(@Nonnull CommandContext context, @Nullable Ref<EntityStore> sourceRef, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull Store<EntityStore> store) {
             DamageCause damageCause = (DamageCause)context.get(this.causeArg);
             float damageAmount = ((Float)context.get(this.damageArg)).floatValue();
             Damage.CommandSource damageSource = new Damage.CommandSource(context.sender(), this.getName());
@@ -81,7 +80,7 @@ extends AbstractCommandCollection {
         }
 
         @Override
-        protected void execute(@NonNullDecl CommandContext context, @NullableDecl Ref<EntityStore> sourceRef, @NonNullDecl Ref<EntityStore> ref, @NonNullDecl PlayerRef playerRef, @NonNullDecl World world, @NonNullDecl Store<EntityStore> store) {
+        protected void execute(@Nonnull CommandContext context, @Nullable Ref<EntityStore> sourceRef, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull Store<EntityStore> store) {
             CameraEffect cameraEffect = (CameraEffect)context.get(this.effectArg);
             float intensity = ((Float)context.get(this.intensityArg)).floatValue();
             PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());

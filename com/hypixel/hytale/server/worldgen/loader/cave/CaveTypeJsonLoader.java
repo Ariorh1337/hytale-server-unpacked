@@ -33,7 +33,6 @@ import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
 import com.hypixel.hytale.server.worldgen.loader.prefab.BlockPlacementMaskJsonLoader;
 import com.hypixel.hytale.server.worldgen.util.ConstantNoiseProperty;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
-import com.hypixel.hytale.server.worldgen.util.condition.DefaultBlockMaskCondition;
 import com.hypixel.hytale.server.worldgen.util.condition.flag.Int2FlagsCondition;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
@@ -119,7 +118,7 @@ extends JsonLoader<SeedStringResource, CaveType> {
 
     @Nullable
     protected BlockMaskCondition loadBlockMask() {
-        BlockMaskCondition placementConfiguration = DefaultBlockMaskCondition.DEFAULT_TRUE;
+        BlockMaskCondition placementConfiguration = BlockMaskCondition.DEFAULT_TRUE;
         if (this.has("BlockMask")) {
             placementConfiguration = new BlockPlacementMaskJsonLoader(this.seed, this.dataFolder, this.getRaw("BlockMask")).load();
         }

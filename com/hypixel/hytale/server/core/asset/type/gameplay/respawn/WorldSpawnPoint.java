@@ -12,18 +12,21 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import javax.annotation.Nonnull;
 
 public class WorldSpawnPoint
 implements RespawnController {
     public static final WorldSpawnPoint INSTANCE = new WorldSpawnPoint();
+    @Nonnull
     public static final BuilderCodec<WorldSpawnPoint> CODEC = BuilderCodec.builder(WorldSpawnPoint.class, () -> INSTANCE).build();
 
     @Override
-    public void respawnPlayer(@NonNullDecl World world, @NonNullDecl Ref<EntityStore> playerReference, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+    public void respawnPlayer(@Nonnull World world, @Nonnull Ref<EntityStore> playerReference, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+        assert (spawnProvider != null);
         Transform spawnPoint = spawnProvider.getSpawnPoint(playerReference, commandBuffer);
-        commandBuffer.addComponent(playerReference, Teleport.getComponentType(), new Teleport(null, spawnPoint));
+        Teleport teleportComponent = Teleport.createForPlayer(spawnPoint);
+        commandBuffer.addComponent(playerReference, Teleport.getComponentType(), teleportComponent);
     }
 }
 

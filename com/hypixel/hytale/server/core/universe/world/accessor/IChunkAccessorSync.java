@@ -118,6 +118,10 @@ public interface IChunkAccessorSync<WorldChunk extends BlockAccessor> {
         return position;
     }
 
+    default public int getBlockRotationIndex(int x, int y, int z) {
+        return this.getChunk(ChunkUtil.indexChunkFromBlock(x, z)).getRotationIndex(x, y, z);
+    }
+
     @FunctionalInterface
     public static interface TestBlockFunction {
         public boolean test(int var1, int var2, int var3, BlockType var4, int var5, int var6);

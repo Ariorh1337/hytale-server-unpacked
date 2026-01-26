@@ -30,7 +30,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class MemoriesConditionInteraction
 extends com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction {
@@ -63,7 +62,7 @@ extends com.hypixel.hytale.server.core.modules.interaction.interaction.config.In
     private String failed;
 
     @Override
-    protected void tick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         int memoriesLevel;
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
         assert (commandBuffer != null);
@@ -80,7 +79,7 @@ extends com.hypixel.hytale.server.core.modules.interaction.interaction.config.In
     }
 
     @Override
-    protected void simulateTick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         int memoriesLevel = context.getServerState().chainingIndex;
         int labelIndex = this.levelToLabel.get(memoriesLevel);
         if (labelIndex == -1) {

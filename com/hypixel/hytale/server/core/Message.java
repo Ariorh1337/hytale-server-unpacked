@@ -52,8 +52,6 @@ import org.bson.BsonNull;
 import org.bson.BsonString;
 import org.bson.BsonType;
 import org.bson.BsonValue;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class Message {
     private static final BuilderCodec.Builder<FormattedMessage> MESSAGE_CODEC_BUILDER = BuilderCodec.builder(FormattedMessage.class, FormattedMessage::new);
@@ -495,8 +493,8 @@ public class Message {
         }
 
         @Override
-        @NullableDecl
-        public MaybeBool decodeJson(@NonNullDecl RawJsonReader reader, ExtraInfo extraInfo) throws IOException {
+        @Nullable
+        public MaybeBool decodeJson(@Nonnull RawJsonReader reader, ExtraInfo extraInfo) throws IOException {
             if (reader.peekFor('n')) {
                 if (!reader.tryConsume("null")) {
                     throw new IllegalArgumentException("Invalid null value");

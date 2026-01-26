@@ -686,12 +686,20 @@ MetricProvider {
             }
             this.finalizePlayerRemoval(playerRef);
         } else {
+            CompletableFuture removedFuture = new CompletableFuture();
             CompletableFuture.runAsync(() -> {
                 Player playerComponent = ref.getStore().getComponent(ref, Player.getComponentType());
                 if (playerComponent != null) {
                     playerComponent.remove();
                 }
-            }, world).orTimeout(5L, TimeUnit.SECONDS).whenComplete((result, error) -> {
+            }, world).whenComplete((unused, throwable) -> {
+                if (throwable != null) {
+                    removedFuture.completeExceptionally((Throwable)throwable);
+                } else {
+                    removedFuture.complete(unused);
+                }
+            });
+            removedFuture.orTimeout(5L, TimeUnit.SECONDS).whenComplete((result, error) -> {
                 if (error != null) {
                     ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause((Throwable)error)).log("Timeout or error waiting for player '%s' removal from world store", playerRef.getUsername());
                 }

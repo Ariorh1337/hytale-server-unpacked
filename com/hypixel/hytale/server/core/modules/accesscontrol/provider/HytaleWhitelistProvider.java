@@ -29,12 +29,16 @@ import javax.annotation.Nonnull;
 public class HytaleWhitelistProvider
 extends BlockingDiskFile
 implements AccessProvider {
+    @Nonnull
+    private static final String WHITELIST_FILE_PATH = "whitelist.json";
+    @Nonnull
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    @Nonnull
     private final Set<UUID> whitelist = new HashSet<UUID>();
     private boolean isEnabled;
 
     public HytaleWhitelistProvider() {
-        super(Paths.get("whitelist.json", new String[0]));
+        super(Paths.get(WHITELIST_FILE_PATH, new String[0]));
     }
 
     @Override

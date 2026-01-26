@@ -45,21 +45,18 @@ extends AbstractPlayerCommand {
 
     @Override
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
-        Transform spawn = SpawnCommand.resolveSpawn(context, world, playerRef, this.spawnIndexArg);
+        Transform spawnTransform = SpawnCommand.resolveSpawn(context, world, playerRef, this.spawnIndexArg);
         TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
         assert (transformComponent != null);
         HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
         assert (headRotationComponent != null);
-        Vector3f previousBodyRotation = transformComponent.getRotation().clone();
         Vector3d previousPos = transformComponent.getPosition().clone();
         Vector3f previousRotation = headRotationComponent.getRotation().clone();
         TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
         teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + world.getName() + "'s spawn");
-        Vector3f spawnRotation = spawn.getRotation().clone();
-        spawn.setRotation(new Vector3f(previousBodyRotation.getPitch(), spawnRotation.getYaw(), previousBodyRotation.getRoll()));
-        Teleport teleport = new Teleport(world, spawn).withHeadRotation(spawnRotation);
-        store.addComponent(ref, Teleport.getComponentType(), teleport);
-        Vector3d position = spawn.getPosition();
+        Teleport teleportComponent = Teleport.createForPlayer(world, spawnTransform);
+        store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+        Vector3d position = spawnTransform.getPosition();
         context.sendMessage(Message.translation("server.commands.spawn.teleported").param("x", position.getX()).param("y", position.getY()).param("z", position.getZ()));
     }
 
@@ -114,15 +111,12 @@ extends AbstractPlayerCommand {
                 assert (transformComponent != null);
                 HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
                 assert (headRotationComponent != null);
-                Vector3f previousBodyRotation = transformComponent.getRotation().clone();
                 Vector3d previousPos = transformComponent.getPosition().clone();
                 Vector3f previousRotation = headRotationComponent.getRotation().clone();
                 TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
                 teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + world.getName() + "'s spawn");
-                Vector3f spawnRotation = spawn.getRotation().clone();
-                spawn.setRotation(new Vector3f(previousBodyRotation.getPitch(), spawnRotation.getYaw(), previousBodyRotation.getRoll()));
-                Teleport teleport = new Teleport(world, spawn).withHeadRotation(spawnRotation);
-                store.addComponent(ref, Teleport.getComponentType(), teleport);
+                Teleport teleportComponent = Teleport.createForPlayer(world, spawn);
+                store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
                 Vector3d position = spawn.getPosition();
                 context.sendMessage(Message.translation("server.commands.spawn.teleportedOther").param("username", targetPlayerRef.getUsername()).param("x", position.getX()).param("y", position.getY()).param("z", position.getZ()));
             });

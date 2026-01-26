@@ -26,9 +26,11 @@ import javax.annotation.Nonnull;
 
 public class TeleportWorldCommand
 extends AbstractPlayerCommand {
+    @Nonnull
     private static final Message MESSAGE_WORLD_NOT_FOUND = Message.translation("server.world.notFound");
-    private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
+    @Nonnull
     private static final Message MESSAGE_WORLD_SPAWN_NOT_SET = Message.translation("server.world.spawn.notSet");
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_WORLD = Message.translation("server.commands.teleport.teleportedToWorld");
     @Nonnull
     private final RequiredArg<String> worldNameArg = this.withRequiredArg("worldName", "server.commands.worldport.worldName.desc", ArgTypes.STRING);
@@ -60,7 +62,8 @@ extends AbstractPlayerCommand {
             TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
             teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + targetWorld.getName());
         }
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(targetWorld, spawnPoint));
+        Teleport teleportComponent = Teleport.createForPlayer(targetWorld, spawnPoint);
+        store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
         Vector3d spawnPos = spawnPoint.getPosition();
         context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_WORLD.param("worldName", worldName).param("x", spawnPos.getX()).param("y", spawnPos.getY()).param("z", spawnPos.getZ()));
     }

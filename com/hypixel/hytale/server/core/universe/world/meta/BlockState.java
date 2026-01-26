@@ -42,7 +42,7 @@ implements Component<ChunkStore> {
     public static final BuilderCodec<BlockState> BASE_CODEC = ((BuilderCodec.Builder)BuilderCodec.abstractBuilder(BlockState.class).addField(new KeyedCodec<Vector3i>("Position", Vector3i.CODEC), (entity, o) -> {
         entity.position = o;
     }, entity -> {
-        if (Vector3i.ZERO.equals(entity.position)) {
+        if (entity.position == null || Vector3i.ZERO.equals(entity.position)) {
             return null;
         }
         return entity.position;
@@ -117,6 +117,10 @@ implements Component<ChunkStore> {
 
     public Vector3i __internal_getPosition() {
         return this.position;
+    }
+
+    public void clearPositionForSerialization() {
+        this.position = null;
     }
 
     public int getBlockX() {

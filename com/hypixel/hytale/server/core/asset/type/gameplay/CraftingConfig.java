@@ -15,17 +15,17 @@ public class CraftingConfig {
         gameplayConfig.benchMaterialHorizontalChestSearchRadius = o;
     }, gameplayConfig -> gameplayConfig.benchMaterialHorizontalChestSearchRadius, (gameplayConfig, parent) -> {
         gameplayConfig.benchMaterialHorizontalChestSearchRadius = parent.benchMaterialHorizontalChestSearchRadius;
-    }).addValidator(Validators.range(0, 7)).documentation("The horizontal radius of search around a bench to use materials from the chests").add()).appendInherited(new KeyedCodec<Integer>("BenchMaterialChestVerticalSearchRadius", Codec.INTEGER), (gameplayConfig, o) -> {
+    }).addValidator(Validators.range(0, 14)).documentation("The horizontal radius of search around a bench to use materials from the chests").add()).appendInherited(new KeyedCodec<Integer>("BenchMaterialChestVerticalSearchRadius", Codec.INTEGER), (gameplayConfig, o) -> {
         gameplayConfig.benchMaterialVerticalChestSearchRadius = o;
     }, gameplayConfig -> gameplayConfig.benchMaterialVerticalChestSearchRadius, (gameplayConfig, parent) -> {
         gameplayConfig.benchMaterialVerticalChestSearchRadius = parent.benchMaterialVerticalChestSearchRadius;
-    }).addValidator(Validators.range(0, 7)).documentation("The vertical radius of search around a bench to use materials from the chests").add()).appendInherited(new KeyedCodec<Integer>("BenchMaterialChestLimit", Codec.INTEGER), (gameplayConfig, o) -> {
+    }).addValidator(Validators.range(0, 14)).documentation("The vertical radius of search around a bench to use materials from the chests").add()).appendInherited(new KeyedCodec<Integer>("BenchMaterialChestLimit", Codec.INTEGER), (gameplayConfig, o) -> {
         gameplayConfig.benchMaterialChestLimit = o;
     }, gameplayConfig -> gameplayConfig.benchMaterialChestLimit, (gameplayConfig, parent) -> {
         gameplayConfig.benchMaterialChestLimit = parent.benchMaterialChestLimit;
     }).addValidator(Validators.range(0, 200)).documentation("The maximum number of chests a crafting bench will draw materials from").add()).build();
-    protected int benchMaterialHorizontalChestSearchRadius = 7;
-    protected int benchMaterialVerticalChestSearchRadius = 3;
+    protected int benchMaterialHorizontalChestSearchRadius = 14;
+    protected int benchMaterialVerticalChestSearchRadius = 6;
     protected int benchMaterialChestLimit = 100;
 
     public int getBenchMaterialHorizontalChestSearchRadius() {

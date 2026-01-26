@@ -48,6 +48,7 @@ import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -58,7 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class CoopBlock
 implements Component<ChunkStore> {
@@ -70,7 +71,6 @@ implements Component<ChunkStore> {
     }, coop -> (CoopResident[])coop.residents.toArray(CoopResident[]::new)).add()).append(new KeyedCodec<ItemContainer>("Storage", ItemContainer.CODEC), (coop, storage) -> {
         coop.itemContainer = storage;
     }, coop -> coop.itemContainer).add()).build();
-    HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     protected String coopAssetId;
     protected List<CoopResident> residents = new ArrayList<CoopResident>();
     protected ItemContainer itemContainer = EmptyItemContainer.INSTANCE;
@@ -84,7 +84,7 @@ implements Component<ChunkStore> {
         this.itemContainer = ItemContainer.ensureContainerCapacity(this.itemContainer, (short)5, SimpleItemContainer::new, remainder);
     }
 
-    @NullableDecl
+    @Nullable
     public FarmingCoopAsset getCoopAsset() {
         return FarmingCoopAsset.getAssetMap().getAsset(this.coopAssetId);
     }
@@ -93,7 +93,7 @@ implements Component<ChunkStore> {
         this.coopAssetId = farmingCoopId;
         this.residents.addAll(residents);
         this.itemContainer = itemContainer.clone();
-        ArrayList<ItemStack> remainder = new ArrayList<ItemStack>();
+        ObjectArrayList<ItemStack> remainder = new ObjectArrayList<ItemStack>();
         this.itemContainer = ItemContainer.ensureContainerCapacity(this.itemContainer, (short)5, SimpleItemContainer::new, remainder);
     }
 
@@ -309,7 +309,7 @@ implements Component<ChunkStore> {
         return !roamTimeRange.includes(gameHour);
     }
 
-    @NullableDecl
+    @Nullable
     public Instant getNextScheduledTick(WorldTimeResource worldTimeResource) {
         Instant gameTime = worldTimeResource.getGameTime();
         LocalDateTime gameDateTime = worldTimeResource.getGameDateTime();
@@ -385,7 +385,7 @@ implements Component<ChunkStore> {
             coop.lastProduced = instant;
         }, coop -> coop.lastProduced).add()).build();
         protected CapturedNPCMetadata metadata;
-        @NullableDecl
+        @Nullable
         protected PersistentRef persistentRef;
         protected boolean deployedToWorld;
         protected Instant lastProduced;
@@ -403,12 +403,12 @@ implements Component<ChunkStore> {
             return this.metadata;
         }
 
-        @NullableDecl
+        @Nullable
         public PersistentRef getPersistentRef() {
             return this.persistentRef;
         }
 
-        public void setPersistentRef(@NullableDecl PersistentRef persistentRef) {
+        public void setPersistentRef(@Nullable PersistentRef persistentRef) {
             this.persistentRef = persistentRef;
         }
 

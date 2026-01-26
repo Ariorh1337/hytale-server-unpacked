@@ -6,6 +6,7 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport.variant;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -24,13 +25,16 @@ import javax.annotation.Nonnull;
 
 public class TeleportOtherToPlayerCommand
 extends CommandBase {
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD = Message.translation("server.commands.errors.targetNotInWorld");
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_TELEPORT_TELEPORTED_OTHER_TO_PLAYER = Message.translation("server.commands.teleport.teleportedOtherToPlayer");
     @Nonnull
-    private final RequiredArg<PlayerRef> targetPlayerArg = this.withRequiredArg("targetPlayer", "server.commands.teleport.targetPlayer.desc", ArgTypes.PLAYER_REF);
-    @Nonnull
     private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.argtype.player.desc", ArgTypes.PLAYER_REF);
+    @Nonnull
+    private final RequiredArg<PlayerRef> targetPlayerArg = this.withRequiredArg("targetPlayer", "server.commands.teleport.targetPlayer.desc", ArgTypes.PLAYER_REF);
 
     public TeleportOtherToPlayerCommand() {
         super("server.commands.teleport.otherToPlayer.desc");
@@ -68,11 +72,11 @@ extends CommandBase {
                 HeadRotation targetHeadRotationComponent = targetStore.getComponent(targetRef, HeadRotation.getComponentType());
                 assert (targetHeadRotationComponent != null);
                 Vector3d targetPosition = targetTransformComponent.getPosition().clone();
-                Vector3f targetRotation = targetTransformComponent.getRotation().clone();
                 Vector3f targetHeadRotation = targetHeadRotationComponent.getRotation().clone();
+                Transform targetTransform = new Transform(targetPosition, targetHeadRotation);
                 sourceWorld.execute(() -> {
-                    Teleport teleport = new Teleport(targetWorld, targetPosition, targetRotation).withHeadRotation(targetHeadRotation).withResetRoll();
-                    sourceStore.addComponent(sourceRef, Teleport.getComponentType(), teleport);
+                    Teleport teleportComponent = Teleport.createForPlayer(targetWorld, targetTransform);
+                    sourceStore.addComponent(sourceRef, Teleport.getComponentType(), teleportComponent);
                     PlayerRef sourcePlayerRefComponent = sourceStore.getComponent(sourceRef, PlayerRef.getComponentType());
                     assert (sourcePlayerRefComponent != null);
                     PlayerRef targetPlayerRefComponent = targetStore.getComponent(targetRef, PlayerRef.getComponentType());

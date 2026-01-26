@@ -54,8 +54,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class FarmingSystems {
     private static boolean updateSoilDecayTime(CommandBuffer<ChunkStore> commandBuffer, TilledSoilBlock soilBlock, BlockType blockType) {
@@ -109,7 +107,7 @@ public class FarmingSystems {
         }
 
         @Override
-        public void tick(float dt, int index, @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
             CoopResidentComponent coopResidentComponent = archetypeChunk.getComponent(index, CoopResidentComponent.getComponentType());
             if (coopResidentComponent == null) {
                 return;
@@ -130,11 +128,11 @@ public class FarmingSystems {
         }
 
         @Override
-        public void onEntityAdded(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl AddReason reason, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         }
 
         @Override
-        public void onEntityRemove(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl RemoveReason reason, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
             long chunkIndex;
             if (reason == RemoveReason.UNLOAD) {
                 return;
@@ -193,7 +191,7 @@ public class FarmingSystems {
         private static final Query<ChunkStore> QUERY = Query.and(BlockModule.BlockStateInfo.getComponentType(), CoopBlock.getComponentType());
 
         @Override
-        public void onEntityAdded(@NonNullDecl Ref<ChunkStore> ref, @NonNullDecl AddReason reason, @NonNullDecl Store<ChunkStore> store, @NonNullDecl CommandBuffer<ChunkStore> commandBuffer) {
+        public void onEntityAdded(@Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
             CoopBlock coopBlock = commandBuffer.getComponent(ref, CoopBlock.getComponentType());
             if (coopBlock == null) {
                 return;
@@ -211,7 +209,7 @@ public class FarmingSystems {
         }
 
         @Override
-        public void onEntityRemove(@NonNullDecl Ref<ChunkStore> ref, @NonNullDecl RemoveReason reason, @NonNullDecl Store<ChunkStore> store, @NonNullDecl CommandBuffer<ChunkStore> commandBuffer) {
+        public void onEntityRemove(@Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
             if (reason == RemoveReason.UNLOAD) {
                 return;
             }
@@ -244,7 +242,7 @@ public class FarmingSystems {
         }
 
         @Override
-        @NullableDecl
+        @Nullable
         public Query<ChunkStore> getQuery() {
             return QUERY;
         }
@@ -263,9 +261,14 @@ public class FarmingSystems {
             }
             ChunkSection section = archetypeChunk.getComponent(index, ChunkSection.getComponentType());
             assert (section != null);
+            if (section.getChunkColumnReference() == null || !section.getChunkColumnReference().isValid()) {
+                return;
+            }
             BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(section.getChunkColumnReference(), BlockComponentChunk.getComponentType());
             assert (blockComponentChunk != null);
             Ref<ChunkStore> ref = archetypeChunk.getReferenceTo(index);
+            BlockChunk blockChunk = commandBuffer.getComponent(section.getChunkColumnReference(), BlockChunk.getComponentType());
+            assert (blockChunk != null);
             blocks.forEachTicking(blockComponentChunk, commandBuffer, section.getY(), (blockComponentChunk1, commandBuffer1, localX, localY, localZ, blockId) -> {
                 Ref<ChunkStore> blockRef = blockComponentChunk1.getEntityReference(ChunkUtil.indexBlockInColumn(localX, localY, localZ));
                 if (blockRef == null) {
@@ -273,7 +276,7 @@ public class FarmingSystems {
                 }
                 FarmingBlock farming = commandBuffer1.getComponent(blockRef, FarmingBlock.getComponentType());
                 if (farming != null) {
-                    FarmingUtil.tickFarming(commandBuffer1, blocks, ref, blockRef, farming, localX, localY, localZ, false);
+                    FarmingUtil.tickFarming(commandBuffer1, blockChunk, blocks, ref, blockRef, farming, localX, localY, localZ, false);
                     return BlockTickStrategy.SLEEP;
                 }
                 TilledSoilBlock soil = commandBuffer1.getComponent(blockRef, TilledSoilBlock.getComponentType());
@@ -430,9 +433,9 @@ public class FarmingSystems {
             assert (farmingBlock != null);
             BlockModule.BlockStateInfo info = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType());
             assert (info != null);
+            BlockChunk blockChunk = commandBuffer.getComponent(info.getChunkRef(), BlockChunk.getComponentType());
             if (farmingBlock.getLastTickGameTime() == null) {
                 FarmingStageData[] stages;
-                BlockChunk blockChunk = commandBuffer.getComponent(info.getChunkRef(), BlockChunk.getComponentType());
                 int blockId = blockChunk.getBlock(ChunkUtil.xFromBlockInColumn(info.getIndex()), ChunkUtil.yFromBlockInColumn(info.getIndex()), ChunkUtil.zFromBlockInColumn(info.getIndex()));
                 BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
                 if (blockType.getFarming() == null) {
@@ -440,6 +443,7 @@ public class FarmingSystems {
                 }
                 farmingBlock.setCurrentStageSet(blockType.getFarming().getStartingStageSet());
                 farmingBlock.setLastTickGameTime(store.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType()).getGameTime());
+                blockChunk.markNeedsSaving();
                 if (blockType.getFarming().getStages() != null && (stages = blockType.getFarming().getStages().get(blockType.getFarming().getStartingStageSet())) != null && stages.length > 0) {
                     boolean found = false;
                     block4: for (int i = 0; i < stages.length; ++i) {
@@ -473,6 +477,7 @@ public class FarmingSystems {
             }
             if (farmingBlock.getLastTickGameTime() == null) {
                 farmingBlock.setLastTickGameTime(store.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType()).getGameTime());
+                blockChunk.markNeedsSaving();
             }
             int x = ChunkUtil.xFromBlockInColumn(info.getIndex());
             int y = ChunkUtil.yFromBlockInColumn(info.getIndex());
@@ -483,7 +488,7 @@ public class FarmingSystems {
             assert (column != null);
             Ref<ChunkStore> section = column.getSection(ChunkUtil.chunkCoordinate(y));
             BlockSection blockSection = commandBuffer.getComponent(section, BlockSection.getComponentType());
-            FarmingUtil.tickFarming(commandBuffer, blockSection, section, ref, farmingBlock, x, y, z, true);
+            FarmingUtil.tickFarming(commandBuffer, blockChunk, blockSection, section, ref, farmingBlock, x, y, z, true);
         }
 
         @Override

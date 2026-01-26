@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.
 import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.OperationsBuilder;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class SimpleInteraction
 extends Interaction {
@@ -53,14 +52,14 @@ extends Interaction {
     }
 
     @Override
-    protected void tick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         if (context.getState().state == InteractionState.Failed && context.hasLabels()) {
             context.jump(context.getLabel(0));
         }
     }
 
     @Override
-    protected void simulateTick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         if (this.getWaitForDataFrom() == WaitForDataFrom.Server && context.getServerState() != null && context.getServerState().state == InteractionState.Failed) {
             context.getState().state = InteractionState.Failed;
         }
@@ -100,7 +99,7 @@ extends Interaction {
     }
 
     @Override
-    @NonNullDecl
+    @Nonnull
     protected com.hypixel.hytale.protocol.Interaction generatePacket() {
         return new com.hypixel.hytale.protocol.SimpleInteraction();
     }

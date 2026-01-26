@@ -18,9 +18,7 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGeneratorExecution;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
-import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
-import com.hypixel.hytale.server.worldgen.util.condition.DefaultBlockMaskCondition;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -53,7 +51,7 @@ public class PrefabPasteUtil {
         }, (cx, cy, cz, block, holder, supportValue, rotation, filler, buffer, fluidId, fluidLevel) -> {
             int currentFluid;
             int currentBlock;
-            if (buffer.blockMask == DefaultBlockMaskCondition.DEFAULT_FALSE) {
+            if (buffer.blockMask == BlockMaskCondition.DEFAULT_FALSE) {
                 return;
             }
             int bx = cx + buffer.posChunk.x;
@@ -62,7 +60,7 @@ public class PrefabPasteUtil {
             if (by < 0 || by >= 320) {
                 return;
             }
-            if (buffer.blockMask != DefaultBlockMaskCondition.DEFAULT_TRUE && !buffer.blockMask.eval(currentBlock = buffer.execution.getBlock(bx, by, bz), currentFluid = buffer.execution.getFluid(bx, by, bz), new BlockFluidEntry(block, 0, fluidId))) {
+            if (buffer.blockMask != BlockMaskCondition.DEFAULT_TRUE && !buffer.blockMask.eval(currentBlock = buffer.execution.getBlock(bx, by, bz), currentFluid = buffer.execution.getFluid(bx, by, bz), block, fluidId)) {
                 return;
             }
             buffer.execution.setBlock(bx, by, bz, buffer.priority, block, (Holder<ChunkStore>)(holder != null ? holder.clone() : null), supportValue, rotation, filler);
@@ -195,7 +193,7 @@ public class PrefabPasteUtil {
             this.execution = null;
             this.fitHeightmap = false;
             this.deepSearch = false;
-            this.blockMask = DefaultBlockMaskCondition.DEFAULT_TRUE;
+            this.blockMask = BlockMaskCondition.DEFAULT_TRUE;
             this.environmentId = Integer.MIN_VALUE;
             this.heightCondition = DefaultCoordinateCondition.DEFAULT_TRUE;
             this.spawnCondition = DefaultCoordinateRndCondition.DEFAULT_TRUE;

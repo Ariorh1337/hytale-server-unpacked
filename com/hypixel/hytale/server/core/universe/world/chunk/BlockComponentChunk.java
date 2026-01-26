@@ -105,13 +105,18 @@ implements Component<ChunkStore> {
     @Override
     @Nonnull
     public Component<ChunkStore> cloneSerializable() {
+        ComponentRegistry.Data<ChunkStore> data = ChunkStore.REGISTRY.getData();
         Int2ObjectOpenHashMap<Holder<ChunkStore>> entityHoldersClone = new Int2ObjectOpenHashMap<Holder<ChunkStore>>(this.entityHolders.size() + this.entityReferences.size());
         for (Int2ObjectMap.Entry entry : this.entityHolders.int2ObjectEntrySet()) {
-            entityHoldersClone.put(entry.getIntKey(), (Holder<ChunkStore>)((Holder)entry.getValue()).clone());
+            Holder holder = (Holder)entry.getValue();
+            if (!holder.getArchetype().hasSerializableComponents(data)) continue;
+            entityHoldersClone.put(entry.getIntKey(), holder.cloneSerializable(data));
         }
         for (Int2ObjectMap.Entry entry : this.entityReferences.int2ObjectEntrySet()) {
             Ref reference = (Ref)entry.getValue();
-            entityHoldersClone.put(entry.getIntKey(), (Holder<ChunkStore>)reference.getStore().copySerializableEntity(reference));
+            Store store = reference.getStore();
+            if (!store.getArchetype(reference).hasSerializableComponents(data)) continue;
+            entityHoldersClone.put(entry.getIntKey(), (Holder<ChunkStore>)store.copySerializableEntity(reference));
         }
         return new BlockComponentChunk(entityHoldersClone, new Int2ObjectOpenHashMap<Ref<ChunkStore>>());
     }
@@ -364,6 +369,7 @@ implements Component<ChunkStore> {
                     LOGGER.at(Level.SEVERE).log("Empty archetype entity holder: %s (#%d)", (Object)holder, i);
                     holders[i] = holders[--holderCount];
                     holders[holderCount] = holder;
+                    chunk.markNeedsSaving();
                     continue;
                 }
                 int index = indexes[i];

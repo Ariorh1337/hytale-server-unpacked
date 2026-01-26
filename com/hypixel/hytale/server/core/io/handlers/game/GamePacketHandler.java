@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
@@ -645,7 +646,9 @@ implements IPacketHandler {
             }
             MapMarker marker = worldMapTracker.getSentMarkers().get(packet.id);
             if (marker != null) {
-                world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), new Teleport(null, PositionUtil.toTransform(marker.transform)));
+                Transform transform = PositionUtil.toTransform(marker.transform);
+                Teleport teleportComponent = Teleport.createForPlayer(transform);
+                world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
             }
         });
     }
@@ -666,9 +669,11 @@ implements IPacketHandler {
                 return;
             }
             world.getChunkStore().getChunkReferenceAsync(ChunkUtil.indexChunkFromBlock(packet.x, packet.y)).thenAcceptAsync(chunkRef -> {
-                BlockChunk blockChunk = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
-                Vector3d position = new Vector3d(packet.x, blockChunk.getHeight(packet.x, packet.y) + 2, packet.y);
-                world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), new Teleport(null, position, Vector3f.NaN));
+                BlockChunk blockChunkComponent = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
+                assert (blockChunkComponent != null);
+                Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
+                Teleport teleportComponent = Teleport.createForPlayer(null, position, new Vector3f(0.0f, 0.0f, 0.0f));
+                world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
             }, (Executor)world);
         });
     }

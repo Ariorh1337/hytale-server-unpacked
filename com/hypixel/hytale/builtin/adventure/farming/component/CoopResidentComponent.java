@@ -10,7 +10,7 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nullable;
 
 public class CoopResidentComponent
 implements Component<EntityStore> {
@@ -43,7 +43,7 @@ implements Component<EntityStore> {
     }
 
     @Override
-    @NullableDecl
+    @Nullable
     public Component<EntityStore> clone() {
         CoopResidentComponent component = new CoopResidentComponent();
         component.coopLocation.assign(this.coopLocation);

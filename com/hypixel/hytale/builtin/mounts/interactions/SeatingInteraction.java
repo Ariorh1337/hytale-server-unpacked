@@ -43,7 +43,7 @@ extends SimpleBlockInteraction {
         Vector3f whereWasHit = new Vector3f((float)rawTarget.x + 0.5f, (float)rawTarget.y + 0.5f, (float)rawTarget.z + 0.5f);
         BlockMountAPI.BlockMountResult result = BlockMountAPI.mountOnBlock(ref, commandBuffer, targetBlock, whereWasHit);
         if (result == BlockMountAPI.DidNotMount.ALREADY_MOUNTED) {
-            int soundEventIndex = SoundEvent.getAssetMap().getIndex("Creative_Play_Add_Mask");
+            int soundEventIndex = SoundEvent.getAssetMap().getIndex("SFX_Creative_Play_Add_Mask");
             SoundUtil.playSoundEvent2d(ref, soundEventIndex, SoundCategory.SFX, commandBuffer);
         } else if (result instanceof BlockMountAPI.Mounted) {
             String seatSoundId;

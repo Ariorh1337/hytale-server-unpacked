@@ -22,7 +22,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.StringTag;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class RepeatInteraction
 extends SimpleInteraction {
@@ -50,7 +49,7 @@ extends SimpleInteraction {
     }
 
     @Override
-    protected void tick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         InteractionChain chain;
         DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();
         if (firstRun && this.repeat != -1) {
@@ -87,7 +86,7 @@ extends SimpleInteraction {
     }
 
     @Override
-    protected void simulateTick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         InteractionChain chain = context.getInstanceStore().getMetaObject(FORKED_CHAIN);
         DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();
         if (chain != null) {

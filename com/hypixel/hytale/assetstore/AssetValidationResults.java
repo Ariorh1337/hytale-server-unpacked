@@ -16,7 +16,6 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class AssetValidationResults
 extends ValidationResults {
@@ -48,11 +47,11 @@ extends ValidationResults {
     }
 
     @Override
-    public void logOrThrowValidatorExceptions(@NonNullDecl HytaleLogger logger, @NonNullDecl String msg) {
+    public void logOrThrowValidatorExceptions(@Nonnull HytaleLogger logger, @Nonnull String msg) {
         this.logOrThrowValidatorExceptions(logger, msg, null, 0);
     }
 
-    public void logOrThrowValidatorExceptions(@NonNullDecl HytaleLogger logger, @NonNullDecl String msg, @Nullable Path path, int lineOffset) {
+    public void logOrThrowValidatorExceptions(@Nonnull HytaleLogger logger, @Nonnull String msg, @Nullable Path path, int lineOffset) {
         if (GithubMessageUtil.isGithub() && this.validatorExceptions != null && !this.validatorExceptions.isEmpty()) {
             for (ValidationResults.ValidatorResultsHolder holder : this.validatorExceptions) {
                 ExtraInfo extraInfo;

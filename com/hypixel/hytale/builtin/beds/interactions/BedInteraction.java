@@ -41,18 +41,19 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class BedInteraction
 extends SimpleBlockInteraction {
+    @Nonnull
+    private static final Message MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED = Message.translation("server.customUI.respawnPointClaimed");
+    @Nonnull
     public static final BuilderCodec<BedInteraction> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(BedInteraction.class, BedInteraction::new, SimpleBlockInteraction.CODEC).documentation("Interact with a bed block, ostensibly to sleep in it.")).build();
 
     @Override
-    protected void interactWithBlock(@NonNullDecl World world, @NonNullDecl CommandBuffer<EntityStore> commandBuffer, @NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NullableDecl ItemStack itemInHand, @NonNullDecl Vector3i pos, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i pos, @Nonnull CooldownHandler cooldownHandler) {
         RespawnConfig respawnConfig;
         int radiusLimitRespawnPoint;
-        RespawnBlock respawnBlock;
+        RespawnBlock respawnBlockComponent;
         Ref<EntityStore> ref = context.getEntity();
         Player player = commandBuffer.getComponent(ref, Player.getComponentType());
         if (player == null) {
@@ -79,10 +80,10 @@ extends SimpleBlockInteraction {
             holder.ensureComponent(RespawnBlock.getComponentType());
             blockRef = chunkStore.addEntity(holder, AddReason.SPAWN);
         }
-        if ((respawnBlock = chunkStore.getComponent(blockRef, RespawnBlock.getComponentType())) == null) {
+        if ((respawnBlockComponent = chunkStore.getComponent(blockRef, RespawnBlock.getComponentType())) == null) {
             return;
         }
-        UUID ownerUUID = respawnBlock.getOwnerUUID();
+        UUID ownerUUID = respawnBlockComponent.getOwnerUUID();
         PageManager pageManager = player.getPageManager();
         boolean isOwner = playerUuid.equals(ownerUUID);
         if (isOwner) {
@@ -97,24 +98,24 @@ extends SimpleBlockInteraction {
             return;
         }
         if (ownerUUID != null) {
-            player.sendMessage(Message.translation("server.customUI.respawnPointClaimed"));
+            player.sendMessage(MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED);
             return;
         }
         PlayerRespawnPointData[] respawnPoints = player.getPlayerConfigData().getPerWorldData(world.getName()).getRespawnPoints();
-        PlayerRespawnPointData[] nearbyRespawnPoints = this.getNearbySavedRespawnPoints(pos, respawnBlock, respawnPoints, radiusLimitRespawnPoint = (respawnConfig = world.getGameplayConfig().getRespawnConfig()).getRadiusLimitRespawnPoint());
+        PlayerRespawnPointData[] nearbyRespawnPoints = this.getNearbySavedRespawnPoints(pos, respawnBlockComponent, respawnPoints, radiusLimitRespawnPoint = (respawnConfig = world.getGameplayConfig().getRespawnConfig()).getRadiusLimitRespawnPoint());
         if (nearbyRespawnPoints != null) {
-            pageManager.openCustomPage(ref, store, new OverrideNearbyRespawnPointPage(playerRefComponent, type, pos, respawnBlock, nearbyRespawnPoints, radiusLimitRespawnPoint));
+            pageManager.openCustomPage(ref, store, new OverrideNearbyRespawnPointPage(playerRefComponent, type, pos, respawnBlockComponent, nearbyRespawnPoints, radiusLimitRespawnPoint));
             return;
         }
         if (respawnPoints != null && respawnPoints.length >= respawnConfig.getMaxRespawnPointsPerPlayer()) {
-            pageManager.openCustomPage(ref, store, new SelectOverrideRespawnPointPage(playerRefComponent, type, pos, respawnBlock, respawnPoints));
+            pageManager.openCustomPage(ref, store, new SelectOverrideRespawnPointPage(playerRefComponent, type, pos, respawnBlockComponent, respawnPoints));
             return;
         }
-        pageManager.openCustomPage(ref, store, new SetNameRespawnPointPage(playerRefComponent, type, pos, respawnBlock));
+        pageManager.openCustomPage(ref, store, new SetNameRespawnPointPage(playerRefComponent, type, pos, respawnBlockComponent));
     }
 
     @Override
-    protected void simulateInteractWithBlock(@NonNullDecl InteractionType type, @NonNullDecl InteractionContext context, @NullableDecl ItemStack itemInHand, @NonNullDecl World world, @NonNullDecl Vector3i targetBlock) {
+    protected void simulateInteractWithBlock(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock) {
     }
 
     @Nullable
@@ -133,7 +134,7 @@ extends SimpleBlockInteraction {
     }
 
     @Override
-    @NonNullDecl
+    @Nonnull
     public String toString() {
         return "BedInteraction{} " + super.toString();
     }

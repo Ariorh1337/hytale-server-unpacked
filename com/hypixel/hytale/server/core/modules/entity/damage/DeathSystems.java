@@ -86,8 +86,12 @@ public class DeathSystems {
         if (modelComponent == null) {
             return;
         }
+        DamageCause deathCause = deathComponent.getDeathCause();
+        if (deathCause == null) {
+            return;
+        }
         Model model = modelComponent.getModel();
-        String[] animationIds = Entity.DefaultAnimations.getDeathAnimationIds(movementStatesComponent.getMovementStates(), deathComponent.getDeathCause());
+        String[] animationIds = Entity.DefaultAnimations.getDeathAnimationIds(movementStatesComponent.getMovementStates(), deathCause);
         String selectedAnimationId = model.getFirstBoundAnimationId(animationIds);
         AnimationUtils.playAnimation(ref, AnimationSlot.Status, selectedAnimationId, true, componentAccessor);
     }

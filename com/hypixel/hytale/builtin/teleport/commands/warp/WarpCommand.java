@@ -29,10 +29,13 @@ import javax.annotation.Nonnull;
 
 public class WarpCommand
 extends AbstractCommandCollection {
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED = Message.translation("server.commands.teleport.warp.notLoaded");
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_UNKNOWN_WARP = Message.translation("server.commands.teleport.warp.unknownWarp");
-    private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_WORLD_NAME_FOR_WARP_NOT_FOUND = Message.translation("server.commands.teleport.warp.worldNameForWarpNotFound");
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_WARPED_TO = Message.translation("server.commands.teleport.warp.warpedTo");
 
     public WarpCommand() {
@@ -57,8 +60,8 @@ extends AbstractCommandCollection {
         }
         String worldName = targetWarp.getWorld();
         World world = Universe.get().getWorld(worldName);
-        Teleport teleport = targetWarp.toTeleport();
-        if (world == null || teleport == null) {
+        Teleport teleportComponent = targetWarp.toTeleport();
+        if (world == null || teleportComponent == null) {
             context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_WORLD_NAME_FOR_WARP_NOT_FOUND.param("worldName", worldName).param("warp", warp));
             return;
         }
@@ -69,7 +72,7 @@ extends AbstractCommandCollection {
         Vector3d playerPosition = transformComponent.getPosition();
         Vector3f playerHeadRotation = headRotationComponent.getRotation();
         store.ensureAndGetComponent(ref, TeleportHistory.getComponentType()).append(world, playerPosition.clone(), playerHeadRotation.clone(), "Warp '" + warp + "'");
-        store.addComponent(ref, Teleport.getComponentType(), teleport);
+        store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
         context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_WARPED_TO.param("name", warp));
     }
 }

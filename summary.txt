@@ -224,7 +224,7 @@ org.jline.reader.impl.LineReaderImpl
 ----------------------------
 
 readLine(java.lang.String java.lang.String org.jline.reader.MaskingCallback java.lang.String )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [3[TRYBLOCK], 1[TRYBLOCK]], but top level block is 13[CASE]
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [1[TRYBLOCK], 3[TRYBLOCK]], but top level block is 13[CASE]
 
 
 org.jline.terminal.impl.ExternalTerminal
@@ -356,4 +356,4 @@ com.hypixel.hytale.builtin.beds.sleep.systems.player.EnterBedSystem
 ----------------------------
 
 getMessage(com.hypixel.hytale.builtin.beds.sleep.systems.world.CanSleepInWorld$Result )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,310
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,321

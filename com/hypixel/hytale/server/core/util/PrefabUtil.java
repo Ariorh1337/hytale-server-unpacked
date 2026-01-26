@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.event.PrefabPasteEvent;
 import com.hypixel.hytale.server.core.prefab.event.PrefabPlaceEntityEvent;
@@ -119,6 +120,9 @@ public class PrefabUtil {
             BlockType block = technicalPaste ? (blockId == 0 && fluidId == 0 ? (BlockType)blockTypeMap.getAsset(EDITOR_BLOCK_PREFAB_AIR) : (BlockType)blockTypeMap.getAsset(blockId)) : (BlockType)blockTypeMap.getAsset(blockId);
             String blockKey = block.getId();
             if (filler != 0) {
+                if (holder != null) {
+                    chunk.setState(bx, by, bz, (Holder<ChunkStore>)holder.clone());
+                }
                 return;
             }
             if (pasteAnchorAsBlock && technicalPaste && x == buffer.getAnchorX() && y == buffer.getAnchorY() && z == buffer.getAnchorZ()) {
@@ -173,7 +177,10 @@ public class PrefabUtil {
                 entityPosition.z = entityWorldPosition.z;
                 PrefabPlaceEntityEvent prefabPlaceEntityEvent = new PrefabPlaceEntityEvent(prefabId, (Holder<EntityStore>)entityToAdd);
                 componentAccessor.invoke(prefabPlaceEntityEvent);
-                ((Holder)entityToAdd).addComponent(FromPrefab.getComponentType(), FromPrefab.INSTANCE);
+                ((Holder)entityToAdd).ensureComponent(FromPrefab.getComponentType());
+                if (technicalPaste) {
+                    ((Holder)entityToAdd).ensureComponent(PrefabCopyableComponent.getComponentType());
+                }
                 componentAccessor.addEntity((Holder<EntityStore>)entityToAdd, AddReason.LOAD);
             }
         }, (x, y, z, path, fitHeightmap, inheritSeed, inheritHeightCondition, weights, rot, t) -> {}, new PrefabBufferCall(random, rotation));

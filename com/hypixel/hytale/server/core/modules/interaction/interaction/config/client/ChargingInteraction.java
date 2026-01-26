@@ -42,7 +42,6 @@ import java.util.Arrays;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ChargingInteraction
 extends Interaction {
@@ -152,7 +151,7 @@ extends Interaction {
     }
 
     @Override
-    protected void tick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         InteractionSyncData clientData = context.getClientState();
         if (context.getClientState().state == InteractionState.Failed && context.hasLabels()) {
             context.getState().state = InteractionState.Failed;
@@ -205,7 +204,7 @@ extends Interaction {
     }
 
     @Override
-    protected void simulateTick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         Ref<EntityStore> ref = context.getEntity();
         IInteractionSimulationHandler simulationHandler = context.getInteractionManager().getInteractionSimulationHandler();
         if (simulationHandler.isCharging(firstRun, time, type, context, ref, cooldownHandler) && (this.allowIndefiniteHold || time < this.highestChargeValue)) {

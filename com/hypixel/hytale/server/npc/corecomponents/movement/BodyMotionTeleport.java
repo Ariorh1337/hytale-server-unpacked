@@ -91,7 +91,7 @@ extends BodyMotionBase {
         switch (this.orientation.ordinal()) {
             case 0: {
                 Vector3f bodyRotation = transformComponent.getRotation();
-                componentAccessor.addComponent(ref, Teleport.getComponentType(), new Teleport(this.target, bodyRotation));
+                componentAccessor.addComponent(ref, Teleport.getComponentType(), Teleport.createExact(this.target, bodyRotation));
                 break;
             }
             case 1: {
@@ -108,7 +108,7 @@ extends BodyMotionBase {
                     yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
                     pitch = PhysicsMath.pitchFromDirection(x, y, z);
                 }
-                componentAccessor.addComponent(ref, Teleport.getComponentType(), new Teleport(this.target, new Vector3f(yaw, pitch, bodyRotation.getRoll())));
+                componentAccessor.addComponent(ref, Teleport.getComponentType(), Teleport.createExact(this.target, new Vector3f(yaw, pitch, bodyRotation.getRoll())));
                 break;
             }
             case 2: {
@@ -120,7 +120,7 @@ extends BodyMotionBase {
                 TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
                 assert (targetTransformComponent != null);
                 Vector3f bodyRotation = targetTransformComponent.getRotation();
-                componentAccessor.addComponent(ref, Teleport.getComponentType(), new Teleport(this.target, bodyRotation));
+                componentAccessor.addComponent(ref, Teleport.getComponentType(), Teleport.createExact(this.target, bodyRotation));
             }
         }
         this.tries = 10;

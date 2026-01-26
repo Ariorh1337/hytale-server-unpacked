@@ -21,6 +21,7 @@ import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
@@ -152,8 +153,26 @@ extends SelectorType {
                 this.executor.setLineOfSightProvider((fromX, fromY, fromZ, toX, toY, toZ) -> {
                     LocalCachedChunkAccessor localAccessor = LocalCachedChunkAccessor.atWorldCoords(((EntityStore)commandBuffer.getStore().getExternalData()).getWorld(), (int)fromX, (int)fromZ, (int)(StabSelector.this.endDistance + 1.0));
                     return BlockIterator.iterateFromTo(fromX, fromY, fromZ, toX, toY, toZ, (x, y, z, px, py, pz, qx, qy, qz, accessor) -> {
-                        int blockId = accessor.getBlock(x, y, z);
-                        return blockId == 0;
+                        if (accessor.getBlockType(x, y, z).getMaterial() == BlockMaterial.Solid) {
+                            BlockType blockType = accessor.getBlockType(x, y, z);
+                            if (blockType == null) {
+                                return true;
+                            }
+                            BlockBoundingBoxes blockHitboxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+                            if (blockHitboxes == null) {
+                                return true;
+                            }
+                            BlockBoundingBoxes.RotatedVariantBoxes rotatedHitboxes = blockHitboxes.get(accessor.getBlockRotationIndex(x, y, z));
+                            Vector3d lineFrom = new Vector3d(fromX, fromY, fromZ);
+                            Vector3d lineTo = new Vector3d(toX, toY, toZ);
+                            for (Box box : rotatedHitboxes.getDetailBoxes()) {
+                                Box offsetBox = box.clone().offset(x, y, z);
+                                boolean intersect = offsetBox.intersectsLine(lineFrom, lineTo);
+                                if (!intersect) continue;
+                                return false;
+                            }
+                        }
+                        return true;
                     }, localAccessor);
                 });
             } else {

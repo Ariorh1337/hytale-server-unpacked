@@ -10,7 +10,6 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.universe.world.path.IPathWaypoint;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class SimplePathWaypoint
 implements IPathWaypoint {
@@ -29,7 +28,7 @@ implements IPathWaypoint {
 
     @Override
     @Nonnull
-    public Vector3d getWaypointPosition(@NonNullDecl ComponentAccessor<EntityStore> componentAccessor) {
+    public Vector3d getWaypointPosition(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         return this.transform.getPosition();
     }
 

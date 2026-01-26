@@ -28,21 +28,19 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 public class RespondToHitSystems {
 
     public static class OnPlayerSettingsChange
     extends RefChangeSystem<EntityStore, PlayerSettings> {
         @Override
-        @NonNullDecl
+        @Nonnull
         public ComponentType<EntityStore, PlayerSettings> componentType() {
             return PlayerSettings.getComponentType();
         }
 
         @Override
-        public void onComponentAdded(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl PlayerSettings component, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull PlayerSettings component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
             Player player = commandBuffer.getComponent(ref, Player.getComponentType());
             if (player.getGameMode() != GameMode.Creative) {
                 return;
@@ -55,7 +53,7 @@ public class RespondToHitSystems {
         }
 
         @Override
-        public void onComponentSet(@NonNullDecl Ref<EntityStore> ref, @NullableDecl PlayerSettings oldComponent, @NonNullDecl PlayerSettings newComponent, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void onComponentSet(@Nonnull Ref<EntityStore> ref, @Nullable PlayerSettings oldComponent, @Nonnull PlayerSettings newComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
             Player player = commandBuffer.getComponent(ref, Player.getComponentType());
             if (player.getGameMode() != GameMode.Creative) {
                 return;
@@ -68,11 +66,11 @@ public class RespondToHitSystems {
         }
 
         @Override
-        public void onComponentRemoved(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl PlayerSettings component, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+        public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull PlayerSettings component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         }
 
         @Override
-        @NullableDecl
+        @Nullable
         public Query<EntityStore> getQuery() {
             return Player.getComponentType();
         }

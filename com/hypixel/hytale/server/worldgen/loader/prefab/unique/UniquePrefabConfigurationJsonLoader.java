@@ -31,7 +31,6 @@ import com.hypixel.hytale.server.worldgen.loader.util.Vector3dJsonLoader;
 import com.hypixel.hytale.server.worldgen.prefab.unique.UniquePrefabConfiguration;
 import com.hypixel.hytale.server.worldgen.util.ResolvedBlockArray;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
-import com.hypixel.hytale.server.worldgen.util.condition.DefaultBlockMaskCondition;
 import com.hypixel.hytale.server.worldgen.util.condition.HashSetBlockFluidCondition;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.nio.file.Path;
@@ -99,7 +98,7 @@ extends JsonLoader<SeedStringResource, UniquePrefabConfiguration> {
 
     @Nullable
     protected BlockMaskCondition loadMask() {
-        BlockMaskCondition configuration = DefaultBlockMaskCondition.DEFAULT_TRUE;
+        BlockMaskCondition configuration = BlockMaskCondition.DEFAULT_TRUE;
         if (this.has("Mask")) {
             configuration = new BlockPlacementMaskJsonLoader(this.seed, this.dataFolder, this.getRaw("Mask")).load();
         }

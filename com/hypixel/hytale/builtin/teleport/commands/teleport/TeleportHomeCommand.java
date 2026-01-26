@@ -38,12 +38,13 @@ extends AbstractPlayerCommand {
         assert (transformComponent != null);
         HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
         assert (headRotationComponent != null);
-        Vector3d position = transformComponent.getPosition().clone();
-        Vector3f headRotation = headRotationComponent.getRotation().clone();
+        Vector3d previousPos = transformComponent.getPosition().clone();
+        Vector3f previousHeadRotation = headRotationComponent.getRotation().clone();
         TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
-        teleportHistoryComponent.append(world, position, headRotation, "Home");
+        teleportHistoryComponent.append(world, previousPos, previousHeadRotation, "Home");
         Transform homeTransform = Player.getRespawnPosition(ref, world.getName(), store);
-        store.addComponent(ref, Teleport.getComponentType(), new Teleport(null, homeTransform));
+        Teleport teleportComponent = Teleport.createForPlayer(null, homeTransform);
+        store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
         context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_SELF_HOME);
     }
 }

@@ -56,7 +56,6 @@ public class HytaleServerConfig {
     private String password = "";
     private int maxPlayers = 100;
     private int maxViewRadius = 32;
-    private boolean localCompressionEnabled;
     @Nonnull
     private Defaults defaults = new Defaults(this);
     @Nonnull
@@ -133,15 +132,6 @@ public class HytaleServerConfig {
 
     public void setMaxViewRadius(int maxViewRadius) {
         this.maxViewRadius = maxViewRadius;
-        this.markChanged();
-    }
-
-    public boolean isLocalCompressionEnabled() {
-        return this.localCompressionEnabled;
-    }
-
-    public void setLocalCompressionEnabled(boolean localCompression) {
-        this.localCompressionEnabled = localCompression;
         this.markChanged();
     }
 
@@ -291,7 +281,7 @@ public class HytaleServerConfig {
         Module.BUILDER_CODEC_BUILDER.addField(new KeyedCodec("Modules", new MapCodec<Module, ConcurrentHashMap>(Module.CODEC, ConcurrentHashMap::new, false)), (o, m) -> {
             o.modules = m;
         }, o -> o.modules);
-        CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HytaleServerConfig.class, HytaleServerConfig::new).versioned()).codecVersion(3)).append(new KeyedCodec<String>("ServerName", Codec.STRING), (o, s) -> {
+        CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HytaleServerConfig.class, HytaleServerConfig::new).versioned()).codecVersion(3)).append(new KeyedCodec<String>("ServerName", Codec.STRING), (o, s) -> {
             o.serverName = s;
         }, o -> o.serverName).add()).append(new KeyedCodec<String>("MOTD", Codec.STRING), (o, s) -> {
             o.motd = s;
@@ -301,9 +291,7 @@ public class HytaleServerConfig {
             o.maxPlayers = i;
         }, o -> o.maxPlayers).add()).append(new KeyedCodec<Integer>("MaxViewRadius", Codec.INTEGER), (o, i) -> {
             o.maxViewRadius = i;
-        }, o -> o.maxViewRadius).add()).append(new KeyedCodec<Boolean>("LocalCompressionEnabled", Codec.BOOLEAN), (o, i) -> {
-            o.localCompressionEnabled = i;
-        }, o -> o.localCompressionEnabled).add()).append(new KeyedCodec<Defaults>("Defaults", Defaults.CODEC), (o, obj) -> {
+        }, o -> o.maxViewRadius).add()).append(new KeyedCodec<Defaults>("Defaults", Defaults.CODEC), (o, obj) -> {
             o.defaults = obj;
         }, o -> o.defaults).add()).append(new KeyedCodec<ConnectionTimeouts>("ConnectionTimeouts", ConnectionTimeouts.CODEC), (o, m) -> {
             o.connectionTimeouts = m;

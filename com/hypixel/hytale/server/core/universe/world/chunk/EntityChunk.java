@@ -107,12 +107,16 @@ implements Component<ChunkStore> {
     @Override
     @Nonnull
     public Component<ChunkStore> cloneSerializable() {
+        ComponentRegistry.Data<EntityStore> data = EntityStore.REGISTRY.getData();
         ObjectArrayList<Holder<EntityStore>> entityHoldersClone = new ObjectArrayList<Holder<EntityStore>>(this.entityHolders.size() + this.entityReferences.size());
         for (Holder<EntityStore> holder : this.entityHolders) {
-            entityHoldersClone.add((Holder<EntityStore>)holder.clone());
+            if (!holder.getArchetype().hasSerializableComponents(data)) continue;
+            entityHoldersClone.add(holder.cloneSerializable(data));
         }
         for (Ref ref : this.entityReferences) {
-            entityHoldersClone.add(ref.getStore().copySerializableEntity(ref));
+            Store store = ref.getStore();
+            if (!store.getArchetype(ref).hasSerializableComponents(data)) continue;
+            entityHoldersClone.add(store.copySerializableEntity(ref));
         }
         return new EntityChunk(entityHoldersClone, new HashSet<Ref<EntityStore>>());
     }
@@ -288,6 +292,7 @@ implements Component<ChunkStore> {
                     LOGGER.at(Level.SEVERE).log("Empty archetype entity holder: %s (#%d)", (Object)holder, i);
                     holders[i] = holders[--holderCount];
                     holders[holderCount] = holder;
+                    worldChunkComponent.markNeedsSaving();
                     continue;
                 }
                 if (archetype.count() == 1 && archetype.contains(Nameplate.getComponentType())) {

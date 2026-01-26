@@ -38,6 +38,8 @@ extends AbstractPlayerCommand {
     @Nonnull
     private final DefaultArg<Integer> quantityArg = this.withDefaultArg("quantity", "server.commands.give.quantity.desc", ArgTypes.INTEGER, Integer.valueOf(1), "1");
     @Nonnull
+    private final OptionalArg<Double> durabilityArg = this.withOptionalArg("durability", "server.commands.give.durability.desc", ArgTypes.DOUBLE);
+    @Nonnull
     private final OptionalArg<String> metadataArg = this.withOptionalArg("metadata", "server.commands.give.metadata.desc", ArgTypes.STRING);
 
     public GiveCommand() {
@@ -53,6 +55,10 @@ extends AbstractPlayerCommand {
         assert (playerComponent != null);
         Item item = (Item)this.itemArg.get(context);
         Integer quantity = (Integer)this.quantityArg.get(context);
+        double durability = Double.MAX_VALUE;
+        if (this.durabilityArg.provided(context)) {
+            durability = (Double)this.durabilityArg.get(context);
+        }
         BsonDocument metadata = null;
         if (this.metadataArg.provided(context)) {
             String metadataStr = (String)this.metadataArg.get(context);
@@ -64,7 +70,8 @@ extends AbstractPlayerCommand {
                 return;
             }
         }
-        ItemStackTransaction transaction = playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(new ItemStack(item.getId(), quantity, metadata));
+        ItemStack stack = new ItemStack(item.getId(), quantity, metadata).withDurability(durability);
+        ItemStackTransaction transaction = playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(stack);
         ItemStack remainder = transaction.getRemainder();
         Message itemNameMessage = Message.translation(item.getTranslationKey());
         if (remainder == null || remainder.isEmpty()) {
@@ -90,6 +97,8 @@ extends AbstractPlayerCommand {
         private final RequiredArg<Item> itemArg = this.withRequiredArg("item", "server.commands.give.item.desc", ArgTypes.ITEM_ASSET);
         @Nonnull
         private final DefaultArg<Integer> quantityArg = this.withDefaultArg("quantity", "server.commands.give.quantity.desc", ArgTypes.INTEGER, Integer.valueOf(1), "1");
+        @Nonnull
+        private final OptionalArg<Double> durabilityArg = this.withOptionalArg("durability", "server.commands.give.durability.desc", ArgTypes.DOUBLE);
         @Nonnull
         private final OptionalArg<String> metadataArg = this.withOptionalArg("metadata", "server.commands.give.metadata.desc", ArgTypes.STRING);
 
@@ -118,6 +127,10 @@ extends AbstractPlayerCommand {
                 assert (playerRefComponent != null);
                 Item item = (Item)this.itemArg.get(context);
                 Integer quantity = (Integer)this.quantityArg.get(context);
+                double durability = Double.MAX_VALUE;
+                if (this.durabilityArg.provided(context)) {
+                    durability = (Double)this.durabilityArg.get(context);
+                }
                 BsonDocument metadata = null;
                 if (this.metadataArg.provided(context)) {
                     String metadataStr = (String)this.metadataArg.get(context);
@@ -129,7 +142,8 @@ extends AbstractPlayerCommand {
                         return;
                     }
                 }
-                ItemStackTransaction transaction = playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(new ItemStack(item.getId(), quantity, metadata));
+                ItemStack stack = new ItemStack(item.getId(), quantity, metadata).withDurability(durability);
+                ItemStackTransaction transaction = playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(stack);
                 ItemStack remainder = transaction.getRemainder();
                 Message itemNameMessage = Message.translation(item.getTranslationKey());
                 if (remainder == null || remainder.isEmpty()) {

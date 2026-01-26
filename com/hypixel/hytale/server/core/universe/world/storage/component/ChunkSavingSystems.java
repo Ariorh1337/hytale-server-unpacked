@@ -26,7 +26,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
-import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Deque;
 import java.util.List;
@@ -257,11 +256,8 @@ public class ChunkSavingSystems {
         @Override
         public void onSystemRemovedFromStore(@Nonnull Store<ChunkStore> store) {
             World world = store.getExternalData().getWorld();
-            IWorldGen generator = world.getChunkStore().getGenerator();
-            if (generator != null) {
-                world.getLogger().at(Level.INFO).log("Shutting down chunk generator...");
-                generator.shutdown();
-            }
+            world.getLogger().at(Level.INFO).log("Shutting down chunk generator...");
+            world.getChunkStore().shutdownGenerator();
             if (!world.getWorldConfig().canSaveChunks()) {
                 world.getLogger().at(Level.INFO).log("This world has opted to disable chunk saving so it will not be saved on shutdown");
                 return;

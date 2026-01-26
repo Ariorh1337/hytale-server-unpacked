@@ -17,7 +17,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.
 import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.OperationsBuilder;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class MovementConditionInteraction
 extends SimpleInteraction {
@@ -82,7 +81,7 @@ extends SimpleInteraction {
     private String backRight;
 
     @Override
-    protected void tick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         context.getState().state = InteractionState.Finished;
         context.jump(context.getLabel(switch (context.getClientState().movementDirection) {
             default -> throw new MatchException(null, null);
@@ -110,7 +109,7 @@ extends SimpleInteraction {
     }
 
     @Override
-    protected void simulateTick0(boolean firstRun, float time, @NonNullDecl InteractionType type, @Nonnull InteractionContext context, @NonNullDecl CooldownHandler cooldownHandler) {
+    protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         context.getState().movementDirection = MovementDirection.None;
         context.jump(context.getLabel(0));
     }

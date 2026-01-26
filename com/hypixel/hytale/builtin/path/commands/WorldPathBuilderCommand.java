@@ -143,7 +143,10 @@ extends AbstractCommandCollection {
                     future.complete(null);
                     scheduledFuture[0].cancel(false);
                 } else {
-                    world.execute(() -> store.addComponent(ref, Teleport.getComponentType(), new Teleport(null, transform)));
+                    world.execute(() -> {
+                        Teleport teleportComponent = Teleport.createForPlayer(transform);
+                        store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+                    });
                 }
             }, 1L, 1L, TimeUnit.SECONDS)};
         }
@@ -231,7 +234,9 @@ extends AbstractCommandCollection {
             }
             Integer index = (Integer)this.indexArg.get(context);
             WorldPath worldPath = builder.getPath();
-            store.addComponent(ref, Teleport.getComponentType(), new Teleport(null, worldPath.getWaypoints().get(index)));
+            Transform waypointTransform = worldPath.getWaypoints().get(index);
+            Teleport teleportComponent = Teleport.createForPlayer(null, waypointTransform);
+            store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
             context.sendMessage(Message.translation("server.universe.worldpath.teleportedToPoint").param("index", index));
         }
     }

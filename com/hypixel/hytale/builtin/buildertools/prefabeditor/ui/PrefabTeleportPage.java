@@ -118,7 +118,7 @@ extends InteractiveCustomUIPage<PageData> {
                     WorldChunk worldChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(centerX, centerZ));
                     int teleportY = worldChunk != null ? worldChunk.getHeight(centerX, centerZ) + 8 : maxPoint.y + 8;
                     Vector3d teleportPosition = new Vector3d((double)centerX + 0.5, teleportY, (double)centerZ + 0.5);
-                    store.addComponent(ref, Teleport.getComponentType(), new Teleport(teleportPosition, new Vector3f()));
+                    store.addComponent(ref, Teleport.getComponentType(), Teleport.createForPlayer(teleportPosition, new Vector3f()));
                     playerComponent.getPageManager().setPage(ref, store, Page.None);
                 }
             }

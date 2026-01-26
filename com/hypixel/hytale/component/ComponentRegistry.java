@@ -1372,7 +1372,7 @@ implements IComponentRegistry<ECS_TYPE> {
         @Nonnull
         private BuilderCodec<Holder<ECS_TYPE>> createCodec() {
             Function<Codec, Codec> function = componentCodec -> componentCodec != null ? componentCodec : TempUnknownComponent.COMPONENT_CODEC;
-            return ((BuilderCodec.Builder)BuilderCodec.builder(Holder.class, this.registry::newHolder).addField(new KeyedCodec("Components", new MapProvidedMapCodec(this.codecMap, function, LinkedHashMap::new, false)), (holder, map) -> holder.loadComponentsMap(this, map), holder -> holder.createComponentsMap(this))).build();
+            return ((BuilderCodec.BuilderBase)BuilderCodec.builder(Holder.class, this.registry::newHolder).append(new KeyedCodec("Components", new MapProvidedMapCodec(this.codecMap, function, LinkedHashMap::new, false)), (holder, map) -> holder.loadComponentsMap(this, map), holder -> holder.createComponentsMap(this)).add()).build();
         }
 
         public int getVersion() {

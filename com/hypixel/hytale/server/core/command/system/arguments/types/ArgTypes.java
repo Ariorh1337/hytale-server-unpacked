@@ -19,6 +19,8 @@ import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
+import com.hypixel.hytale.server.core.auth.ProfileServiceClient;
+import com.hypixel.hytale.server.core.auth.ServerAuthManager;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
@@ -61,6 +63,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -166,6 +169,61 @@ public final class ArgTypes {
                     return playerRef.getUuid();
                 }
                 parseResult.fail(Message.translation("server.commands.parsing.argtype.playerUuid.fail").param("input", input));
+                return null;
+            }
+        }
+    };
+    public static final SingleArgumentType<CompletableFuture<ProfileServiceClient.PublicGameProfile>> GAME_PROFILE_LOOKUP_ASYNC = new SingleArgumentType<CompletableFuture<ProfileServiceClient.PublicGameProfile>>("server.commands.parsing.argtype.playerUuidLookup.name", "server.commands.parsing.argtype.playerUuidLookup.usage", new String[]{java.util.UUID.randomUUID().toString(), "john_doe", "user123"}){
+
+        @Override
+        @Nullable
+        public CompletableFuture<ProfileServiceClient.PublicGameProfile> parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
+            for (World world : Universe.get().getWorlds().values()) {
+                Collection<PlayerRef> playerRefs = world.getPlayerRefs();
+                PlayerRef playerRef = NameMatching.DEFAULT.find(playerRefs, input, PlayerRef::getUsername);
+                if (playerRef == null) continue;
+                return CompletableFuture.completedFuture(new ProfileServiceClient.PublicGameProfile(playerRef.getUuid(), playerRef.getUsername()));
+            }
+            UUID inputAsUuid = null;
+            try {
+                inputAsUuid = java.util.UUID.fromString(input);
+            }
+            catch (IllegalArgumentException world) {
+                // empty catch block
+            }
+            ServerAuthManager authManager = ServerAuthManager.getInstance();
+            String sessionToken = authManager.getSessionToken();
+            if (sessionToken == null) {
+                return CompletableFuture.failedFuture(new IllegalStateException("No session token available for profile lookup"));
+            }
+            ProfileServiceClient profileClient = authManager.getProfileServiceClient();
+            CompletableFuture<ProfileServiceClient.PublicGameProfile> future = inputAsUuid != null ? profileClient.getProfileByUuidAsync(inputAsUuid, sessionToken) : profileClient.getProfileByUsernameAsync(input, sessionToken);
+            return future.thenApply(profile -> {
+                if (profile == null || profile.getUuid() == null) {
+                    throw new IllegalArgumentException("Player not found: " + input);
+                }
+                return profile;
+            });
+        }
+    };
+    public static final SingleArgumentType<ProfileServiceClient.PublicGameProfile> GAME_PROFILE_LOOKUP = new SingleArgumentType<ProfileServiceClient.PublicGameProfile>("server.commands.parsing.argtype.playerUuidLookup.name", "server.commands.parsing.argtype.playerUuidLookup.usage", new String[]{java.util.UUID.randomUUID().toString(), "john_doe", "user123"}){
+
+        @Override
+        @Nullable
+        public ProfileServiceClient.PublicGameProfile parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
+            try {
+                return GAME_PROFILE_LOOKUP_ASYNC.parse(input, parseResult).join();
+            }
+            catch (Exception e) {
+                Throwable cause;
+                Throwable throwable = cause = e.getCause() != null ? e.getCause() : e;
+                if (cause instanceof IllegalStateException) {
+                    parseResult.fail(Message.translation("server.commands.parsing.argtype.playerUuidLookup.noAuth").param("input", input));
+                } else if (cause instanceof IllegalArgumentException) {
+                    parseResult.fail(Message.translation("server.commands.parsing.argtype.playerUuidLookup.notFound").param("input", input));
+                } else {
+                    parseResult.fail(Message.translation("server.commands.parsing.argtype.playerUuidLookup.lookupError").param("input", input).param("error", cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName()));
+                }
                 return null;
             }
         }

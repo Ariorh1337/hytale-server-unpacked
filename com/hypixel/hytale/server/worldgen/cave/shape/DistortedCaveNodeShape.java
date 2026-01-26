@@ -167,7 +167,7 @@ implements CaveNodeShape {
                     boolean bl = isCandidateBlock = !surfaceLimited || current != 0;
                     if (!isCandidateBlock) continue;
                     BlockFluidEntry blockEntry2 = CaveNodeShapeUtils.getFillingBlock(caveType, caveNodeType, y, random);
-                    if (!caveType.getBlockMask().eval(current, currentFluid, blockEntry2)) continue;
+                    if (!caveType.getBlockMask().eval(current, currentFluid, blockEntry2.blockId(), blockEntry2.fluidId())) continue;
                     if (execution.setBlock(cx, y, cz, (byte)6, blockEntry2, environment)) {
                         if (y < lowest) {
                             lowest = y;

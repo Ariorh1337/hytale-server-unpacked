@@ -20,8 +20,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /*
  * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
@@ -41,17 +41,17 @@ extends RefChangeSystem<EntityStore, MountedComponent> {
     }
 
     @Override
-    public void onComponentAdded(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl MountedComponent component, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+    public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         this.check(ref, component, store);
     }
 
     @Override
-    public void onComponentSet(@NonNullDecl Ref<EntityStore> ref, @NullableDecl MountedComponent oldComponent, @NonNullDecl MountedComponent newComponent, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+    public void onComponentSet(@Nonnull Ref<EntityStore> ref, @Nullable MountedComponent oldComponent, @Nonnull MountedComponent newComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         this.check(ref, newComponent, store);
     }
 
     @Override
-    public void onComponentRemoved(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl MountedComponent component, @NonNullDecl Store<EntityStore> store, @NonNullDecl CommandBuffer<EntityStore> commandBuffer) {
+    public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
     }
 
     public void check(Ref<EntityStore> ref, MountedComponent component, Store<EntityStore> store) {
@@ -70,6 +70,7 @@ extends RefChangeSystem<EntityStore, MountedComponent> {
         CanSleepInWorld.Result canSleepResult = CanSleepInWorld.check(world);
         if (!canSleepResult.isNegative()) return;
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        assert (playerRef != null);
         if (!(canSleepResult instanceof CanSleepInWorld.NotDuringSleepHoursRange)) {
             Message msg = this.getMessage(canSleepResult);
             playerRef.sendMessage(msg);
@@ -98,7 +99,7 @@ extends RefChangeSystem<EntityStore, MountedComponent> {
         /*
          * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
          * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,310
+         * org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,321
          *     at org.benf.cfr.reader.bytecode.analysis.parse.literal.TypedLiteral.getConstantPoolEntry(TypedLiteral.java:340)
          *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op02WithProcessedDataAndRefs.getBootstrapArg(Op02WithProcessedDataAndRefs.java:538)
          *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op02WithProcessedDataAndRefs.getVarArgs(Op02WithProcessedDataAndRefs.java:671)
@@ -138,7 +139,7 @@ extends RefChangeSystem<EntityStore, MountedComponent> {
         return Message.translation(msgKey).param("h", displayHour).param("m", String.format("%02d", minute));
     }
 
-    private static Message formatDuration(Duration duration) {
+    private static Message formatDuration(@Nonnull Duration duration) {
         long totalMinutes = duration.toMinutes();
         long hours = totalMinutes / 60L;
         long minutes = totalMinutes % 60L;

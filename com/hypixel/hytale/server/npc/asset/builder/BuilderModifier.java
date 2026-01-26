@@ -6,6 +6,7 @@ package com.hypixel.hytale.server.npc.asset.builder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.schema.NamedSchema;
 import com.hypixel.hytale.codec.schema.SchemaContext;
@@ -181,7 +182,9 @@ public class BuilderModifier {
         String combatConfig = null;
         JsonElement combatConfigValue = modify.get(KEY_COMBAT_CONFIG);
         if (combatConfigValue != null) {
-            combatConfig = combatConfigValue.getAsString();
+            combatConfig = BalanceAsset.CHILD_ASSET_CODEC.decode(BsonUtil.translateJsonToBson(combatConfigValue), extraInfo);
+            extraInfo.getValidationResults()._processValidationResults();
+            extraInfo.getValidationResults().logOrThrowValidatorExceptions(HytaleLogger.getLogger());
         }
         Object var11_16 = null;
         JsonElement interactionVarsValue = modify.get(KEY_INTERACTION_VARS);
@@ -260,9 +263,11 @@ public class BuilderModifier {
             s.setProperties(props);
             props.put(BuilderModifier.KEY_EXPORT_STATES, new ArraySchema(new StringSchema()));
             props.put(BuilderModifier.KEY_INTERFACE_PARAMETERS, new ObjectSchema());
-            StringSchema combatConfig = new StringSchema();
-            combatConfig.setHytaleAssetRef(BalanceAsset.class.getSimpleName());
-            props.put(BuilderModifier.KEY_COMBAT_CONFIG, combatConfig);
+            Schema combatConfigKeySchema = context.refDefinition(Codec.STRING);
+            combatConfigKeySchema.setTitle("Reference to " + BalanceAsset.class.getSimpleName());
+            Schema combatConfigNestedSchema = context.refDefinition(BalanceAsset.CHILD_ASSET_CODEC);
+            Schema combatConfigSchema = Schema.anyOf(combatConfigKeySchema, combatConfigNestedSchema);
+            props.put(BuilderModifier.KEY_COMBAT_CONFIG, combatConfigSchema);
             ObjectSchema interactionVars = new ObjectSchema();
             interactionVars.setTitle("Map");
             Schema childSchema = context.refDefinition(RootInteraction.CHILD_ASSET_CODEC);

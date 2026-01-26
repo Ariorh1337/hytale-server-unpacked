@@ -4,12 +4,12 @@
 package com.hypixel.hytale.server.core.modules.accesscontrol.commands;
 
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.auth.ProfileServiceClient;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
 import com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleBanProvider;
-import com.hypixel.hytale.server.core.util.AuthUtil;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
@@ -19,7 +19,7 @@ extends AbstractAsyncCommand {
     @Nonnull
     private final HytaleBanProvider banProvider;
     @Nonnull
-    private final RequiredArg<String> usernameArg = this.withRequiredArg("username", "server.commands.unban.username.desc", ArgTypes.STRING);
+    private final RequiredArg<ProfileServiceClient.PublicGameProfile> playerArg = this.withRequiredArg("player", "server.commands.unban.player.desc", ArgTypes.GAME_PROFILE_LOOKUP);
 
     public UnbanCommand(@Nonnull HytaleBanProvider banProvider) {
         super("unban", "server.commands.unban.desc");
@@ -30,19 +30,19 @@ extends AbstractAsyncCommand {
     @Override
     @Nonnull
     protected CompletableFuture<Void> executeAsync(@Nonnull CommandContext context) {
-        String username = (String)this.usernameArg.get(context);
-        return ((CompletableFuture)AuthUtil.lookupUuid(username).thenAccept(uuid -> {
-            if (!this.banProvider.hasBan((UUID)uuid)) {
-                context.sendMessage(Message.translation("server.modules.unban.playerNotBanned").param("name", username));
-            } else {
-                this.banProvider.modify(map -> map.remove(uuid) != null);
-                context.sendMessage(Message.translation("server.modules.unban.success").param("name", username));
-            }
-        })).exceptionally(ex -> {
-            context.sendMessage(Message.translation("server.modules.ban.lookupFailed").param("name", username));
-            ex.printStackTrace();
-            return null;
-        });
+        ProfileServiceClient.PublicGameProfile profile = (ProfileServiceClient.PublicGameProfile)this.playerArg.get(context);
+        if (profile == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        UUID uuid = profile.getUuid();
+        Message displayMessage = Message.raw(profile.getUsername()).bold(true);
+        if (!this.banProvider.hasBan(uuid)) {
+            context.sendMessage(Message.translation("server.modules.unban.playerNotBanned").param("name", displayMessage));
+        } else {
+            this.banProvider.modify(map -> map.remove(uuid) != null);
+            context.sendMessage(Message.translation("server.modules.unban.success").param("name", displayMessage));
+        }
+        return CompletableFuture.completedFuture(null);
     }
 }
 

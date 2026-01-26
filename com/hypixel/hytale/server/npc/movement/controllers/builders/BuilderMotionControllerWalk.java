@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.NumberArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
@@ -44,9 +45,9 @@ extends BuilderMotionControllerBase {
     private final DoubleHolder minJumpDistance = new DoubleHolder();
     private final DoubleHolder jumpBlending = new DoubleHolder();
     private final DoubleHolder jumpDescentBlending = new DoubleHolder();
-    private double climbSpeedMult;
-    private double climbSpeedPow;
-    private double climbSpeedConst;
+    private final DoubleHolder climbSpeedMult = new DoubleHolder();
+    private final DoubleHolder climbSpeedPow = new DoubleHolder();
+    private final DoubleHolder climbSpeedConst = new DoubleHolder();
     private final DoubleHolder minDescentAnimationHeight = new DoubleHolder();
     private final DoubleHolder descendFlatness = new DoubleHolder();
     private final DoubleHolder descendSpeedCompensation = new DoubleHolder();
@@ -63,8 +64,8 @@ extends BuilderMotionControllerBase {
     private float hoverFreq;
     private double maxWalkSpeedAfterHitMultiplier;
     private String fenceBlockSet;
-    private MotionControllerWalk.DescentAnimationType descentAnimationType;
-    private MotionControllerWalk.AscentAnimationType ascentAnimationType;
+    private final EnumHolder<MotionControllerWalk.DescentAnimationType> descentAnimationType = new EnumHolder();
+    private final EnumHolder<MotionControllerWalk.AscentAnimationType> ascentAnimationType = new EnumHolder();
 
     @Override
     @Nonnull
@@ -118,24 +119,14 @@ extends BuilderMotionControllerBase {
         this.getDouble(data, "JumpBlending", this.jumpBlending, 1.0, (DoubleValidator)DoubleRangeValidator.between01(), BuilderDescriptorState.Experimental, "The blending of the upwards jump pattern", "The blending of the upward jump pattern. 0 is more curved and 1 is linear");
         this.getDouble(data, "JumpDescentBlending", this.jumpDescentBlending, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Experimental, "The blending of the jump descent pattern", "The blending of the jump descent pattern. 0 is linear while higher values become more curved");
         this.getDouble(data, "JumpDescentSteepness", this.jumpDescentSteepness, 1.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "The steepness of the descent portion of the jump", null);
-        this.getEnum(data, "AscentAnimationType", (E v) -> {
-            this.ascentAnimationType = v;
-        }, MotionControllerWalk.AscentAnimationType.class, MotionControllerWalk.AscentAnimationType.Walk, BuilderDescriptorState.Stable, "The animation to play when walking up a block", null);
-        this.getDouble(data, "ClimbSpeedMult", (double v) -> {
-            this.climbSpeedMult = v;
-        }, 0.0, null, BuilderDescriptorState.WorkInProgress, "Climb speed multiplier (const + multiplier * walkspeed ** power)", null);
-        this.getDouble(data, "ClimbSpeedPow", (double v) -> {
-            this.climbSpeedPow = v;
-        }, 1.0, null, BuilderDescriptorState.WorkInProgress, "Climb speed power (const + multiplier * walkspeed ** power)", null);
-        this.getDouble(data, "ClimbSpeedConst", (double v) -> {
-            this.climbSpeedConst = v;
-        }, 5.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.WorkInProgress, "Climb speed constant (const + multiplier * walkspeed ** power)", null);
+        this.getEnum(data, "AscentAnimationType", this.ascentAnimationType, MotionControllerWalk.AscentAnimationType.class, MotionControllerWalk.AscentAnimationType.Walk, BuilderDescriptorState.Stable, "The animation to play when walking up a block", null);
+        this.getDouble(data, "ClimbSpeedMult", this.climbSpeedMult, 0.0, null, BuilderDescriptorState.WorkInProgress, "Climb speed multiplier (const + multiplier * walkspeed ** power)", null);
+        this.getDouble(data, "ClimbSpeedPow", this.climbSpeedPow, 1.0, null, BuilderDescriptorState.WorkInProgress, "Climb speed power (const + multiplier * walkspeed ** power)", null);
+        this.getDouble(data, "ClimbSpeedConst", this.climbSpeedConst, 5.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.WorkInProgress, "Climb speed constant (const + multiplier * walkspeed ** power)", null);
         this.getDouble(data, "MinDescentAnimationHeight", this.minDescentAnimationHeight, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Stable, "The min drop distance to switch from the standard walking animation to the specified descent animation", null);
         this.getDouble(data, "DescendFlatness", this.descendFlatness, 0.7, (DoubleValidator)DoubleRangeValidator.between01(), BuilderDescriptorState.WorkInProgress, "Relative scale how fast NPC moves forward while climbing down", null);
         this.getDouble(data, "DescendSpeedCompensation", this.descendSpeedCompensation, 0.9, (DoubleValidator)DoubleRangeValidator.between01(), BuilderDescriptorState.WorkInProgress, "Factor to compensate forward speed reduction while moving downwards", null);
-        this.getEnum(data, "DescentAnimationType", (E v) -> {
-            this.descentAnimationType = v;
-        }, MotionControllerWalk.DescentAnimationType.class, MotionControllerWalk.DescentAnimationType.Fall, BuilderDescriptorState.Experimental, "The animation to play when moving down a block", null);
+        this.getEnum(data, "DescentAnimationType", this.descentAnimationType, MotionControllerWalk.DescentAnimationType.class, MotionControllerWalk.DescentAnimationType.Fall, BuilderDescriptorState.Experimental, "The animation to play when moving down a block", null);
         this.getDouble(data, "DescentSteepness", this.descentSteepness, 1.4, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "The relative steepness of the descent", null);
         this.getDouble(data, "DescentBlending", this.descentBlending, 1.8, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Experimental, "The blending of the descent pattern", "The blending of the descent pattern. 0 is linear, while higher values become more curved");
         this.getDouble(data, "MaxDropHeight", this.maxDropHeight, 3.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.WorkInProgress, "Maximum height NPC considers drop safe", null);
@@ -217,16 +208,16 @@ extends BuilderMotionControllerBase {
         return this.maxClimbHeight.get(support.getExecutionContext());
     }
 
-    public double getClimbSpeedMult() {
-        return this.climbSpeedMult;
+    public double getClimbSpeedMult(BuilderSupport support) {
+        return this.climbSpeedMult.get(support.getExecutionContext());
     }
 
-    public double getClimbSpeedPow() {
-        return this.climbSpeedPow;
+    public double getClimbSpeedPow(BuilderSupport support) {
+        return this.climbSpeedPow.get(support.getExecutionContext());
     }
 
-    public double getClimbSpeedConst() {
-        return this.climbSpeedConst;
+    public double getClimbSpeedConst(BuilderSupport support) {
+        return this.climbSpeedConst.get(support.getExecutionContext());
     }
 
     public double getDescendForwardAmount(@Nonnull BuilderSupport builderSupport) {
@@ -305,12 +296,12 @@ extends BuilderMotionControllerBase {
         return this.jumpDescentBlending.get(support.getExecutionContext());
     }
 
-    public MotionControllerWalk.DescentAnimationType getDescentAnimationType() {
-        return this.descentAnimationType;
+    public MotionControllerWalk.DescentAnimationType getDescentAnimationType(BuilderSupport support) {
+        return this.descentAnimationType.get(support.getExecutionContext());
     }
 
-    public MotionControllerWalk.AscentAnimationType getAscentAnimationType() {
-        return this.ascentAnimationType;
+    public MotionControllerWalk.AscentAnimationType getAscentAnimationType(BuilderSupport support) {
+        return this.ascentAnimationType.get(support.getExecutionContext());
     }
 
     public double getDescentSteepness(@Nonnull BuilderSupport support) {

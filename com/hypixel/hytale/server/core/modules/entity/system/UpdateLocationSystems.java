@@ -124,7 +124,8 @@ public class UpdateLocationSystems {
             Vector3d targetPosition = position.clone().subtract(32.0, 0.0, 0.0);
             PlayerRef playerRefComponent = entityComponentAccessor.getComponent(ref, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
-            entityComponentAccessor.addComponent(ref, Teleport.getComponentType(), new Teleport(targetPosition, bodyRotation));
+            Teleport teleportComponent = Teleport.createForPlayer(targetPosition, bodyRotation);
+            entityComponentAccessor.addComponent(ref, Teleport.getComponentType(), teleportComponent);
             playerRefComponent.sendMessage(MESSAGE_GENERAL_PLAYER_IN_INVALID_CHUNK);
         }
     }

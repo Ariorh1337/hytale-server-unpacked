@@ -29,7 +29,7 @@ public class WorldValidationUtil {
                 sb.append("\tInvalid Block Type: ").append(blockType == null ? "null" : blockType.getId()).append(" at ").append('(').append(x + offsetX).append(',').append(y + offsetY).append(',').append(z + offsetZ).append(')').append('\n');
             }
             if (options.contains((Object)ValidationOption.BLOCK_STATES) && holder != null && (unknownComponents = holder.getComponent(ChunkStore.REGISTRY.getUnknownComponentType())) != null && !unknownComponents.getUnknownComponents().isEmpty()) {
-                sb.append("\tUnknown Components: ").append(holder).append("\n");
+                sb.append("\tUnknown Components at (").append(x + offsetX).append(',').append(y + offsetY).append(',').append(z + offsetZ).append("): ").append(unknownComponents.getUnknownComponents().keySet()).append("\n");
             }
         };
     }

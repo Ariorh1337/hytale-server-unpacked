@@ -655,12 +655,12 @@ lbl26:
             BlockTypeAssetMap<String, BlockType> blockTypeMap = BlockType.getAssetMap();
             for (int idx = 0; idx < 32768; ++idx) {
                 double boxMaximumExtent;
+                BlockBoundingBoxes asset;
                 int blockId = this.chunkSection.get(idx);
                 if (blockId == 0) continue;
                 int rotation = this.rotationSection.get(idx);
                 BlockType blockType = blockTypeMap.getAsset(blockId);
-                BlockBoundingBoxes asset = hitBoxAssetMap.getAsset(blockType.getHitboxTypeIndex());
-                if (asset == BlockBoundingBoxes.UNIT_BOX || !((boxMaximumExtent = asset.get(rotation).getBoundingBox().getMaximumExtent()) > maximumExtent)) continue;
+                if (blockType == null || blockType.isUnknown() || (asset = hitBoxAssetMap.getAsset(blockType.getHitboxTypeIndex())) == BlockBoundingBoxes.UNIT_BOX || !((boxMaximumExtent = asset.get(rotation).getBoundingBox().getMaximumExtent()) > maximumExtent)) continue;
                 maximumExtent = boxMaximumExtent;
             }
         }

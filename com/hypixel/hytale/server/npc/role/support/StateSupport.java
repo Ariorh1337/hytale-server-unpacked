@@ -314,7 +314,7 @@ public class StateSupport {
 
     private void sendInteractionHintToPlayer(@Nonnull Ref<EntityStore> entityRef, @Nonnull Ref<EntityStore> playerReference, @Nonnull String hint, @Nonnull Store<EntityStore> store) {
         EntityTrackerSystems.EntityViewer viewerComponent = store.getComponent(playerReference, EntityTrackerSystems.EntityViewer.getComponentType());
-        if (viewerComponent == null) {
+        if (viewerComponent == null || !viewerComponent.visible.contains(entityRef)) {
             return;
         }
         ComponentUpdate update = new ComponentUpdate();
