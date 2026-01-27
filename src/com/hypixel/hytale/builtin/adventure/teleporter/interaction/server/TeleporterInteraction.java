@@ -50,7 +50,7 @@ public class TeleporterInteraction extends SimpleBlockInteraction {
       .documentation("The particle to play on the entity when teleporting.")
       .add()
       .build();
-   private static final Duration TELEPORT_GLOBAL_COOLDOWN = Duration.ofMillis(250L);
+   private static final Duration TELEPORT_GLOBAL_COOLDOWN = Duration.ofMillis(2250L);
    @Nullable
    private String particle;
 

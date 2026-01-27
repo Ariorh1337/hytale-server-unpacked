@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
+import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -20,7 +21,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
 public class OAuthClient {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final SecureRandom RANDOM = new SecureRandom();
-   private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10L)).build();
+   private final HttpClient httpClient = ServiceHttpClientFactory.create(AuthConfig.HTTP_TIMEOUT);
 
    public Runnable startFlow(@Nonnull OAuthBrowserFlow flow) {
       AtomicBoolean cancelled = new AtomicBoolean(false);

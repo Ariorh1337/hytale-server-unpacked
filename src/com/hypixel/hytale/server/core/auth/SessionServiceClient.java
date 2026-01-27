@@ -7,6 +7,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -14,24 +15,25 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class SessionServiceClient {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5L);
+   private static final ExecutorService HTTP_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
    private final HttpClient httpClient;
    private final String sessionServiceUrl;
 
    public SessionServiceClient(@Nonnull String sessionServiceUrl) {
       if (sessionServiceUrl != null && !sessionServiceUrl.isEmpty()) {
          this.sessionServiceUrl = sessionServiceUrl.endsWith("/") ? sessionServiceUrl.substring(0, sessionServiceUrl.length() - 1) : sessionServiceUrl;
-         this.httpClient = HttpClient.newBuilder().connectTimeout(REQUEST_TIMEOUT).build();
+         this.httpClient = ServiceHttpClientFactory.create(AuthConfig.HTTP_TIMEOUT);
          LOGGER.at(Level.INFO).log("Session Service client initialized for: %s", this.sessionServiceUrl);
       } else {
          throw new IllegalArgumentException("Session Service URL cannot be null or empty");
@@ -49,7 +51,7 @@ public class SessionServiceClient {
                   .header("Accept", "application/json")
                   .header("Authorization", "Bearer " + bearerToken)
                   .header("User-Agent", AuthConfig.USER_AGENT)
-                  .timeout(REQUEST_TIMEOUT)
+                  .timeout(AuthConfig.HTTP_TIMEOUT)
                   .POST(BodyPublishers.ofString(jsonBody))
                   .build();
                LOGGER.at(Level.INFO).log("Requesting authorization grant with identity token, aud='%s'", serverAudience);
@@ -79,7 +81,8 @@ public class SessionServiceClient {
                LOGGER.at(Level.WARNING).log("Unexpected error requesting authorization grant: %s", e.getMessage());
                return null;
             }
-         }
+         },
+         HTTP_EXECUTOR
       );
    }
 
@@ -98,7 +101,7 @@ public class SessionServiceClient {
                   .header("Accept", "application/json")
                   .header("Authorization", "Bearer " + bearerToken)
                   .header("User-Agent", AuthConfig.USER_AGENT)
-                  .timeout(REQUEST_TIMEOUT)
+                  .timeout(AuthConfig.HTTP_TIMEOUT)
                   .POST(BodyPublishers.ofString(jsonBody))
                   .build();
                LOGGER.at(Level.INFO).log("Exchanging authorization grant for access token");
@@ -130,7 +133,8 @@ public class SessionServiceClient {
                LOGGER.at(Level.WARNING).log("Unexpected error exchanging auth grant: %s", e.getMessage());
                return null;
             }
-         }
+         },
+         HTTP_EXECUTOR
       );
    }
 
@@ -141,7 +145,7 @@ public class SessionServiceClient {
             .uri(URI.create(this.sessionServiceUrl + "/.well-known/jwks.json"))
             .header("Accept", "application/json")
             .header("User-Agent", AuthConfig.USER_AGENT)
-            .timeout(REQUEST_TIMEOUT)
+            .timeout(AuthConfig.HTTP_TIMEOUT)
             .GET()
             .build();
          LOGGER.at(Level.FINE).log("Fetching JWKS from Session Service");
@@ -181,7 +185,7 @@ public class SessionServiceClient {
             .header("Accept", "application/json")
             .header("Authorization", "Bearer " + oauthAccessToken)
             .header("User-Agent", AuthConfig.USER_AGENT)
-            .timeout(REQUEST_TIMEOUT)
+            .timeout(AuthConfig.HTTP_TIMEOUT)
             .GET()
             .build();
          LOGGER.at(Level.INFO).log("Fetching game profiles...");
@@ -221,7 +225,7 @@ public class SessionServiceClient {
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer " + oauthAccessToken)
             .header("User-Agent", AuthConfig.USER_AGENT)
-            .timeout(REQUEST_TIMEOUT)
+            .timeout(AuthConfig.HTTP_TIMEOUT)
             .POST(BodyPublishers.ofString(body))
             .build();
          LOGGER.at(Level.INFO).log("Creating game session...");
@@ -262,7 +266,7 @@ public class SessionServiceClient {
                   .header("Accept", "application/json")
                   .header("Authorization", "Bearer " + sessionToken)
                   .header("User-Agent", AuthConfig.USER_AGENT)
-                  .timeout(REQUEST_TIMEOUT)
+                  .timeout(AuthConfig.HTTP_TIMEOUT)
                   .POST(BodyPublishers.noBody())
                   .build();
                LOGGER.at(Level.INFO).log("Refreshing game session...");
@@ -292,7 +296,8 @@ public class SessionServiceClient {
                LOGGER.at(Level.WARNING).log("Unexpected error refreshing session: %s", e.getMessage());
                return null;
             }
-         }
+         },
+         HTTP_EXECUTOR
       );
    }
 
@@ -303,7 +308,7 @@ public class SessionServiceClient {
                .uri(URI.create(this.sessionServiceUrl + "/game-session"))
                .header("Authorization", "Bearer " + sessionToken)
                .header("User-Agent", AuthConfig.USER_AGENT)
-               .timeout(REQUEST_TIMEOUT)
+               .timeout(AuthConfig.HTTP_TIMEOUT)
                .DELETE()
                .build();
             LOGGER.at(Level.INFO).log("Terminating game session...");

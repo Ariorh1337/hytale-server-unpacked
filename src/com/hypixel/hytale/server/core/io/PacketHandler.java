@@ -410,10 +410,12 @@ public abstract class PacketHandler implements IPacketReceiver {
       Attribute<Long> loginStartAttribute = channel.attr(LOGIN_START_ATTRIBUTE_KEY);
       long now = System.nanoTime();
       Long before = loginStartAttribute.getAndSet(now);
+      NettyUtil.TimeoutContext context = channel.attr(NettyUtil.TimeoutContext.KEY).get();
+      String identifier = context != null ? context.playerIdentifier() : NettyUtil.formatRemoteAddress(channel);
       if (before == null) {
-         LOGIN_TIMING_LOGGER.at(level).log(message);
+         LOGIN_TIMING_LOGGER.at(level).log("[%s] %s", identifier, message);
       } else {
-         LOGIN_TIMING_LOGGER.at(level).log("%s took %s", message, LazyArgs.lazy(() -> FormatUtil.nanosToString(now - before)));
+         LOGIN_TIMING_LOGGER.at(level).log("[%s] %s took %s", identifier, message, LazyArgs.lazy(() -> FormatUtil.nanosToString(now - before)));
       }
    }
 

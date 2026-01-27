@@ -691,6 +691,12 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                   .getEventBus()
                   .<Void, PlayerConnectEvent>dispatchFor(PlayerConnectEvent.class)
                   .dispatch(new PlayerConnectEvent((Holder<EntityStore>)holder, playerRefComponent, lastWorld != null ? lastWorld : this.getDefaultWorld()));
+               if (!channel.isActive()) {
+                  this.players.remove(uuid, playerRefComponent);
+                  this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected during PlayerConnectEvent, cleaned up", username, uuid);
+                  return CompletableFuture.completedFuture(null);
+               }
+
                World world = event.getWorld() != null ? event.getWorld() : this.getDefaultWorld();
                if (world == null) {
                   this.players.remove(uuid, playerRefComponent);
@@ -707,27 +713,34 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
 
                PacketHandler.logConnectionTimings(channel, "Processed Referral", Level.FINEST);
                playerRefComponent.getPacketHandler().write(new ServerTags(AssetRegistry.getClientTags()));
-               return world.addPlayer(playerRefComponent, null, false, false).thenApply(p -> {
-                  PacketHandler.logConnectionTimings(channel, "Add to World", Level.FINEST);
-                  if (!channel.isActive()) {
-                     if (p != null) {
-                        playerComponent.remove();
-                     }
-
-                     this.players.remove(uuid, playerRefComponent);
-                     this.getLogger().at(Level.WARNING).log("Player '%s' (%s) disconnected during world join, cleaned up from universe", username, uuid);
-                     return null;
-                  } else if (playerComponent.wasRemoved()) {
-                     this.players.remove(uuid, playerRefComponent);
-                     return null;
-                  } else {
-                     return (PlayerRef)p;
-                  }
-               }).exceptionally(throwable -> {
+               CompletableFuture<PlayerRef> addPlayerFuture = world.addPlayer(playerRefComponent, null, false, false);
+               if (addPlayerFuture == null) {
                   this.players.remove(uuid, playerRefComponent);
-                  playerComponent.remove();
-                  throw new RuntimeException("Exception when adding player to universe:", throwable);
-               });
+                  this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected before world addition, cleaned up", username, uuid);
+                  return CompletableFuture.completedFuture(null);
+               } else {
+                  return addPlayerFuture.<PlayerRef>thenApply(p -> {
+                     PacketHandler.logConnectionTimings(channel, "Add to World", Level.FINEST);
+                     if (!channel.isActive()) {
+                        if (p != null) {
+                           playerComponent.remove();
+                        }
+
+                        this.players.remove(uuid, playerRefComponent);
+                        this.getLogger().at(Level.WARNING).log("Player '%s' (%s) disconnected during world join, cleaned up from universe", username, uuid);
+                        return null;
+                     } else if (playerComponent.wasRemoved()) {
+                        this.players.remove(uuid, playerRefComponent);
+                        return null;
+                     } else {
+                        return (PlayerRef)p;
+                     }
+                  }).exceptionally(throwable -> {
+                     this.players.remove(uuid, playerRefComponent);
+                     playerComponent.remove();
+                     throw new RuntimeException("Exception when adding player to universe:", throwable);
+                  });
+               }
             }
          );
    }

@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
+import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,7 +47,7 @@ public class UpdateService {
    private final String accountDataUrl = "https://account-data.hytale.com";
 
    public UpdateService() {
-      this.httpClient = HttpClient.newBuilder().connectTimeout(REQUEST_TIMEOUT).followRedirects(Redirect.NORMAL).build();
+      this.httpClient = ServiceHttpClientFactory.newBuilder(REQUEST_TIMEOUT).followRedirects(Redirect.NORMAL).build();
    }
 
    @Nullable
