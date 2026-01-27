@@ -58,7 +58,7 @@ implements IChunkStorageProvider {
     }, o -> o.flushOnWrite, (o, p) -> {
         o.flushOnWrite = p.flushOnWrite;
     }).documentation("Controls whether the indexed storage flushes during writes.\nRecommended to be enabled to prevent corruption of chunks during unclean shutdowns.").add()).build();
-    private boolean flushOnWrite = true;
+    private boolean flushOnWrite = false;
 
     @Override
     @Nonnull

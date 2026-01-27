@@ -632,6 +632,11 @@ MetricProvider {
             String lastWorldName = playerConfig.getWorld();
             World lastWorld = this.getWorld(lastWorldName);
             PlayerConnectEvent event = HytaleServer.get().getEventBus().dispatchFor(PlayerConnectEvent.class).dispatch(new PlayerConnectEvent((Holder<EntityStore>)holder, playerRefComponent, lastWorld != null ? lastWorld : this.getDefaultWorld()));
+            if (!channel.isActive()) {
+                this.players.remove(uuid, playerRefComponent);
+                this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected during PlayerConnectEvent, cleaned up", (Object)username, (Object)uuid);
+                return CompletableFuture.completedFuture(null);
+            }
             World world2 = world = event.getWorld() != null ? event.getWorld() : this.getDefaultWorld();
             if (world == null) {
                 this.players.remove(uuid, playerRefComponent);
@@ -644,7 +649,13 @@ MetricProvider {
             }
             PacketHandler.logConnectionTimings(channel, "Processed Referral", Level.FINEST);
             playerRefComponent.getPacketHandler().write((Packet)new ServerTags(AssetRegistry.getClientTags()));
-            return ((CompletableFuture)world.addPlayer(playerRefComponent, null, false, false).thenApply(p -> {
+            CompletableFuture<PlayerRef> addPlayerFuture = world.addPlayer(playerRefComponent, null, false, false);
+            if (addPlayerFuture == null) {
+                this.players.remove(uuid, playerRefComponent);
+                this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected before world addition, cleaned up", (Object)username, (Object)uuid);
+                return CompletableFuture.completedFuture(null);
+            }
+            return ((CompletableFuture)addPlayerFuture.thenApply(p -> {
                 PacketHandler.logConnectionTimings(channel, "Add to World", Level.FINEST);
                 if (!channel.isActive()) {
                     if (p != null) {

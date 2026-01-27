@@ -397,6 +397,9 @@ implements NetworkSerializable<UpdatePlayerInventory> {
 
     private boolean tryEquipArmorPart(int fromSectionId, short fromSlotId, int quantity, ItemContainer targetContainer, boolean forceEquip) {
         ItemStack itemStack = targetContainer.getItemStack(fromSlotId);
+        if (ItemStack.isEmpty(itemStack)) {
+            return false;
+        }
         Item item = itemStack.getItem();
         ItemArmor itemArmor = item.getArmor();
         if (itemArmor != null && fromSectionId != -3 && (forceEquip || this.armor.getItemStack((short)itemArmor.getArmorSlot().ordinal()) == null)) {

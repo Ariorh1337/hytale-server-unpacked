@@ -10,6 +10,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
+import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -17,7 +18,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 
 public class ProfileServiceClient {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5L);
     private final HttpClient httpClient;
     private final String profileServiceUrl;
 
@@ -35,14 +34,14 @@ public class ProfileServiceClient {
             throw new IllegalArgumentException("Profile Service URL cannot be null or empty");
         }
         this.profileServiceUrl = profileServiceUrl.endsWith("/") ? profileServiceUrl.substring(0, profileServiceUrl.length() - 1) : profileServiceUrl;
-        this.httpClient = HttpClient.newBuilder().connectTimeout(REQUEST_TIMEOUT).build();
+        this.httpClient = ServiceHttpClientFactory.create(AuthConfig.HTTP_TIMEOUT);
         LOGGER.at(Level.INFO).log("Profile Service client initialized for: %s", this.profileServiceUrl);
     }
 
     @Nullable
     public PublicGameProfile getProfileByUuid(@Nonnull UUID uuid, @Nonnull String bearerToken) {
         try {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.profileServiceUrl + "/profile/uuid/" + uuid.toString())).header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).GET().build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.profileServiceUrl + "/profile/uuid/" + uuid.toString())).header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).GET().build();
             LOGGER.at(Level.FINE).log("Fetching profile by UUID: %s", uuid);
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
@@ -80,7 +79,7 @@ public class ProfileServiceClient {
     public PublicGameProfile getProfileByUsername(@Nonnull String username, @Nonnull String bearerToken) {
         try {
             String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.profileServiceUrl + "/profile/username/" + encodedUsername)).header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).GET().build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.profileServiceUrl + "/profile/username/" + encodedUsername)).header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).GET().build();
             LOGGER.at(Level.FINE).log("Fetching profile by username: %s", username);
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {

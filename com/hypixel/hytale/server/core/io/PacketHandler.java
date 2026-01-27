@@ -390,13 +390,16 @@ implements IPacketReceiver {
     }
 
     public static void logConnectionTimings(@Nonnull Channel channel, @Nonnull String message, @Nonnull Level level) {
-        long now;
+        String identifier;
         Attribute<Long> loginStartAttribute = channel.attr(LOGIN_START_ATTRIBUTE_KEY);
-        Long before = loginStartAttribute.getAndSet(now = System.nanoTime());
+        long now = System.nanoTime();
+        Long before = loginStartAttribute.getAndSet(now);
+        NettyUtil.TimeoutContext context = channel.attr(NettyUtil.TimeoutContext.KEY).get();
+        String string = identifier = context != null ? context.playerIdentifier() : NettyUtil.formatRemoteAddress(channel);
         if (before == null) {
-            LOGIN_TIMING_LOGGER.at(level).log(message);
+            LOGIN_TIMING_LOGGER.at(level).log("[%s] %s", (Object)identifier, (Object)message);
         } else {
-            LOGIN_TIMING_LOGGER.at(level).log("%s took %s", (Object)message, LazyArgs.lazy(() -> FormatUtil.nanosToString(now - before)));
+            LOGIN_TIMING_LOGGER.at(level).log("[%s] %s took %s", identifier, message, LazyArgs.lazy(() -> FormatUtil.nanosToString(now - before)));
         }
     }
 

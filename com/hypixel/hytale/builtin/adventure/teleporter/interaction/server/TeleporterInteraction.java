@@ -4,9 +4,11 @@
 package com.hypixel.hytale.builtin.adventure.teleporter.interaction.server;
 
 import com.hypixel.hytale.builtin.adventure.teleporter.component.Teleporter;
+import com.hypixel.hytale.builtin.adventure.teleporter.interaction.server.UsedTeleporter;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
@@ -42,14 +44,24 @@ import javax.annotation.Nullable;
 public class TeleporterInteraction
 extends SimpleBlockInteraction {
     @Nonnull
-    public static final BuilderCodec<TeleporterInteraction> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(TeleporterInteraction.class, TeleporterInteraction::new, SimpleBlockInteraction.CODEC).appendInherited(new KeyedCodec<String>("Particle", Codec.STRING), (interaction, s) -> {
+    public static final BuilderCodec<TeleporterInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TeleporterInteraction.class, TeleporterInteraction::new, SimpleBlockInteraction.CODEC).appendInherited(new KeyedCodec<String>("Particle", Codec.STRING), (interaction, s) -> {
         interaction.particle = s;
     }, interaction -> interaction.particle, (interaction, parent) -> {
         interaction.particle = parent.particle;
-    }).documentation("The particle to play on the entity when teleporting.").add()).build();
-    private static final Duration TELEPORT_GLOBAL_COOLDOWN = Duration.ofMillis(250L);
+    }).documentation("The particle to play on the entity when teleporting.").add()).appendInherited(new KeyedCodec<Double>("ClearOutXZ", Codec.DOUBLE), (interaction, s) -> {
+        interaction.clearoutXZ = s;
+    }, interaction -> interaction.clearoutXZ, (interaction, parent) -> {
+        interaction.clearoutXZ = parent.clearoutXZ;
+    }).addValidator(Validators.greaterThanOrEqual(0.0)).documentation("Upon reaching the warp destination, how far away one has to move on the XZ plane in order to use another Teleporter.").add()).appendInherited(new KeyedCodec<Double>("ClearOutY", Codec.DOUBLE), (interaction, s) -> {
+        interaction.clearoutY = s;
+    }, interaction -> interaction.clearoutY, (interaction, parent) -> {
+        interaction.clearoutY = parent.clearoutY;
+    }).addValidator(Validators.greaterThanOrEqual(0.0)).documentation("Upon reaching the warp destination, how far away one has to move along the Y axis in order to use another Teleporter.").add()).build();
+    private static final Duration TELEPORTER_GLOBAL_COOLDOWN = Duration.ofMillis(100L);
     @Nullable
     private String particle;
+    private double clearoutXZ = 1.3;
+    private double clearoutY = 2.5;
 
     @Override
     @Nonnull
@@ -59,6 +71,7 @@ extends SimpleBlockInteraction {
 
     @Override
     protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i targetBlock, @Nonnull CooldownHandler cooldownHandler) {
+        TransformComponent transformComponent;
         BlockType variantBlockType;
         String currentState;
         long chunkIndex;
@@ -93,23 +106,33 @@ extends SimpleBlockInteraction {
         if (archetype.contains(Teleport.getComponentType()) || archetype.contains(PendingTeleport.getComponentType())) {
             return;
         }
+        if (archetype.contains(UsedTeleporter.getComponentType())) {
+            return;
+        }
         WorldChunk worldChunkComponent = chunkRef.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
-        assert (worldChunkComponent != null);
+        if (worldChunkComponent == null) {
+            return;
+        }
         BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
+        if (blockType == null) {
+            return;
+        }
         if (!teleporter.isValid() && !"default".equals(currentState = blockType.getStateForBlock(blockType)) && (variantBlockType = blockType.getBlockForState("default")) != null) {
             worldChunkComponent.setBlockInteractionState(targetBlock.x, targetBlock.y, targetBlock.z, variantBlockType, "default", true);
         }
-        TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
-        assert (transformComponent != null);
+        if ((transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType())) == null) {
+            return;
+        }
         Teleport teleportComponent = teleporter.toTeleport(transformComponent.getPosition(), transformComponent.getRotation(), targetBlock);
         if (teleportComponent == null) {
             return;
         }
         TeleportRecord recorder = commandBuffer.getComponent(ref, TeleportRecord.getComponentType());
-        if (recorder != null && !recorder.hasElapsedSinceLastTeleport(TELEPORT_GLOBAL_COOLDOWN)) {
+        if (recorder != null && !recorder.hasElapsedSinceLastTeleport(TELEPORTER_GLOBAL_COOLDOWN)) {
             return;
         }
         commandBuffer.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+        commandBuffer.addComponent(ref, UsedTeleporter.getComponentType(), new UsedTeleporter(teleporter.getWorldUuid(), teleportComponent.getPosition(), this.clearoutXZ, this.clearoutY));
         if (this.particle != null) {
             Vector3d particlePosition = transformComponent.getPosition();
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());

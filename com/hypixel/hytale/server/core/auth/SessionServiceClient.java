@@ -11,22 +11,24 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
+import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class SessionServiceClient {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5L);
+    private static final ExecutorService HTTP_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
     private final HttpClient httpClient;
     private final String sessionServiceUrl;
 
@@ -35,7 +37,7 @@ public class SessionServiceClient {
             throw new IllegalArgumentException("Session Service URL cannot be null or empty");
         }
         this.sessionServiceUrl = sessionServiceUrl.endsWith("/") ? sessionServiceUrl.substring(0, sessionServiceUrl.length() - 1) : sessionServiceUrl;
-        this.httpClient = HttpClient.newBuilder().connectTimeout(REQUEST_TIMEOUT).build();
+        this.httpClient = ServiceHttpClientFactory.create(AuthConfig.HTTP_TIMEOUT);
         LOGGER.at(Level.INFO).log("Session Service client initialized for: %s", this.sessionServiceUrl);
     }
 
@@ -43,7 +45,7 @@ public class SessionServiceClient {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String jsonBody = String.format("{\"identityToken\":\"%s\",\"aud\":\"%s\"}", SessionServiceClient.escapeJsonString(identityToken), SessionServiceClient.escapeJsonString(serverAudience));
-                HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/server-join/auth-grant")).header("Content-Type", "application/json").header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).POST(HttpRequest.BodyPublishers.ofString(jsonBody)).build();
+                HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/server-join/auth-grant")).header("Content-Type", "application/json").header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).POST(HttpRequest.BodyPublishers.ofString(jsonBody)).build();
                 LOGGER.at(Level.INFO).log("Requesting authorization grant with identity token, aud='%s'", serverAudience);
                 HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
@@ -71,14 +73,14 @@ public class SessionServiceClient {
                 LOGGER.at(Level.WARNING).log("Unexpected error requesting authorization grant: %s", e.getMessage());
                 return null;
             }
-        });
+        }, HTTP_EXECUTOR);
     }
 
     public CompletableFuture<String> exchangeAuthGrantForTokenAsync(@Nonnull String authorizationGrant, @Nonnull String x509Fingerprint, @Nonnull String bearerToken) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String jsonBody = String.format("{\"authorizationGrant\":\"%s\",\"x509Fingerprint\":\"%s\"}", SessionServiceClient.escapeJsonString(authorizationGrant), SessionServiceClient.escapeJsonString(x509Fingerprint));
-                HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/server-join/auth-token")).header("Content-Type", "application/json").header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).POST(HttpRequest.BodyPublishers.ofString(jsonBody)).build();
+                HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/server-join/auth-token")).header("Content-Type", "application/json").header("Accept", "application/json").header("Authorization", "Bearer " + bearerToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).POST(HttpRequest.BodyPublishers.ofString(jsonBody)).build();
                 LOGGER.at(Level.INFO).log("Exchanging authorization grant for access token");
                 LOGGER.at(Level.FINE).log("Using bearer token (first 20 chars): %s...", bearerToken.length() > 20 ? bearerToken.substring(0, 20) : bearerToken);
                 LOGGER.at(Level.FINE).log("Request body: %s", jsonBody);
@@ -108,13 +110,13 @@ public class SessionServiceClient {
                 LOGGER.at(Level.WARNING).log("Unexpected error exchanging auth grant: %s", e.getMessage());
                 return null;
             }
-        });
+        }, HTTP_EXECUTOR);
     }
 
     @Nullable
     public JwksResponse getJwks() {
         try {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/.well-known/jwks.json")).header("Accept", "application/json").header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).GET().build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/.well-known/jwks.json")).header("Accept", "application/json").header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).GET().build();
             LOGGER.at(Level.FINE).log("Fetching JWKS from Session Service");
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
@@ -147,7 +149,7 @@ public class SessionServiceClient {
     @Nullable
     public GameProfile[] getGameProfiles(@Nonnull String oauthAccessToken) {
         try {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://account-data.hytale.com/my-account/get-profiles")).header("Accept", "application/json").header("Authorization", "Bearer " + oauthAccessToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).GET().build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://account-data.hytale.com/my-account/get-profiles")).header("Accept", "application/json").header("Authorization", "Bearer " + oauthAccessToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).GET().build();
             LOGGER.at(Level.INFO).log("Fetching game profiles...");
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
@@ -180,7 +182,7 @@ public class SessionServiceClient {
     public GameSessionResponse createGameSession(@Nonnull String oauthAccessToken, @Nonnull UUID profileUuid) {
         try {
             String body = String.format("{\"uuid\":\"%s\"}", profileUuid.toString());
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/game-session/new")).header("Content-Type", "application/json").header("Authorization", "Bearer " + oauthAccessToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).POST(HttpRequest.BodyPublishers.ofString(body)).build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/game-session/new")).header("Content-Type", "application/json").header("Authorization", "Bearer " + oauthAccessToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).POST(HttpRequest.BodyPublishers.ofString(body)).build();
             LOGGER.at(Level.INFO).log("Creating game session...");
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200 && response.statusCode() != 201) {
@@ -213,7 +215,7 @@ public class SessionServiceClient {
     public CompletableFuture<GameSessionResponse> refreshSessionAsync(@Nonnull String sessionToken) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/game-session/refresh")).header("Accept", "application/json").header("Authorization", "Bearer " + sessionToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).POST(HttpRequest.BodyPublishers.noBody()).build();
+                HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/game-session/refresh")).header("Accept", "application/json").header("Authorization", "Bearer " + sessionToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).POST(HttpRequest.BodyPublishers.noBody()).build();
                 LOGGER.at(Level.INFO).log("Refreshing game session...");
                 HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
@@ -241,7 +243,7 @@ public class SessionServiceClient {
                 LOGGER.at(Level.WARNING).log("Unexpected error refreshing session: %s", e.getMessage());
                 return null;
             }
-        });
+        }, HTTP_EXECUTOR);
     }
 
     public void terminateSession(@Nonnull String sessionToken) {
@@ -249,7 +251,7 @@ public class SessionServiceClient {
             return;
         }
         try {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/game-session")).header("Authorization", "Bearer " + sessionToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(REQUEST_TIMEOUT).DELETE().build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(this.sessionServiceUrl + "/game-session")).header("Authorization", "Bearer " + sessionToken).header("User-Agent", AuthConfig.USER_AGENT).timeout(AuthConfig.HTTP_TIMEOUT).DELETE().build();
             LOGGER.at(Level.INFO).log("Terminating game session...");
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200 || response.statusCode() == 204) {

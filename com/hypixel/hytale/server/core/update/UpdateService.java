@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
+import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,7 +47,7 @@ public class UpdateService {
     private static final Duration DOWNLOAD_TIMEOUT = Duration.ofMinutes(30L);
     private static final Path STAGING_DIR = Path.of("..", new String[0]).resolve("updater").resolve("staging");
     private static final Path BACKUP_DIR = Path.of("..", new String[0]).resolve("updater").resolve("backup");
-    private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(REQUEST_TIMEOUT).followRedirects(HttpClient.Redirect.NORMAL).build();
+    private final HttpClient httpClient = ServiceHttpClientFactory.newBuilder(REQUEST_TIMEOUT).followRedirects(HttpClient.Redirect.NORMAL).build();
     private final String accountDataUrl;
 
     public UpdateService() {

@@ -13,7 +13,6 @@ import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector4d;
-import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ForkedChainId;
 import com.hypixel.hytale.protocol.GameMode;
@@ -52,11 +51,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.UUIDUtil;
-import io.sentry.Sentry;
-import io.sentry.SentryEvent;
-import io.sentry.SentryLevel;
-import io.sentry.protocol.Message;
-import io.sentry.protocol.SentryId;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -64,7 +58,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Arrays;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -200,6 +193,7 @@ implements Component<EntityStore> {
         int highestChainId = -1;
         boolean changed = false;
         block0: while (it.hasNext()) {
+            boolean isProxy;
             InteractionChain chain;
             SyncInteractionChain packet = it.next();
             if (packet.desync) {
@@ -239,7 +233,8 @@ implements Component<EntityStore> {
                 }
             }
             highestChainId = Math.max(highestChainId, packet.chainId);
-            if (chain == null && !finished) {
+            boolean bl = isProxy = packet.data != null && !UUIDUtil.isEmptyOrNull(packet.data.proxyId);
+            if (chain == null && !finished || isProxy) {
                 if (this.syncStart(ref, packet)) {
                     changed = true;
                     it.remove();
@@ -267,7 +262,7 @@ implements Component<EntityStore> {
                         }
                     }
                 }
-                if (desynced) continue;
+                if (desynced || isProxy) continue;
                 finished = true;
                 continue;
             }
@@ -358,7 +353,7 @@ implements Component<EntityStore> {
                     long threshold = this.getOperationTimeoutThreshold();
                     TimeResource timeResource = this.commandBuffer.getResource(TimeResource.getResourceType());
                     if (timeResource.getTimeDilationModifier() == 1.0f && waitMillis > threshold) {
-                        this.sendCancelPacket(chain);
+                        this.cancelChains(chain);
                         return chain.getForkedChains().isEmpty();
                     }
                 }
@@ -549,39 +544,10 @@ implements Component<EntityStore> {
             }
             long threshold = this.getOperationTimeoutThreshold();
             if (tickTimeDilation == 1.0f && waitMillis > threshold) {
-                SentryEvent event = new SentryEvent();
-                event.setLevel(SentryLevel.ERROR);
-                Message message = new Message();
-                message.setMessage("Client failed to send client data, ending early to prevent desync");
-                HashMap<String, Object> unknown = new HashMap<String, Object>();
-                unknown.put("Threshold", threshold);
-                unknown.put("Wait Millis", waitMillis);
-                unknown.put("Current Root", chain.getRootInteraction() != null ? chain.getRootInteraction().getId() : "<null>");
-                Operation innerOp = operation.getInnerOperation();
-                unknown.put("Current Op", innerOp.getClass().getName());
-                if (innerOp instanceof Interaction) {
-                    Interaction interaction = (Interaction)innerOp;
-                    unknown.put("Current Interaction", interaction.getId());
-                }
-                unknown.put("Current Index", chain.getOperationIndex());
-                unknown.put("Current Op Counter", chain.getOperationCounter());
-                HistoricMetric metric = ref.getStore().getExternalData().getWorld().getBufferedTickLengthMetricSet();
-                long[] periods = metric.getPeriodsNanos();
-                for (int i = 0; i < periods.length; ++i) {
-                    String length = FormatUtil.timeUnitToString(periods[i], TimeUnit.NANOSECONDS, true);
-                    double average = metric.getAverage(i);
-                    long min = metric.calculateMin(i);
-                    long max = metric.calculateMax(i);
-                    String value = FormatUtil.simpleTimeUnitFormat(min, average, max, TimeUnit.NANOSECONDS, TimeUnit.MILLISECONDS, 3);
-                    unknown.put(String.format("World Perf %s", length), value);
-                }
-                event.setExtras(unknown);
-                event.setMessage(message);
-                SentryId eventId = Sentry.captureEvent(event);
-                ((HytaleLogger.Api)LOGGER.atWarning()).log("Client failed to send client data, ending early to prevent desync. %s", eventId);
+                ((HytaleLogger.Api)LOGGER.atWarning()).log("Client failed to send client data, ending early to prevent desync.");
                 chain.setServerState(InteractionState.Failed);
                 chain.setClientState(InteractionState.Failed);
-                this.sendCancelPacket(chain);
+                this.cancelChains(chain);
                 return null;
             }
             if (entry.consumeSendInitial() || wasWrong) {
@@ -692,9 +658,12 @@ implements Component<EntityStore> {
         assert (this.commandBuffer != null);
         int index = packet.chainId;
         if (!packet.initial) {
-            HytaleLogger.Api ctx;
-            if (packet.forkedId == null && (ctx = LOGGER.at(Level.FINE)).isEnabled()) {
-                ctx.log("Got syncStart for %d-%s but packet wasn't the first.", index, (Object)packet.forkedId);
+            if (packet.forkedId == null) {
+                HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
+                if (ctx.isEnabled()) {
+                    ctx.log("Got syncStart for %d-%s but packet wasn't the first.", index, (Object)packet.forkedId);
+                }
+                this.sendCancelPacket(index, packet.forkedId);
             }
             return true;
         }
@@ -703,6 +672,7 @@ implements Component<EntityStore> {
             if (ctx.isEnabled()) {
                 ctx.log("Can't start a forked chain from the client: %d %s", index, (Object)packet.forkedId);
             }
+            this.sendCancelPacket(index, packet.forkedId);
             return true;
         }
         InteractionType type = packet.interactionType;
@@ -1125,7 +1095,7 @@ implements Component<EntityStore> {
         this.sendCancelPacket(chain.getChainId(), chain.getForkedChainId());
     }
 
-    public void sendCancelPacket(int chainId, @Nonnull ForkedChainId forkedChainId) {
+    public void sendCancelPacket(int chainId, ForkedChainId forkedChainId) {
         if (this.playerRef != null) {
             this.playerRef.getPacketHandler().writeNoCache(new CancelInteractionChain(chainId, forkedChainId));
         }
