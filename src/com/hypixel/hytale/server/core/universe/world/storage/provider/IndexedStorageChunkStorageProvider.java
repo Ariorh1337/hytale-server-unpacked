@@ -58,7 +58,7 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
       )
       .add()
       .build();
-   private boolean flushOnWrite = true;
+   private boolean flushOnWrite = false;
 
    @Nonnull
    @Override

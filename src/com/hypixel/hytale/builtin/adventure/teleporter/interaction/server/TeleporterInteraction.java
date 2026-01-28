@@ -4,6 +4,7 @@ import com.hypixel.hytale.builtin.adventure.teleporter.component.Teleporter;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
@@ -49,10 +50,30 @@ public class TeleporterInteraction extends SimpleBlockInteraction {
       )
       .documentation("The particle to play on the entity when teleporting.")
       .add()
+      .<Double>appendInherited(
+         new KeyedCodec<>("ClearOutXZ", Codec.DOUBLE),
+         (interaction, s) -> interaction.clearoutXZ = s,
+         interaction -> interaction.clearoutXZ,
+         (interaction, parent) -> interaction.clearoutXZ = parent.clearoutXZ
+      )
+      .addValidator(Validators.greaterThanOrEqual(0.0))
+      .documentation("Upon reaching the warp destination, how far away one has to move on the XZ plane in order to use another Teleporter.")
+      .add()
+      .<Double>appendInherited(
+         new KeyedCodec<>("ClearOutY", Codec.DOUBLE),
+         (interaction, s) -> interaction.clearoutY = s,
+         interaction -> interaction.clearoutY,
+         (interaction, parent) -> interaction.clearoutY = parent.clearoutY
+      )
+      .addValidator(Validators.greaterThanOrEqual(0.0))
+      .documentation("Upon reaching the warp destination, how far away one has to move along the Y axis in order to use another Teleporter.")
+      .add()
       .build();
-   private static final Duration TELEPORT_GLOBAL_COOLDOWN = Duration.ofMillis(2250L);
+   private static final Duration TELEPORTER_GLOBAL_COOLDOWN = Duration.ofMillis(100L);
    @Nullable
    private String particle;
+   private double clearoutXZ = 1.3;
+   private double clearoutY = 2.5;
 
    @Nonnull
    @Override
@@ -88,34 +109,49 @@ public class TeleporterInteraction extends SimpleBlockInteraction {
                      if (playerComponent == null || !playerComponent.isWaitingForClientReady()) {
                         Archetype<EntityStore> archetype = commandBuffer.getArchetype(ref);
                         if (!archetype.contains(Teleport.getComponentType()) && !archetype.contains(PendingTeleport.getComponentType())) {
-                           WorldChunk worldChunkComponent = chunkRef.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
-                           assert worldChunkComponent != null;
-                           BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
-                           if (!teleporter.isValid()) {
-                              String currentState = blockType.getStateForBlock(blockType);
-                              if (!"default".equals(currentState)) {
-                                 BlockType variantBlockType = blockType.getBlockForState("default");
-                                 if (variantBlockType != null) {
-                                    worldChunkComponent.setBlockInteractionState(targetBlock.x, targetBlock.y, targetBlock.z, variantBlockType, "default", true);
-                                 }
-                              }
-                           }
+                           if (!archetype.contains(UsedTeleporter.getComponentType())) {
+                              WorldChunk worldChunkComponent = chunkRef.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
+                              if (worldChunkComponent != null) {
+                                 BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
+                                 if (blockType != null) {
+                                    if (!teleporter.isValid()) {
+                                       String currentState = blockType.getStateForBlock(blockType);
+                                       if (!"default".equals(currentState)) {
+                                          BlockType variantBlockType = blockType.getBlockForState("default");
+                                          if (variantBlockType != null) {
+                                             worldChunkComponent.setBlockInteractionState(
+                                                targetBlock.x, targetBlock.y, targetBlock.z, variantBlockType, "default", true
+                                             );
+                                          }
+                                       }
+                                    }
 
-                           TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
-                           assert transformComponent != null;
-                           Teleport teleportComponent = teleporter.toTeleport(transformComponent.getPosition(), transformComponent.getRotation(), targetBlock);
-                           if (teleportComponent != null) {
-                              TeleportRecord recorder = commandBuffer.getComponent(ref, TeleportRecord.getComponentType());
-                              if (recorder == null || recorder.hasElapsedSinceLastTeleport(TELEPORT_GLOBAL_COOLDOWN)) {
-                                 commandBuffer.addComponent(ref, Teleport.getComponentType(), teleportComponent);
-                                 if (this.particle != null) {
-                                    Vector3d particlePosition = transformComponent.getPosition();
-                                    SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(
-                                       EntityModule.get().getPlayerSpatialResourceType()
-                                    );
-                                    ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
-                                    playerSpatialResource.getSpatialStructure().collect(particlePosition, 75.0, results);
-                                    ParticleUtil.spawnParticleEffect(this.particle, particlePosition, results, commandBuffer);
+                                    TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
+                                    if (transformComponent != null) {
+                                       Teleport teleportComponent = teleporter.toTeleport(
+                                          transformComponent.getPosition(), transformComponent.getRotation(), targetBlock
+                                       );
+                                       if (teleportComponent != null) {
+                                          TeleportRecord recorder = commandBuffer.getComponent(ref, TeleportRecord.getComponentType());
+                                          if (recorder == null || recorder.hasElapsedSinceLastTeleport(TELEPORTER_GLOBAL_COOLDOWN)) {
+                                             commandBuffer.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+                                             commandBuffer.addComponent(
+                                                ref,
+                                                UsedTeleporter.getComponentType(),
+                                                new UsedTeleporter(teleporter.getWorldUuid(), teleportComponent.getPosition(), this.clearoutXZ, this.clearoutY)
+                                             );
+                                             if (this.particle != null) {
+                                                Vector3d particlePosition = transformComponent.getPosition();
+                                                SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(
+                                                   EntityModule.get().getPlayerSpatialResourceType()
+                                                );
+                                                ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                                                playerSpatialResource.getSpatialStructure().collect(particlePosition, 75.0, results);
+                                                ParticleUtil.spawnParticleEffect(this.particle, particlePosition, results, commandBuffer);
+                                             }
+                                          }
+                                       }
+                                    }
                                  }
                               }
                            }

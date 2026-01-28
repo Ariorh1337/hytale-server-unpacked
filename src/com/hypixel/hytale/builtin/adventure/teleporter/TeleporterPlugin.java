@@ -2,7 +2,9 @@ package com.hypixel.hytale.builtin.adventure.teleporter;
 
 import com.hypixel.hytale.builtin.adventure.teleporter.component.Teleporter;
 import com.hypixel.hytale.builtin.adventure.teleporter.interaction.server.TeleporterInteraction;
+import com.hypixel.hytale.builtin.adventure.teleporter.interaction.server.UsedTeleporter;
 import com.hypixel.hytale.builtin.adventure.teleporter.page.TeleporterSettingsPageSupplier;
+import com.hypixel.hytale.builtin.adventure.teleporter.system.ClearUsedTeleporterSystem;
 import com.hypixel.hytale.builtin.adventure.teleporter.system.CreateWarpWhenTeleporterPlacedSystem;
 import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
 import com.hypixel.hytale.component.AddReason;
@@ -19,12 +21,14 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.ser
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class TeleporterPlugin extends JavaPlugin {
    private static TeleporterPlugin instance;
    private ComponentType<ChunkStore, Teleporter> teleporterComponentType;
+   private ComponentType<EntityStore, UsedTeleporter> usedTeleporterComponentType;
 
    public static TeleporterPlugin get() {
       return instance;
@@ -41,6 +45,8 @@ public class TeleporterPlugin extends JavaPlugin {
       this.getChunkStoreRegistry().registerSystem(new TeleporterPlugin.TeleporterOwnedWarpRefChangeSystem());
       this.getChunkStoreRegistry().registerSystem(new TeleporterPlugin.TeleporterOwnedWarpRefSystem());
       this.getChunkStoreRegistry().registerSystem(new CreateWarpWhenTeleporterPlacedSystem());
+      this.usedTeleporterComponentType = this.getEntityStoreRegistry().registerComponent(UsedTeleporter.class, UsedTeleporter::new);
+      this.getEntityStoreRegistry().registerSystem(new ClearUsedTeleporterSystem());
       this.getCodecRegistry(Interaction.CODEC).register("Teleporter", TeleporterInteraction.class, TeleporterInteraction.CODEC);
       this.getCodecRegistry(OpenCustomUIInteraction.PAGE_CODEC)
          .register("Teleporter", TeleporterSettingsPageSupplier.class, TeleporterSettingsPageSupplier.CODEC);
@@ -48,6 +54,10 @@ public class TeleporterPlugin extends JavaPlugin {
 
    public ComponentType<ChunkStore, Teleporter> getTeleporterComponentType() {
       return this.teleporterComponentType;
+   }
+
+   public ComponentType<EntityStore, UsedTeleporter> getUsedTeleporterComponentType() {
+      return this.usedTeleporterComponentType;
    }
 
    private static class TeleporterOwnedWarpRefChangeSystem extends RefChangeSystem<ChunkStore, Teleporter> {
