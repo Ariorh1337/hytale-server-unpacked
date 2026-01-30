@@ -1,8 +1,10 @@
 package com.hypixel.hytale.builtin.adventure.npcreputation;
 
 import com.hypixel.hytale.builtin.adventure.reputation.ReputationGroupComponent;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import javax.annotation.Nonnull;
 
@@ -13,7 +15,8 @@ public class NPCReputationPlugin extends JavaPlugin {
 
    @Override
    protected void setup() {
-      this.getEntityStoreRegistry().registerSystem(new ReputationAttitudeSystem());
-      this.getEntityStoreRegistry().registerSystem(new NPCReputationHolderSystem(ReputationGroupComponent.getComponentType(), NPCEntity.getComponentType()));
+      ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
+      entityStoreRegistry.registerSystem(new ReputationAttitudeSystem());
+      entityStoreRegistry.registerSystem(new NPCReputationHolderSystem(ReputationGroupComponent.getComponentType(), NPCEntity.getComponentType()));
    }
 }

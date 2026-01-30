@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -24,14 +25,18 @@ public class KillTrackerSystem extends DeathSystems.OnDeathSystem {
    public void onComponentAdded(
       @Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      NPCEntity entity = store.getComponent(ref, NPCEntity.getComponentType());
-      KillTrackerResource tracker = store.getResource(KillTrackerResource.getResourceType());
-      List<KillTaskTransaction> killTasks = tracker.getKillTasks();
-      int size = killTasks.size();
+      NPCEntity npcEntityComponent = store.getComponent(ref, NPCEntity.getComponentType());
+      assert npcEntityComponent != null;
+      KillTrackerResource killTrackerResource = store.getResource(KillTrackerResource.getResourceType());
+      List<KillTaskTransaction> killTasks = killTrackerResource.getKillTasks();
+      Damage deathInfo = component.getDeathInfo();
+      if (deathInfo != null) {
+         int size = killTasks.size();
 
-      for (int i = size - 1; i >= 0; i--) {
-         KillTaskTransaction entry = killTasks.get(i);
-         entry.getTask().checkKilledEntity(store, ref, entry.getObjective(), entity, component.getDeathInfo());
+         for (int i = size - 1; i >= 0; i--) {
+            KillTaskTransaction entry = killTasks.get(i);
+            entry.getTask().checkKilledEntity(store, ref, entry.getObjective(), npcEntityComponent, deathInfo);
+         }
       }
    }
 }

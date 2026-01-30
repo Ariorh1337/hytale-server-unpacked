@@ -16,6 +16,8 @@ public class RotatorDensity extends Density {
    private final double spinAngle;
    @Nonnull
    private final RotatorDensity.SpecialCase axisSpecialCase;
+   private final Vector3d rChildPosition;
+   private final Density.Context rChildContext;
 
    public RotatorDensity(@Nonnull Density input, @Nonnull Vector3d newYAxis, double spinAngle) {
       this.input = input;
@@ -41,6 +43,8 @@ public class RotatorDensity extends Density {
 
       this.tiltAxis = yAxis.cross(newYAxis);
       this.tiltAngle = Math.acos(newYAxis.dot(yAxis) / (newYAxis.length() * yAxis.length()));
+      this.rChildPosition = new Vector3d();
+      this.rChildContext = new Density.Context();
    }
 
    @Override
@@ -49,18 +53,18 @@ public class RotatorDensity extends Density {
          return 0.0;
       }
 
-      Vector3d childPosition = context.position.clone();
+      this.rChildPosition.assign(context.position);
       switch (this.axisSpecialCase) {
          case INVERTED_Y_AXIS:
-            childPosition.scale(-1.0);
+            this.rChildPosition.scale(-1.0);
          case NONE:
-            VectorUtil.rotateAroundAxis(childPosition, this.tiltAxis, this.tiltAngle);
+            VectorUtil.rotateAroundAxis(this.rChildPosition, this.tiltAxis, this.tiltAngle);
          case Y_AXIS:
          default:
-            VectorUtil.rotateAroundAxis(childPosition, Y_AXIS, this.spinAngle);
-            Density.Context childContext = new Density.Context(context);
-            childContext.position = childPosition;
-            return this.input.process(childContext);
+            VectorUtil.rotateAroundAxis(this.rChildPosition, Y_AXIS, this.spinAngle);
+            this.rChildContext.assign(context);
+            this.rChildContext.position = this.rChildPosition;
+            return this.input.process(this.rChildContext);
       }
    }
 

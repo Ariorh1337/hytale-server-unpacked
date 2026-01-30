@@ -55,7 +55,7 @@ public class ColumnLinearScanner extends Scanner {
       }
 
       Vector3i patternPosition = context.position.clone();
-      Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace, context.workerId);
+      Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace);
       if (this.topDownOrder) {
          for (patternPosition.y = scanMaxY - 1; patternPosition.y >= scanMinY; patternPosition.y--) {
             if (context.pattern.matches(patternContext)) {

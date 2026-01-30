@@ -33,7 +33,7 @@ public class CachedPositionProviderAsset extends PositionProviderAsset {
       }
 
       PositionProvider childPositions = this.childAsset.build(argument);
-      return new CachedPositionProvider(childPositions, this.sectionSize, this.cacheSize, false, argument.workerIndexer.getWorkerCount());
+      return new CachedPositionProvider(childPositions, this.sectionSize, this.cacheSize, false);
    }
 
    @Override

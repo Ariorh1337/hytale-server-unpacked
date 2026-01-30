@@ -5,10 +5,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public abstract class Registry<T extends Registration> {
    @Nonnull
    private final BooleanSupplier precondition;
+   @Nullable
    private final String preconditionMessage;
    private final Registry.RegistrationWrapFunction<T> wrappingFunction;
    @Nonnull
@@ -20,7 +22,7 @@ public abstract class Registry<T extends Registration> {
    protected Registry(
       @Nonnull List<BooleanConsumer> registrations,
       @Nonnull BooleanSupplier precondition,
-      String preconditionMessage,
+      @Nullable String preconditionMessage,
       @Nonnull Registry.RegistrationWrapFunction<T> wrappingFunction
    ) {
       this.registrations = registrations;

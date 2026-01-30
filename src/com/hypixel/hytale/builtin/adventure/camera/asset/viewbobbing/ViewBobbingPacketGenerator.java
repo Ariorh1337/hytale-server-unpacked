@@ -41,7 +41,7 @@ public class ViewBobbingPacketGenerator extends SimpleAssetPacketGenerator<Movem
    }
 
    @Nonnull
-   protected static Packet toCachedPacket(UpdateType type, @Nonnull Map<MovementType, ViewBobbing> assets) {
+   protected static Packet toCachedPacket(@Nonnull UpdateType type, @Nonnull Map<MovementType, ViewBobbing> assets) {
       UpdateViewBobbing packet = new UpdateViewBobbing();
       packet.type = type;
       packet.profiles = new EnumMap<>(MovementType.class);

@@ -10,7 +10,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.tintproviders.TintProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -78,22 +77,17 @@ public abstract class TintProviderAsset implements Cleanable, JsonAssetWithMap<S
       public SeedBox parentSeed;
       public MaterialCache materialCache;
       public ReferenceBundle referenceBundle;
-      public WorkerIndexer workerIndexer;
 
-      public Argument(
-         @Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer
-      ) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle) {
          this.parentSeed = parentSeed;
          this.materialCache = materialCache;
          this.referenceBundle = referenceBundle;
-         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull TintProviderAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.materialCache = argument.materialCache;
          this.referenceBundle = argument.referenceBundle;
-         this.workerIndexer = argument.workerIndexer;
       }
    }
 }

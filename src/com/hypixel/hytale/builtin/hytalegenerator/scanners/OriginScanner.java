@@ -17,7 +17,7 @@ public class OriginScanner extends Scanner {
    @Nonnull
    @Override
    public List<Vector3i> scan(@Nonnull Scanner.Context context) {
-      Pattern.Context patternContext = new Pattern.Context(context.position, context.materialSpace, context.workerId);
+      Pattern.Context patternContext = new Pattern.Context(context.position, context.materialSpace);
       return context.pattern.matches(patternContext) ? Collections.singletonList(context.position.clone()) : Collections.emptyList();
    }
 

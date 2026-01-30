@@ -14,7 +14,13 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.FormatStyle;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -146,7 +152,7 @@ public class MessageUtil {
                   } else if (replacement != null) {
                      String formattedReplacement;
                      formattedReplacement = "";
-                     label147:
+                     label155:
                      switch (format) {
                         case "upper":
                            if (replacement instanceof StringParamValue s) {
@@ -169,7 +175,7 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label147;
+                                 break label155;
                               case "decimal":
                               case null:
                               default:
@@ -181,7 +187,7 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label147;
+                                 break label155;
                            }
                         case "plural":
                            if (options != null) {
@@ -198,6 +204,24 @@ public class MessageUtil {
                               }
 
                               formattedReplacement = formatText(selected, params, messageParams);
+                           }
+                           break;
+                        case "date":
+                           Instant instantx = parseDateTime(replacement);
+                           if (instantx != null) {
+                              DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault());
+                              formattedReplacement = formatter.format(instantx.atZone(ZoneId.systemDefault()));
+                           } else {
+                              formattedReplacement = "";
+                           }
+                           break;
+                        case "time":
+                           Instant instant = parseDateTime(replacement);
+                           if (instant != null) {
+                              DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault());
+                              formattedReplacement = formatter.format(instant.atZone(ZoneId.systemDefault()));
+                           } else {
+                              formattedReplacement = "";
                            }
                         case null:
                      }
@@ -436,5 +460,30 @@ public class MessageUtil {
    @Nonnull
    private static String getKoreanPluralCategory(int n) {
       return "other";
+   }
+
+   @Nullable
+   private static Instant parseDateTime(@Nonnull ParamValue value) {
+      return switch (value) {
+         case LongParamValue l -> {
+            Instant var10 = Instant.ofEpochMilli(l.value);
+            yield var10;
+         }
+         case StringParamValue s -> {
+            Instant var9;
+            try {
+               var9 = Instant.parse(s.value);
+            } catch (DateTimeParseException e) {
+               Object var8 = null;
+               yield var8;
+            }
+
+            yield var9;
+         }
+         default -> {
+            Object var3 = null;
+            yield var3;
+         }
+      };
    }
 }

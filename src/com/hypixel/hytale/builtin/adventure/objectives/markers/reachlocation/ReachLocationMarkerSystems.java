@@ -38,10 +38,13 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class ReachLocationMarkerSystems {
+   @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   @Nonnull
    private static final ThreadLocal<Set<UUID>> THREAD_LOCAL_TEMP_UUIDS = ThreadLocal.withInitial(HashSet::new);
 
    public static class EnsureNetworkSendable extends HolderSystem<EntityStore> {
+      @Nonnull
       private final Query<EntityStore> query = Query.and(ReachLocationMarker.getComponentType(), Query.not(NetworkId.getComponentType()));
 
       @Override
@@ -62,6 +65,7 @@ public class ReachLocationMarkerSystems {
 
    public static class EntityAdded extends RefSystem<EntityStore> {
       private final ComponentType<EntityStore, ReachLocationMarker> reachLocationMarkerComponent;
+      @Nonnull
       private final ComponentType<EntityStore, TransformComponent> transformComponentType;
       @Nonnull
       private final Query<EntityStore> query;
@@ -106,8 +110,10 @@ public class ReachLocationMarkerSystems {
 
    public static class Ticking extends EntityTickingSystem<EntityStore> {
       private final ComponentType<EntityStore, ReachLocationMarker> reachLocationMarkerComponent;
+      @Nonnull
       private final ComponentType<EntityStore, TransformComponent> transformComponentType;
       private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent;
+      @Nonnull
       private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
       @Nonnull
       private final Query<EntityStore> query;
@@ -176,14 +182,15 @@ public class ReachLocationMarkerSystems {
             for (int i = 0; i < results.size(); i++) {
                Ref<EntityStore> otherEntityReference = results.get(i);
                UUIDComponent otherUuidComponent = commandBuffer.getComponent(otherEntityReference, this.uuidComponentType);
-               assert otherUuidComponent != null;
-               UUID otherUuid = otherUuidComponent.getUuid();
-               players.add(otherUuid);
-               if (!previousPlayers.contains(otherUuid)) {
-                  for (ObjectiveTaskRef<ReachLocationTask> taskRef : objectiveDataStore.getTaskRefsForType(ReachLocationTask.class)) {
-                     Objective objective = objectiveDataStore.getObjective(taskRef.getObjectiveUUID());
-                     if (objective != null) {
-                        taskRef.getObjectiveTask().onPlayerReachLocationMarker(store, otherEntityReference, markerId, objective);
+               if (otherUuidComponent != null) {
+                  UUID otherUuid = otherUuidComponent.getUuid();
+                  players.add(otherUuid);
+                  if (!previousPlayers.contains(otherUuid)) {
+                     for (ObjectiveTaskRef<ReachLocationTask> taskRef : objectiveDataStore.getTaskRefsForType(ReachLocationTask.class)) {
+                        Objective objective = objectiveDataStore.getObjective(taskRef.getObjectiveUUID());
+                        if (objective != null) {
+                           taskRef.getObjectiveTask().onPlayerReachLocationMarker(store, otherEntityReference, markerId, objective);
+                        }
                      }
                   }
                }

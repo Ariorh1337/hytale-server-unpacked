@@ -14,13 +14,21 @@ public class HandleProvider implements IWorldGenProvider {
    private final HytaleGenerator plugin;
    @Nonnull
    private String worldStructureName = "Default";
+   @Nullable
+   private String seedOverride;
+   private int worldCounter;
 
-   public HandleProvider(@Nonnull HytaleGenerator plugin) {
+   public HandleProvider(@Nonnull HytaleGenerator plugin, int worldCounter) {
       this.plugin = plugin;
+      this.worldCounter = worldCounter;
    }
 
    public void setWorldStructureName(@Nullable String worldStructureName) {
       this.worldStructureName = worldStructureName;
+   }
+
+   public void setSeedOverride(@Nullable String seedOverride) {
+      this.seedOverride = seedOverride;
    }
 
    @Nonnull
@@ -28,8 +36,13 @@ public class HandleProvider implements IWorldGenProvider {
       return this.worldStructureName;
    }
 
+   @Nullable
+   public String getSeedOverride() {
+      return this.seedOverride;
+   }
+
    @Override
    public IWorldGen getGenerator() throws WorldGenLoadException {
-      return new Handle(this.plugin, new ChunkRequest.GeneratorProfile(this.worldStructureName, 0));
+      return new Handle(this.plugin, new ChunkRequest.GeneratorProfile(this.worldStructureName, 0, this.worldCounter), this.seedOverride);
    }
 }

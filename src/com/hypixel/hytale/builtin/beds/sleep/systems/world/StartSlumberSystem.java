@@ -22,8 +22,11 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 public class StartSlumberSystem extends DelayedSystem<EntityStore> {
-   public static final Duration NODDING_OFF_DURATION = Duration.ofMillis(3200L);
-   public static final Duration WAKE_UP_AUTOSLEEP_DELAY = Duration.ofHours(1L);
+   @Nonnull
+   private static final Duration NODDING_OFF_DURATION = Duration.ofMillis(3200L);
+   @Nonnull
+   private static final Duration WAKE_UP_AUTOSLEEP_DELAY = Duration.ofHours(1L);
+   private static final float SYSTEM_INTERVAL_S = 0.3F;
 
    public StartSlumberSystem() {
       super(0.3F);
@@ -34,7 +37,7 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       this.checkIfEveryoneIsReadyToSleep(store);
    }
 
-   private void checkIfEveryoneIsReadyToSleep(Store<EntityStore> store) {
+   private void checkIfEveryoneIsReadyToSleep(@Nonnull Store<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       Collection<PlayerRef> playerRefs = world.getPlayerRefs();
       if (!playerRefs.isEmpty()) {
@@ -43,7 +46,7 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
             WorldSomnolence worldSomnolenceResource = store.getResource(WorldSomnolence.getResourceType());
             WorldSleep worldState = worldSomnolenceResource.getState();
             if (worldState == WorldSleep.Awake.INSTANCE) {
-               if (this.isEveryoneReadyToSleep(store)) {
+               if (isEveryoneReadyToSleep(store)) {
                   WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
                   Instant now = timeResource.getGameTime();
                   Instant target = this.computeWakeupInstant(now, wakeUpHour);
@@ -71,14 +74,14 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       return wakeUpTime.toInstant(ZoneOffset.UTC);
    }
 
-   private static float computeIrlSeconds(Instant startInstant, Instant targetInstant) {
+   private static float computeIrlSeconds(@Nonnull Instant startInstant, @Nonnull Instant targetInstant) {
       long ms = Duration.between(startInstant, targetInstant).toMillis();
       long hours = TimeUnit.MILLISECONDS.toHours(ms);
       double seconds = Math.max(3.0, hours / 6.0);
       return (float)Math.ceil(seconds);
    }
 
-   private boolean isEveryoneReadyToSleep(ComponentAccessor<EntityStore> store) {
+   private static boolean isEveryoneReadyToSleep(@Nonnull ComponentAccessor<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       Collection<PlayerRef> playerRefs = world.getPlayerRefs();
       if (playerRefs.isEmpty()) {
@@ -86,7 +89,8 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       }
 
       for (PlayerRef playerRef : playerRefs) {
-         if (!isReadyToSleep(store, playerRef.getReference())) {
+         Ref<EntityStore> ref = playerRef.getReference();
+         if (ref != null && ref.isValid() && !isReadyToSleep(store, ref)) {
             return false;
          }
       }
@@ -94,7 +98,11 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       return true;
    }
 
-   public static boolean isReadyToSleep(ComponentAccessor<EntityStore> store, Ref<EntityStore> ref) {
+   public static boolean isReadyToSleep(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
+      if (!ref.isValid()) {
+         return true;
+      }
+
       PlayerSomnolence somnolence = store.getComponent(ref, PlayerSomnolence.getComponentType());
       if (somnolence == null) {
          return false;
@@ -103,7 +111,7 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       PlayerSleep sleepState = somnolence.getSleepState();
 
       return switch (sleepState) {
-         case PlayerSleep.FullyAwake fullyAwake -> false;
+         case PlayerSleep.FullyAwake ignored -> false;
          case PlayerSleep.MorningWakeUp morningWakeUp -> {
             WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
             Instant readyTime = morningWakeUp.gameTimeStart().plus(WAKE_UP_AUTOSLEEP_DELAY);
@@ -113,7 +121,7 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
             Instant sleepStart = noddingOff.realTimeStart().plus(NODDING_OFF_DURATION);
             yield Instant.now().isAfter(sleepStart);
          }
-         case PlayerSleep.Slumber slumber -> true;
+         case PlayerSleep.Slumber ignored -> true;
          default -> throw new MatchException(null, null);
       };
    }

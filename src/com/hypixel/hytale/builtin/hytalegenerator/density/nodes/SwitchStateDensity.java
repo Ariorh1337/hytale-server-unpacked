@@ -9,10 +9,12 @@ public class SwitchStateDensity extends Density {
    @Nullable
    private Density input;
    private final int switchState;
+   private final Density.Context rChildContext;
 
    public SwitchStateDensity(Density input, int switchState) {
       this.input = input;
       this.switchState = switchState;
+      this.rChildContext = new Density.Context();
    }
 
    @Override
@@ -21,8 +23,8 @@ public class SwitchStateDensity extends Density {
          return 0.0;
       }
 
-      Density.Context childContext = new Density.Context(context);
-      childContext.switchState = this.switchState;
+      this.rChildContext.assign(context);
+      this.rChildContext.switchState = this.switchState;
       return this.input.process(context);
    }
 

@@ -63,28 +63,22 @@ public class AssetEditorGamePacketHandler implements SubPacketHandler {
       if (ref != null && ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         world.execute(
-            () -> {
+         CompletableFuture.runAsync(() -> {
                Player playerComponent = store.getComponent(ref, Player.getComponentType());
                if (!this.lacksPermission(playerComponent, true)) {
-                  CompletableFuture.runAsync(
-                     () -> {
-                        LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
-                        EditorClient mockClient = new EditorClient(playerRef);
-                        AssetEditorPlugin.get()
-                           .handleJsonAssetUpdate(
-                              mockClient,
-                              packet.path != null ? new AssetPath(packet.path) : null,
-                              packet.assetType,
-                              packet.assetIndex,
-                              packet.commands,
-                              packet.token
-                           );
-                     }
-                  );
+                  ;
                }
-            }
-         );
+            }, world)
+            .thenRunAsync(
+               () -> {
+                  LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
+                  EditorClient mockClient = new EditorClient(playerRef);
+                  AssetEditorPlugin.get()
+                     .handleJsonAssetUpdate(
+                        mockClient, packet.path != null ? new AssetPath(packet.path) : null, packet.assetType, packet.assetIndex, packet.commands, packet.token
+                     );
+               }
+            );
       } else {
          throw new RuntimeException("Unable to process AssetEditorUpdateJsonAsset packet. Player ref is invalid!");
       }

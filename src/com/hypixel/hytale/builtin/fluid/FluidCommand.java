@@ -30,7 +30,7 @@ public class FluidCommand extends AbstractCommandCollection {
    private static final SingleArgumentType<Fluid> FLUID_ARG = new AssetArgumentType("Fluid", Fluid.class, "");
 
    public FluidCommand() {
-      super("fluid", "Fluid debug commands");
+      super("fluid", "server.commands.fluid.desc");
       this.addSubCommand(new FluidCommand.SetCommand());
       this.addSubCommand(new FluidCommand.GetCommand());
       this.addSubCommand(new FluidCommand.SetRadiusCommand());
@@ -45,7 +45,7 @@ public class FluidCommand extends AbstractCommandCollection {
       private final OptionalArg<RelativeIntPosition> targetOffset = this.withOptionalArg("offset", "", ArgTypes.RELATIVE_BLOCK_POSITION);
 
       public GetCommand() {
-         super("get", "Gets the fluid at the target position");
+         super("get", "server.commands.fluid.get.desc");
       }
 
       @Override
@@ -101,7 +101,7 @@ public class FluidCommand extends AbstractCommandCollection {
       private final OptionalArg<RelativeIntPosition> targetOffset = this.withOptionalArg("offset", "", ArgTypes.RELATIVE_BLOCK_POSITION);
 
       public SetCommand() {
-         super("set", "Changes the fluid at the target position");
+         super("set", "server.commands.fluid.set.desc");
       }
 
       @Override
@@ -172,7 +172,7 @@ public class FluidCommand extends AbstractCommandCollection {
       private final OptionalArg<RelativeIntPosition> targetOffset = this.withOptionalArg("offset", "", ArgTypes.RELATIVE_BLOCK_POSITION);
 
       public SetRadiusCommand() {
-         super("setradius", "Changes the fluid at the player position in a given radius");
+         super("setradius", "server.commands.fluid.setradius.desc");
       }
 
       @Override

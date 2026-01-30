@@ -14,7 +14,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProv
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.Assignments;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import javax.annotation.Nonnull;
@@ -58,18 +57,14 @@ public class PropRuntimeAsset implements Cleanable, JsonAssetWithMap<String, Def
       this.assignmentsAsset.cleanUp();
    }
 
-   public PositionProvider buildPositionProvider(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-      return this.positionProviderAsset.build(new PositionProviderAsset.Argument(parentSeed, referenceBundle, workerIndexer));
+   public PositionProvider buildPositionProvider(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
+      return this.positionProviderAsset.build(new PositionProviderAsset.Argument(parentSeed, referenceBundle));
    }
 
    public Assignments buildPropDistribution(
-      @Nonnull SeedBox parentSeed,
-      @Nonnull MaterialCache materialCache,
-      int runtime,
-      @Nonnull ReferenceBundle referenceBundle,
-      @Nonnull WorkerIndexer workerIndexer
+      @Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, int runtime, @Nonnull ReferenceBundle referenceBundle
    ) {
-      return this.assignmentsAsset.build(new AssignmentsAsset.Argument(parentSeed, materialCache, referenceBundle, runtime, workerIndexer));
+      return this.assignmentsAsset.build(new AssignmentsAsset.Argument(parentSeed, materialCache, referenceBundle, runtime));
    }
 
    public int getRuntime() {

@@ -28,31 +28,103 @@ public abstract class PlayCommandBase extends CommandBase {
    @Override
    protected void executeSync(@Nonnull CommandContext context) {
       if (!Constants.SINGLEPLAYER) {
-         context.sendMessage(Message.translation("server.commands.play.singleplayerOnly").param("commandAccess", this.commandAccess.toString()));
+         switch (this.commandAccess) {
+            case Private:
+               context.sendMessage(Message.translation("server.commands.play.singleplayerOnlyPrivate"));
+               break;
+            case LAN:
+               context.sendMessage(Message.translation("server.commands.play.singleplayerOnlyLan"));
+               break;
+            case Friend:
+               context.sendMessage(Message.translation("server.commands.play.singleplayerOnlyFriend"));
+               break;
+            case Open:
+               context.sendMessage(Message.translation("server.commands.play.singleplayerOnlyOpen"));
+         }
       } else {
          Access access = SingleplayerModule.get().getAccess();
          if (!this.enabledArg.provided(context)) {
             if (access == this.commandAccess) {
                this.singleplayerModule.requestServerAccess(Access.Private);
-               context.sendMessage(Message.translation("server.commands.play.accessDisabled").param("commandAccess", this.commandAccess.toString()));
+               switch (this.commandAccess) {
+                  case Private:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledPrivate"));
+                     break;
+                  case LAN:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledLan"));
+                     break;
+                  case Friend:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledFriend"));
+                     break;
+                  case Open:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledOpen"));
+               }
             } else {
                this.singleplayerModule.requestServerAccess(this.commandAccess);
-               context.sendMessage(Message.translation("server.commands.play.accessEnabled").param("commandAccess", this.commandAccess.toString()));
+               switch (this.commandAccess) {
+                  case Private:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledPrivate"));
+                     break;
+                  case LAN:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledLan"));
+                     break;
+                  case Friend:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledFriend"));
+                     break;
+                  case Open:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledOpen"));
+               }
             }
          } else {
             boolean enabled = this.enabledArg.get(context);
             if (!enabled && access == this.commandAccess) {
                this.singleplayerModule.requestServerAccess(Access.Private);
-               context.sendMessage(Message.translation("server.commands.play.accessDisabled").param("commandAccess", this.commandAccess.toString()));
+               switch (this.commandAccess) {
+                  case Private:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledPrivate"));
+                     break;
+                  case LAN:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledLan"));
+                     break;
+                  case Friend:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledFriend"));
+                     break;
+                  case Open:
+                     context.sendMessage(Message.translation("server.commands.play.accessDisabledOpen"));
+               }
             } else if (enabled && access != this.commandAccess) {
                this.singleplayerModule.requestServerAccess(this.commandAccess);
-               context.sendMessage(Message.translation("server.commands.play.accessEnabled").param("commandAccess", this.commandAccess.toString()));
+               switch (this.commandAccess) {
+                  case Private:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledPrivate"));
+                     break;
+                  case LAN:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledLan"));
+                     break;
+                  case Friend:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledFriend"));
+                     break;
+                  case Open:
+                     context.sendMessage(Message.translation("server.commands.play.accessEnabledOpen"));
+               }
             } else {
-               context.sendMessage(
-                  Message.translation("server.commands.play.accessAlreadyToggled")
-                     .param("commandAccess", this.commandAccess.toString())
-                     .param("enabled", MessageFormat.enabled(enabled))
-               );
+               switch (this.commandAccess) {
+                  case Private:
+                     context.sendMessage(
+                        Message.translation("server.commands.play.accessAlreadyToggledPrivate").param("enabled", MessageFormat.enabled(enabled))
+                     );
+                     break;
+                  case LAN:
+                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledLan").param("enabled", MessageFormat.enabled(enabled)));
+                     break;
+                  case Friend:
+                     context.sendMessage(
+                        Message.translation("server.commands.play.accessAlreadyToggledFriend").param("enabled", MessageFormat.enabled(enabled))
+                     );
+                     break;
+                  case Open:
+                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledOpen").param("enabled", MessageFormat.enabled(enabled)));
+               }
             }
          }
       }

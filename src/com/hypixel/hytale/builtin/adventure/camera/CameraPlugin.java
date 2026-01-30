@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.plugin.registry.AssetRegistry;
 import javax.annotation.Nonnull;
 
 public class CameraPlugin extends JavaPlugin {
+   @Nonnull
    private static final String CODEC_CAMERA_SHAKE = "CameraShake";
 
    public CameraPlugin(@Nonnull JavaPluginInit init) {

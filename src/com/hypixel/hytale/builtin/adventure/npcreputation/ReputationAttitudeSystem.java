@@ -11,13 +11,14 @@ import com.hypixel.hytale.server.npc.blackboard.view.attitude.AttitudeView;
 import javax.annotation.Nonnull;
 
 public class ReputationAttitudeSystem extends StoreSystem<EntityStore> {
+   @Nonnull
    private final ResourceType<EntityStore, Blackboard> resourceType = Blackboard.getResourceType();
 
    @Override
    public void onSystemAddedToStore(@Nonnull Store<EntityStore> store) {
-      Blackboard blackboard = store.getResource(this.resourceType);
-      AttitudeView view = blackboard.getView(AttitudeView.class, 0L);
-      view.registerProvider(100, (ref, role, targetRef, accessor) -> {
+      Blackboard blackboardResource = store.getResource(this.resourceType);
+      AttitudeView attitudeView = blackboardResource.getView(AttitudeView.class, 0L);
+      attitudeView.registerProvider(100, (ref, role, targetRef, accessor) -> {
          Player playerComponent = store.getComponent(targetRef, Player.getComponentType());
          return playerComponent == null ? null : ReputationPlugin.get().getAttitude(store, targetRef, ref);
       });

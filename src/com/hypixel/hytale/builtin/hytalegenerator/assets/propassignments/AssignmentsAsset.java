@@ -11,7 +11,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.Assignments;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -74,20 +73,12 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
       public MaterialCache materialCache;
       public ReferenceBundle referenceBundle;
       public int runtime;
-      public WorkerIndexer workerIndexer;
 
-      public Argument(
-         @Nonnull SeedBox parentSeed,
-         @Nonnull MaterialCache materialCache,
-         @Nonnull ReferenceBundle referenceBundle,
-         int runtime,
-         @Nonnull WorkerIndexer workerIndexer
-      ) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, int runtime) {
          this.parentSeed = parentSeed;
          this.materialCache = materialCache;
          this.referenceBundle = referenceBundle;
          this.runtime = runtime;
-         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull AssignmentsAsset.Argument argument) {
@@ -95,7 +86,6 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
          this.materialCache = argument.materialCache;
          this.referenceBundle = argument.referenceBundle;
          this.runtime = argument.runtime;
-         this.workerIndexer = argument.workerIndexer;
       }
    }
 }

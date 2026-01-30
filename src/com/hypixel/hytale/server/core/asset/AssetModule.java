@@ -85,7 +85,7 @@ public class AssetModule extends JavaPlugin {
       }
 
       for (Path path : Options.getOptionSet().valuesOf(Options.ASSET_DIRECTORY)) {
-         this.loadAndRegisterPack(path);
+         this.loadAndRegisterPack(path, false);
       }
 
       this.loadPacksFromDirectory(PluginManager.MODS_PATH);
@@ -239,7 +239,7 @@ public class AssetModule extends JavaPlugin {
          try (DirectoryStream<Path> stream = Files.newDirectoryStream(modsPath)) {
             for (Path packPath : stream) {
                if (packPath.getFileName() != null && !packPath.getFileName().toString().toLowerCase().endsWith(".jar")) {
-                  this.loadAndRegisterPack(packPath);
+                  this.loadAndRegisterPack(packPath, true);
                }
             }
          } catch (IOException e) {
@@ -248,7 +248,7 @@ public class AssetModule extends JavaPlugin {
       }
    }
 
-   private void loadAndRegisterPack(Path packPath) {
+   private void loadAndRegisterPack(Path packPath, boolean isExternal) {
       PluginManifest manifest;
       try {
          manifest = this.loadPackManifest(packPath);
@@ -262,8 +262,15 @@ public class AssetModule extends JavaPlugin {
       }
 
       PluginIdentifier packIdentifier = new PluginIdentifier(manifest);
-      HytaleServerConfig.ModConfig modConfig = HytaleServer.get().getConfig().getModConfig().get(packIdentifier);
-      boolean enabled = modConfig == null || modConfig.getEnabled() == null || modConfig.getEnabled();
+      HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+      HytaleServerConfig.ModConfig modConfig = serverConfig.getModConfig().get(packIdentifier);
+      boolean enabled;
+      if (modConfig != null && modConfig.getEnabled() != null) {
+         enabled = modConfig.getEnabled();
+      } else {
+         enabled = !manifest.isDisabledByDefault() && (!isExternal || serverConfig.getDefaultModsEnabled());
+      }
+
       String packId = packIdentifier.toString();
       if (enabled) {
          this.registerPack(packId, packPath, manifest);

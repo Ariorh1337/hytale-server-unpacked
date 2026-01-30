@@ -24,11 +24,13 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class KillSpawnMarkerObjectiveTask extends KillObjectiveTask {
+   @Nonnull
    public static final BuilderCodec<KillSpawnMarkerObjectiveTask> CODEC = BuilderCodec.builder(
          KillSpawnMarkerObjectiveTask.class, KillSpawnMarkerObjectiveTask::new, KillObjectiveTask.CODEC
       )
       .build();
    private static final ComponentType<EntityStore, SpawnMarkerEntity> SPAWN_MARKER_COMPONENT_TYPE = SpawnMarkerEntity.getComponentType();
+   @Nonnull
    private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
 
    public KillSpawnMarkerObjectiveTask(@Nonnull KillSpawnMarkerObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
@@ -55,19 +57,17 @@ public class KillSpawnMarkerObjectiveTask extends KillObjectiveTask {
          String[] spawnMarkerIds = asset.getSpawnMarkerIds();
          HytaleLogger logger = ObjectivePlugin.get().getLogger();
 
-         for (Ref<EntityStore> entityReference : results) {
-            SpawnMarkerEntity entitySpawnMarkerComponent = store.getComponent(entityReference, SPAWN_MARKER_COMPONENT_TYPE);
-            assert entitySpawnMarkerComponent != null;
-            String spawnMarkerId = entitySpawnMarkerComponent.getSpawnMarkerId();
-            if (ArrayUtil.contains(spawnMarkerIds, spawnMarkerId)) {
-               world.execute(() -> entitySpawnMarkerComponent.trigger(entityReference, store));
-               logger.at(Level.INFO)
-                  .log(
-                     "Triggered SpawnMarker '"
-                        + spawnMarkerId
-                        + "' at position: "
-                        + store.getComponent(entityReference, TRANSFORM_COMPONENT_TYPE).getPosition()
-                  );
+         for (Ref<EntityStore> ref : results) {
+            SpawnMarkerEntity entitySpawnMarkerComponent = store.getComponent(ref, SPAWN_MARKER_COMPONENT_TYPE);
+            if (entitySpawnMarkerComponent != null) {
+               String spawnMarkerId = entitySpawnMarkerComponent.getSpawnMarkerId();
+               if (ArrayUtil.contains(spawnMarkerIds, spawnMarkerId)) {
+                  world.execute(() -> entitySpawnMarkerComponent.trigger(ref, store));
+                  TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
+                  if (transformComponent != null) {
+                     logger.at(Level.INFO).log("Triggered SpawnMarker '" + spawnMarkerId + "' at position: " + transformComponent.getPosition());
+                  }
+               }
             }
          }
       }

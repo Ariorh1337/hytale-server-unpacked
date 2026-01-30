@@ -97,6 +97,10 @@ public class Options {
       .withRequiredArg()
       .withValuesConvertedBy(new Options.PathConverter(Options.PathConverter.PathType.DIR));
    public static final OptionSpec<Integer> BACKUP_MAX_COUNT = PARSER.accepts("backup-max-count").withRequiredArg().ofType(Integer.class).defaultsTo(5);
+   public static final OptionSpec<Integer> BACKUP_ARCHIVE_MAX_COUNT = PARSER.accepts("backup-archive-max-count")
+      .withRequiredArg()
+      .ofType(Integer.class)
+      .defaultsTo(5);
    public static final OptionSpec<Void> SINGLEPLAYER = PARSER.accepts("singleplayer");
    public static final OptionSpec<String> OWNER_NAME = PARSER.accepts("owner-name").withRequiredArg();
    public static final OptionSpec<UUID> OWNER_UUID = PARSER.accepts("owner-uuid").withRequiredArg().withValuesConvertedBy(new Options.UUIDConverter());

@@ -44,7 +44,7 @@ public class BlockBulkFindCommand extends AbstractWorldCommand {
    private final RequiredArg<Integer> timeoutArg = this.withRequiredArg("timeout", "", ArgTypes.INTEGER);
 
    public BlockBulkFindCommand() {
-      super("find", "server.commands.find.desc", true);
+      super("find", "server.commands.block.find.desc", true);
    }
 
    @Override

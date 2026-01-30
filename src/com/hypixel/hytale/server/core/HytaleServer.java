@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.event.events.ShutdownEvent;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginClassLoader;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
@@ -116,7 +117,9 @@ public class HytaleServer {
       LOGGER.at(Level.INFO).log("Authentication mode: %s", optionSet.valueOf(Options.AUTH_MODE));
       ServerAuthManager.getInstance().initialize();
       if (EarlyPluginLoader.hasTransformers()) {
-         HytaleLogger.getLogger().at(Level.INFO).log("Early plugins loaded!! Disabling Sentry!!");
+         LOGGER.at(Level.INFO).log("Early plugins loaded!! Disabling Sentry!!");
+      } else if (!ManifestUtil.isJar() || ManifestUtil.getVersion() == null) {
+         LOGGER.at(Level.INFO).log("Sentry disabled: development build (no version)");
       } else if (!optionSet.has(Options.DISABLE_SENTRY)) {
          LOGGER.at(Level.INFO).log("Enabling Sentry");
          SentryOptions options = new SentryOptions();
@@ -152,6 +155,7 @@ public class HytaleServer {
             }
 
             HashMap<String, Object> pluginsContext = new HashMap<>();
+            boolean hasExternalPlugins = false;
 
             for (PluginBase plugin : this.pluginManager.getPlugins()) {
                PluginManifest manifestxx = plugin.getManifest();
@@ -159,10 +163,14 @@ public class HytaleServer {
                pluginInfo.put("version", manifestxx.getVersion().toString());
                pluginInfo.put("state", plugin.getState().name());
                pluginsContext.put(plugin.getIdentifier().toString(), pluginInfo);
+               if (plugin instanceof JavaPlugin jp && !jp.getClassLoader().isInServerClassPath()) {
+                  hasExternalPlugins = true;
+               }
             }
 
             contexts.put("plugins", pluginsContext);
             AssetModule assetModule = AssetModule.get();
+            boolean hasUserPacks = false;
             if (assetModule != null) {
                HashMap<String, Object> packsContext = new HashMap<>();
 
@@ -175,11 +183,16 @@ public class HytaleServer {
 
                   packInfo.put("immutable", pack.isImmutable());
                   packsContext.put(pack.getName(), packInfo);
+                  if (!pack.isImmutable()) {
+                     hasUserPacks = true;
+                  }
                }
 
                contexts.put("packs", packsContext);
             }
 
+            event.setTag("has-plugins", String.valueOf(hasExternalPlugins));
+            event.setTag("has-packs", String.valueOf(hasUserPacks));
             User user = new User();
             HashMap<String, Object> unknown = new HashMap<>();
             user.setUnknown(unknown);

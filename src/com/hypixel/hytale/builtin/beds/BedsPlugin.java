@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 
 public class BedsPlugin extends JavaPlugin {
    private static BedsPlugin instance;
@@ -27,7 +28,7 @@ public class BedsPlugin extends JavaPlugin {
       return instance;
    }
 
-   public BedsPlugin(JavaPluginInit init) {
+   public BedsPlugin(@Nonnull JavaPluginInit init) {
       super(init);
    }
 

@@ -36,7 +36,7 @@ public class CellNoise2DDensityAsset extends DensityAsset {
       SeedBox childSeed = argument.parentSeed.child(this.seedKey);
       CellNoiseField noise = new CellNoiseField(childSeed.createSupplier().get(), this.scaleX, 1.0, this.scaleZ, this.jitter, this.octaves, this.cellType);
       Noise2dDensity noiseDensity = new Noise2dDensity(noise);
-      Density cacheDensity = new MultiCacheDensity(noiseDensity, argument.workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+      Density cacheDensity = new MultiCacheDensity(noiseDensity, CacheDensityAsset.DEFAULT_CAPACITY);
       return new YOverrideDensity(cacheDensity, 0.0);
    }
 

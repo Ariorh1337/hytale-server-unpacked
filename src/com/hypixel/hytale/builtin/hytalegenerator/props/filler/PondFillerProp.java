@@ -207,9 +207,7 @@ public class PondFillerProp extends Prop {
       if (fluidBlocks != null) {
          for (Vector3i position : fluidBlocks) {
             if (context.materialSpace.isInsideSpace(position.x, position.y, position.z)) {
-               MaterialProvider.Context materialsContext = new MaterialProvider.Context(
-                  position, 0.0, 0, 0, 0, 0, context.workerId, null, context.distanceFromBiomeEdge
-               );
+               MaterialProvider.Context materialsContext = new MaterialProvider.Context(position, 0.0, 0, 0, 0, 0, null, context.distanceFromBiomeEdge);
                Material material = this.filledMaterialProvider.getVoxelTypeAt(materialsContext);
                if (material != null) {
                   context.materialSpace.set(material, position.x, position.y, position.z);

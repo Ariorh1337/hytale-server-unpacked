@@ -25,7 +25,7 @@ public class ConstantAssignmentsAsset extends AssignmentsAsset {
          return Assignments.noPropDistribution(argument.runtime);
       }
 
-      Prop prop = this.propAsset.build(new PropAsset.Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle, argument.workerIndexer));
+      Prop prop = this.propAsset.build(new PropAsset.Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle));
       return new ConstantAssignments(prop, argument.runtime);
    }
 

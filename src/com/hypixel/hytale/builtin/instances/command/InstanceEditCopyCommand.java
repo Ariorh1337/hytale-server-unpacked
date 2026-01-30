@@ -17,7 +17,9 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class InstanceEditCopyCommand extends AbstractAsyncCommand {
+   @Nonnull
    private final RequiredArg<String> originNameArg = this.withRequiredArg("instanceToCopy", "server.commands.instances.editcopy.origin.name", ArgTypes.STRING);
+   @Nonnull
    private final RequiredArg<String> destinationNameArg = this.withRequiredArg(
       "newInstanceName", "server.commands.instances.editcopy.destination.name", ArgTypes.STRING
    );

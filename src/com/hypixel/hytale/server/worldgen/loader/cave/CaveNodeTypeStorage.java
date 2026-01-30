@@ -1,14 +1,13 @@
 package com.hypixel.hytale.server.worldgen.loader.cave;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
+import com.hypixel.hytale.procedurallib.file.FileIO;
+import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.cave.CaveNodeType;
 import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,8 +59,8 @@ public class CaveNodeTypeStorage {
    public CaveNodeType loadCaveNodeType(@Nonnull String name) {
       Path file = this.caveFolder.resolve(String.format("%s.node.json", name.replace(".", File.separator)));
 
-      try (JsonReader reader = new JsonReader(Files.newBufferedReader(file))) {
-         JsonObject caveNodeJson = JsonParser.parseReader(reader).getAsJsonObject();
+      try {
+         JsonObject caveNodeJson = FileIO.load(file, JsonLoader.JSON_OBJ_LOADER);
          return this.loadCaveNodeType(name, caveNodeJson);
       } catch (Throwable e) {
          throw new Error(String.format("Error while loading CaveNodeType %s for world generator from %s", name, file.toString()), e);

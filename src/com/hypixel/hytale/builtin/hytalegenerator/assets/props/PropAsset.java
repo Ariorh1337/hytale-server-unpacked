@@ -11,7 +11,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -73,15 +72,11 @@ public abstract class PropAsset implements Cleanable, JsonAssetWithMap<String, D
       public SeedBox parentSeed;
       public MaterialCache materialCache;
       public ReferenceBundle referenceBundle;
-      public WorkerIndexer workerIndexer;
 
-      public Argument(
-         @Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer
-      ) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle) {
          this.parentSeed = parentSeed;
          this.materialCache = materialCache;
          this.referenceBundle = referenceBundle;
-         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull PropAsset.Argument argument) {

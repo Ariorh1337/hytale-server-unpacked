@@ -20,19 +20,28 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class SelectOverrideRespawnPointPage extends RespawnPointPage {
+   @Nonnull
+   private static final Message MESSAGE_SERVER_CUSTOM_UI_NEED_TO_SELECT_RESPAWN_POINT = Message.translation("server.customUI.needToSelectRespawnPoint");
+   @Nonnull
    private static final Value<String> DEFAULT_RESPAWN_BUTTON_STYLE = Value.ref("Pages/OverrideRespawnPointButton.ui", "DefaultRespawnButtonStyle");
+   @Nonnull
    private static final Value<String> SELECTED_RESPAWN_BUTTON_STYLE = Value.ref("Pages/OverrideRespawnPointButton.ui", "SelectedRespawnButtonStyle");
+   @Nonnull
+   private static final String PAGE_SELECT_OVERRIDE_RESPAWN_POINT_PAGE = "Pages/SelectOverrideRespawnPointPage.ui";
+   @Nonnull
    private final Vector3i respawnPointToAddPosition;
+   @Nonnull
    private final RespawnBlock respawnPointToAdd;
+   @Nonnull
    private final PlayerRespawnPointData[] respawnPoints;
    private int selectedRespawnPointIndex = -1;
 
    public SelectOverrideRespawnPointPage(
       @Nonnull PlayerRef playerRef,
-      InteractionType interactionType,
-      Vector3i respawnPointToAddPosition,
-      RespawnBlock respawnPointToAdd,
-      PlayerRespawnPointData[] respawnPoints
+      @Nonnull InteractionType interactionType,
+      @Nonnull Vector3i respawnPointToAddPosition,
+      @Nonnull RespawnBlock respawnPointToAdd,
+      @Nonnull PlayerRespawnPointData[] respawnPoints
    ) {
       super(playerRef, interactionType);
       this.respawnPointToAddPosition = respawnPointToAddPosition;
@@ -77,7 +86,7 @@ public class SelectOverrideRespawnPointPage extends RespawnPointPage {
          this.sendUpdate();
       } else if (data.getRespawnPointName() != null) {
          if (this.selectedRespawnPointIndex == -1) {
-            this.displayError(Message.translation("server.customUI.needToSelectRespawnPoint"));
+            this.displayError(MESSAGE_SERVER_CUSTOM_UI_NEED_TO_SELECT_RESPAWN_POINT);
             return;
          }
 
@@ -86,7 +95,9 @@ public class SelectOverrideRespawnPointPage extends RespawnPointPage {
          );
       } else if ("Cancel".equals(data.getAction())) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
-         playerComponent.getPageManager().setPage(ref, store, Page.None);
+         if (playerComponent != null) {
+            playerComponent.getPageManager().setPage(ref, store, Page.None);
+         }
       }
    }
 

@@ -15,6 +15,7 @@ import com.hypixel.hytale.protocol.packets.inventory.SetCreativeItem;
 import com.hypixel.hytale.protocol.packets.inventory.SmartGiveCreativeItem;
 import com.hypixel.hytale.protocol.packets.inventory.SmartMoveItemStack;
 import com.hypixel.hytale.protocol.packets.inventory.SwitchHotbarBlockSet;
+import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.BlockGroup;
 import com.hypixel.hytale.server.core.asset.type.item.config.BlockSelectorToolData;
@@ -407,60 +408,70 @@ public class InventoryPacketHandler implements SubPacketHandler {
          if (packet.inventorySectionId >= 0 || packet.inventorySectionId == -9) {
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData().getWorld();
-            world.execute(() -> {
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               assert playerComponent != null;
-               Inventory inventory = playerComponent.getInventory();
-               switch (packet.inventoryActionType) {
-                  case TakeAll:
-                     if (packet.inventorySectionId == -9) {
-                        inventory.takeAll(packet.inventorySectionId);
-                        return;
-                     }
-
-                     Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
-                     if (window instanceof ItemContainerWindow) {
-                        inventory.takeAll(packet.inventorySectionId);
-                     }
-                     break;
-                  case PutAll:
-                     if (packet.inventorySectionId == -9) {
-                        inventory.putAll(packet.inventorySectionId);
-                        return;
-                     }
-
-                     Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
-                     if (window instanceof ItemContainerWindow) {
-                        inventory.putAll(packet.inventorySectionId);
-                     }
-                     break;
-                  case QuickStack:
-                     if (packet.inventorySectionId == -9) {
-                        inventory.quickStack(packet.inventorySectionId);
-                        return;
-                     }
-
-                     Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
-                     if (window instanceof ItemContainerWindow) {
-                        inventory.quickStack(packet.inventorySectionId);
-                     }
-                     break;
-                  case Sort:
-                     SortType sortType = SortType.VALUES[packet.actionData];
-                     if (packet.inventorySectionId == 0) {
-                        inventory.sortStorage(sortType);
-                     } else {
-                        if (packet.inventorySectionId == -9 && inventory.getBackpack() != null) {
-                           inventory.getBackpack().sortItems(sortType);
+            world.execute(
+               () -> {
+                  Player playerComponent = store.getComponent(ref, Player.getComponentType());
+                  assert playerComponent != null;
+                  Inventory inventory = playerComponent.getInventory();
+                  switch (packet.inventoryActionType) {
+                     case TakeAll:
+                        if (packet.inventorySectionId == -9) {
+                           inventory.takeAll(packet.inventorySectionId);
                            return;
                         }
 
-                        if (playerComponent.getWindowManager().getWindow(packet.inventorySectionId) instanceof ItemContainerWindow itemContainerWindow) {
-                           itemContainerWindow.getItemContainer().sortItems(sortType);
+                        Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
+                        if (window instanceof ItemContainerWindow itemContainerWindow) {
+                           if (window.getType() == WindowType.Processing) {
+                              if (itemContainerWindow.getItemContainer() instanceof CombinedItemContainer combinedItemContainer
+                                 && combinedItemContainer.getContainersSize() >= 3) {
+                                 ItemContainer outputContainer = combinedItemContainer.getContainer(2);
+                                 outputContainer.moveAllItemStacksTo(inventory.getCombinedHotbarFirst());
+                              }
+                           } else {
+                              inventory.takeAll(packet.inventorySectionId);
+                           }
                         }
-                     }
+                        break;
+                     case PutAll:
+                        if (packet.inventorySectionId == -9) {
+                           inventory.putAll(packet.inventorySectionId);
+                           return;
+                        }
+
+                        Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
+                        if (window instanceof ItemContainerWindow) {
+                           inventory.putAll(packet.inventorySectionId);
+                        }
+                        break;
+                     case QuickStack:
+                        if (packet.inventorySectionId == -9) {
+                           inventory.quickStack(packet.inventorySectionId);
+                           return;
+                        }
+
+                        Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
+                        if (window instanceof ItemContainerWindow) {
+                           inventory.quickStack(packet.inventorySectionId);
+                        }
+                        break;
+                     case Sort:
+                        SortType sortType = SortType.VALUES[packet.actionData];
+                        if (packet.inventorySectionId == 0) {
+                           inventory.sortStorage(sortType);
+                        } else {
+                           if (packet.inventorySectionId == -9 && inventory.getBackpack() != null) {
+                              inventory.getBackpack().sortItems(sortType);
+                              return;
+                           }
+
+                           if (playerComponent.getWindowManager().getWindow(packet.inventorySectionId) instanceof ItemContainerWindow itemContainerWindow) {
+                              itemContainerWindow.getItemContainer().sortItems(sortType);
+                           }
+                        }
+                  }
                }
-            });
+            );
          }
       }
    }

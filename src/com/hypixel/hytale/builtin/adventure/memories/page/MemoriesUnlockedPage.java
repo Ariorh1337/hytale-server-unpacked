@@ -49,11 +49,14 @@ public class MemoriesUnlockedPage extends InteractiveCustomUIPage<MemoriesUnlock
    public enum PageAction {
       DiscoverMemories;
 
+      @Nonnull
       public static final Codec<MemoriesUnlockedPage.PageAction> CODEC = new EnumCodec<>(MemoriesUnlockedPage.PageAction.class);
    }
 
    public static class PageEventData {
+      @Nonnull
       public static final String KEY_ACTION = "Action";
+      @Nonnull
       public static final BuilderCodec<MemoriesUnlockedPage.PageEventData> CODEC = BuilderCodec.builder(
             MemoriesUnlockedPage.PageEventData.class, MemoriesUnlockedPage.PageEventData::new
          )

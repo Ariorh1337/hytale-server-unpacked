@@ -69,9 +69,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MemoriesPlugin extends JavaPlugin {
+   @Nonnull
+   public static final String MEMORIES_JSON_PATH = "memories.json";
    private static MemoriesPlugin instance;
+   @Nonnull
    private final Config<MemoriesPlugin.MemoriesPluginConfig> config = this.withConfig(MemoriesPlugin.MemoriesPluginConfig.CODEC);
+   @Nonnull
    private final List<MemoryProvider<?>> providers = new ObjectArrayList<>();
+   @Nonnull
    private final Map<String, Set<Memory>> allMemories = new Object2ObjectRBTreeMap<>();
    private ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
    @Nullable
@@ -169,6 +174,7 @@ public class MemoriesPlugin extends JavaPlugin {
       this.providers.add(memoryProvider);
    }
 
+   @Nonnull
    public Map<String, Set<Memory>> getAllMemories() {
       return this.allMemories;
    }
@@ -290,6 +296,7 @@ public class MemoriesPlugin extends JavaPlugin {
    }
 
    public static class MemoriesPluginConfig {
+      @Nonnull
       public static final BuilderCodec<MemoriesPlugin.MemoriesPluginConfig> CODEC = BuilderCodec.builder(
             MemoriesPlugin.MemoriesPluginConfig.class, MemoriesPlugin.MemoriesPluginConfig::new
          )
@@ -348,6 +355,7 @@ public class MemoriesPlugin extends JavaPlugin {
    }
 
    private static class RecordedMemories {
+      @Nonnull
       public static final BuilderCodec<MemoriesPlugin.RecordedMemories> CODEC = BuilderCodec.builder(
             MemoriesPlugin.RecordedMemories.class, MemoriesPlugin.RecordedMemories::new
          )
@@ -358,7 +366,9 @@ public class MemoriesPlugin extends JavaPlugin {
          }, recordedMemories -> recordedMemories.memories.toArray(Memory[]::new))
          .add()
          .build();
+      @Nonnull
       private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+      @Nonnull
       private final Set<Memory> memories = new HashSet<>();
    }
 }

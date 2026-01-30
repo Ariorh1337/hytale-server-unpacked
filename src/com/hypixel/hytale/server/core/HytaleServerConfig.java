@@ -37,14 +37,14 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
 public class HytaleServerConfig {
-   public static final int VERSION = 3;
+   public static final int VERSION = 4;
    public static final int DEFAULT_MAX_VIEW_RADIUS = 32;
    @Nonnull
    public static final Path PATH = Path.of("config.json");
    @Nonnull
    public static final BuilderCodec<HytaleServerConfig> CODEC = BuilderCodec.builder(HytaleServerConfig.class, HytaleServerConfig::new)
       .versioned()
-      .codecVersion(3)
+      .codecVersion(4)
       .append(new KeyedCodec<>("ServerName", Codec.STRING), (o, s) -> o.serverName = s, o -> o.serverName)
       .add()
       .append(new KeyedCodec<>("MOTD", Codec.STRING), (o, s) -> o.motd = s, o -> o.motd)
@@ -92,6 +92,9 @@ public class HytaleServerConfig {
          o -> o.modConfig
       )
       .add()
+      .<Boolean>append(new KeyedCodec<>("DefaultModsEnabled", Codec.BOOLEAN), (o, v) -> o.defaultModsEnabled = v, o -> o.defaultModsEnabled)
+      .setVersionRange(4, Integer.MAX_VALUE)
+      .add()
       .append(
          new KeyedCodec<>("DisplayTmpTagsInStrings", Codec.BOOLEAN),
          (o, displayTmpTagsInStrings) -> o.displayTmpTagsInStrings = displayTmpTagsInStrings,
@@ -104,7 +107,7 @@ public class HytaleServerConfig {
       .add()
       .append(new KeyedCodec<>("Update", HytaleServerConfig.UpdateConfig.CODEC), (o, value) -> o.updateConfig = value, o -> o.updateConfig)
       .add()
-      .afterDecode(config -> {
+      .afterDecode((config, extraInfo) -> {
          config.defaults.hytaleServerConfig = config;
          config.connectionTimeouts.setHytaleServerConfig(config);
          config.rateLimitConfig.hytaleServerConfig = config;
@@ -116,6 +119,11 @@ public class HytaleServerConfig {
             }
 
             config.legacyPluginConfig = null;
+            config.markChanged();
+         }
+
+         if (config.defaultModsEnabled == null && extraInfo.getVersion() < 4) {
+            config.defaultModsEnabled = true;
             config.markChanged();
          }
       })
@@ -141,6 +149,8 @@ public class HytaleServerConfig {
    private transient Map<PluginIdentifier, HytaleServerConfig.ModConfig> legacyPluginConfig;
    @Nonnull
    private Map<PluginIdentifier, HytaleServerConfig.ModConfig> modConfig = new ConcurrentHashMap<>();
+   @Nullable
+   private Boolean defaultModsEnabled;
    @Nonnull
    private Map<String, HytaleServerConfig.Module> unmodifiableModules = Collections.unmodifiableMap(this.modules);
    @Nonnull
@@ -271,6 +281,10 @@ public class HytaleServerConfig {
    public void setModConfig(@Nonnull Map<PluginIdentifier, HytaleServerConfig.ModConfig> modConfig) {
       this.modConfig = modConfig;
       this.markChanged();
+   }
+
+   public boolean getDefaultModsEnabled() {
+      return this.defaultModsEnabled != null ? this.defaultModsEnabled : !Constants.SINGLEPLAYER;
    }
 
    @Nonnull

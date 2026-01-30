@@ -9,7 +9,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
@@ -31,7 +30,7 @@ public abstract class TerrainAsset implements Cleanable, JsonAssetWithMap<String
    protected TerrainAsset() {
    }
 
-   public abstract Density buildDensity(@Nonnull SeedBox var1, @Nonnull ReferenceBundle var2, @Nonnull WorkerIndexer var3);
+   public abstract Density buildDensity(@Nonnull SeedBox var1, @Nonnull ReferenceBundle var2);
 
    public String getId() {
       return this.id;

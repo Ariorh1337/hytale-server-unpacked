@@ -10,7 +10,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -38,14 +37,14 @@ public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap
                LoggerUtil.getLogger().warning("Duplicate export name for asset: " + asset.exportName);
             }
 
-            VectorProviderAsset.Exported exported = new VectorProviderAsset.Exported();
-            exported.asset = asset;
+            boolean isSingleInstance;
             if (asset instanceof ExportedVectorProviderAsset exportedAsset) {
-               exported.singleInstance = exportedAsset.isSingleInstance();
+               isSingleInstance = exportedAsset.isSingleInstance();
             } else {
-               exported.singleInstance = false;
+               isSingleInstance = false;
             }
 
+            VectorProviderAsset.Exported exported = new VectorProviderAsset.Exported(isSingleInstance, asset);
             exportedNodes.put(asset.exportName, exported);
             LoggerUtil.getLogger().fine("Registered imported node asset with name '" + asset.exportName + "' with asset id '" + asset.id);
          }
@@ -80,30 +79,34 @@ public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap
    public static class Argument {
       public SeedBox parentSeed;
       public ReferenceBundle referenceBundle;
-      public WorkerIndexer workerIndexer;
 
-      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
          this.parentSeed = parentSeed;
          this.referenceBundle = referenceBundle;
-         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull VectorProviderAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
-         this.workerIndexer = argument.workerIndexer;
       }
 
       public Argument(@Nonnull DensityAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
-         this.workerIndexer = argument.workerIndexer;
       }
    }
 
    public static class Exported {
-      public boolean singleInstance;
+      public boolean isSingleInstance;
+      @Nonnull
       public VectorProviderAsset asset;
-      public VectorProvider builtInstance;
+      @Nonnull
+      public Map<Thread, VectorProvider> threadInstances;
+
+      public Exported(boolean isSingleInstance, @Nonnull VectorProviderAsset asset) {
+         this.isSingleInstance = isSingleInstance;
+         this.asset = asset;
+         this.threadInstances = new ConcurrentHashMap<>();
+      }
    }
 }

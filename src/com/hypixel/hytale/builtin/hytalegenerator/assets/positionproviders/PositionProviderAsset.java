@@ -10,7 +10,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -71,18 +70,15 @@ public abstract class PositionProviderAsset implements Cleanable, JsonAssetWithM
    public static class Argument {
       public SeedBox parentSeed;
       public ReferenceBundle referenceBundle;
-      public WorkerIndexer workerIndexer;
 
-      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
          this.parentSeed = parentSeed;
          this.referenceBundle = referenceBundle;
-         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull PositionProviderAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
-         this.workerIndexer = argument.workerIndexer;
       }
    }
 }

@@ -32,6 +32,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionTool
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolReplyWithClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionTransform;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionUpdate;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityCollision;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityLight;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityPickupEnabled;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityScale;
@@ -60,9 +61,12 @@ import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
+import com.hypixel.hytale.server.core.modules.entity.component.NPCMarkerComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentDynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
+import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
 import com.hypixel.hytale.server.core.modules.entity.item.PreventPickup;
 import com.hypixel.hytale.server.core.modules.interaction.Interactions;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
@@ -109,6 +113,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          this.packetHandler.registerHandler(421, p -> this.handle((BuilderToolSetEntityPickupEnabled)p));
          this.packetHandler.registerHandler(422, p -> this.handle((BuilderToolSetEntityLight)p));
          this.packetHandler.registerHandler(423, p -> this.handle((BuilderToolSetNPCDebug)p));
+         this.packetHandler.registerHandler(425, p -> this.handle((BuilderToolSetEntityCollision)p));
       }
    }
 
@@ -435,7 +440,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                         }
 
                         if (prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode() == null) {
-                           s.select(initialSelectionMin, initialSelectionMax, "SelectionTranslatePacket", componentAccessor);
+                           s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
                            if (packet.cutOriginal) {
                               s.copyOrCut(
                                  r,
@@ -501,7 +506,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                               finalKeepEmptyBlocks,
                               componentAccessor
                            );
-                           s.select(initialSelectionMin, initialSelectionMax, "SelectionTranslatePacket", componentAccessor);
+                           s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
                            s.transformSelectionPoints(transformationMatrix, rotationOrigin);
                            if (large) {
                               playerComponent.sendMessage(Message.translation("server.builderTools.selection.large.complete"));
@@ -572,17 +577,28 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       if (ref != null && ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            assert playerComponent != null;
-            if (hasPermission(playerComponent, "hytale.editor.selection.clipboard")) {
-               LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
-                  s.select(this.fromBlockPosition(packet.selectionMin), this.fromBlockPosition(packet.selectionMax), "Extrude", componentAccessor);
-                  s.stack(r, new Vector3i(packet.xNormal, packet.yNormal, packet.zNormal), packet.numStacks, true, 0, componentAccessor);
-               });
+         world.execute(
+            () -> {
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
+               assert playerComponent != null;
+               if (hasPermission(playerComponent, "hytale.editor.selection.clipboard")) {
+                  LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+                  BuilderToolsPlugin.addToQueue(
+                     playerComponent,
+                     playerRef,
+                     (r, s, componentAccessor) -> {
+                        s.select(
+                           this.fromBlockPosition(packet.selectionMin),
+                           this.fromBlockPosition(packet.selectionMax),
+                           "server.builderTools.selectReasons.extrude",
+                           componentAccessor
+                        );
+                        s.stack(r, new Vector3i(packet.xNormal, packet.yNormal, packet.zNormal), packet.numStacks, true, 0, componentAccessor);
+                     }
+                  );
+               }
             }
-         });
+         );
       } else {
          throw new RuntimeException("Unable to process BuilderToolStackArea packet. Player ref is invalid!");
       }
@@ -900,17 +916,51 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
             if (hasPermission(playerComponent)) {
                Ref<EntityStore> entityReference = world.getEntityStore().getRefFromNetworkId(packet.entityId);
                if (entityReference != null) {
-                  UUIDComponent uuidComponent = store.getComponent(entityReference, UUIDComponent.getComponentType());
-                  if (uuidComponent != null) {
-                     UUID uuid = uuidComponent.getUuid();
-                     String command = packet.enabled ? "npc debug set display --entity " + uuid : "npc debug clear --entity " + uuid;
-                     CommandManager.get().handleCommand(playerComponent, command);
+                  NPCMarkerComponent npcMarker = store.getComponent(entityReference, NPCMarkerComponent.getComponentType());
+                  if (npcMarker != null) {
+                     UUIDComponent uuidComponent = store.getComponent(entityReference, UUIDComponent.getComponentType());
+                     if (uuidComponent != null) {
+                        UUID uuid = uuidComponent.getUuid();
+                        String command = packet.enabled ? "npc debug set display --entity " + uuid : "npc debug clear --entity " + uuid;
+                        CommandManager.get().handleCommand(playerComponent, command);
+                     }
                   }
                }
             }
          });
       } else {
          throw new RuntimeException("Unable to process BuilderToolSetNPCDebug packet. Player ref is invalid!");
+      }
+   }
+
+   public void handle(@Nonnull BuilderToolSetEntityCollision packet) {
+      PlayerRef playerRef = this.packetHandler.getPlayerRef();
+      Ref<EntityStore> ref = playerRef.getReference();
+      if (ref != null && ref.isValid()) {
+         Store<EntityStore> store = ref.getStore();
+         World world = store.getExternalData().getWorld();
+         world.execute(() -> {
+            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            if (hasPermission(playerComponent)) {
+               Ref<EntityStore> entityReference = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+               if (entityReference != null) {
+                  PropComponent propComponent = store.getComponent(entityReference, PropComponent.getComponentType());
+                  NPCMarkerComponent npcMarker = store.getComponent(entityReference, NPCMarkerComponent.getComponentType());
+                  if (propComponent != null || npcMarker != null) {
+                     if (packet.collisionType != null && !packet.collisionType.isEmpty()) {
+                        HitboxCollisionConfig hitboxCollisionConfig = HitboxCollisionConfig.getAssetMap().getAsset(packet.collisionType);
+                        if (hitboxCollisionConfig != null) {
+                           store.putComponent(entityReference, HitboxCollision.getComponentType(), new HitboxCollision(hitboxCollisionConfig));
+                        }
+                     } else {
+                        store.removeComponent(entityReference, HitboxCollision.getComponentType());
+                     }
+                  }
+               }
+            }
+         });
+      } else {
+         throw new RuntimeException("Unable to process BuilderToolSetEntityCollision packet. Player ref is invalid!");
       }
    }
 }

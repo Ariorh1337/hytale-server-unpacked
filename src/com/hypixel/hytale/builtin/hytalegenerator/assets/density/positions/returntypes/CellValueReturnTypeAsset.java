@@ -9,7 +9,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.return
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -29,10 +28,10 @@ public class CellValueReturnTypeAsset extends ReturnTypeAsset {
 
    @Nonnull
    @Override
-   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-      Density densityNode = this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer));
-      Density cache = new MultiCacheDensity(densityNode, workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
-      return new CellValueReturnType(cache, this.defaultValue, workerIndexer.getWorkerCount());
+   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
+      Density densityNode = this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle));
+      Density cache = new MultiCacheDensity(densityNode, CacheDensityAsset.DEFAULT_CAPACITY);
+      return new CellValueReturnType(cache, this.defaultValue);
    }
 
    @Override

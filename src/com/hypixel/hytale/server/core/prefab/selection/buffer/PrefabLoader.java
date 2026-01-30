@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -36,7 +35,7 @@ public class PrefabLoader {
       } else {
          Path prefabPath = rootFolder.resolve(prefabName.replace('.', File.separatorChar) + ".prefab.json");
          if (!Files.exists(prefabPath)) {
-            throw new NoSuchFileException(prefabPath.toString());
+            return;
          }
 
          pathConsumer.accept(prefabPath);
@@ -46,23 +45,25 @@ public class PrefabLoader {
    public static void resolvePrefabFolder(@Nonnull Path rootFolder, @Nonnull String prefabName, @Nonnull final Consumer<Path> pathConsumer) throws IOException {
       String prefabDirectory = prefabName.substring(0, prefabName.length() - 2);
       Path directoryPath = rootFolder.resolve(prefabDirectory.replace('.', File.separatorChar));
-      if (!Files.isDirectory(directoryPath)) {
-         throw new NotDirectoryException(directoryPath.toString());
-      }
-
-      Files.walkFileTree(directoryPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-         @Nonnull
-         public FileVisitResult visitFile(@Nonnull Path file, BasicFileAttributes attrs) {
-            String fileName = file.getFileName().toString();
-            Matcher matcher = PrefabBufferUtil.FILE_SUFFIX_PATTERN.matcher(fileName);
-            if (matcher.find()) {
-               String fileNameNoExtension = matcher.replaceAll("");
-               pathConsumer.accept(file.resolveSibling(fileNameNoExtension));
-            }
-
-            return FileVisitResult.CONTINUE;
+      if (Files.exists(directoryPath)) {
+         if (!Files.isDirectory(directoryPath)) {
+            throw new NotDirectoryException(directoryPath.toString());
          }
-      });
+
+         Files.walkFileTree(directoryPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+            @Nonnull
+            public FileVisitResult visitFile(@Nonnull Path file, BasicFileAttributes attrs) {
+               String fileName = file.getFileName().toString();
+               Matcher matcher = PrefabBufferUtil.FILE_SUFFIX_PATTERN.matcher(fileName);
+               if (matcher.find()) {
+                  String fileNameNoExtension = matcher.replaceAll("");
+                  pathConsumer.accept(file.resolveSibling(fileNameNoExtension));
+               }
+
+               return FileVisitResult.CONTINUE;
+            }
+         });
+      }
    }
 
    @Nonnull

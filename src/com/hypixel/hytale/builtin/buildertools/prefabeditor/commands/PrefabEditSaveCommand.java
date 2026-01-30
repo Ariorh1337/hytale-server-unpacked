@@ -39,6 +39,8 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
    private final FlagArg emptyArg = this.withFlagArg("empty", "server.commands.editprefab.save.empty.desc");
    @Nonnull
    private final FlagArg confirmArg = this.withFlagArg("confirm", "server.commands.editprefab.save.confirm.desc");
+   @Nonnull
+   private final FlagArg clearSupportArg = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
 
    private static boolean isPathInAllowedPrefabDirectory(@Nonnull Path path) {
       PrefabStore prefabStore = PrefabStore.get();
@@ -70,6 +72,7 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
       prefabSaverSettings.setEntities(!this.noEntitiesArg.provided(context));
       prefabSaverSettings.setOverwriteExisting(true);
       prefabSaverSettings.setEmpty(this.emptyArg.get(context));
+      prefabSaverSettings.setClearSupportValues(this.clearSupportArg.get(context));
       boolean confirm = this.confirmArg.provided(context);
       if (!this.saveAllArg.provided(context)) {
          PrefabEditingMetadata selectedPrefab = prefabEditSession.getSelectedPrefab(playerRef.getUuid());

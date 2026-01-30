@@ -110,10 +110,14 @@ import javax.annotation.Nullable;
 
 public class ObjectivePlugin extends JavaPlugin {
    protected static ObjectivePlugin instance;
+   @Nonnull
    public static final String OBJECTIVE_LOCATION_MARKER_MODEL_ID = "Objective_Location_Marker";
    public static final long SAVE_INTERVAL_MINUTES = 5L;
+   @Nonnull
    private final Map<Class<? extends ObjectiveTaskAsset>, TriFunction<ObjectiveTaskAsset, Integer, Integer, ? extends ObjectiveTask>> taskGenerators = new ConcurrentHashMap<>();
+   @Nonnull
    private final Map<Class<? extends ObjectiveCompletionAsset>, Function<ObjectiveCompletionAsset, ? extends ObjectiveCompletion>> completionGenerators = new ConcurrentHashMap<>();
+   @Nonnull
    private final Config<ObjectivePlugin.ObjectivePluginConfig> config = this.withConfig(ObjectivePlugin.ObjectivePluginConfig.CODEC);
    private Model objectiveLocationMarkerModel;
    private ComponentType<EntityStore, ObjectiveHistoryComponent> objectiveHistoryComponentType;
@@ -392,7 +396,6 @@ public class ObjectivePlugin extends JavaPlugin {
                   activeObjectiveUUIDs.add(objective.getObjectiveUUID());
                   playerConfigData.setActiveObjectiveUUIDs(activeObjectiveUUIDs);
                   playerRefComponent.sendMessage(Message.translation("server.modules.objective.start.success").param("title", assetTitleMessage));
-                  playerRefComponent.sendMessage(objective.getTaskInfoMessage());
                   playerRefComponent.getPacketHandler().writeNoCache(trackObjectivePacket);
                }
             }
@@ -595,8 +598,8 @@ public class ObjectivePlugin extends JavaPlugin {
       ObjectiveTask[] currentTasks = objective.getCurrentTasks();
 
       for (ObjectiveTask task : currentTasks) {
-         if (task instanceof UseEntityObjectiveTask) {
-            this.objectiveDataStore.removeEntityTaskForPlayer(objectiveUUID, ((UseEntityObjectiveTask)task).getAsset().getTaskId(), playerUUID);
+         if (task instanceof UseEntityObjectiveTask useEntityObjectiveTask) {
+            this.objectiveDataStore.removeEntityTaskForPlayer(objectiveUUID, useEntityObjectiveTask.getAsset().getTaskId(), playerUUID);
          }
       }
 
@@ -838,7 +841,7 @@ public class ObjectivePlugin extends JavaPlugin {
       }
    }
 
-   private void onWorldAdded(AddWorldEvent event) {
+   private void onWorldAdded(@Nonnull AddWorldEvent event) {
       event.getWorld().getWorldMapManager().addMarkerProvider("objectives", ObjectiveMarkerProvider.INSTANCE);
    }
 
@@ -865,6 +868,7 @@ public class ObjectivePlugin extends JavaPlugin {
    }
 
    public static class ObjectivePluginConfig {
+      @Nonnull
       public static final BuilderCodec<ObjectivePlugin.ObjectivePluginConfig> CODEC = BuilderCodec.builder(
             ObjectivePlugin.ObjectivePluginConfig.class, ObjectivePlugin.ObjectivePluginConfig::new
          )

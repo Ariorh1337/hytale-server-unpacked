@@ -53,6 +53,8 @@ public class NPCMemory extends Memory {
    @Nonnull
    public static final String ID = "NPC";
    @Nonnull
+   public static final String ZONE_NAME_UNKNOWN = "???";
+   @Nonnull
    public static final BuilderCodec<NPCMemory> CODEC = BuilderCodec.builder(NPCMemory.class, NPCMemory::new)
       .append(new KeyedCodec<>("NPCRole", Codec.STRING), (npcMemory, s) -> npcMemory.npcRole = s, npcMemory -> npcMemory.npcRole)
       .addValidator(Validators.nonNull())
@@ -119,7 +121,7 @@ public class NPCMemory extends Memory {
       return Message.translation("server.memories.general.discovered.tooltipText");
    }
 
-   @Nullable
+   @Nonnull
    @Override
    public String getIconPath() {
       return "UI/Custom/Pages/Memories/npcs/" + this.npcRole + ".png";
@@ -157,6 +159,7 @@ public class NPCMemory extends Memory {
       return this.foundLocationZoneNameKey;
    }
 
+   @Nonnull
    public Message getLocationMessage() {
       if (this.foundLocationGeneralNameKey != null) {
          return Message.translation(this.foundLocationGeneralNameKey);
@@ -166,7 +169,7 @@ public class NPCMemory extends Memory {
    }
 
    @Override
-   public boolean equals(Object o) {
+   public boolean equals(@Nullable Object o) {
       if (o == null || this.getClass() != o.getClass()) {
          return false;
       }
@@ -186,6 +189,7 @@ public class NPCMemory extends Memory {
       return 31 * result + Boolean.hashCode(this.isMemoriesNameOverridden);
    }
 
+   @Nonnull
    @Override
    public String toString() {
       return "NPCMemory{npcRole='"
@@ -202,7 +206,7 @@ public class NPCMemory extends Memory {
    public static class GatherMemoriesSystem extends EntityTickingSystem<EntityStore> {
       @Nonnull
       public static final Query<EntityStore> QUERY = Query.and(
-         TransformComponent.getComponentType(), Player.getComponentType(), PlayerMemories.getComponentType()
+         TransformComponent.getComponentType(), Player.getComponentType(), PlayerRef.getComponentType(), PlayerMemories.getComponentType()
       );
       private final double radius;
 
@@ -242,8 +246,7 @@ public class NPCMemory extends Memory {
                   NPCEntity npcComponent = commandBuffer.getComponent(npcRef, NPCEntity.getComponentType());
                   if (npcComponent != null) {
                      Role role = npcComponent.getRole();
-                     assert role != null;
-                     if (role.isMemory()) {
+                     if (role != null && role.isMemory()) {
                         temp.isMemoriesNameOverridden = role.isMemoriesNameOverriden();
                         temp.npcRole = temp.isMemoriesNameOverridden ? role.getMemoriesNameOverride() : npcComponent.getRoleName();
                         temp.memoryTitleKey = role.getNameTranslationKey();
@@ -260,25 +263,28 @@ public class NPCMemory extends Memory {
                               );
                               temp = new NPCMemory();
                               TransformComponent npcTransformComponent = commandBuffer.getComponent(npcRef, TransformComponent.getComponentType());
-                              assert npcTransformComponent != null;
-                              MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(store.getExternalData().getWorld().getGameplayConfig());
-                              if (memoriesGameplayConfig != null) {
-                                 ItemStack memoryItemStack = new ItemStack(memoriesGameplayConfig.getMemoriesCatchItemId());
-                                 Vector3d memoryItemHolderPosition = npcTransformComponent.getPosition().clone();
-                                 BoundingBox boundingBoxComponent = commandBuffer.getComponent(npcRef, BoundingBox.getComponentType());
-                                 if (boundingBoxComponent != null) {
-                                    memoryItemHolderPosition.y = memoryItemHolderPosition.y + boundingBoxComponent.getBoundingBox().middleY();
-                                 }
-
-                                 Holder<EntityStore> memoryItemHolder = ItemComponent.generatePickedUpItem(
-                                    memoryItemStack, memoryItemHolderPosition, commandBuffer, ref
+                              if (npcTransformComponent != null) {
+                                 MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(
+                                    store.getExternalData().getWorld().getGameplayConfig()
                                  );
-                                 float memoryCatchItemLifetimeS = 0.62F;
-                                 PickupItemComponent pickupItemComponent = memoryItemHolder.getComponent(PickupItemComponent.getComponentType());
-                                 assert pickupItemComponent != null;
-                                 pickupItemComponent.setInitialLifeTime(0.62F);
-                                 commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
-                                 displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, npcRef, commandBuffer);
+                                 if (memoriesGameplayConfig != null) {
+                                    ItemStack memoryItemStack = new ItemStack(memoriesGameplayConfig.getMemoriesCatchItemId());
+                                    Vector3d memoryItemHolderPosition = npcTransformComponent.getPosition().clone();
+                                    BoundingBox boundingBoxComponent = commandBuffer.getComponent(npcRef, BoundingBox.getComponentType());
+                                    if (boundingBoxComponent != null) {
+                                       memoryItemHolderPosition.y = memoryItemHolderPosition.y + boundingBoxComponent.getBoundingBox().middleY();
+                                    }
+
+                                    Holder<EntityStore> memoryItemHolder = ItemComponent.generatePickedUpItem(
+                                       memoryItemStack, memoryItemHolderPosition, commandBuffer, ref
+                                    );
+                                    float memoryCatchItemLifetimeS = 0.62F;
+                                    PickupItemComponent pickupItemComponent = memoryItemHolder.getComponent(PickupItemComponent.getComponentType());
+                                    assert pickupItemComponent != null;
+                                    pickupItemComponent.setInitialLifeTime(0.62F);
+                                    commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
+                                    displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, npcRef, commandBuffer);
+                                 }
                               }
                            }
                         }
@@ -289,7 +295,7 @@ public class NPCMemory extends Memory {
          }
       }
 
-      private static String findLocationZoneName(World world, Vector3d position) {
+      private static String findLocationZoneName(@Nonnull World world, @Nonnull Vector3d position) {
          if (world.getChunkStore().getGenerator() instanceof ChunkGenerator generator) {
             int seed = (int)world.getWorldConfig().getSeed();
             ZoneBiomeResult result = generator.getZoneBiomeResultAt(seed, MathUtil.floor(position.x), MathUtil.floor(position.z));
@@ -308,7 +314,10 @@ public class NPCMemory extends Memory {
       }
 
       private static void displayCatchEntityParticles(
-         MemoriesGameplayConfig memoriesGameplayConfig, Vector3d targetPosition, Ref<EntityStore> targetRef, @Nonnull CommandBuffer<EntityStore> commandBuffer
+         @Nonnull MemoriesGameplayConfig memoriesGameplayConfig,
+         @Nonnull Vector3d targetPosition,
+         @Nonnull Ref<EntityStore> targetRef,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          ModelParticle particle = memoriesGameplayConfig.getMemoriesCatchEntityParticle();
          if (particle != null) {
@@ -323,8 +332,9 @@ public class NPCMemory extends Memory {
 
                for (Ref<EntityStore> ref : results) {
                   PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-                  assert playerRefComponent != null;
-                  playerRefComponent.getPacketHandler().write(packet);
+                  if (playerRefComponent != null) {
+                     playerRefComponent.getPacketHandler().write(packet);
+                  }
                }
             }
          }

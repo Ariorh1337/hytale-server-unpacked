@@ -20,9 +20,9 @@ import com.hypixel.hytale.protocol.packets.world.UpdateSleepState;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -30,11 +30,15 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
+   @Nonnull
    public static final Query<EntityStore> QUERY = Query.and(PlayerRef.getComponentType(), PlayerSomnolence.getComponentType(), SleepTracker.getComponentType());
    public static final Duration SPAN_BEFORE_BLACK_SCREEN = Duration.ofMillis(1200L);
    public static final int MAX_SAMPLE_COUNT = 5;
+   @Nonnull
    private static final UUID[] EMPTY_UUIDS = new UUID[0];
+   @Nonnull
    private static final UpdateSleepState PACKET_NO_SLEEP_UI = new UpdateSleepState(false, false, null, null);
+   private static final float SYSTEM_INTERVAL_S = 0.25F;
 
    @Override
    public Query<EntityStore> getQuery() {
@@ -64,6 +68,7 @@ public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
       }
    }
 
+   @Nonnull
    private UpdateSleepState createSleepPacket(@Nonnull Store<EntityStore> store, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk) {
       World world = store.getExternalData().getWorld();
       WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
@@ -95,7 +100,7 @@ public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
    @Nullable
    private SleepMultiplayer createSleepMultiplayer(@Nonnull Store<EntityStore> store) {
       World world = store.getExternalData().getWorld();
-      List<PlayerRef> playerRefs = new ArrayList<>(world.getPlayerRefs());
+      List<PlayerRef> playerRefs = new ObjectArrayList<>(world.getPlayerRefs());
       playerRefs.removeIf(playerRefx -> playerRefx.getReference() == null);
       if (playerRefs.size() <= 1) {
          return null;
@@ -104,7 +109,7 @@ public class UpdateSleepPacketSystem extends DelayedEntitySystem<EntityStore> {
       playerRefs.sort(Comparator.comparingLong(refx -> refx.getUuid().hashCode() + world.hashCode()));
       int sleepersCount = 0;
       int awakeCount = 0;
-      List<UUID> awakeSampleList = new ArrayList<>(playerRefs.size());
+      List<UUID> awakeSampleList = new ObjectArrayList<>(playerRefs.size());
 
       for (PlayerRef playerRef : playerRefs) {
          Ref<EntityStore> ref = playerRef.getReference();

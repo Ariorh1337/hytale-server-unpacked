@@ -19,10 +19,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class SetNameRespawnPointPage extends RespawnPointPage {
+   @Nonnull
    private final Vector3i respawnBlockPosition;
+   @Nonnull
    private final RespawnBlock respawnBlock;
 
-   public SetNameRespawnPointPage(@Nonnull PlayerRef playerRef, InteractionType interactionType, Vector3i respawnBlockPosition, RespawnBlock respawnBlock) {
+   public SetNameRespawnPointPage(
+      @Nonnull PlayerRef playerRef, @Nonnull InteractionType interactionType, @Nonnull Vector3i respawnBlockPosition, @Nonnull RespawnBlock respawnBlock
+   ) {
       super(playerRef, interactionType);
       this.respawnBlockPosition = respawnBlockPosition;
       this.respawnBlock = respawnBlock;
@@ -65,7 +69,9 @@ public class SetNameRespawnPointPage extends RespawnPointPage {
          this.setRespawnPointForPlayer(ref, store, this.respawnBlockPosition, this.respawnBlock, respawnPointName);
       } else if ("Cancel".equals(data.getAction())) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
-         playerComponent.getPageManager().setPage(ref, store, Page.None);
+         if (playerComponent != null) {
+            playerComponent.getPageManager().setPage(ref, store, Page.None);
+         }
       }
    }
 }

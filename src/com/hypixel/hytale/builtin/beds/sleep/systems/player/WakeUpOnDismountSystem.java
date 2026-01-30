@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class WakeUpOnDismountSystem extends RefChangeSystem<EntityStore, MountedComponent> {
+   @Nonnull
    @Override
    public ComponentType<EntityStore, MountedComponent> componentType() {
       return MountedComponent.getComponentType();

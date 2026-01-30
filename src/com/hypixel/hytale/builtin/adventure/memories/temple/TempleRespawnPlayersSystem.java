@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class TempleRespawnPlayersSystem extends DelayedEntitySystem<EntityStore> {
+   @Nonnull
    public static final Query<EntityStore> QUERY = Query.and(PlayerRef.getComponentType(), TransformComponent.getComponentType());
 
    public TempleRespawnPlayersSystem() {

@@ -7,8 +7,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public enum RoleDebugFlags implements Supplier<String> {
-   TraceFail("Trace failed steps"),
-   TraceSuccess("Trace matched steps"),
+   TraceFail("Trace failed instructions"),
+   TraceSuccess("Trace matched instructions"),
    TraceSensorFailures("Trace failing sensors"),
    Flock("Trace flock events"),
    FlockDamage("Trace flock damage events"),

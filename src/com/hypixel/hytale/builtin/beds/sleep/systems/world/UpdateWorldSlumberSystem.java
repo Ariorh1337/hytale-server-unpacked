@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Iterator;
 import javax.annotation.Nonnull;
 
 public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
@@ -25,7 +24,7 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
       World world = store.getExternalData().getWorld();
       WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
       if (worldSomnolence.getState() instanceof WorldSlumber slumber) {
-         slumber.incProgressSeconds(dt);
+         slumber.incrementProgressSeconds(dt);
          boolean sleepingIsOver = slumber.getProgressSeconds() >= slumber.getIrlDurationSeconds() || isSomeoneAwake(store);
          if (sleepingIsOver) {
             worldSomnolence.setState(WorldSleep.Awake.INSTANCE);
@@ -44,6 +43,7 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
       }
    }
 
+   @Nonnull
    private static Instant computeWakeupTime(@Nonnull WorldSlumber slumber) {
       float progress = slumber.getProgressSeconds() / slumber.getIrlDurationSeconds();
       long totalNanos = Duration.between(slumber.getStartInstant(), slumber.getTargetInstant()).toNanos();
@@ -58,18 +58,19 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
          return false;
       }
 
-      Iterator var3 = playerRefs.iterator();
-      if (var3.hasNext()) {
-         PlayerRef playerRef = (PlayerRef)var3.next();
-         PlayerSomnolence somnolenceComponent = store.getComponent(playerRef.getReference(), PlayerSomnolence.getComponentType());
-         if (somnolenceComponent == null) {
-            return true;
-         }
+      for (PlayerRef playerRef : playerRefs) {
+         Ref<EntityStore> ref = playerRef.getReference();
+         if (ref != null && ref.isValid()) {
+            PlayerSomnolence somnolenceComponent = store.getComponent(ref, PlayerSomnolence.getComponentType());
+            if (somnolenceComponent == null) {
+               return true;
+            }
 
-         PlayerSleep sleepState = somnolenceComponent.getSleepState();
-         return sleepState instanceof PlayerSleep.FullyAwake;
-      } else {
-         return false;
+            PlayerSleep sleepState = somnolenceComponent.getSleepState();
+            return sleepState instanceof PlayerSleep.FullyAwake;
+         }
       }
+
+      return false;
    }
 }

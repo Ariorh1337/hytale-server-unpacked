@@ -3,20 +3,20 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.basic;
 import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.Registry;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.biomes.BiomeAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ConstantDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.mapcontentfield.BaseHeightContentFieldAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.mapcontentfield.ContentFieldAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.biome.BiomeType;
-import com.hypixel.hytale.builtin.hytalegenerator.biomemap.BiomeMap;
-import com.hypixel.hytale.builtin.hytalegenerator.biomemap.SimpleBiomeMap;
+import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
 import com.hypixel.hytale.builtin.hytalegenerator.cartas.SimpleNoiseCarta;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.rangemaps.DoubleRange;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.BaseHeightReference;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
+import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -69,7 +69,7 @@ public class BasicWorldStructureAsset extends WorldStructureAsset {
 
    @Nullable
    @Override
-   public BiomeMap buildBiomeMap(@Nonnull WorldStructureAsset.Argument argument) {
+   public WorldStructure build(@Nonnull WorldStructureAsset.Argument argument) {
       ReferenceBundle referenceBundle = new ReferenceBundle();
 
       for (int i = this.contentFieldAssets.length - 1; i >= 0; i--) {
@@ -81,17 +81,19 @@ public class BasicWorldStructureAsset extends WorldStructureAsset {
          }
       }
 
-      HashMap<BiomeAsset, BiomeType> biomeAssetToBiomeType = new HashMap<>();
+      HashMap<BiomeAsset, Biome> biomeAssetToBiomeType = new HashMap<>();
       BiomeAsset defaultBiomeAsset = (BiomeAsset)((DefaultAssetMap)BiomeAsset.getAssetStore().getAssetMap()).getAsset(this.defaultBiomeId);
       if (defaultBiomeAsset == null) {
          LoggerUtil.getLogger().warning("Couldn't find Biome asset with id: " + this.defaultBiomeId);
          return null;
       }
 
-      BiomeType defaultBiome = defaultBiomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle, argument.workerIndexer);
+      Biome defaultBiome = defaultBiomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle);
       biomeAssetToBiomeType.put(defaultBiomeAsset, defaultBiome);
       Density noise = this.densityAsset.build(DensityAsset.from(argument, referenceBundle));
-      SimpleNoiseCarta<BiomeType> carta = new SimpleNoiseCarta<>(noise, defaultBiome);
+      Registry<Biome> biomeRegistry = new Registry<>();
+      int defaultBiomeId = biomeRegistry.getIdOrRegister(defaultBiome);
+      SimpleNoiseCarta<Integer> carta = new SimpleNoiseCarta<>(noise, defaultBiomeId);
 
       for (BiomeRangeAsset asset : this.biomeRangeAssets) {
          DoubleRange range = asset.getRange();
@@ -99,32 +101,20 @@ public class BasicWorldStructureAsset extends WorldStructureAsset {
          if (biomeAsset == null) {
             LoggerUtil.getLogger().warning("Couldn't find biome asset with name " + asset.getBiomeAssetId());
          } else {
-            BiomeType biome;
+            Biome biome;
             if (biomeAssetToBiomeType.containsKey(biomeAsset)) {
                biome = biomeAssetToBiomeType.get(biomeAsset);
             } else {
-               biome = biomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle, argument.workerIndexer);
+               biome = biomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle);
                biomeAssetToBiomeType.put(biomeAsset, biome);
             }
 
-            carta.put(range, biome);
+            carta.put(range, biomeRegistry.getIdOrRegister(biome));
          }
       }
 
-      SimpleBiomeMap<Object> biomeMap = new SimpleBiomeMap<>(carta);
-      int defaultRadius = Math.max(1, this.biomeTransitionDistance / 2);
-      biomeMap.setDefaultRadius(defaultRadius);
-      return biomeMap;
-   }
-
-   @Override
-   public int getBiomeTransitionDistance() {
-      return this.biomeTransitionDistance;
-   }
-
-   @Override
-   public int getMaxBiomeEdgeDistance() {
-      return this.maxBiomeEdgeDistance;
+      int biomeTransitionRadius = Math.max(1, this.biomeTransitionDistance / 2);
+      return new WorldStructure(carta, biomeRegistry, biomeTransitionRadius, this.maxBiomeEdgeDistance);
    }
 
    @Override

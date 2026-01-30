@@ -272,17 +272,22 @@ public class ObjectiveLocationMarkerSystems {
 
             for (Ref<EntityStore> playerReference : playerReferences) {
                PlayerRef playerRefComponent = commandBuffer.getComponent(playerReference, this.playerRefComponentType);
-               assert playerRefComponent != null;
-               UUIDComponent playerUuidComponent = commandBuffer.getComponent(playerReference, this.uuidComponentType);
-               assert playerUuidComponent != null;
-               TransformComponent playerTransformComponent = commandBuffer.getComponent(playerReference, this.transformComponentType);
-               assert playerTransformComponent != null;
-               WeatherTracker playerWeatherTrackerComponent = commandBuffer.getComponent(playerReference, this.weatherTrackerComponentType);
-               assert playerWeatherTrackerComponent != null;
-               if (isPlayerInSpecificEnvironment(objectiveLocationMarkerComponent, playerWeatherTrackerComponent, playerTransformComponent, commandBuffer)) {
-                  playersInExitArea.add(playerUuidComponent.getUuid());
-                  if (objectiveLocationMarkerComponent.area.isPlayerInEntryArea(playerTransformComponent.getPosition(), position)) {
-                     playersInEntryArea[playersInEntryAreaSize++] = playerRefComponent;
+               if (playerRefComponent != null) {
+                  UUIDComponent playerUuidComponent = commandBuffer.getComponent(playerReference, this.uuidComponentType);
+                  if (playerUuidComponent != null) {
+                     TransformComponent playerTransformComponent = commandBuffer.getComponent(playerReference, this.transformComponentType);
+                     if (playerTransformComponent != null) {
+                        WeatherTracker playerWeatherTrackerComponent = commandBuffer.getComponent(playerReference, this.weatherTrackerComponentType);
+                        if (playerWeatherTrackerComponent != null
+                           && isPlayerInSpecificEnvironment(
+                              objectiveLocationMarkerComponent, playerWeatherTrackerComponent, playerTransformComponent, commandBuffer
+                           )) {
+                           playersInExitArea.add(playerUuidComponent.getUuid());
+                           if (objectiveLocationMarkerComponent.area.isPlayerInEntryArea(playerTransformComponent.getPosition(), position)) {
+                              playersInEntryArea[playersInEntryAreaSize++] = playerRefComponent;
+                           }
+                        }
+                     }
                   }
                }
             }

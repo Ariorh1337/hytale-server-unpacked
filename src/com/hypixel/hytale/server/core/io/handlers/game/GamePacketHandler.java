@@ -44,6 +44,7 @@ import com.hypixel.hytale.protocol.packets.window.CloseWindow;
 import com.hypixel.hytale.protocol.packets.window.SendWindowAction;
 import com.hypixel.hytale.protocol.packets.window.UpdateWindow;
 import com.hypixel.hytale.protocol.packets.world.SetPaused;
+import com.hypixel.hytale.protocol.packets.worldmap.CreateUserMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapPosition;
@@ -61,7 +62,6 @@ import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.console.ConsoleModule;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ValidatedWindow;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
@@ -93,9 +93,12 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.utils.MapMarkerUtils;
 import com.hypixel.hytale.server.core.util.MessageUtil;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import com.hypixel.hytale.server.core.util.ValidateUtil;
@@ -187,6 +190,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       this.registerHandler(243, p -> this.handle((UpdateWorldMapVisible)p));
       this.registerHandler(244, p -> this.handle((TeleportToWorldMapMarker)p));
       this.registerHandler(245, p -> this.handle((TeleportToWorldMapPosition)p));
+      this.registerHandler(246, p -> this.handle((CreateUserMarker)p));
       this.registerHandler(290, p -> this.handle((SyncInteractionChains)p));
       this.registerHandler(158, p -> this.handle((SetPaused)p));
       this.registerHandler(282, p -> this.handle((RequestFlyCameraMode)p));
@@ -205,7 +209,13 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       if (this.playerRef != null) {
          HytaleLogger.getLogger()
             .at(Level.INFO)
-            .log("Disconnecting %s at %s with the message: %s", this.playerRef.getUsername(), NettyUtil.formatRemoteAddress(this.channel), message);
+            .log(
+               "Disconnecting %s at %s (SNI: %s) with the message: %s",
+               this.playerRef.getUsername(),
+               NettyUtil.formatRemoteAddress(this.channel),
+               this.getSniHostname(),
+               message
+            );
          this.disconnect0(message);
          Universe.get().removePlayer(this.playerRef);
       } else {
@@ -514,14 +524,6 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                Vector3i targetBlock = new Vector3i(packet.position.x, packet.position.y, packet.position.z);
                BlockRotation blockRotation = new BlockRotation(packet.rotation.rotationYaw, packet.rotation.rotationPitch, packet.rotation.rotationRoll);
                TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
-               if (transformComponent != null && playerComponent.getGameMode() != GameMode.Creative) {
-                  Vector3d position = transformComponent.getPosition();
-                  Vector3d blockCenter = new Vector3d(targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5);
-                  if (position.distanceSquaredTo(blockCenter) > 36.0) {
-                     return;
-                  }
-               }
-
                Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
                long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
                Ref<ChunkStore> chunkReference = chunkStore.getExternalData().getChunkReference(chunkIndex);
@@ -530,6 +532,15 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                   if (blockChunk != null) {
                      BlockSection section = blockChunk.getSectionAtBlockY(targetBlock.y);
                      if (section != null) {
+                        if (transformComponent != null && playerComponent.getGameMode() != GameMode.Creative) {
+                           Vector3d position = transformComponent.getPosition();
+                           Vector3d blockCenter = new Vector3d(targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5);
+                           if (position.distanceSquaredTo(blockCenter) > 49.0) {
+                              section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
+                              return;
+                           }
+                        }
+
                         ItemStack itemInHand = playerComponent.getInventory().getItemInHand();
                         if (itemInHand == null) {
                            section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
@@ -576,12 +587,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       if (ref != null && ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            assert playerComponent != null;
-            PlayerWorldData perWorldData = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());
-            perWorldData.removeLastDeath(packet.markerId);
-         });
+         world.execute(() -> world.getWorldMapManager().handleUserRemoveMarker(this.playerRef, packet));
       }
    }
 
@@ -726,6 +732,14 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                MapMarker marker = worldMapTracker.getSentMarkers().get(packet.id);
                if (marker != null) {
                   Transform transform = PositionUtil.toTransform(marker.transform);
+                  if (MapMarkerUtils.isUserMarker(marker)) {
+                     int blockX = (int)transform.getPosition().getX();
+                     int blockZ = (int)transform.getPosition().getZ();
+                     WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(blockX, blockZ));
+                     int height = chunk == null ? 319 : chunk.getHeight(blockX, blockZ);
+                     transform.getPosition().setY(height);
+                  }
+
                   Teleport teleportComponent = Teleport.createForPlayer(transform);
                   world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
                }
@@ -754,6 +768,18 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                   world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
                }, world);
             }
+         });
+      }
+   }
+
+   public void handle(@Nonnull CreateUserMarker packet) {
+      Ref<EntityStore> ref = this.playerRef.getReference();
+      if (ref != null && ref.isValid()) {
+         Store<EntityStore> store = ref.getStore();
+         World world = store.getExternalData().getWorld();
+         world.execute(() -> {
+            WorldMapManager worldMapManager = world.getWorldMapManager();
+            worldMapManager.handleUserCreateMarker(this.playerRef, packet);
          });
       }
    }

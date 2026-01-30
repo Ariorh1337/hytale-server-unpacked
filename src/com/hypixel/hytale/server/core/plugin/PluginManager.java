@@ -102,14 +102,16 @@ public class PluginManager {
       this.corePlugins.add(new PendingLoadJavaPlugin(null, builder, this.corePluginClassLoader));
    }
 
-   private boolean canLoadOnBoot(@Nonnull PluginManifest manifest) {
-      PluginIdentifier identifier = new PluginIdentifier(manifest);
+   private boolean canLoadOnBoot(@Nonnull PendingLoadPlugin plugin) {
+      PluginIdentifier identifier = plugin.getIdentifier();
+      PluginManifest manifest = plugin.getManifest();
       HytaleServerConfig.ModConfig modConfig = HytaleServer.get().getConfig().getModConfig().get(identifier);
       boolean enabled;
       if (modConfig != null && modConfig.getEnabled() != null) {
          enabled = modConfig.getEnabled();
       } else {
-         enabled = !manifest.isDisabledByDefault();
+         HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+         enabled = !manifest.isDisabledByDefault() && (plugin.isInServerClassPath() || serverConfig.getDefaultModsEnabled());
       }
 
       if (enabled) {
@@ -136,7 +138,7 @@ public class PluginManager {
       for (int i = 0; i < this.corePlugins.size(); i++) {
          PendingLoadPlugin plugin = this.corePlugins.get(i);
          LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
-         if (this.canLoadOnBoot(plugin.getManifest())) {
+         if (this.canLoadOnBoot(plugin)) {
             loadPendingPlugin(pending, plugin);
          } else {
             this.availablePlugins.put(plugin.getIdentifier(), plugin.getManifest());
@@ -356,7 +358,7 @@ public class PluginManager {
                   if (plugin != null) {
                      assert plugin.getPath() != null;
                      LOGGER.at(Level.INFO).log("- %s from path %s", plugin.getIdentifier(), path.relativize(plugin.getPath()));
-                     if (this.canLoadOnBoot(plugin.getManifest())) {
+                     if (this.canLoadOnBoot(plugin)) {
                         loadPendingPlugin(pending, plugin);
                      } else {
                         bootRejectMap.put(plugin.getIdentifier(), plugin.getManifest());
@@ -438,7 +440,7 @@ public class PluginManager {
                   }
 
                   LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
-                  if (this.canLoadOnBoot(plugin.getManifest())) {
+                  if (this.canLoadOnBoot(plugin)) {
                      loadPendingPlugin(pending, plugin);
                   } else {
                      rejectedBootList.put(plugin.getIdentifier(), plugin.getManifest());
@@ -464,7 +466,7 @@ public class PluginManager {
                   for (PluginManifest manifest : manifests) {
                      PendingLoadJavaPlugin plugin = new PendingLoadJavaPlugin(path, manifest, pluginClassLoader);
                      LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
-                     if (this.canLoadOnBoot(plugin.getManifest())) {
+                     if (this.canLoadOnBoot(plugin)) {
                         loadPendingPlugin(pending, plugin);
                      } else {
                         rejectedBootList.put(plugin.getIdentifier(), plugin.getManifest());

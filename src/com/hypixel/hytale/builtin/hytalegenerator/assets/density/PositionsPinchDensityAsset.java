@@ -53,17 +53,16 @@ public class PositionsPinchDensityAsset extends DensityAsset {
          return this.isHorizontal
             ? new PositionsHorizontalPinchDensity(
                this.buildFirstInput(argument),
-               this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer)),
+               this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle)),
                this.pinchCurveAsset.build(),
                this.maxDistance,
                this.normalizeDistance,
                this.positionsMinY,
-               this.positionsMaxY,
-               argument.workerIndexer.getWorkerCount()
+               this.positionsMaxY
             )
             : new PositionsPinchDensity(
                this.buildFirstInput(argument),
-               this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer)),
+               this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle)),
                this.pinchCurveAsset.build(),
                this.maxDistance,
                this.normalizeDistance

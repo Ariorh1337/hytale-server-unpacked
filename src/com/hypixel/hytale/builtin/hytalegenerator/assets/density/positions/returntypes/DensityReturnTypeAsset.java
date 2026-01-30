@@ -14,7 +14,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.return
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -44,8 +43,8 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
 
    @Nonnull
    @Override
-   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-      DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer);
+   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
+      DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle);
       Density choiceDensity = this.choiceDensityAsset.build(densityArgument);
       HashMap<Range, Density> delimiterMap = new HashMap<>(this.delimiterAssets.length);
 
@@ -53,8 +52,8 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
          delimiterMap.put(new Range((float)delimiter.from, (float)delimiter.to), delimiter.densityAsset.build(densityArgument));
       }
 
-      Density cache = new MultiCacheDensity(choiceDensity, workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
-      return new DensityReturnType(cache, delimiterMap, true, this.defaultValue, workerIndexer.getWorkerCount());
+      Density cache = new MultiCacheDensity(choiceDensity, CacheDensityAsset.DEFAULT_CAPACITY);
+      return new DensityReturnType(cache, delimiterMap, true, this.defaultValue);
    }
 
    public static class DelimiterAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, FieldFunctionMaterialProviderAsset.DelimiterAsset>> {

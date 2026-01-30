@@ -54,7 +54,7 @@ public class SimplexNoise2dDensityAsset extends DensityAsset {
          .withNumberOfOctaves(this.octaves)
          .build();
       Noise2dDensity noiseDensity = new Noise2dDensity(noise);
-      Density cacheDensity = new MultiCacheDensity(noiseDensity, argument.workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+      Density cacheDensity = new MultiCacheDensity(noiseDensity, CacheDensityAsset.DEFAULT_CAPACITY);
       return new YOverrideDensity(cacheDensity, 0.0);
    }
 

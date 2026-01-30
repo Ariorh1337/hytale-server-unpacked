@@ -101,7 +101,7 @@ public class TeleporterInteraction extends SimpleBlockInteraction {
             BlockModule.BlockStateInfo blockStateInfoComponent = blockRef.getStore().getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType());
             if (blockStateInfoComponent != null) {
                Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
-               if (chunkRef != null || chunkRef.isValid()) {
+               if (chunkRef.isValid()) {
                   Teleporter teleporter = chunkStore.getStore().getComponent(blockRef, Teleporter.getComponentType());
                   if (teleporter != null) {
                      Ref<EntityStore> ref = context.getEntity();

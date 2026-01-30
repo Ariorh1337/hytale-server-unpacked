@@ -9,7 +9,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -43,7 +42,7 @@ public abstract class ReturnTypeAsset implements JsonAssetWithMap<String, Defaul
    protected ReturnTypeAsset() {
    }
 
-   public abstract ReturnType build(@Nonnull SeedBox var1, @Nonnull ReferenceBundle var2, @Nonnull WorkerIndexer var3);
+   public abstract ReturnType build(@Nonnull SeedBox var1, @Nonnull ReferenceBundle var2);
 
    public void cleanUp() {
    }

@@ -28,7 +28,7 @@ public class Cache2dDensityAsset_Deprecated extends DensityAsset {
             return new ConstantValueDensity(0.0);
          }
 
-         Density cacheDensity = new MultiCacheDensity(input, argument.workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+         Density cacheDensity = new MultiCacheDensity(input, CacheDensityAsset.DEFAULT_CAPACITY);
          return new YOverrideDensity(cacheDensity, this.y);
       } else {
          return new ConstantValueDensity(0.0);

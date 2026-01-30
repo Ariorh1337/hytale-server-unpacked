@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 
-public class SimpleBiomeType implements BiomeType {
+public class SimpleBiome implements Biome {
    private final Density terrainDensity;
    private final MaterialProvider<Material> materialProvider;
    private final List<PropField> propFields;
@@ -19,7 +19,7 @@ public class SimpleBiomeType implements BiomeType {
    private final TintProvider tintProvider;
    private final String biomeName;
 
-   public SimpleBiomeType(
+   public SimpleBiome(
       @Nonnull String biomeName,
       @Nonnull Density terrainDensity,
       @Nonnull MaterialProvider<Material> materialProvider,

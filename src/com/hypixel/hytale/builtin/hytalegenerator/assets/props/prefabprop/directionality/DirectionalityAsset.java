@@ -12,7 +12,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.props.directionality.Directionality;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -61,29 +60,24 @@ public abstract class DirectionalityAsset implements Cleanable, JsonAssetWithMap
 
    @Nonnull
    public static DirectionalityAsset.Argument argumentFrom(@Nonnull PropAsset.Argument argument) {
-      return new DirectionalityAsset.Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle, argument.workerIndexer);
+      return new DirectionalityAsset.Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle);
    }
 
    public static class Argument {
       public SeedBox parentSeed;
       public MaterialCache materialCache;
       public ReferenceBundle referenceBundle;
-      public WorkerIndexer workerIndexer;
 
-      public Argument(
-         @Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer
-      ) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle) {
          this.parentSeed = parentSeed;
          this.materialCache = materialCache;
          this.referenceBundle = referenceBundle;
-         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull DirectionalityAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.materialCache = argument.materialCache;
          this.referenceBundle = argument.referenceBundle;
-         this.workerIndexer = argument.workerIndexer;
       }
    }
 }

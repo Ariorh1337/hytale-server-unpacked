@@ -6,11 +6,9 @@ import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
-import com.hypixel.hytale.builtin.hytalegenerator.biomemap.BiomeMap;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
-import com.hypixel.hytale.builtin.hytalegenerator.material.SolidMaterial;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
@@ -29,11 +27,7 @@ public abstract class WorldStructureAsset implements Cleanable, JsonAssetWithMap
    protected WorldStructureAsset() {
    }
 
-   public abstract BiomeMap<SolidMaterial> buildBiomeMap(@Nonnull WorldStructureAsset.Argument var1);
-
-   public abstract int getBiomeTransitionDistance();
-
-   public abstract int getMaxBiomeEdgeDistance();
+   public abstract WorldStructure build(@Nonnull WorldStructureAsset.Argument var1);
 
    public String getId() {
       return this.id;
@@ -46,18 +40,15 @@ public abstract class WorldStructureAsset implements Cleanable, JsonAssetWithMap
    public static class Argument {
       public MaterialCache materialCache;
       public SeedBox parentSeed;
-      public WorkerIndexer workerIndexer;
 
-      public Argument(@Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed, @Nonnull WorkerIndexer workerIndexer) {
+      public Argument(@Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed) {
          this.materialCache = materialCache;
          this.parentSeed = parentSeed;
-         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull WorldStructureAsset.Argument argument) {
          this.materialCache = argument.materialCache;
          this.parentSeed = argument.parentSeed;
-         this.workerIndexer = argument.workerIndexer;
       }
    }
 }

@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -23,7 +22,7 @@ public class ImportedReturnTypeAsset extends ReturnTypeAsset {
    private String importedAssetName = "";
 
    @Override
-   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
       ReturnTypeAsset asset = getExportedAsset(this.importedAssetName);
       if (asset == null) {
          Logger.getLogger("Density")
@@ -42,7 +41,7 @@ public class ImportedReturnTypeAsset extends ReturnTypeAsset {
             }
          };
       } else {
-         return asset.build(parentSeed, referenceBundle, workerIndexer);
+         return asset.build(parentSeed, referenceBundle);
       }
    }
 }

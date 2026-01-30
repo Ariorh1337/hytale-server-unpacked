@@ -21,8 +21,6 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.SoundCategory;
-import com.hypixel.hytale.protocol.Transform;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
@@ -30,7 +28,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.BenchTie
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.ProcessingBench;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.ResourceQuantity;
@@ -47,7 +44,6 @@ import com.hypixel.hytale.server.core.inventory.transaction.ListTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.MaterialSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.MaterialTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ResourceTransaction;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -56,12 +52,9 @@ import com.hypixel.hytale.server.core.universe.world.chunk.state.TickableBlockSt
 import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.DestroyableBlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerBlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.state.MarkerBlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.PlacedByBlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
@@ -70,20 +63,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
-public class ProcessingBenchState
-   extends BenchState
-   implements TickableBlockState,
-   ItemContainerBlockState,
-   DestroyableBlockState,
-   MarkerBlockState,
-   PlacedByBlockState {
+public class ProcessingBenchState extends BenchState implements TickableBlockState, ItemContainerBlockState, DestroyableBlockState, PlacedByBlockState {
    public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    public static final boolean EXACT_RESOURCE_AMOUNTS = true;
    public static final Codec<ProcessingBenchState> CODEC = BuilderCodec.builder(ProcessingBenchState.class, ProcessingBenchState::new, BenchState.CODEC)
@@ -101,8 +87,6 @@ public class ProcessingBenchState
       .add()
       .append(new KeyedCodec<>("NextExtra", Codec.INTEGER), (state, b) -> state.nextExtra = b, state -> state.nextExtra)
       .add()
-      .append(new KeyedCodec<>("Marker", WorldMapManager.MarkerReference.CODEC), (state, o) -> state.marker = o, state -> state.marker)
-      .add()
       .append(new KeyedCodec<>("RecipeId", Codec.STRING), (state, o) -> state.recipeId = o, state -> state.recipeId)
       .add()
       .build();
@@ -111,7 +95,6 @@ public class ProcessingBenchState
    private static final float EJECT_VERTICAL_VELOCITY = 3.25F;
    public static final String PROCESSING = "Processing";
    public static final String PROCESS_COMPLETED = "ProcessCompleted";
-   protected WorldMapManager.MarkerReference marker;
    private ProcessingBench processingBench;
    private ItemContainer inputContainer;
    private ItemContainer fuelContainer;
@@ -649,10 +632,6 @@ public class ProcessingBenchState
             world.execute(() -> entityStore.addEntities(itemEntityHolders, AddReason.SPAWN));
          }
       }
-
-      if (this.marker != null) {
-         this.marker.remove();
-      }
    }
 
    public CombinedItemContainer getItemContainer() {
@@ -778,36 +757,12 @@ public class ProcessingBenchState
    }
 
    @Override
-   public void setMarker(WorldMapManager.MarkerReference marker) {
-      this.marker = marker;
-      this.markNeedsSave();
-   }
-
-   @Override
    public void placedBy(
       @Nonnull Ref<EntityStore> playerRef,
       @Nonnull String blockTypeKey,
       @Nonnull BlockState blockState,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (blockTypeKey.equals(this.processingBench.getIconItem()) && this.processingBench.getIcon() != null) {
-         Player playerComponent = componentAccessor.getComponent(playerRef, Player.getComponentType());
-         assert playerComponent != null;
-         TransformComponent transformComponent = componentAccessor.getComponent(playerRef, TransformComponent.getComponentType());
-         assert transformComponent != null;
-         Transform transformPacket = PositionUtil.toTransformPacket(transformComponent.getTransform());
-         transformPacket.orientation.yaw = 0.0F;
-         transformPacket.orientation.pitch = 0.0F;
-         transformPacket.orientation.roll = 0.0F;
-         MapMarker marker = new MapMarker(
-            this.processingBench.getIconId() + "-" + UUID.randomUUID(),
-            this.processingBench.getIconName(),
-            this.processingBench.getIcon(),
-            transformPacket,
-            null
-         );
-         ((MarkerBlockState)blockState).setMarker(WorldMapManager.createPlayerMarker(playerRef, marker, componentAccessor));
-      }
    }
 
    private void playSound(@Nonnull World world, int soundEventIndex, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {

@@ -57,7 +57,10 @@ public class TeleporterSettingsPageSupplier implements OpenCustomUIInteraction.C
    @Nullable
    @Override
    public CustomUIPage tryCreate(
-      @Nonnull Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor, @Nonnull PlayerRef playerRef, @Nonnull InteractionContext context
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull InteractionContext context
    ) {
       BlockPosition targetBlock = context.getTargetBlock();
       if (targetBlock == null) {
@@ -67,8 +70,11 @@ public class TeleporterSettingsPageSupplier implements OpenCustomUIInteraction.C
       Store<EntityStore> store = ref.getStore();
       World world = store.getExternalData().getWorld();
       ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
       Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-      BlockComponentChunk blockComponentChunk = chunkRef == null ? null : chunkStore.getStore().getComponent(chunkRef, BlockComponentChunk.getComponentType());
+      BlockComponentChunk blockComponentChunk = chunkRef != null && chunkRef.isValid()
+         ? chunkComponentStore.getComponent(chunkRef, BlockComponentChunk.getComponentType())
+         : null;
       if (blockComponentChunk == null) {
          return null;
       }
@@ -83,9 +89,9 @@ public class TeleporterSettingsPageSupplier implements OpenCustomUIInteraction.C
          Holder<ChunkStore> holder = ChunkStore.REGISTRY.newHolder();
          holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(blockIndex, chunkRef));
          holder.ensureComponent(Teleporter.getComponentType());
-         blockRef = world.getChunkStore().getStore().addEntity(holder, AddReason.SPAWN);
+         blockRef = chunkComponentStore.addEntity(holder, AddReason.SPAWN);
       }
 
-      return new TeleporterSettingsPage(playerRef, blockRef, this.mode, this.activeState);
+      return blockRef != null && blockRef.isValid() ? new TeleporterSettingsPage(playerRef, blockRef, this.mode, this.activeState) : null;
    }
 }

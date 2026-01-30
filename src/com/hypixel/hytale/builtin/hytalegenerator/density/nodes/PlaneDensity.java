@@ -16,12 +16,26 @@ public class PlaneDensity extends Density {
    private final Vector3d planeNormal;
    private final boolean isPlaneHorizontal;
    private final boolean isAnchored;
+   private final Vector3d rNearestPoint;
+   private final Vector3d rPosition;
+   private final Vector3d rVectorFromPlane;
+   private final Vector3d r0;
+   private final Vector3d r1;
+   private final Vector3d r2;
+   private final Vector3d r3;
 
    public PlaneDensity(@Nonnull Double2DoubleFunction distanceCurve, @Nonnull Vector3d planeNormal, boolean isAnchored) {
       this.distanceCurve = distanceCurve;
       this.planeNormal = planeNormal;
       this.isPlaneHorizontal = planeNormal.x == 0.0 && planeNormal.z == 0.0;
       this.isAnchored = isAnchored;
+      this.rNearestPoint = new Vector3d();
+      this.rPosition = new Vector3d();
+      this.rVectorFromPlane = new Vector3d();
+      this.r0 = new Vector3d();
+      this.r1 = new Vector3d();
+      this.r2 = new Vector3d();
+      this.r3 = new Vector3d();
    }
 
    @Override
@@ -38,8 +52,8 @@ public class PlaneDensity extends Density {
       if (this.isPlaneHorizontal) {
          distance = context.position.y;
       } else {
-         Vector3d nearestPoint = VectorUtil.nearestPointOnLine3d(context.position, ZERO_VECTOR, this.planeNormal);
-         distance = nearestPoint.length();
+         VectorUtil.nearestPointOnLine3d(context.position, ZERO_VECTOR, this.planeNormal, this.rNearestPoint, this.r0, this.r1, this.r2, this.r3);
+         distance = this.rNearestPoint.length();
       }
 
       return this.distanceCurve.get(distance);
@@ -50,7 +64,7 @@ public class PlaneDensity extends Density {
          return 0.0;
       }
 
-      Vector3d position = new Vector3d(x, y, z);
+      this.rPosition.assign(x, y, z);
       Vector3d p0 = context.densityAnchor;
       if (p0 == null) {
          return 0.0;
@@ -58,12 +72,12 @@ public class PlaneDensity extends Density {
 
       double distance = 0.0;
       if (this.isPlaneHorizontal) {
-         distance = Math.abs(p0.y - position.y);
+         distance = Math.abs(p0.y - this.rPosition.y);
       }
 
-      Vector3d pos = position.clone().addScaled(p0, -1.0);
-      Vector3d vectorFromPlane = VectorUtil.nearestPointOnLine3d(pos, ZERO_VECTOR, this.planeNormal);
-      distance = vectorFromPlane.length();
+      this.rPosition.subtract(p0);
+      VectorUtil.nearestPointOnLine3d(this.rPosition, ZERO_VECTOR, this.planeNormal, this.rVectorFromPlane, this.r0, this.r1, this.r2, this.r3);
+      distance = this.rVectorFromPlane.length();
       return this.distanceCurve.get(distance);
    }
 }

@@ -30,12 +30,15 @@ public class ImportedVectorProviderAsset extends VectorProviderAsset {
          return new ConstantVectorProvider(new Vector3d());
       }
 
-      if (exported.singleInstance) {
-         if (exported.builtInstance == null) {
-            exported.builtInstance = exported.asset.build(argument);
+      if (exported.isSingleInstance) {
+         Thread thread = Thread.currentThread();
+         VectorProvider builtInstance = exported.threadInstances.get(thread);
+         if (builtInstance == null) {
+            builtInstance = exported.asset.build(argument);
+            exported.threadInstances.put(thread, builtInstance);
          }
 
-         return exported.builtInstance;
+         return builtInstance;
       } else {
          return exported.asset.build(argument);
       }
@@ -45,7 +48,7 @@ public class ImportedVectorProviderAsset extends VectorProviderAsset {
    public void cleanUp() {
       VectorProviderAsset.Exported exported = getExportedAsset(this.importedNodeName);
       if (exported != null) {
-         exported.builtInstance = null;
+         exported.threadInstances.clear();
       }
    }
 }

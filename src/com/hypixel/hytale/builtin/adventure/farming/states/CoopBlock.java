@@ -56,10 +56,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CoopBlock implements Component<ChunkStore> {
+   @Nonnull
    public static final String STATE_PRODUCE = "Produce_Ready";
+   @Nonnull
    public static final BuilderCodec<CoopBlock> CODEC = BuilderCodec.builder(CoopBlock.class, CoopBlock::new)
       .append(new KeyedCodec<>("FarmingCoopId", Codec.STRING, true), (coop, s) -> coop.coopAssetId = s, coop -> coop.coopAssetId)
       .add()
@@ -73,7 +76,9 @@ public class CoopBlock implements Component<ChunkStore> {
       .add()
       .build();
    protected String coopAssetId;
-   protected List<CoopBlock.CoopResident> residents = new ArrayList<>();
+   @Nonnull
+   protected List<CoopBlock.CoopResident> residents = new ObjectArrayList<>();
+   @Nonnull
    protected ItemContainer itemContainer = EmptyItemContainer.INSTANCE;
 
    public static ComponentType<ChunkStore, CoopBlock> getComponentType() {
@@ -81,7 +86,7 @@ public class CoopBlock implements Component<ChunkStore> {
    }
 
    public CoopBlock() {
-      ArrayList<ItemStack> remainder = new ArrayList<>();
+      List<ItemStack> remainder = new ObjectArrayList<>();
       this.itemContainer = ItemContainer.ensureContainerCapacity(this.itemContainer, (short)5, SimpleItemContainer::new, remainder);
    }
 
@@ -90,7 +95,7 @@ public class CoopBlock implements Component<ChunkStore> {
       return FarmingCoopAsset.getAssetMap().getAsset(this.coopAssetId);
    }
 
-   public CoopBlock(String farmingCoopId, List<CoopBlock.CoopResident> residents, ItemContainer itemContainer) {
+   public CoopBlock(@Nonnull String farmingCoopId, @Nonnull List<CoopBlock.CoopResident> residents, @Nonnull ItemContainer itemContainer) {
       this.coopAssetId = farmingCoopId;
       this.residents.addAll(residents);
       this.itemContainer = itemContainer.clone();
@@ -98,7 +103,7 @@ public class CoopBlock implements Component<ChunkStore> {
       this.itemContainer = ItemContainer.ensureContainerCapacity(this.itemContainer, (short)5, SimpleItemContainer::new, remainder);
    }
 
-   public boolean tryPutResident(CapturedNPCMetadata metadata, WorldTimeResource worldTimeResource) {
+   public boolean tryPutResident(@Nonnull CapturedNPCMetadata metadata, @Nonnull WorldTimeResource worldTimeResource) {
       FarmingCoopAsset coopAsset = this.getCoopAsset();
       if (coopAsset == null) {
          return false;
@@ -108,7 +113,7 @@ public class CoopBlock implements Component<ChunkStore> {
          return false;
       }
 
-      if (!this.getCoopAcceptsNPCGroup(metadata.getRoleIndex())) {
+      if (!this.getCoopAcceptsNPC(metadata.getNpcNameKey())) {
          return false;
       }
 
@@ -116,7 +121,9 @@ public class CoopBlock implements Component<ChunkStore> {
       return true;
    }
 
-   public boolean tryPutWildResidentFromWild(Store<EntityStore> store, Ref<EntityStore> entityRef, WorldTimeResource worldTimeResource, Vector3i coopLocation) {
+   public boolean tryPutWildResidentFromWild(
+      @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> entityRef, @Nonnull WorldTimeResource worldTimeResource, @Nonnull Vector3i coopLocation
+   ) {
       FarmingCoopAsset coopAsset = this.getCoopAsset();
       if (coopAsset == null) {
          return false;
@@ -132,7 +139,7 @@ public class CoopBlock implements Component<ChunkStore> {
          return false;
       }
 
-      if (!this.getCoopAcceptsNPCGroup(npcComponent.getRoleIndex())) {
+      if (!this.getCoopAcceptsNPC(npcComponent.getRoleName())) {
          return false;
       }
 
@@ -149,15 +156,16 @@ public class CoopBlock implements Component<ChunkStore> {
 
       PersistentRef persistentRef = new PersistentRef();
       persistentRef.setEntity(entityRef, uuidComponent.getUuid());
-      CapturedNPCMetadata metadata = FarmingUtil.generateCapturedNPCMetadata(store, entityRef, npcComponent.getRoleIndex());
+      CapturedNPCMetadata metadata = FarmingUtil.generateCapturedNPCMetadata(store, entityRef, npcComponent.getRoleName());
       CoopBlock.CoopResident residentRecord = new CoopBlock.CoopResident(metadata, persistentRef, worldTimeResource.getGameTime());
       residentRecord.deployedToWorld = true;
       this.residents.add(residentRecord);
       return true;
    }
 
-   public boolean getCoopAcceptsNPCGroup(int npcRoleIndex) {
+   public boolean getCoopAcceptsNPC(String npcNameKey) {
       TagSetPlugin.TagSetLookup tagSetPlugin = TagSetPlugin.get(NPCGroup.class);
+      int roleIndex = NPCPlugin.get().getIndex(npcNameKey);
       FarmingCoopAsset coopAsset = this.getCoopAsset();
       if (coopAsset == null) {
          return false;
@@ -169,7 +177,7 @@ public class CoopBlock implements Component<ChunkStore> {
       }
 
       for (int group : acceptedNpcGroupIndexes) {
-         if (tagSetPlugin.tagInSet(group, npcRoleIndex)) {
+         if (tagSetPlugin.tagInSet(group, roleIndex)) {
             return true;
          }
       }
@@ -177,7 +185,7 @@ public class CoopBlock implements Component<ChunkStore> {
       return false;
    }
 
-   public void generateProduceToInventory(WorldTimeResource worldTimeResource) {
+   public void generateProduceToInventory(@Nonnull WorldTimeResource worldTimeResource) {
       Instant currentTime = worldTimeResource.getGameTime();
       FarmingCoopAsset coopAsset = this.getCoopAsset();
       if (coopAsset != null) {
@@ -192,8 +200,7 @@ public class CoopBlock implements Component<ChunkStore> {
                   resident.setLastProduced(currentTime);
                } else {
                   CapturedNPCMetadata residentMeta = resident.getMetadata();
-                  int npcRoleIndex = residentMeta.getRoleIndex();
-                  String npcName = NPCPlugin.get().getName(npcRoleIndex);
+                  String npcName = residentMeta.getNpcNameKey();
                   String npcDropListName = produceDropsMap.get(npcName);
                   if (npcDropListName != null) {
                      ItemDropList dropListAsset = ItemDropList.getAssetMap().getAsset(npcDropListName);
@@ -233,14 +240,15 @@ public class CoopBlock implements Component<ChunkStore> {
       }
    }
 
-   public void gatherProduceFromInventory(ItemContainer playerInventory) {
+   public void gatherProduceFromContainer(@Nonnull ItemContainer playerInventory) {
       for (ItemStack item : this.itemContainer.removeAllItemStacks()) {
          playerInventory.addItemStack(item);
       }
    }
 
-   public void ensureSpawnResidentsInWorld(World world, Store<EntityStore> store, Vector3d coopLocation, Vector3d spawnOffset) {
-      NPCPlugin npcModule = NPCPlugin.get();
+   public void ensureSpawnResidentsInWorld(
+      @Nonnull World world, @Nonnull Store<EntityStore> store, @Nonnull Vector3d coopLocation, @Nonnull Vector3d spawnOffset
+   ) {
       FarmingCoopAsset coopAsset = this.getCoopAsset();
       if (coopAsset != null) {
          float radiansPerSpawn = (float) (Math.PI * 2) / coopAsset.getMaxResidents();
@@ -249,7 +257,8 @@ public class CoopBlock implements Component<ChunkStore> {
 
          for (CoopBlock.CoopResident resident : this.residents) {
             CapturedNPCMetadata residentMeta = resident.getMetadata();
-            int npcRoleIndex = residentMeta.getRoleIndex();
+            String npcNameKey = residentMeta.getNpcNameKey();
+            int npcRoleIndex = NPCPlugin.get().getIndex(npcNameKey);
             boolean residentDeployed = resident.getDeployedToWorld();
             PersistentRef residentEntityId = resident.getPersistentRef();
             if (!residentDeployed && residentEntityId == null) {
@@ -259,9 +268,8 @@ public class CoopBlock implements Component<ChunkStore> {
                   spawningContext.setSpawnable((ISpawnableWithModel)roleBuilder);
                   if (spawningContext.set(world, residentSpawnLocation.x, residentSpawnLocation.y, residentSpawnLocation.z)
                      && spawningContext.canSpawn() == SpawnTestResult.TEST_OK) {
-                     Pair<Ref<EntityStore>, NPCEntity> npcPair = npcModule.spawnEntity(
-                        store, npcRoleIndex, spawningContext.newPosition(), Vector3f.ZERO, null, null
-                     );
+                     Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get()
+                        .spawnEntity(store, npcRoleIndex, spawningContext.newPosition(), Vector3f.ZERO, null, null);
                      if (npcPair == null) {
                         resident.setPersistentRef(null);
                         resident.setDeployedToWorld(false);
@@ -296,40 +304,45 @@ public class CoopBlock implements Component<ChunkStore> {
       }
    }
 
-   public void ensureNoResidentsInWorld(Store<EntityStore> store) {
-      ArrayList<CoopBlock.CoopResident> residentsToRemove = new ArrayList<>();
+   public void ensureNoResidentsInWorld(@Nonnull Store<EntityStore> store) {
+      FarmingCoopAsset coopAsset = this.getCoopAsset();
+      if (coopAsset != null) {
+         ObjectArrayList<CoopBlock.CoopResident> residentsToRemove = new ObjectArrayList<>();
 
-      for (CoopBlock.CoopResident resident : this.residents) {
-         boolean deployed = resident.getDeployedToWorld();
-         PersistentRef entityUuid = resident.getPersistentRef();
-         if (deployed || entityUuid != null) {
-            Ref<EntityStore> entityRef = entityUuid.getEntity(store);
-            if (entityRef == null) {
-               residentsToRemove.add(resident);
-            } else {
-               CoopResidentComponent coopResidentComponent = store.getComponent(entityRef, CoopResidentComponent.getComponentType());
-               if (coopResidentComponent == null) {
+         for (CoopBlock.CoopResident resident : this.residents) {
+            boolean deployed = resident.getDeployedToWorld();
+            PersistentRef entityUuid = resident.getPersistentRef();
+            if (deployed || entityUuid != null) {
+               Ref<EntityStore> entityRef = entityUuid.getEntity(store);
+               if (entityRef == null) {
                   residentsToRemove.add(resident);
                } else {
-                  DeathComponent deathComponent = store.getComponent(entityRef, DeathComponent.getComponentType());
-                  if (deathComponent != null) {
+                  CoopResidentComponent coopResidentComponent = store.getComponent(entityRef, CoopResidentComponent.getComponentType());
+                  if (coopResidentComponent == null) {
                      residentsToRemove.add(resident);
                   } else {
-                     coopResidentComponent.setMarkedForDespawn(true);
-                     resident.setPersistentRef(null);
-                     resident.setDeployedToWorld(false);
+                     DeathComponent deathComponent = store.getComponent(entityRef, DeathComponent.getComponentType());
+                     if (deathComponent != null) {
+                        residentsToRemove.add(resident);
+                     } else if (!this.getCoopAcceptsNPC(resident.metadata.getNpcNameKey())) {
+                        residentsToRemove.add(resident);
+                     } else {
+                        coopResidentComponent.setMarkedForDespawn(true);
+                        resident.setPersistentRef(null);
+                        resident.setDeployedToWorld(false);
+                     }
                   }
                }
             }
          }
-      }
 
-      for (CoopBlock.CoopResident resident : residentsToRemove) {
-         this.residents.remove(resident);
+         for (CoopBlock.CoopResident resident : residentsToRemove) {
+            this.residents.remove(resident);
+         }
       }
    }
 
-   public boolean shouldResidentsBeInCoop(WorldTimeResource worldTimeResource) {
+   public boolean shouldResidentsBeInCoop(@Nonnull WorldTimeResource worldTimeResource) {
       FarmingCoopAsset coopAsset = this.getCoopAsset();
       if (coopAsset == null) {
          return true;
@@ -345,7 +358,7 @@ public class CoopBlock implements Component<ChunkStore> {
    }
 
    @Nullable
-   public Instant getNextScheduledTick(WorldTimeResource worldTimeResource) {
+   public Instant getNextScheduledTick(@Nonnull WorldTimeResource worldTimeResource) {
       Instant gameTime = worldTimeResource.getGameTime();
       LocalDateTime gameDateTime = worldTimeResource.getGameDateTime();
       int gameHour = worldTimeResource.getCurrentHour();
@@ -374,7 +387,7 @@ public class CoopBlock implements Component<ChunkStore> {
       return gameTime.plus(nextScheduledHour * 60L - minutes, ChronoUnit.MINUTES);
    }
 
-   public void handleResidentDespawn(UUID entityUuid) {
+   public void handleResidentDespawn(@Nonnull UUID entityUuid) {
       CoopBlock.CoopResident removedResident = null;
 
       for (CoopBlock.CoopResident resident : this.residents) {
@@ -389,7 +402,9 @@ public class CoopBlock implements Component<ChunkStore> {
       }
    }
 
-   public void handleBlockBroken(World world, WorldTimeResource worldTimeResource, Store<EntityStore> store, int blockX, int blockY, int blockZ) {
+   public void handleBlockBroken(
+      @Nonnull World world, @Nonnull WorldTimeResource worldTimeResource, @Nonnull Store<EntityStore> store, int blockX, int blockY, int blockZ
+   ) {
       Vector3i location = new Vector3i(blockX, blockY, blockZ);
       world.execute(() -> this.ensureSpawnResidentsInWorld(world, store, location.toVector3d(), new Vector3d().assign(Vector3d.FORWARD)));
       this.generateProduceToInventory(worldTimeResource);
@@ -424,6 +439,7 @@ public class CoopBlock implements Component<ChunkStore> {
    }
 
    public static class CoopResident {
+      @Nonnull
       public static final BuilderCodec<CoopBlock.CoopResident> CODEC = BuilderCodec.builder(CoopBlock.CoopResident.class, CoopBlock.CoopResident::new)
          .append(new KeyedCodec<>("Metadata", CapturedNPCMetadata.CODEC), (coop, meta) -> coop.metadata = meta, coop -> coop.metadata)
          .add()
@@ -447,7 +463,7 @@ public class CoopBlock implements Component<ChunkStore> {
       public CoopResident() {
       }
 
-      public CoopResident(CapturedNPCMetadata metadata, PersistentRef persistentRef, Instant lastProduced) {
+      public CoopResident(CapturedNPCMetadata metadata, @Nullable PersistentRef persistentRef, @Nonnull Instant lastProduced) {
          this.metadata = metadata;
          this.persistentRef = persistentRef;
          this.lastProduced = lastProduced;

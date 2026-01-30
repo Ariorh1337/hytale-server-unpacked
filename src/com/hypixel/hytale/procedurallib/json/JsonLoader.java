@@ -3,10 +3,8 @@ package com.hypixel.hytale.procedurallib.json;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
+import com.hypixel.hytale.procedurallib.file.FileIO;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Function;
@@ -15,6 +13,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class JsonLoader<K extends SeedResource, T> extends Loader<K, T> {
+   public static final JsonResourceLoader<JsonElement> JSON_LOADER = new JsonResourceLoader<>(JsonElement.class, e -> !e.isJsonNull(), Function.identity());
+   public static final JsonResourceLoader<JsonArray> JSON_ARR_LOADER = new JsonResourceLoader<>(
+      JsonArray.class, JsonElement::isJsonArray, JsonElement::getAsJsonArray
+   );
+   public static final JsonResourceLoader<JsonObject> JSON_OBJ_LOADER = new JsonResourceLoader<>(
+      JsonObject.class, JsonElement::isJsonObject, JsonElement::getAsJsonObject
+   );
    @Nullable
    protected final JsonElement json;
 
@@ -67,8 +72,8 @@ public abstract class JsonLoader<K extends SeedResource, T> extends Loader<K, T>
    protected JsonElement loadFile(@Nonnull String filePath) {
       Path file = this.dataFolder.resolve(filePath.replace('.', File.separatorChar) + ".json");
 
-      try (JsonReader reader = new JsonReader(Files.newBufferedReader(file))) {
-         return JsonParser.parseReader(reader);
+      try {
+         return FileIO.load(file, JSON_LOADER);
       } catch (Throwable e) {
          throw new Error("Error while loading file reference." + file.toString(), e);
       }

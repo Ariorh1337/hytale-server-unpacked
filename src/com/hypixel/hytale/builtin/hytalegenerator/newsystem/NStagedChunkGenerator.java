@@ -28,6 +28,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
+import com.hypixel.hytale.server.core.universe.world.chunk.environment.EnvironmentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedBlockChunk;
@@ -40,7 +41,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -329,6 +329,7 @@ public class NStagedChunkGenerator implements ChunkGenerator {
                   section_timeProbe.start();
                   Holder<ChunkStore> section = sections[sectionIndexFinal];
                   FluidSection fluidSection = fluidSections[sectionIndexFinal];
+                  Vector3i world_voxelGrid = new Vector3i();
 
                   for (int x_voxelGrid = 0; x_voxelGrid < 32; x_voxelGrid++) {
                      for (int z_voxelGrid = 0; z_voxelGrid < 32; z_voxelGrid++) {
@@ -337,10 +338,10 @@ public class NStagedChunkGenerator implements ChunkGenerator {
 
                         for (int y_voxelGrid = minY_voxelGrid; y_voxelGrid < maxY_voxelGrid; y_voxelGrid++) {
                            int sectionY = y_voxelGrid - minY_voxelGrid;
-                           int worldX_voxelGrid = x_voxelGrid + chunkBounds_voxelGrid.min.x;
-                           int worldY_voxelGrid = y_voxelGrid + chunkBounds_voxelGrid.min.y;
-                           int worldZ_voxelGrid = z_voxelGrid + chunkBounds_voxelGrid.min.z;
-                           Material material = materialVoxelSpace.getContent(worldX_voxelGrid, worldY_voxelGrid, worldZ_voxelGrid);
+                           world_voxelGrid.x = x_voxelGrid + chunkBounds_voxelGrid.min.x;
+                           world_voxelGrid.y = y_voxelGrid + chunkBounds_voxelGrid.min.y;
+                           world_voxelGrid.z = z_voxelGrid + chunkBounds_voxelGrid.min.z;
+                           Material material = materialVoxelSpace.getContent(world_voxelGrid);
                            if (material == null) {
                               blockChunk.setBlock(x_voxelGrid, y_voxelGrid, z_voxelGrid, 0, 0, 0);
                               fluidSection.setFluid(
@@ -384,16 +385,17 @@ public class NStagedChunkGenerator implements ChunkGenerator {
       NBufferBundle.Access tintBufferAccess = this.bufferBundle.createBufferAccess(this.tintOutput_bufferType, chunkBounds_bufferGrid);
       VoxelSpace<Integer> tintVoxelSpace = new NPixelBufferView<>(tintBufferAccess.createView(), Integer.class);
       GeneratedBlockChunk blockChunk = generatedChunk.getBlockChunk();
-      int worldY_voxelGrid = 0;
       TimeInstrument.Probe tintsTransfer_timeProbe = transfer_timeProbe.createProbe("Tints");
       return CompletableFuture.runAsync(() -> {
          tintsTransfer_timeProbe.start();
+         Vector3i worldPosition_voxelGrid = new Vector3i();
+         worldPosition_voxelGrid.y = 0;
 
          for (int x_voxelGrid = 0; x_voxelGrid < 32; x_voxelGrid++) {
             for (int z_voxelGrid = 0; z_voxelGrid < 32; z_voxelGrid++) {
-               int worldX_voxelGrid = x_voxelGrid + chunkBounds_voxelGrid.min.x;
-               int worldZ_voxelGrid = z_voxelGrid + chunkBounds_voxelGrid.min.z;
-               Integer tint = tintVoxelSpace.getContent(worldX_voxelGrid, 0, worldZ_voxelGrid);
+               worldPosition_voxelGrid.x = x_voxelGrid + chunkBounds_voxelGrid.min.x;
+               worldPosition_voxelGrid.z = z_voxelGrid + chunkBounds_voxelGrid.min.z;
+               Integer tint = tintVoxelSpace.getContent(worldPosition_voxelGrid);
                if (tint == null) {
                   blockChunk.setTint(x_voxelGrid, z_voxelGrid, 0);
                } else {
@@ -421,28 +423,46 @@ public class NStagedChunkGenerator implements ChunkGenerator {
       Bounds3i chunkBounds_bufferGrid = GridUtils.createChunkBounds_bufferGrid(arguments.x(), arguments.z());
       NBufferBundle.Access environmentBufferAccess = this.bufferBundle.createBufferAccess(this.environmentOutput_bufferType, chunkBounds_bufferGrid);
       VoxelSpace<Integer> environmentVoxelSpace = new NVoxelBufferView<>(environmentBufferAccess.createView(), Integer.class);
-      GeneratedBlockChunk blockChunk = generatedChunk.getBlockChunk();
-      TimeInstrument.Probe timeProbe = transfer_timeProbe.createProbe("Environment");
-      return CompletableFuture.runAsync(() -> {
-         timeProbe.start();
+      EnvironmentChunk.BulkWriter bulkWriter = new EnvironmentChunk.BulkWriter();
+      int sectionCounter = 0;
+      Vector3i taskSize = new Vector3i(8, 0, 8);
+      Vector3i taskCount = new Vector3i(32 / taskSize.x, 0, 32 / taskSize.z);
+      List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-         for (int x_voxelGrid = 0; x_voxelGrid < 32; x_voxelGrid++) {
-            for (int z_voxelGrid = 0; z_voxelGrid < 32; z_voxelGrid++) {
-               int minY_voxelGrid = 0;
-               int maxY_voxelGrid = 320;
+      for (int taskX = 0; taskX < taskCount.x; taskX++) {
+         for (int taskZ = 0; taskZ < taskCount.z; taskZ++) {
+            TimeInstrument.Probe timeProbe = transfer_timeProbe.createProbe("Environment Section " + sectionCounter++);
+            int minX_voxelGrid = taskX * taskSize.x;
+            int minZ_voxelGrid = taskZ * taskSize.z;
+            int maxX_voxelGrid = minX_voxelGrid + taskSize.x;
+            int maxZ_voxelGrid = minZ_voxelGrid + taskSize.z;
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+               timeProbe.start();
+               Vector3i world_voxelGrid = new Vector3i();
 
-               for (int y_voxelGrid = 0; y_voxelGrid < 320; y_voxelGrid++) {
-                  int worldX_voxelGrid = x_voxelGrid + chunkBounds_voxelGrid.min.x;
-                  int worldY_voxelGrid = y_voxelGrid + chunkBounds_voxelGrid.min.y;
-                  int worldZ_voxelGrid = z_voxelGrid + chunkBounds_voxelGrid.min.z;
-                  Integer environment = environmentVoxelSpace.getContent(worldX_voxelGrid, worldY_voxelGrid, worldZ_voxelGrid);
-                  blockChunk.setEnvironment(x_voxelGrid, y_voxelGrid, z_voxelGrid, Objects.requireNonNullElse(environment, 0));
+               for (int x_voxelGrid = minX_voxelGrid; x_voxelGrid < maxX_voxelGrid; x_voxelGrid++) {
+                  for (int z_voxelGrid = minZ_voxelGrid; z_voxelGrid < maxZ_voxelGrid; z_voxelGrid++) {
+                     EnvironmentChunk.BulkWriter.ColumnWriter columnWriter = bulkWriter.getColumnWriter(x_voxelGrid, z_voxelGrid);
+                     int x_voxelGrid_final = x_voxelGrid;
+                     int z_voxelGrid_final = z_voxelGrid;
+                     columnWriter.intake(y_voxelGrid -> {
+                        world_voxelGrid.x = x_voxelGrid_final + chunkBounds_voxelGrid.min.x;
+                        world_voxelGrid.y = y_voxelGrid + chunkBounds_voxelGrid.min.y;
+                        world_voxelGrid.z = z_voxelGrid_final + chunkBounds_voxelGrid.min.z;
+                        Integer environment = environmentVoxelSpace.getContent(world_voxelGrid);
+                        assert environment != null;
+                        return environment;
+                     });
+                  }
                }
-            }
-         }
 
-         timeProbe.stop();
-      }, this.concurrentExecutor).handle((r, e) -> {
+               timeProbe.stop();
+            }, this.concurrentExecutor);
+            futures.add(future);
+         }
+      }
+
+      return FutureUtils.allOf(futures).thenRun(() -> bulkWriter.write(generatedChunk.getBlockChunk().getEnvironmentChunk())).handle((r, e) -> {
          if (e == null) {
             return (Void)r;
          }

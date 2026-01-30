@@ -82,7 +82,6 @@ public class DensityProp extends Prop {
       densitySpace.setOrigin(-min.x, -min.y, -min.z);
       Density.Context childContext = new Density.Context();
       childContext.densityAnchor = position.toVector3d();
-      childContext.workerId = id;
       Vector3i itPosition = new Vector3i(position);
 
       for (itPosition.x = min.x; itPosition.x <= max.x; itPosition.x++) {
@@ -163,7 +162,7 @@ public class DensityProp extends Prop {
                   && itPosition.z < writeMax.z) {
                   int i = itPosition.y - bottom;
                   MaterialProvider.Context materialContext = new MaterialProvider.Context(
-                     position, 0.0, depthIntoFloor[i], depthIntoCeiling[i], spaceAboveFloor[i], spaceBelowCeiling[i], id, (functionPosition, workerId) -> {
+                     position, 0.0, depthIntoFloor[i], depthIntoCeiling[i], spaceAboveFloor[i], spaceBelowCeiling[i], functionPosition -> {
                         childContext.position = functionPosition.toVector3d();
                         return this.density.process(childContext);
                      }, childContext.distanceToBiomeEdge

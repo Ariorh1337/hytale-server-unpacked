@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
@@ -22,8 +21,8 @@ public class DensityTerrainAsset extends TerrainAsset {
 
    @Nonnull
    @Override
-   public Density buildDensity(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-      return this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer));
+   public Density buildDensity(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
+      return this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle));
    }
 
    @Override

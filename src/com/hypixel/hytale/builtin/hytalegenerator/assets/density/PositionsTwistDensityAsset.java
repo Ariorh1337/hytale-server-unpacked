@@ -48,7 +48,7 @@ public class PositionsTwistDensityAsset extends DensityAsset {
          ? new ConstantValueDensity(0.0)
          : new PositionsTwistDensity(
             this.buildFirstInput(argument),
-            this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer)),
+            this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle)),
             this.pinchCurveAsset.build(),
             this.twistAxis,
             this.maxDistance,

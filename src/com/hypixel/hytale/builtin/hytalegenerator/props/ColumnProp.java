@@ -79,7 +79,7 @@ public class ColumnProp extends Prop {
       Scanner.Context scannerContext = new Scanner.Context(position, this.directionality.getGeneralPattern(), materialSpace, id);
       List<Vector3i> validPositions = this.scanner.scan(scannerContext);
       Vector3i patternPosition = new Vector3i();
-      Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace, id);
+      Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace);
       RotatedPositionsScanResult scanResult = new RotatedPositionsScanResult(new ArrayList<>());
 
       for (Vector3i validPosition : validPositions) {

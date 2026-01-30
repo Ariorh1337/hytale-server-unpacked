@@ -116,7 +116,7 @@ public abstract class PendingLoadPlugin {
       HashSet<PluginIdentifier> classpathPlugins = new HashSet<>();
 
       for (Entry<PluginIdentifier, PendingLoadPlugin> entry : pending.entrySet()) {
-         if (entry.getValue().isInServerClassPath()) {
+         if (entry.getValue().isInServerClassPath() && "Hytale".equals(entry.getKey().getGroup())) {
             classpathPlugins.add(entry.getKey());
          }
       }

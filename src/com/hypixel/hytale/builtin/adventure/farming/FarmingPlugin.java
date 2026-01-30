@@ -23,6 +23,7 @@ import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlock;
 import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlockState;
 import com.hypixel.hytale.builtin.adventure.farming.states.TilledSoilBlock;
 import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.event.EventPriority;
@@ -34,6 +35,7 @@ import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.plugin.registry.AssetRegistry;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.events.ChunkPreLoadProcessEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -60,28 +62,29 @@ public class FarmingPlugin extends JavaPlugin {
    @Override
    protected void setup() {
       instance = this;
-      this.getAssetRegistry()
-         .register(
-            ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
-                              GrowthModifierAsset.class, new DefaultAssetMap()
-                           )
-                           .setPath("Farming/Modifiers"))
-                        .setCodec(GrowthModifierAsset.CODEC))
-                     .loadsAfter(Weather.class))
-                  .setKeyFunction(GrowthModifierAsset::getId))
-               .build()
-         );
-      this.getAssetRegistry()
-         .register(
-            ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
-                              FarmingCoopAsset.class, new DefaultAssetMap()
-                           )
-                           .setPath("Farming/Coops"))
-                        .setCodec(FarmingCoopAsset.CODEC))
-                     .loadsAfter(ItemDropList.class, NPCGroup.class))
-                  .setKeyFunction(FarmingCoopAsset::getId))
-               .build()
-         );
+      AssetRegistry assetRegistry = this.getAssetRegistry();
+      ComponentRegistryProxy<ChunkStore> chunkStoreRegistry = this.getChunkStoreRegistry();
+      ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
+      assetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                           GrowthModifierAsset.class, new DefaultAssetMap()
+                        )
+                        .setPath("Farming/Modifiers"))
+                     .setCodec(GrowthModifierAsset.CODEC))
+                  .loadsAfter(Weather.class))
+               .setKeyFunction(GrowthModifierAsset::getId))
+            .build()
+      );
+      assetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                           FarmingCoopAsset.class, new DefaultAssetMap()
+                        )
+                        .setPath("Farming/Coops"))
+                     .setCodec(FarmingCoopAsset.CODEC))
+                  .loadsAfter(ItemDropList.class, NPCGroup.class))
+               .setKeyFunction(FarmingCoopAsset::getId))
+            .build()
+      );
       this.getCodecRegistry(Interaction.CODEC)
          .register("HarvestCrop", HarvestCropInteraction.class, HarvestCropInteraction.CODEC)
          .register("FertilizeSoil", FertilizeSoilInteraction.class, FertilizeSoilInteraction.CODEC)
@@ -97,23 +100,22 @@ public class FarmingPlugin extends JavaPlugin {
       this.getCodecRegistry(FarmingStageData.CODEC).register("Prefab", PrefabFarmingStageData.class, PrefabFarmingStageData.CODEC);
       this.getCodecRegistry(FarmingStageData.CODEC).register("Spread", SpreadFarmingStageData.class, SpreadFarmingStageData.CODEC);
       this.getCodecRegistry(SpreadGrowthBehaviour.CODEC).register("Directional", DirectionalGrowthBehaviour.class, DirectionalGrowthBehaviour.CODEC);
-      this.tiledSoilBlockComponentType = this.getChunkStoreRegistry().registerComponent(TilledSoilBlock.class, "TilledSoil", TilledSoilBlock.CODEC);
-      this.farmingBlockComponentType = this.getChunkStoreRegistry().registerComponent(FarmingBlock.class, "FarmingBlock", FarmingBlock.CODEC);
-      this.farmingBlockStateComponentType = this.getChunkStoreRegistry().registerComponent(FarmingBlockState.class, "Farming", FarmingBlockState.CODEC);
-      this.coopBlockStateComponentType = this.getChunkStoreRegistry().registerComponent(CoopBlock.class, "Coop", CoopBlock.CODEC);
-      this.coopResidentComponentType = this.getEntityStoreRegistry()
-         .registerComponent(CoopResidentComponent.class, "CoopResident", CoopResidentComponent.CODEC);
-      this.getChunkStoreRegistry().registerSystem(new FarmingSystems.OnSoilAdded());
-      this.getChunkStoreRegistry().registerSystem(new FarmingSystems.OnFarmBlockAdded());
-      this.getChunkStoreRegistry().registerSystem(new FarmingSystems.Ticking());
-      this.getChunkStoreRegistry().registerSystem(new FarmingSystems.MigrateFarming());
-      this.getChunkStoreRegistry().registerSystem(new FarmingSystems.OnCoopAdded());
-      this.getEntityStoreRegistry().registerSystem(new FarmingSystems.CoopResidentEntitySystem());
-      this.getEntityStoreRegistry().registerSystem(new FarmingSystems.CoopResidentTicking());
+      this.tiledSoilBlockComponentType = chunkStoreRegistry.registerComponent(TilledSoilBlock.class, "TilledSoil", TilledSoilBlock.CODEC);
+      this.farmingBlockComponentType = chunkStoreRegistry.registerComponent(FarmingBlock.class, "FarmingBlock", FarmingBlock.CODEC);
+      this.farmingBlockStateComponentType = chunkStoreRegistry.registerComponent(FarmingBlockState.class, "Farming", FarmingBlockState.CODEC);
+      this.coopBlockStateComponentType = chunkStoreRegistry.registerComponent(CoopBlock.class, "Coop", CoopBlock.CODEC);
+      this.coopResidentComponentType = entityStoreRegistry.registerComponent(CoopResidentComponent.class, "CoopResident", CoopResidentComponent.CODEC);
+      chunkStoreRegistry.registerSystem(new FarmingSystems.OnSoilAdded());
+      chunkStoreRegistry.registerSystem(new FarmingSystems.OnFarmBlockAdded());
+      chunkStoreRegistry.registerSystem(new FarmingSystems.Ticking());
+      chunkStoreRegistry.registerSystem(new FarmingSystems.MigrateFarming());
+      chunkStoreRegistry.registerSystem(new FarmingSystems.OnCoopAdded());
+      entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentEntitySystem());
+      entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentTicking());
       this.getEventRegistry().registerGlobal(EventPriority.LAST, ChunkPreLoadProcessEvent.class, FarmingPlugin::preventSpreadOnNew);
    }
 
-   private static void preventSpreadOnNew(ChunkPreLoadProcessEvent event) {
+   private static void preventSpreadOnNew(@Nonnull ChunkPreLoadProcessEvent event) {
       if (event.isNewlyGenerated()) {
          BlockComponentChunk components = event.getHolder().getComponent(BlockComponentChunk.getComponentType());
          if (components != null) {

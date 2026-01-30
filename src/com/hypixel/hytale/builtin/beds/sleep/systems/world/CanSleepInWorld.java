@@ -6,9 +6,11 @@ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.LocalDateTime;
+import javax.annotation.Nonnull;
 
 public final class CanSleepInWorld {
-   public static CanSleepInWorld.Result check(World world) {
+   @Nonnull
+   public static CanSleepInWorld.Result check(@Nonnull World world) {
       if (world.getWorldConfig().isGameTimePaused()) {
          return CanSleepInWorld.Status.GAME_TIME_PAUSED;
       }

@@ -19,8 +19,8 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.terrains.DensityTerrain
 import com.hypixel.hytale.builtin.hytalegenerator.assets.terrains.TerrainAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.ConstantTintProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.TintProviderAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.biome.BiomeType;
-import com.hypixel.hytale.builtin.hytalegenerator.biome.SimpleBiomeType;
+import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
+import com.hypixel.hytale.builtin.hytalegenerator.biome.SimpleBiome;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.EnvironmentProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
@@ -30,7 +30,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProv
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.Assignments;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.tintproviders.TintProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -123,28 +122,26 @@ public class BiomeAsset implements JsonAssetWithMap<String, DefaultAssetMap<Stri
       }
    }
 
-   public BiomeType build(
-      @Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer
-   ) {
+   public Biome build(@Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
       MaterialProvider<Material> materialProvider = this.materialProviderAsset
-         .build(new MaterialProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerIndexer));
-      Density density = this.terrainAsset.buildDensity(parentSeed, referenceBundle, workerIndexer);
+         .build(new MaterialProviderAsset.Argument(parentSeed, materialCache, referenceBundle));
+      Density density = this.terrainAsset.buildDensity(parentSeed, referenceBundle);
       EnvironmentProvider environments = EnvironmentProvider.noEnvironmentProvider();
       if (this.environmentProviderAsset != null) {
-         environments = this.environmentProviderAsset.build(new EnvironmentProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerIndexer));
+         environments = this.environmentProviderAsset.build(new EnvironmentProviderAsset.Argument(parentSeed, materialCache, referenceBundle));
       }
 
       TintProvider tints = TintProvider.noTintProvider();
       if (this.tintProviderAsset != null) {
-         tints = this.tintProviderAsset.build(new TintProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerIndexer));
+         tints = this.tintProviderAsset.build(new TintProviderAsset.Argument(parentSeed, materialCache, referenceBundle));
       }
 
-      SimpleBiomeType biome = new SimpleBiomeType(this.biomeName, density, materialProvider, environments, tints);
+      SimpleBiome biome = new SimpleBiome(this.biomeName, density, materialProvider, environments, tints);
 
       for (PropRuntimeAsset fieldAsset : this.propRuntimeAssets) {
          if (!fieldAsset.isSkip()) {
-            PositionProvider positionProvider = fieldAsset.buildPositionProvider(parentSeed, referenceBundle, workerIndexer);
-            Assignments distribution = fieldAsset.buildPropDistribution(parentSeed, materialCache, fieldAsset.getRuntime(), referenceBundle, workerIndexer);
+            PositionProvider positionProvider = fieldAsset.buildPositionProvider(parentSeed, referenceBundle);
+            Assignments distribution = fieldAsset.buildPropDistribution(parentSeed, materialCache, fieldAsset.getRuntime(), referenceBundle);
             PropField field = new PropField(fieldAsset.getRuntime(), distribution, positionProvider);
             biome.addPropFieldTo(field);
          }
