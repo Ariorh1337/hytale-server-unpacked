@@ -16,7 +16,6 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.HostAddress;
-import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
@@ -56,7 +55,6 @@ import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.NameMatching;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -109,7 +107,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -576,30 +573,6 @@ implements IPacketHandler {
     }
 
     public void handle(@Nonnull UpdateMachinimaScene packet) {
-        Ref<EntityStore> ref = this.playerRef.getReference();
-        if (ref == null || !ref.isValid()) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        world.execute(() -> {
-            UpdateMachinimaScene updatePacket = new UpdateMachinimaScene(this.playerRef.getUsername(), packet.sceneName, packet.frame, packet.updateType, packet.scene);
-            if ("*".equals(packet.player)) {
-                for (PlayerRef otherPlayerRef : world.getPlayerRefs()) {
-                    if (Objects.equals(otherPlayerRef, this.playerRef)) continue;
-                    otherPlayerRef.getPacketHandler().writeNoCache(updatePacket);
-                }
-                this.playerRef.sendMessage(Message.translation("server.io.gamepackethandler.sceneUpdateSent"));
-            } else {
-                PlayerRef target = NameMatching.DEFAULT.find(Universe.get().getPlayers(), packet.player, PlayerRef::getUsername);
-                if (target != null && target.getReference().getStore().getExternalData().getWorld() == world) {
-                    target.getPacketHandler().write((Packet)updatePacket);
-                    this.playerRef.sendMessage(Message.translation("server.io.gamepackethander.sceneUpdateSentToPlayer").param("name", target.getUsername()));
-                } else {
-                    this.playerRef.sendMessage(Message.translation("server.io.gamepackethandler.playerNotFound").param("name", packet.player));
-                }
-            }
-        });
     }
 
     public void handle(@Nonnull ClientReady packet) {
