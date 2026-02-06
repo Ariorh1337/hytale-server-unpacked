@@ -127,6 +127,9 @@ public class HytaleServerConfig {
 
          if (config.defaultModsEnabled == null && extraInfo.getVersion() < 4) {
             config.defaultModsEnabled = true;
+         }
+
+         if (extraInfo.getVersion() != 4) {
             config.markChanged();
          }
       })
