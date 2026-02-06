@@ -13,7 +13,9 @@ public class VectorWarpDensity extends Density {
    private final double warpFactor;
    @Nonnull
    private final Vector3d warpVector;
+   @Nonnull
    private final Vector3d rSamplePoint;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public VectorWarpDensity(@Nonnull Density input, @Nonnull Density warpInput, double warpFactor, @Nonnull Vector3d warpVector) {

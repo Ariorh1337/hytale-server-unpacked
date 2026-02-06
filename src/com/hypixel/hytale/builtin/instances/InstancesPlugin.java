@@ -25,6 +25,7 @@ import com.hypixel.hytale.codec.schema.config.ObjectSchema;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.schema.config.StringSchema;
 import com.hypixel.hytale.common.util.FormatUtil;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
@@ -171,7 +172,7 @@ public class InstancesPlugin extends JavaPlugin {
          worldKey = "instance-" + safeName(name) + "-" + uuid;
       }
 
-      Path worldPath = path.resolve("worlds").resolve(worldKey);
+      Path worldPath = universe.validateWorldPath(worldKey);
       String finalWorldKey = worldKey;
       return WorldConfig.load(assetPath.resolve("instance.bson"))
          .thenApplyAsync(
@@ -294,7 +295,7 @@ public class InstancesPlugin extends JavaPlugin {
       componentAccessor.addComponent(playerRef, Teleport.getComponentType(), teleportComponent);
    }
 
-   public static void exitInstance(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public static CompletableFuture<Void> exitInstance(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       World world = componentAccessor.getExternalData().getWorld();
       InstanceEntityConfig entityConfig = componentAccessor.getComponent(targetRef, InstanceEntityConfig.getComponentType());
       WorldReturnPoint returnPoint = entityConfig != null ? entityConfig.getReturnPoint() : null;
@@ -314,7 +315,10 @@ public class InstancesPlugin extends JavaPlugin {
       }
 
       Teleport teleportComponent = Teleport.createForPlayer(targetWorld, returnPoint.getReturnPoint());
+      CompletableFuture<Void> future = new CompletableFuture<>();
+      teleportComponent.setOnComplete(future);
       componentAccessor.addComponent(targetRef, Teleport.getComponentType(), teleportComponent);
+      return future;
    }
 
    public static void safeRemoveInstance(@Nonnull String worldName) {
@@ -342,13 +346,24 @@ public class InstancesPlugin extends JavaPlugin {
    @Nonnull
    public static Path getInstanceAssetPath(@Nonnull String name) {
       for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-         Path path = pack.getRoot().resolve("Server").resolve("Instances").resolve(name);
+         Path instancesDir = pack.getRoot().resolve("Server").resolve("Instances");
+         Path path = PathUtil.resolvePathWithinDir(instancesDir, name);
+         if (path == null) {
+            throw new IllegalArgumentException("Invalid instance name");
+         }
+
          if (Files.exists(path)) {
             return path;
          }
       }
 
-      return AssetModule.get().getBaseAssetPack().getRoot().resolve("Server").resolve("Instances").resolve(name);
+      Path instancesDir = AssetModule.get().getBaseAssetPack().getRoot().resolve("Server").resolve("Instances");
+      Path path = PathUtil.resolvePathWithinDir(instancesDir, name);
+      if (path == null) {
+         throw new IllegalArgumentException("Invalid instance name");
+      } else {
+         return path;
+      }
    }
 
    public static boolean doesInstanceAssetExist(@Nonnull String name) {

@@ -56,28 +56,32 @@ public class SelectOverrideRespawnPointPage extends RespawnPointPage {
       commandBuilder.append("Pages/SelectOverrideRespawnPointPage.ui");
       commandBuilder.clear("#RespawnPointList");
       PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-      assert playerRefComponent != null;
-      HeadRotation rotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
-      assert rotationComponent != null;
-      float lookYaw = rotationComponent.getRotation().getYaw();
-      double direction = Math.toDegrees(lookYaw);
+      if (playerRefComponent != null) {
+         HeadRotation rotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
+         if (rotationComponent != null) {
+            float lookYaw = rotationComponent.getRotation().getYaw();
+            double direction = Math.toDegrees(lookYaw);
 
-      for (int i = 0; i < this.respawnPoints.length; i++) {
-         String selector = "#RespawnPointList[" + i + "]";
-         PlayerRespawnPointData respawnPoint = this.respawnPoints[i];
-         commandBuilder.append("#RespawnPointList", "Pages/OverrideRespawnPointButton.ui");
-         commandBuilder.set(selector + " #Name.Text", respawnPoint.getName());
-         Vector3i respawnPointPosition = respawnPoint.getBlockPosition();
-         int distance = (int)this.respawnPointToAddPosition.distanceTo(respawnPointPosition.x, this.respawnPointToAddPosition.y, respawnPointPosition.z);
-         commandBuilder.set(selector + " #Distance.Text", Message.translation("server.customUI.respawnPointDistance").param("distance", distance));
-         double angle = Math.atan2(respawnPointPosition.z - this.respawnPointToAddPosition.z, respawnPointPosition.x - this.respawnPointToAddPosition.x);
-         commandBuilder.set(selector + " #Icon.Angle", Math.toDegrees(angle) + direction + 90.0);
-         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, selector, EventData.of("Index", Integer.toString(i)), false);
+            for (int i = 0; i < this.respawnPoints.length; i++) {
+               String selector = "#RespawnPointList[" + i + "]";
+               PlayerRespawnPointData respawnPoint = this.respawnPoints[i];
+               commandBuilder.append("#RespawnPointList", "Pages/OverrideRespawnPointButton.ui");
+               commandBuilder.set(selector + " #Name.Text", respawnPoint.getName());
+               Vector3i respawnPointPosition = respawnPoint.getBlockPosition();
+               int distance = (int)this.respawnPointToAddPosition.distanceTo(respawnPointPosition.x, this.respawnPointToAddPosition.y, respawnPointPosition.z);
+               commandBuilder.set(selector + " #Distance.Text", Message.translation("server.customUI.respawnPointDistance").param("distance", distance));
+               double angle = Math.atan2(respawnPointPosition.z - this.respawnPointToAddPosition.z, respawnPointPosition.x - this.respawnPointToAddPosition.x);
+               commandBuilder.set(selector + " #Icon.Angle", Math.toDegrees(angle) + direction + 90.0);
+               eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, selector, EventData.of("Index", Integer.toString(i)), false);
+            }
+
+            commandBuilder.set(
+               "#NameInput.Value", Message.translation("server.customUI.defaultRespawnPointName").param("name", playerRefComponent.getUsername())
+            );
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmButton", EventData.of("@RespawnPointName", "#NameInput.Value"));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton", EventData.of("Action", "Cancel"));
+         }
       }
-
-      commandBuilder.set("#NameInput.Value", Message.translation("server.customUI.defaultRespawnPointName").param("name", playerRefComponent.getUsername()));
-      eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmButton", EventData.of("@RespawnPointName", "#NameInput.Value"));
-      eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton", EventData.of("Action", "Cancel"));
    }
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPointPage.RespawnPointEventData data) {

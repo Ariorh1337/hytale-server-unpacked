@@ -37,23 +37,41 @@ import javax.annotation.Nullable;
 
 public class NPropStage implements NStage {
    public static final double DEFAULT_BACKGROUND_DENSITY = 0.0;
+   @Nonnull
    public static final Class<NCountedPixelBuffer> biomeBufferClass = NCountedPixelBuffer.class;
+   @Nonnull
    public static final Class<Integer> biomeClass = Integer.class;
+   @Nonnull
    public static final Class<NSimplePixelBuffer> biomeDistanceBufferClass = NSimplePixelBuffer.class;
+   @Nonnull
    public static final Class<NBiomeDistanceStage.BiomeDistanceEntries> biomeDistanceClass = NBiomeDistanceStage.BiomeDistanceEntries.class;
+   @Nonnull
    public static final Class<NVoxelBuffer> materialBufferClass = NVoxelBuffer.class;
+   @Nonnull
    public static final Class<Material> materialClass = Material.class;
+   @Nonnull
    public static final Class<NEntityBuffer> entityBufferClass = NEntityBuffer.class;
+   @Nonnull
    private final NParametrizedBufferType biomeInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType biomeDistanceInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType materialInputBufferType;
+   @Nullable
    private final NBufferType entityInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType materialOutputBufferType;
+   @Nonnull
    private final NBufferType entityOutputBufferType;
+   @Nonnull
    private final Bounds3i inputBounds_bufferGrid;
+   @Nonnull
    private final Bounds3i inputBounds_voxelGrid;
+   @Nonnull
    private final String stageName;
+   @Nonnull
    private final MaterialCache materialCache;
+   @Nonnull
    private final WorkerIndexer.Data<WorldStructure> worldStructure_workerData;
    private final int runtimeIndex;
 
@@ -176,14 +194,12 @@ public class NPropStage implements NStage {
                   Vector3i position2d_voxelGrid = positionInt_voxelGrid.clone();
                   position2d_voxelGrid.setY(0);
                   double distanceToBiomeEdge = biomeDistanceSpace.getContent(position2d_voxelGrid).distanceToClosestOtherBiome(biomeIdAtPosition);
-                  Prop prop = propField.getPropDistribution().propAt(position, WorkerIndexer.Id.TEMP_0, distanceToBiomeEdge);
+                  Prop prop = propField.getPropDistribution().propAt(position, context.workerId, distanceToBiomeEdge);
                   Bounds3i propWriteBounds = prop.getWriteBounds_voxelGrid().clone();
                   propWriteBounds.offset(positionInt_voxelGrid);
                   if (propWriteBounds.intersects(localOutputBounds_voxelGrid)) {
-                     ScanResult scanResult = prop.scan(positionInt_voxelGrid, materialInputSpace, WorkerIndexer.Id.TEMP_0);
-                     Prop.Context propContext = new Prop.Context(
-                        scanResult, materialOutputSpace, entityOutputSpace, WorkerIndexer.Id.TEMP_0, distanceToBiomeEdge
-                     );
+                     ScanResult scanResult = prop.scan(positionInt_voxelGrid, materialInputSpace, context.workerId);
+                     Prop.Context propContext = new Prop.Context(scanResult, materialOutputSpace, entityOutputSpace, context.workerId, distanceToBiomeEdge);
                      prop.place(propContext);
                   }
                }

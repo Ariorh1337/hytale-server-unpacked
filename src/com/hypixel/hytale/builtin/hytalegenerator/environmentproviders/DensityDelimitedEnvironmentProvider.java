@@ -12,6 +12,7 @@ public class DensityDelimitedEnvironmentProvider extends EnvironmentProvider {
    private final List<DelimiterDouble<EnvironmentProvider>> delimiters = new ArrayList<>();
    @Nonnull
    private final Density density;
+   @Nonnull
    private final Density.Context rDensityContext;
 
    public DensityDelimitedEnvironmentProvider(@Nonnull List<DelimiterDouble<EnvironmentProvider>> delimiters, @Nonnull Density density) {

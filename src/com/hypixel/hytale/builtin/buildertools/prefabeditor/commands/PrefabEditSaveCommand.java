@@ -10,6 +10,7 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncPlayerCommand;
@@ -44,9 +45,16 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
 
    private static boolean isPathInAllowedPrefabDirectory(@Nonnull Path path) {
       PrefabStore prefabStore = PrefabStore.get();
-      return PathUtil.isChildOf(prefabStore.getServerPrefabsPath(), path)
-         || PathUtil.isChildOf(prefabStore.getAssetPrefabsPath(), path)
-         || PathUtil.isChildOf(prefabStore.getWorldGenPrefabsPath(), path);
+      if (PathUtil.isChildOf(prefabStore.getServerPrefabsPath(), path)) {
+         return true;
+      }
+
+      if (PathUtil.isChildOf(prefabStore.getWorldGenPrefabsPath(), path)) {
+         return true;
+      }
+
+      AssetModule assetModule = AssetModule.get();
+      return assetModule.isWithinPackSubDir(path, "Server/Prefabs") && !assetModule.isAssetPathImmutable(path);
    }
 
    public PrefabEditSaveCommand() {

@@ -19,15 +19,25 @@ public class PositionsTwistDensity extends Density {
    private double maxDistance;
    private boolean distanceNormalized;
    private boolean zeroPositionsY;
+   @Nonnull
    private final Vector3d rMin;
+   @Nonnull
    private final Vector3d rMax;
+   @Nonnull
    private final Vector3d rSamplePoint;
+   @Nonnull
    private final Vector3d rQueryPosition;
+   @Nonnull
    private final Vector3d rWarpVector;
+   @Nonnull
    private final ReusableList<Vector3d> rWarpVectors;
+   @Nonnull
    private final ReusableList<Double> rWarpDistances;
+   @Nonnull
    private final ReusableList<Double> rWeights;
+   @Nonnull
    private final PositionProvider.Context rPositionsContext;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public PositionsTwistDensity(

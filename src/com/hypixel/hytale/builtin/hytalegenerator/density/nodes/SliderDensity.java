@@ -11,7 +11,9 @@ public class SliderDensity extends Density {
    private final double slideZ;
    @Nullable
    private Density input;
+   @Nonnull
    private final Vector3d rChildPosition;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public SliderDensity(double slideX, double slideY, double slideZ, Density input) {

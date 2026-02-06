@@ -10,6 +10,7 @@ public class FieldFunctionMaterialProvider<V> extends MaterialProvider<V> {
    private final Density density;
    @Nonnull
    private final FieldFunctionMaterialProvider.FieldDelimiter<V>[] fieldDelimiters;
+   @Nonnull
    private final Density.Context rDensityContext;
 
    public FieldFunctionMaterialProvider(@Nonnull Density density, @Nonnull List<FieldFunctionMaterialProvider.FieldDelimiter<V>> delimiters) {

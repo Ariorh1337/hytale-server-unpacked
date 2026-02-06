@@ -50,33 +50,38 @@ public class OverrideNearbyRespawnPointPage extends RespawnPointPage {
    ) {
       commandBuilder.append("Pages/OverrideNearbyRespawnPointPage.ui");
       HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
-      assert headRotationComponent != null;
-      PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-      assert playerRefComponent != null;
-      double direction = Math.toDegrees(headRotationComponent.getRotation().getYaw());
-      commandBuilder.set(
-         "#DescriptionLabel.Text",
-         Message.translation("server.customUI.overrideNearbyRespawnPoint.label")
-            .param("respawnPointCount", this.nearbyRespawnPoints.length)
-            .param("minDistance", this.radiusLimitRespawnPoint)
-      );
+      if (headRotationComponent != null) {
+         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            double direction = Math.toDegrees(headRotationComponent.getRotation().getYaw());
+            commandBuilder.set(
+               "#DescriptionLabel.Text",
+               Message.translation("server.customUI.overrideNearbyRespawnPoint.label")
+                  .param("respawnPointCount", this.nearbyRespawnPoints.length)
+                  .param("minDistance", this.radiusLimitRespawnPoint)
+            );
 
-      for (int i = 0; i < this.nearbyRespawnPoints.length; i++) {
-         String selector = "#RespawnPointList[" + i + "]";
-         PlayerRespawnPointData nearbyRespawnPoint = this.nearbyRespawnPoints[i];
-         commandBuilder.append("#RespawnPointList", "Pages/OverrideRespawnPointButton.ui");
-         commandBuilder.set(selector + ".Disabled", true);
-         commandBuilder.set(selector + " #Name.Text", nearbyRespawnPoint.getName());
-         Vector3i nearbyRespawnPointPosition = nearbyRespawnPoint.getBlockPosition();
-         int distance = (int)this.respawnPointPosition.distanceTo(nearbyRespawnPointPosition.x, this.respawnPointPosition.y, nearbyRespawnPointPosition.z);
-         commandBuilder.set(selector + " #Distance.Text", Message.translation("server.customUI.respawnPointDistance").param("distance", distance));
-         double angle = Math.atan2(nearbyRespawnPointPosition.z - this.respawnPointPosition.z, nearbyRespawnPointPosition.x - this.respawnPointPosition.x);
-         commandBuilder.set(selector + " #Icon.Angle", Math.toDegrees(angle) + direction + 90.0);
+            for (int i = 0; i < this.nearbyRespawnPoints.length; i++) {
+               String selector = "#RespawnPointList[" + i + "]";
+               PlayerRespawnPointData nearbyRespawnPoint = this.nearbyRespawnPoints[i];
+               commandBuilder.append("#RespawnPointList", "Pages/OverrideRespawnPointButton.ui");
+               commandBuilder.set(selector + ".Disabled", true);
+               commandBuilder.set(selector + " #Name.Text", nearbyRespawnPoint.getName());
+               Vector3i nearbyRespawnPointPosition = nearbyRespawnPoint.getBlockPosition();
+               int distance = (int)this.respawnPointPosition
+                  .distanceTo(nearbyRespawnPointPosition.x, this.respawnPointPosition.y, nearbyRespawnPointPosition.z);
+               commandBuilder.set(selector + " #Distance.Text", Message.translation("server.customUI.respawnPointDistance").param("distance", distance));
+               double angle = Math.atan2(nearbyRespawnPointPosition.z - this.respawnPointPosition.z, nearbyRespawnPointPosition.x - this.respawnPointPosition.x);
+               commandBuilder.set(selector + " #Icon.Angle", Math.toDegrees(angle) + direction + 90.0);
+            }
+
+            commandBuilder.set(
+               "#NameInput.Value", Message.translation("server.customUI.defaultRespawnPointName").param("name", playerRefComponent.getUsername())
+            );
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmButton", EventData.of("@RespawnPointName", "#NameInput.Value"));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton", EventData.of("Action", "Cancel"));
+         }
       }
-
-      commandBuilder.set("#NameInput.Value", Message.translation("server.customUI.defaultRespawnPointName").param("name", playerRefComponent.getUsername()));
-      eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmButton", EventData.of("@RespawnPointName", "#NameInput.Value"));
-      eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton", EventData.of("Action", "Cancel"));
    }
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPointPage.RespawnPointEventData data) {

@@ -20,14 +20,23 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class NEnvironmentStage implements NStage {
+   @Nonnull
    public static final Class<NCountedPixelBuffer> biomeBufferClass = NCountedPixelBuffer.class;
+   @Nonnull
    public static final Class<Integer> biomeTypeClass = Integer.class;
+   @Nonnull
    public static final Class<NVoxelBuffer> environmentBufferClass = NVoxelBuffer.class;
+   @Nonnull
    public static final Class<Integer> environmentClass = Integer.class;
+   @Nonnull
    private final NParametrizedBufferType biomeInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType environmentOutputBufferType;
+   @Nonnull
    private final Bounds3i inputBounds_bufferGrid;
+   @Nonnull
    private final String stageName;
+   @Nonnull
    private final WorkerIndexer.Data<WorldStructure> worldStructure_workerData;
 
    public NEnvironmentStage(
@@ -53,7 +62,7 @@ public class NEnvironmentStage implements NStage {
       NVoxelBufferView<Integer> environmentSpace = new NVoxelBufferView<>(environmentAccess, environmentClass);
       Bounds3i outputBounds_voxelGrid = environmentSpace.getBounds();
       Vector3i position_voxelGrid = new Vector3i(outputBounds_voxelGrid.min);
-      EnvironmentProvider.Context tintContext = new EnvironmentProvider.Context(position_voxelGrid, WorkerIndexer.Id.TEMP_0);
+      EnvironmentProvider.Context environmentContext = new EnvironmentProvider.Context(position_voxelGrid);
       Registry<Biome> biomeRegistry = this.worldStructure_workerData.get(context.workerId).getBiomeRegistry();
 
       for (position_voxelGrid.x = outputBounds_voxelGrid.min.x; position_voxelGrid.x < outputBounds_voxelGrid.max.x; position_voxelGrid.x++) {
@@ -65,7 +74,8 @@ public class NEnvironmentStage implements NStage {
             EnvironmentProvider environmentProvider = biome.getEnvironmentProvider();
 
             for (position_voxelGrid.y = outputBounds_voxelGrid.min.y; position_voxelGrid.y < outputBounds_voxelGrid.max.y; position_voxelGrid.y++) {
-               int environment = environmentProvider.getValue(tintContext);
+               position_voxelGrid.dropHash();
+               int environment = environmentProvider.getValue(environmentContext);
                environmentSpace.set(environment, position_voxelGrid);
             }
          }

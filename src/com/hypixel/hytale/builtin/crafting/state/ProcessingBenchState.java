@@ -16,6 +16,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventPriority;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
@@ -48,6 +49,7 @@ import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.state.TickableBlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.DestroyableBlockState;
@@ -70,8 +72,10 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
 public class ProcessingBenchState extends BenchState implements TickableBlockState, ItemContainerBlockState, DestroyableBlockState, PlacedByBlockState {
+   @Nonnull
    public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    public static final boolean EXACT_RESOURCE_AMOUNTS = true;
+   @Nonnull
    public static final Codec<ProcessingBenchState> CODEC = BuilderCodec.builder(ProcessingBenchState.class, ProcessingBenchState::new, BenchState.CODEC)
       .append(new KeyedCodec<>("InputContainer", ItemContainer.CODEC), (state, o) -> state.inputContainer = o, state -> state.inputContainer)
       .add()
@@ -93,7 +97,9 @@ public class ProcessingBenchState extends BenchState implements TickableBlockSta
    private static final float EJECT_VELOCITY = 2.0F;
    private static final float EJECT_SPREAD_VELOCITY = 1.0F;
    private static final float EJECT_VERTICAL_VELOCITY = 3.25F;
+   @Nonnull
    public static final String PROCESSING = "Processing";
+   @Nonnull
    public static final String PROCESS_COMPLETED = "ProcessCompleted";
    private ProcessingBench processingBench;
    private ItemContainer inputContainer;
@@ -104,7 +110,9 @@ public class ProcessingBenchState extends BenchState implements TickableBlockSta
    private float fuelTime;
    private int lastConsumedFuelTotal;
    private int nextExtra = -1;
+   @Nonnull
    private final Set<Short> processingSlots = new HashSet<>();
+   @Nonnull
    private final Set<Short> processingFuelSlots = new HashSet<>();
    @Nullable
    private String recipeId;
@@ -768,7 +776,16 @@ public class ProcessingBenchState extends BenchState implements TickableBlockSta
    private void playSound(@Nonnull World world, int soundEventIndex, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (soundEventIndex != 0) {
          Vector3i pos = this.getBlockPosition();
-         SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, pos.x + 0.5, pos.y + 0.5, pos.z + 0.5, componentAccessor);
+         WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
+         int rotationIndex = chunk.getRotationIndex(pos.x, pos.y, pos.z);
+         Vector3d soundPos = new Vector3d();
+         BlockType blockType = this.getBlockType();
+         if (blockType != null) {
+            blockType.getBlockCenter(rotationIndex, soundPos);
+         }
+
+         soundPos.add(pos);
+         SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, soundPos, componentAccessor);
       }
    }
 

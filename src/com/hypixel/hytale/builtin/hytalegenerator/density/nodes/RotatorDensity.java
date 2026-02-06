@@ -7,6 +7,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class RotatorDensity extends Density {
+   @Nonnull
    private static final Vector3d Y_AXIS = new Vector3d(0.0, 1.0, 0.0);
    @Nullable
    private Density input;
@@ -16,7 +17,9 @@ public class RotatorDensity extends Density {
    private final double spinAngle;
    @Nonnull
    private final RotatorDensity.SpecialCase axisSpecialCase;
+   @Nonnull
    private final Vector3d rChildPosition;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public RotatorDensity(@Nonnull Density input, @Nonnull Vector3d newYAxis, double spinAngle) {

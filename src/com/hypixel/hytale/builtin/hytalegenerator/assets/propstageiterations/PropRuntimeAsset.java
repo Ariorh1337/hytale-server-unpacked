@@ -14,11 +14,13 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProv
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.Assignments;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import javax.annotation.Nonnull;
 
 public class PropRuntimeAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, PropRuntimeAsset>> {
+   @Nonnull
    public static final AssetBuilderCodec<String, PropRuntimeAsset> CODEC = AssetBuilderCodec.builder(
          PropRuntimeAsset.class,
          PropRuntimeAsset::new,
@@ -57,14 +59,18 @@ public class PropRuntimeAsset implements Cleanable, JsonAssetWithMap<String, Def
       this.assignmentsAsset.cleanUp();
    }
 
-   public PositionProvider buildPositionProvider(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
-      return this.positionProviderAsset.build(new PositionProviderAsset.Argument(parentSeed, referenceBundle));
+   public PositionProvider buildPositionProvider(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+      return this.positionProviderAsset.build(new PositionProviderAsset.Argument(parentSeed, referenceBundle, workerId));
    }
 
    public Assignments buildPropDistribution(
-      @Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, int runtime, @Nonnull ReferenceBundle referenceBundle
+      @Nonnull SeedBox parentSeed,
+      @Nonnull MaterialCache materialCache,
+      int runtime,
+      @Nonnull ReferenceBundle referenceBundle,
+      @Nonnull WorkerIndexer.Id workerId
    ) {
-      return this.assignmentsAsset.build(new AssignmentsAsset.Argument(parentSeed, materialCache, referenceBundle, runtime));
+      return this.assignmentsAsset.build(new AssignmentsAsset.Argument(parentSeed, materialCache, referenceBundle, runtime, workerId));
    }
 
    public int getRuntime() {

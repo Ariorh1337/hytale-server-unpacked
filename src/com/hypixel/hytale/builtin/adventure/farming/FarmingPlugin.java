@@ -32,11 +32,15 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.Farmin
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.GrowthModifierAsset;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.registry.AssetRegistry;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
 import com.hypixel.hytale.server.core.universe.world.events.ChunkPreLoadProcessEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -105,13 +109,25 @@ public class FarmingPlugin extends JavaPlugin {
       this.farmingBlockStateComponentType = chunkStoreRegistry.registerComponent(FarmingBlockState.class, "Farming", FarmingBlockState.CODEC);
       this.coopBlockStateComponentType = chunkStoreRegistry.registerComponent(CoopBlock.class, "Coop", CoopBlock.CODEC);
       this.coopResidentComponentType = entityStoreRegistry.registerComponent(CoopResidentComponent.class, "CoopResident", CoopResidentComponent.CODEC);
-      chunkStoreRegistry.registerSystem(new FarmingSystems.OnSoilAdded());
-      chunkStoreRegistry.registerSystem(new FarmingSystems.OnFarmBlockAdded());
-      chunkStoreRegistry.registerSystem(new FarmingSystems.Ticking());
+      ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType = BlockModule.BlockStateInfo.getComponentType();
+      ComponentType<ChunkStore, BlockSection> blockSectionComponentType = BlockSection.getComponentType();
+      ComponentType<ChunkStore, ChunkSection> chunkSectionComponentType = ChunkSection.getComponentType();
+      ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
+      chunkStoreRegistry.registerSystem(new FarmingSystems.OnSoilAdded(blockStateInfoComponentType, this.tiledSoilBlockComponentType));
+      chunkStoreRegistry.registerSystem(new FarmingSystems.OnFarmBlockAdded(blockStateInfoComponentType, this.farmingBlockComponentType));
+      chunkStoreRegistry.registerSystem(
+         new FarmingSystems.Ticking(
+            blockSectionComponentType,
+            chunkSectionComponentType,
+            this.farmingBlockComponentType,
+            this.tiledSoilBlockComponentType,
+            this.coopBlockStateComponentType
+         )
+      );
       chunkStoreRegistry.registerSystem(new FarmingSystems.MigrateFarming());
-      chunkStoreRegistry.registerSystem(new FarmingSystems.OnCoopAdded());
-      entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentEntitySystem());
-      entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentTicking());
+      chunkStoreRegistry.registerSystem(new FarmingSystems.OnCoopAdded(blockStateInfoComponentType, this.coopBlockStateComponentType));
+      entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentEntitySystem(this.coopResidentComponentType, uuidComponentType));
+      entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentTicking(this.coopResidentComponentType));
       this.getEventRegistry().registerGlobal(EventPriority.LAST, ChunkPreLoadProcessEvent.class, FarmingPlugin::preventSpreadOnNew);
    }
 

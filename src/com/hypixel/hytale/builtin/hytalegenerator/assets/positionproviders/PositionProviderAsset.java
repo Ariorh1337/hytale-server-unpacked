@@ -10,6 +10,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -19,12 +20,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public abstract class PositionProviderAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, PositionProviderAsset>> {
+   @Nonnull
    public static final AssetCodecMapCodec<String, PositionProviderAsset> CODEC = new AssetCodecMapCodec<>(
       Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
    );
+   @Nonnull
    private static final Map<String, PositionProviderAsset> exportedNodes = new ConcurrentHashMap<>();
+   @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(PositionProviderAsset.class, CODEC);
+   @Nonnull
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
+   @Nonnull
    public static final BuilderCodec<PositionProviderAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(PositionProviderAsset.class)
       .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
       .add()
@@ -70,15 +76,18 @@ public abstract class PositionProviderAsset implements Cleanable, JsonAssetWithM
    public static class Argument {
       public SeedBox parentSeed;
       public ReferenceBundle referenceBundle;
+      public WorkerIndexer.Id workerId;
 
-      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
          this.parentSeed = parentSeed;
          this.referenceBundle = referenceBundle;
+         this.workerId = workerId;
       }
 
       public Argument(@Nonnull PositionProviderAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
+         this.workerId = argument.workerId;
       }
    }
 }

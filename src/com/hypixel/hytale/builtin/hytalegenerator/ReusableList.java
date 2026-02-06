@@ -2,9 +2,11 @@ package com.hypixel.hytale.builtin.hytalegenerator;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ReusableList<T> {
+   @Nonnull
    private final List<T> data = new ArrayList<>(0);
    private int softSize = 0;
 

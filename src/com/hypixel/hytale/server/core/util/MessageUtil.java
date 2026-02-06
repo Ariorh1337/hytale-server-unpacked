@@ -152,7 +152,7 @@ public class MessageUtil {
                   } else if (replacement != null) {
                      String formattedReplacement;
                      formattedReplacement = "";
-                     label155:
+                     label171:
                      switch (format) {
                         case "upper":
                            if (replacement instanceof StringParamValue s) {
@@ -175,7 +175,7 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label155;
+                                 break label171;
                               case "decimal":
                               case null:
                               default:
@@ -187,7 +187,7 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label155;
+                                 break label171;
                            }
                         case "plural":
                            if (options != null) {
@@ -222,6 +222,22 @@ public class MessageUtil {
                               formattedReplacement = formatter.format(instant.atZone(ZoneId.systemDefault()));
                            } else {
                               formattedReplacement = "";
+                           }
+                           break;
+                        case "select":
+                           if (options != null) {
+                              Map<String, String> selectOptions = parseSelectOptions(options);
+                              String selectKey = replacement.toString();
+                              String selected;
+                              if (selectOptions.containsKey(selectKey)) {
+                                 selected = selectOptions.get(selectKey);
+                              } else if (selectOptions.containsKey("other")) {
+                                 selected = selectOptions.get("other");
+                              } else {
+                                 selected = selectOptions.isEmpty() ? "" : selectOptions.values().iterator().next();
+                              }
+
+                              formattedReplacement = formatText(selected, params, messageParams);
                            }
                         case null:
                      }
@@ -460,6 +476,59 @@ public class MessageUtil {
    @Nonnull
    private static String getKoreanPluralCategory(int n) {
       return "other";
+   }
+
+   @Nonnull
+   private static Map<String, String> parseSelectOptions(@Nonnull String options) {
+      HashMap<String, String> result = new HashMap<>();
+      int i = 0;
+      int len = options.length();
+
+      while (i < len) {
+         while (i < len && Character.isWhitespace(options.charAt(i))) {
+            i++;
+         }
+
+         if (i >= len) {
+            break;
+         }
+
+         int keyStart = i;
+
+         while (i < len && !Character.isWhitespace(options.charAt(i)) && options.charAt(i) != '{') {
+            i++;
+         }
+
+         if (i == keyStart) {
+            break;
+         }
+
+         String key = options.substring(keyStart, i);
+
+         while (i < len && Character.isWhitespace(options.charAt(i))) {
+            i++;
+         }
+
+         if (i >= len || options.charAt(i) != '{') {
+            break;
+         }
+
+         int braceStart = i;
+         int braceEnd = findMatchingBrace(options, braceStart);
+         if (braceEnd < 0) {
+            break;
+         }
+
+         if (braceEnd > braceStart + 1) {
+            result.put(key, options.substring(braceStart + 1, braceEnd));
+         } else {
+            result.put(key, "");
+         }
+
+         i = braceEnd + 1;
+      }
+
+      return result;
    }
 
    @Nullable

@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class Density {
+   @Nonnull
    private static final Bounds3i DEFAULT_READ_BOUNDS = new Bounds3i();
    public static final double DEFAULT_VALUE = Double.MAX_VALUE;
    public static final double DEFAULT_DENSITY = 0.0;

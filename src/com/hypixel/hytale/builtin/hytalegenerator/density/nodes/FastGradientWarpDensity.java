@@ -13,8 +13,11 @@ public class FastGradientWarpDensity extends Density {
    private final double warpScale;
    @Nonnull
    private final FastNoiseLite warper;
+   @Nonnull
    private final FastNoiseLite.Vector3 rWarpedPosition;
+   @Nonnull
    private final Density.Context rChildContext;
+   @Nonnull
    private final Vector3d rPosition;
 
    public FastGradientWarpDensity(

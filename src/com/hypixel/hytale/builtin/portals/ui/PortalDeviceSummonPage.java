@@ -65,8 +65,6 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    private final Ref<ChunkStore> blockRef;
    @Nullable
    private final ItemStack offeredItemStack;
-   @Nonnull
-   private static final Transform DEFAULT_WORLDGEN_SPAWN = new Transform(0.0, 140.0, 0.0);
 
    public PortalDeviceSummonPage(@Nonnull PlayerRef playerRef, PortalDeviceConfig config, Ref<ChunkStore> blockRef, @Nullable ItemStack offeredItemStack) {
       super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PortalDeviceSummonPage.Data.CODEC);
@@ -314,19 +312,19 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
       if (spawnProvider == null) {
          return CompletableFuture.completedFuture(null);
+      } else {
+         Transform worldSpawnPoint = spawnProvider.getSpawnPoint(world, sampleUuid);
+         if (portalSpawn == null) {
+            Transform uppedSpawnPoint = worldSpawnPoint.clone();
+            uppedSpawnPoint.getPosition().add(0.0, 0.5, 0.0);
+            return CompletableFuture.completedFuture(uppedSpawnPoint);
+         } else {
+            return CompletableFuture.supplyAsync(() -> {
+               Transform computedSpawn = PortalSpawnFinder.computeSpawnTransform(world, portalSpawn);
+               return computedSpawn == null ? worldSpawnPoint : computedSpawn;
+            }, world);
+         }
       }
-
-      Transform worldSpawnPoint = spawnProvider.getSpawnPoint(world, sampleUuid);
-      if (DEFAULT_WORLDGEN_SPAWN.equals(worldSpawnPoint) && portalSpawn != null) {
-         return CompletableFuture.supplyAsync(() -> {
-            Transform computedSpawn = PortalSpawnFinder.computeSpawnTransform(world, portalSpawn);
-            return computedSpawn == null ? worldSpawnPoint : computedSpawn;
-         }, world);
-      }
-
-      Transform uppedSpawnPoint = worldSpawnPoint.clone();
-      uppedSpawnPoint.getPosition().add(0.0, 0.5, 0.0);
-      return CompletableFuture.completedFuture(uppedSpawnPoint);
    }
 
    @Nonnull

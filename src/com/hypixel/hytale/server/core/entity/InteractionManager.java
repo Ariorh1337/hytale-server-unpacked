@@ -414,7 +414,8 @@ public class InteractionManager implements Component<EntityStore> {
 
             long threshold = this.getOperationTimeoutThreshold();
             if (waitMillis > threshold) {
-               LOGGER.at(Level.SEVERE).log("Client finished chain earlier than server! %d, %s", chain.getChainId(), chain);
+               LOGGER.at(Level.FINE).log("Client finished chain earlier than server! %d, %s", chain.getChainId(), chain);
+               this.cancelChains(chain);
             }
          }
 
@@ -668,10 +669,12 @@ public class InteractionManager implements Component<EntityStore> {
 
          long threshold = this.getOperationTimeoutThreshold();
          if (waitMillis > threshold) {
-            HytaleLogger.Api ctx = LOGGER.at(Level.SEVERE);
+            HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
             if (ctx.isEnabled()) {
                ctx.log("Client finished interaction earlier than server! %d, %s", entry.getIndex(), entry);
             }
+
+            this.cancelChains(chain);
          }
       }
    }

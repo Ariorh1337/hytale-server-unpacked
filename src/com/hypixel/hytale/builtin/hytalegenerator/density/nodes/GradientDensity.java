@@ -13,8 +13,11 @@ public class GradientDensity extends Density {
    private final double slopeRange;
    @Nonnull
    private final Vector3d axis;
+   @Nonnull
    private final Density.Context rChildContext;
+   @Nonnull
    private final Vector3d rSlopeDirection;
+   @Nonnull
    private final Vector3d rPosition;
 
    public GradientDensity(@Nonnull Density input, double slopeRange, @Nonnull Vector3d axis) {

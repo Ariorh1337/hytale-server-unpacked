@@ -9,6 +9,7 @@ public class SwitchStateDensity extends Density {
    @Nullable
    private Density input;
    private final int switchState;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public SwitchStateDensity(Density input, int switchState) {

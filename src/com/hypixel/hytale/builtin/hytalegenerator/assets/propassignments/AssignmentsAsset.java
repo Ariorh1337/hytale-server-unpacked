@@ -11,6 +11,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.Assignments;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -20,12 +21,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, AssignmentsAsset>> {
+   @Nonnull
    public static final AssetCodecMapCodec<String, AssignmentsAsset> CODEC = new AssetCodecMapCodec<>(
       Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
    );
+   @Nonnull
    private static final Map<String, AssignmentsAsset> exportedNodes = new ConcurrentHashMap<>();
+   @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(AssignmentsAsset.class, CODEC);
+   @Nonnull
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
+   @Nonnull
    public static final BuilderCodec<AssignmentsAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(AssignmentsAsset.class)
       .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
       .add()
@@ -44,7 +50,7 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
       .build();
    private String id;
    private AssetExtraInfo.Data data;
-   private boolean skip = false;
+   private boolean skip;
    private String exportName = "";
 
    protected AssignmentsAsset() {
@@ -73,12 +79,20 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
       public MaterialCache materialCache;
       public ReferenceBundle referenceBundle;
       public int runtime;
+      public WorkerIndexer.Id workerId;
 
-      public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, int runtime) {
+      public Argument(
+         @Nonnull SeedBox parentSeed,
+         @Nonnull MaterialCache materialCache,
+         @Nonnull ReferenceBundle referenceBundle,
+         int runtime,
+         @Nonnull WorkerIndexer.Id workerId
+      ) {
          this.parentSeed = parentSeed;
          this.materialCache = materialCache;
          this.referenceBundle = referenceBundle;
          this.runtime = runtime;
+         this.workerId = workerId;
       }
 
       public Argument(@Nonnull AssignmentsAsset.Argument argument) {
@@ -86,6 +100,7 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
          this.materialCache = argument.materialCache;
          this.referenceBundle = argument.referenceBundle;
          this.runtime = argument.runtime;
+         this.workerId = argument.workerId;
       }
    }
 }

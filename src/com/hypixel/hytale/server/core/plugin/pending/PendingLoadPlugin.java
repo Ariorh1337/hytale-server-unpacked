@@ -48,8 +48,8 @@ public abstract class PendingLoadPlugin {
 
    public abstract PendingLoadPlugin createSubPendingLoadPlugin(PluginManifest var1);
 
-   @Nullable
-   public abstract PluginBase load();
+   @Nonnull
+   public abstract PluginBase load() throws Exception;
 
    @Nonnull
    public List<PendingLoadPlugin> createSubPendingLoadPlugins() {

@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
-import com.hypixel.hytale.server.core.util.message.MessageFormat;
 import javax.annotation.Nonnull;
 
 public abstract class PlayCommandBase extends CommandBase {
@@ -76,7 +75,7 @@ public abstract class PlayCommandBase extends CommandBase {
                }
             }
          } else {
-            boolean enabled = this.enabledArg.get(context);
+            Boolean enabled = this.enabledArg.get(context);
             if (!enabled && access == this.commandAccess) {
                this.singleplayerModule.requestServerAccess(Access.Private);
                switch (this.commandAccess) {
@@ -110,20 +109,16 @@ public abstract class PlayCommandBase extends CommandBase {
             } else {
                switch (this.commandAccess) {
                   case Private:
-                     context.sendMessage(
-                        Message.translation("server.commands.play.accessAlreadyToggledPrivate").param("enabled", MessageFormat.enabled(enabled))
-                     );
+                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledPrivate").param("enabled", enabled.toString()));
                      break;
                   case LAN:
-                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledLan").param("enabled", MessageFormat.enabled(enabled)));
+                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledLan").param("enabled", enabled.toString()));
                      break;
                   case Friend:
-                     context.sendMessage(
-                        Message.translation("server.commands.play.accessAlreadyToggledFriend").param("enabled", MessageFormat.enabled(enabled))
-                     );
+                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledFriend").param("enabled", enabled.toString()));
                      break;
                   case Open:
-                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledOpen").param("enabled", MessageFormat.enabled(enabled)));
+                     context.sendMessage(Message.translation("server.commands.play.accessAlreadyToggledOpen").param("enabled", enabled.toString()));
                }
             }
          }

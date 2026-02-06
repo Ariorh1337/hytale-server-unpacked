@@ -5,6 +5,7 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.DisableProcessingAssert;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.dependency.Order;
@@ -30,10 +31,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockPhysicsSystems {
+   @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    public static final int MAX_SUPPORT_RADIUS = 14;
 
    public static class CachedAccessor extends AbstractCachedAccessor {
+      @Nonnull
       private static final ThreadLocal<BlockPhysicsSystems.CachedAccessor> THREAD_LOCAL = ThreadLocal.withInitial(BlockPhysicsSystems.CachedAccessor::new);
       private static final int PHYSICS_COMPONENT = 0;
       private static final int FLUID_COMPONENT = 1;
@@ -125,9 +128,11 @@ public class BlockPhysicsSystems {
    }
 
    public static class Ticking extends EntityTickingSystem<ChunkStore> implements DisableProcessingAssert {
+      @Nonnull
       private static final Query<ChunkStore> QUERY = Query.and(
          ChunkSection.getComponentType(), BlockSection.getComponentType(), BlockPhysics.getComponentType(), FluidSection.getComponentType()
       );
+      @Nonnull
       private static final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(
          new SystemDependency<>(Order.AFTER, ChunkBlockTickSystem.PreTick.class), new SystemDependency<>(Order.BEFORE, ChunkBlockTickSystem.Ticking.class)
       );
@@ -156,22 +161,40 @@ public class BlockPhysicsSystems {
          assert section != null;
 
          try {
-            BlockSection blockSection = archetypeChunk.getComponent(index, BlockSection.getComponentType());
-            assert blockSection != null;
-            if (blockSection.getTickingBlocksCountCopy() <= 0) {
+            BlockSection blockSectionComponent = archetypeChunk.getComponent(index, BlockSection.getComponentType());
+            if (blockSectionComponent == null) {
                return;
             }
 
-            BlockPhysics blockPhysics = archetypeChunk.getComponent(index, BlockPhysics.getComponentType());
-            assert blockPhysics != null;
-            FluidSection fluidSection = archetypeChunk.getComponent(index, FluidSection.getComponentType());
-            assert fluidSection != null;
-            WorldChunk worldChunk = commandBuffer.getComponent(section.getChunkColumnReference(), WorldChunk.getComponentType());
+            if (blockSectionComponent.getTickingBlocksCountCopy() <= 0) {
+               return;
+            }
+
+            BlockPhysics blockPhysicsComponent = archetypeChunk.getComponent(index, BlockPhysics.getComponentType());
+            if (blockPhysicsComponent == null) {
+               return;
+            }
+
+            FluidSection fluidSectionComponent = archetypeChunk.getComponent(index, FluidSection.getComponentType());
+            if (fluidSectionComponent == null) {
+               return;
+            }
+
+            Ref<ChunkStore> columnRef = section.getChunkColumnReference();
+            if (columnRef == null || !columnRef.isValid()) {
+               return;
+            }
+
+            WorldChunk worldChunkComponent = commandBuffer.getComponent(columnRef, WorldChunk.getComponentType());
+            if (worldChunkComponent == null) {
+               return;
+            }
+
             BlockPhysicsSystems.CachedAccessor accessor = BlockPhysicsSystems.CachedAccessor.of(
-               commandBuffer, blockSection, blockPhysics, fluidSection, section.getX(), section.getY(), section.getZ(), 14
+               commandBuffer, blockSectionComponent, blockPhysicsComponent, fluidSectionComponent, section.getX(), section.getY(), section.getZ(), 14
             );
-            blockSection.forEachTicking(
-               worldChunk,
+            blockSectionComponent.forEachTicking(
+               worldChunkComponent,
                accessor,
                section.getY(),
                (wc, accessor1, localX, localY, localZ, blockId) -> {

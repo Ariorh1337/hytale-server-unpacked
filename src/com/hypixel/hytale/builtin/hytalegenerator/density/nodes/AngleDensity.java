@@ -13,7 +13,9 @@ public class AngleDensity extends Density {
    @Nonnull
    private final Vector3d vector;
    private final boolean toAxis;
+   @Nonnull
    private final Vector3d rOtherVector;
+   @Nonnull
    private final VectorProvider.Context rVectorProviderContext;
 
    public AngleDensity(@Nonnull VectorProvider vectorProvider, @Nonnull Vector3d vector, boolean toAxis) {

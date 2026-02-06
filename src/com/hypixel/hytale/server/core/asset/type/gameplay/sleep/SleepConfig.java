@@ -1,4 +1,4 @@
-package com.hypixel.hytale.server.core.asset.type.gameplay;
+package com.hypixel.hytale.server.core.asset.type.gameplay.sleep;
 
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -22,10 +22,13 @@ public class SleepConfig {
       .addValidator(Validators.doubleArraySize(2))
       .documentation("The in-game hours during which players can sleep to skip to the WakeUpHour. If missing, there is no restriction.")
       .add()
+      .append(new KeyedCodec<>("Sounds", SleepSoundsConfig.CODEC), (sleepConfig, i) -> sleepConfig.sounds = i, sleepConfig -> sleepConfig.sounds)
+      .add()
       .build();
    public static final SleepConfig DEFAULT = new SleepConfig();
    private float wakeUpHour = 5.5F;
    private double[] allowedSleepHoursRange;
+   private SleepSoundsConfig sounds = new SleepSoundsConfig();
 
    public float getWakeUpHour() {
       return this.wakeUpHour;
@@ -34,6 +37,10 @@ public class SleepConfig {
    @Nullable
    public double[] getAllowedSleepHoursRange() {
       return this.allowedSleepHoursRange;
+   }
+
+   public SleepSoundsConfig getSounds() {
+      return this.sounds;
    }
 
    @Nullable

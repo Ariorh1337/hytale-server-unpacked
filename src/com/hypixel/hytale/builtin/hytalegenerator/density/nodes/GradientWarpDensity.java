@@ -13,8 +13,11 @@ public class GradientWarpDensity extends Density {
    private Density warpInput;
    private final double slopeRange;
    private final double warpFactor;
+   @Nonnull
    private final Density.Context rChildContext;
+   @Nonnull
    private final Vector3d rGradient;
+   @Nonnull
    public final Vector3d rPosition;
 
    public GradientWarpDensity(@Nonnull Density input, @Nonnull Density warpInput, double slopeRange, double warpFactor) {

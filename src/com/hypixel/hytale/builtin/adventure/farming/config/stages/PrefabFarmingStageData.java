@@ -1,6 +1,5 @@
 package com.hypixel.hytale.builtin.adventure.farming.config.stages;
 
-import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlock;
@@ -20,7 +19,6 @@ import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
-import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
@@ -38,7 +36,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.PrefabUtil;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -456,14 +453,12 @@ public class PrefabFarmingStageData extends FarmingStageData {
 
       @Nonnull
       public Path getResolvedPath() {
-         for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-            Path assetPath = pack.getRoot().resolve("Server").resolve("Prefabs").resolve(this.path);
-            if (Files.exists(assetPath)) {
-               return assetPath;
-            }
+         Path assetPath = PrefabStore.get().findAssetPrefabPath(this.path);
+         if (assetPath == null) {
+            throw new IllegalStateException("Invalid prefab path: " + this.path);
+         } else {
+            return assetPath;
          }
-
-         return PrefabStore.get().getAssetPrefabsPath().resolve(this.path);
       }
 
       @Nonnull

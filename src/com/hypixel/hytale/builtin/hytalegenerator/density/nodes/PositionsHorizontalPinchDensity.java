@@ -21,16 +21,27 @@ public class PositionsHorizontalPinchDensity extends Density {
    private final boolean distanceNormalized;
    private final double positionsMinY;
    private final double positionsMaxY;
+   @Nonnull
    private final Vector3d rWarpVector;
+   @Nonnull
    private final Vector3d rSamplePoint;
+   @Nonnull
    private final Vector3d rMin;
+   @Nonnull
    private final Vector3d rMax;
+   @Nonnull
    private final Vector3d rPosition;
+   @Nonnull
    private final Vector3d rConsumerResult;
+   @Nonnull
    private final ReusableList<Vector3d> rWarpVectors;
+   @Nonnull
    private final ReusableList<Double> rWarpDistances;
+   @Nonnull
    private final ReusableList<Double> rWeights;
+   @Nonnull
    private final PositionProvider.Context rPositionsContext;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public PositionsHorizontalPinchDensity(

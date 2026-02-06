@@ -14,6 +14,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.return
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import javax.annotation.Nonnull;
 
 public class DensityReturnTypeAsset extends ReturnTypeAsset {
+   @Nonnull
    public static final BuilderCodec<DensityReturnTypeAsset> CODEC = BuilderCodec.builder(
          DensityReturnTypeAsset.class, DensityReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC
       )
@@ -43,8 +45,8 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
 
    @Nonnull
    @Override
-   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
-      DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle);
+   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+      DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle, workerId);
       Density choiceDensity = this.choiceDensityAsset.build(densityArgument);
       HashMap<Range, Density> delimiterMap = new HashMap<>(this.delimiterAssets.length);
 
@@ -57,6 +59,7 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
    }
 
    public static class DelimiterAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, FieldFunctionMaterialProviderAsset.DelimiterAsset>> {
+      @Nonnull
       public static final AssetBuilderCodec<String, DensityReturnTypeAsset.DelimiterAsset> CODEC = AssetBuilderCodec.builder(
             DensityReturnTypeAsset.DelimiterAsset.class,
             DensityReturnTypeAsset.DelimiterAsset::new,

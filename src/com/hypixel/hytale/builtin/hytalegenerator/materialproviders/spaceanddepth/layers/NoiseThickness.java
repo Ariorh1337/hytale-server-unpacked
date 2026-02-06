@@ -11,6 +11,7 @@ public class NoiseThickness<V> extends SpaceAndDepthMaterialProvider.Layer<V> {
    private final Density density;
    @Nullable
    private final MaterialProvider<V> materialProvider;
+   @Nonnull
    private final Density.Context rDensityContext;
 
    public NoiseThickness(@Nonnull Density density, @Nullable MaterialProvider<V> materialProvider) {

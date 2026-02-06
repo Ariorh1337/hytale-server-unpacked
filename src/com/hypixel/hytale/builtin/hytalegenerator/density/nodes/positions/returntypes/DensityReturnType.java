@@ -20,7 +20,9 @@ public class DensityReturnType extends ReturnType {
    @Nonnull
    private final Density[] sampleDensities;
    private final boolean calculateDistanceFromWall;
+   @Nonnull
    private final Vector3d rScaledSamplePointClone;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public DensityReturnType(

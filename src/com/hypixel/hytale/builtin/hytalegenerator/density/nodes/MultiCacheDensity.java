@@ -88,6 +88,7 @@ public class MultiCacheDensity extends Density {
    }
 
    private static class Entry {
+      @Nullable
       Vector3d position = null;
       double value = 0.0;
 

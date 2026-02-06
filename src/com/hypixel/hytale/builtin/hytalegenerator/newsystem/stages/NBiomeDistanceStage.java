@@ -21,15 +21,23 @@ public class NBiomeDistanceStage implements NStage {
    private static final double ORIGIN_REACH = 1.0;
    private static final double BUFFER_DIAGONAL_VOXEL_GRID = Math.sqrt(NPixelBuffer.SIZE.x * NPixelBuffer.SIZE.x + NPixelBuffer.SIZE.z * NPixelBuffer.SIZE.z);
    public static final double DEFAULT_DISTANCE_TO_BIOME_EDGE = Double.MAX_VALUE;
+   @Nonnull
    public static final Class<NCountedPixelBuffer> biomeBufferClass = NCountedPixelBuffer.class;
+   @Nonnull
    public static final Class<Integer> biomeClass = Integer.class;
+   @Nonnull
    public static final Class<NSimplePixelBuffer> biomeDistanceBufferClass = NSimplePixelBuffer.class;
+   @Nonnull
    public static final Class<NBiomeDistanceStage.BiomeDistanceEntries> biomeDistanceClass = NBiomeDistanceStage.BiomeDistanceEntries.class;
+   @Nonnull
    private final NParametrizedBufferType biomeInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType biomeDistanceOutputBufferType;
+   @Nonnull
    private final String stageName;
    private final double maxDistance_voxelGrid;
    private final int maxDistance_bufferGrid;
+   @Nonnull
    private final Bounds3i inputBounds_bufferGrid;
 
    public NBiomeDistanceStage(
@@ -239,6 +247,7 @@ public class NBiomeDistanceStage implements NStage {
    }
 
    public static class BiomeDistanceEntries {
+      @Nonnull
       public final List<NBiomeDistanceStage.BiomeDistanceEntry> entries;
 
       public BiomeDistanceEntries(@Nonnull List<NBiomeDistanceStage.BiomeDistanceEntry> entries) {

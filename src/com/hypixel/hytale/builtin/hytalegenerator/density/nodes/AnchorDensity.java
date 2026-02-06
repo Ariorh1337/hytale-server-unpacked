@@ -9,7 +9,9 @@ public class AnchorDensity extends Density {
    @Nullable
    private Density input;
    private final boolean isReversed;
+   @Nonnull
    private final Vector3d rChildPosition;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public AnchorDensity(Density input, boolean isReversed) {

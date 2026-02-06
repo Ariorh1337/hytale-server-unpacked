@@ -19,14 +19,23 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class NTintStage implements NStage {
+   @Nonnull
    public static final Class<NCountedPixelBuffer> biomeBufferClass = NCountedPixelBuffer.class;
+   @Nonnull
    public static final Class<Integer> biomeClass = Integer.class;
+   @Nonnull
    public static final Class<NSimplePixelBuffer> tintBufferClass = NSimplePixelBuffer.class;
+   @Nonnull
    public static final Class<Integer> tintClass = Integer.class;
+   @Nonnull
    private final NParametrizedBufferType biomeInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType tintOutputBufferType;
+   @Nonnull
    private final Bounds3i inputBounds_bufferGrid;
+   @Nonnull
    private final String stageName;
+   @Nonnull
    private final WorkerIndexer.Data<WorldStructure> worldStructure_workerData;
 
    public NTintStage(
@@ -54,7 +63,7 @@ public class NTintStage implements NStage {
       Registry<Biome> biomeRegistry = this.worldStructure_workerData.get(context.workerId).getBiomeRegistry();
       Vector3i position_voxelGrid = new Vector3i(outputBounds_voxelGrid.min);
       position_voxelGrid.setY(0);
-      TintProvider.Context tintContext = new TintProvider.Context(position_voxelGrid, WorkerIndexer.Id.TEMP_0);
+      TintProvider.Context tintContext = new TintProvider.Context(position_voxelGrid, context.workerId);
 
       for (position_voxelGrid.x = outputBounds_voxelGrid.min.x; position_voxelGrid.x < outputBounds_voxelGrid.max.x; position_voxelGrid.x++) {
          for (position_voxelGrid.z = outputBounds_voxelGrid.min.z; position_voxelGrid.z < outputBounds_voxelGrid.max.z; position_voxelGrid.z++) {

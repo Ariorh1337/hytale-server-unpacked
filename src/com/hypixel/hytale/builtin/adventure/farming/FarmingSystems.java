@@ -99,11 +99,23 @@ public class FarmingSystems {
    }
 
    public static class CoopResidentEntitySystem extends RefSystem<EntityStore> {
-      private static final ComponentType<EntityStore, CoopResidentComponent> COMPONENT_TYPE_COOP_RESIDENT = CoopResidentComponent.getComponentType();
+      @Nonnull
+      private final ComponentType<EntityStore, CoopResidentComponent> coopResidentComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, UUIDComponent> uuidComponentType;
 
+      public CoopResidentEntitySystem(
+         @Nonnull ComponentType<EntityStore, CoopResidentComponent> coopResidentComponentType,
+         @Nonnull ComponentType<EntityStore, UUIDComponent> uuidComponentType
+      ) {
+         this.coopResidentComponentType = coopResidentComponentType;
+         this.uuidComponentType = uuidComponentType;
+      }
+
+      @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
-         return COMPONENT_TYPE_COOP_RESIDENT;
+         return this.coopResidentComponentType;
       }
 
       @Override
@@ -117,10 +129,10 @@ public class FarmingSystems {
          @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          if (reason != RemoveReason.UNLOAD) {
-            UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+            UUIDComponent uuidComponent = commandBuffer.getComponent(ref, this.uuidComponentType);
             if (uuidComponent != null) {
                UUID uuid = uuidComponent.getUuid();
-               CoopResidentComponent coopResidentComponent = commandBuffer.getComponent(ref, COMPONENT_TYPE_COOP_RESIDENT);
+               CoopResidentComponent coopResidentComponent = commandBuffer.getComponent(ref, this.coopResidentComponentType);
                if (coopResidentComponent != null) {
                   Vector3i coopPosition = coopResidentComponent.getCoopLocation();
                   World world = commandBuffer.getExternalData().getWorld();
@@ -159,11 +171,17 @@ public class FarmingSystems {
    }
 
    public static class CoopResidentTicking extends EntityTickingSystem<EntityStore> {
-      private static final ComponentType<EntityStore, CoopResidentComponent> COMPONENT_TYPE_COOP_RESIDENT = CoopResidentComponent.getComponentType();
+      @Nonnull
+      private final ComponentType<EntityStore, CoopResidentComponent> coopResidentComponentType;
 
+      public CoopResidentTicking(@Nonnull ComponentType<EntityStore, CoopResidentComponent> coopResidentComponentType) {
+         this.coopResidentComponentType = coopResidentComponentType;
+      }
+
+      @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
-         return COMPONENT_TYPE_COOP_RESIDENT;
+         return this.coopResidentComponentType;
       }
 
       @Override
@@ -174,11 +192,10 @@ public class FarmingSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         CoopResidentComponent coopResidentComponent = archetypeChunk.getComponent(index, CoopResidentComponent.getComponentType());
-         if (coopResidentComponent != null) {
-            if (coopResidentComponent.getMarkedForDespawn()) {
-               commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
-            }
+         CoopResidentComponent coopResidentComponent = archetypeChunk.getComponent(index, this.coopResidentComponentType);
+         assert coopResidentComponent != null;
+         if (coopResidentComponent.getMarkedForDespawn()) {
+            commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
          }
       }
    }
@@ -209,15 +226,28 @@ public class FarmingSystems {
 
    public static class OnCoopAdded extends RefSystem<ChunkStore> {
       @Nonnull
-      private static final Query<ChunkStore> QUERY = Query.and(BlockModule.BlockStateInfo.getComponentType(), CoopBlock.getComponentType());
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, CoopBlock> coopBlockComponentType;
+      @Nonnull
+      private final Query<ChunkStore> query;
+
+      public OnCoopAdded(
+         @Nonnull ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType,
+         @Nonnull ComponentType<ChunkStore, CoopBlock> coopBlockComponentType
+      ) {
+         this.blockStateInfoComponentType = blockStateInfoComponentType;
+         this.coopBlockComponentType = coopBlockComponentType;
+         this.query = Query.and(blockStateInfoComponentType, coopBlockComponentType);
+      }
 
       @Override
       public void onEntityAdded(
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         CoopBlock coopBlockComponent = commandBuffer.getComponent(ref, CoopBlock.getComponentType());
+         CoopBlock coopBlockComponent = commandBuffer.getComponent(ref, this.coopBlockComponentType);
          assert coopBlockComponent != null;
-         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType());
+         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
          assert blockStateInfoComponent != null;
          World world = commandBuffer.getExternalData().getWorld();
          Store<EntityStore> entityStore = world.getEntityStore().getStore();
@@ -240,9 +270,9 @@ public class FarmingSystems {
          @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          if (reason != RemoveReason.UNLOAD) {
-            CoopBlock coopBlockComponent = commandBuffer.getComponent(ref, CoopBlock.getComponentType());
+            CoopBlock coopBlockComponent = commandBuffer.getComponent(ref, this.coopBlockComponentType);
             assert coopBlockComponent != null;
-            BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType());
+            BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
             assert blockStateInfoComponent != null;
             int index = blockStateInfoComponent.getIndex();
             int x = ChunkUtil.xFromBlockInColumn(index);
@@ -268,24 +298,37 @@ public class FarmingSystems {
          }
       }
 
-      @Nullable
+      @Nonnull
       @Override
       public Query<ChunkStore> getQuery() {
-         return QUERY;
+         return this.query;
       }
    }
 
    public static class OnFarmBlockAdded extends RefSystem<ChunkStore> {
       @Nonnull
-      private static final Query<ChunkStore> QUERY = Query.and(BlockModule.BlockStateInfo.getComponentType(), FarmingBlock.getComponentType());
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, FarmingBlock> farmingBlockComponentType;
+      @Nonnull
+      private final Query<ChunkStore> query;
+
+      public OnFarmBlockAdded(
+         @Nonnull ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType,
+         @Nonnull ComponentType<ChunkStore, FarmingBlock> farmingBlockComponentType
+      ) {
+         this.blockStateInfoComponentType = blockStateInfoComponentType;
+         this.farmingBlockComponentType = farmingBlockComponentType;
+         this.query = Query.and(blockStateInfoComponentType, farmingBlockComponentType);
+      }
 
       @Override
       public void onEntityAdded(
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         FarmingBlock farmingBlockComponent = commandBuffer.getComponent(ref, FarmingBlock.getComponentType());
+         FarmingBlock farmingBlockComponent = commandBuffer.getComponent(ref, this.farmingBlockComponentType);
          assert farmingBlockComponent != null;
-         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType());
+         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
          assert blockStateInfoComponent != null;
          Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
          if (chunkRef.isValid()) {
@@ -389,24 +432,37 @@ public class FarmingSystems {
       ) {
       }
 
-      @Nullable
+      @Nonnull
       @Override
       public Query<ChunkStore> getQuery() {
-         return QUERY;
+         return this.query;
       }
    }
 
    public static class OnSoilAdded extends RefSystem<ChunkStore> {
       @Nonnull
-      private static final Query<ChunkStore> QUERY = Query.and(BlockModule.BlockStateInfo.getComponentType(), TilledSoilBlock.getComponentType());
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, TilledSoilBlock> tilledSoilBlockComponentType;
+      @Nonnull
+      private final Query<ChunkStore> query;
+
+      public OnSoilAdded(
+         @Nonnull ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType,
+         @Nonnull ComponentType<ChunkStore, TilledSoilBlock> tilledSoilBlockComponentType
+      ) {
+         this.blockStateInfoComponentType = blockStateInfoComponentType;
+         this.tilledSoilBlockComponentType = tilledSoilBlockComponentType;
+         this.query = Query.and(blockStateInfoComponentType, tilledSoilBlockComponentType);
+      }
 
       @Override
       public void onEntityAdded(
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         TilledSoilBlock soilComponent = commandBuffer.getComponent(ref, TilledSoilBlock.getComponentType());
+         TilledSoilBlock soilComponent = commandBuffer.getComponent(ref, this.tilledSoilBlockComponentType);
          assert soilComponent != null;
-         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType());
+         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
          assert blockStateInfoComponent != null;
          Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
          if (chunkRef.isValid()) {
@@ -440,16 +496,41 @@ public class FarmingSystems {
       ) {
       }
 
-      @Nullable
+      @Nonnull
       @Override
       public Query<ChunkStore> getQuery() {
-         return QUERY;
+         return this.query;
       }
    }
 
    public static class Ticking extends EntityTickingSystem<ChunkStore> {
       @Nonnull
-      private static final Query<ChunkStore> QUERY = Query.and(BlockSection.getComponentType(), ChunkSection.getComponentType());
+      private final ComponentType<ChunkStore, BlockSection> blockSectionComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, ChunkSection> chunkSectionComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, FarmingBlock> farmingBlockComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, TilledSoilBlock> tilledSoilBlockComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, CoopBlock> coopBlockComponentType;
+      @Nonnull
+      private final Query<ChunkStore> query;
+
+      public Ticking(
+         @Nonnull ComponentType<ChunkStore, BlockSection> blockSectionComponentType,
+         @Nonnull ComponentType<ChunkStore, ChunkSection> chunkSectionComponentType,
+         @Nonnull ComponentType<ChunkStore, FarmingBlock> farmingBlockComponentType,
+         @Nonnull ComponentType<ChunkStore, TilledSoilBlock> tilledSoilBlockComponentType,
+         @Nonnull ComponentType<ChunkStore, CoopBlock> coopBlockComponentType
+      ) {
+         this.blockSectionComponentType = blockSectionComponentType;
+         this.chunkSectionComponentType = chunkSectionComponentType;
+         this.farmingBlockComponentType = farmingBlockComponentType;
+         this.tilledSoilBlockComponentType = tilledSoilBlockComponentType;
+         this.coopBlockComponentType = coopBlockComponentType;
+         this.query = Query.and(blockSectionComponentType, chunkSectionComponentType);
+      }
 
       @Override
       public void tick(
@@ -459,10 +540,10 @@ public class FarmingSystems {
          @Nonnull Store<ChunkStore> store,
          @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         BlockSection blockSectionComponent = archetypeChunk.getComponent(index, BlockSection.getComponentType());
+         BlockSection blockSectionComponent = archetypeChunk.getComponent(index, this.blockSectionComponentType);
          assert blockSectionComponent != null;
          if (blockSectionComponent.getTickingBlocksCountCopy() != 0) {
-            ChunkSection chunkSectionComponent = archetypeChunk.getComponent(index, ChunkSection.getComponentType());
+            ChunkSection chunkSectionComponent = archetypeChunk.getComponent(index, this.chunkSectionComponentType);
             assert chunkSectionComponent != null;
             Ref<ChunkStore> chunkColumnRef = chunkSectionComponent.getChunkColumnReference();
             if (chunkColumnRef != null && chunkColumnRef.isValid()) {
@@ -480,21 +561,21 @@ public class FarmingSystems {
                      if (blockRef == null) {
                         return BlockTickStrategy.IGNORED;
                      } else {
-                        FarmingBlock farmingBlockComponent = commandBuffer1.getComponent(blockRef, FarmingBlock.getComponentType());
-                        if (farmingBlockComponent != null) {
+                        FarmingBlock farmingBlockComp = commandBuffer1.getComponent(blockRef, this.farmingBlockComponentType);
+                        if (farmingBlockComp != null) {
                            FarmingUtil.tickFarming(
-                              commandBuffer1, blockChunk, blockSectionComponent, ref, blockRef, farmingBlockComponent, localX, localY, localZ, false
+                              commandBuffer1, blockChunk, blockSectionComponent, ref, blockRef, farmingBlockComp, localX, localY, localZ, false
                            );
                            return BlockTickStrategy.SLEEP;
                         } else {
-                           TilledSoilBlock tilledSoilBlockComponent = commandBuffer1.getComponent(blockRef, TilledSoilBlock.getComponentType());
-                           if (tilledSoilBlockComponent != null) {
-                              tickSoil(commandBuffer1, blockRef, tilledSoilBlockComponent);
+                           TilledSoilBlock tilledSoilBlockComp = commandBuffer1.getComponent(blockRef, this.tilledSoilBlockComponentType);
+                           if (tilledSoilBlockComp != null) {
+                              tickSoil(commandBuffer1, blockRef, tilledSoilBlockComp);
                               return BlockTickStrategy.SLEEP;
                            } else {
-                              CoopBlock coopBlockComponent = commandBuffer1.getComponent(blockRef, CoopBlock.getComponentType());
-                              if (coopBlockComponent != null) {
-                                 tickCoop(commandBuffer1, blockRef, coopBlockComponent);
+                              CoopBlock coopBlockComp = commandBuffer1.getComponent(blockRef, this.coopBlockComponentType);
+                              if (coopBlockComp != null) {
+                                 tickCoop(commandBuffer1, blockRef, coopBlockComp);
                                  return BlockTickStrategy.SLEEP;
                               } else {
                                  return BlockTickStrategy.IGNORED;
@@ -645,10 +726,10 @@ public class FarmingSystems {
          }
       }
 
-      @Nullable
+      @Nonnull
       @Override
       public Query<ChunkStore> getQuery() {
-         return QUERY;
+         return this.query;
       }
    }
 }

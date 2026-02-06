@@ -10,6 +10,7 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class CacheDensityAsset extends DensityAsset {
+   @Nonnull
    public static final BuilderCodec<CacheDensityAsset> CODEC = BuilderCodec.builder(
          CacheDensityAsset.class, CacheDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )

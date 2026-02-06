@@ -33,6 +33,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class OpenProcessingBenchInteraction extends SimpleBlockInteraction {
+   @Nonnull
    public static final BuilderCodec<OpenProcessingBenchInteraction> CODEC = BuilderCodec.builder(
          OpenProcessingBenchInteraction.class, OpenProcessingBenchInteraction::new, SimpleBlockInteraction.CODEC
       )
@@ -83,7 +84,7 @@ public class OpenProcessingBenchInteraction extends SimpleBlockInteraction {
                            if (currentBlockType != null) {
                               String interactionState = BlockAccessor.getCurrentInteractionState(currentBlockType);
                               if (windows.isEmpty() && !"Processing".equals(interactionState) && !"ProcessCompleted".equals(interactionState)) {
-                                 world.setBlockInteractionState(pos, currentBlockType, "default");
+                                 world.setBlockInteractionState(pos, benchState.getBaseBlockType(), benchState.getTierStateName());
                               }
 
                               int soundEventIndexx = blockType.getBench().getLocalCloseSoundEventIndex();

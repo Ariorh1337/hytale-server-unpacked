@@ -12,9 +12,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class NVoxelBufferView<T> implements VoxelSpace<T> {
+   @Nonnull
    private final Class<T> voxelType;
+   @Nonnull
    private final NBufferBundle.Access.View bufferAccess;
+   @Nonnull
    private final Bounds3i bounds_voxelGrid;
+   @Nonnull
    private final Vector3i size_voxelGrid;
 
    public NVoxelBufferView(@Nonnull NBufferBundle.Access.View bufferAccess, @Nonnull Class<T> voxelType) {

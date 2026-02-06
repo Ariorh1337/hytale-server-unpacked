@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class CellNoise2DDensityAsset extends DensityAsset {
    private static Set<String> validCellTypes = new HashSet<>();
+   @Nonnull
    public static final BuilderCodec<CellNoise2DDensityAsset> CODEC;
    private double scaleX = 1.0;
    private double scaleZ = 1.0;

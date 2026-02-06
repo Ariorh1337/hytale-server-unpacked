@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import javax.annotation.Nonnull;
 
 public class EchoCommand extends CommandBase {
+   @Nonnull
    private final RequiredArg<String> messageArg = this.withRequiredArg("message", "server.commands.echos.message.desc", ArgTypes.STRING);
 
    public EchoCommand() {

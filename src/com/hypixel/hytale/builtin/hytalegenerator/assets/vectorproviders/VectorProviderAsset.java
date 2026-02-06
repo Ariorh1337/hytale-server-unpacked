@@ -10,6 +10,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -20,12 +21,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, VectorProviderAsset>> {
+   @Nonnull
    public static final AssetCodecMapCodec<String, VectorProviderAsset> CODEC = new AssetCodecMapCodec<>(
       Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
    );
+   @Nonnull
    private static final Map<String, VectorProviderAsset.Exported> exportedNodes = new ConcurrentHashMap<>();
+   @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(VectorProviderAsset.class, CODEC);
+   @Nonnull
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
+   @Nonnull
    public static final BuilderCodec<VectorProviderAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(VectorProviderAsset.class)
       .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
       .add()
@@ -79,20 +85,24 @@ public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap
    public static class Argument {
       public SeedBox parentSeed;
       public ReferenceBundle referenceBundle;
+      public WorkerIndexer.Id workerId;
 
-      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
          this.parentSeed = parentSeed;
          this.referenceBundle = referenceBundle;
+         this.workerId = workerId;
       }
 
       public Argument(@Nonnull VectorProviderAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
+         this.workerId = argument.workerId;
       }
 
       public Argument(@Nonnull DensityAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
+         this.workerId = argument.workerId;
       }
    }
 
@@ -101,7 +111,7 @@ public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap
       @Nonnull
       public VectorProviderAsset asset;
       @Nonnull
-      public Map<Thread, VectorProvider> threadInstances;
+      public Map<WorkerIndexer.Id, VectorProvider> threadInstances;
 
       public Exported(boolean isSingleInstance, @Nonnull VectorProviderAsset asset) {
          this.isSingleInstance = isSingleInstance;

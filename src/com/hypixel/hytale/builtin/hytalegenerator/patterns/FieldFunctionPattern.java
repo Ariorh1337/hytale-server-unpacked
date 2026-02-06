@@ -13,6 +13,7 @@ public class FieldFunctionPattern extends Pattern {
    private final SpaceSize readSpaceSize;
    @Nonnull
    private final List<FieldFunctionPattern.Delimiter> delimiters;
+   @Nonnull
    private final Density.Context rDensityContext;
 
    public FieldFunctionPattern(@Nonnull Density field) {

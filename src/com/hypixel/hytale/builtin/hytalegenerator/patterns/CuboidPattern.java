@@ -13,9 +13,13 @@ public class CuboidPattern extends Pattern {
    private final Vector3i max;
    @Nonnull
    private final SpaceSize readSpaceSize;
+   @Nonnull
    private final Vector3i rScanMin;
+   @Nonnull
    private final Vector3i rScanMax;
+   @Nonnull
    private final Vector3i rChildPosition;
+   @Nonnull
    private final Pattern.Context rChildContext;
 
    public CuboidPattern(@Nonnull Pattern subPattern, @Nonnull Vector3i min, @Nonnull Vector3i max) {

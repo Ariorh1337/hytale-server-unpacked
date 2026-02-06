@@ -17,7 +17,9 @@ public class WallPattern extends Pattern {
    private final List<WallPattern.WallDirection> directions;
    private final boolean matchAll;
    private final SpaceSize readSpaceSize;
+   @Nonnull
    private final Vector3i rWallPosition;
+   @Nonnull
    private final Pattern.Context rWallContext;
 
    public WallPattern(@Nonnull Pattern wallPattern, @Nonnull Pattern originPattern, @Nonnull List<WallPattern.WallDirection> wallDirections, boolean matchAll) {
@@ -93,6 +95,7 @@ public class WallPattern extends Pattern {
       E,
       W;
 
+      @Nonnull
       public static final Codec<WallPattern.WallDirection> CODEC = new EnumCodec<>(WallPattern.WallDirection.class, EnumCodec.EnumStyle.LEGACY);
    }
 }

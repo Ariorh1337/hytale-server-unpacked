@@ -10,6 +10,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class ImportedVectorProviderAsset extends VectorProviderAsset {
+   @Nonnull
    public static final BuilderCodec<ImportedVectorProviderAsset> CODEC = BuilderCodec.builder(
          ImportedVectorProviderAsset.class, ImportedVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
@@ -31,11 +32,10 @@ public class ImportedVectorProviderAsset extends VectorProviderAsset {
       }
 
       if (exported.isSingleInstance) {
-         Thread thread = Thread.currentThread();
-         VectorProvider builtInstance = exported.threadInstances.get(thread);
+         VectorProvider builtInstance = exported.threadInstances.get(argument.workerId);
          if (builtInstance == null) {
             builtInstance = exported.asset.build(argument);
-            exported.threadInstances.put(thread, builtInstance);
+            exported.threadInstances.put(argument.workerId, builtInstance);
          }
 
          return builtInstance;

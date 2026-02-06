@@ -54,51 +54,66 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class EntityTrackerSystems {
+   @Nonnull
    public static final SystemGroup<EntityStore> FIND_VISIBLE_ENTITIES_GROUP = EntityStore.REGISTRY.registerSystemGroup();
+   @Nonnull
    public static final SystemGroup<EntityStore> QUEUE_UPDATE_GROUP = EntityStore.REGISTRY.registerSystemGroup();
 
    public static boolean despawnAll(@Nonnull Ref<EntityStore> viewerRef, @Nonnull Store<EntityStore> store) {
-      EntityTrackerSystems.EntityViewer viewer = store.getComponent(viewerRef, EntityTrackerSystems.EntityViewer.getComponentType());
-      if (viewer == null) {
+      if (!viewerRef.isValid()) {
          return false;
       }
 
-      int networkId = viewer.sent.removeInt(viewerRef);
+      EntityTrackerSystems.EntityViewer entityViewerComponent = store.getComponent(viewerRef, EntityTrackerSystems.EntityViewer.getComponentType());
+      if (entityViewerComponent == null) {
+         return false;
+      }
+
+      int networkId = entityViewerComponent.sent.removeInt(viewerRef);
       EntityUpdates packet = new EntityUpdates();
-      packet.removed = viewer.sent.values().toIntArray();
-      viewer.packetReceiver.writeNoCache(packet);
+      packet.removed = entityViewerComponent.sent.values().toIntArray();
+      entityViewerComponent.packetReceiver.writeNoCache(packet);
       clear(viewerRef, store);
-      viewer.sent.put(viewerRef, networkId);
+      entityViewerComponent.sent.put(viewerRef, networkId);
       return true;
    }
 
    public static boolean clear(@Nonnull Ref<EntityStore> viewerRef, @Nonnull Store<EntityStore> store) {
-      EntityTrackerSystems.EntityViewer viewer = store.getComponent(viewerRef, EntityTrackerSystems.EntityViewer.getComponentType());
-      if (viewer == null) {
+      if (!viewerRef.isValid()) {
          return false;
       }
 
-      for (Ref<EntityStore> ref : viewer.sent.keySet()) {
-         EntityTrackerSystems.Visible visible = store.getComponent(ref, EntityTrackerSystems.Visible.getComponentType());
-         if (visible != null) {
-            visible.visibleTo.remove(viewerRef);
+      EntityTrackerSystems.EntityViewer entityViewerComponent = store.getComponent(viewerRef, EntityTrackerSystems.EntityViewer.getComponentType());
+      if (entityViewerComponent == null) {
+         return false;
+      }
+
+      for (Ref<EntityStore> ref : entityViewerComponent.sent.keySet()) {
+         if (ref != null && ref.isValid()) {
+            EntityTrackerSystems.Visible visibleComponent = store.getComponent(ref, EntityTrackerSystems.Visible.getComponentType());
+            if (visibleComponent != null) {
+               visibleComponent.visibleTo.remove(viewerRef);
+            }
          }
       }
 
-      viewer.sent.clear();
+      entityViewerComponent.sent.clear();
       return true;
    }
 
    public static class AddToVisible extends EntityTickingSystem<EntityStore> {
+      @Nonnull
       public static final Set<Dependency<EntityStore>> DEPENDENCIES = Collections.singleton(
          new SystemDependency<>(Order.AFTER, EntityTrackerSystems.EnsureVisibleComponent.class)
       );
+      @Nonnull
       private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType;
+      @Nonnull
       private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
 
       public AddToVisible(
-         ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType,
-         ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType
+         @Nonnull ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType,
+         @Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType
       ) {
          this.entityViewerComponentType = entityViewerComponentType;
          this.visibleComponentType = visibleComponentType;
@@ -128,23 +143,31 @@ public class EntityTrackerSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         Ref<EntityStore> viewerRef = archetypeChunk.getReferenceTo(index);
-         EntityTrackerSystems.EntityViewer viewer = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         EntityTrackerSystems.EntityViewer entityViewerComponent = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+         assert entityViewerComponent != null;
 
-         for (Ref<EntityStore> ref : viewer.visible) {
-            commandBuffer.getComponent(ref, this.visibleComponentType).addViewerParallel(viewerRef, viewer);
+         for (Ref<EntityStore> vislbleRef : entityViewerComponent.visible) {
+            if (vislbleRef != null && vislbleRef.isValid()) {
+               EntityTrackerSystems.Visible visibleComponent = commandBuffer.getComponent(vislbleRef, this.visibleComponentType);
+               if (visibleComponent != null) {
+                  visibleComponent.addViewerParallel(ref, entityViewerComponent);
+               }
+            }
          }
       }
    }
 
    public static class ClearEntityViewers extends EntityTickingSystem<EntityStore> {
+      @Nonnull
       public static final Set<Dependency<EntityStore>> DEPENDENCIES = Collections.singleton(
          new SystemGroupDependency<>(Order.BEFORE, EntityTrackerSystems.FIND_VISIBLE_ENTITIES_GROUP)
       );
-      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> componentType;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType;
 
-      public ClearEntityViewers(ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> componentType) {
-         this.componentType = componentType;
+      public ClearEntityViewers(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType) {
+         this.entityViewerComponentType = entityViewerComponentType;
       }
 
       @Nonnull
@@ -155,7 +178,7 @@ public class EntityTrackerSystems {
 
       @Override
       public Query<EntityStore> getQuery() {
-         return this.componentType;
+         return this.entityViewerComponentType;
       }
 
       @Override
@@ -171,22 +194,25 @@ public class EntityTrackerSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         EntityTrackerSystems.EntityViewer viewer = archetypeChunk.getComponent(index, this.componentType);
-         viewer.visible.clear();
-         viewer.lodExcludedCount = 0;
-         viewer.hiddenCount = 0;
+         EntityTrackerSystems.EntityViewer entityViewerComponent = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+         assert entityViewerComponent != null;
+         entityViewerComponent.visible.clear();
+         entityViewerComponent.lodExcludedCount = 0;
+         entityViewerComponent.hiddenCount = 0;
       }
    }
 
    public static class ClearPreviouslyVisible extends EntityTickingSystem<EntityStore> {
+      @Nonnull
       public static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(
          new SystemDependency<>(Order.AFTER, EntityTrackerSystems.ClearEntityViewers.class),
          new SystemGroupDependency<EntityStore>(Order.AFTER, EntityTrackerSystems.FIND_VISIBLE_ENTITIES_GROUP)
       );
-      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> componentType;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
 
-      public ClearPreviouslyVisible(ComponentType<EntityStore, EntityTrackerSystems.Visible> componentType) {
-         this.componentType = componentType;
+      public ClearPreviouslyVisible(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType) {
+         this.visibleComponentType = visibleComponentType;
       }
 
       @Nonnull
@@ -197,7 +223,7 @@ public class EntityTrackerSystems {
 
       @Override
       public Query<EntityStore> getQuery() {
-         return this.componentType;
+         return this.visibleComponentType;
       }
 
       @Override
@@ -213,24 +239,27 @@ public class EntityTrackerSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         EntityTrackerSystems.Visible visible = archetypeChunk.getComponent(index, this.componentType);
-         Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> oldVisibleTo = visible.previousVisibleTo;
-         visible.previousVisibleTo = visible.visibleTo;
-         visible.visibleTo = oldVisibleTo;
-         visible.visibleTo.clear();
-         visible.newlyVisibleTo.clear();
+         EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.visibleComponentType);
+         assert visibleComponent != null;
+         Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> oldVisibleTo = visibleComponent.previousVisibleTo;
+         visibleComponent.previousVisibleTo = visibleComponent.visibleTo;
+         visibleComponent.visibleTo = oldVisibleTo;
+         visibleComponent.visibleTo.clear();
+         visibleComponent.newlyVisibleTo.clear();
       }
    }
 
    public static class CollectVisible extends EntityTickingSystem<EntityStore> {
-      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> componentType;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType;
+      @Nonnull
       private final Query<EntityStore> query;
       @Nonnull
       private final Set<Dependency<EntityStore>> dependencies;
 
-      public CollectVisible(ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> componentType) {
-         this.componentType = componentType;
-         this.query = Archetype.of(componentType, TransformComponent.getComponentType());
+      public CollectVisible(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType) {
+         this.entityViewerComponentType = entityViewerComponentType;
+         this.query = Archetype.of(entityViewerComponentType, TransformComponent.getComponentType());
          this.dependencies = Collections.singleton(new SystemDependency<>(Order.AFTER, NetworkSendableSpatialSystem.class));
       }
 
@@ -264,14 +293,16 @@ public class EntityTrackerSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         TransformComponent transform = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-         Vector3d position = transform.getPosition();
-         EntityTrackerSystems.EntityViewer entityViewer = archetypeChunk.getComponent(index, this.componentType);
+         TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+         assert transformComponent != null;
+         Vector3d position = transformComponent.getPosition();
+         EntityTrackerSystems.EntityViewer entityViewerComponent = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+         assert entityViewerComponent != null;
          SpatialStructure<Ref<EntityStore>> spatialStructure = store.getResource(EntityModule.get().getNetworkSendableSpatialResourceType())
             .getSpatialStructure();
          ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
-         spatialStructure.collect(position, entityViewer.viewRadiusBlocks, results);
-         entityViewer.visible.addAll(results);
+         spatialStructure.collect(position, entityViewerComponent.viewRadiusBlocks, results);
+         entityViewerComponent.visible.addAll(results);
       }
    }
 
@@ -319,15 +350,15 @@ public class EntityTrackerSystems {
       ) {
          EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.visibleComponentType);
          assert visibleComponent != null;
-         Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
          EffectControllerComponent effectControllerComponent = archetypeChunk.getComponent(index, this.effectControllerComponentType);
          assert effectControllerComponent != null;
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
          if (!visibleComponent.newlyVisibleTo.isEmpty()) {
-            queueFullUpdate(entityRef, effectControllerComponent, visibleComponent.newlyVisibleTo);
+            queueFullUpdate(ref, effectControllerComponent, visibleComponent.newlyVisibleTo);
          }
 
          if (effectControllerComponent.consumeNetworkOutdated()) {
-            queueUpdatesFor(entityRef, effectControllerComponent, visibleComponent.visibleTo, visibleComponent.newlyVisibleTo);
+            queueUpdatesFor(ref, effectControllerComponent, visibleComponent.visibleTo, visibleComponent.newlyVisibleTo);
          }
       }
 
@@ -369,15 +400,18 @@ public class EntityTrackerSystems {
    }
 
    public static class EnsureVisibleComponent extends EntityTickingSystem<EntityStore> {
+      @Nonnull
       public static final Set<Dependency<EntityStore>> DEPENDENCIES = Collections.singleton(
          new SystemDependency<>(Order.AFTER, EntityTrackerSystems.ClearPreviouslyVisible.class)
       );
+      @Nonnull
       private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType;
+      @Nonnull
       private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
 
       public EnsureVisibleComponent(
-         ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType,
-         ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType
+         @Nonnull ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType,
+         @Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType
       ) {
          this.entityViewerComponentType = entityViewerComponentType;
          this.visibleComponentType = visibleComponentType;
@@ -407,9 +441,12 @@ public class EntityTrackerSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         for (Ref<EntityStore> ref : archetypeChunk.getComponent(index, this.entityViewerComponentType).visible) {
-            if (!commandBuffer.getArchetype(ref).contains(this.visibleComponentType)) {
-               commandBuffer.ensureComponent(ref, this.visibleComponentType);
+         EntityTrackerSystems.EntityViewer entityViewerComponent = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+         assert entityViewerComponent != null;
+
+         for (Ref<EntityStore> visibleRef : entityViewerComponent.visible) {
+            if (visibleRef != null && visibleRef.isValid() && !commandBuffer.getArchetype(visibleRef).contains(this.visibleComponentType)) {
+               commandBuffer.ensureComponent(visibleRef, this.visibleComponentType);
             }
          }
       }
@@ -473,9 +510,13 @@ public class EntityTrackerSystems {
 
    public static class EntityViewer implements Component<EntityStore> {
       public int viewRadiusBlocks;
+      @Nonnull
       public IPacketReceiver packetReceiver;
+      @Nonnull
       public Set<Ref<EntityStore>> visible;
+      @Nonnull
       public Map<Ref<EntityStore>, EntityTrackerSystems.EntityUpdate> updates;
+      @Nonnull
       public Object2IntMap<Ref<EntityStore>> sent;
       public int lodExcludedCount;
       public int hiddenCount;
@@ -484,7 +525,7 @@ public class EntityTrackerSystems {
          return EntityModule.get().getEntityViewerComponentType();
       }
 
-      public EntityViewer(int viewRadiusBlocks, IPacketReceiver packetReceiver) {
+      public EntityViewer(int viewRadiusBlocks, @Nonnull IPacketReceiver packetReceiver) {
          this.viewRadiusBlocks = viewRadiusBlocks;
          this.packetReceiver = packetReceiver;
          this.visible = new ObjectOpenHashSet<>();
@@ -513,7 +554,7 @@ public class EntityTrackerSystems {
          return new EntityTrackerSystems.EntityViewer(this);
       }
 
-      public void queueRemove(Ref<EntityStore> ref, ComponentUpdateType type) {
+      public void queueRemove(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentUpdateType type) {
          if (!this.visible.contains(ref)) {
             throw new IllegalArgumentException("Entity is not visible!");
          }
@@ -521,7 +562,7 @@ public class EntityTrackerSystems {
          this.updates.computeIfAbsent(ref, k -> new EntityTrackerSystems.EntityUpdate()).queueRemove(type);
       }
 
-      public void queueUpdate(Ref<EntityStore> ref, ComponentUpdate update) {
+      public void queueUpdate(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentUpdate update) {
          if (!this.visible.contains(ref)) {
             throw new IllegalArgumentException("Entity is not visible!");
          }
@@ -531,14 +572,16 @@ public class EntityTrackerSystems {
    }
 
    public static class RemoveEmptyVisibleComponent extends EntityTickingSystem<EntityStore> {
+      @Nonnull
       public static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(
          new SystemDependency<>(Order.AFTER, EntityTrackerSystems.AddToVisible.class),
          new SystemGroupDependency<EntityStore>(Order.BEFORE, EntityTrackerSystems.QUEUE_UPDATE_GROUP)
       );
-      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> componentType;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
 
-      public RemoveEmptyVisibleComponent(ComponentType<EntityStore, EntityTrackerSystems.Visible> componentType) {
-         this.componentType = componentType;
+      public RemoveEmptyVisibleComponent(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType) {
+         this.visibleComponentType = visibleComponentType;
       }
 
       @Nonnull
@@ -549,7 +592,7 @@ public class EntityTrackerSystems {
 
       @Override
       public Query<EntityStore> getQuery() {
-         return this.componentType;
+         return this.visibleComponentType;
       }
 
       @Override
@@ -565,22 +608,25 @@ public class EntityTrackerSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         if (archetypeChunk.getComponent(index, this.componentType).visibleTo.isEmpty()) {
-            commandBuffer.removeComponent(archetypeChunk.getReferenceTo(index), this.componentType);
+         EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.visibleComponentType);
+         assert visibleComponent != null;
+         if (visibleComponent.visibleTo.isEmpty()) {
+            commandBuffer.removeComponent(archetypeChunk.getReferenceTo(index), this.visibleComponentType);
          }
       }
    }
 
    public static class RemoveVisibleComponent extends HolderSystem<EntityStore> {
-      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> componentType;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
 
-      public RemoveVisibleComponent(ComponentType<EntityStore, EntityTrackerSystems.Visible> componentType) {
-         this.componentType = componentType;
+      public RemoveVisibleComponent(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType) {
+         this.visibleComponentType = visibleComponentType;
       }
 
       @Override
       public Query<EntityStore> getQuery() {
-         return this.componentType;
+         return this.visibleComponentType;
       }
 
       @Override
@@ -589,18 +635,22 @@ public class EntityTrackerSystems {
 
       @Override
       public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-         holder.removeComponent(this.componentType);
+         holder.removeComponent(this.visibleComponentType);
       }
    }
 
    public static class SendPackets extends EntityTickingSystem<EntityStore> {
+      @Nonnull
       public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+      @Nonnull
       public static final ThreadLocal<IntList> INT_LIST_THREAD_LOCAL = ThreadLocal.withInitial(IntArrayList::new);
+      @Nonnull
       public static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(new SystemGroupDependency<>(Order.AFTER, EntityTrackerSystems.QUEUE_UPDATE_GROUP));
-      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> componentType;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType;
 
-      public SendPackets(ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> componentType) {
-         this.componentType = componentType;
+      public SendPackets(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType) {
+         this.entityViewerComponentType = entityViewerComponentType;
       }
 
       @Nullable
@@ -617,7 +667,7 @@ public class EntityTrackerSystems {
 
       @Override
       public Query<EntityStore> getQuery() {
-         return this.componentType;
+         return this.entityViewerComponentType;
       }
 
       @Override
@@ -633,61 +683,64 @@ public class EntityTrackerSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         EntityTrackerSystems.EntityViewer viewer = archetypeChunk.getComponent(index, this.componentType);
+         EntityTrackerSystems.EntityViewer entityViewerComponent = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+         assert entityViewerComponent != null;
          IntList removedEntities = INT_LIST_THREAD_LOCAL.get();
          removedEntities.clear();
-         int before = viewer.updates.size();
-         viewer.updates.entrySet().removeIf(v -> !v.getKey().isValid());
-         if (before != viewer.updates.size()) {
-            LOGGER.atWarning().log("Removed %d invalid updates for removed entities.", (int)(before - viewer.updates.size()));
+         int before = entityViewerComponent.updates.size();
+         entityViewerComponent.updates.entrySet().removeIf(v -> !v.getKey().isValid());
+         if (before != entityViewerComponent.updates.size()) {
+            LOGGER.atWarning().log("Removed %d invalid updates for removed entities.", (int)(before - entityViewerComponent.updates.size()));
          }
 
-         ObjectIterator<Object2IntMap.Entry<Ref<EntityStore>>> iterator = viewer.sent.object2IntEntrySet().iterator();
+         ObjectIterator<Object2IntMap.Entry<Ref<EntityStore>>> iterator = entityViewerComponent.sent.object2IntEntrySet().iterator();
 
          while (iterator.hasNext()) {
             Object2IntMap.Entry<Ref<EntityStore>> entry = iterator.next();
             Ref<EntityStore> ref = entry.getKey();
-            if (!ref.isValid() || !viewer.visible.contains(ref)) {
+            if (ref == null || !ref.isValid() || !entityViewerComponent.visible.contains(ref)) {
                removedEntities.add(entry.getIntValue());
                iterator.remove();
-               if (viewer.updates.remove(ref) != null) {
+               if (entityViewerComponent.updates.remove(ref) != null) {
                   LOGGER.atSevere().log("Entity can't be removed and also receive an update! " + ref);
                }
             }
          }
 
-         if (!removedEntities.isEmpty() || !viewer.updates.isEmpty()) {
-            Iterator<Ref<EntityStore>> iteratorx = viewer.updates.keySet().iterator();
+         if (!removedEntities.isEmpty() || !entityViewerComponent.updates.isEmpty()) {
+            Iterator<Ref<EntityStore>> iteratorx = entityViewerComponent.updates.keySet().iterator();
 
             while (iteratorx.hasNext()) {
                Ref<EntityStore> ref = iteratorx.next();
-               if (!ref.isValid() || ref.getStore() != store) {
+               if (ref == null || !ref.isValid() || ref.getStore() != store) {
                   iteratorx.remove();
-               } else if (!viewer.sent.containsKey(ref)) {
-                  int networkId = commandBuffer.getComponent(ref, NetworkId.getComponentType()).getId();
+               } else if (!entityViewerComponent.sent.containsKey(ref)) {
+                  NetworkId networkIdComponent = commandBuffer.getComponent(ref, NetworkId.getComponentType());
+                  assert networkIdComponent != null;
+                  int networkId = networkIdComponent.getId();
                   if (networkId == -1) {
                      throw new IllegalArgumentException("Invalid entity network id: " + ref);
                   }
 
-                  viewer.sent.put(ref, networkId);
+                  entityViewerComponent.sent.put(ref, networkId);
                }
             }
 
             EntityUpdates packet = new EntityUpdates();
             packet.removed = !removedEntities.isEmpty() ? removedEntities.toIntArray() : null;
-            packet.updates = new com.hypixel.hytale.protocol.EntityUpdate[viewer.updates.size()];
+            packet.updates = new com.hypixel.hytale.protocol.EntityUpdate[entityViewerComponent.updates.size()];
             int i = 0;
 
-            for (Entry<Ref<EntityStore>, EntityTrackerSystems.EntityUpdate> entry : viewer.updates.entrySet()) {
+            for (Entry<Ref<EntityStore>, EntityTrackerSystems.EntityUpdate> entry : entityViewerComponent.updates.entrySet()) {
                com.hypixel.hytale.protocol.EntityUpdate entityUpdate = packet.updates[i++] = new com.hypixel.hytale.protocol.EntityUpdate();
-               entityUpdate.networkId = viewer.sent.getInt(entry.getKey());
+               entityUpdate.networkId = entityViewerComponent.sent.getInt(entry.getKey());
                EntityTrackerSystems.EntityUpdate update = entry.getValue();
                entityUpdate.removed = update.toRemovedArray();
                entityUpdate.updates = update.toUpdatesArray();
             }
 
-            viewer.updates.clear();
-            viewer.packetReceiver.writeNoCache(packet);
+            entityViewerComponent.updates.clear();
+            entityViewerComponent.packetReceiver.writeNoCache(packet);
          }
       }
    }
@@ -713,13 +766,13 @@ public class EntityTrackerSystems {
          return new EntityTrackerSystems.Visible();
       }
 
-      public void addViewerParallel(Ref<EntityStore> ref, EntityTrackerSystems.EntityViewer entityViewer) {
+      public void addViewerParallel(@Nonnull Ref<EntityStore> ref, @Nonnull EntityTrackerSystems.EntityViewer entityViewerComponent) {
          long stamp = this.lock.writeLock();
 
          try {
-            this.visibleTo.put(ref, entityViewer);
+            this.visibleTo.put(ref, entityViewerComponent);
             if (!this.previousVisibleTo.containsKey(ref)) {
-               this.newlyVisibleTo.put(ref, entityViewer);
+               this.newlyVisibleTo.put(ref, entityViewerComponent);
             }
          } finally {
             this.lock.unlockWrite(stamp);

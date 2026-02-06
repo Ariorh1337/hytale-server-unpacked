@@ -106,4 +106,8 @@ public final class Constants {
    private static Path getUniversePath() {
       return OPTION_SET.has(Options.UNIVERSE) ? OPTION_SET.valueOf(Options.UNIVERSE) : Path.of("universe");
    }
+
+   public static boolean shouldSkipModValidation() {
+      return OPTION_SET.has(Options.SKIP_MOD_VALIDATION) || HytaleServer.get().getConfig().shouldSkipModValidation();
+   }
 }

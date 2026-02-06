@@ -129,6 +129,11 @@ public class HytaleServer {
          options.setEnvironment("release");
          options.setTag("patchline", ManifestUtil.getPatchline());
          options.setServerName(NetworkUtil.getHostName());
+         UUID distinctId = HardwareUtil.getUUID();
+         if (distinctId != null) {
+            options.setDistinctId(distinctId.toString());
+         }
+
          options.setBeforeSend((event, hint) -> {
             Throwable throwable = event.getThrowable();
             if (PluginClassLoader.isFromThirdPartyPlugin(throwable)) {
@@ -214,6 +219,7 @@ public class HytaleServer {
             return event;
          });
          Sentry.init(options);
+         Sentry.startSession();
          Sentry.configureScope(
             scope -> {
                UUID hardwareUUID = HardwareUtil.getUUID();
@@ -327,8 +333,8 @@ public class HytaleServer {
 
             if (loadAssetEvent.isShouldShutdown()) {
                List<String> reasons = loadAssetEvent.getReasons();
-               String join = String.join(", ", reasons);
-               LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s): %s", reasons.size(), join);
+               String join = String.join("\n", reasons);
+               LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s):\n%s", reasons.size(), join);
                this.shutdownServer(ShutdownReason.VALIDATE_ERROR.withMessage(join));
                return;
             }
@@ -431,7 +437,7 @@ public class HytaleServer {
       Objects.requireNonNull(reason, "Server shutdown reason can't be null!");
       if (this.shutdown.getAndSet(reason) == null) {
          if (reason.getMessage() != null) {
-            this.sendSingleplayerSignal("-=|Shutdown|" + reason.getMessage());
+            this.sendSingleplayerSignal("-=|Shutdown|" + reason.getMessage().replace("\n", "\\n"));
          }
 
          Thread shutdownThread = new Thread(() -> this.shutdown0(reason), "ShutdownThread");
@@ -462,6 +468,7 @@ public class HytaleServer {
 
       this.aliveLock.release();
       HytaleLogManager.resetFinally();
+      Sentry.endSession();
       SCHEDULED_EXECUTOR.schedule(() -> {
          LOGGER.at(Level.SEVERE).log("Forcing shutdown!");
          Runtime.getRuntime().halt(reason.getExitCode());

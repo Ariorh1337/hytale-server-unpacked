@@ -18,12 +18,19 @@ public class PositionsDensity extends Density {
    private final ReturnType returnType;
    @Nonnull
    private final DistanceFunction distanceFunction;
+   @Nonnull
    private final Vector3d rMin;
+   @Nonnull
    private final Vector3d rMax;
+   @Nonnull
    private final Vector3d rClosestPoint;
+   @Nonnull
    private final Vector3d rPreviousClosestPoint;
+   @Nonnull
    private final Vector3d rLocalPoint;
+   @Nonnull
    private final double[] rDistance;
+   @Nonnull
    private final boolean[] rHasClosestPoint;
 
    public PositionsDensity(

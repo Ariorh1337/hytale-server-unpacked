@@ -75,9 +75,9 @@ public class InitialPacketHandler extends PacketHandler {
       this.receivedConnect = true;
       this.clearTimeout();
       PacketHandler.logConnectionTimings(this.channel, "Connect", Level.FINE);
-      if (packet.protocolCrc != 701662755) {
+      if (packet.protocolCrc != 672031543) {
          int clientBuild = packet.protocolBuildNumber;
-         int serverBuild = 5;
+         int serverBuild = 12;
          int errorCode;
          if (clientBuild < serverBuild) {
             errorCode = 5;

@@ -5,6 +5,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.PropField;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.AssetManager;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.SettingsAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.PositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
 import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkGenerator;
@@ -26,12 +27,15 @@ import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NPropStage;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NStage;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NTerrainStage;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NTintStage;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
 import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
@@ -56,12 +60,16 @@ import javax.annotation.Nonnull;
 public class HytaleGenerator extends JavaPlugin {
    private AssetManager assetManager;
    private Runnable assetReloadListener;
+   @Nonnull
    private final Map<ChunkRequest.GeneratorProfile, ChunkGenerator> generators = new HashMap<>();
+   @Nonnull
    private final Semaphore chunkGenerationSemaphore = new Semaphore(1);
    private int concurrency;
    private ExecutorService mainExecutor;
    private ThreadPoolExecutor concurrentExecutor;
    private int worldCounter;
+   @Nonnull
+   public static Vector3d DEFAULT_SPAWN_POSITION = new Vector3d(0.0, 140.0, 0.0);
 
    @Override
    protected void start() {
@@ -73,6 +81,38 @@ public class HytaleGenerator extends JavaPlugin {
       if (this.assetReloadListener == null) {
          this.assetReloadListener = () -> this.reloadGenerators();
          this.assetManager.registerReloadListener(this.assetReloadListener);
+      }
+   }
+
+   @Nonnull
+   public List<Vector3d> getSpawnPositions(@Nonnull ChunkRequest.GeneratorProfile profile, int maxPositionsCount) {
+      assert maxPositionsCount >= 0;
+      if (profile.worldStructureName() == null) {
+         LoggerUtil.getLogger().warning("World Structure asset not loaded.");
+         return List.of(DEFAULT_SPAWN_POSITION);
+      } else {
+         WorldStructureAsset worldStructureAsset = this.assetManager.getWorldStructureAsset(profile.worldStructureName());
+         if (worldStructureAsset == null) {
+            LoggerUtil.getLogger().warning("World Structure asset not found: " + profile.worldStructureName());
+            return List.of(DEFAULT_SPAWN_POSITION);
+         } else {
+            SeedBox seed = new SeedBox(profile.seed());
+            PositionProvider spawnPositionProvider = worldStructureAsset.getSpawnPositionsAsset()
+               .build(new PositionProviderAsset.Argument(seed, new ReferenceBundle(), WorkerIndexer.Id.MAIN));
+            List<Vector3d> positions = new ArrayList<>(maxPositionsCount);
+            PositionProvider.Context context = new PositionProvider.Context(
+               new Vector3d(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY),
+               new Vector3d(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY),
+               position -> {
+                  if (positions.size() < maxPositionsCount) {
+                     positions.add(position);
+                  }
+               },
+               null
+            );
+            spawnPositionProvider.positionsIn(context);
+            return positions;
+         }
       }
    }
 
@@ -133,7 +173,7 @@ public class HytaleGenerator extends JavaPlugin {
       while (workerSession.hasNext()) {
          WorkerIndexer.Id workerId = workerSession.next();
          CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            WorldStructure worldStructure = worldStructureAsset.build(new WorldStructureAsset.Argument(materialCache, seed));
+            WorldStructure worldStructure = worldStructureAsset.build(new WorldStructureAsset.Argument(materialCache, seed, workerId));
             worldStructure_workerData.set(workerId, worldStructure);
          }, this.concurrentExecutor).handle((r, e) -> {
             if (e == null) {
@@ -262,6 +302,7 @@ public class HytaleGenerator extends JavaPlugin {
          .withMaterialCache(materialCache)
          .withConcurrentExecutor(this.concurrentExecutor, workerIndexer)
          .withBufferCapacity(bufferCapacityFactor, targetViewDistance, targetPlayerCount)
+         .withSpawnPositions(worldStructure_worker0.getSpawnPositions())
          .build();
    }
 

@@ -19,7 +19,9 @@ public class GapPattern extends Pattern {
    private Pattern gapPattern;
    private Pattern anchorPattern;
    private SpaceSize readSpaceSize;
+   @Nonnull
    private final Vector3i rChildPosition;
+   @Nonnull
    private final Pattern.Context rChildContext;
 
    public GapPattern(

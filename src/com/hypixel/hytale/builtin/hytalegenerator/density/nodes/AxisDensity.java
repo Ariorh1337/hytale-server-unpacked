@@ -8,17 +8,24 @@ import javax.annotation.Nonnull;
 
 public class AxisDensity extends Density {
    public static final double ZERO_DELTA = 1.0E-9;
+   @Nonnull
    private static final Vector3d ZERO_VECTOR = new Vector3d();
    @Nonnull
    private final Double2DoubleFunction distanceCurve;
    @Nonnull
    private final Vector3d axis;
    private final boolean isAnchored;
+   @Nonnull
    private final Vector3d rPosition;
+   @Nonnull
    private final Vector3d r0;
+   @Nonnull
    private final Vector3d r1;
+   @Nonnull
    private final Vector3d r2;
+   @Nonnull
    private final Vector3d r3;
+   @Nonnull
    private final Vector3d r4;
 
    public AxisDensity(@Nonnull Double2DoubleFunction distanceCurve, @Nonnull Vector3d axis, boolean isAnchored) {

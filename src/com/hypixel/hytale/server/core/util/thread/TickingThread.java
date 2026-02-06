@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.util.thread;
 
+import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import java.util.concurrent.CompletableFuture;
@@ -24,6 +25,10 @@ public abstract class TickingThread implements Runnable {
    private Thread thread;
    @Nonnull
    private CompletableFuture<Void> startedFuture = new CompletableFuture<>();
+   @Nullable
+   private PluginIdentifier possibleFailureCause;
+   @Nullable
+   private Throwable failureException;
 
    public TickingThread(String threadName) {
       this(threadName, 30, false);
@@ -74,7 +79,16 @@ public abstract class TickingThread implements Runnable {
       } catch (InterruptedException ignored) {
          Thread.currentThread().interrupt();
       } catch (Throwable t) {
-         HytaleLogger.getLogger().at(Level.SEVERE).withCause(t).log("Exception in thread %s:", this.thread);
+         this.failureException = t;
+         this.possibleFailureCause = PluginIdentifier.identifyThirdPartyPlugin(t);
+         if (this.possibleFailureCause == null) {
+            HytaleLogger.getLogger().at(Level.SEVERE).withCause(t).log("Exception in thread %s:", this.thread);
+         } else {
+            HytaleLogger.getLogger()
+               .at(Level.SEVERE)
+               .withCause(t)
+               .log("Exception in thread %s potentially caused by %s:", this.thread, this.possibleFailureCause);
+         }
       }
 
       if (this.needsShutdown.getAndSet(false)) {
@@ -193,6 +207,16 @@ public abstract class TickingThread implements Runnable {
 
    public boolean isStarted() {
       return this.thread != null && this.thread.isAlive() && this.needsShutdown.get();
+   }
+
+   @Nullable
+   public PluginIdentifier getPossibleFailureCause() {
+      return this.possibleFailureCause;
+   }
+
+   @Nullable
+   public Throwable getFailureException() {
+      return this.failureException;
    }
 
    @Deprecated

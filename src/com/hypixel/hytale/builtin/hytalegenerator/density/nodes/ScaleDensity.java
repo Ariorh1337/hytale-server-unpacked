@@ -11,7 +11,9 @@ public class ScaleDensity extends Density {
    private final boolean isInvalid;
    @Nullable
    private Density input;
+   @Nonnull
    private final Vector3d rChildPosition;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public ScaleDensity(double scaleX, double scaleY, double scaleZ, Density input) {

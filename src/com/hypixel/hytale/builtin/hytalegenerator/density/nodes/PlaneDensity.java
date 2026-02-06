@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 
 public class PlaneDensity extends Density {
    public static final double ZERO_DELTA = 1.0E-9;
+   @Nonnull
    private static final Vector3d ZERO_VECTOR = new Vector3d();
    @Nonnull
    private final Double2DoubleFunction distanceCurve;
@@ -16,12 +17,19 @@ public class PlaneDensity extends Density {
    private final Vector3d planeNormal;
    private final boolean isPlaneHorizontal;
    private final boolean isAnchored;
+   @Nonnull
    private final Vector3d rNearestPoint;
+   @Nonnull
    private final Vector3d rPosition;
+   @Nonnull
    private final Vector3d rVectorFromPlane;
+   @Nonnull
    private final Vector3d r0;
+   @Nonnull
    private final Vector3d r1;
+   @Nonnull
    private final Vector3d r2;
+   @Nonnull
    private final Vector3d r3;
 
    public PlaneDensity(@Nonnull Double2DoubleFunction distanceCurve, @Nonnull Vector3d planeNormal, boolean isAnchored) {

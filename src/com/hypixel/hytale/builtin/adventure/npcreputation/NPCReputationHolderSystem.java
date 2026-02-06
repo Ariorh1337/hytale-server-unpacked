@@ -19,12 +19,14 @@ import javax.annotation.Nonnull;
 public class NPCReputationHolderSystem extends HolderSystem<EntityStore> {
    @Nonnull
    private final ComponentType<EntityStore, ReputationGroupComponent> reputationGroupComponentType;
+   @Nonnull
    private final ComponentType<EntityStore, NPCEntity> npcEntityComponentType;
    @Nonnull
    private final Query<EntityStore> query;
 
    public NPCReputationHolderSystem(
-      @Nonnull ComponentType<EntityStore, ReputationGroupComponent> reputationGroupComponentType, ComponentType<EntityStore, NPCEntity> npcEntityComponentType
+      @Nonnull ComponentType<EntityStore, ReputationGroupComponent> reputationGroupComponentType,
+      @Nonnull ComponentType<EntityStore, NPCEntity> npcEntityComponentType
    ) {
       this.reputationGroupComponentType = reputationGroupComponentType;
       this.npcEntityComponentType = npcEntityComponentType;

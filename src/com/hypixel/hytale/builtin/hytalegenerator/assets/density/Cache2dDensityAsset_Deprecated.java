@@ -10,6 +10,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class Cache2dDensityAsset_Deprecated extends DensityAsset {
+   @Nonnull
    public static final BuilderCodec<Cache2dDensityAsset_Deprecated> CODEC = BuilderCodec.builder(
          Cache2dDensityAsset_Deprecated.class, Cache2dDensityAsset_Deprecated::new, DensityAsset.ABSTRACT_CODEC
       )

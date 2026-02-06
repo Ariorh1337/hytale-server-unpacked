@@ -20,7 +20,9 @@ public class SurfacePattern extends Pattern {
    private final List<Vector3i> surfacePositions;
    @Nonnull
    private final List<Vector3i> originPositions;
+   @Nonnull
    private final Vector3i rChildPosition;
+   @Nonnull
    private final Pattern.Context rChildContext;
 
    public SurfacePattern(

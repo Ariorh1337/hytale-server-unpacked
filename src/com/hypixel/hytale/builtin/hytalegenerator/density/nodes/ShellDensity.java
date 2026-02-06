@@ -16,6 +16,7 @@ public class ShellDensity extends Density {
    @Nonnull
    private final Vector3d axis;
    private final boolean isMirrored;
+   @Nonnull
    private final Vector3d rRadialVector;
 
    public ShellDensity(@Nonnull Double2DoubleFunction angleCurve, @Nonnull Double2DoubleFunction distanceCurve, @Nonnull Vector3d axis, boolean isMirrored) {

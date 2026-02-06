@@ -13,6 +13,7 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -205,12 +206,29 @@ public class NPCMemory extends Memory {
 
    public static class GatherMemoriesSystem extends EntityTickingSystem<EntityStore> {
       @Nonnull
-      public static final Query<EntityStore> QUERY = Query.and(
-         TransformComponent.getComponentType(), Player.getComponentType(), PlayerRef.getComponentType(), PlayerMemories.getComponentType()
-      );
+      private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, Player> playerComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
       private final double radius;
 
-      public GatherMemoriesSystem(double radius) {
+      public GatherMemoriesSystem(
+         @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType,
+         @Nonnull ComponentType<EntityStore, Player> playerComponentType,
+         @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType,
+         @Nonnull ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType,
+         double radius
+      ) {
+         this.transformComponentType = transformComponentType;
+         this.playerComponentType = playerComponentType;
+         this.playerRefComponentType = playerRefComponentType;
+         this.playerMemoriesComponentType = playerMemoriesComponentType;
+         this.query = Query.and(transformComponentType, playerComponentType, playerRefComponentType, playerMemoriesComponentType);
          this.radius = radius;
       }
 
@@ -222,21 +240,21 @@ public class NPCMemory extends Memory {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         Player playerComponent = archetypeChunk.getComponent(index, Player.getComponentType());
+         Player playerComponent = archetypeChunk.getComponent(index, this.playerComponentType);
          assert playerComponent != null;
          if (playerComponent.getGameMode() == GameMode.Adventure) {
-            TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+            TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
             assert transformComponent != null;
             Vector3d position = transformComponent.getPosition();
             SpatialResource<Ref<EntityStore>, EntityStore> npcSpatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
             ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             npcSpatialResource.getSpatialStructure().collect(position, this.radius, results);
             if (!results.isEmpty()) {
-               PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
+               PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
                assert playerRefComponent != null;
                Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                MemoriesPlugin memoriesPlugin = MemoriesPlugin.get();
-               PlayerMemories playerMemoriesComponent = archetypeChunk.getComponent(index, PlayerMemories.getComponentType());
+               PlayerMemories playerMemoriesComponent = archetypeChunk.getComponent(index, this.playerMemoriesComponentType);
                assert playerMemoriesComponent != null;
                NPCMemory temp = new NPCMemory();
                World world = commandBuffer.getExternalData().getWorld();
@@ -343,7 +361,7 @@ public class NPCMemory extends Memory {
       @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
-         return QUERY;
+         return this.query;
       }
    }
 }

@@ -1,7 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.scanners;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiDouble2DoubleFunction;
 import com.hypixel.hytale.builtin.hytalegenerator.framework.math.SeedGenerator;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.math.util.FastRandom;
@@ -10,14 +9,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class ColumnRandomScanner extends Scanner {
    private final int minY;
    private final int maxY;
    private final boolean isRelativeToPosition;
-   @Nullable
-   private final BiDouble2DoubleFunction bedFunction;
+   private final double baseHeight;
    private final int resultsCap;
    @Nonnull
    private final SeedGenerator seedGenerator;
@@ -27,19 +24,13 @@ public class ColumnRandomScanner extends Scanner {
    private final SpaceSize scanSpaceSize;
 
    public ColumnRandomScanner(
-      int minY,
-      int maxY,
-      int resultsCap,
-      int seed,
-      @Nonnull ColumnRandomScanner.Strategy strategy,
-      boolean isRelativeToPosition,
-      @Nullable BiDouble2DoubleFunction bedFunction
+      int minY, int maxY, int resultsCap, int seed, @Nonnull ColumnRandomScanner.Strategy strategy, boolean isRelativeToPosition, double baseHeight
    ) {
       if (resultsCap < 0) {
          throw new IllegalArgumentException();
       }
 
-      this.bedFunction = bedFunction;
+      this.baseHeight = baseHeight;
       this.minY = minY;
       this.maxY = maxY;
       this.isRelativeToPosition = isRelativeToPosition;
@@ -69,13 +60,10 @@ public class ColumnRandomScanner extends Scanner {
       if (this.isRelativeToPosition) {
          scanMinY = Math.max(context.position.y + this.minY, context.materialSpace.minY());
          scanMaxY = Math.min(context.position.y + this.maxY, context.materialSpace.maxY());
-      } else if (this.bedFunction != null) {
-         int bedY = (int)this.bedFunction.apply(context.position.x, context.position.z);
+      } else {
+         int bedY = (int)this.baseHeight;
          scanMinY = Math.max(bedY + this.minY, context.materialSpace.minY());
          scanMaxY = Math.min(bedY + this.maxY, context.materialSpace.maxY());
-      } else {
-         scanMinY = Math.max(this.minY, context.materialSpace.minY());
-         scanMaxY = Math.min(this.maxY, context.materialSpace.maxY());
       }
 
       int numberOfPossiblePositions = Math.max(0, scanMaxY - scanMinY);

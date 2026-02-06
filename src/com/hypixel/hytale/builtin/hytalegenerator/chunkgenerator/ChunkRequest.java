@@ -46,6 +46,11 @@ public record ChunkRequest(@Nonnull ChunkRequest.GeneratorProfile generatorProfi
          return Objects.hash(this.worldStructureName, this.seed, this.worldCounter);
       }
 
+      public ChunkRequest.GeneratorProfile clone() {
+         return new ChunkRequest.GeneratorProfile(this.worldStructureName, this.seed, this.worldCounter);
+      }
+
+      @Nonnull
       @Override
       public String toString() {
          return "GeneratorProfile{worldStructureName='" + this.worldStructureName + "', seed=" + this.seed + ", worldCounter=" + this.worldCounter + "}";

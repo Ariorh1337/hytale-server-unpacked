@@ -8,7 +8,9 @@ public class DensityGradientVectorProvider extends VectorProvider {
    @Nonnull
    private final Density density;
    private final double sampleDistance;
+   @Nonnull
    private final Density.Context rChildContext;
+   @Nonnull
    private final Vector3d rPosition;
 
    public DensityGradientVectorProvider(@Nonnull Density density, double sampleDistance) {

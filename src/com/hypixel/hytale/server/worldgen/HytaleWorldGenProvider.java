@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.worldgen;
 
-import com.hypixel.hytale.builtin.worldgen.WorldGenPlugin;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -14,8 +13,10 @@ import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenLoadExcept
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
 import com.hypixel.hytale.server.worldgen.loader.ChunkGeneratorJsonLoader;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabStoreRoot;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -23,7 +24,7 @@ public class HytaleWorldGenProvider implements IWorldGenProvider {
    public static final String ID = "Hytale";
    public static final String DEFAULT_NAME = "Default";
    public static final Semver MIN_VERSION = new Semver(0L, 0L, 0L);
-   public static final BuilderCodec<HytaleWorldGenProvider> CODEC = new HytaleWorldGenProvider.DefaultBuilderCodec(
+   public static final HytaleWorldGenProvider.WorldGenBuilderCodec CODEC = new HytaleWorldGenProvider.WorldGenBuilderCodec(
       BuilderCodec.builder(HytaleWorldGenProvider.class, HytaleWorldGenProvider::new)
          .documentation("The standard generator for Hytale.")
          .<String>append(new KeyedCodec<>("Name", Codec.STRING), (config, s) -> config.name = s, config -> config.name)
@@ -44,17 +45,30 @@ public class HytaleWorldGenProvider implements IWorldGenProvider {
    private String path;
 
    @Nonnull
+   public Semver getVersion() {
+      return this.version;
+   }
+
+   @Nonnull
    @Override
    public IWorldGen getGenerator() throws WorldGenLoadException {
       Path worldGenPath;
       if (this.path != null) {
-         worldGenPath = PathUtil.get(this.path);
+         worldGenPath = Path.of(this.path);
+         if (!PathUtil.isInTrustedRoot(worldGenPath)) {
+            throw new WorldGenLoadException("World gen path must be within a trusted directory: " + this.path);
+         }
       } else {
          worldGenPath = Universe.getWorldGenPath();
       }
 
       if (!"Default".equals(this.name) || !Files.exists(worldGenPath.resolve("World.json"))) {
-         worldGenPath = worldGenPath.resolve(this.name);
+         Path resolved = PathUtil.resolvePathWithinDir(worldGenPath, this.name);
+         if (resolved == null) {
+            throw new WorldGenLoadException("Invalid world gen name: " + this.name);
+         }
+
+         worldGenPath = resolved;
       }
 
       try {
@@ -70,16 +84,29 @@ public class HytaleWorldGenProvider implements IWorldGenProvider {
       return "HytaleWorldGenProvider{name='" + this.name + "', version=" + this.version + ", path='" + this.path + "'}";
    }
 
-   private static class DefaultBuilderCodec extends BuilderCodec<HytaleWorldGenProvider> {
-      protected DefaultBuilderCodec(@Nonnull BuilderCodec.BuilderBase<HytaleWorldGenProvider, ?> builder) {
+   public static class WorldGenBuilderCodec extends BuilderCodec<HytaleWorldGenProvider> {
+      private final Object lock = new Object();
+      private final Map<String, Semver> versions = new Object2ObjectOpenHashMap<>();
+
+      protected WorldGenBuilderCodec(@Nonnull BuilderCodec.BuilderBase<HytaleWorldGenProvider, ?> builder) {
          super(builder);
       }
 
       public HytaleWorldGenProvider getDefaultValue(ExtraInfo extraInfo) {
          HytaleWorldGenProvider value = new HytaleWorldGenProvider();
-         value.version = WorldGenPlugin.get().getLatestVersion("Default", HytaleWorldGenProvider.MIN_VERSION);
+         synchronized (this.lock) {
+            value.version = this.versions.getOrDefault("Default", HytaleWorldGenProvider.MIN_VERSION);
+         }
+
          this.afterDecode(value, extraInfo);
          return value;
+      }
+
+      public void setVersions(@Nonnull Map<String, Semver> versions) {
+         synchronized (this.lock) {
+            this.versions.clear();
+            this.versions.putAll(versions);
+         }
       }
    }
 }

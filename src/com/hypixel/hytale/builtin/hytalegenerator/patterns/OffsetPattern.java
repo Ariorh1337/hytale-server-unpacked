@@ -11,7 +11,9 @@ public class OffsetPattern extends Pattern {
    private final Vector3i offset;
    @Nonnull
    private final SpaceSize readSpaceSize;
+   @Nonnull
    private final Vector3i rChildPosition;
+   @Nonnull
    private final Pattern.Context rChildContext;
 
    public OffsetPattern(@Nonnull Pattern pattern, @Nonnull Vector3i offset) {

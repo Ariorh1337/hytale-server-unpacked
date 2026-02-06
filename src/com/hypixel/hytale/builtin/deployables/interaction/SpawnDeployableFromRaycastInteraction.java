@@ -33,6 +33,7 @@ import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -61,6 +62,7 @@ public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteract
       .afterDecode(SpawnDeployableFromRaycastInteraction::processConfig)
       .build();
    protected Object2FloatMap<String> unknownEntityStats;
+   @Nullable
    protected Int2FloatMap entityStats;
    protected float maxPlacementDistance;
    private DeployableConfig config;

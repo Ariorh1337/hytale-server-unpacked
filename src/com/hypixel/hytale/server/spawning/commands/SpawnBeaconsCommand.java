@@ -15,7 +15,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.AssetArgumentType;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTargetEntityCommand;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.spawning.beacons.LegacySpawnBeaconEntity;
 import com.hypixel.hytale.server.spawning.beacons.SpawnBeacon;
 import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
 import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
+import it.unimi.dsi.fastutil.objects.ObjectList;
 import javax.annotation.Nonnull;
 
 public class SpawnBeaconsCommand extends AbstractCommandCollection {
@@ -101,11 +102,10 @@ public class SpawnBeaconsCommand extends AbstractCommandCollection {
       }
    }
 
-   private static class ManualTrigger extends AbstractPlayerCommand {
-      private static final Message MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NOT_BEACON = Message.translation(
-         "server.commands.spawning.beacons.trigger.notBeacon"
+   private static class ManualTrigger extends AbstractTargetEntityCommand {
+      private static final Message MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_BEACONS = Message.translation(
+         "server.commands.spawning.beacons.trigger.no_beacons"
       );
-      private static final Message MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_SPOTS = Message.translation("server.commands.spawning.beacons.trigger.no_spots");
 
       public ManualTrigger() {
          super("trigger", "server.commands.spawning.beacons.trigger.desc");
@@ -113,22 +113,40 @@ public class SpawnBeaconsCommand extends AbstractCommandCollection {
 
       @Override
       protected void execute(
-         @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
+         @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
       ) {
-         FloodFillPositionSelector positionSelectorComponent = store.getComponent(ref, FloodFillPositionSelector.getComponentType());
-         if (positionSelectorComponent == null) {
-            throw new GeneralCommandException(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NOT_BEACON);
-         }
-
-         SpawnBeacon spawnBeaconComponent = store.getComponent(ref, SpawnBeacon.getComponentType());
-         if (spawnBeaconComponent == null) {
-            throw new GeneralCommandException(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NOT_BEACON);
-         }
-
-         if (!spawnBeaconComponent.manualTrigger(ref, positionSelectorComponent, ref, store)) {
-            context.sendMessage(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_SPOTS);
+         if (entities.isEmpty()) {
+            context.sendMessage(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_BEACONS);
          } else {
-            context.sendMessage(Message.translation("server.commands.spawning.beacons.trigger.success"));
+            int count = 0;
+
+            for (Ref<EntityStore> ref : entities) {
+               if (ref != null && ref.isValid()) {
+                  UUIDComponent uuid = store.getComponent(ref, UUIDComponent.getComponentType());
+                  if (uuid != null) {
+                     FloodFillPositionSelector positionSelectorComponent = store.getComponent(ref, FloodFillPositionSelector.getComponentType());
+                     if (positionSelectorComponent != null) {
+                        SpawnBeacon spawnBeaconComponent = store.getComponent(ref, SpawnBeacon.getComponentType());
+                        if (spawnBeaconComponent != null) {
+                           if (!spawnBeaconComponent.manualTrigger(ref, positionSelectorComponent, ref, store)) {
+                              Message message = Message.translation("server.commands.spawning.beacons.trigger.no_spots");
+                              message.param("id", uuid.getUuid().toString());
+                              context.sendMessage(message);
+                           } else {
+                              Message message = Message.translation("server.commands.spawning.beacons.trigger.success");
+                              message.param("id", uuid.getUuid().toString());
+                              context.sendMessage(message);
+                              count++;
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+
+            if (count == 0) {
+               context.sendMessage(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_BEACONS);
+            }
          }
       }
    }

@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -36,8 +35,6 @@ public class WorldGenPlugin extends JavaPlugin {
    private static final String VERSIONS_DIR_NAME = "$Versions";
    private static final String MANIFEST_FILENAME = "manifest.json";
    private static WorldGenPlugin instance;
-   private final Object lock = new Object();
-   private final Map<String, Semver> versions = new Object2ObjectOpenHashMap<>();
 
    public static WorldGenPlugin get() {
       return instance;
@@ -67,16 +64,7 @@ public class WorldGenPlugin extends JavaPlugin {
             }
          }
 
-         synchronized (this.lock) {
-            this.versions.clear();
-            this.versions.putAll(versions);
-         }
-      }
-   }
-
-   public Semver getLatestVersion(@Nonnull String name, @Nonnull Semver minVersion) {
-      synchronized (this.lock) {
-         return this.versions.getOrDefault(name, minVersion);
+         HytaleWorldGenProvider.CODEC.setVersions(versions);
       }
    }
 

@@ -32,20 +32,34 @@ public class NTerrainStage implements NStage {
    public static final double ORIGIN_REACH = 1.0;
    public static final double ORIGIN_REACH_HALF = 0.5;
    public static final double QUARTER_PI = Math.PI / 4;
+   @Nonnull
    public static final Class<NCountedPixelBuffer> biomeBufferClass = NCountedPixelBuffer.class;
+   @Nonnull
    public static final Class<Integer> biomeClass = Integer.class;
+   @Nonnull
    public static final Class<NSimplePixelBuffer> biomeDistanceBufferClass = NSimplePixelBuffer.class;
+   @Nonnull
    public static final Class<NBiomeDistanceStage.BiomeDistanceEntries> biomeDistanceClass = NBiomeDistanceStage.BiomeDistanceEntries.class;
+   @Nonnull
    public static final Class<NVoxelBuffer> materialBufferClass = NVoxelBuffer.class;
+   @Nonnull
    public static final Class<Material> materialClass = Material.class;
+   @Nonnull
    private final NParametrizedBufferType biomeInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType biomeDistanceInputBufferType;
+   @Nonnull
    private final NParametrizedBufferType materialOutputBufferType;
+   @Nonnull
    private final Bounds3i inputBounds_bufferGrid;
+   @Nonnull
    private final String stageName;
    private final int maxInterpolationRadius_voxelGrid;
+   @Nonnull
    private final MaterialCache materialCache;
+   @Nonnull
    private final WorkerIndexer.Data<FloatContainer3d> densityContainers;
+   @Nonnull
    private final WorkerIndexer.Data<WorldStructure> worldStructure_workerdata;
 
    public NTerrainStage(

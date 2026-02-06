@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.procedurallib.file.FileIO;
@@ -148,10 +149,15 @@ public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGe
       }
 
       IWeightedMap<String> weightedMap = builder.build();
-      Path maskFile = this.dataFolder.resolve(weightedMap.get(new FastRandom(this.seed.hashCode())));
-      return maskFile.getFileName().endsWith("Mask.json")
-         ? new ClimateMaskJsonLoader<>(this.seed, this.dataFolder, maskFile).load()
-         : new MaskProviderJsonLoader(this.seed, this.dataFolder, worldJson.get("Randomizer"), maskFile, worldSize, worldOffset).load();
+      String maskName = weightedMap.get(new FastRandom(this.seed.hashCode()));
+      Path maskFile = PathUtil.resolvePathWithinDir(this.dataFolder, maskName);
+      if (maskFile == null) {
+         throw new Error("Invalid mask file path: " + maskName);
+      } else {
+         return maskFile.getFileName().toString().endsWith("Mask.json")
+            ? new ClimateMaskJsonLoader<>(this.seed, this.dataFolder, maskFile).load()
+            : new MaskProviderJsonLoader(this.seed, this.dataFolder, worldJson.get("Randomizer"), maskFile, worldSize, worldOffset).load();
+      }
    }
 
    @Nonnull

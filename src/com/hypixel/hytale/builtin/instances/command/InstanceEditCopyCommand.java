@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.instances.command;
 
 import com.hypixel.hytale.builtin.instances.InstancesPlugin;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -43,8 +44,12 @@ public class InstanceEditCopyCommand extends AbstractAsyncCommand {
          return CompletableFuture.completedFuture(null);
       }
 
-      String destinationName = this.destinationNameArg.get(context);
-      Path destinationPath = originPath.getParent().resolve(destinationName);
+      Path destinationPath = PathUtil.resolveName(originPath.getParent(), this.destinationNameArg.get(context));
+      if (destinationPath == null) {
+         context.sendMessage(Message.translation("server.commands.instances.edit.copy.invalidPath"));
+         return CompletableFuture.completedFuture(null);
+      }
+
       if (Files.exists(destinationPath)) {
          context.sendMessage(
             Message.translation("server.commands.instances.edit.copy.destinationExists").param("path", destinationPath.toAbsolutePath().toString())
@@ -76,7 +81,9 @@ public class InstanceEditCopyCommand extends AbstractAsyncCommand {
       return WorldConfig.save(destinationConfigFile, worldConfig)
          .thenRun(
             () -> context.sendMessage(
-               Message.translation("server.commands.instances.copiedInstanceAssetConfig").param("origin", instanceToCopy).param("destination", destinationName)
+               Message.translation("server.commands.instances.copiedInstanceAssetConfig")
+                  .param("origin", instanceToCopy)
+                  .param("destination", destinationPath.getFileName().toString())
             )
          );
    }

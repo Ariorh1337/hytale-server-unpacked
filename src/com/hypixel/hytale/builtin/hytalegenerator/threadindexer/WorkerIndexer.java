@@ -94,8 +94,11 @@ public class WorkerIndexer {
 
    public static class Id {
       public static final int UNKNOWN_THREAD_ID = -1;
+      public static final int MAIN_THREAD_ID = 0;
+      @Nonnull
       public static final WorkerIndexer.Id UNKNOWN = new WorkerIndexer.Id(-1);
-      public static final WorkerIndexer.Id TEMP_0 = new WorkerIndexer.Id(0);
+      @Nonnull
+      public static final WorkerIndexer.Id MAIN = new WorkerIndexer.Id(0);
       public final int id;
 
       private Id(int id) {

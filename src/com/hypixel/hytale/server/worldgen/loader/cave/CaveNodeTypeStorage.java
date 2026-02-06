@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.worldgen.loader.cave;
 
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
@@ -57,7 +58,11 @@ public class CaveNodeTypeStorage {
 
    @Nonnull
    public CaveNodeType loadCaveNodeType(@Nonnull String name) {
-      Path file = this.caveFolder.resolve(String.format("%s.node.json", name.replace(".", File.separator)));
+      String relativePath = String.format("%s.node.json", name.replace(".", File.separator));
+      Path file = PathUtil.resolvePathWithinDir(this.caveFolder, relativePath);
+      if (file == null) {
+         throw new Error(String.format("Invalid cave node type name: %s", name));
+      }
 
       try {
          JsonObject caveNodeJson = FileIO.load(file, JsonLoader.JSON_OBJ_LOADER);

@@ -30,17 +30,23 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class OpenBenchPageInteraction extends SimpleBlockInteraction {
+   @Nonnull
    public static final OpenBenchPageInteraction SIMPLE_CRAFTING = new OpenBenchPageInteraction(
       "*Simple_Crafting_Default", OpenBenchPageInteraction.PageType.SIMPLE_CRAFTING
    );
+   @Nonnull
    public static final RootInteraction SIMPLE_CRAFTING_ROOT = new RootInteraction(SIMPLE_CRAFTING.getId(), SIMPLE_CRAFTING.getId());
+   @Nonnull
    public static final OpenBenchPageInteraction DIAGRAM_CRAFTING = new OpenBenchPageInteraction(
       "*Diagram_Crafting_Default", OpenBenchPageInteraction.PageType.DIAGRAM_CRAFTING
    );
+   @Nonnull
    public static final RootInteraction DIAGRAM_CRAFTING_ROOT = new RootInteraction(DIAGRAM_CRAFTING.getId(), DIAGRAM_CRAFTING.getId());
+   @Nonnull
    public static final OpenBenchPageInteraction STRUCTURAL_CRAFTING = new OpenBenchPageInteraction(
       "*Structural_Crafting_Default", OpenBenchPageInteraction.PageType.STRUCTURAL_CRAFTING
    );
+   @Nonnull
    public static final RootInteraction STRUCTURAL_CRAFTING_ROOT = new RootInteraction(STRUCTURAL_CRAFTING.getId(), STRUCTURAL_CRAFTING.getId());
    @Nonnull
    public static final BuilderCodec<OpenBenchPageInteraction> CODEC = BuilderCodec.<SimpleBlockInteraction>builder(

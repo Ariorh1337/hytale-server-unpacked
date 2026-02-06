@@ -18,6 +18,7 @@ public abstract class PositionProvider {
    }
 
    public static class Context {
+      @Nonnull
       public static final Consumer<Vector3d> EMPTY_CONSUMER = p -> {};
       public Vector3d minInclusive;
       public Vector3d maxExclusive;

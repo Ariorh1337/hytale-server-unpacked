@@ -5,6 +5,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class CacheDensity extends Density {
+   @Nonnull
    private final CacheDensity.Cache cache;
    @Nonnull
    private Density input;

@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.instances.command;
 
 import com.hypixel.hytale.assetstore.AssetPack;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -16,7 +17,11 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public class InstanceEditNewCommand extends AbstractAsyncCommand {
+   @Nonnull
+   private static final Message MESSAGE_SERVER_COMMANDS_INSTANCES_EDIT_ASSETS_IMMUTABLE = Message.translation("server.commands.instances.edit.assetsImmutable");
+   @Nonnull
    private final RequiredArg<String> instanceNameArg = this.withRequiredArg("instanceName", "server.commands.instances.edit.arg.name", ArgTypes.STRING);
+   @Nonnull
    private final OptionalArg<String> packName = this.withOptionalArg("pack", "server.commands.instances.edit.arg.packName", ArgTypes.STRING);
 
    public InstanceEditNewCommand() {
@@ -27,7 +32,7 @@ public class InstanceEditNewCommand extends AbstractAsyncCommand {
    @Override
    public CompletableFuture<Void> executeAsync(@Nonnull CommandContext context) {
       if (AssetModule.get().getBaseAssetPack().isImmutable()) {
-         context.sendMessage(Message.translation("server.commands.instances.edit.assetsImmutable"));
+         context.sendMessage(MESSAGE_SERVER_COMMANDS_INSTANCES_EDIT_ASSETS_IMMUTABLE);
          return CompletableFuture.completedFuture(null);
       }
 
@@ -42,9 +47,11 @@ public class InstanceEditNewCommand extends AbstractAsyncCommand {
          pack = AssetModule.get().getBaseAssetPack();
       }
 
-      String name = this.instanceNameArg.get(context);
-      Path path = pack.getRoot().resolve("Server").resolve("Instances").resolve(name);
-      WorldConfig defaultConfig = new WorldConfig();
+      Path path = PathUtil.resolveName(pack.getRoot().resolve("Server").resolve("Instances"), this.instanceNameArg.get(context));
+      if (path == null) {
+         context.sendMessage(Message.translation("server.commands.instances.edit.new.invalidPath"));
+         return CompletableFuture.completedFuture(null);
+      }
 
       try {
          Files.createDirectories(path);
@@ -53,7 +60,9 @@ public class InstanceEditNewCommand extends AbstractAsyncCommand {
          return CompletableFuture.completedFuture(null);
       }
 
-      return WorldConfig.save(path.resolve("instance.bson"), defaultConfig)
-         .thenRun(() -> context.sendMessage(Message.translation("server.commands.instances.createdInstanceAssetConfig").param("name", name)));
+      return WorldConfig.save(path.resolve("instance.bson"), new WorldConfig())
+         .thenRun(
+            () -> context.sendMessage(Message.translation("server.commands.instances.createdInstanceAssetConfig").param("name", path.getFileName().toString()))
+         );
    }
 }

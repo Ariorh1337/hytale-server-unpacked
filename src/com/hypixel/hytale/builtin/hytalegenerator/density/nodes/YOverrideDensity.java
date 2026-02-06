@@ -8,7 +8,9 @@ public class YOverrideDensity extends Density {
    @Nonnull
    private Density input;
    private final double value;
+   @Nonnull
    private final Density.Context rChildContext;
+   @Nonnull
    private final Vector3d rChildPosition;
 
    public YOverrideDensity(@Nonnull Density input, double value) {

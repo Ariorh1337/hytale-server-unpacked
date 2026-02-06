@@ -14,10 +14,15 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class NBiomeStage implements NStage {
+   @Nonnull
    public static final Class<NCountedPixelBuffer> bufferClass = NCountedPixelBuffer.class;
+   @Nonnull
    public static final Class<Integer> biomeClass = Integer.class;
+   @Nonnull
    private final NParametrizedBufferType biomeOutputBufferType;
+   @Nonnull
    private final String stageName;
+   @Nonnull
    private final WorkerIndexer.Data<WorldStructure> worldStructure_workerData;
 
    public NBiomeStage(
@@ -36,7 +41,7 @@ public class NBiomeStage implements NStage {
 
       for (int x = biomeSpace.minX(); x < biomeSpace.maxX(); x++) {
          for (int z = biomeSpace.minZ(); z < biomeSpace.maxZ(); z++) {
-            Integer biomeId = biomeMap.apply(x, z, WorkerIndexer.Id.TEMP_0);
+            Integer biomeId = biomeMap.apply(x, z, context.workerId);
             biomeSpace.set(biomeId, x, 0, z);
          }
       }

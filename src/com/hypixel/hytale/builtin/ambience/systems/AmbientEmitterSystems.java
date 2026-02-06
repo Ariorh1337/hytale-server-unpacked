@@ -29,18 +29,37 @@ import javax.annotation.Nonnull;
 public class AmbientEmitterSystems {
    public static class EntityAdded extends HolderSystem<EntityStore> {
       @Nonnull
-      private final Query<EntityStore> query = Query.and(AmbientEmitterComponent.getComponentType(), TransformComponent.getComponentType());
+      private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, Intangible> intangibleComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public EntityAdded(
+         @Nonnull ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType,
+         @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType,
+         @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType,
+         @Nonnull ComponentType<EntityStore, Intangible> intangibleComponentType,
+         @Nonnull ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType
+      ) {
+         this.networkIdComponentType = networkIdComponentType;
+         this.intangibleComponentType = intangibleComponentType;
+         this.prefabCopyableComponentType = prefabCopyableComponentType;
+         this.query = Query.and(ambientEmitterComponentType, transformComponentType);
+      }
 
       @Override
       public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
          Archetype<EntityStore> archetype = holder.getArchetype();
-         ComponentType<EntityStore, NetworkId> networkIdComponentType = NetworkId.getComponentType();
-         if (!archetype.contains(networkIdComponentType)) {
-            holder.addComponent(networkIdComponentType, new NetworkId(store.getExternalData().takeNextNetworkId()));
+         if (!archetype.contains(this.networkIdComponentType)) {
+            int nextNetworkId = store.getExternalData().takeNextNetworkId();
+            holder.addComponent(this.networkIdComponentType, new NetworkId(nextNetworkId));
          }
 
-         holder.ensureComponent(Intangible.getComponentType());
-         holder.ensureComponent(PrefabCopyableComponent.getComponentType());
+         holder.ensureComponent(this.intangibleComponentType);
+         holder.ensureComponent(this.prefabCopyableComponentType);
       }
 
       @Override
@@ -56,25 +75,52 @@ public class AmbientEmitterSystems {
 
    public static class EntityRefAdded extends RefSystem<EntityStore> {
       @Nonnull
-      private final Query<EntityStore> query = Query.and(AmbientEmitterComponent.getComponentType(), TransformComponent.getComponentType());
+      private final ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, AudioComponent> audioComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, Intangible> intangibleComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public EntityRefAdded(
+         @Nonnull ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType,
+         @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType,
+         @Nonnull ComponentType<EntityStore, AudioComponent> audioComponentType,
+         @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType,
+         @Nonnull ComponentType<EntityStore, Intangible> intangibleComponentType
+      ) {
+         this.ambientEmitterComponentType = ambientEmitterComponentType;
+         this.transformComponentType = transformComponentType;
+         this.audioComponentType = audioComponentType;
+         this.networkIdComponentType = networkIdComponentType;
+         this.intangibleComponentType = intangibleComponentType;
+         this.query = Query.and(ambientEmitterComponentType, transformComponentType);
+      }
 
       @Override
       public void onEntityAdded(
          @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         AmbientEmitterComponent emitterComponent = store.getComponent(ref, AmbientEmitterComponent.getComponentType());
+         AmbientEmitterComponent emitterComponent = store.getComponent(ref, this.ambientEmitterComponentType);
          assert emitterComponent != null;
-         TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+         TransformComponent transformComponent = store.getComponent(ref, this.transformComponentType);
          assert transformComponent != null;
          Holder<EntityStore> emitterHolder = EntityStore.REGISTRY.newHolder();
-         emitterHolder.addComponent(TransformComponent.getComponentType(), transformComponent.clone());
+         emitterHolder.addComponent(this.transformComponentType, transformComponent.clone());
          AudioComponent audioComponent = new AudioComponent();
          audioComponent.addSound(SoundEvent.getAssetMap().getIndex(emitterComponent.getSoundEventId()));
-         emitterHolder.addComponent(AudioComponent.getComponentType(), audioComponent);
-         emitterHolder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
-         emitterHolder.ensureComponent(Intangible.getComponentType());
+         emitterHolder.addComponent(this.audioComponentType, audioComponent);
+         int nextNetworkId = store.getExternalData().takeNextNetworkId();
+         emitterHolder.addComponent(this.networkIdComponentType, new NetworkId(nextNetworkId));
+         emitterHolder.ensureComponent(this.intangibleComponentType);
          emitterHolder.addComponent(EntityStore.REGISTRY.getNonSerializedComponentType(), NonSerialized.get());
-         emitterComponent.setSpawnedEmitter(commandBuffer.addEntity(emitterHolder, AddReason.SPAWN));
+         Ref<EntityStore> emitterRef = commandBuffer.addEntity(emitterHolder, AddReason.SPAWN);
+         emitterComponent.setSpawnedEmitter(emitterRef);
       }
 
       @Override
@@ -82,7 +128,7 @@ public class AmbientEmitterSystems {
          @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          if (reason == RemoveReason.REMOVE) {
-            AmbientEmitterComponent emitterComponent = store.getComponent(ref, AmbientEmitterComponent.getComponentType());
+            AmbientEmitterComponent emitterComponent = store.getComponent(ref, this.ambientEmitterComponentType);
             assert emitterComponent != null;
             Ref<EntityStore> emitterRef = emitterComponent.getSpawnedEmitter();
             if (emitterRef != null) {
@@ -100,7 +146,20 @@ public class AmbientEmitterSystems {
 
    public static class Ticking extends EntityTickingSystem<EntityStore> {
       @Nonnull
-      private final Query<EntityStore> query = Query.and(AmbientEmitterComponent.getComponentType(), TransformComponent.getComponentType());
+      private final ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public Ticking(
+         @Nonnull ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType,
+         @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType
+      ) {
+         this.ambientEmitterComponentType = ambientEmitterComponentType;
+         this.transformComponentType = transformComponentType;
+         this.query = Query.and(ambientEmitterComponentType, transformComponentType);
+      }
 
       @Override
       public void tick(
@@ -110,13 +169,13 @@ public class AmbientEmitterSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         AmbientEmitterComponent emitterComponent = archetypeChunk.getComponent(index, AmbientEmitterComponent.getComponentType());
+         AmbientEmitterComponent emitterComponent = archetypeChunk.getComponent(index, this.ambientEmitterComponentType);
          assert emitterComponent != null;
-         TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+         TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
          assert transformComponent != null;
          Ref<EntityStore> spawnedEmitterRef = emitterComponent.getSpawnedEmitter();
          if (spawnedEmitterRef != null && spawnedEmitterRef.isValid()) {
-            TransformComponent ownedEmitterTransform = commandBuffer.getComponent(spawnedEmitterRef, TransformComponent.getComponentType());
+            TransformComponent ownedEmitterTransform = commandBuffer.getComponent(spawnedEmitterRef, this.transformComponentType);
             if (ownedEmitterTransform != null) {
                if (transformComponent.getPosition().distanceSquaredTo(ownedEmitterTransform.getPosition()) > 1.0) {
                   ownedEmitterTransform.setPosition(transformComponent.getPosition());

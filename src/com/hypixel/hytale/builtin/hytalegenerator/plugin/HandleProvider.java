@@ -8,7 +8,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class HandleProvider implements IWorldGenProvider {
+   @Nonnull
    public static final String ID = "HytaleGenerator";
+   @Nonnull
    public static final String DEFAULT_WORLD_STRUCTURE_NAME = "Default";
    @Nonnull
    private final HytaleGenerator plugin;
@@ -41,6 +43,7 @@ public class HandleProvider implements IWorldGenProvider {
       return this.seedOverride;
    }
 
+   @Nonnull
    @Override
    public IWorldGen getGenerator() throws WorldGenLoadException {
       return new Handle(this.plugin, new ChunkRequest.GeneratorProfile(this.worldStructureName, 0, this.worldCounter), this.seedOverride);

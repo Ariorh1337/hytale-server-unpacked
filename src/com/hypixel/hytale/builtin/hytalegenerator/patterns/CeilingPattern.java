@@ -11,7 +11,9 @@ public class CeilingPattern extends Pattern {
    private final Pattern airPattern;
    @Nonnull
    private final SpaceSize readSpaceSize;
+   @Nonnull
    private final Vector3i rCeilingPosition;
+   @Nonnull
    private final Pattern.Context rCeilingContext;
 
    public CeilingPattern(@Nonnull Pattern ceilingPattern, @Nonnull Pattern airPattern) {

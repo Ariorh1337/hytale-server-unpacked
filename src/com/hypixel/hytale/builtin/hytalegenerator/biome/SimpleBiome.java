@@ -12,11 +12,17 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class SimpleBiome implements Biome {
+   @Nonnull
    private final Density terrainDensity;
+   @Nonnull
    private final MaterialProvider<Material> materialProvider;
+   @Nonnull
    private final List<PropField> propFields;
+   @Nonnull
    private final EnvironmentProvider environmentProvider;
+   @Nonnull
    private final TintProvider tintProvider;
+   @Nonnull
    private final String biomeName;
 
    public SimpleBiome(
@@ -38,6 +44,7 @@ public class SimpleBiome implements Biome {
       this.propFields.add(propField);
    }
 
+   @Nonnull
    @Override
    public MaterialProvider<Material> getMaterialProvider() {
       return this.materialProvider;
@@ -49,26 +56,31 @@ public class SimpleBiome implements Biome {
       return this.terrainDensity;
    }
 
+   @Nonnull
    @Override
    public String getBiomeName() {
       return this.biomeName;
    }
 
+   @Nonnull
    @Override
    public List<PropField> getPropFields() {
       return this.propFields;
    }
 
+   @Nonnull
    @Override
    public EnvironmentProvider getEnvironmentProvider() {
       return this.environmentProvider;
    }
 
+   @Nonnull
    @Override
    public TintProvider getTintProvider() {
       return this.tintProvider;
    }
 
+   @Nonnull
    @Override
    public List<Assignments> getAllPropDistributions() {
       ArrayList<Assignments> list = new ArrayList<>();

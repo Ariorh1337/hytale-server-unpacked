@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class TeleporterSettingsPageSupplier implements OpenCustomUIInteraction.CustomPageSupplier {
+   @Nonnull
    public static final BuilderCodec<TeleporterSettingsPageSupplier> CODEC = BuilderCodec.builder(
          TeleporterSettingsPageSupplier.class, TeleporterSettingsPageSupplier::new
       )

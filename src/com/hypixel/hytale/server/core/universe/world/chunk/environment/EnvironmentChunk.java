@@ -266,10 +266,11 @@ public class EnvironmentChunk implements Component<ChunkStore> {
          public void intake(@Nonnull Int2IntFunction dataSource) {
             int maxYInclusive = 319;
             int previousEnvironment = 0;
+            int environmentId = 0;
             int runCounter = 0;
 
             for (int y = 319; y >= 0; y--) {
-               int environmentId = dataSource.applyAsInt(y);
+               environmentId = dataSource.applyAsInt(y);
                if (y == 319) {
                   previousEnvironment = environmentId;
                   this.valuesReversed.add(environmentId);
@@ -284,6 +285,8 @@ public class EnvironmentChunk implements Component<ChunkStore> {
                   runCounter = 1;
                }
             }
+
+            this.count(environmentId, runCounter);
          }
       }
    }

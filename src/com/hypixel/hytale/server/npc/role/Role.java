@@ -54,6 +54,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -562,6 +563,11 @@ public class Role implements IAnnotatedComponentCollection {
       @Nonnull NPCEntity npcComponent, @Nonnull Map<String, MotionController> motionControllers, @Nullable String initialMotionController
    ) {
       this.motionControllers = motionControllers;
+
+      for (Entry<String, MotionController> entry : this.motionControllers.entrySet()) {
+         this.debugSupport.registerDebugFlagsListener(entry.getValue());
+      }
+
       this.updateMotionControllers(null, null, null, null);
       if (!this.motionControllers.isEmpty()) {
          if (initialMotionController != null && this.setActiveMotionController(null, npcComponent, initialMotionController, null)) {
@@ -620,6 +626,10 @@ public class Role implements IAnnotatedComponentCollection {
    protected void computeActionsAndSteering(
       @Nonnull Ref<EntityStore> ref, double tickTime, @Nonnull Steering bodySteering, @Nonnull Steering headSteering, @Nonnull Store<EntityStore> store
    ) {
+      if (this.debugSupport.isVisSensorRanges()) {
+         this.debugSupport.beginSensorVisualization();
+      }
+
       boolean isDead = store.getArchetype(ref).contains(DeathComponent.getComponentType());
       if (isDead) {
          if (this.deathInstruction != null) {

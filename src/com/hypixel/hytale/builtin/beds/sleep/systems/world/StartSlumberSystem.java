@@ -6,11 +6,16 @@ import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSleep;
 import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSlumber;
 import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSomnolence;
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.system.DelayedSystem;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.asset.type.gameplay.sleep.SleepConfig;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
@@ -20,6 +25,7 @@ import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class StartSlumberSystem extends DelayedSystem<EntityStore> {
    @Nonnull
@@ -27,9 +33,22 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
    @Nonnull
    private static final Duration WAKE_UP_AUTOSLEEP_DELAY = Duration.ofHours(1L);
    private static final float SYSTEM_INTERVAL_S = 0.3F;
+   @Nonnull
+   private final ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType;
+   @Nonnull
+   private final ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType;
+   @Nonnull
+   private final ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType;
 
-   public StartSlumberSystem() {
+   public StartSlumberSystem(
+      @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType,
+      @Nonnull ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType,
+      @Nonnull ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType
+   ) {
       super(0.3F);
+      this.playerSomnolenceComponentType = playerSomnolenceComponentType;
+      this.worldSomnolenceResourceType = worldSomnolenceResourceType;
+      this.worldTimeResourceType = worldTimeResourceType;
    }
 
    @Override
@@ -42,20 +61,26 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       Collection<PlayerRef> playerRefs = world.getPlayerRefs();
       if (!playerRefs.isEmpty()) {
          if (!CanSleepInWorld.check(world).isNegative()) {
-            float wakeUpHour = world.getGameplayConfig().getWorldConfig().getSleepConfig().getWakeUpHour();
-            WorldSomnolence worldSomnolenceResource = store.getResource(WorldSomnolence.getResourceType());
+            SleepConfig sleepConfig = world.getGameplayConfig().getWorldConfig().getSleepConfig();
+            float wakeUpHour = sleepConfig.getWakeUpHour();
+            WorldSomnolence worldSomnolenceResource = store.getResource(this.worldSomnolenceResourceType);
             WorldSleep worldState = worldSomnolenceResource.getState();
             if (worldState == WorldSleep.Awake.INSTANCE) {
-               if (isEveryoneReadyToSleep(store)) {
-                  WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
+               if (this.isEveryoneReadyToSleep(store)) {
+                  WorldTimeResource timeResource = store.getResource(this.worldTimeResourceType);
                   Instant now = timeResource.getGameTime();
                   Instant target = this.computeWakeupInstant(now, wakeUpHour);
                   float irlSeconds = computeIrlSeconds(now, target);
                   worldSomnolenceResource.setState(new WorldSlumber(now, target, irlSeconds));
-                  store.forEachEntityParallel(PlayerSomnolence.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
+                  store.forEachEntityParallel(this.playerSomnolenceComponentType, (index, archetypeChunk, commandBuffer) -> {
                      Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-                     commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.Slumber.createComponent(timeResource));
+                     commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, PlayerSleep.Slumber.createComponent(timeResource));
+                     PlayerRef playerRef = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
+                     if (playerRef != null) {
+                        SoundUtil.playSoundEvent2dToPlayer(playerRef, sleepConfig.getSounds().getSuccessIndex(), SoundCategory.UI);
+                     }
                   });
+                  worldSomnolenceResource.resetNotificationCooldown();
                }
             }
          }
@@ -81,7 +106,7 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       return (float)Math.ceil(seconds);
    }
 
-   private static boolean isEveryoneReadyToSleep(@Nonnull ComponentAccessor<EntityStore> store) {
+   private boolean isEveryoneReadyToSleep(@Nonnull ComponentAccessor<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       Collection<PlayerRef> playerRefs = world.getPlayerRefs();
       if (playerRefs.isEmpty()) {
@@ -98,31 +123,54 @@ public class StartSlumberSystem extends DelayedSystem<EntityStore> {
       return true;
    }
 
-   public static boolean isReadyToSleep(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
-      if (!ref.isValid()) {
+   public static boolean isReadyToSleep(@Nonnull ComponentAccessor<EntityStore> store, @Nullable Ref<EntityStore> ref) {
+      if (ref != null && ref.isValid()) {
+         PlayerSomnolence somnolenceComponent = store.getComponent(ref, PlayerSomnolence.getComponentType());
+         if (somnolenceComponent == null) {
+            return false;
+         }
+
+         PlayerSleep sleepState = somnolenceComponent.getSleepState();
+
+         return switch (sleepState) {
+            case PlayerSleep.FullyAwake fullAwake -> false;
+            case PlayerSleep.MorningWakeUp morningWakeUp -> {
+               WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
+               yield morningWakeUp.isReadyToSleepAgain(worldTimeResource.getGameTime());
+            }
+            case PlayerSleep.NoddingOff noddingOff -> {
+               Instant sleepStart = noddingOff.realTimeStart().plus(NODDING_OFF_DURATION);
+               yield Instant.now().isAfter(sleepStart);
+            }
+            case PlayerSleep.Slumber ignored -> true;
+            default -> throw new MatchException(null, null);
+         };
+      } else {
          return true;
       }
+   }
 
-      PlayerSomnolence somnolence = store.getComponent(ref, PlayerSomnolence.getComponentType());
-      if (somnolence == null) {
-         return false;
+   public static boolean canNotifyOthersAboutTryingToSleep(@Nonnull ComponentAccessor<EntityStore> store, @Nullable Ref<EntityStore> ref) {
+      if (ref != null && ref.isValid()) {
+         PlayerSomnolence somnolenceComponent = store.getComponent(ref, PlayerSomnolence.getComponentType());
+         if (somnolenceComponent == null) {
+            return false;
+         }
+
+         PlayerSleep sleepState = somnolenceComponent.getSleepState();
+
+         return switch (sleepState) {
+            case PlayerSleep.FullyAwake fullAwake -> false;
+            case PlayerSleep.MorningWakeUp morningWakeUp -> {
+               WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
+               yield morningWakeUp.isReadyToSleepAgain(worldTimeResource.getGameTime());
+            }
+            case PlayerSleep.NoddingOff noddingOff -> true;
+            case PlayerSleep.Slumber ignored -> true;
+            default -> throw new MatchException(null, null);
+         };
+      } else {
+         return true;
       }
-
-      PlayerSleep sleepState = somnolence.getSleepState();
-
-      return switch (sleepState) {
-         case PlayerSleep.FullyAwake ignored -> false;
-         case PlayerSleep.MorningWakeUp morningWakeUp -> {
-            WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
-            Instant readyTime = morningWakeUp.gameTimeStart().plus(WAKE_UP_AUTOSLEEP_DELAY);
-            yield worldTimeResource.getGameTime().isAfter(readyTime);
-         }
-         case PlayerSleep.NoddingOff noddingOff -> {
-            Instant sleepStart = noddingOff.realTimeStart().plus(NODDING_OFF_DURATION);
-            yield Instant.now().isAfter(sleepStart);
-         }
-         case PlayerSleep.Slumber ignored -> true;
-         default -> throw new MatchException(null, null);
-      };
    }
 }

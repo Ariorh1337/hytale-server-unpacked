@@ -21,7 +21,7 @@ public class AssetsCommand extends AbstractCommandCollection {
 
    public static class AssetLongestAssetNameCommand extends AbstractAsyncCommand {
       public AssetLongestAssetNameCommand() {
-         super("longest", "");
+         super("longest", "server.commands.assets.longest.desc");
       }
 
       @Nonnull

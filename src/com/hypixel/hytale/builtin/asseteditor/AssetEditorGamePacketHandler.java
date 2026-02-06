@@ -63,22 +63,28 @@ public class AssetEditorGamePacketHandler implements SubPacketHandler {
       if (ref != null && ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         CompletableFuture.runAsync(() -> {
+         world.execute(
+            () -> {
                Player playerComponent = store.getComponent(ref, Player.getComponentType());
                if (!this.lacksPermission(playerComponent, true)) {
-                  ;
+                  CompletableFuture.runAsync(
+                     () -> {
+                        LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
+                        EditorClient mockClient = new EditorClient(playerRef);
+                        AssetEditorPlugin.get()
+                           .handleJsonAssetUpdate(
+                              mockClient,
+                              packet.path != null ? new AssetPath(packet.path) : null,
+                              packet.assetType,
+                              packet.assetIndex,
+                              packet.commands,
+                              packet.token
+                           );
+                     }
+                  );
                }
-            }, world)
-            .thenRunAsync(
-               () -> {
-                  LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
-                  EditorClient mockClient = new EditorClient(playerRef);
-                  AssetEditorPlugin.get()
-                     .handleJsonAssetUpdate(
-                        mockClient, packet.path != null ? new AssetPath(packet.path) : null, packet.assetType, packet.assetIndex, packet.commands, packet.token
-                     );
-               }
-            );
+            }
+         );
       } else {
          throw new RuntimeException("Unable to process AssetEditorUpdateJsonAsset packet. Player ref is invalid!");
       }
@@ -87,7 +93,7 @@ public class AssetEditorGamePacketHandler implements SubPacketHandler {
    private boolean lacksPermission(@Nonnull Player player, boolean shouldShowDenialMessage) {
       if (!player.hasPermission("hytale.editor.asset")) {
          if (shouldShowDenialMessage) {
-            player.sendMessage(Messages.USAGE_DENIED_MESSAGE);
+            player.sendMessage(Messages.USAGE_DENIED);
          }
 
          return true;

@@ -124,6 +124,7 @@ public class MultiMixDensity extends Density {
       }
 
       public static class GaugeSegmentComparator implements BiFunction<Double, MultiMixDensity.Segment, Integer> {
+         @Nonnull
          public static final MultiMixDensity.Segment.GaugeSegmentComparator INSTANCE = new MultiMixDensity.Segment.GaugeSegmentComparator();
 
          @Nonnull

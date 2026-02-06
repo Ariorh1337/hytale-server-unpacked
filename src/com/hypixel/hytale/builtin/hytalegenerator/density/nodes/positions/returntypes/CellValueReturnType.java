@@ -9,6 +9,7 @@ public class CellValueReturnType extends ReturnType {
    @Nonnull
    private final Density sampleField;
    private final double defaultValue;
+   @Nonnull
    private final Density.Context rChildContext;
 
    public CellValueReturnType(@Nonnull Density sampleField, double defaultValue) {
