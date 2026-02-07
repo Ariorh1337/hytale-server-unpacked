@@ -18,6 +18,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -31,6 +32,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class KillSpawnBeaconObjectiveTask extends KillObjectiveTask {
+   @Nonnull
    public static final BuilderCodec<KillSpawnBeaconObjectiveTask> CODEC = BuilderCodec.builder(
          KillSpawnBeaconObjectiveTask.class, KillSpawnBeaconObjectiveTask::new, KillObjectiveTask.CODEC
       )
@@ -92,7 +94,12 @@ public class KillSpawnBeaconObjectiveTask extends KillObjectiveTask {
 
          WorldLocationProvider worldLocationCondition = spawnBeaconConfig.getWorldLocationProvider();
          if (worldLocationCondition != null) {
-            spawnPosition = worldLocationCondition.runCondition(world, spawnPosition.toVector3i()).toVector3d();
+            Vector3i potentialSpawnLocation = worldLocationCondition.runCondition(world, spawnPosition.toVector3i());
+            if (potentialSpawnLocation != null) {
+               spawnPosition = potentialSpawnLocation.toVector3d();
+            } else {
+               spawnPosition = null;
+            }
          }
 
          if (spawnPosition == null) {
@@ -104,9 +111,12 @@ public class KillSpawnBeaconObjectiveTask extends KillObjectiveTask {
             );
             spawnBeaconPair.second().setObjectiveUUID(objective.getObjectiveUUID());
             UUIDComponent spawnBeaconUuidComponent = componentAccessor.getComponent(spawnBeaconPair.first(), UUIDComponent.getComponentType());
-            assert spawnBeaconUuidComponent != null;
-            logger.at(Level.INFO).log("Spawned SpawnBeacon '" + spawnBeaconId + "' at position: " + position);
-            transactionRecords[i] = new SpawnEntityTransactionRecord(world.getWorldConfig().getUuid(), spawnBeaconUuidComponent.getUuid());
+            if (spawnBeaconUuidComponent == null) {
+               transactionRecords[i] = new WorldTransactionRecord().fail("Failed to retrieve UUID component for spawned beacon " + spawnBeaconId);
+            } else {
+               logger.at(Level.INFO).log("Spawned SpawnBeacon '" + spawnBeaconId + "' at position: " + position);
+               transactionRecords[i] = new SpawnEntityTransactionRecord(world.getWorldConfig().getUuid(), spawnBeaconUuidComponent.getUuid());
+            }
          }
       }
 

@@ -39,7 +39,9 @@ public class CameraShakePacketGenerator extends SimpleAssetPacketGenerator<Strin
    }
 
    @Nonnull
-   protected static Packet toCachedPacket(UpdateType type, @Nonnull IndexedAssetMap<String, CameraShake> assetMap, @Nonnull Map<String, CameraShake> assets) {
+   protected static Packet toCachedPacket(
+      @Nonnull UpdateType type, @Nonnull IndexedAssetMap<String, CameraShake> assetMap, @Nonnull Map<String, CameraShake> assets
+   ) {
       Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.CameraShake> profiles = new Int2ObjectOpenHashMap<>();
 
       for (Entry<String, CameraShake> entry : assets.entrySet()) {

@@ -3,16 +3,19 @@ package com.hypixel.hytale.server.worldgen.loader;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.vector.Vector2i;
+import com.hypixel.hytale.procedurallib.file.FileIO;
+import com.hypixel.hytale.procedurallib.file.FileIOSystem;
+import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.Loader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
+import com.hypixel.hytale.server.worldgen.WorldGenConfig;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGenerator;
 import com.hypixel.hytale.server.worldgen.chunk.MaskProvider;
 import com.hypixel.hytale.server.worldgen.loader.climate.ClimateMaskJsonLoader;
@@ -26,8 +29,12 @@ import java.nio.file.Path;
 import javax.annotation.Nonnull;
 
 public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGenerator> {
-   public ChunkGeneratorJsonLoader(SeedString<SeedStringResource> seed, Path dataFolder) {
-      super(seed, dataFolder);
+   @Nonnull
+   private final WorldGenConfig config;
+
+   public ChunkGeneratorJsonLoader(@Nonnull SeedString<SeedStringResource> seed, @Nonnull WorldGenConfig config) {
+      super(seed, config.path());
+      this.config = config;
    }
 
    @Nonnull
@@ -42,18 +49,21 @@ public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGe
       }
 
       JsonObject worldJson = this.loadWorldJson(worldFile);
-      Vector2i worldSize = this.loadWorldSize(worldJson);
-      Vector2i worldOffset = this.loadWorldOffset(worldJson);
-      MaskProvider maskProvider = this.loadMaskProvider(worldJson, worldSize, worldOffset);
-      PrefabStoreRoot prefabStore = this.loadPrefabStore(worldJson);
-      Path overrideDataFolder = this.loadOverrideDataFolderPath(worldJson, this.dataFolder);
-      this.seed.get().setPrefabStore(prefabStore);
-      this.seed.get().setDataFolder(overrideDataFolder);
-      ZonePatternProviderJsonLoader loader = this.loadZonePatternGenerator(maskProvider);
-      FileLoadingContext loadingContext = new FileContextLoader(overrideDataFolder, loader.loadZoneRequirement()).load();
-      Zone[] zones = new ZonesJsonLoader(this.seed, overrideDataFolder, loadingContext).load();
-      loader.setZones(zones);
-      return new ChunkGenerator(loader.load(), overrideDataFolder);
+      Path overrideDataFolder = this.loadOverrideDataFolderPath(worldJson, this.config.path());
+      WorldGenConfig config = this.config.withOverride(overrideDataFolder);
+
+      try (FileIOSystem fs = FileIO.openFileIOSystem(new AssetFileSystem(config))) {
+         Vector2i worldSize = this.loadWorldSize(worldJson);
+         Vector2i worldOffset = this.loadWorldOffset(worldJson);
+         MaskProvider maskProvider = this.loadMaskProvider(worldJson, worldSize, worldOffset);
+         PrefabStoreRoot prefabStore = this.loadPrefabStore(worldJson);
+         this.seed.get().setPrefabConfig(config, prefabStore);
+         ZonePatternProviderJsonLoader loader = this.loadZonePatternGenerator(maskProvider);
+         FileLoadingContext loadingContext = new FileContextLoader(overrideDataFolder, loader.loadZoneRequirement()).load();
+         Zone[] zones = new ZonesJsonLoader(this.seed, overrideDataFolder, loadingContext).load();
+         loader.setZones(zones);
+         return new ChunkGenerator(loader.load(), overrideDataFolder);
+      }
    }
 
    @Nonnull
@@ -73,8 +83,8 @@ public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGe
 
    @Nonnull
    protected JsonObject loadWorldJson(@Nonnull Path file) {
-      try (JsonReader reader = new JsonReader(Files.newBufferedReader(file))) {
-         return JsonParser.parseReader(reader).getAsJsonObject();
+      try {
+         return FileIO.load(file, JsonLoader.JSON_OBJ_LOADER);
       } catch (Throwable e) {
          throw new Error(String.format("Could not read JSON configuration for world. File: %s", file), e);
       }
@@ -139,10 +149,15 @@ public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGe
       }
 
       IWeightedMap<String> weightedMap = builder.build();
-      Path maskFile = this.dataFolder.resolve(weightedMap.get(new FastRandom(this.seed.hashCode())));
-      return maskFile.getFileName().endsWith("Mask.json")
-         ? new ClimateMaskJsonLoader<>(this.seed, this.dataFolder, maskFile).load()
-         : new MaskProviderJsonLoader(this.seed, this.dataFolder, worldJson.get("Randomizer"), maskFile, worldSize, worldOffset).load();
+      String maskName = weightedMap.get(new FastRandom(this.seed.hashCode()));
+      Path maskFile = PathUtil.resolvePathWithinDir(this.dataFolder, maskName);
+      if (maskFile == null) {
+         throw new Error("Invalid mask file path: " + maskName);
+      } else {
+         return maskFile.getFileName().toString().endsWith("Mask.json")
+            ? new ClimateMaskJsonLoader<>(this.seed, this.dataFolder, maskFile).load()
+            : new MaskProviderJsonLoader(this.seed, this.dataFolder, worldJson.get("Randomizer"), maskFile, worldSize, worldOffset).load();
+      }
    }
 
    @Nonnull
@@ -169,8 +184,8 @@ public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGe
    protected ZonePatternProviderJsonLoader loadZonePatternGenerator(MaskProvider maskProvider) {
       Path zoneFile = this.dataFolder.resolve("Zones.json");
 
-      try (JsonReader reader = new JsonReader(Files.newBufferedReader(zoneFile))) {
-         JsonObject zoneJson = JsonParser.parseReader(reader).getAsJsonObject();
+      try {
+         JsonObject zoneJson = FileIO.load(zoneFile, JsonLoader.JSON_OBJ_LOADER);
          return new ZonePatternProviderJsonLoader(this.seed, this.dataFolder, zoneJson, maskProvider);
       } catch (Throwable e) {
          throw new Error(String.format("Failed to read zone configuration file! File: %s", zoneFile.toString()), e);

@@ -4,8 +4,10 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.vector.Vector3i;
+import javax.annotation.Nonnull;
 
 public class PortalSpawn {
+   @Nonnull
    public static final BuilderCodec<PortalSpawn> CODEC = BuilderCodec.builder(PortalSpawn.class, PortalSpawn::new)
       .append(new KeyedCodec<>("Y", Codec.INTEGER), (spawn, o) -> spawn.checkSpawnY = o, spawn -> spawn.checkSpawnY)
       .documentation("The Y height where to start looking for X,Z candidate.")

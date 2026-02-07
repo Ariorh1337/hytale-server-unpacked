@@ -24,15 +24,16 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -41,7 +42,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends AssetMap<K, T>> extends AssetStore<K, T, M> {
-   public static final ObjectList<Consumer<Packet>> SETUP_PACKET_CONSUMERS = new ObjectArrayList<>();
+   public static final Queue<Consumer<Packet>> SETUP_PACKET_CONSUMERS = new ConcurrentLinkedQueue<>();
    protected final AssetPacketGenerator<K, T, M> packetGenerator;
    protected final Function<K, ItemWithAllMetadata> notificationItemFunction;
    @Nullable
@@ -92,8 +93,7 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
                Packet packet = this.packetGenerator.generateRemovePacket(this.assetMap, toBeRemoved, query);
                universe.broadcastPacketNoCache(packet);
 
-               for (int i = 0; i < SETUP_PACKET_CONSUMERS.size(); i++) {
-                  Consumer<Packet> c = SETUP_PACKET_CONSUMERS.get(i);
+               for (Consumer<Packet> c : SETUP_PACKET_CONSUMERS) {
                   c.accept(packet);
                }
             }
@@ -102,8 +102,7 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
                Packet packet = this.packetGenerator.generateUpdatePacket(this.assetMap, toBeUpdated, query);
                universe.broadcastPacketNoCache(packet);
 
-               for (int i = 0; i < SETUP_PACKET_CONSUMERS.size(); i++) {
-                  Consumer<Packet> c = SETUP_PACKET_CONSUMERS.get(i);
+               for (Consumer<Packet> c : SETUP_PACKET_CONSUMERS) {
                   c.accept(packet);
                }
             }

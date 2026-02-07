@@ -139,7 +139,7 @@ public class MemoriesConditionInteraction extends Interaction {
    }
 
    @Override
-   protected void configurePacket(com.hypixel.hytale.protocol.Interaction packet) {
+   protected void configurePacket(@Nonnull com.hypixel.hytale.protocol.Interaction packet) {
       super.configurePacket(packet);
       com.hypixel.hytale.protocol.MemoriesConditionInteraction p = (com.hypixel.hytale.protocol.MemoriesConditionInteraction)packet;
       p.memoriesNext = new Int2IntOpenHashMap(this.next.size());
@@ -153,11 +153,9 @@ public class MemoriesConditionInteraction extends Interaction {
 
    @Override
    public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
-      if (this.next != null) {
-         for (Int2ObjectMap.Entry<String> entry : this.next.int2ObjectEntrySet()) {
-            if (InteractionManager.walkInteraction(collector, context, new MemoriesConditionInteraction.MemoriesTag(entry.getIntKey()), entry.getValue())) {
-               return true;
-            }
+      for (Int2ObjectMap.Entry<String> entry : this.next.int2ObjectEntrySet()) {
+         if (InteractionManager.walkInteraction(collector, context, new MemoriesConditionInteraction.MemoriesTag(entry.getIntKey()), entry.getValue())) {
+            return true;
          }
       }
 
@@ -169,6 +167,7 @@ public class MemoriesConditionInteraction extends Interaction {
       return false;
    }
 
+   @Nonnull
    @Override
    public WaitForDataFrom getWaitForDataFrom() {
       return WaitForDataFrom.Server;

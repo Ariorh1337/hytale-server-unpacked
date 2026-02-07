@@ -33,7 +33,6 @@ public class FieldFunctionPositionProvider extends PositionProvider {
          Density.Context densityContext = new Density.Context();
          densityContext.position = p;
          densityContext.positionsAnchor = context.anchor;
-         densityContext.workerId = context.workerId;
          double value = this.field.process(densityContext);
 
          for (FieldFunctionPositionProvider.Delimiter d : this.delimiters) {

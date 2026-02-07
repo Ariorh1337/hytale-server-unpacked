@@ -10,6 +10,7 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class CacheDensityAsset extends DensityAsset {
+   @Nonnull
    public static final BuilderCodec<CacheDensityAsset> CODEC = BuilderCodec.builder(
          CacheDensityAsset.class, CacheDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -26,9 +27,7 @@ public class CacheDensityAsset extends DensityAsset {
       if (this.capacity <= 0) {
          return this.build(argument);
       } else {
-         return this.capacity == 1
-            ? new CacheDensity(this.buildFirstInput(argument), argument.workerIndexer.getWorkerCount())
-            : new MultiCacheDensity(this.buildFirstInput(argument), argument.workerIndexer.getWorkerCount(), this.capacity);
+         return this.capacity == 1 ? new CacheDensity(this.buildFirstInput(argument)) : new MultiCacheDensity(this.buildFirstInput(argument), this.capacity);
       }
    }
 

@@ -589,6 +589,21 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       }
    }
 
+   public void clearAllSupportValues() {
+      this.blocksLock.writeLock().lock();
+
+      try {
+         this.blocks
+            .replaceAll(
+               (k, b) -> (BlockSelection.BlockHolder)(b.supportValue() == 0
+                  ? b
+                  : new BlockSelection.BlockHolder(b.blockId(), b.rotation(), b.filler(), 0, b.holder()))
+            );
+      } finally {
+         this.blocksLock.writeLock().unlock();
+      }
+   }
+
    public void addEntityFromWorld(@Nonnull Holder<EntityStore> entityHolder) {
       TransformComponent transformComponent = entityHolder.getComponent(TransformComponent.getComponentType());
       assert transformComponent != null;

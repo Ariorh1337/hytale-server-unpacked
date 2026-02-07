@@ -225,20 +225,22 @@ public class SpawnBeaconSystems {
                      NPCEntity spawnedEntityNpcComponent = commandBuffer.getComponent(spawnedEntityReference, this.npcComponentType);
                      if (spawnedEntityNpcComponent != null && !spawnedEntityNpcComponent.isDespawning()) {
                         Role role = spawnedEntityNpcComponent.getRole();
-                        boolean hasTarget = role.getMarkedEntitySupport()
-                           .hasMarkedEntityInSlot(legacySpawnBeaconComponent.getSpawnWrapper().getSpawn().getTargetSlot());
-                        TransformComponent spawnedEntityTransformComponent = commandBuffer.getComponent(spawnedEntityReference, this.transformComponentType);
-                        assert spawnedEntityTransformComponent != null;
-                        Vector3d npcPosition = spawnedEntityTransformComponent.getPosition();
-                        double beaconDistance = npcPosition.distanceSquaredTo(position);
-                        if ((despawnNPCsIfIdle && !hasTarget || beaconDistance > beaconRadiusSquared) && !role.getStateSupport().isInBusyState()) {
-                           double timeout = entityTimeoutCounter.mergeDouble(spawnedEntityReference, dt, Double::sum);
-                           if (timeout >= despawnNPCAfterTimeout) {
-                              spawnedEntityNpcComponent.setToDespawn();
+                        if (role != null) {
+                           boolean hasTarget = role.getMarkedEntitySupport()
+                              .hasMarkedEntityInSlot(legacySpawnBeaconComponent.getSpawnWrapper().getSpawn().getTargetSlot());
+                           TransformComponent spawnedEntityTransformComponent = commandBuffer.getComponent(spawnedEntityReference, this.transformComponentType);
+                           assert spawnedEntityTransformComponent != null;
+                           Vector3d npcPosition = spawnedEntityTransformComponent.getPosition();
+                           double beaconDistance = npcPosition.distanceSquaredTo(position);
+                           if ((despawnNPCsIfIdle && !hasTarget || beaconDistance > beaconRadiusSquared) && !role.getStateSupport().isInBusyState()) {
+                              double timeout = entityTimeoutCounter.mergeDouble(spawnedEntityReference, dt, Double::sum);
+                              if (timeout >= despawnNPCAfterTimeout) {
+                                 spawnedEntityNpcComponent.setToDespawn();
+                              }
+                           } else {
+                              entityTimeoutCounter.put(spawnedEntityReference, 0.0);
+                              validatedEntityList.add(spawnedEntityNpcComponent);
                            }
-                        } else {
-                           entityTimeoutCounter.put(spawnedEntityReference, 0.0);
-                           validatedEntityList.add(spawnedEntityNpcComponent);
                         }
                      }
                   }
@@ -312,13 +314,15 @@ public class SpawnBeaconSystems {
 
                      for (int i = 0; i < validatedEntityList.size(); i++) {
                         NPCEntity npc = validatedEntityList.get(i);
-                        Ref<EntityStore> lockedTargetRef = npc.getRole()
-                           .getMarkedEntitySupport()
-                           .getMarkedEntityRef(legacySpawnBeaconComponent.getSpawnWrapper().getSpawn().getTargetSlot());
-                        if (lockedTargetRef != null) {
-                           UUIDComponent lockedTarget = commandBuffer.getComponent(lockedTargetRef, this.uuidComponentType);
-                           if (lockedTarget != null) {
-                              entitiesPerPlayer.mergeInt(lockedTarget.getUuid(), 1, Integer::sum);
+                        Role role = npc.getRole();
+                        if (role != null) {
+                           Ref<EntityStore> lockedTargetRef = role.getMarkedEntitySupport()
+                              .getMarkedEntityRef(legacySpawnBeaconComponent.getSpawnWrapper().getSpawn().getTargetSlot());
+                           if (lockedTargetRef != null) {
+                              UUIDComponent lockedTargetUuidComponent = commandBuffer.getComponent(lockedTargetRef, this.uuidComponentType);
+                              if (lockedTargetUuidComponent != null) {
+                                 entitiesPerPlayer.mergeInt(lockedTargetUuidComponent.getUuid(), 1, Integer::sum);
+                              }
                            }
                         }
                      }
@@ -335,13 +339,13 @@ public class SpawnBeaconSystems {
          }
       }
 
-      private static boolean isReadyToRespawn(LegacySpawnBeaconEntity spawnBeacon, WorldTimeResource timeManager) {
+      private static boolean isReadyToRespawn(@Nonnull LegacySpawnBeaconEntity spawnBeacon, @Nonnull WorldTimeResource worldTimeResource) {
          Instant nextSpawnAfter = spawnBeacon.getNextSpawnAfter();
          if (nextSpawnAfter == null) {
             return true;
          }
 
-         Instant now = spawnBeacon.isNextSpawnAfterRealtime() ? Instant.now() : timeManager.getGameTime();
+         Instant now = spawnBeacon.isNextSpawnAfterRealtime() ? Instant.now() : worldTimeResource.getGameTime();
          return now.isAfter(nextSpawnAfter);
       }
 

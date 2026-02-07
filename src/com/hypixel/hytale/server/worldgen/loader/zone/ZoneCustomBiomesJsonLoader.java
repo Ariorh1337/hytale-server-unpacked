@@ -1,8 +1,7 @@
 package com.hypixel.hytale.server.worldgen.loader.zone;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
+import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
@@ -12,7 +11,6 @@ import com.hypixel.hytale.server.worldgen.biome.CustomBiomeGenerator;
 import com.hypixel.hytale.server.worldgen.loader.biome.CustomBiomeJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.context.BiomeFileContext;
 import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -40,8 +38,8 @@ public class ZoneCustomBiomesJsonLoader extends JsonLoader<SeedStringResource, C
       for (Entry<String, BiomeFileContext> biomeEntry : this.zoneContext.getCustomBiomes()) {
          BiomeFileContext biomeContext = biomeEntry.getValue();
 
-         try (JsonReader reader = new JsonReader(Files.newBufferedReader(biomeContext.getPath()))) {
-            JsonElement biomeJson = JsonParser.parseReader(reader);
+         try {
+            JsonElement biomeJson = FileIO.load(biomeContext.getPath(), JsonLoader.JSON_OBJ_LOADER);
             CustomBiome biome = new CustomBiomeJsonLoader(this.seed, this.dataFolder, biomeJson, biomeContext, this.tileBiomes).load();
             CustomBiomeGenerator reference = biome.getCustomBiomeGenerator();
             if (reference == null) {

@@ -9,6 +9,7 @@ import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.common.util.CompletableFutureUtil;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
@@ -91,6 +92,7 @@ import com.hypixel.hytale.server.core.universe.world.worldgen.provider.DummyWorl
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.FlatWorldGenProvider;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.VoidWorldGenProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.DisabledWorldMapProvider;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.chunk.WorldGenWorldMapProvider;
@@ -119,6 +121,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiPredicate;
 import java.util.logging.Level;
 import javax.annotation.CheckReturnValue;
@@ -141,6 +144,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    private ComponentType<EntityStore, PlayerRef> playerRefComponentType;
    @Nonnull
    private final Path path = Constants.UNIVERSE_PATH;
+   private final Path worldsPath = this.path.resolve("worlds");
+   private final Path worldsDeletedPath = this.worldsPath.resolveSibling("worlds-deleted");
    @Nonnull
    private final Map<UUID, PlayerRef> players = new ConcurrentHashMap<>();
    @Nonnull
@@ -152,7 +157,9 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    private PlayerStorage playerStorage;
    private WorldConfigProvider worldConfigProvider;
    private ResourceType<ChunkStore, IndexedStorageChunkStorageProvider.IndexedStorageCache> indexedStorageCacheResourceType;
+   private ResourceType<ChunkStore, WorldMarkersResource> worldMarkersResourceType;
    private CompletableFuture<Void> universeReady;
+   private final AtomicBoolean isBackingUp = new AtomicBoolean(false);
 
    public static Universe get() {
       return instance;
@@ -173,11 +180,23 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          int frequencyMinutes = Math.max(Options.getOptionSet().valueOf(Options.BACKUP_FREQUENCY_MINUTES), 1);
          this.getLogger().at(Level.INFO).log("Scheduled backup to run every %d minute(s)", (int)frequencyMinutes);
          HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> {
-            try {
-               this.getLogger().at(Level.INFO).log("Backing up universe...");
-               this.runBackup().thenAccept(aVoid -> this.getLogger().at(Level.INFO).log("Completed scheduled backup."));
-            } catch (Exception e) {
-               this.getLogger().at(Level.SEVERE).withCause(e).log("Error backing up universe");
+            if (!this.isBackingUp.compareAndSet(false, true)) {
+               this.getLogger().at(Level.WARNING).log("Skipping scheduled backup: previous backup still in progress");
+            } else {
+               try {
+                  this.getLogger().at(Level.INFO).log("Backing up universe...");
+                  this.runBackup().whenComplete((aVoid, throwable) -> {
+                     this.isBackingUp.set(false);
+                     if (throwable != null) {
+                        this.getLogger().at(Level.SEVERE).withCause(throwable).log("Scheduled backup failed");
+                     } else {
+                        this.getLogger().at(Level.INFO).log("Completed scheduled backup.");
+                     }
+                  });
+               } catch (Exception e) {
+                  this.isBackingUp.set(false);
+                  this.getLogger().at(Level.SEVERE).withCause(e).log("Error backing up universe");
+               }
             }
          }, frequencyMinutes, frequencyMinutes, TimeUnit.MINUTES);
       }
@@ -225,6 +244,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       this.indexedStorageCacheResourceType = chunkStoreRegistry.registerResource(
          IndexedStorageChunkStorageProvider.IndexedStorageCache.class, IndexedStorageChunkStorageProvider.IndexedStorageCache::new
       );
+      this.worldMarkersResourceType = chunkStoreRegistry.registerResource(WorldMarkersResource.class, "SharedUserMapMarkers", WorldMarkersResource.CODEC);
       chunkStoreRegistry.registerSystem(new IndexedStorageChunkStorageProvider.IndexedStorageCacheSetupSystem());
       chunkStoreRegistry.registerSystem(new WorldPregenerateSystem());
       entityStoreRegistry.registerSystem(new WorldConfigSaveSystem());
@@ -289,16 +309,23 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          ObjectArrayList<CompletableFuture<?>> loadingWorlds = new ObjectArrayList<>();
 
          try {
-            Path worldsPath = this.path.resolve("worlds");
-            Files.createDirectories(worldsPath);
+            if (Files.exists(this.worldsDeletedPath)) {
+               FileUtil.deleteDirectory(this.worldsDeletedPath);
+            }
+         } catch (Throwable t) {
+            throw new RuntimeException("Failed to complete deletion of " + this.worldsDeletedPath.toAbsolutePath(), t);
+         }
 
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(worldsPath)) {
+         try {
+            Files.createDirectories(this.worldsPath);
+
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(this.worldsPath)) {
                for (Path file : stream) {
                   if (HytaleServer.get().isShuttingDown()) {
                      return;
                   }
 
-                  if (!file.equals(worldsPath) && Files.isDirectory(file)) {
+                  if (!file.equals(this.worldsPath) && Files.isDirectory(file)) {
                      String name = file.getFileName().toString();
                      if (this.getWorld(name) == null) {
                         loadingWorlds.add(this.loadWorldFromStart(file, name).exceptionally(throwable -> {
@@ -364,8 +391,12 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       return this.indexedStorageCacheResourceType;
    }
 
+   public ResourceType<ChunkStore, WorldMarkersResource> getWorldMarkersResourceType() {
+      return this.worldMarkersResourceType;
+   }
+
    public boolean isWorldLoadable(@Nonnull String name) {
-      Path savePath = this.path.resolve("worlds").resolve(name);
+      Path savePath = this.validateWorldPath(name);
       return Files.isDirectory(savePath) && (Files.exists(savePath.resolve("config.bson")) || Files.exists(savePath.resolve("config.json")));
    }
 
@@ -387,7 +418,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          throw new IllegalArgumentException("World " + name + " already exists on disk!");
       }
 
-      Path savePath = this.path.resolve("worlds").resolve(name);
+      Path savePath = this.validateWorldPath(name);
       return this.worldConfigProvider.load(savePath, name).thenCompose(worldConfig -> {
          if (generatorType != null && !"default".equals(generatorType)) {
             BuilderCodec<? extends IWorldGenProvider> providerCodec = IWorldGenProvider.CODEC.getCodecFor(generatorType);
@@ -415,6 +446,15 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       });
    }
 
+   public Path validateWorldPath(@Nonnull String name) {
+      Path savePath = PathUtil.resolvePathWithinDir(this.worldsPath, name);
+      if (savePath == null) {
+         throw new IllegalArgumentException("World " + name + " contains invalid characters!");
+      } else {
+         return savePath;
+      }
+   }
+
    @Nonnull
    @CheckReturnValue
    public CompletableFuture<World> makeWorld(@Nonnull String name, @Nonnull Path savePath, @Nonnull WorldConfig worldConfig) {
@@ -424,6 +464,10 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    @Nonnull
    @CheckReturnValue
    public CompletableFuture<World> makeWorld(@Nonnull String name, @Nonnull Path savePath, @Nonnull WorldConfig worldConfig, boolean start) {
+      if (!PathUtil.isChildOf(this.worldsPath, savePath) && !PathUtil.isInTrustedRoot(savePath)) {
+         throw new IllegalArgumentException("Invalid path");
+      }
+
       Map<PluginIdentifier, SemverRange> map = worldConfig.getRequiredPlugins();
       if (map != null) {
          PluginManager pluginManager = PluginManager.get();
@@ -477,7 +521,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                   String nameLower = name.toLowerCase();
                   if (this.worlds.containsKey(nameLower)) {
                      try {
-                        this.removeWorldExceptionally(name);
+                        this.removeWorldExceptionally(name, Map.of());
                      } catch (Exception e) {
                         this.getLogger().at(Level.WARNING).withCause(e).log("Failed to clean up world '%s' after init failure", name);
                      }
@@ -506,7 +550,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       if (this.worlds.containsKey(name)) {
          throw new IllegalArgumentException("World " + name + " already loaded!");
       } else {
-         Path savePath = this.path.resolve("worlds").resolve(name);
+         Path savePath = this.validateWorldPath(name);
          if (!Files.isDirectory(savePath)) {
             throw new IllegalArgumentException("World " + name + " does not exist!");
          } else {
@@ -555,14 +599,18 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       this.worlds.remove(nameLower);
       this.worldsByUuid.remove(world.getWorldConfig().getUuid());
       if (world.isAlive()) {
-         world.stopIndividualWorld();
+         if (world.isInThread()) {
+            world.stopIndividualWorld();
+         } else {
+            CompletableFuture.runAsync(world::stopIndividualWorld).join();
+         }
       }
 
       world.validateDeleteOnRemove();
       return true;
    }
 
-   public void removeWorldExceptionally(@Nonnull String name) {
+   public void removeWorldExceptionally(@Nonnull String name, Map<UUID, PlayerRef> players) {
       Objects.requireNonNull(name, "Name can't be null!");
       this.getLogger().at(Level.INFO).log("Removing world exceptionally: %s", name);
       String nameLower = name.toLowerCase();
@@ -578,7 +626,11 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       this.worlds.remove(nameLower);
       this.worldsByUuid.remove(world.getWorldConfig().getUuid());
       if (world.isAlive()) {
-         world.stopIndividualWorld();
+         if (world.isInThread()) {
+            world.stopIndividualWorld(players);
+         } else {
+            CompletableFuture.runAsync(() -> world.stopIndividualWorld(players)).join();
+         }
       }
 
       world.validateDeleteOnRemove();
@@ -587,6 +639,14 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    @Nonnull
    public Path getPath() {
       return this.path;
+   }
+
+   public Path getWorldsPath() {
+      return this.worldsPath;
+   }
+
+   public Path getWorldsDeletedPath() {
+      return this.worldsDeletedPath;
    }
 
    @Nonnull

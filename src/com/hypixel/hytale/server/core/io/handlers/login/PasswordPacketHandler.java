@@ -166,7 +166,7 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
          this.auth.setReferralSource(this.referralSource);
       }
 
-      LOGGER.at(Level.INFO).log("Connection complete for %s (%s), transitioning to setup", this.username, this.playerUuid);
+      LOGGER.at(Level.INFO).log("Connection complete for %s (%s) (SNI: %s), transitioning to setup", this.username, this.playerUuid, this.getSniHostname());
       NettyUtil.setChannelHandler(this.channel, this.setupHandlerSupplier.create(this.channel, this.protocolVersion, this.language, this.auth));
    }
 

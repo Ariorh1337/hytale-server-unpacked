@@ -97,6 +97,10 @@ public class Options {
       .withRequiredArg()
       .withValuesConvertedBy(new Options.PathConverter(Options.PathConverter.PathType.DIR));
    public static final OptionSpec<Integer> BACKUP_MAX_COUNT = PARSER.accepts("backup-max-count").withRequiredArg().ofType(Integer.class).defaultsTo(5);
+   public static final OptionSpec<Integer> BACKUP_ARCHIVE_MAX_COUNT = PARSER.accepts("backup-archive-max-count")
+      .withRequiredArg()
+      .ofType(Integer.class)
+      .defaultsTo(5);
    public static final OptionSpec<Void> SINGLEPLAYER = PARSER.accepts("singleplayer");
    public static final OptionSpec<String> OWNER_NAME = PARSER.accepts("owner-name").withRequiredArg();
    public static final OptionSpec<UUID> OWNER_UUID = PARSER.accepts("owner-uuid").withRequiredArg().withValuesConvertedBy(new Options.UUIDConverter());
@@ -118,6 +122,9 @@ public class Options {
       )
       .withRequiredArg()
       .withValuesSeparatedBy(',');
+   public static final OptionSpec<Void> SKIP_MOD_VALIDATION = PARSER.accepts(
+      "skip-mod-validation", "Skips mod validation, attempting to allow the server to boot even if one fails to load"
+   );
    public static final String ALLOW_SELF_OP_COMMAND_STRING = "allow-op";
    public static final OptionSpec<Void> ALLOW_SELF_OP_COMMAND = PARSER.accepts("allow-op");
    public static final OptionSpec<Options.AuthMode> AUTH_MODE = PARSER.accepts("auth-mode", "Authentication mode")
@@ -168,6 +175,30 @@ public class Options {
             HytaleLoggerBackend.loadLevels(optionSet.valuesOf(LOG_LEVELS));
          } else if (optionSet.has(SHUTDOWN_AFTER_VALIDATE)) {
             HytaleLoggerBackend.loadLevels(List.of(Map.entry("", Level.WARNING)));
+         }
+
+         for (Path path : optionSet.valuesOf(ASSET_DIRECTORY)) {
+            PathUtil.addTrustedRoot(path);
+         }
+
+         for (Path path : optionSet.valuesOf(MODS_DIRECTORIES)) {
+            PathUtil.addTrustedRoot(path);
+         }
+
+         for (Path path : optionSet.valuesOf(EARLY_PLUGIN_DIRECTORIES)) {
+            PathUtil.addTrustedRoot(path);
+         }
+
+         if (optionSet.has(WORLD_GEN_DIRECTORY)) {
+            PathUtil.addTrustedRoot(optionSet.valueOf(WORLD_GEN_DIRECTORY));
+         }
+
+         if (optionSet.has(BACKUP_DIRECTORY)) {
+            PathUtil.addTrustedRoot(optionSet.valueOf(BACKUP_DIRECTORY));
+         }
+
+         if (optionSet.has(UNIVERSE)) {
+            PathUtil.addTrustedRoot(optionSet.valueOf(UNIVERSE));
          }
 
          return false;

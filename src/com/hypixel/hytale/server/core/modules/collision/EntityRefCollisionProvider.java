@@ -127,9 +127,11 @@ public class EntityRefCollisionProvider {
       this.position = pos;
       this.direction = dir;
       this.boundingBox = boundingBox;
-      SpatialResource<Ref<EntityStore>, EntityStore> spatial = commandBuffer.getResource(CollisionModule.get().getTangiableEntitySpatialComponent());
+      SpatialResource<Ref<EntityStore>, EntityStore> tangibleEntitySpatialResourceType = commandBuffer.getResource(
+         CollisionModule.get().getTangibleEntitySpatialResourceType()
+      );
       this.tmpResults.clear();
-      spatial.getSpatialStructure().collect(pos, radius, this.tmpResults);
+      tangibleEntitySpatialResourceType.getSpatialStructure().collect(pos, radius, this.tmpResults);
 
       for (Ref<EntityStore> result : this.tmpResults) {
          consumer.accept(this, result, commandBuffer);
@@ -144,9 +146,15 @@ public class EntityRefCollisionProvider {
 
    protected boolean isColliding(@Nonnull Ref<EntityStore> ref, @Nonnull Vector2d minMax, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
       BoundingBox boundingBoxComponent = commandBuffer.getComponent(ref, BoundingBox.getComponentType());
-      assert boundingBoxComponent != null;
+      if (boundingBoxComponent == null) {
+         return false;
+      }
+
       TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
-      assert transformComponent != null;
+      if (transformComponent == null) {
+         return false;
+      }
+
       Box entityBoundingBox = boundingBoxComponent.getBoundingBox();
       if (boundingBoxComponent.getDetailBoxes() != null && !boundingBoxComponent.getDetailBoxes().isEmpty()) {
          for (Entry<String, DetailBox[]> e : boundingBoxComponent.getDetailBoxes().entrySet()) {

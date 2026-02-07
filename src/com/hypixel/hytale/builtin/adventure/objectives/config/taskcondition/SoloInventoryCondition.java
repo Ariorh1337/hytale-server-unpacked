@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class SoloInventoryCondition extends TaskConditionAsset {
+   @Nonnull
    public static final BuilderCodec<SoloInventoryCondition> CODEC = BuilderCodec.builder(SoloInventoryCondition.class, SoloInventoryCondition::new)
       .append(
          new KeyedCodec<>("BlockTagOrItemId", BlockTagOrItemIdField.CODEC),
@@ -71,15 +72,19 @@ public class SoloInventoryCondition extends TaskConditionAsset {
       Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
       if (playerComponent == null) {
          return false;
-      } else {
-         Inventory inventory = playerComponent.getInventory();
-         if (this.holdInHand) {
-            ItemStack itemInHand = inventory.getItemInHand();
-            return !this.blockTypeOrTagTask.isBlockTypeIncluded(itemInHand.getItemId()) ? false : inventory.getItemInHand().getQuantity() >= this.quantity;
+      }
+
+      Inventory inventory = playerComponent.getInventory();
+      if (this.holdInHand) {
+         ItemStack itemInHand = inventory.getItemInHand();
+         if (itemInHand == null) {
+            return false;
          } else {
-            return inventory.getCombinedHotbarFirst().countItemStacks(itemStack -> this.blockTypeOrTagTask.isBlockTypeIncluded(itemStack.getItemId()))
-               >= this.quantity;
+            return !this.blockTypeOrTagTask.isBlockTypeIncluded(itemInHand.getItemId()) ? false : inventory.getItemInHand().getQuantity() >= this.quantity;
          }
+      } else {
+         return inventory.getCombinedHotbarFirst().countItemStacks(itemStack -> this.blockTypeOrTagTask.isBlockTypeIncluded(itemStack.getItemId()))
+            >= this.quantity;
       }
    }
 

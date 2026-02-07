@@ -511,7 +511,11 @@ public class CommonAssetModule extends JavaPlugin {
          packets[0] = new AssetInitialize(thisAsset.toPacket(), allBytes.length);
 
          for (int partIndex = 0; partIndex < parts.length; partIndex++) {
-            packets[1 + partIndex * 2] = new WorldLoadProgress("Loading asset " + thisAsset.getName(), thisPercent, 100 * partIndex / parts.length);
+            packets[1 + partIndex * 2] = new WorldLoadProgress(
+               Message.translation("client.general.worldLoad.loadingAsset").param("assetName", thisAsset.getName()).getFormattedMessage(),
+               thisPercent,
+               100 * partIndex / parts.length
+            );
             packets[1 + partIndex * 2 + 1] = new AssetPart(parts[partIndex]);
          }
 

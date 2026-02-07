@@ -11,12 +11,18 @@ public class SliderDensity extends Density {
    private final double slideZ;
    @Nullable
    private Density input;
+   @Nonnull
+   private final Vector3d rChildPosition;
+   @Nonnull
+   private final Density.Context rChildContext;
 
    public SliderDensity(double slideX, double slideY, double slideZ, Density input) {
       this.slideX = slideX;
       this.slideY = slideY;
       this.slideZ = slideZ;
       this.input = input;
+      this.rChildPosition = new Vector3d();
+      this.rChildContext = new Density.Context();
    }
 
    @Override
@@ -25,10 +31,10 @@ public class SliderDensity extends Density {
          return 0.0;
       }
 
-      Vector3d childPosition = new Vector3d(context.position.x - this.slideX, context.position.y - this.slideY, context.position.z - this.slideZ);
-      Density.Context childContext = new Density.Context(context);
-      childContext.position = childPosition;
-      return this.input.process(childContext);
+      this.rChildPosition.assign(context.position.x - this.slideX, context.position.y - this.slideY, context.position.z - this.slideZ);
+      this.rChildContext.assign(context);
+      this.rChildContext.position = this.rChildPosition;
+      return this.input.process(this.rChildContext);
    }
 
    @Override

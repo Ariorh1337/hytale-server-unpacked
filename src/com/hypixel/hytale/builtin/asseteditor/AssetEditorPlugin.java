@@ -36,6 +36,7 @@ import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAsset;
@@ -69,6 +70,7 @@ import com.hypixel.hytale.protocol.packets.asseteditor.SchemaFile;
 import com.hypixel.hytale.protocol.packets.asseteditor.TimestampedAssetReference;
 import com.hypixel.hytale.protocol.packets.assets.UpdateTranslations;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.asset.AssetModule;
@@ -96,7 +98,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -118,22 +119,32 @@ import org.bson.BsonValue;
 
 public class AssetEditorPlugin extends JavaPlugin {
    private static AssetEditorPlugin instance;
+   @Nonnull
    private final StampedLock globalEditLock = new StampedLock();
+   @Nonnull
    private final Map<UUID, Set<EditorClient>> uuidToEditorClients = new ConcurrentHashMap<>();
+   @Nonnull
    private final Map<EditorClient, AssetPath> clientOpenAssetPathMapping = new ConcurrentHashMap<>();
+   @Nonnull
    private final Set<EditorClient> clientsSubscribedToModifiedAssetsChanges = ConcurrentHashMap.newKeySet();
    @Nonnull
    private Map<String, Schema> schemas = new Object2ObjectOpenHashMap<>();
    private AssetEditorSetupSchemas setupSchemasPacket;
+   @Nonnull
    private final StampedLock initLock = new StampedLock();
+   @Nonnull
    private final Set<EditorClient> initQueue = new HashSet<>();
    @Nonnull
    private AssetEditorPlugin.InitState initState = AssetEditorPlugin.InitState.NOT_INITIALIZED;
    @Nullable
    private ScheduledFuture<?> scheduledReinitFuture;
+   @Nonnull
    private final Map<String, DataSource> assetPackDataSources = new ConcurrentHashMap<>();
+   @Nonnull
    private final AssetTypeRegistry assetTypeRegistry = new AssetTypeRegistry();
+   @Nonnull
    private final UndoRedoManager undoRedoManager = new UndoRedoManager();
+   @Nullable
    private ScheduledFuture<?> pingClientsTask;
 
    public static AssetEditorPlugin get() {
@@ -145,7 +156,7 @@ public class AssetEditorPlugin extends JavaPlugin {
    }
 
    @Nullable
-   DataSource registerDataSourceForPack(AssetPack assetPack) {
+   DataSource registerDataSourceForPack(@Nonnull AssetPack assetPack) {
       PluginManifest manifest = assetPack.getManifest();
       if (manifest == null) {
          this.getLogger().at(Level.SEVERE).log("Could not load asset pack manifest for " + assetPack.getName());
@@ -160,6 +171,7 @@ public class AssetEditorPlugin extends JavaPlugin {
    @Override
    protected void setup() {
       instance = this;
+      EventRegistry eventRegistry = this.getEventRegistry();
 
       for (AssetPack assetPack : AssetModule.get().getAssetPacks()) {
          this.registerDataSourceForPack(assetPack);
@@ -180,13 +192,13 @@ public class AssetEditorPlugin extends JavaPlugin {
       this.assetTypeRegistry.registerAssetType(new CommonAssetTypeHandler("Sound", null, ".ogg", AssetEditorEditorType.None));
       this.assetTypeRegistry.registerAssetType(new CommonAssetTypeHandler("UI", null, ".ui", AssetEditorEditorType.Text));
       this.assetTypeRegistry.registerAssetType(new CommonAssetTypeHandler("Language", null, ".lang", AssetEditorEditorType.Text));
-      this.getEventRegistry().register(RegisterAssetStoreEvent.class, this::onRegisterAssetStore);
-      this.getEventRegistry().register(RemoveAssetStoreEvent.class, this::onUnregisterAssetStore);
-      this.getEventRegistry().register(AssetPackRegisterEvent.class, this::onRegisterAssetPack);
-      this.getEventRegistry().register(AssetPackUnregisterEvent.class, this::onUnregisterAssetPack);
-      this.getEventRegistry().register(AssetStoreMonitorEvent.class, this::onAssetMonitor);
-      this.getEventRegistry().register(CommonAssetMonitorEvent.class, this::onAssetMonitor);
-      this.getEventRegistry().register(MessagesUpdated.class, this::onI18nMessagesUpdated);
+      eventRegistry.register(RegisterAssetStoreEvent.class, this::onRegisterAssetStore);
+      eventRegistry.register(RemoveAssetStoreEvent.class, this::onUnregisterAssetStore);
+      eventRegistry.register(AssetPackRegisterEvent.class, this::onRegisterAssetPack);
+      eventRegistry.register(AssetPackUnregisterEvent.class, this::onUnregisterAssetPack);
+      eventRegistry.register(AssetStoreMonitorEvent.class, this::onAssetMonitor);
+      eventRegistry.register(CommonAssetMonitorEvent.class, this::onAssetMonitor);
+      eventRegistry.register(MessagesUpdated.class, this::onI18nMessagesUpdated);
       AssetSpecificFunctionality.setup();
    }
 
@@ -210,38 +222,49 @@ public class AssetEditorPlugin extends JavaPlugin {
          }
       }
 
-      this.pingClientsTask.cancel(false);
+      if (this.pingClientsTask != null) {
+         this.pingClientsTask.cancel(false);
+      } else {
+         this.getLogger().at(Level.WARNING).log("Failed to cancel ping clients task as it was null");
+      }
 
       for (DataSource dataSource : this.assetPackDataSources.values()) {
          dataSource.shutdown();
       }
    }
 
-   public DataSource getDataSourceForPath(AssetPath path) {
+   @Nullable
+   public DataSource getDataSourceForPath(@Nonnull AssetPath path) {
       return this.getDataSourceForPack(path.packId());
    }
 
-   public DataSource getDataSourceForPack(String assetPack) {
+   @Nullable
+   public DataSource getDataSourceForPack(@Nonnull String assetPack) {
       return this.assetPackDataSources.get(assetPack);
    }
 
+   @Nonnull
    public Collection<DataSource> getDataSources() {
       return this.assetPackDataSources.values();
    }
 
+   @Nonnull
    public AssetTypeRegistry getAssetTypeRegistry() {
       return this.assetTypeRegistry;
    }
 
-   public Schema getSchema(String id) {
+   @Nullable
+   public Schema getSchema(@Nonnull String id) {
       return this.schemas.get(id);
    }
 
+   @Nonnull
    public Map<EditorClient, AssetPath> getClientOpenAssetPathMapping() {
       return this.clientOpenAssetPathMapping;
    }
 
-   public Set<EditorClient> getEditorClients(UUID uuid) {
+   @Nullable
+   public Set<EditorClient> getEditorClients(@Nonnull UUID uuid) {
       return this.uuidToEditorClients.get(uuid);
    }
 
@@ -259,7 +282,7 @@ public class AssetEditorPlugin extends JavaPlugin {
    }
 
    @Nonnull
-   private List<EditorClient> getClientsWithOpenAssetPath(AssetPath path) {
+   private List<EditorClient> getClientsWithOpenAssetPath(@Nonnull AssetPath path) {
       if (this.clientOpenAssetPathMapping.isEmpty()) {
          return Collections.emptyList();
       }
@@ -275,11 +298,12 @@ public class AssetEditorPlugin extends JavaPlugin {
       return list;
    }
 
-   public AssetPath getOpenAssetPath(EditorClient editorClient) {
+   @Nullable
+   public AssetPath getOpenAssetPath(@Nonnull EditorClient editorClient) {
       return this.clientOpenAssetPathMapping.get(editorClient);
    }
 
-   private void onRegisterAssetPack(AssetPackRegisterEvent event) {
+   private void onRegisterAssetPack(@Nonnull AssetPackRegisterEvent event) {
       if (!this.assetPackDataSources.containsKey(event.getAssetPack().getName())) {
          DataSource dataSource = this.registerDataSourceForPack(event.getAssetPack());
          if (dataSource != null) {
@@ -307,7 +331,7 @@ public class AssetEditorPlugin extends JavaPlugin {
       }
    }
 
-   private void onUnregisterAssetPack(AssetPackUnregisterEvent event) {
+   private void onUnregisterAssetPack(@Nonnull AssetPackUnregisterEvent event) {
       if (this.assetPackDataSources.containsKey(event.getAssetPack().getName())) {
          DataSource dataSource = this.assetPackDataSources.remove(event.getAssetPack().getName());
          dataSource.shutdown();
@@ -628,7 +652,7 @@ public class AssetEditorPlugin extends JavaPlugin {
       this.getLogger().at(Level.INFO).log("Done Initializing %s", editorClient.getUsername());
    }
 
-   public void handleEditorClientDisconnected(@Nonnull EditorClient editorClient, PacketHandler.DisconnectReason disconnectReason) {
+   public void handleEditorClientDisconnected(@Nonnull EditorClient editorClient, @Nonnull PacketHandler.DisconnectReason disconnectReason) {
       IEventDispatcher<AssetEditorClientDisconnectEvent, AssetEditorClientDisconnectEvent> dispatch = HytaleServer.get()
          .getEventBus()
          .dispatchFor(AssetEditorClientDisconnectEvent.class);
@@ -650,11 +674,11 @@ public class AssetEditorPlugin extends JavaPlugin {
 
    public void handleDeleteAssetPack(@Nonnull EditorClient editorClient, @Nonnull String packId) {
       if (packId.equalsIgnoreCase("Hytale:Hytale")) {
-         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSET_PACK);
       } else {
          DataSource dataSource = this.getDataSourceForPack(packId);
          if (dataSource == null) {
-            editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+            editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSET_PACK);
          } else {
             AssetModule.get().unregisterPack(packId);
 
@@ -687,9 +711,7 @@ public class AssetEditorPlugin extends JavaPlugin {
             }
 
             if (!isInModsDirectory) {
-               editorClient.sendPopupNotification(
-                  AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.packOutsideDirectory")
-               );
+               editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.PACK_OUTSIDE_DIRECTORY);
             } else {
                try {
                   FileUtil.deleteDirectory(targetPath);
@@ -703,17 +725,17 @@ public class AssetEditorPlugin extends JavaPlugin {
 
    public void handleUpdateAssetPack(@Nonnull EditorClient editorClient, @Nonnull String packId, @Nonnull AssetPackManifest packetManifest) {
       if (packId.equals("Hytale:Hytale")) {
-         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSET_PACK);
       } else {
          DataSource dataSource = this.getDataSourceForPack(packId);
          if (dataSource == null) {
-            editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+            editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSET_PACK);
          } else if (dataSource.isImmutable()) {
-            editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+            editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.ASSETS_READ_ONLY);
          } else {
             PluginManifest manifest = dataSource.getManifest();
             if (manifest == null) {
-               editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.manifestNotFound"));
+               editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.MANIFEST_NOT_FOUND);
             } else {
                boolean didIdentifierChange = false;
                if (packetManifest.name != null && !packetManifest.name.isEmpty() && !manifest.getName().equals(packetManifest.name)) {
@@ -739,9 +761,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                      manifest.setVersion(Semver.fromString(packetManifest.version));
                   } catch (IllegalArgumentException e) {
                      this.getLogger().at(Level.WARNING).withCause(e).log("Invalid version format: %s", packetManifest.version);
-                     editorClient.sendPopupNotification(
-                        AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.invalidVersionFormat")
-                     );
+                     editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.INVALID_VERSION_FORMAT);
                      return;
                   }
                }
@@ -760,23 +780,35 @@ public class AssetEditorPlugin extends JavaPlugin {
                   manifest.setAuthors(authors);
                }
 
+               if (packetManifest.serverVersion != null) {
+                  manifest.setServerVersion(packetManifest.serverVersion);
+               }
+
                Path manifestPath = dataSource.getRootPath().resolve("manifest.json");
 
                try {
                   BsonUtil.writeSync(manifestPath, PluginManifest.CODEC, manifest, this.getLogger());
                   this.getLogger().at(Level.INFO).log("Saved manifest for pack %s", packId);
-                  editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Success, Message.translation("server.assetEditor.messages.manifestSaved"));
+                  editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Success, Messages.MANIFEST_SAVED);
                } catch (IOException e) {
                   this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to save manifest for pack %s", packId);
-                  editorClient.sendPopupNotification(
-                     AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.manifestSaveFailed")
-                  );
+                  editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.MANIFEST_SAVE_FAILED);
                }
 
                this.broadcastPackAddedOrUpdated(packId, manifest);
                if (didIdentifierChange) {
-                  String newPackId = new PluginIdentifier(manifest).toString();
+                  PluginIdentifier newPackIdentifier = new PluginIdentifier(manifest);
+                  String newPackId = newPackIdentifier.toString();
                   Path packPath = dataSource.getRootPath();
+                  HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+                  HytaleServerConfig.ModConfig.setBoot(serverConfig, newPackIdentifier, true);
+                  Map<PluginIdentifier, HytaleServerConfig.ModConfig> modConfig = serverConfig.getModConfig();
+                  modConfig.remove(PluginIdentifier.fromString(packId));
+                  serverConfig.markChanged();
+                  if (serverConfig.consumeHasChanged()) {
+                     HytaleServerConfig.save(serverConfig).join();
+                  }
+
                   AssetModule assetModule = AssetModule.get();
                   assetModule.unregisterPack(packId);
                   assetModule.registerPack(newPackId, packPath, manifest);
@@ -788,7 +820,7 @@ public class AssetEditorPlugin extends JavaPlugin {
 
    public void handleCreateAssetPack(@Nonnull EditorClient editorClient, @Nonnull AssetPackManifest packetManifest, int requestToken) {
       if (packetManifest.name == null || packetManifest.name.isEmpty()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.packNameRequired"));
+         editorClient.sendFailureReply(requestToken, Messages.PACK_NAME_REQUIRED);
       } else if (packetManifest.group != null && !packetManifest.group.isEmpty()) {
          PluginManifest manifest = new PluginManifest();
          manifest.setName(packetManifest.name);
@@ -806,7 +838,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                manifest.setVersion(Semver.fromString(packetManifest.version));
             } catch (IllegalArgumentException e) {
                this.getLogger().at(Level.WARNING).withCause(e).log("Invalid version format: %s", packetManifest.version);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.invalidVersionFormat"));
+               editorClient.sendFailureReply(requestToken, Messages.INVALID_VERSION_FORMAT);
                return;
             }
          }
@@ -825,9 +857,10 @@ public class AssetEditorPlugin extends JavaPlugin {
             manifest.setAuthors(authors);
          }
 
+         manifest.setServerVersion(packetManifest.serverVersion);
          String packId = new PluginIdentifier(manifest).toString();
          if (this.assetPackDataSources.containsKey(packId)) {
-            editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.packAlreadyExists"));
+            editorClient.sendFailureReply(requestToken, Messages.PACK_ALREADY_EXISTS);
          } else {
             Path modsPath = PluginManager.MODS_PATH;
             String dirName = AssetPathUtil.removeInvalidFileNameChars(
@@ -835,33 +868,41 @@ public class AssetEditorPlugin extends JavaPlugin {
             );
             Path normalized = Path.of(dirName).normalize();
             if (AssetPathUtil.isInvalidFileName(normalized)) {
-               editorClient.sendFailureReply(requestToken, Messages.INVALID_FILENAME_MESSAGE);
+               editorClient.sendFailureReply(requestToken, Messages.INVALID_FILE_NAME);
             } else {
                Path packPath = modsPath.resolve(normalized).normalize();
                if (!packPath.startsWith(modsPath)) {
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.packOutsideDirectory"));
+                  editorClient.sendFailureReply(requestToken, Messages.PACK_OUTSIDE_DIRECTORY);
                } else if (Files.exists(packPath)) {
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.packAlreadyExistsAtPath"));
+                  editorClient.sendFailureReply(requestToken, Messages.PACK_ALREADY_EXISTS_AT_PATH);
                } else {
                   try {
                      Files.createDirectories(packPath);
                      Path manifestPath = packPath.resolve("manifest.json");
                      BsonUtil.writeSync(manifestPath, PluginManifest.CODEC, manifest, this.getLogger());
+                     HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+                     HytaleServerConfig.ModConfig.setBoot(serverConfig, new PluginIdentifier(manifest), true);
+                     serverConfig.markChanged();
+                     if (serverConfig.consumeHasChanged()) {
+                        HytaleServerConfig.save(serverConfig).join();
+                     }
+
                      AssetModule.get().registerPack(packId, packPath, manifest);
-                     editorClient.sendSuccessReply(requestToken, Message.translation("server.assetEditor.messages.packCreated"));
+                     editorClient.sendSuccessReply(requestToken, Messages.PACK_CREATED);
                      this.getLogger().at(Level.INFO).log("Created new pack: %s at %s", packId, packPath);
                   } catch (IOException e) {
                      this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to create pack %s", packId);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.packCreationFailed"));
+                     editorClient.sendFailureReply(requestToken, Messages.PACK_CREATION_FAILED);
                   }
                }
             }
          }
       } else {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.packGroupRequired"));
+         editorClient.sendFailureReply(requestToken, Messages.PACK_GROUP_REQUIRED);
       }
    }
 
+   @Nonnull
    private static AssetPackManifest toManifestPacket(@Nonnull PluginManifest manifest) {
       AssetPackManifest packet = new AssetPackManifest();
       packet.name = manifest.getName();
@@ -869,6 +910,7 @@ public class AssetEditorPlugin extends JavaPlugin {
       packet.group = manifest.getGroup();
       packet.version = manifest.getVersion() != null ? manifest.getVersion().toString() : "";
       packet.website = manifest.getWebsite() != null ? manifest.getWebsite() : "";
+      packet.serverVersion = manifest.getServerVersion() != null ? manifest.getServerVersion() : "";
       List<com.hypixel.hytale.protocol.packets.asseteditor.AuthorInfo> authors = new ObjectArrayList<>();
 
       for (AuthorInfo a : manifest.getAuthors()) {
@@ -882,7 +924,7 @@ public class AssetEditorPlugin extends JavaPlugin {
       return packet;
    }
 
-   private void broadcastPackAddedOrUpdated(String packId, PluginManifest manifest) {
+   private void broadcastPackAddedOrUpdated(@Nonnull String packId, @Nonnull PluginManifest manifest) {
       AssetPackManifest manifestPacket = toManifestPacket(manifest);
 
       for (Set<EditorClient> clients : this.uuidToEditorClients.values()) {
@@ -988,11 +1030,11 @@ public class AssetEditorPlugin extends JavaPlugin {
    public void handleAssetUpdate(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, @Nonnull byte[] data, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else {
          AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.tryGetAssetTypeHandler(assetPath.path(), editorClient, requestToken);
          if (assetTypeHandler != null) {
@@ -1002,13 +1044,13 @@ public class AssetEditorPlugin extends JavaPlugin {
                try {
                   if (!dataSource.doesAssetExist(assetPath.path())) {
                      this.getLogger().at(Level.WARNING).log("%s does not exist", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.update.doesntExist"));
+                     editorClient.sendFailureReply(requestToken, Messages.UPDATE_DOESNT_EXIST);
                      return;
                   }
 
                   if (!assetTypeHandler.isValidData(data)) {
                      this.getLogger().at(Level.WARNING).log("Failed to validate data for %s", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createAsset.failed"));
+                     editorClient.sendFailureReply(requestToken, Messages.CREATE_ASSET_FAILED);
                      return;
                   }
 
@@ -1021,7 +1063,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                   }
 
                   this.getLogger().at(Level.WARNING).log("Failed to update asset %s in data source!", assetPath);
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.update.failed"));
+                  editorClient.sendFailureReply(requestToken, Messages.UPDATE_FAILED);
                } finally {
                   this.globalEditLock.unlockWrite(stamp);
                }
@@ -1043,26 +1085,26 @@ public class AssetEditorPlugin extends JavaPlugin {
       int requestToken
    ) {
       AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.getAssetTypeHandler(assetType);
-      if (!(assetTypeHandler instanceof JsonTypeHandler)) {
+      if (!(assetTypeHandler instanceof JsonTypeHandler jsonTypeHandler)) {
          this.getLogger().at(Level.WARNING).log("Invalid asset type %s", assetType);
          editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.unknownAssetType").param("assetType", assetType));
       } else {
          DataSource dataSource;
-         if (assetIndex > -1 && assetTypeHandler instanceof AssetStoreTypeHandler) {
-            AssetStore assetStore = ((AssetStoreTypeHandler)assetTypeHandler).getAssetStore();
+         if (assetIndex > -1 && assetTypeHandler instanceof AssetStoreTypeHandler assetStoreTypeHandler) {
+            AssetStore assetStore = assetStoreTypeHandler.getAssetStore();
             AssetMap assetMap = assetStore.getAssetMap();
             String keyString = AssetStoreUtil.getIdFromIndex(assetStore, assetIndex);
             Object key = assetStore.decodeStringKey(keyString);
             Path storedPath = assetMap.getPath(key);
             String storedAssetPack = assetMap.getAssetPack(key);
             if (storedPath == null || storedAssetPack == null) {
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.unknownAssetIndex"));
+               editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_INDEX);
                return;
             }
 
             dataSource = this.getDataSourceForPack(storedAssetPack);
             if (dataSource == null) {
-               editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+               editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
                return;
             }
 
@@ -1070,18 +1112,18 @@ public class AssetEditorPlugin extends JavaPlugin {
          } else {
             dataSource = this.getDataSourceForPath(assetPath);
             if (dataSource == null) {
-               editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+               editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
                return;
             }
          }
 
          if (dataSource.isImmutable()) {
-            editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+            editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
          } else if (!this.isValidPath(dataSource, assetPath)) {
-            editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+            editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
          } else if (!assetPath.path().startsWith(assetTypeHandler.getRootPath())) {
             this.getLogger().at(Level.WARNING).log("%s is not within valid asset directory", assetPath);
-            editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.directoryOutsideRoot"));
+            editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ROOT);
          } else {
             String fileExtension = PathUtil.getFileExtension(assetPath.path());
             if (!fileExtension.equalsIgnoreCase(assetTypeHandler.getConfig().fileExtension)) {
@@ -1102,7 +1144,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                   byte[] bytes = dataSource.getAssetBytes(assetPath.path());
                   if (bytes == null) {
                      this.getLogger().at(Level.WARNING).log("%s does not exist", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.update.doesntExist"));
+                     editorClient.sendFailureReply(requestToken, Messages.UPDATE_DOESNT_EXIST);
                      return;
                   }
 
@@ -1115,7 +1157,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                      bytes = json.getBytes(StandardCharsets.UTF_8);
                   } catch (Exception e) {
                      this.getLogger().at(Level.WARNING).withCause(e).log("Failed to apply commands to %s", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.update.failed"));
+                     editorClient.sendFailureReply(requestToken, Messages.UPDATE_FAILED);
                      return;
                   }
 
@@ -1130,18 +1172,17 @@ public class AssetEditorPlugin extends JavaPlugin {
                      this.updateJsonAssetForConnectedClients(assetPath, commands, editorClient);
                      editorClient.sendSuccessReply(requestToken);
                      this.sendModifiedAssetsUpdateToConnectedUsers();
-                     ((JsonTypeHandler)assetTypeHandler)
-                        .loadAssetFromDocument(
-                           assetPath,
-                           dataSource.getFullPathToAssetData(assetPath.path()),
-                           asset.clone(),
-                           new AssetUpdateQuery(rebuildCacheBuilder.build()),
-                           editorClient
-                        );
+                     jsonTypeHandler.loadAssetFromDocument(
+                        assetPath,
+                        dataSource.getFullPathToAssetData(assetPath.path()),
+                        asset.clone(),
+                        new AssetUpdateQuery(rebuildCacheBuilder.build()),
+                        editorClient
+                     );
                      return;
                   }
 
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.update.failed"));
+                  editorClient.sendFailureReply(requestToken, Messages.UPDATE_FAILED);
                } finally {
                   this.globalEditLock.unlockWrite(stamp);
                }
@@ -1153,17 +1194,17 @@ public class AssetEditorPlugin extends JavaPlugin {
    public void handleUndo(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else {
          AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.tryGetAssetTypeHandler(assetPath.path(), editorClient, requestToken);
          if (assetTypeHandler != null) {
             if (!(assetTypeHandler instanceof JsonTypeHandler)) {
                this.getLogger().at(Level.WARNING).log("Undo can only be applied to an instance of JsonTypeHandler");
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.invalidAssetType"));
+               editorClient.sendFailureReply(requestToken, Messages.INVALID_ASSET_TYPE);
             } else {
                long stamp = this.globalEditLock.writeLock();
 
@@ -1171,7 +1212,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                   AssetUndoRedoInfo undoRedo = this.undoRedoManager.getUndoRedoStack(assetPath);
                   if (undoRedo == null || undoRedo.undoStack.isEmpty()) {
                      this.getLogger().at(Level.INFO).log("Nothing to undo");
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.undo.empty"));
+                     editorClient.sendFailureReply(requestToken, Messages.UNDO_EMPTY);
                      return;
                   }
 
@@ -1190,7 +1231,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                   byte[] bytes = dataSource.getAssetBytes(assetPath.path());
                   if (bytes == null) {
                      this.getLogger().at(Level.WARNING).log("%s does not exist", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.update.doesntExist"));
+                     editorClient.sendFailureReply(requestToken, Messages.UPDATE_DOESNT_EXIST);
                      return;
                   }
 
@@ -1203,7 +1244,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                      bytes = json.getBytes(StandardCharsets.UTF_8);
                   } catch (Exception e) {
                      this.getLogger().at(Level.WARNING).withCause(e).log("Failed to undo for %s", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.undo.failed"));
+                     editorClient.sendFailureReply(requestToken, Messages.UNDO_FAILED);
                      return;
                   }
 
@@ -1224,7 +1265,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                      return;
                   }
 
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.undo.failed"));
+                  editorClient.sendFailureReply(requestToken, Messages.UNDO_FAILED);
                } finally {
                   this.globalEditLock.unlockWrite(stamp);
                }
@@ -1236,17 +1277,17 @@ public class AssetEditorPlugin extends JavaPlugin {
    public void handleRedo(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else {
          AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.tryGetAssetTypeHandler(assetPath.path(), editorClient, requestToken);
          if (assetTypeHandler != null) {
             if (!(assetTypeHandler instanceof JsonTypeHandler)) {
                this.getLogger().at(Level.WARNING).log("Redo can only be applied to an instance of JsonTypeHandler");
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.invalidAssetType"));
+               editorClient.sendFailureReply(requestToken, Messages.INVALID_ASSET_TYPE);
             } else {
                long stamp = this.globalEditLock.writeLock();
 
@@ -1254,14 +1295,14 @@ public class AssetEditorPlugin extends JavaPlugin {
                   AssetUndoRedoInfo undoRedo = this.undoRedoManager.getUndoRedoStack(assetPath);
                   if (undoRedo == null || undoRedo.redoStack.isEmpty()) {
                      this.getLogger().at(Level.WARNING).log("Nothing to redo");
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.redo.empty"));
+                     editorClient.sendFailureReply(requestToken, Messages.REDO_EMPTY);
                      return;
                   }
 
                   byte[] bytes = dataSource.getAssetBytes(assetPath.path());
                   if (bytes == null) {
                      this.getLogger().at(Level.WARNING).log("%s does not exist", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.update.doesntExist"));
+                     editorClient.sendFailureReply(requestToken, Messages.UPDATE_DOESNT_EXIST);
                      return;
                   }
 
@@ -1275,7 +1316,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                      bytes = json.getBytes(StandardCharsets.UTF_8);
                   } catch (Exception e) {
                      this.getLogger().at(Level.WARNING).withCause(e).log("Failed to redo for %s", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.redo.failed"));
+                     editorClient.sendFailureReply(requestToken, Messages.REDO_FAILED);
                      return;
                   }
 
@@ -1296,7 +1337,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                      return;
                   }
 
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.redo.failed"));
+                  editorClient.sendFailureReply(requestToken, Messages.REDO_FAILED);
                } finally {
                   this.globalEditLock.unlockWrite(stamp);
                }
@@ -1308,16 +1349,16 @@ public class AssetEditorPlugin extends JavaPlugin {
    public void handleFetchAsset(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else if (this.assetTypeRegistry.tryGetAssetTypeHandler(assetPath.path(), editorClient, requestToken) != null) {
          long stamp = this.globalEditLock.readLock();
 
          try {
             if (!dataSource.doesAssetExist(assetPath.path())) {
                this.getLogger().at(Level.WARNING).log("%s is not a regular file", assetPath);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.fetchAsset.doesntExist"));
+               editorClient.sendFailureReply(requestToken, Messages.FETCH_ASSET_DOESNT_EXIST);
                return;
             }
 
@@ -1329,7 +1370,7 @@ public class AssetEditorPlugin extends JavaPlugin {
             }
 
             this.getLogger().at(Level.INFO).log("Failed to get '%s'", assetPath);
-            editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.fetchAsset.failed"));
+            editorClient.sendFailureReply(requestToken, Messages.FETCH_ASSET_FAILED);
          } finally {
             this.globalEditLock.unlockRead(stamp);
          }
@@ -1339,9 +1380,9 @@ public class AssetEditorPlugin extends JavaPlugin {
    public void handleFetchJsonAssetWithParents(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, boolean isFromOpenedTab, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else if (this.assetTypeRegistry.tryGetAssetTypeHandler(assetPath.path(), editorClient, requestToken) != null) {
          long stamp = this.globalEditLock.readLock();
 
@@ -1357,7 +1398,7 @@ public class AssetEditorPlugin extends JavaPlugin {
             }
 
             this.getLogger().at(Level.INFO).log("Failed to get '%s'", assetPath);
-            editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.fetchAsset.failed"));
+            editorClient.sendFailureReply(requestToken, Messages.FETCH_ASSET_FAILED);
          } finally {
             this.globalEditLock.unlockRead(stamp);
          }
@@ -1367,43 +1408,38 @@ public class AssetEditorPlugin extends JavaPlugin {
    public void handleRequestChildIds(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.UNKNOWN_ASSET_PACK);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
+      } else if (!(this.assetTypeRegistry.getAssetTypeHandlerForPath(assetPath.path()) instanceof AssetStoreTypeHandler assetStoreTypeHandler)) {
+         this.getLogger().at(Level.WARNING).log("Invalid asset type for %s", assetPath);
+         editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.REQUEST_CHILD_IDS_ASSET_TYPE_MISSING);
       } else {
-         AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.getAssetTypeHandlerForPath(assetPath.path());
-         if (!(assetTypeHandler instanceof AssetStoreTypeHandler)) {
-            this.getLogger().at(Level.WARNING).log("Invalid asset type for %s", assetPath);
-            editorClient.sendPopupNotification(
-               AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.requestChildIds.assetTypeMissing")
-            );
-         } else {
-            AssetStore assetStore = ((AssetStoreTypeHandler)assetTypeHandler).getAssetStore();
-            Object key = assetStore.decodeFilePathKey(assetPath.path());
-            Set children = assetStore.getAssetMap().getChildren(key);
-            HashSet<String> childrenIds = new HashSet<>();
-            if (children != null) {
-               for (Object child : children) {
-                  if (assetStore.getAssetMap().getPath(child) != null) {
-                     childrenIds.add(child.toString());
-                  }
+         AssetStore assetStore = assetStoreTypeHandler.getAssetStore();
+         Object key = assetStore.decodeFilePathKey(assetPath.path());
+         Set children = assetStore.getAssetMap().getChildren(key);
+         HashSet childrenIds = new HashSet();
+         if (children != null) {
+            for (Object child : children) {
+               if (assetStore.getAssetMap().getPath(child) != null) {
+                  childrenIds.add(child.toString());
                }
             }
-
-            this.getLogger().at(Level.INFO).log("Children ids for '%s': %s", key.toString(), childrenIds);
-            editorClient.getPacketHandler().write(new AssetEditorRequestChildrenListReply(assetPath.toPacket(), childrenIds.toArray(String[]::new)));
          }
+
+         this.getLogger().at(Level.INFO).log("Children ids for '%s': %s", key.toString(), childrenIds);
+         editorClient.getPacketHandler().write(new AssetEditorRequestChildrenListReply(assetPath.toPacket(), childrenIds.toArray(String[]::new)));
       }
    }
 
    public void handleDeleteAsset(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else {
          AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.tryGetAssetTypeHandler(assetPath.path(), editorClient, requestToken);
          if (assetTypeHandler != null) {
@@ -1413,7 +1449,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                try {
                   if (!dataSource.doesAssetExist(assetPath.path())) {
                      this.getLogger().at(Level.WARNING).log("%s does not exist", assetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.deleteAsset.alreadyDeleted"));
+                     editorClient.sendFailureReply(requestToken, Messages.DELETE_ASSET_ALREADY_DELETED);
                      return;
                   }
 
@@ -1429,7 +1465,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                   }
 
                   this.getLogger().at(Level.WARNING).log("Failed to delete %s from data source", assetPath);
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.failedToDeleteAsset"));
+                  editorClient.sendFailureReply(requestToken, Messages.FAILED_TO_DELETE_ASSET);
                } finally {
                   this.globalEditLock.unlockWrite(stamp);
                }
@@ -1442,24 +1478,24 @@ public class AssetEditorPlugin extends JavaPlugin {
       }
    }
 
-   public void handleSubscribeToModifiedAssetsChanges(EditorClient editorClient) {
+   public void handleSubscribeToModifiedAssetsChanges(@Nonnull EditorClient editorClient) {
       this.clientsSubscribedToModifiedAssetsChanges.add(editorClient);
    }
 
-   public void handleUnsubscribeFromModifiedAssetsChanges(EditorClient editorClient) {
+   public void handleUnsubscribeFromModifiedAssetsChanges(@Nonnull EditorClient editorClient) {
       this.clientsSubscribedToModifiedAssetsChanges.remove(editorClient);
    }
 
    public void handleRenameAsset(@Nonnull EditorClient editorClient, @Nonnull AssetPath oldAssetPath, @Nonnull AssetPath newAssetPath, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(oldAssetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, oldAssetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else if (!this.isValidPath(dataSource, newAssetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else {
          AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.tryGetAssetTypeHandler(oldAssetPath.path(), editorClient, requestToken);
          if (assetTypeHandler != null) {
@@ -1474,21 +1510,21 @@ public class AssetEditorPlugin extends JavaPlugin {
                );
             } else if (!newAssetPath.path().startsWith(assetTypeHandler.getRootPath())) {
                this.getLogger().at(Level.WARNING).log("%s is not within valid asset directory", newAssetPath);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.directoryOutsideRoot"));
+               editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ROOT);
             } else {
                long stamp = this.globalEditLock.writeLock();
 
                try {
                   if (dataSource.doesAssetExist(newAssetPath.path())) {
                      this.getLogger().at(Level.WARNING).log("%s already exists", newAssetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.renameAsset.alreadyExists"));
+                     editorClient.sendFailureReply(requestToken, Messages.RENAME_ASSET_ALREADY_EXISTS);
                      return;
                   }
 
                   byte[] oldAsset = dataSource.getAssetBytes(oldAssetPath.path());
                   if (oldAsset == null) {
                      this.getLogger().at(Level.WARNING).log("%s is not a regular file", oldAssetPath);
-                     editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.renameAsset.doesntExist"));
+                     editorClient.sendFailureReply(requestToken, Messages.RENAME_ASSET_DOESNT_EXIST);
                      return;
                   }
 
@@ -1512,7 +1548,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                   }
 
                   this.getLogger().at(Level.WARNING).log("Failed to move file %s to %s", oldAssetPath, newAssetPath);
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.renameAsset.failed"));
+                  editorClient.sendFailureReply(requestToken, Messages.RENAME_ASSET_FAILED);
                } finally {
                   this.globalEditLock.unlockWrite(stamp);
                }
@@ -1524,24 +1560,24 @@ public class AssetEditorPlugin extends JavaPlugin {
    public void handleDeleteDirectory(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.directoryOutsideRoot"));
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ROOT);
       } else if (!this.getAssetTypeRegistry().isPathInAssetTypeFolder(assetPath.path())) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else {
          long stamp = this.globalEditLock.writeLock();
 
          try {
             if (!dataSource.doesDirectoryExist(assetPath.path())) {
                this.getLogger().at(Level.WARNING).log("Directory doesn't exist %s", assetPath);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createDirectory.alreadyExists"));
+               editorClient.sendFailureReply(requestToken, Messages.CREATE_DIRECTORY_ALREADY_EXISTS);
                return;
             }
 
             if (!dataSource.getAssetTree().isDirectoryEmpty(assetPath.path())) {
                this.getLogger().at(Level.WARNING).log("%s must be empty", assetPath);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.deleteDirectory.notEmpty"));
+               editorClient.sendFailureReply(requestToken, Messages.DELETE_DIRECTORY_NOT_EMPTY);
                return;
             }
 
@@ -1555,7 +1591,7 @@ public class AssetEditorPlugin extends JavaPlugin {
             }
 
             this.getLogger().at(Level.WARNING).log("Directory %s could not be deleted!", assetPath);
-            editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.deleteDirectory.failed"));
+            editorClient.sendFailureReply(requestToken, Messages.DELETE_DIRECTORY_FAILED);
          } finally {
             this.globalEditLock.unlockWrite(stamp);
          }
@@ -1563,31 +1599,31 @@ public class AssetEditorPlugin extends JavaPlugin {
    }
 
    public void handleRenameDirectory(@Nonnull EditorClient editorClient, AssetPath path, AssetPath newPath, int requestToken) {
-      editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.renameDirectory.unsupported"));
+      editorClient.sendFailureReply(requestToken, Messages.RENAME_DIRECTORY_UNSUPPORTED);
    }
 
    public void handleCreateDirectory(@Nonnull EditorClient editorClient, @Nonnull AssetPath assetPath, int requestToken) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createDirectory.noDataSource"));
+         editorClient.sendFailureReply(requestToken, Messages.CREATE_DIRECTORY_NO_DATA_SOURCE);
       } else if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createDirectory.noPath"));
+         editorClient.sendFailureReply(requestToken, Messages.CREATE_DIRECTORY_NO_PATH);
       } else {
          long stamp = this.globalEditLock.writeLock();
 
          try {
             if (dataSource.doesDirectoryExist(assetPath.path())) {
                this.getLogger().at(Level.WARNING).log("Directory already exists at %s", assetPath);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createDirectory.alreadyExists"));
+               editorClient.sendFailureReply(requestToken, Messages.CREATE_DIRECTORY_ALREADY_EXISTS);
                return;
             }
 
             Path parentDirectoryPath = assetPath.path().getParent();
             if (!dataSource.doesDirectoryExist(parentDirectoryPath)) {
                this.getLogger().at(Level.WARNING).log("Parent directory is missing for %s", assetPath);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.parentDirectoryMissing"));
+               editorClient.sendFailureReply(requestToken, Messages.PARENT_DIRECTORY_MISSING);
                return;
             }
 
@@ -1604,7 +1640,7 @@ public class AssetEditorPlugin extends JavaPlugin {
             }
 
             this.getLogger().at(Level.WARNING).log("Failed to create directory %s", assetPath);
-            editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.failedToCreateDirectory"));
+            editorClient.sendFailureReply(requestToken, Messages.FAILED_TO_CREATE_DIRECTORY);
          } finally {
             this.globalEditLock.unlockWrite(stamp);
          }
@@ -1621,11 +1657,11 @@ public class AssetEditorPlugin extends JavaPlugin {
    ) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       if (dataSource == null) {
-         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSETPACK_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.UNKNOWN_ASSET_PACK);
       } else if (dataSource.isImmutable()) {
-         editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.assetsReadOnly"));
+         editorClient.sendFailureReply(requestToken, Messages.ASSETS_READ_ONLY);
       } else if (!this.isValidPath(dataSource, assetPath)) {
-         editorClient.sendFailureReply(requestToken, Messages.OUTSIDE_ASSET_ROOT_MESSAGE);
+         editorClient.sendFailureReply(requestToken, Messages.DIRECTORY_OUTSIDE_ASSET_TYPE_ROOT);
       } else {
          AssetTypeHandler assetTypeHandler = this.assetTypeRegistry.tryGetAssetTypeHandler(assetPath.path(), editorClient, requestToken);
          if (assetTypeHandler != null) {
@@ -1634,13 +1670,13 @@ public class AssetEditorPlugin extends JavaPlugin {
             try {
                if (dataSource.doesAssetExist(assetPath.path())) {
                   this.getLogger().at(Level.WARNING).log("%s already exists", assetPath);
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createAsset.idAlreadyExists"));
+                  editorClient.sendFailureReply(requestToken, Messages.CREATE_ASSET_ID_ALREADY_EXISTS);
                   return;
                }
 
                if (!assetTypeHandler.isValidData(data)) {
                   this.getLogger().at(Level.WARNING).log("Failed to validate data for %s", assetPath);
-                  editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createAsset.failed"));
+                  editorClient.sendFailureReply(requestToken, Messages.CREATE_ASSET_FAILED);
                   return;
                }
 
@@ -1676,7 +1712,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                }
 
                this.getLogger().at(Level.WARNING).log("Failed to create asset %s", assetPath);
-               editorClient.sendFailureReply(requestToken, Message.translation("server.assetEditor.messages.createAsset.failed"));
+               editorClient.sendFailureReply(requestToken, Messages.CREATE_ASSET_FAILED);
             } finally {
                this.globalEditLock.unlockWrite(stamp);
             }
@@ -1773,13 +1809,13 @@ public class AssetEditorPlugin extends JavaPlugin {
       this.updateAssetForConnectedClients(assetPath, null);
    }
 
-   private void updateAssetForConnectedClients(@Nonnull AssetPath assetPath, EditorClient ignoreEditorClient) {
+   private void updateAssetForConnectedClients(@Nonnull AssetPath assetPath, @Nullable EditorClient ignoreEditorClient) {
       DataSource dataSource = this.getDataSourceForPath(assetPath);
       byte[] bytes = dataSource.getAssetBytes(assetPath.path());
       this.updateAssetForConnectedClients(assetPath, bytes, ignoreEditorClient);
    }
 
-   private void updateAssetForConnectedClients(@Nonnull AssetPath assetPath, byte[] bytes, EditorClient ignoreEditorClient) {
+   private void updateAssetForConnectedClients(@Nonnull AssetPath assetPath, byte[] bytes, @Nullable EditorClient ignoreEditorClient) {
       AssetEditorAssetUpdated updatePacket = new AssetEditorAssetUpdated(assetPath.toPacket(), bytes);
 
       for (Entry<EditorClient, AssetPath> entry : this.clientOpenAssetPathMapping.entrySet()) {
@@ -1789,11 +1825,13 @@ public class AssetEditorPlugin extends JavaPlugin {
       }
    }
 
-   private void updateJsonAssetForConnectedClients(@Nonnull AssetPath assetPath, JsonUpdateCommand[] commands) {
+   private void updateJsonAssetForConnectedClients(@Nonnull AssetPath assetPath, @Nonnull JsonUpdateCommand[] commands) {
       this.updateJsonAssetForConnectedClients(assetPath, commands, null);
    }
 
-   private void updateJsonAssetForConnectedClients(@Nonnull AssetPath assetPath, JsonUpdateCommand[] commands, EditorClient ignoreEditorClient) {
+   private void updateJsonAssetForConnectedClients(
+      @Nonnull AssetPath assetPath, @Nonnull JsonUpdateCommand[] commands, @Nullable EditorClient ignoreEditorClient
+   ) {
       AssetEditorJsonAssetUpdated updatePacket = new AssetEditorJsonAssetUpdated(assetPath.toPacket(), commands);
 
       for (Entry<EditorClient, AssetPath> connectedPlayer : this.clientOpenAssetPathMapping.entrySet()) {
@@ -1805,7 +1843,7 @@ public class AssetEditorPlugin extends JavaPlugin {
 
    @Nonnull
    private AssetEditorLastModifiedAssets buildAssetEditorLastModifiedAssetsPacket() {
-      ArrayList<AssetInfo> allAssets = new ArrayList<>();
+      List<AssetInfo> allAssets = new ObjectArrayList<>();
 
       for (Entry<String, DataSource> dataSource : this.assetPackDataSources.entrySet()) {
          if (dataSource.getValue() instanceof StandardDataSource standardDataSource) {

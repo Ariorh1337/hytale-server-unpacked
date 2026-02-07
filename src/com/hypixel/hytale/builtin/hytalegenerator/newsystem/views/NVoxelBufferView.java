@@ -12,9 +12,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class NVoxelBufferView<T> implements VoxelSpace<T> {
+   @Nonnull
    private final Class<T> voxelType;
+   @Nonnull
    private final NBufferBundle.Access.View bufferAccess;
+   @Nonnull
    private final Bounds3i bounds_voxelGrid;
+   @Nonnull
    private final Vector3i size_voxelGrid;
 
    public NVoxelBufferView(@Nonnull NBufferBundle.Access.View bufferAccess, @Nonnull Class<T> voxelType) {
@@ -59,10 +63,13 @@ public class NVoxelBufferView<T> implements VoxelSpace<T> {
    @Override
    public boolean set(T content, @Nonnull Vector3i position_voxelGrid) {
       assert this.bounds_voxelGrid.contains(position_voxelGrid);
+      int initialX = position_voxelGrid.x;
+      int initialY = position_voxelGrid.y;
+      int initialZ = position_voxelGrid.z;
       NVoxelBuffer<T> buffer = this.getBuffer_fromVoxelGrid(position_voxelGrid);
-      Vector3i positionInBuffer_voxelGrid = position_voxelGrid.clone();
-      GridUtils.toVoxelGridInsideBuffer_fromWorldGrid(positionInBuffer_voxelGrid);
-      buffer.setVoxelContent(positionInBuffer_voxelGrid, content);
+      GridUtils.toVoxelGridInsideBuffer_fromWorldGrid(position_voxelGrid);
+      buffer.setVoxelContent(position_voxelGrid, content);
+      position_voxelGrid.assign(initialX, initialY, initialZ);
       return true;
    }
 
@@ -86,10 +93,15 @@ public class NVoxelBufferView<T> implements VoxelSpace<T> {
    @Override
    public T getContent(@Nonnull Vector3i position_voxelGrid) {
       assert this.bounds_voxelGrid.contains(position_voxelGrid);
+      int initialX = position_voxelGrid.x;
+      int initialY = position_voxelGrid.y;
+      int initialZ = position_voxelGrid.z;
       NVoxelBuffer<T> buffer = this.getBuffer_fromVoxelGrid(position_voxelGrid);
-      Vector3i positionInBuffer_voxelGrid = position_voxelGrid.clone();
+      Vector3i positionInBuffer_voxelGrid = position_voxelGrid;
       GridUtils.toVoxelGridInsideBuffer_fromWorldGrid(positionInBuffer_voxelGrid);
-      return buffer.getVoxelContent(positionInBuffer_voxelGrid);
+      T content = buffer.getVoxelContent(positionInBuffer_voxelGrid);
+      position_voxelGrid.assign(initialX, initialY, initialZ);
+      return content;
    }
 
    @Override

@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class Teleporter implements Component<ChunkStore> {
+   @Nonnull
    public static final BuilderCodec<Teleporter> CODEC = BuilderCodec.builder(Teleporter.class, Teleporter::new)
       .append(new KeyedCodec<>("World", Codec.UUID_BINARY), (teleporter, uuid) -> teleporter.worldUuid = uuid, teleporter -> teleporter.worldUuid)
       .add()
@@ -51,6 +52,7 @@ public class Teleporter implements Component<ChunkStore> {
    @Nullable
    private String warp;
    @Deprecated
+   @Nullable
    private String ownedWarp;
    private boolean isCustomName;
    private String warpNameWordListKey;
@@ -94,11 +96,12 @@ public class Teleporter implements Component<ChunkStore> {
       this.warp = warp != null && !warp.isEmpty() ? warp : null;
    }
 
+   @Nullable
    public String getOwnedWarp() {
       return this.ownedWarp;
    }
 
-   public void setOwnedWarp(String ownedWarp) {
+   public void setOwnedWarp(@Nullable String ownedWarp) {
       this.ownedWarp = ownedWarp;
    }
 

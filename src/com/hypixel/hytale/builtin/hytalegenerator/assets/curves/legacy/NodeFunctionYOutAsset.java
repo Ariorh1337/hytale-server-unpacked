@@ -14,6 +14,7 @@ import java.util.HashSet;
 import javax.annotation.Nonnull;
 
 public class NodeFunctionYOutAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, NodeFunctionYOutAsset>>, Cleanable {
+   @Nonnull
    public static final AssetBuilderCodec<String, NodeFunctionYOutAsset> CODEC = AssetBuilderCodec.builder(
          NodeFunctionYOutAsset.class,
          NodeFunctionYOutAsset::new,

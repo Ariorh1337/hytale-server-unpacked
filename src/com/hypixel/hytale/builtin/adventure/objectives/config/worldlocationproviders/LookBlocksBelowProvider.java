@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class LookBlocksBelowProvider extends WorldLocationProvider {
+   @Nonnull
    public static final BuilderCodec<LookBlocksBelowProvider> CODEC = BuilderCodec.builder(
          LookBlocksBelowProvider.class, LookBlocksBelowProvider::new, BASE_CODEC
       )
@@ -96,7 +97,12 @@ public class LookBlocksBelowProvider extends WorldLocationProvider {
    @Override
    public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
       Vector3i newPosition = position.clone();
-      WorldChunk worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z));
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z);
+      WorldChunk worldChunkComponent = world.getChunk(chunkIndex);
+      if (worldChunkComponent == null) {
+         return null;
+      }
+
       int baseY = newPosition.y;
       int x = newPosition.x;
       int y = newPosition.y;
@@ -104,25 +110,31 @@ public class LookBlocksBelowProvider extends WorldLocationProvider {
       int currentCount = 0;
 
       while (y >= this.minRange && baseY - y <= this.maxRange) {
-         String blockStateKey = worldChunk.getBlockType(x, y, z).getId();
-         boolean found = false;
+         BlockType blockType = worldChunkComponent.getBlockType(x, y, z);
+         if (blockType == null) {
+            y--;
+            currentCount = 0;
+         } else {
+            String blockStateKey = blockType.getId();
+            boolean found = false;
 
-         for (int i = 0; i < this.blockTagsIndexes.length; i++) {
-            int blockTagId = this.blockTagsIndexes[i];
-            if (BlockType.getAssetMap().getKeysForTag(blockTagId).contains(blockStateKey)) {
-               found = true;
-               currentCount++;
+            for (int i = 0; i < this.blockTagsIndexes.length; i++) {
+               int blockTagId = this.blockTagsIndexes[i];
+               if (BlockType.getAssetMap().getKeysForTag(blockTagId).contains(blockStateKey)) {
+                  found = true;
+                  currentCount++;
+                  break;
+               }
+            }
+
+            if (currentCount == this.count) {
                break;
             }
-         }
 
-         if (currentCount == this.count) {
-            break;
-         }
-
-         y--;
-         if (!found) {
-            currentCount = 0;
+            y--;
+            if (!found) {
+               currentCount = 0;
+            }
          }
       }
 

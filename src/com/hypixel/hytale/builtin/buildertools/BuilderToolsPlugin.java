@@ -21,6 +21,7 @@ import com.hypixel.hytale.builtin.buildertools.commands.FlipCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.GlobalMaskCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.HollowCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.HotbarSwitchCommand;
+import com.hypixel.hytale.builtin.buildertools.commands.LayerCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.MoveCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.PasteCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.Pos1Command;
@@ -245,6 +246,7 @@ import com.hypixel.hytale.server.core.util.TargetUtil;
 import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import com.hypixel.hytale.sneakythrow.consumer.ThrowableConsumer;
 import com.hypixel.hytale.sneakythrow.consumer.ThrowableTriConsumer;
+import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMaps;
@@ -443,6 +445,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       commandRegistry.registerCommand(new SetToolHistorySizeCommand());
       commandRegistry.registerCommand(new ObjImportCommand());
       commandRegistry.registerCommand(new ImageImportCommand());
+      commandRegistry.registerCommand(new LayerCommand());
       OpenCustomUIInteraction.registerBlockCustomPage(
          this,
          PrefabSpawnerState.PrefabSpawnerSettingsPage.class,
@@ -877,7 +880,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       EXTRUDE,
       UPDATE_SELECTION,
       WALLS,
-      HOLLOW;
+      HOLLOW,
+      LAYER;
    }
 
    public static class ActionEntry {
@@ -2585,6 +2589,114 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          );
       }
 
+      public void layer(
+         int x,
+         int y,
+         int z,
+         @Nonnull List<Pair<Integer, String>> layers,
+         int depth,
+         Vector3i direction,
+         WorldChunk chunk,
+         BlockSelection before,
+         BlockSelection after
+      ) {
+         int xModifier = direction.x == 1 ? -1 : (direction.x == -1 ? 1 : 0);
+         int yModifier = direction.y == 1 ? -1 : (direction.y == -1 ? 1 : 0);
+         int zModifier = direction.z == 1 ? -1 : (direction.z == -1 ? 1 : 0);
+
+         for (int i = 0; i < depth; i++) {
+            if (chunk.getBlock(x + i * xModifier + xModifier, y + i * yModifier + yModifier, z + i * zModifier + zModifier) <= 0
+               && this.attemptSetLayer(x, y, z, i, layers, chunk, before, after)) {
+               return;
+            }
+         }
+      }
+
+      public void layer(@Nonnull List<Pair<Integer, String>> layers, Vector3i direction, ComponentAccessor<EntityStore> componentAccessor) {
+         if (this.selection == null) {
+            this.sendFeedback(Message.translation("server.builderTools.noSelection"), componentAccessor);
+         } else if (!this.selection.hasSelectionBounds()) {
+            this.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
+         } else {
+            int maxDepth = 0;
+
+            for (Pair<Integer, String> layer : layers) {
+               maxDepth += layer.left();
+            }
+
+            long start = System.nanoTime();
+            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.getX();
+            int xMax = max.getX();
+            int yMin = min.getY();
+            int yMax = max.getY();
+            int zMin = min.getZ();
+            int zMax = max.getZ();
+            BlockSelection before = new BlockSelection();
+            int width = xMax - xMin;
+            int depth = zMax - zMin;
+            int halfWidth = width / 2;
+            int halfDepth = depth / 2;
+            before.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
+            before.setSelectionArea(min, max);
+            this.pushHistory(BuilderToolsPlugin.Action.LAYER, new BlockSelectionSnapshot(before));
+            BlockSelection after = new BlockSelection(before);
+            World world = componentAccessor.getExternalData().getWorld();
+            LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, xMin + halfWidth, zMin + halfDepth, Math.max(width, depth));
+
+            for (int x = xMin; x <= xMax; x++) {
+               for (int z = zMin; z <= zMax; z++) {
+                  WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
+
+                  for (int y = yMax; y >= yMin; y--) {
+                     int currentBlock = chunk.getBlock(x, y, z);
+                     int currentFluid = chunk.getFluidId(x, y, z);
+                     if (currentBlock > 0 && (this.globalMask == null || !this.globalMask.isExcluded(accessor, x, y, z, min, max, currentBlock, currentFluid))) {
+                        this.layer(x, y, z, layers, maxDepth, direction, chunk, before, after);
+                     }
+                  }
+               }
+            }
+
+            after.placeNoReturn("Finished layer", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+            long end = System.nanoTime();
+            long diff = end - start;
+            BuilderToolsPlugin.get()
+               .getLogger()
+               .at(Level.FINE)
+               .log("Took: %dns (%dms) to execute layer", (long)diff, (long)TimeUnit.NANOSECONDS.toMillis(diff));
+            this.sendUpdate();
+            this.sendArea();
+         }
+      }
+
+      private boolean attemptSetLayer(
+         int x, int y, int z, int depth, List<Pair<Integer, String>> layers, WorldChunk chunk, BlockSelection before, BlockSelection after
+      ) {
+         int currentDepth = 0;
+
+         for (Pair<Integer, String> layer : layers) {
+            currentDepth += layer.left();
+            if (depth < currentDepth) {
+               int currentBlock = chunk.getBlock(x, y, z);
+               int currentBlockFiller = chunk.getFiller(x, y, z);
+               Holder<ChunkStore> holder = chunk.getBlockComponentHolder(x, y, z);
+               int rotation = chunk.getRotationIndex(x, y, z);
+               int supportValue = chunk.getSupportValue(x, y, z);
+               BlockPattern pattern = BlockPattern.parse(layer.right());
+               int materialId = pattern.nextBlock(this.random);
+               Holder<ChunkStore> newHolder = BuilderToolsPlugin.createBlockComponent(chunk, x, y, z, materialId, currentBlock, holder, true);
+               before.addBlockAtWorldPos(x, y, z, currentBlock, rotation, currentBlockFiller, supportValue, holder);
+               after.addBlockAtWorldPos(x, y, z, materialId, rotation, 0, 0, newHolder);
+               return true;
+            }
+         }
+
+         return false;
+      }
+
       public int paste(@Nonnull Ref<EntityStore> ref, int x, int y, int z, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
          return this.paste(ref, x, y, z, false, componentAccessor);
       }
@@ -3696,10 +3808,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
 
          if (reason != null) {
-            Message reasonMessage = Message.translation(reason);
             this.sendFeedback(
-               Message.translation("server.builderTools.selectedWithReason")
-                  .param("reason", reasonMessage)
+               Message.translation(reason)
                   .param("x1", pos1.getX())
                   .param("y1", pos1.getY())
                   .param("z1", pos1.getZ())
@@ -4092,6 +4202,17 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       public void save(
          @Nonnull Ref<EntityStore> ref, @Nonnull String name, boolean relativize, boolean overwrite, ComponentAccessor<EntityStore> componentAccessor
       ) {
+         this.save(ref, name, relativize, overwrite, false, componentAccessor);
+      }
+
+      public void save(
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull String name,
+         boolean relativize,
+         boolean overwrite,
+         boolean clearSupport,
+         ComponentAccessor<EntityStore> componentAccessor
+      ) {
          if (this.selection == null) {
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelection"), componentAccessor);
          } else {
@@ -4107,6 +4228,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             } else {
                try {
                   BlockSelection postClone = relativize ? this.selection.relativize() : this.selection.cloneSelection();
+                  if (clearSupport) {
+                     postClone.clearAllSupportValues();
+                  }
+
                   prefabStore.saveServerPrefab(name, postClone, overwrite);
                   this.sendUpdate();
                   this.sendFeedback(Message.translation("server.builderTools.savedSelectionToPrefab").param("name", name), componentAccessor);
@@ -4144,7 +4269,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          boolean includeEmpty,
          @Nonnull ComponentAccessor<EntityStore> componentAccessor
       ) {
-         this.saveFromSelection(ref, name, relativize, overwrite, includeEntities, includeEmpty, null, componentAccessor);
+         this.saveFromSelection(ref, name, relativize, overwrite, includeEntities, includeEmpty, null, false, componentAccessor);
       }
 
       public void saveFromSelection(
@@ -4155,6 +4280,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          boolean includeEntities,
          boolean includeEmpty,
          @Nullable Vector3i playerAnchor,
+         boolean clearSupport,
          @Nonnull ComponentAccessor<EntityStore> componentAccessor
       ) {
          if (this.selection != null && (!this.selection.getSelectionMin().equals(Vector3i.ZERO) || !this.selection.getSelectionMax().equals(Vector3i.ZERO))) {
@@ -4252,6 +4378,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
                try {
                   BlockSelection postClone = relativize ? tempSelection.relativize() : tempSelection.cloneSelection();
+                  if (clearSupport) {
+                     postClone.clearAllSupportValues();
+                  }
+
                   prefabStore.saveServerPrefab(name, postClone, overwrite);
                   this.sendFeedback(Message.translation("server.builderTools.savedSelectionToPrefab").param("name", name), componentAccessor);
                } catch (PrefabSaveException e) {

@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent;
@@ -111,15 +112,21 @@ public class LegacyEntityTrackerSystems {
          }
 
          boolean modelOutdated = modelComponent.consumeNetworkOutdated();
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         boolean isProp = store.getComponent(ref, PropComponent.getComponentType()) != null;
          if (modelOutdated || scaleOutdated) {
-            queueUpdatesFor(archetypeChunk.getReferenceTo(index), modelComponent, entityScale, visibleComponent.visibleTo);
+            queueUpdatesFor(ref, modelComponent, entityScale, isProp, visibleComponent.visibleTo);
          } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
-            queueUpdatesFor(archetypeChunk.getReferenceTo(index), modelComponent, entityScale, visibleComponent.newlyVisibleTo);
+            queueUpdatesFor(ref, modelComponent, entityScale, isProp, visibleComponent.newlyVisibleTo);
          }
       }
 
       private static void queueUpdatesFor(
-         Ref<EntityStore> ref, @Nullable ModelComponent model, float entityScale, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
+         Ref<EntityStore> ref,
+         @Nullable ModelComponent model,
+         float entityScale,
+         boolean isProp,
+         @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
       ) {
          ComponentUpdate update = new ComponentUpdate();
          update.type = ComponentUpdateType.Model;
@@ -128,6 +135,16 @@ public class LegacyEntityTrackerSystems {
 
          for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
             viewer.queueUpdate(ref, update);
+         }
+
+         if (isProp) {
+            ComponentUpdate propUpdate = new ComponentUpdate();
+            propUpdate.type = ComponentUpdateType.Prop;
+            propUpdate.isProp = true;
+
+            for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
+               viewer.queueUpdate(ref, propUpdate);
+            }
          }
       }
    }
