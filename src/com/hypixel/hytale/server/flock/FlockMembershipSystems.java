@@ -325,46 +325,6 @@ public class FlockMembershipSystems {
       }
    }
 
-   public static class FilterPlayerFlockDamageSystem extends DamageEventSystem {
-      @Nonnull
-      private final Query<EntityStore> query = Query.and(Player.getComponentType(), FlockMembership.getComponentType());
-
-      @Nullable
-      @Override
-      public SystemGroup<EntityStore> getGroup() {
-         return DamageModule.get().getFilterDamageGroup();
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
-
-      public void handle(
-         int index,
-         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
-         @Nonnull Store<EntityStore> store,
-         @Nonnull CommandBuffer<EntityStore> commandBuffer,
-         @Nonnull Damage damage
-      ) {
-         FlockMembership flockMembership = archetypeChunk.getComponent(index, FlockMembership.getComponentType());
-         assert flockMembership != null;
-         if (damage.getSource() instanceof Damage.EntitySource entitySource) {
-            Ref<EntityStore> flockRef = flockMembership.getFlockRef();
-            if (flockRef != null && flockRef.isValid()) {
-               Ref<EntityStore> sourceRef = entitySource.getRef();
-               if (sourceRef.isValid()) {
-                  EntityGroup group = store.getComponent(flockRef, EntityGroup.getComponentType());
-                  if (group != null && group.isMember(sourceRef)) {
-                     damage.setCancelled(true);
-                  }
-               }
-            }
-         }
-      }
-   }
-
    public static class NPCAddedFromWorldGen extends HolderSystem<EntityStore> {
       @Nullable
       private final ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();

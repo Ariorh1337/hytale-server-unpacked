@@ -22,23 +22,14 @@ import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ColumnProp extends Prop {
-   @Nonnull
    private final int[] yPositions;
-   @Nonnull
    private final Material[] blocks0;
-   @Nonnull
    private final Material[] blocks90;
-   @Nonnull
    private final Material[] blocks180;
-   @Nonnull
    private final Material[] blocks270;
-   @Nonnull
    private final BlockMask blockMask;
-   @Nonnull
    private final Scanner scanner;
-   @Nonnull
    private final ContextDependency contextDependency;
-   @Nonnull
    private final Directionality directionality;
    @Nonnull
    private final Bounds3i readBounds_voxelGrid;
@@ -83,13 +74,12 @@ public class ColumnProp extends Prop {
       this.writeBounds_voxelGrid = this.contextDependency.getWriteBounds_voxelGrid();
    }
 
-   @Nonnull
    @Override
    public ScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
       Scanner.Context scannerContext = new Scanner.Context(position, this.directionality.getGeneralPattern(), materialSpace, id);
       List<Vector3i> validPositions = this.scanner.scan(scannerContext);
       Vector3i patternPosition = new Vector3i();
-      Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace);
+      Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace, id);
       RotatedPositionsScanResult scanResult = new RotatedPositionsScanResult(new ArrayList<>());
 
       for (Vector3i validPosition : validPositions) {
@@ -134,7 +124,6 @@ public class ColumnProp extends Prop {
       }
    }
 
-   @Nonnull
    @Override
    public ContextDependency getContextDependency() {
       return this.contextDependency.clone();

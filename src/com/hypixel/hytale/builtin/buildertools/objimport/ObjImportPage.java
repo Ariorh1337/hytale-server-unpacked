@@ -6,7 +6,6 @@ import com.hypixel.hytale.builtin.buildertools.utils.PasteToolUtil;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -15,7 +14,6 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -403,14 +401,12 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
    private void performImport(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
       if (this.objPath.isEmpty()) {
          this.setError("Please enter a path to an OBJ file");
-      } else if (!this.objPath.toLowerCase().endsWith(".obj")) {
-         this.setError("File must be a .obj file");
       } else {
          Path path = Paths.get(this.objPath);
-         if (!AssetModule.get().isWithinPackSubDir(path, "Server/Imports/Models")) {
-            this.setError("File must be within an asset pack's imports directory");
-         } else if (!Files.exists(path)) {
+         if (!Files.exists(path)) {
             this.setError("File not found: " + this.objPath);
+         } else if (!this.objPath.toLowerCase().endsWith(".obj")) {
+            this.setError("File must be a .obj file");
          } else {
             List<ObjImportPage.WeightedBlock> blocks = this.parseBlockPattern(this.blockPattern);
             if (blocks == null) {
@@ -582,8 +578,8 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
       boolean autoDetectTextures
    ) throws IOException {
       if (mesh.mtlLib() != null) {
-         Path mtlPath = PathUtil.resolvePathWithinDir(objPath.getParent(), mesh.mtlLib());
-         if (mtlPath != null && Files.exists(mtlPath)) {
+         Path mtlPath = objPath.getParent().resolve(mesh.mtlLib());
+         if (Files.exists(mtlPath)) {
             Map<String, MtlParser.MtlMaterial> materials = MtlParser.parse(mtlPath);
             Path textureDir = mtlPath.getParent();
 
@@ -596,11 +592,7 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
                }
 
                if (texturePath != null) {
-                  Path resolvedPath = PathUtil.resolvePathWithinDir(textureDir, texturePath);
-                  if (resolvedPath == null) {
-                     continue;
-                  }
-
+                  Path resolvedPath = textureDir.resolve(texturePath);
                   BufferedImage texture = TextureSampler.loadTexture(resolvedPath);
                   if (texture != null) {
                      materialTextures.put(materialName, texture);

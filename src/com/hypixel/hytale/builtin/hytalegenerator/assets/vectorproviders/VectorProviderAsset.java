@@ -21,17 +21,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, VectorProviderAsset>> {
-   @Nonnull
    public static final AssetCodecMapCodec<String, VectorProviderAsset> CODEC = new AssetCodecMapCodec<>(
       Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
    );
-   @Nonnull
    private static final Map<String, VectorProviderAsset.Exported> exportedNodes = new ConcurrentHashMap<>();
-   @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(VectorProviderAsset.class, CODEC);
-   @Nonnull
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
-   @Nonnull
    public static final BuilderCodec<VectorProviderAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(VectorProviderAsset.class)
       .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
       .add()
@@ -43,14 +38,14 @@ public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap
                LoggerUtil.getLogger().warning("Duplicate export name for asset: " + asset.exportName);
             }
 
-            boolean isSingleInstance;
+            VectorProviderAsset.Exported exported = new VectorProviderAsset.Exported();
+            exported.asset = asset;
             if (asset instanceof ExportedVectorProviderAsset exportedAsset) {
-               isSingleInstance = exportedAsset.isSingleInstance();
+               exported.singleInstance = exportedAsset.isSingleInstance();
             } else {
-               isSingleInstance = false;
+               exported.singleInstance = false;
             }
 
-            VectorProviderAsset.Exported exported = new VectorProviderAsset.Exported(isSingleInstance, asset);
             exportedNodes.put(asset.exportName, exported);
             LoggerUtil.getLogger().fine("Registered imported node asset with name '" + asset.exportName + "' with asset id '" + asset.id);
          }
@@ -85,38 +80,30 @@ public abstract class VectorProviderAsset implements Cleanable, JsonAssetWithMap
    public static class Argument {
       public SeedBox parentSeed;
       public ReferenceBundle referenceBundle;
-      public WorkerIndexer.Id workerId;
+      public WorkerIndexer workerIndexer;
 
-      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+      public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
          this.parentSeed = parentSeed;
          this.referenceBundle = referenceBundle;
-         this.workerId = workerId;
+         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull VectorProviderAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
-         this.workerId = argument.workerId;
+         this.workerIndexer = argument.workerIndexer;
       }
 
       public Argument(@Nonnull DensityAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
-         this.workerId = argument.workerId;
+         this.workerIndexer = argument.workerIndexer;
       }
    }
 
    public static class Exported {
-      public boolean isSingleInstance;
-      @Nonnull
+      public boolean singleInstance;
       public VectorProviderAsset asset;
-      @Nonnull
-      public Map<WorkerIndexer.Id, VectorProvider> threadInstances;
-
-      public Exported(boolean isSingleInstance, @Nonnull VectorProviderAsset asset) {
-         this.isSingleInstance = isSingleInstance;
-         this.asset = asset;
-         this.threadInstances = new ConcurrentHashMap<>();
-      }
+      public VectorProvider builtInstance;
    }
 }

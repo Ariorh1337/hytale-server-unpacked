@@ -20,7 +20,6 @@ import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.Packet;
-import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
@@ -245,7 +244,6 @@ public class AssetRegistryLoader {
       Path serverAssetDirectory = assetPack.getRoot().resolve("Server");
       HytaleLogger.getLogger().at(Level.INFO).log("Loading assets from: %s", serverAssetDirectory);
       long startAll = System.nanoTime();
-      boolean shouldFail = Options.getOptionSet().has(Options.VALIDATE_ASSETS) || !Constants.shouldSkipModValidation();
       boolean failedToLoadAsset = false;
       LOGGER.at(Level.INFO).log("Loading assets from %s", serverAssetDirectory);
       Collection<AssetStore<?, ?, ?>> values = AssetRegistry.getStoreMap().values();
@@ -278,10 +276,6 @@ public class AssetRegistryLoader {
                }
             } catch (Exception e) {
                failedToLoadAsset = true;
-               if (event != null) {
-                  event.failed(shouldFail, "Asset pack " + assetPack.getName() + " failed to load " + assetClass.getSimpleName() + " - " + e.getMessage());
-               }
-
                long end = System.nanoTime();
                long diff = end - start;
                if (iterator.isBeingWaitedFor(assetStore)) {
@@ -316,25 +310,33 @@ public class AssetRegistryLoader {
       long diffAll = endAll - startAll;
       LOGGER.at(Level.INFO).log("Took %s to load all assets", FormatUtil.nanosToString(diffAll));
       if (failedToLoadAsset && event != null) {
-         if ("Hytale:Hytale".equals(assetPack.getName())) {
-            event.failed(shouldFail, "Assets " + assetPack.getName() + " failed to load.");
-         } else {
-            event.failed(shouldFail, "Mod " + assetPack.getName() + " failed to load. Check for mod updates or contact the mod author.");
-         }
+         event.failed(Options.getOptionSet().has(Options.VALIDATE_ASSETS), "failed to validate assets");
       }
    }
 
    public static void sendAssets(@Nonnull PacketHandler packetHandler) {
       Consumer<Packet[]> packetConsumer = packetHandler::write;
       Consumer<Packet> singlePacketConsumer = packetHandler::write;
-      HytaleAssetStore.SETUP_PACKET_CONSUMERS.add(singlePacketConsumer);
+      AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+      try {
+         HytaleAssetStore.SETUP_PACKET_CONSUMERS.add(singlePacketConsumer);
+      } finally {
+         AssetRegistry.ASSET_LOCK.writeLock().unlock();
+      }
 
       try {
          for (AssetStore<?, ?, ?> assetStore : AssetRegistry.getStoreMap().values()) {
             ((HytaleAssetStore)assetStore).sendAssets(packetConsumer);
          }
       } finally {
-         HytaleAssetStore.SETUP_PACKET_CONSUMERS.remove(singlePacketConsumer);
+         AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+         try {
+            HytaleAssetStore.SETUP_PACKET_CONSUMERS.remove(singlePacketConsumer);
+         } finally {
+            AssetRegistry.ASSET_LOCK.writeLock().unlock();
+         }
       }
    }
 

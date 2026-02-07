@@ -25,7 +25,6 @@ import javax.annotation.Nonnull;
 import org.bson.BsonDocument;
 
 public class StartObjectiveInteraction extends SimpleInstantInteraction {
-   @Nonnull
    public static final BuilderCodec<StartObjectiveInteraction> CODEC = BuilderCodec.builder(
          StartObjectiveInteraction.class, StartObjectiveInteraction::new, SimpleInstantInteraction.CODEC
       )
@@ -39,7 +38,6 @@ public class StartObjectiveInteraction extends SimpleInstantInteraction {
       .addValidator(Validators.nonNull())
       .add()
       .build();
-   @Nonnull
    public static final KeyedCodec<UUID> OBJECTIVE_UUID = new KeyedCodec<>("ObjectiveUUID", Codec.UUID_BINARY);
    protected ObjectiveTypeSetup objectiveTypeSetup;
 

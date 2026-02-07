@@ -26,7 +26,6 @@ public class ReputationGroup implements JsonAssetWithMap<String, DefaultAssetMap
          reputationRank -> reputationRank.initialReputationValue
       )
       .build();
-   @Nonnull
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(ReputationGroup::getAssetStore));
    private static AssetStore<String, ReputationGroup, DefaultAssetMap<String, ReputationGroup>> ASSET_STORE;
    protected AssetExtraInfo.Data data;
@@ -34,7 +33,6 @@ public class ReputationGroup implements JsonAssetWithMap<String, DefaultAssetMap
    protected String[] npcGroups;
    protected int initialReputationValue;
 
-   @Nonnull
    public static AssetStore<String, ReputationGroup, DefaultAssetMap<String, ReputationGroup>> getAssetStore() {
       if (ASSET_STORE == null) {
          ASSET_STORE = AssetRegistry.getAssetStore(ReputationGroup.class);

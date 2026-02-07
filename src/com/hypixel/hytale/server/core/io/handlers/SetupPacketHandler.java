@@ -244,7 +244,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                   AssetRegistryLoader.sendAssets(this);
                   I18nModule.get().sendTranslations(this, this.language);
                   PacketHandler.logConnectionTimings(this.channel, "Send Config Assets", Level.FINE);
-                  this.write(new WorldLoadProgress(Message.translation("client.general.worldLoad.loadingWorld").getFormattedMessage(), 0, 0));
+                  this.write(new WorldLoadProgress("Loading world...", 0, 0));
                   this.write(new WorldLoadFinished());
                }
             })

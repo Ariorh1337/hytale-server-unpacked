@@ -10,7 +10,6 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class RotatorDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<RotatorDensityAsset> CODEC = BuilderCodec.builder(
          RotatorDensityAsset.class, RotatorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -20,7 +19,7 @@ public class RotatorDensityAsset extends DensityAsset {
       .add()
       .build();
    private Vector3d newYAxis = new Vector3d();
-   private double spinAngle;
+   private double spinAngle = 0.0;
 
    @Nonnull
    @Override

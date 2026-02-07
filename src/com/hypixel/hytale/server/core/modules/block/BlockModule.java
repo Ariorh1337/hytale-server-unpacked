@@ -5,7 +5,6 @@ import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
-import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
@@ -66,33 +65,31 @@ public class BlockModule extends JavaPlugin {
 
    @Override
    protected void setup() {
-      ComponentRegistryProxy<ChunkStore> chunkStoreRegistry = this.getChunkStoreRegistry();
-      this.migrationSystemType = chunkStoreRegistry.registerSystemType(BlockModule.MigrationSystem.class);
-      this.blockStateInfoComponentType = chunkStoreRegistry.registerComponent(BlockModule.BlockStateInfo.class, () -> {
+      this.migrationSystemType = this.getChunkStoreRegistry().registerSystemType(BlockModule.MigrationSystem.class);
+      this.blockStateInfoComponentType = this.getChunkStoreRegistry().registerComponent(BlockModule.BlockStateInfo.class, () -> {
          throw new UnsupportedOperationException();
       });
-      chunkStoreRegistry.registerSystem(new BlockModule.BlockStateInfoRefSystem(this.blockStateInfoComponentType));
-      this.launchPadComponentType = chunkStoreRegistry.registerComponent(LaunchPad.class, "LaunchPad", LaunchPad.CODEC);
-      chunkStoreRegistry.registerSystem(new BlockModule.MigrateLaunchPad());
-      this.respawnBlockComponentType = chunkStoreRegistry.registerComponent(RespawnBlock.class, "RespawnBlock", RespawnBlock.CODEC);
-      chunkStoreRegistry.registerSystem(new RespawnBlock.OnRemove());
-      this.blockMapMarkerComponentType = chunkStoreRegistry.registerComponent(BlockMapMarker.class, "BlockMapMarker", BlockMapMarker.CODEC);
-      this.blockMapMarkersResourceType = chunkStoreRegistry.registerResource(BlockMapMarkersResource.class, "BlockMapMarkers", BlockMapMarkersResource.CODEC);
-      chunkStoreRegistry.registerSystem(new BlockMapMarker.OnAddRemove());
+      this.getChunkStoreRegistry().registerSystem(new BlockModule.BlockStateInfoRefSystem(this.blockStateInfoComponentType));
+      this.launchPadComponentType = this.getChunkStoreRegistry().registerComponent(LaunchPad.class, "LaunchPad", LaunchPad.CODEC);
+      this.getChunkStoreRegistry().registerSystem(new BlockModule.MigrateLaunchPad());
+      this.respawnBlockComponentType = this.getChunkStoreRegistry().registerComponent(RespawnBlock.class, "RespawnBlock", RespawnBlock.CODEC);
+      this.getChunkStoreRegistry().registerSystem(new RespawnBlock.OnRemove());
+      this.blockMapMarkerComponentType = this.getChunkStoreRegistry().registerComponent(BlockMapMarker.class, "BlockMapMarker", BlockMapMarker.CODEC);
+      this.blockMapMarkersResourceType = this.getChunkStoreRegistry()
+         .registerResource(BlockMapMarkersResource.class, "BlockMapMarkers", BlockMapMarkersResource.CODEC);
+      this.getChunkStoreRegistry().registerSystem(new BlockMapMarker.OnAddRemove());
       this.getEventRegistry()
          .registerGlobal(
             AddWorldEvent.class,
             event -> event.getWorld().getWorldMapManager().getMarkerProviders().put("blockMapMarkers", BlockMapMarker.MarkerProvider.INSTANCE)
          );
-      this.blockStateInfoNeedRebuildResourceType = chunkStoreRegistry.registerResource(
-         BlockModule.BlockStateInfoNeedRebuild.class, BlockModule.BlockStateInfoNeedRebuild::new
-      );
+      this.blockStateInfoNeedRebuildResourceType = this.getChunkStoreRegistry()
+         .registerResource(BlockModule.BlockStateInfoNeedRebuild.class, BlockModule.BlockStateInfoNeedRebuild::new);
       this.getEventRegistry().registerGlobal(EventPriority.EARLY, ChunkPreLoadProcessEvent.class, BlockModule::onChunkPreLoadProcessEnsureBlockEntity);
    }
 
    @Deprecated
-   @Nullable
-   public static Ref<ChunkStore> ensureBlockEntity(@Nonnull WorldChunk chunk, int x, int y, int z) {
+   public static Ref<ChunkStore> ensureBlockEntity(WorldChunk chunk, int x, int y, int z) {
       Ref<ChunkStore> blockRef = chunk.getBlockComponentEntity(x, y, z);
       if (blockRef != null) {
          return blockRef;
@@ -118,41 +115,40 @@ public class BlockModule extends JavaPlugin {
          BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = BlockType.getAssetMap();
          Holder<ChunkStore> holder = event.getHolder();
          WorldChunk chunk = event.getChunk();
-         ChunkColumn chunkColumnComponent = holder.getComponent(ChunkColumn.getComponentType());
-         if (chunkColumnComponent != null) {
-            Holder<ChunkStore>[] sectionHolders = chunkColumnComponent.getSectionHolders();
-            if (sectionHolders != null) {
+         ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
+         if (column != null) {
+            Holder<ChunkStore>[] sections = column.getSectionHolders();
+            if (sections != null) {
                BlockComponentChunk blockComponentModule = holder.getComponent(BlockComponentChunk.getComponentType());
-               if (blockComponentModule != null) {
-                  for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
-                     BlockSection section = sectionHolders[sectionIndex].ensureAndGetComponent(BlockSection.getComponentType());
-                     if (!section.isSolidAir()) {
-                        int sectionYBlock = sectionIndex << 5;
 
-                        for (int sectionY = 0; sectionY < 32; sectionY++) {
-                           int y = sectionYBlock | sectionY;
+               for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
+                  BlockSection section = sections[sectionIndex].ensureAndGetComponent(BlockSection.getComponentType());
+                  if (!section.isSolidAir()) {
+                     int sectionYBlock = sectionIndex << 5;
 
-                           for (int z = 0; z < 32; z++) {
-                              for (int x = 0; x < 32; x++) {
-                                 int blockId = section.get(x, y, z);
-                                 BlockType blockType = blockTypeAssetMap.getAsset(blockId);
-                                 if (blockType != null && !blockType.isUnknown() && section.getFiller(x, y, z) == 0) {
-                                    int index = ChunkUtil.indexBlockInColumn(x, y, z);
-                                    if (blockType.getBlockEntity() != null) {
-                                       if (blockComponentModule.getEntityHolder(index) != null) {
-                                          continue;
-                                       }
+                     for (int sectionY = 0; sectionY < 32; sectionY++) {
+                        int y = sectionYBlock | sectionY;
 
-                                       blockComponentModule.addEntityHolder(index, blockType.getBlockEntity().clone());
+                        for (int z = 0; z < 32; z++) {
+                           for (int x = 0; x < 32; x++) {
+                              int blockId = section.get(x, y, z);
+                              BlockType blockType = blockTypeAssetMap.getAsset(blockId);
+                              if (blockType != null && !blockType.isUnknown() && section.getFiller(x, y, z) == 0) {
+                                 int index = ChunkUtil.indexBlockInColumn(x, y, z);
+                                 if (blockType.getBlockEntity() != null) {
+                                    if (blockComponentModule.getEntityHolder(index) != null) {
+                                       continue;
                                     }
 
-                                    StateData state = blockType.getState();
-                                    if (state != null && state.getId() != null && blockComponentModule.getEntityHolder(index) == null) {
-                                       Vector3i position = new Vector3i(x, y, z);
-                                       BlockState blockState = BlockStateModule.get().createBlockState(state.getId(), chunk, position, blockType);
-                                       if (blockState != null) {
-                                          blockComponentModule.addEntityHolder(index, blockState.toHolder());
-                                       }
+                                    blockComponentModule.addEntityHolder(index, blockType.getBlockEntity().clone());
+                                 }
+
+                                 StateData state = blockType.getState();
+                                 if (state != null && state.getId() != null && blockComponentModule.getEntityHolder(index) == null) {
+                                    Vector3i position = new Vector3i(x, y, z);
+                                    BlockState blockState = BlockStateModule.get().createBlockState(state.getId(), chunk, position, blockType);
+                                    if (blockState != null) {
+                                       blockComponentModule.addEntityHolder(index, blockState.toHolder());
                                     }
                                  }
                               }
@@ -213,21 +209,17 @@ public class BlockModule extends JavaPlugin {
    }
 
    @Nullable
-   public static <T extends Component<ChunkStore>> T getComponent(ComponentType<ChunkStore, T> componentType, World world, int x, int y, int z) {
+   public <T extends Component<ChunkStore>> T getComponent(ComponentType<ChunkStore, T> componentType, World world, int x, int y, int z) {
       Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
       Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(ChunkUtil.indexChunkFromBlock(x, z));
-      if (chunkRef != null && chunkRef.isValid()) {
-         BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
-         if (blockComponentChunk == null) {
-            return null;
-         }
-
-         int blockIndex = ChunkUtil.indexBlockInColumn(x, y, z);
-         Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndex);
-         return blockRef != null && blockRef.isValid() ? chunkStore.getComponent(blockRef, componentType) : null;
-      } else {
+      BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
+      if (blockComponentChunk == null) {
          return null;
       }
+
+      int blockIndex = ChunkUtil.indexBlockInColumn(x, y, z);
+      Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndex);
+      return blockRef != null && blockRef.isValid() ? chunkStore.getComponent(blockRef, componentType) : null;
    }
 
    public static class BlockStateInfo implements Component<ChunkStore> {
@@ -255,7 +247,7 @@ public class BlockModule extends JavaPlugin {
       }
 
       public void markNeedsSaving() {
-         if (this.chunkRef.isValid()) {
+         if (this.chunkRef != null && this.chunkRef.isValid()) {
             BlockComponentChunk blockComponentChunk = this.chunkRef.getStore().getComponent(this.chunkRef, BlockComponentChunk.getComponentType());
             if (blockComponentChunk != null) {
                blockComponentChunk.markNeedsSaving();
@@ -305,35 +297,31 @@ public class BlockModule extends JavaPlugin {
    }
 
    public static class BlockStateInfoRefSystem extends RefSystem<ChunkStore> {
-      @Nonnull
-      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType;
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> componentType;
 
-      public BlockStateInfoRefSystem(@Nonnull ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType) {
-         this.blockStateInfoComponentType = blockStateInfoComponentType;
+      public BlockStateInfoRefSystem(ComponentType<ChunkStore, BlockModule.BlockStateInfo> componentType) {
+         this.componentType = componentType;
       }
 
       @Override
       public Query<ChunkStore> getQuery() {
-         return this.blockStateInfoComponentType;
+         return this.componentType;
       }
 
       @Override
       public void onEntityAdded(
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
-         assert blockStateInfoComponent != null;
-         Ref<ChunkStore> chunkRef = blockStateInfoComponent.chunkRef;
-         if (chunkRef.isValid()) {
-            BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(chunkRef, BlockComponentChunk.getComponentType());
-            if (blockComponentChunk != null) {
-               switch (reason) {
-                  case SPAWN:
-                     blockComponentChunk.addEntityReference(blockStateInfoComponent.getIndex(), ref);
-                     break;
-                  case LOAD:
-                     blockComponentChunk.loadEntityReference(blockStateInfoComponent.getIndex(), ref);
-               }
+         BlockModule.BlockStateInfo blockState = commandBuffer.getComponent(ref, this.componentType);
+         Ref<ChunkStore> chunk = blockState.chunkRef;
+         if (chunk != null) {
+            BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(chunk, BlockComponentChunk.getComponentType());
+            switch (reason) {
+               case SPAWN:
+                  blockComponentChunk.addEntityReference(blockState.getIndex(), ref);
+                  break;
+               case LOAD:
+                  blockComponentChunk.loadEntityReference(blockState.getIndex(), ref);
             }
          }
       }
@@ -342,19 +330,16 @@ public class BlockModule extends JavaPlugin {
       public void onEntityRemove(
          @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
-         assert blockStateInfoComponent != null;
-         Ref<ChunkStore> chunkRef = blockStateInfoComponent.chunkRef;
-         if (chunkRef.isValid()) {
-            BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(chunkRef, BlockComponentChunk.getComponentType());
-            if (blockComponentChunk != null) {
-               switch (reason) {
-                  case REMOVE:
-                     blockComponentChunk.removeEntityReference(blockStateInfoComponent.getIndex(), ref);
-                     break;
-                  case UNLOAD:
-                     blockComponentChunk.unloadEntityReference(blockStateInfoComponent.getIndex(), ref);
-               }
+         BlockModule.BlockStateInfo blockState = commandBuffer.getComponent(ref, this.componentType);
+         Ref<ChunkStore> chunk = blockState.chunkRef;
+         if (chunk != null) {
+            BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(chunk, BlockComponentChunk.getComponentType());
+            switch (reason) {
+               case REMOVE:
+                  blockComponentChunk.removeEntityReference(blockState.getIndex(), ref);
+                  break;
+               case UNLOAD:
+                  blockComponentChunk.unloadEntityReference(blockState.getIndex(), ref);
             }
          }
       }
@@ -362,7 +347,7 @@ public class BlockModule extends JavaPlugin {
       @Nonnull
       @Override
       public String toString() {
-         return "BlockStateInfoRefSystem{componentType=" + this.blockStateInfoComponentType + "}";
+         return "BlockStateInfoRefSystem{componentType=" + this.componentType + "}";
       }
    }
 
@@ -370,11 +355,11 @@ public class BlockModule extends JavaPlugin {
    public static class MigrateLaunchPad extends BlockModule.MigrationSystem {
       @Override
       public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         UnknownComponents<ChunkStore> unknownComponents = holder.getComponent(ChunkStore.REGISTRY.getUnknownComponentType());
-         assert unknownComponents != null;
-         LaunchPad launchPadComponent = unknownComponents.removeComponent("launchPad", LaunchPad.CODEC);
-         if (launchPadComponent != null) {
-            holder.putComponent(LaunchPad.getComponentType(), launchPadComponent);
+         UnknownComponents<ChunkStore> unknown = holder.getComponent(ChunkStore.REGISTRY.getUnknownComponentType());
+         assert unknown != null;
+         LaunchPad launchPad = unknown.removeComponent("launchPad", LaunchPad.CODEC);
+         if (launchPad != null) {
+            holder.putComponent(LaunchPad.getComponentType(), launchPad);
          }
       }
 

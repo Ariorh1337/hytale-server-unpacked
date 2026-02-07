@@ -69,6 +69,10 @@ public class AimingData implements ExtraInfoProvider {
       return this.yaw[flatTrajectory ? 0 : 1];
    }
 
+   public boolean isBallistic() {
+      return this.ballisticData != null;
+   }
+
    @Nullable
    public BallisticData getBallisticData() {
       return this.ballisticData;
@@ -119,7 +123,7 @@ public class AimingData implements ExtraInfoProvider {
       return null;
    }
 
-   public void setTarget(@Nullable Ref<EntityStore> ref) {
+   public void setTarget(Ref<EntityStore> ref) {
       this.target = ref;
    }
 
@@ -146,7 +150,7 @@ public class AimingData implements ExtraInfoProvider {
          return this.haveSolution = false;
       }
 
-      if (this.ballisticData == null) {
+      if (!this.isBallistic()) {
          this.yaw[0] = this.yaw[1] = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
          this.pitch[0] = this.pitch[1] = PhysicsMath.pitchFromDirection(x, y, z);
          return this.haveSolution = true;
@@ -164,8 +168,7 @@ public class AimingData implements ExtraInfoProvider {
 
       double v2 = NPCPhysicsMath.dotProduct(vx, vy, vz);
       if (v2 < 1.0E-4) {
-         this.haveSolution = AimingHelper.computePitch(Math.sqrt(xxzz), y, this.ballisticData.getMuzzleVelocity(), this.ballisticData.getGravity(), this.pitch);
-         if (this.haveSolution) {
+         if (this.haveSolution = this.computeStaticSolution(Math.sqrt(xxzz), y)) {
             this.yaw[0] = this.yaw[1] = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
          }
 
@@ -235,7 +238,7 @@ public class AimingData implements ExtraInfoProvider {
       }
 
       double differenceYaw = NPCPhysicsMath.turnAngle(yaw, this.getYaw());
-      if (this.ballisticData == null) {
+      if (!this.isBallistic()) {
          return -hitAngle <= differenceYaw && differenceYaw <= hitAngle;
       }
 
@@ -265,5 +268,9 @@ public class AimingData implements ExtraInfoProvider {
       this.depthOffset = 0.0;
       this.pitchAdjustOffset = false;
       this.haveAttacked = false;
+   }
+
+   protected boolean computeStaticSolution(double dx, double dy) {
+      return this.haveSolution = AimingHelper.computePitch(dx, dy, this.ballisticData.getMuzzleVelocity(), this.ballisticData.getGravity(), this.pitch);
    }
 }

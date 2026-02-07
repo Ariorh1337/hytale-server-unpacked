@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.DeathConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
@@ -214,17 +213,15 @@ public class DeathComponent implements Component<EntityStore> {
       }
 
       World world = componentAccessor.getExternalData().getWorld();
-      PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
       RespawnController respawnController = world.getDeathConfig().getRespawnController();
       deathComponent.respawnFuture = respawnController.respawnPlayer(world, ref, componentAccessor).whenComplete((ignore, ex) -> {
          if (ex != null) {
             LOGGER.atSevere().withCause(ex).log("Failed to respawn entity");
          }
 
-         Ref<EntityStore> currentRef = playerRefComponent.getReference();
-         if (currentRef != null && currentRef.isValid()) {
-            Store<EntityStore> store = currentRef.getStore();
-            store.tryRemoveComponent(currentRef, getComponentType());
+         Store<EntityStore> store = world.getEntityStore().getStore();
+         if (ref.isValid()) {
+            store.tryRemoveComponent(ref, getComponentType());
          }
       });
       return deathComponent.respawnFuture;

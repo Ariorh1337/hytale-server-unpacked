@@ -10,7 +10,6 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class ExportedVectorProviderAsset extends VectorProviderAsset {
-   @Nonnull
    public static final BuilderCodec<ExportedVectorProviderAsset> CODEC = BuilderCodec.builder(
          ExportedVectorProviderAsset.class, ExportedVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
@@ -34,18 +33,19 @@ public class ExportedVectorProviderAsset extends VectorProviderAsset {
 
       VectorProviderAsset.Exported exported = getExportedAsset(this.exportName);
       if (exported == null) {
-         LoggerUtil.getLogger().warning("Couldn't find VectorProvider asset exported with name: '" + this.exportName + "'. Using empty Node instead.");
-         return new ConstantVectorProvider(new Vector3d());
+         LoggerUtil.getLogger()
+            .severe(
+               "Couldn't find VectorProvider asset exported with name: '" + this.exportName + "'. This could indicate a defect in the HytaleGenerator assets."
+            );
+         return this.vectorProviderAsset.build(argument);
       }
 
-      if (exported.isSingleInstance) {
-         VectorProvider builtInstance = exported.threadInstances.get(argument.workerId);
-         if (builtInstance == null) {
-            builtInstance = this.vectorProviderAsset.build(argument);
-            exported.threadInstances.put(argument.workerId, builtInstance);
+      if (exported.singleInstance) {
+         if (exported.builtInstance == null) {
+            exported.builtInstance = this.vectorProviderAsset.build(argument);
          }
 
-         return builtInstance;
+         return exported.builtInstance;
       } else {
          return this.vectorProviderAsset.build(argument);
       }
@@ -55,7 +55,7 @@ public class ExportedVectorProviderAsset extends VectorProviderAsset {
    public void cleanUp() {
       VectorProviderAsset.Exported exported = getExportedAsset(this.exportName);
       if (exported != null) {
-         exported.threadInstances.clear();
+         exported.builtInstance = null;
          this.vectorProviderAsset.cleanUp();
       }
    }

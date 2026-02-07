@@ -27,12 +27,7 @@ public class ActionStartObjective extends ActionBase {
    @Override
    public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
-      Ref<EntityStore> interactionIterationTarget = role.getStateSupport().getInteractionIterationTarget();
-      if (interactionIterationTarget == null) {
-         return false;
-      }
-
-      NPCObjectivesPlugin.startObjective(interactionIterationTarget, this.objectiveId, store);
+      NPCObjectivesPlugin.startObjective(role.getStateSupport().getInteractionIterationTarget(), this.objectiveId, store);
       return true;
    }
 }

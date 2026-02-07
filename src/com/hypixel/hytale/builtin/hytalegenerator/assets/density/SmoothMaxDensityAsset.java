@@ -10,7 +10,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class SmoothMaxDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<SmoothMaxDensityAsset> CODEC = BuilderCodec.builder(
          SmoothMaxDensityAsset.class, SmoothMaxDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )

@@ -46,30 +46,18 @@ import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class PrefabProp extends Prop {
-   @Nonnull
    private final WeightedMap<List<PrefabBuffer>> prefabPool;
-   @Nonnull
    private final Scanner scanner;
    private ContextDependency contextDependency;
-   @Nonnull
    private final MaterialCache materialCache;
-   @Nonnull
    private final SeedGenerator seedGenerator;
-   @Nonnull
    private final BlockMask materialMask;
-   @Nonnull
    private final Directionality directionality;
-   @Nonnull
    private final Bounds3i readBounds_voxelGrid;
-   @Nonnull
    private final Bounds3i writeBounds_voxelGrid;
-   @Nonnull
    private final Bounds3i prefabBounds_voxelGrid;
-   @Nonnull
    private final List<PrefabProp> childProps;
-   @Nonnull
    private final List<RotatedPosition> childPositions;
-   @Nonnull
    private final Function<String, List<PrefabBuffer>> childPrefabLoader;
    private final Scanner moldingScanner;
    private final Pattern moldingPattern;
@@ -169,8 +157,7 @@ public class PrefabProp extends Prop {
       this.prefabBounds_voxelGrid.max.assign(this.contextDependency.getWriteRange()).add(Vector3i.ALL_ONES);
    }
 
-   @Nonnull
-   private Vector3i getWriteRange(@Nonnull PrefabBuffer.PrefabBufferAccessor prefabAccess) {
+   private Vector3i getWriteRange(PrefabBuffer.PrefabBufferAccessor prefabAccess) {
       SpaceSize space = new SpaceSize();
 
       for (PrefabRotation rotation : this.directionality.getPossibleRotations()) {
@@ -184,13 +171,12 @@ public class PrefabProp extends Prop {
       return space.getRange();
    }
 
-   @Nonnull
    @Override
    public ScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
       Scanner.Context scannerContext = new Scanner.Context(position, this.directionality.getGeneralPattern(), materialSpace, id);
       List<Vector3i> validPositions = this.scanner.scan(scannerContext);
       Vector3i patternPosition = new Vector3i();
-      Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace);
+      Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace, id);
       RotatedPositionsScanResult scanResult = new RotatedPositionsScanResult(new ArrayList<>());
 
       for (Vector3i validPosition : validPositions) {
@@ -221,14 +207,14 @@ public class PrefabProp extends Prop {
       }
    }
 
-   private PrefabBuffer pickPrefab(@Nonnull Random rand) {
+   private PrefabBuffer pickPrefab(Random rand) {
       List<PrefabBuffer> list = this.prefabPool.pick(rand);
       int randomIndex = rand.nextInt(list.size());
       return list.get(randomIndex);
    }
 
    private void place(
-      @Nonnull RotatedPosition position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull EntityContainer entityBuffer, @Nonnull WorkerIndexer.Id id
+      RotatedPosition position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull EntityContainer entityBuffer, @Nonnull WorkerIndexer.Id id
    ) {
       Random random = new Random(this.seedGenerator.seedAt(position.x, position.y, position.z));
       PrefabBufferCall callInstance = new PrefabBufferCall(random, position.rotation);

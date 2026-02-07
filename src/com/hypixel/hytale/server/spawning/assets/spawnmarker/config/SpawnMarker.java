@@ -108,36 +108,30 @@ public class SpawnMarker implements JsonAssetWithMap<String, DefaultAssetMap<Str
          (asset, results) -> {
             boolean isRealtime = asset.isRealtimeRespawn();
             IWeightedMap<SpawnMarker.SpawnConfiguration> configs = asset.getWeightedConfigurations();
-            if (configs != null && configs.size() != 0) {
-               configs.forEach(
-                  config -> {
-                     if (isRealtime && config.getRealtimeRespawnTime() <= 0.0) {
-                        results.fail(
+            configs.forEach(
+               config -> {
+                  if (isRealtime && config.getRealtimeRespawnTime() <= 0.0) {
+                     results.fail(
+                        String.format("Value for RealtimeRespawn in %s:%s must be greater than zero if using realtime spawning", asset.getId(), config.getNpc())
+                     );
+                  } else if (!isRealtime && config.getSpawnAfterGameTime() == null) {
+                     results.fail(
+                        String.format("Value for SpawnAfterGameTime in %s:%s must be provided if using game time spawning", asset.getId(), config.getNpc())
+                     );
+                  } else {
+                     if (config.getSpawnAfterGameTime() != null && config.getRealtimeRespawnTime() > 0.0) {
+                        results.warn(
                            String.format(
-                              "Value for RealtimeRespawn in %s:%s must be greater than zero if using realtime spawning", asset.getId(), config.getNpc()
+                              "%s:%s defines both RealtimeRespawn and SpawnAfterGameTime despite being set to %s spawning",
+                              asset.getId(),
+                              config.getNpc(),
+                              isRealtime ? "realtime" : "game time"
                            )
                         );
-                     } else if (!isRealtime && config.getSpawnAfterGameTime() == null) {
-                        results.fail(
-                           String.format("Value for SpawnAfterGameTime in %s:%s must be provided if using game time spawning", asset.getId(), config.getNpc())
-                        );
-                     } else {
-                        if (config.getSpawnAfterGameTime() != null && config.getRealtimeRespawnTime() > 0.0) {
-                           results.warn(
-                              String.format(
-                                 "%s:%s defines both RealtimeRespawn and SpawnAfterGameTime despite being set to %s spawning",
-                                 asset.getId(),
-                                 config.getNpc(),
-                                 isRealtime ? "realtime" : "game time"
-                              )
-                           );
-                        }
                      }
                   }
-               );
-            } else {
-               results.fail(String.format("Spawn marker %s must define at least one NPC configuration to spawn", asset.getId()));
-            }
+               }
+            );
          }
       )
       .build();
@@ -146,7 +140,6 @@ public class SpawnMarker implements JsonAssetWithMap<String, DefaultAssetMap<Str
    private AssetExtraInfo.Data data;
    protected String id;
    protected String model;
-   @Nullable
    protected IWeightedMap<SpawnMarker.SpawnConfiguration> weightedConfigurations;
    protected double exclusionRadius;
    protected double maxDropHeightSquared = 4.0;
@@ -170,7 +163,6 @@ public class SpawnMarker implements JsonAssetWithMap<String, DefaultAssetMap<Str
    protected SpawnMarker() {
    }
 
-   @Nullable
    public IWeightedMap<SpawnMarker.SpawnConfiguration> getWeightedConfigurations() {
       return this.weightedConfigurations;
    }

@@ -12,7 +12,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class PatternDirectionalityAsset extends DirectionalityAsset {
-   @Nonnull
    public static final BuilderCodec<PatternDirectionalityAsset> CODEC = BuilderCodec.builder(
          PatternDirectionalityAsset.class, PatternDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC
       )

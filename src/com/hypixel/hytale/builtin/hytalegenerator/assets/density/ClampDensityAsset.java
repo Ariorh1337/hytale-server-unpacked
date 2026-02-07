@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class ClampDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<ClampDensityAsset> CODEC = BuilderCodec.builder(
          ClampDensityAsset.class, ClampDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -18,8 +17,8 @@ public class ClampDensityAsset extends DensityAsset {
       .append(new KeyedCodec<>("WallB", Codec.DOUBLE, true), (t, k) -> t.wallB = k, k -> k.wallB)
       .add()
       .build();
-   private double wallA;
-   private double wallB;
+   private double wallA = 0.0;
+   private double wallB = 0.0;
 
    @Nonnull
    @Override

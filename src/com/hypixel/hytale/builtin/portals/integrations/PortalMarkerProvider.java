@@ -2,25 +2,31 @@ package com.hypixel.hytale.builtin.portals.integrations;
 
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.IndividualSpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
-import javax.annotation.Nonnull;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.util.PositionUtil;
 
 public class PortalMarkerProvider implements WorldMapManager.MarkerProvider {
    public static final PortalMarkerProvider INSTANCE = new PortalMarkerProvider();
 
    @Override
-   public void update(@Nonnull World world, @Nonnull Player player, @Nonnull MarkersCollector collector) {
+   public void update(World world, MapMarkerTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
       if (world.getWorldConfig().getSpawnProvider() instanceof IndividualSpawnProvider individualSpawnProvider) {
          Transform spawnPoint = individualSpawnProvider.getFirstSpawnPoint();
          if (spawnPoint != null) {
-            MapMarker marker = new MapMarkerBuilder("Portal", "Portal.png", spawnPoint).withName(Message.translation("server.portals.exit.marker")).build();
-            collector.add(marker);
+            tracker.trySendMarker(
+               chunkViewRadius,
+               playerChunkX,
+               playerChunkZ,
+               spawnPoint.getPosition(),
+               spawnPoint.getRotation().getYaw(),
+               "Portal",
+               "Fragment Exit",
+               spawnPoint,
+               (id, name, sp) -> new MapMarker(id, name, "Portal.png", PositionUtil.toTransformPacket(sp), null)
+            );
          }
       }
    }

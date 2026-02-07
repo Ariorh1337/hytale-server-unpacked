@@ -15,9 +15,9 @@ import javax.annotation.Nullable;
 
 public class BlockType {
    public static final int NULLABLE_BIT_FIELD_SIZE = 4;
-   public static final int FIXED_BLOCK_SIZE = 164;
+   public static final int FIXED_BLOCK_SIZE = 163;
    public static final int VARIABLE_FIELD_COUNT = 24;
-   public static final int VARIABLE_BLOCK_START = 260;
+   public static final int VARIABLE_BLOCK_START = 259;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String item;
@@ -323,10 +323,10 @@ public class BlockType {
          obj.placementSettings = BlockPlacementSettings.deserialize(buf, offset + 142);
       }
 
-      obj.ignoreSupportWhenPlaced = buf.getByte(offset + 159) != 0;
-      obj.transitionToTag = buf.getIntLE(offset + 160);
+      obj.ignoreSupportWhenPlaced = buf.getByte(offset + 158) != 0;
+      obj.transitionToTag = buf.getIntLE(offset + 159);
       if ((nullBits[0] & 128) != 0) {
-         int varPos0 = offset + 260 + buf.getIntLE(offset + 164);
+         int varPos0 = offset + 259 + buf.getIntLE(offset + 163);
          int itemLen = VarInt.peek(buf, varPos0);
          if (itemLen < 0) {
             throw ProtocolException.negativeLength("Item", itemLen);
@@ -340,7 +340,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos1 = offset + 260 + buf.getIntLE(offset + 168);
+         int varPos1 = offset + 259 + buf.getIntLE(offset + 167);
          int nameLen = VarInt.peek(buf, varPos1);
          if (nameLen < 0) {
             throw ProtocolException.negativeLength("Name", nameLen);
@@ -354,7 +354,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos2 = offset + 260 + buf.getIntLE(offset + 172);
+         int varPos2 = offset + 259 + buf.getIntLE(offset + 171);
          int shaderEffectCount = VarInt.peek(buf, varPos2);
          if (shaderEffectCount < 0) {
             throw ProtocolException.negativeLength("ShaderEffect", shaderEffectCount);
@@ -379,7 +379,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int varPos3 = offset + 260 + buf.getIntLE(offset + 176);
+         int varPos3 = offset + 259 + buf.getIntLE(offset + 175);
          int modelLen = VarInt.peek(buf, varPos3);
          if (modelLen < 0) {
             throw ProtocolException.negativeLength("Model", modelLen);
@@ -393,7 +393,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int varPos4 = offset + 260 + buf.getIntLE(offset + 180);
+         int varPos4 = offset + 259 + buf.getIntLE(offset + 179);
          int modelTextureCount = VarInt.peek(buf, varPos4);
          if (modelTextureCount < 0) {
             throw ProtocolException.negativeLength("ModelTexture", modelTextureCount);
@@ -418,7 +418,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int varPos5 = offset + 260 + buf.getIntLE(offset + 184);
+         int varPos5 = offset + 259 + buf.getIntLE(offset + 183);
          int modelAnimationLen = VarInt.peek(buf, varPos5);
          if (modelAnimationLen < 0) {
             throw ProtocolException.negativeLength("ModelAnimation", modelAnimationLen);
@@ -432,7 +432,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int varPos6 = offset + 260 + buf.getIntLE(offset + 188);
+         int varPos6 = offset + 259 + buf.getIntLE(offset + 187);
          int supportCount = VarInt.peek(buf, varPos6);
          if (supportCount < 0) {
             throw ProtocolException.negativeLength("Support", supportCount);
@@ -477,7 +477,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int varPos7 = offset + 260 + buf.getIntLE(offset + 192);
+         int varPos7 = offset + 259 + buf.getIntLE(offset + 191);
          int supportingCount = VarInt.peek(buf, varPos7);
          if (supportingCount < 0) {
             throw ProtocolException.negativeLength("Supporting", supportingCount);
@@ -522,7 +522,7 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int varPos8 = offset + 260 + buf.getIntLE(offset + 196);
+         int varPos8 = offset + 259 + buf.getIntLE(offset + 195);
          int cubeTexturesCount = VarInt.peek(buf, varPos8);
          if (cubeTexturesCount < 0) {
             throw ProtocolException.negativeLength("CubeTextures", cubeTexturesCount);
@@ -547,7 +547,7 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int varPos9 = offset + 260 + buf.getIntLE(offset + 200);
+         int varPos9 = offset + 259 + buf.getIntLE(offset + 199);
          int cubeSideMaskTextureLen = VarInt.peek(buf, varPos9);
          if (cubeSideMaskTextureLen < 0) {
             throw ProtocolException.negativeLength("CubeSideMaskTexture", cubeSideMaskTextureLen);
@@ -561,7 +561,7 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 2) != 0) {
-         int varPos10 = offset + 260 + buf.getIntLE(offset + 204);
+         int varPos10 = offset + 259 + buf.getIntLE(offset + 203);
          int particlesCount = VarInt.peek(buf, varPos10);
          if (particlesCount < 0) {
             throw ProtocolException.negativeLength("Particles", particlesCount);
@@ -586,7 +586,7 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 4) != 0) {
-         int varPos11 = offset + 260 + buf.getIntLE(offset + 208);
+         int varPos11 = offset + 259 + buf.getIntLE(offset + 207);
          int blockParticleSetIdLen = VarInt.peek(buf, varPos11);
          if (blockParticleSetIdLen < 0) {
             throw ProtocolException.negativeLength("BlockParticleSetId", blockParticleSetIdLen);
@@ -600,7 +600,7 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 8) != 0) {
-         int varPos12 = offset + 260 + buf.getIntLE(offset + 212);
+         int varPos12 = offset + 259 + buf.getIntLE(offset + 211);
          int blockBreakingDecalIdLen = VarInt.peek(buf, varPos12);
          if (blockBreakingDecalIdLen < 0) {
             throw ProtocolException.negativeLength("BlockBreakingDecalId", blockBreakingDecalIdLen);
@@ -614,7 +614,7 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 16) != 0) {
-         int varPos13 = offset + 260 + buf.getIntLE(offset + 216);
+         int varPos13 = offset + 259 + buf.getIntLE(offset + 215);
          int transitionTextureLen = VarInt.peek(buf, varPos13);
          if (transitionTextureLen < 0) {
             throw ProtocolException.negativeLength("TransitionTexture", transitionTextureLen);
@@ -628,7 +628,7 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 32) != 0) {
-         int varPos14 = offset + 260 + buf.getIntLE(offset + 220);
+         int varPos14 = offset + 259 + buf.getIntLE(offset + 219);
          int transitionToGroupsCount = VarInt.peek(buf, varPos14);
          if (transitionToGroupsCount < 0) {
             throw ProtocolException.negativeLength("TransitionToGroups", transitionToGroupsCount);
@@ -651,7 +651,7 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 64) != 0) {
-         int varPos15 = offset + 260 + buf.getIntLE(offset + 224);
+         int varPos15 = offset + 259 + buf.getIntLE(offset + 223);
          int interactionHintLen = VarInt.peek(buf, varPos15);
          if (interactionHintLen < 0) {
             throw ProtocolException.negativeLength("InteractionHint", interactionHintLen);
@@ -665,22 +665,22 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 128) != 0) {
-         int varPos16 = offset + 260 + buf.getIntLE(offset + 228);
+         int varPos16 = offset + 259 + buf.getIntLE(offset + 227);
          obj.gathering = BlockGathering.deserialize(buf, varPos16);
       }
 
       if ((nullBits[3] & 1) != 0) {
-         int varPos17 = offset + 260 + buf.getIntLE(offset + 232);
+         int varPos17 = offset + 259 + buf.getIntLE(offset + 231);
          obj.display = ModelDisplay.deserialize(buf, varPos17);
       }
 
       if ((nullBits[3] & 2) != 0) {
-         int varPos18 = offset + 260 + buf.getIntLE(offset + 236);
+         int varPos18 = offset + 259 + buf.getIntLE(offset + 235);
          obj.rail = RailConfig.deserialize(buf, varPos18);
       }
 
       if ((nullBits[3] & 4) != 0) {
-         int varPos19 = offset + 260 + buf.getIntLE(offset + 240);
+         int varPos19 = offset + 259 + buf.getIntLE(offset + 239);
          int interactionsCount = VarInt.peek(buf, varPos19);
          if (interactionsCount < 0) {
             throw ProtocolException.negativeLength("Interactions", interactionsCount);
@@ -705,7 +705,7 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 8) != 0) {
-         int varPos20 = offset + 260 + buf.getIntLE(offset + 244);
+         int varPos20 = offset + 259 + buf.getIntLE(offset + 243);
          int statesCount = VarInt.peek(buf, varPos20);
          if (statesCount < 0) {
             throw ProtocolException.negativeLength("States", statesCount);
@@ -741,7 +741,7 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 16) != 0) {
-         int varPos21 = offset + 260 + buf.getIntLE(offset + 248);
+         int varPos21 = offset + 259 + buf.getIntLE(offset + 247);
          int tagIndexesCount = VarInt.peek(buf, varPos21);
          if (tagIndexesCount < 0) {
             throw ProtocolException.negativeLength("TagIndexes", tagIndexesCount);
@@ -764,12 +764,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 32) != 0) {
-         int varPos22 = offset + 260 + buf.getIntLE(offset + 252);
+         int varPos22 = offset + 259 + buf.getIntLE(offset + 251);
          obj.bench = Bench.deserialize(buf, varPos22);
       }
 
       if ((nullBits[3] & 64) != 0) {
-         int varPos23 = offset + 260 + buf.getIntLE(offset + 256);
+         int varPos23 = offset + 259 + buf.getIntLE(offset + 255);
          obj.connectedBlockRuleSet = ConnectedBlockRuleSet.deserialize(buf, varPos23);
       }
 
@@ -778,10 +778,10 @@ public class BlockType {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte[] nullBits = PacketIO.readBytes(buf, offset, 4);
-      int maxEnd = 260;
+      int maxEnd = 259;
       if ((nullBits[0] & 128) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 164);
-         int pos0 = offset + 260 + fieldOffset0;
+         int fieldOffset0 = buf.getIntLE(offset + 163);
+         int pos0 = offset + 259 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
@@ -790,8 +790,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 168);
-         int pos1 = offset + 260 + fieldOffset1;
+         int fieldOffset1 = buf.getIntLE(offset + 167);
+         int pos1 = offset + 259 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1) + sl;
          if (pos1 - offset > maxEnd) {
@@ -800,8 +800,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 172);
-         int pos2 = offset + 260 + fieldOffset2;
+         int fieldOffset2 = buf.getIntLE(offset + 171);
+         int pos2 = offset + 259 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.length(buf, pos2) + arrLen * 1;
          if (pos2 - offset > maxEnd) {
@@ -810,8 +810,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int fieldOffset3 = buf.getIntLE(offset + 176);
-         int pos3 = offset + 260 + fieldOffset3;
+         int fieldOffset3 = buf.getIntLE(offset + 175);
+         int pos3 = offset + 259 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
          pos3 += VarInt.length(buf, pos3) + sl;
          if (pos3 - offset > maxEnd) {
@@ -820,8 +820,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int fieldOffset4 = buf.getIntLE(offset + 180);
-         int pos4 = offset + 260 + fieldOffset4;
+         int fieldOffset4 = buf.getIntLE(offset + 179);
+         int pos4 = offset + 259 + fieldOffset4;
          int arrLen = VarInt.peek(buf, pos4);
          pos4 += VarInt.length(buf, pos4);
 
@@ -835,8 +835,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int fieldOffset5 = buf.getIntLE(offset + 184);
-         int pos5 = offset + 260 + fieldOffset5;
+         int fieldOffset5 = buf.getIntLE(offset + 183);
+         int pos5 = offset + 259 + fieldOffset5;
          int sl = VarInt.peek(buf, pos5);
          pos5 += VarInt.length(buf, pos5) + sl;
          if (pos5 - offset > maxEnd) {
@@ -845,8 +845,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int fieldOffset6 = buf.getIntLE(offset + 188);
-         int pos6 = offset + 260 + fieldOffset6;
+         int fieldOffset6 = buf.getIntLE(offset + 187);
+         int pos6 = offset + 259 + fieldOffset6;
          int dictLen = VarInt.peek(buf, pos6);
          pos6 += VarInt.length(buf, pos6);
 
@@ -865,8 +865,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int fieldOffset7 = buf.getIntLE(offset + 192);
-         int pos7 = offset + 260 + fieldOffset7;
+         int fieldOffset7 = buf.getIntLE(offset + 191);
+         int pos7 = offset + 259 + fieldOffset7;
          int dictLen = VarInt.peek(buf, pos7);
          pos7 += VarInt.length(buf, pos7);
 
@@ -885,8 +885,8 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int fieldOffset8 = buf.getIntLE(offset + 196);
-         int pos8 = offset + 260 + fieldOffset8;
+         int fieldOffset8 = buf.getIntLE(offset + 195);
+         int pos8 = offset + 259 + fieldOffset8;
          int arrLen = VarInt.peek(buf, pos8);
          pos8 += VarInt.length(buf, pos8);
 
@@ -900,8 +900,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int fieldOffset9 = buf.getIntLE(offset + 200);
-         int pos9 = offset + 260 + fieldOffset9;
+         int fieldOffset9 = buf.getIntLE(offset + 199);
+         int pos9 = offset + 259 + fieldOffset9;
          int sl = VarInt.peek(buf, pos9);
          pos9 += VarInt.length(buf, pos9) + sl;
          if (pos9 - offset > maxEnd) {
@@ -910,8 +910,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 2) != 0) {
-         int fieldOffset10 = buf.getIntLE(offset + 204);
-         int pos10 = offset + 260 + fieldOffset10;
+         int fieldOffset10 = buf.getIntLE(offset + 203);
+         int pos10 = offset + 259 + fieldOffset10;
          int arrLen = VarInt.peek(buf, pos10);
          pos10 += VarInt.length(buf, pos10);
 
@@ -925,8 +925,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 4) != 0) {
-         int fieldOffset11 = buf.getIntLE(offset + 208);
-         int pos11 = offset + 260 + fieldOffset11;
+         int fieldOffset11 = buf.getIntLE(offset + 207);
+         int pos11 = offset + 259 + fieldOffset11;
          int sl = VarInt.peek(buf, pos11);
          pos11 += VarInt.length(buf, pos11) + sl;
          if (pos11 - offset > maxEnd) {
@@ -935,8 +935,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 8) != 0) {
-         int fieldOffset12 = buf.getIntLE(offset + 212);
-         int pos12 = offset + 260 + fieldOffset12;
+         int fieldOffset12 = buf.getIntLE(offset + 211);
+         int pos12 = offset + 259 + fieldOffset12;
          int sl = VarInt.peek(buf, pos12);
          pos12 += VarInt.length(buf, pos12) + sl;
          if (pos12 - offset > maxEnd) {
@@ -945,8 +945,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 16) != 0) {
-         int fieldOffset13 = buf.getIntLE(offset + 216);
-         int pos13 = offset + 260 + fieldOffset13;
+         int fieldOffset13 = buf.getIntLE(offset + 215);
+         int pos13 = offset + 259 + fieldOffset13;
          int sl = VarInt.peek(buf, pos13);
          pos13 += VarInt.length(buf, pos13) + sl;
          if (pos13 - offset > maxEnd) {
@@ -955,8 +955,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 32) != 0) {
-         int fieldOffset14 = buf.getIntLE(offset + 220);
-         int pos14 = offset + 260 + fieldOffset14;
+         int fieldOffset14 = buf.getIntLE(offset + 219);
+         int pos14 = offset + 259 + fieldOffset14;
          int arrLen = VarInt.peek(buf, pos14);
          pos14 += VarInt.length(buf, pos14) + arrLen * 4;
          if (pos14 - offset > maxEnd) {
@@ -965,8 +965,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 64) != 0) {
-         int fieldOffset15 = buf.getIntLE(offset + 224);
-         int pos15 = offset + 260 + fieldOffset15;
+         int fieldOffset15 = buf.getIntLE(offset + 223);
+         int pos15 = offset + 259 + fieldOffset15;
          int sl = VarInt.peek(buf, pos15);
          pos15 += VarInt.length(buf, pos15) + sl;
          if (pos15 - offset > maxEnd) {
@@ -975,8 +975,8 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 128) != 0) {
-         int fieldOffset16 = buf.getIntLE(offset + 228);
-         int pos16 = offset + 260 + fieldOffset16;
+         int fieldOffset16 = buf.getIntLE(offset + 227);
+         int pos16 = offset + 259 + fieldOffset16;
          pos16 += BlockGathering.computeBytesConsumed(buf, pos16);
          if (pos16 - offset > maxEnd) {
             maxEnd = pos16 - offset;
@@ -984,8 +984,8 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 1) != 0) {
-         int fieldOffset17 = buf.getIntLE(offset + 232);
-         int pos17 = offset + 260 + fieldOffset17;
+         int fieldOffset17 = buf.getIntLE(offset + 231);
+         int pos17 = offset + 259 + fieldOffset17;
          pos17 += ModelDisplay.computeBytesConsumed(buf, pos17);
          if (pos17 - offset > maxEnd) {
             maxEnd = pos17 - offset;
@@ -993,8 +993,8 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 2) != 0) {
-         int fieldOffset18 = buf.getIntLE(offset + 236);
-         int pos18 = offset + 260 + fieldOffset18;
+         int fieldOffset18 = buf.getIntLE(offset + 235);
+         int pos18 = offset + 259 + fieldOffset18;
          pos18 += RailConfig.computeBytesConsumed(buf, pos18);
          if (pos18 - offset > maxEnd) {
             maxEnd = pos18 - offset;
@@ -1002,8 +1002,8 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 4) != 0) {
-         int fieldOffset19 = buf.getIntLE(offset + 240);
-         int pos19 = offset + 260 + fieldOffset19;
+         int fieldOffset19 = buf.getIntLE(offset + 239);
+         int pos19 = offset + 259 + fieldOffset19;
          int dictLen = VarInt.peek(buf, pos19);
          pos19 += VarInt.length(buf, pos19);
 
@@ -1017,8 +1017,8 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 8) != 0) {
-         int fieldOffset20 = buf.getIntLE(offset + 244);
-         int pos20 = offset + 260 + fieldOffset20;
+         int fieldOffset20 = buf.getIntLE(offset + 243);
+         int pos20 = offset + 259 + fieldOffset20;
          int dictLen = VarInt.peek(buf, pos20);
          pos20 += VarInt.length(buf, pos20);
 
@@ -1034,8 +1034,8 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 16) != 0) {
-         int fieldOffset21 = buf.getIntLE(offset + 248);
-         int pos21 = offset + 260 + fieldOffset21;
+         int fieldOffset21 = buf.getIntLE(offset + 247);
+         int pos21 = offset + 259 + fieldOffset21;
          int arrLen = VarInt.peek(buf, pos21);
          pos21 += VarInt.length(buf, pos21) + arrLen * 4;
          if (pos21 - offset > maxEnd) {
@@ -1044,8 +1044,8 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 32) != 0) {
-         int fieldOffset22 = buf.getIntLE(offset + 252);
-         int pos22 = offset + 260 + fieldOffset22;
+         int fieldOffset22 = buf.getIntLE(offset + 251);
+         int pos22 = offset + 259 + fieldOffset22;
          pos22 += Bench.computeBytesConsumed(buf, pos22);
          if (pos22 - offset > maxEnd) {
             maxEnd = pos22 - offset;
@@ -1053,8 +1053,8 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 64) != 0) {
-         int fieldOffset23 = buf.getIntLE(offset + 256);
-         int pos23 = offset + 260 + fieldOffset23;
+         int fieldOffset23 = buf.getIntLE(offset + 255);
+         int pos23 = offset + 259 + fieldOffset23;
          pos23 += ConnectedBlockRuleSet.computeBytesConsumed(buf, pos23);
          if (pos23 - offset > maxEnd) {
             maxEnd = pos23 - offset;
@@ -1249,7 +1249,7 @@ public class BlockType {
       if (this.placementSettings != null) {
          this.placementSettings.serialize(buf);
       } else {
-         buf.writeZero(17);
+         buf.writeZero(16);
       }
 
       buf.writeByte(this.ignoreSupportWhenPlaced ? 1 : 0);
@@ -1565,7 +1565,7 @@ public class BlockType {
    }
 
    public int computeSize() {
-      int size = 260;
+      int size = 259;
       if (this.item != null) {
          size += PacketIO.stringSize(this.item);
       }
@@ -1702,18 +1702,18 @@ public class BlockType {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 260) {
-         return ValidationResult.error("Buffer too small: expected at least 260 bytes");
+      if (buffer.readableBytes() - offset < 259) {
+         return ValidationResult.error("Buffer too small: expected at least 259 bytes");
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 4);
       if ((nullBits[0] & 128) != 0) {
-         int itemOffset = buffer.getIntLE(offset + 164);
+         int itemOffset = buffer.getIntLE(offset + 163);
          if (itemOffset < 0) {
             return ValidationResult.error("Invalid offset for Item");
          }
 
-         int pos = offset + 260 + itemOffset;
+         int pos = offset + 259 + itemOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Item");
          }
@@ -1735,12 +1735,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int nameOffset = buffer.getIntLE(offset + 168);
+         int nameOffset = buffer.getIntLE(offset + 167);
          if (nameOffset < 0) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
-         int pos = offset + 260 + nameOffset;
+         int pos = offset + 259 + nameOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Name");
          }
@@ -1762,12 +1762,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int shaderEffectOffset = buffer.getIntLE(offset + 172);
+         int shaderEffectOffset = buffer.getIntLE(offset + 171);
          if (shaderEffectOffset < 0) {
             return ValidationResult.error("Invalid offset for ShaderEffect");
          }
 
-         int pos = offset + 260 + shaderEffectOffset;
+         int pos = offset + 259 + shaderEffectOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ShaderEffect");
          }
@@ -1789,12 +1789,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int modelOffset = buffer.getIntLE(offset + 176);
+         int modelOffset = buffer.getIntLE(offset + 175);
          if (modelOffset < 0) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
-         int pos = offset + 260 + modelOffset;
+         int pos = offset + 259 + modelOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Model");
          }
@@ -1816,12 +1816,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int modelTextureOffset = buffer.getIntLE(offset + 180);
+         int modelTextureOffset = buffer.getIntLE(offset + 179);
          if (modelTextureOffset < 0) {
             return ValidationResult.error("Invalid offset for ModelTexture");
          }
 
-         int pos = offset + 260 + modelTextureOffset;
+         int pos = offset + 259 + modelTextureOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ModelTexture");
          }
@@ -1848,12 +1848,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int modelAnimationOffset = buffer.getIntLE(offset + 184);
+         int modelAnimationOffset = buffer.getIntLE(offset + 183);
          if (modelAnimationOffset < 0) {
             return ValidationResult.error("Invalid offset for ModelAnimation");
          }
 
-         int pos = offset + 260 + modelAnimationOffset;
+         int pos = offset + 259 + modelAnimationOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ModelAnimation");
          }
@@ -1875,12 +1875,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int supportOffset = buffer.getIntLE(offset + 188);
+         int supportOffset = buffer.getIntLE(offset + 187);
          if (supportOffset < 0) {
             return ValidationResult.error("Invalid offset for Support");
          }
 
-         int pos = offset + 260 + supportOffset;
+         int pos = offset + 259 + supportOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Support");
          }
@@ -1911,12 +1911,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int supportingOffset = buffer.getIntLE(offset + 192);
+         int supportingOffset = buffer.getIntLE(offset + 191);
          if (supportingOffset < 0) {
             return ValidationResult.error("Invalid offset for Supporting");
          }
 
-         int pos = offset + 260 + supportingOffset;
+         int pos = offset + 259 + supportingOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Supporting");
          }
@@ -1947,12 +1947,12 @@ public class BlockType {
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int cubeTexturesOffset = buffer.getIntLE(offset + 196);
+         int cubeTexturesOffset = buffer.getIntLE(offset + 195);
          if (cubeTexturesOffset < 0) {
             return ValidationResult.error("Invalid offset for CubeTextures");
          }
 
-         int pos = offset + 260 + cubeTexturesOffset;
+         int pos = offset + 259 + cubeTexturesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for CubeTextures");
          }
@@ -1979,12 +1979,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int cubeSideMaskTextureOffset = buffer.getIntLE(offset + 200);
+         int cubeSideMaskTextureOffset = buffer.getIntLE(offset + 199);
          if (cubeSideMaskTextureOffset < 0) {
             return ValidationResult.error("Invalid offset for CubeSideMaskTexture");
          }
 
-         int pos = offset + 260 + cubeSideMaskTextureOffset;
+         int pos = offset + 259 + cubeSideMaskTextureOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for CubeSideMaskTexture");
          }
@@ -2006,12 +2006,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 2) != 0) {
-         int particlesOffset = buffer.getIntLE(offset + 204);
+         int particlesOffset = buffer.getIntLE(offset + 203);
          if (particlesOffset < 0) {
             return ValidationResult.error("Invalid offset for Particles");
          }
 
-         int pos = offset + 260 + particlesOffset;
+         int pos = offset + 259 + particlesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Particles");
          }
@@ -2038,12 +2038,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 4) != 0) {
-         int blockParticleSetIdOffset = buffer.getIntLE(offset + 208);
+         int blockParticleSetIdOffset = buffer.getIntLE(offset + 207);
          if (blockParticleSetIdOffset < 0) {
             return ValidationResult.error("Invalid offset for BlockParticleSetId");
          }
 
-         int pos = offset + 260 + blockParticleSetIdOffset;
+         int pos = offset + 259 + blockParticleSetIdOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for BlockParticleSetId");
          }
@@ -2065,12 +2065,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 8) != 0) {
-         int blockBreakingDecalIdOffset = buffer.getIntLE(offset + 212);
+         int blockBreakingDecalIdOffset = buffer.getIntLE(offset + 211);
          if (blockBreakingDecalIdOffset < 0) {
             return ValidationResult.error("Invalid offset for BlockBreakingDecalId");
          }
 
-         int pos = offset + 260 + blockBreakingDecalIdOffset;
+         int pos = offset + 259 + blockBreakingDecalIdOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for BlockBreakingDecalId");
          }
@@ -2092,12 +2092,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 16) != 0) {
-         int transitionTextureOffset = buffer.getIntLE(offset + 216);
+         int transitionTextureOffset = buffer.getIntLE(offset + 215);
          if (transitionTextureOffset < 0) {
             return ValidationResult.error("Invalid offset for TransitionTexture");
          }
 
-         int pos = offset + 260 + transitionTextureOffset;
+         int pos = offset + 259 + transitionTextureOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for TransitionTexture");
          }
@@ -2119,12 +2119,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 32) != 0) {
-         int transitionToGroupsOffset = buffer.getIntLE(offset + 220);
+         int transitionToGroupsOffset = buffer.getIntLE(offset + 219);
          if (transitionToGroupsOffset < 0) {
             return ValidationResult.error("Invalid offset for TransitionToGroups");
          }
 
-         int pos = offset + 260 + transitionToGroupsOffset;
+         int pos = offset + 259 + transitionToGroupsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for TransitionToGroups");
          }
@@ -2146,12 +2146,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 64) != 0) {
-         int interactionHintOffset = buffer.getIntLE(offset + 224);
+         int interactionHintOffset = buffer.getIntLE(offset + 223);
          if (interactionHintOffset < 0) {
             return ValidationResult.error("Invalid offset for InteractionHint");
          }
 
-         int pos = offset + 260 + interactionHintOffset;
+         int pos = offset + 259 + interactionHintOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for InteractionHint");
          }
@@ -2173,12 +2173,12 @@ public class BlockType {
       }
 
       if ((nullBits[2] & 128) != 0) {
-         int gatheringOffset = buffer.getIntLE(offset + 228);
+         int gatheringOffset = buffer.getIntLE(offset + 227);
          if (gatheringOffset < 0) {
             return ValidationResult.error("Invalid offset for Gathering");
          }
 
-         int pos = offset + 260 + gatheringOffset;
+         int pos = offset + 259 + gatheringOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Gathering");
          }
@@ -2192,12 +2192,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 1) != 0) {
-         int displayOffset = buffer.getIntLE(offset + 232);
+         int displayOffset = buffer.getIntLE(offset + 231);
          if (displayOffset < 0) {
             return ValidationResult.error("Invalid offset for Display");
          }
 
-         int pos = offset + 260 + displayOffset;
+         int pos = offset + 259 + displayOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Display");
          }
@@ -2211,12 +2211,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 2) != 0) {
-         int railOffset = buffer.getIntLE(offset + 236);
+         int railOffset = buffer.getIntLE(offset + 235);
          if (railOffset < 0) {
             return ValidationResult.error("Invalid offset for Rail");
          }
 
-         int pos = offset + 260 + railOffset;
+         int pos = offset + 259 + railOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Rail");
          }
@@ -2230,12 +2230,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 4) != 0) {
-         int interactionsOffset = buffer.getIntLE(offset + 240);
+         int interactionsOffset = buffer.getIntLE(offset + 239);
          if (interactionsOffset < 0) {
             return ValidationResult.error("Invalid offset for Interactions");
          }
 
-         int pos = offset + 260 + interactionsOffset;
+         int pos = offset + 259 + interactionsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Interactions");
          }
@@ -2260,12 +2260,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 8) != 0) {
-         int statesOffset = buffer.getIntLE(offset + 244);
+         int statesOffset = buffer.getIntLE(offset + 243);
          if (statesOffset < 0) {
             return ValidationResult.error("Invalid offset for States");
          }
 
-         int pos = offset + 260 + statesOffset;
+         int pos = offset + 259 + statesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for States");
          }
@@ -2305,12 +2305,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 16) != 0) {
-         int tagIndexesOffset = buffer.getIntLE(offset + 248);
+         int tagIndexesOffset = buffer.getIntLE(offset + 247);
          if (tagIndexesOffset < 0) {
             return ValidationResult.error("Invalid offset for TagIndexes");
          }
 
-         int pos = offset + 260 + tagIndexesOffset;
+         int pos = offset + 259 + tagIndexesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for TagIndexes");
          }
@@ -2332,12 +2332,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 32) != 0) {
-         int benchOffset = buffer.getIntLE(offset + 252);
+         int benchOffset = buffer.getIntLE(offset + 251);
          if (benchOffset < 0) {
             return ValidationResult.error("Invalid offset for Bench");
          }
 
-         int pos = offset + 260 + benchOffset;
+         int pos = offset + 259 + benchOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Bench");
          }
@@ -2351,12 +2351,12 @@ public class BlockType {
       }
 
       if ((nullBits[3] & 64) != 0) {
-         int connectedBlockRuleSetOffset = buffer.getIntLE(offset + 256);
+         int connectedBlockRuleSetOffset = buffer.getIntLE(offset + 255);
          if (connectedBlockRuleSetOffset < 0) {
             return ValidationResult.error("Invalid offset for ConnectedBlockRuleSet");
          }
 
-         int pos = offset + 260 + connectedBlockRuleSetOffset;
+         int pos = offset + 259 + connectedBlockRuleSetOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ConnectedBlockRuleSet");
          }

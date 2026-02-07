@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 public class TimeoutCondition implements RemovalCondition {
-   @Nonnull
    public static final BuilderCodec<TimeoutCondition> CODEC = BuilderCodec.<TimeoutCondition>builder(TimeoutCondition.class, TimeoutCondition::new)
       .documentation("A condition that triggers after a set time limit.")
       .<Double>append(new KeyedCodec<>("TimeoutSeconds", Codec.DOUBLE), (o, i) -> o.timeoutSeconds = i, o -> o.timeoutSeconds)

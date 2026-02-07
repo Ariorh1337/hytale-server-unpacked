@@ -12,7 +12,6 @@ import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.semver.SemverRange;
-import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.auth.AuthCredentialStoreProvider;
@@ -38,14 +37,14 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
 public class HytaleServerConfig {
-   public static final int VERSION = 4;
+   public static final int VERSION = 3;
    public static final int DEFAULT_MAX_VIEW_RADIUS = 32;
    @Nonnull
    public static final Path PATH = Path.of("config.json");
    @Nonnull
    public static final BuilderCodec<HytaleServerConfig> CODEC = BuilderCodec.builder(HytaleServerConfig.class, HytaleServerConfig::new)
       .versioned()
-      .codecVersion(4)
+      .codecVersion(3)
       .append(new KeyedCodec<>("ServerName", Codec.STRING), (o, s) -> o.serverName = s, o -> o.serverName)
       .add()
       .append(new KeyedCodec<>("MOTD", Codec.STRING), (o, s) -> o.motd = s, o -> o.motd)
@@ -93,9 +92,6 @@ public class HytaleServerConfig {
          o -> o.modConfig
       )
       .add()
-      .<Boolean>append(new KeyedCodec<>("DefaultModsEnabled", Codec.BOOLEAN), (o, v) -> o.defaultModsEnabled = v, o -> o.defaultModsEnabled)
-      .setVersionRange(4, Integer.MAX_VALUE)
-      .add()
       .append(
          new KeyedCodec<>("DisplayTmpTagsInStrings", Codec.BOOLEAN),
          (o, displayTmpTagsInStrings) -> o.displayTmpTagsInStrings = displayTmpTagsInStrings,
@@ -108,9 +104,7 @@ public class HytaleServerConfig {
       .add()
       .append(new KeyedCodec<>("Update", HytaleServerConfig.UpdateConfig.CODEC), (o, value) -> o.updateConfig = value, o -> o.updateConfig)
       .add()
-      .append(new KeyedCodec<>("SkipModValidationForVersion", Codec.STRING), (o, v) -> o.skipModValidationForVersion = v, o -> o.skipModValidationForVersion)
-      .add()
-      .afterDecode((config, extraInfo) -> {
+      .afterDecode(config -> {
          config.defaults.hytaleServerConfig = config;
          config.connectionTimeouts.setHytaleServerConfig(config);
          config.rateLimitConfig.hytaleServerConfig = config;
@@ -122,14 +116,6 @@ public class HytaleServerConfig {
             }
 
             config.legacyPluginConfig = null;
-            config.markChanged();
-         }
-
-         if (config.defaultModsEnabled == null && extraInfo.getVersion() < 4) {
-            config.defaultModsEnabled = true;
-         }
-
-         if (extraInfo.getVersion() != 4) {
             config.markChanged();
          }
       })
@@ -155,8 +141,6 @@ public class HytaleServerConfig {
    private transient Map<PluginIdentifier, HytaleServerConfig.ModConfig> legacyPluginConfig;
    @Nonnull
    private Map<PluginIdentifier, HytaleServerConfig.ModConfig> modConfig = new ConcurrentHashMap<>();
-   @Nullable
-   private Boolean defaultModsEnabled;
    @Nonnull
    private Map<String, HytaleServerConfig.Module> unmodifiableModules = Collections.unmodifiableMap(this.modules);
    @Nonnull
@@ -170,8 +154,6 @@ public class HytaleServerConfig {
    private boolean displayTmpTagsInStrings;
    @Nonnull
    private HytaleServerConfig.UpdateConfig updateConfig = new HytaleServerConfig.UpdateConfig(this);
-   @Nullable
-   private String skipModValidationForVersion;
 
    public String getServerName() {
       return this.serverName;
@@ -291,10 +273,6 @@ public class HytaleServerConfig {
       this.markChanged();
    }
 
-   public boolean getDefaultModsEnabled() {
-      return this.defaultModsEnabled != null ? this.defaultModsEnabled : !Constants.SINGLEPLAYER;
-   }
-
    @Nonnull
    public PlayerStorageProvider getPlayerStorageProvider() {
       return this.playerStorageProvider;
@@ -334,10 +312,6 @@ public class HytaleServerConfig {
    public void setUpdateConfig(@Nonnull HytaleServerConfig.UpdateConfig updateConfig) {
       this.updateConfig = updateConfig;
       this.markChanged();
-   }
-
-   public boolean shouldSkipModValidation() {
-      return this.skipModValidationForVersion != null && this.skipModValidationForVersion.equals(ManifestUtil.getImplementationRevisionId());
    }
 
    public void removeModule(@Nonnull String module) {

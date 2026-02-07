@@ -13,7 +13,6 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class AngleDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<AngleDensityAsset> CODEC = BuilderCodec.builder(
          AngleDensityAsset.class, AngleDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -30,7 +29,7 @@ public class AngleDensityAsset extends DensityAsset {
       .build();
    private VectorProviderAsset vectorProviderAsset = new ConstantVectorProviderAsset();
    private Vector3d vector = new Vector3d();
-   private boolean isAxis;
+   private boolean isAxis = false;
 
    @Nonnull
    @Override

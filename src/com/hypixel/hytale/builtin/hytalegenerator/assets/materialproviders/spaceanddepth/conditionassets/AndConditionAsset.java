@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import javax.annotation.Nonnull;
 
 public class AndConditionAsset extends ConditionAsset {
-   @Nonnull
    public static final BuilderCodec<AndConditionAsset> CODEC = BuilderCodec.builder(
          AndConditionAsset.class, AndConditionAsset::new, ConditionAsset.ABSTRACT_CODEC
       )

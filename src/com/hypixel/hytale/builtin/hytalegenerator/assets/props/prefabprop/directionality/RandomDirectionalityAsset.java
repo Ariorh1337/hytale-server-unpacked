@@ -10,7 +10,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class RandomDirectionalityAsset extends DirectionalityAsset {
-   @Nonnull
    public static final BuilderCodec<RandomDirectionalityAsset> CODEC = BuilderCodec.builder(
          RandomDirectionalityAsset.class, RandomDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC
       )

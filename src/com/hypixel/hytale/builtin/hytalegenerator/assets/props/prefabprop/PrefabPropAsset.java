@@ -30,7 +30,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ExceptionUtil;
-import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
@@ -41,7 +40,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PrefabPropAsset extends PropAsset {
-   @Nonnull
    public static final BuilderCodec<PrefabPropAsset> CODEC = BuilderCodec.builder(PrefabPropAsset.class, PrefabPropAsset::new, PropAsset.ABSTRACT_CODEC)
       .append(
          new KeyedCodec<>("WeightedPrefabPaths", new ArrayCodec<>(PrefabPropAsset.WeightedPathAsset.CODEC, PrefabPropAsset.WeightedPathAsset[]::new), true),
@@ -152,18 +150,14 @@ public class PrefabPropAsset extends PropAsset {
       List<PrefabBuffer> pathPrefabs = new ArrayList<>();
 
       for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-         Path prefabsDir = pack.getRoot().resolve("Server");
+         Path fullPath = pack.getRoot().resolve("Server");
          if (this.legacyPath) {
-            prefabsDir = prefabsDir.resolve("World").resolve("Default").resolve("Prefabs");
+            fullPath = fullPath.resolve("World").resolve("Default").resolve("Prefabs");
          } else {
-            prefabsDir = prefabsDir.resolve("Prefabs");
+            fullPath = fullPath.resolve("Prefabs");
          }
 
-         Path fullPath = PathUtil.resolvePathWithinDir(prefabsDir, path);
-         if (fullPath == null) {
-            LoggerUtil.getLogger().severe("Invalid prefab path: " + path);
-            return null;
-         }
+         fullPath = fullPath.resolve(path);
 
          try {
             PrefabLoader.loadAllPrefabBuffersUnder(fullPath, pathPrefabs);
@@ -185,7 +179,6 @@ public class PrefabPropAsset extends PropAsset {
    }
 
    public static class WeightedPathAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, PrefabPropAsset.WeightedPathAsset>> {
-      @Nonnull
       public static final AssetBuilderCodec<String, PrefabPropAsset.WeightedPathAsset> CODEC = AssetBuilderCodec.builder(
             PrefabPropAsset.WeightedPathAsset.class,
             PrefabPropAsset.WeightedPathAsset::new,

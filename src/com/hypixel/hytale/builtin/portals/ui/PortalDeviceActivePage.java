@@ -72,8 +72,7 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   @Nonnull
-   private static Message createPlayerCountMsg(@Nonnull World world) {
+   private static Message createPlayerCountMsg(World world) {
       int playerCount = world.getPlayerCount();
       String pinkEnoughColor = "#ea4fa46b";
       if (playerCount == 0) {
@@ -94,8 +93,7 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
       return msg;
    }
 
-   @Nonnull
-   private PortalDeviceActivePage.State computeState(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   private PortalDeviceActivePage.State computeState(Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.blockRef.isValid()) {
          return PortalDeviceActivePage.Error.INVALID_BLOCK;
       }
@@ -118,17 +116,13 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
       }
 
       UUIDComponent uuidComponent = componentAccessor.getComponent(ref, UUIDComponent.getComponentType());
-      if (uuidComponent == null) {
-         return PortalDeviceActivePage.Error.INACTIVE_PORTAL;
-      }
-
+      assert uuidComponent != null;
       UUID playerUUID = uuidComponent.getUuid();
       boolean diedInside = portalWorld.getDiedInWorld().contains(playerUUID);
       return new PortalDeviceActivePage.PortalIsOpen(destinationWorld, portalWorld, diedInside);
    }
 
    protected static class Data {
-      @Nonnull
       public static final BuilderCodec<PortalDeviceActivePage.Data> CODEC = BuilderCodec.builder(
             PortalDeviceActivePage.Data.class, PortalDeviceActivePage.Data::new
          )

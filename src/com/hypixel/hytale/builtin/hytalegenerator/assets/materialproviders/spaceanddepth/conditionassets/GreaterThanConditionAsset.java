@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class GreaterThanConditionAsset extends ConditionAsset {
-   @Nonnull
    public static final BuilderCodec<GreaterThanConditionAsset> CODEC = BuilderCodec.builder(
          GreaterThanConditionAsset.class, GreaterThanConditionAsset::new, ConditionAsset.ABSTRACT_CODEC
       )
@@ -19,7 +18,7 @@ public class GreaterThanConditionAsset extends ConditionAsset {
       .add()
       .build();
    private ConditionParameter parameter = ConditionParameter.SPACE_ABOVE_FLOOR;
-   private int threshold;
+   private int threshold = 0;
 
    @Nonnull
    @Override

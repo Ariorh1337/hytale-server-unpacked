@@ -14,29 +14,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class WakeUpOnDismountSystem extends RefChangeSystem<EntityStore, MountedComponent> {
-   @Nonnull
-   private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
-   @Nonnull
-   private final ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType;
-
-   public WakeUpOnDismountSystem(
-      @Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType,
-      @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType
-   ) {
-      this.mountedComponentType = mountedComponentType;
-      this.playerSomnolenceComponentType = playerSomnolenceComponentType;
-   }
-
-   @Nonnull
    @Override
    public ComponentType<EntityStore, MountedComponent> componentType() {
-      return this.mountedComponentType;
+      return MountedComponent.getComponentType();
    }
 
-   @Nonnull
    @Override
    public Query<EntityStore> getQuery() {
-      return this.mountedComponentType;
+      return MountedComponent.getComponentType();
    }
 
    public void onComponentAdded(
@@ -57,7 +42,7 @@ public class WakeUpOnDismountSystem extends RefChangeSystem<EntityStore, Mounted
       @Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       if (component.getBlockMountType() == BlockMountType.Bed) {
-         commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, PlayerSomnolence.AWAKE);
+         commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSomnolence.AWAKE);
       }
    }
 }

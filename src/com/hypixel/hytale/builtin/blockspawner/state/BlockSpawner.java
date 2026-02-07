@@ -11,7 +11,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockSpawner implements Component<ChunkStore> {
-   @Nonnull
    public static final BuilderCodec<BlockSpawner> CODEC = BuilderCodec.<BlockSpawner>builder(BlockSpawner.class, BlockSpawner::new)
       .addField(new KeyedCodec<>("BlockSpawnerId", Codec.STRING), (state, s) -> state.blockSpawnerId = s, state -> state.blockSpawnerId)
       .build();

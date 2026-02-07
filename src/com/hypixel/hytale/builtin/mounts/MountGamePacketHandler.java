@@ -35,7 +35,9 @@ public class MountGamePacketHandler implements SubPacketHandler {
             assert playerComponent != null;
             MountedComponent mounted = store.getComponent(ref, MountedComponent.getComponentType());
             if (mounted == null) {
-               MountPlugin.checkDismountNpc(store, ref, playerComponent);
+               int mountEntityId = playerComponent.getMountEntityId();
+               playerComponent.setMountEntityId(0);
+               MountPlugin.dismountNpc(store, mountEntityId);
             } else {
                if (mounted.getControllerType() == MountController.BlockMount) {
                   store.tryRemoveComponent(ref, MountedComponent.getComponentType());

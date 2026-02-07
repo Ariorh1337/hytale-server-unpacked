@@ -24,7 +24,6 @@ import java.util.HashMap;
 import javax.annotation.Nonnull;
 
 public class DensityReturnTypeAsset extends ReturnTypeAsset {
-   @Nonnull
    public static final BuilderCodec<DensityReturnTypeAsset> CODEC = BuilderCodec.builder(
          DensityReturnTypeAsset.class, DensityReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC
       )
@@ -45,8 +44,8 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
 
    @Nonnull
    @Override
-   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
-      DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle, workerId);
+   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+      DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer);
       Density choiceDensity = this.choiceDensityAsset.build(densityArgument);
       HashMap<Range, Density> delimiterMap = new HashMap<>(this.delimiterAssets.length);
 
@@ -54,12 +53,11 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
          delimiterMap.put(new Range((float)delimiter.from, (float)delimiter.to), delimiter.densityAsset.build(densityArgument));
       }
 
-      Density cache = new MultiCacheDensity(choiceDensity, CacheDensityAsset.DEFAULT_CAPACITY);
-      return new DensityReturnType(cache, delimiterMap, true, this.defaultValue);
+      Density cache = new MultiCacheDensity(choiceDensity, workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+      return new DensityReturnType(cache, delimiterMap, true, this.defaultValue, workerIndexer.getWorkerCount());
    }
 
    public static class DelimiterAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, FieldFunctionMaterialProviderAsset.DelimiterAsset>> {
-      @Nonnull
       public static final AssetBuilderCodec<String, DensityReturnTypeAsset.DelimiterAsset> CODEC = AssetBuilderCodec.builder(
             DensityReturnTypeAsset.DelimiterAsset.class,
             DensityReturnTypeAsset.DelimiterAsset::new,

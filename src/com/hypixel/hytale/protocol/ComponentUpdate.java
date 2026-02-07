@@ -16,9 +16,9 @@ import javax.annotation.Nullable;
 
 public class ComponentUpdate {
    public static final int NULLABLE_BIT_FIELD_SIZE = 3;
-   public static final int FIXED_BLOCK_SIZE = 160;
+   public static final int FIXED_BLOCK_SIZE = 159;
    public static final int VARIABLE_FIELD_COUNT = 13;
-   public static final int VARIABLE_BLOCK_START = 212;
+   public static final int VARIABLE_BLOCK_START = 211;
    public static final int MAX_SIZE = 1677721600;
    @Nonnull
    public ComponentUpdateType type = ComponentUpdateType.Nameplate;
@@ -62,7 +62,6 @@ public class ComponentUpdate {
    public MountedUpdate mounted;
    @Nullable
    public String[] activeAnimations;
-   public boolean isProp;
 
    public ComponentUpdate() {
    }
@@ -90,8 +89,7 @@ public class ComponentUpdate {
       @Nullable int[] soundEventIds,
       @Nullable String interactionHint,
       @Nullable MountedUpdate mounted,
-      @Nullable String[] activeAnimations,
-      boolean isProp
+      @Nullable String[] activeAnimations
    ) {
       this.type = type;
       this.nameplate = nameplate;
@@ -116,7 +114,6 @@ public class ComponentUpdate {
       this.interactionHint = interactionHint;
       this.mounted = mounted;
       this.activeAnimations = activeAnimations;
-      this.isProp = isProp;
    }
 
    public ComponentUpdate(@Nonnull ComponentUpdate other) {
@@ -143,7 +140,6 @@ public class ComponentUpdate {
       this.interactionHint = other.interactionHint;
       this.mounted = other.mounted;
       this.activeAnimations = other.activeAnimations;
-      this.isProp = other.isProp;
    }
 
    @Nonnull
@@ -172,14 +168,13 @@ public class ComponentUpdate {
          obj.mounted = MountedUpdate.deserialize(buf, offset + 111);
       }
 
-      obj.isProp = buf.getByte(offset + 159) != 0;
       if ((nullBits[0] & 16) != 0) {
-         int varPos0 = offset + 212 + buf.getIntLE(offset + 160);
+         int varPos0 = offset + 211 + buf.getIntLE(offset + 159);
          obj.nameplate = Nameplate.deserialize(buf, varPos0);
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int varPos1 = offset + 212 + buf.getIntLE(offset + 164);
+         int varPos1 = offset + 211 + buf.getIntLE(offset + 163);
          int entityUIComponentsCount = VarInt.peek(buf, varPos1);
          if (entityUIComponentsCount < 0) {
             throw ProtocolException.negativeLength("EntityUIComponents", entityUIComponentsCount);
@@ -202,32 +197,32 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int varPos2 = offset + 212 + buf.getIntLE(offset + 168);
+         int varPos2 = offset + 211 + buf.getIntLE(offset + 167);
          obj.combatTextUpdate = CombatTextUpdate.deserialize(buf, varPos2);
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos3 = offset + 212 + buf.getIntLE(offset + 172);
+         int varPos3 = offset + 211 + buf.getIntLE(offset + 171);
          obj.model = Model.deserialize(buf, varPos3);
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos4 = offset + 212 + buf.getIntLE(offset + 176);
+         int varPos4 = offset + 211 + buf.getIntLE(offset + 175);
          obj.skin = PlayerSkin.deserialize(buf, varPos4);
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos5 = offset + 212 + buf.getIntLE(offset + 180);
+         int varPos5 = offset + 211 + buf.getIntLE(offset + 179);
          obj.item = ItemWithAllMetadata.deserialize(buf, varPos5);
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int varPos6 = offset + 212 + buf.getIntLE(offset + 184);
+         int varPos6 = offset + 211 + buf.getIntLE(offset + 183);
          obj.equipment = Equipment.deserialize(buf, varPos6);
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int varPos7 = offset + 212 + buf.getIntLE(offset + 188);
+         int varPos7 = offset + 211 + buf.getIntLE(offset + 187);
          int entityStatUpdatesCount = VarInt.peek(buf, varPos7);
          if (entityStatUpdatesCount < 0) {
             throw ProtocolException.negativeLength("EntityStatUpdates", entityStatUpdatesCount);
@@ -273,7 +268,7 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int varPos8 = offset + 212 + buf.getIntLE(offset + 192);
+         int varPos8 = offset + 211 + buf.getIntLE(offset + 191);
          int entityEffectUpdatesCount = VarInt.peek(buf, varPos8);
          if (entityEffectUpdatesCount < 0) {
             throw ProtocolException.negativeLength("EntityEffectUpdates", entityEffectUpdatesCount);
@@ -298,7 +293,7 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int varPos9 = offset + 212 + buf.getIntLE(offset + 196);
+         int varPos9 = offset + 211 + buf.getIntLE(offset + 195);
          int interactionsCount = VarInt.peek(buf, varPos9);
          if (interactionsCount < 0) {
             throw ProtocolException.negativeLength("Interactions", interactionsCount);
@@ -323,7 +318,7 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int varPos10 = offset + 212 + buf.getIntLE(offset + 200);
+         int varPos10 = offset + 211 + buf.getIntLE(offset + 199);
          int soundEventIdsCount = VarInt.peek(buf, varPos10);
          if (soundEventIdsCount < 0) {
             throw ProtocolException.negativeLength("SoundEventIds", soundEventIdsCount);
@@ -346,7 +341,7 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int varPos11 = offset + 212 + buf.getIntLE(offset + 204);
+         int varPos11 = offset + 211 + buf.getIntLE(offset + 203);
          int interactionHintLen = VarInt.peek(buf, varPos11);
          if (interactionHintLen < 0) {
             throw ProtocolException.negativeLength("InteractionHint", interactionHintLen);
@@ -360,7 +355,7 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int varPos12 = offset + 212 + buf.getIntLE(offset + 208);
+         int varPos12 = offset + 211 + buf.getIntLE(offset + 207);
          int activeAnimationsCount = VarInt.peek(buf, varPos12);
          if (activeAnimationsCount < 0) {
             throw ProtocolException.negativeLength("ActiveAnimations", activeAnimationsCount);
@@ -399,10 +394,10 @@ public class ComponentUpdate {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte[] nullBits = PacketIO.readBytes(buf, offset, 3);
-      int maxEnd = 212;
+      int maxEnd = 211;
       if ((nullBits[0] & 16) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 160);
-         int pos0 = offset + 212 + fieldOffset0;
+         int fieldOffset0 = buf.getIntLE(offset + 159);
+         int pos0 = offset + 211 + fieldOffset0;
          pos0 += Nameplate.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
@@ -410,8 +405,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 164);
-         int pos1 = offset + 212 + fieldOffset1;
+         int fieldOffset1 = buf.getIntLE(offset + 163);
+         int pos1 = offset + 211 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1) + arrLen * 4;
          if (pos1 - offset > maxEnd) {
@@ -420,8 +415,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 168);
-         int pos2 = offset + 212 + fieldOffset2;
+         int fieldOffset2 = buf.getIntLE(offset + 167);
+         int pos2 = offset + 211 + fieldOffset2;
          pos2 += CombatTextUpdate.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
@@ -429,8 +424,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int fieldOffset3 = buf.getIntLE(offset + 172);
-         int pos3 = offset + 212 + fieldOffset3;
+         int fieldOffset3 = buf.getIntLE(offset + 171);
+         int pos3 = offset + 211 + fieldOffset3;
          pos3 += Model.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
@@ -438,8 +433,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int fieldOffset4 = buf.getIntLE(offset + 176);
-         int pos4 = offset + 212 + fieldOffset4;
+         int fieldOffset4 = buf.getIntLE(offset + 175);
+         int pos4 = offset + 211 + fieldOffset4;
          pos4 += PlayerSkin.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
@@ -447,8 +442,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int fieldOffset5 = buf.getIntLE(offset + 180);
-         int pos5 = offset + 212 + fieldOffset5;
+         int fieldOffset5 = buf.getIntLE(offset + 179);
+         int pos5 = offset + 211 + fieldOffset5;
          pos5 += ItemWithAllMetadata.computeBytesConsumed(buf, pos5);
          if (pos5 - offset > maxEnd) {
             maxEnd = pos5 - offset;
@@ -456,8 +451,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int fieldOffset6 = buf.getIntLE(offset + 184);
-         int pos6 = offset + 212 + fieldOffset6;
+         int fieldOffset6 = buf.getIntLE(offset + 183);
+         int pos6 = offset + 211 + fieldOffset6;
          pos6 += Equipment.computeBytesConsumed(buf, pos6);
          if (pos6 - offset > maxEnd) {
             maxEnd = pos6 - offset;
@@ -465,8 +460,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int fieldOffset7 = buf.getIntLE(offset + 188);
-         int pos7 = offset + 212 + fieldOffset7;
+         int fieldOffset7 = buf.getIntLE(offset + 187);
+         int pos7 = offset + 211 + fieldOffset7;
          int dictLen = VarInt.peek(buf, pos7);
          pos7 += VarInt.length(buf, pos7);
 
@@ -486,8 +481,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int fieldOffset8 = buf.getIntLE(offset + 192);
-         int pos8 = offset + 212 + fieldOffset8;
+         int fieldOffset8 = buf.getIntLE(offset + 191);
+         int pos8 = offset + 211 + fieldOffset8;
          int arrLen = VarInt.peek(buf, pos8);
          pos8 += VarInt.length(buf, pos8);
 
@@ -501,8 +496,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int fieldOffset9 = buf.getIntLE(offset + 196);
-         int pos9 = offset + 212 + fieldOffset9;
+         int fieldOffset9 = buf.getIntLE(offset + 195);
+         int pos9 = offset + 211 + fieldOffset9;
          int dictLen = VarInt.peek(buf, pos9);
          pos9 += VarInt.length(buf, pos9);
 
@@ -516,8 +511,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int fieldOffset10 = buf.getIntLE(offset + 200);
-         int pos10 = offset + 212 + fieldOffset10;
+         int fieldOffset10 = buf.getIntLE(offset + 199);
+         int pos10 = offset + 211 + fieldOffset10;
          int arrLen = VarInt.peek(buf, pos10);
          pos10 += VarInt.length(buf, pos10) + arrLen * 4;
          if (pos10 - offset > maxEnd) {
@@ -526,8 +521,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int fieldOffset11 = buf.getIntLE(offset + 204);
-         int pos11 = offset + 212 + fieldOffset11;
+         int fieldOffset11 = buf.getIntLE(offset + 203);
+         int pos11 = offset + 211 + fieldOffset11;
          int sl = VarInt.peek(buf, pos11);
          pos11 += VarInt.length(buf, pos11) + sl;
          if (pos11 - offset > maxEnd) {
@@ -536,8 +531,8 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int fieldOffset12 = buf.getIntLE(offset + 208);
-         int pos12 = offset + 212 + fieldOffset12;
+         int fieldOffset12 = buf.getIntLE(offset + 207);
+         int pos12 = offset + 211 + fieldOffset12;
          int arrLen = VarInt.peek(buf, pos12);
          pos12 += VarInt.length(buf, pos12);
          int bitfieldSize = (arrLen + 7) / 8;
@@ -661,7 +656,6 @@ public class ComponentUpdate {
          buf.writeZero(48);
       }
 
-      buf.writeByte(this.isProp ? 1 : 0);
       int nameplateOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int entityUIComponentsOffsetSlot = buf.writerIndex();
@@ -848,7 +842,7 @@ public class ComponentUpdate {
    }
 
    public int computeSize() {
-      int size = 212;
+      int size = 211;
       if (this.nameplate != null) {
          size += this.nameplate.computeSize();
       }
@@ -925,18 +919,18 @@ public class ComponentUpdate {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 212) {
-         return ValidationResult.error("Buffer too small: expected at least 212 bytes");
+      if (buffer.readableBytes() - offset < 211) {
+         return ValidationResult.error("Buffer too small: expected at least 211 bytes");
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 3);
       if ((nullBits[0] & 16) != 0) {
-         int nameplateOffset = buffer.getIntLE(offset + 160);
+         int nameplateOffset = buffer.getIntLE(offset + 159);
          if (nameplateOffset < 0) {
             return ValidationResult.error("Invalid offset for Nameplate");
          }
 
-         int pos = offset + 212 + nameplateOffset;
+         int pos = offset + 211 + nameplateOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Nameplate");
          }
@@ -950,12 +944,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int entityUIComponentsOffset = buffer.getIntLE(offset + 164);
+         int entityUIComponentsOffset = buffer.getIntLE(offset + 163);
          if (entityUIComponentsOffset < 0) {
             return ValidationResult.error("Invalid offset for EntityUIComponents");
          }
 
-         int pos = offset + 212 + entityUIComponentsOffset;
+         int pos = offset + 211 + entityUIComponentsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for EntityUIComponents");
          }
@@ -977,12 +971,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int combatTextUpdateOffset = buffer.getIntLE(offset + 168);
+         int combatTextUpdateOffset = buffer.getIntLE(offset + 167);
          if (combatTextUpdateOffset < 0) {
             return ValidationResult.error("Invalid offset for CombatTextUpdate");
          }
 
-         int pos = offset + 212 + combatTextUpdateOffset;
+         int pos = offset + 211 + combatTextUpdateOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for CombatTextUpdate");
          }
@@ -996,12 +990,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int modelOffset = buffer.getIntLE(offset + 172);
+         int modelOffset = buffer.getIntLE(offset + 171);
          if (modelOffset < 0) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
-         int pos = offset + 212 + modelOffset;
+         int pos = offset + 211 + modelOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Model");
          }
@@ -1015,12 +1009,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int skinOffset = buffer.getIntLE(offset + 176);
+         int skinOffset = buffer.getIntLE(offset + 175);
          if (skinOffset < 0) {
             return ValidationResult.error("Invalid offset for Skin");
          }
 
-         int pos = offset + 212 + skinOffset;
+         int pos = offset + 211 + skinOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Skin");
          }
@@ -1034,12 +1028,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int itemOffset = buffer.getIntLE(offset + 180);
+         int itemOffset = buffer.getIntLE(offset + 179);
          if (itemOffset < 0) {
             return ValidationResult.error("Invalid offset for Item");
          }
 
-         int pos = offset + 212 + itemOffset;
+         int pos = offset + 211 + itemOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Item");
          }
@@ -1053,12 +1047,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int equipmentOffset = buffer.getIntLE(offset + 184);
+         int equipmentOffset = buffer.getIntLE(offset + 183);
          if (equipmentOffset < 0) {
             return ValidationResult.error("Invalid offset for Equipment");
          }
 
-         int pos = offset + 212 + equipmentOffset;
+         int pos = offset + 211 + equipmentOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Equipment");
          }
@@ -1072,12 +1066,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int entityStatUpdatesOffset = buffer.getIntLE(offset + 188);
+         int entityStatUpdatesOffset = buffer.getIntLE(offset + 187);
          if (entityStatUpdatesOffset < 0) {
             return ValidationResult.error("Invalid offset for EntityStatUpdates");
          }
 
-         int pos = offset + 212 + entityStatUpdatesOffset;
+         int pos = offset + 211 + entityStatUpdatesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for EntityStatUpdates");
          }
@@ -1113,12 +1107,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int entityEffectUpdatesOffset = buffer.getIntLE(offset + 192);
+         int entityEffectUpdatesOffset = buffer.getIntLE(offset + 191);
          if (entityEffectUpdatesOffset < 0) {
             return ValidationResult.error("Invalid offset for EntityEffectUpdates");
          }
 
-         int pos = offset + 212 + entityEffectUpdatesOffset;
+         int pos = offset + 211 + entityEffectUpdatesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for EntityEffectUpdates");
          }
@@ -1145,12 +1139,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int interactionsOffset = buffer.getIntLE(offset + 196);
+         int interactionsOffset = buffer.getIntLE(offset + 195);
          if (interactionsOffset < 0) {
             return ValidationResult.error("Invalid offset for Interactions");
          }
 
-         int pos = offset + 212 + interactionsOffset;
+         int pos = offset + 211 + interactionsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Interactions");
          }
@@ -1175,12 +1169,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int soundEventIdsOffset = buffer.getIntLE(offset + 200);
+         int soundEventIdsOffset = buffer.getIntLE(offset + 199);
          if (soundEventIdsOffset < 0) {
             return ValidationResult.error("Invalid offset for SoundEventIds");
          }
 
-         int pos = offset + 212 + soundEventIdsOffset;
+         int pos = offset + 211 + soundEventIdsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for SoundEventIds");
          }
@@ -1202,12 +1196,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int interactionHintOffset = buffer.getIntLE(offset + 204);
+         int interactionHintOffset = buffer.getIntLE(offset + 203);
          if (interactionHintOffset < 0) {
             return ValidationResult.error("Invalid offset for InteractionHint");
          }
 
-         int pos = offset + 212 + interactionHintOffset;
+         int pos = offset + 211 + interactionHintOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for InteractionHint");
          }
@@ -1229,12 +1223,12 @@ public class ComponentUpdate {
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int activeAnimationsOffset = buffer.getIntLE(offset + 208);
+         int activeAnimationsOffset = buffer.getIntLE(offset + 207);
          if (activeAnimationsOffset < 0) {
             return ValidationResult.error("Invalid offset for ActiveAnimations");
          }
 
-         int pos = offset + 212 + activeAnimationsOffset;
+         int pos = offset + 211 + activeAnimationsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ActiveAnimations");
          }
@@ -1303,7 +1297,6 @@ public class ComponentUpdate {
       copy.interactionHint = this.interactionHint;
       copy.mounted = this.mounted != null ? this.mounted.clone() : null;
       copy.activeAnimations = this.activeAnimations != null ? Arrays.copyOf(this.activeAnimations, this.activeAnimations.length) : null;
-      copy.isProp = this.isProp;
       return copy;
    }
 
@@ -1336,8 +1329,7 @@ public class ComponentUpdate {
                && Arrays.equals(this.soundEventIds, other.soundEventIds)
                && Objects.equals(this.interactionHint, other.interactionHint)
                && Objects.equals(this.mounted, other.mounted)
-               && Arrays.equals(this.activeAnimations, other.activeAnimations)
-               && this.isProp == other.isProp;
+               && Arrays.equals(this.activeAnimations, other.activeAnimations);
       }
    }
 
@@ -1366,7 +1358,6 @@ public class ComponentUpdate {
       result = 31 * result + Arrays.hashCode(this.soundEventIds);
       result = 31 * result + Objects.hashCode(this.interactionHint);
       result = 31 * result + Objects.hashCode(this.mounted);
-      result = 31 * result + Arrays.hashCode(this.activeAnimations);
-      return 31 * result + Boolean.hashCode(this.isProp);
+      return 31 * result + Arrays.hashCode(this.activeAnimations);
    }
 }

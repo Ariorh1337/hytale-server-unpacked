@@ -20,7 +20,6 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class DensityDelimitedTintProviderAsset extends TintProviderAsset {
-   @Nonnull
    public static final BuilderCodec<DensityDelimitedTintProviderAsset> CODEC = BuilderCodec.builder(
          DensityDelimitedTintProviderAsset.class, DensityDelimitedTintProviderAsset::new, TintProviderAsset.ABSTRACT_CODEC
       )
@@ -58,7 +57,6 @@ public class DensityDelimitedTintProviderAsset extends TintProviderAsset {
    }
 
    public static class DelimiterAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, DensityDelimitedTintProviderAsset.DelimiterAsset>> {
-      @Nonnull
       public static final AssetBuilderCodec<String, DensityDelimitedTintProviderAsset.DelimiterAsset> CODEC = AssetBuilderCodec.builder(
             DensityDelimitedTintProviderAsset.DelimiterAsset.class,
             DensityDelimitedTintProviderAsset.DelimiterAsset::new,

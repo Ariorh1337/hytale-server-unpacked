@@ -20,7 +20,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class PositionsCellNoiseDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<PositionsCellNoiseDensityAsset> CODEC = BuilderCodec.builder(
          PositionsCellNoiseDensityAsset.class, PositionsCellNoiseDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -53,8 +52,8 @@ public class PositionsCellNoiseDensityAsset extends DensityAsset {
       }
 
       PositionProvider positionsField = this.positionProviderAsset
-         .build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId));
-      ReturnType returnType = this.returnTypeAsset.build(argument.parentSeed, argument.referenceBundle, argument.workerId);
+         .build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer));
+      ReturnType returnType = this.returnTypeAsset.build(argument.parentSeed, argument.referenceBundle, argument.workerIndexer);
       returnType.setMaxDistance(this.maxDistance);
       DistanceFunction distanceFunction = this.distanceFunctionAsset.build(argument.parentSeed, this.maxDistance);
       return new PositionsDensity(positionsField, returnType, distanceFunction, this.maxDistance);

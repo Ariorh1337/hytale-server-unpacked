@@ -43,11 +43,12 @@ public class TimeInstrument {
 
    @Nonnull
    private String toString(int indentation, @Nonnull TimeInstrument.Probe probe) {
-      long ns = probe.getTotalTime() / this.sampleCount;
+      long ms = probe.getTotalTime() / this.sampleCount;
+      ms /= 1000000L;
       StringBuilder s = new StringBuilder();
       s.append("\t".repeat(indentation));
       s.append(probe.getName()).append(": ");
-      s.append(LoggerUtil.nsToMsDecimal(ns)).append(" ms");
+      s.append(Long.toString(ms)).append(" ms");
       s.append("\n");
       List<TimeInstrument.Probe> childProbes = probe.getProbes();
 
@@ -59,7 +60,6 @@ public class TimeInstrument {
    }
 
    public static class Probe {
-      @Nonnull
       private final String name;
       private long startTime;
       private long totalTime;

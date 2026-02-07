@@ -11,7 +11,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class InstanceWorldConfig {
-   @Nonnull
    public static final String ID = "Instance";
    @Nonnull
    public static final BuilderCodec<InstanceWorldConfig> CODEC = BuilderCodec.builder(InstanceWorldConfig.class, InstanceWorldConfig::new)
@@ -41,7 +40,7 @@ public class InstanceWorldConfig {
    private RemovalCondition[] removalConditions = RemovalCondition.EMPTY;
    @Nullable
    private WorldReturnPoint returnPoint;
-   private boolean preventReconnection;
+   private boolean preventReconnection = false;
    @Nullable
    private InstanceDiscoveryConfig discovery;
 

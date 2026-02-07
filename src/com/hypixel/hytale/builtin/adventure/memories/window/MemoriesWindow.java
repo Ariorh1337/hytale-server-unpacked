@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MemoriesWindow extends Window {
-   @Nonnull
    private final JsonObject windowData = new JsonObject();
 
    public MemoriesWindow() {

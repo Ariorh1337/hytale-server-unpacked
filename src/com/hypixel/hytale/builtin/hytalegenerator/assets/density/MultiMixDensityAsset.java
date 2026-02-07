@@ -17,7 +17,6 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class MultiMixDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<MultiMixDensityAsset> CODEC = BuilderCodec.builder(
          MultiMixDensityAsset.class, MultiMixDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -109,7 +108,6 @@ public class MultiMixDensityAsset extends DensityAsset {
 
    public static class KeyAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, MultiMixDensityAsset.KeyAsset>> {
       public static final int NO_DENSITY_INDEX = 0;
-      @Nonnull
       public static final AssetBuilderCodec<String, MultiMixDensityAsset.KeyAsset> CODEC = AssetBuilderCodec.builder(
             MultiMixDensityAsset.KeyAsset.class,
             MultiMixDensityAsset.KeyAsset::new,

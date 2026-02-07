@@ -4,7 +4,6 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class FluidMaterial {
-   @Nonnull
    private final MaterialCache materialCache;
    public final int fluidId;
    public final byte fluidLevel;
@@ -15,7 +14,6 @@ public class FluidMaterial {
       this.fluidLevel = fluidLevel;
    }
 
-   @Nonnull
    public MaterialCache getVoxelCache() {
       return this.materialCache;
    }
@@ -36,7 +34,6 @@ public class FluidMaterial {
       return Objects.hash(blockId, fluidLevel);
    }
 
-   @Nonnull
    @Override
    public String toString() {
       return "FluidMaterial{materialCache=" + this.materialCache + ", fluidId=" + this.fluidId + ", fluidLevel=" + this.fluidLevel + "}";

@@ -11,7 +11,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class FieldFunctionOccurrencePositionProviderAsset extends PositionProviderAsset {
-   @Nonnull
    public static final BuilderCodec<FieldFunctionOccurrencePositionProviderAsset> CODEC = BuilderCodec.builder(
          FieldFunctionOccurrencePositionProviderAsset.class, FieldFunctionOccurrencePositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )

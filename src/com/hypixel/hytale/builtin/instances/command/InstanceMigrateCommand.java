@@ -45,7 +45,7 @@ public class InstanceMigrateCommand extends AbstractAsyncCommand {
    private static final long CHUNK_UPDATE_INTERVAL = 100L;
 
    public InstanceMigrateCommand() {
-      super("migrate", "server.commands.instances.migrate.desc");
+      super("migrate", "");
    }
 
    @Nonnull

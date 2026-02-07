@@ -13,7 +13,6 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class KillSpawnMarkerObjectiveTaskAsset extends KillObjectiveTaskAsset {
-   @Nonnull
    public static final BuilderCodec<KillSpawnMarkerObjectiveTaskAsset> CODEC = BuilderCodec.builder(
          KillSpawnMarkerObjectiveTaskAsset.class, KillSpawnMarkerObjectiveTaskAsset::new, KillObjectiveTaskAsset.CODEC
       )

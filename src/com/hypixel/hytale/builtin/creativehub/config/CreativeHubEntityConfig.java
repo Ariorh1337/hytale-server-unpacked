@@ -13,7 +13,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CreativeHubEntityConfig implements Component<EntityStore> {
-   @Nonnull
    public static final String ID = "CreativeHub";
    @Nonnull
    public static final BuilderCodec<CreativeHubEntityConfig> CODEC = BuilderCodec.builder(CreativeHubEntityConfig.class, CreativeHubEntityConfig::new)

@@ -13,7 +13,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
-import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
@@ -127,33 +126,22 @@ public class PrefabListAsset implements JsonAssetWithMap<String, DefaultAssetMap
       public void processPrefabPath() {
          if (this.unprocessedPrefabPath != null) {
             this.unprocessedPrefabPath = this.unprocessedPrefabPath.replace('\\', '/');
-            Path prefabRoot = this.rootDirectory.getPrefabPath();
-            if (!this.unprocessedPrefabPath.endsWith("/")) {
+            if (this.unprocessedPrefabPath.endsWith("/")) {
+               try (Stream<Path> walk = Files.walk(this.rootDirectory.getPrefabPath().resolve(this.unprocessedPrefabPath), this.recursive ? 5 : 1)) {
+                  walk.filter(x$0 -> Files.isRegularFile(x$0)).filter(path -> path.toString().endsWith(".prefab.json")).forEach(this.prefabPaths::add);
+               } catch (IOException e) {
+                  PrefabListAsset.getAssetStore()
+                     .getLogger()
+                     .at(Level.SEVERE)
+                     .withCause(e)
+                     .log("Failed to process prefab path: %s", this.unprocessedPrefabPath);
+               }
+            } else {
                if (!this.unprocessedPrefabPath.endsWith(".prefab.json")) {
                   this.unprocessedPrefabPath = this.unprocessedPrefabPath + ".prefab.json";
                }
 
-               Path resolved = PathUtil.resolvePathWithinDir(prefabRoot, this.unprocessedPrefabPath);
-               if (resolved == null) {
-                  PrefabListAsset.getAssetStore().getLogger().at(Level.SEVERE).log("Invalid prefab path: %s", this.unprocessedPrefabPath);
-               } else {
-                  this.prefabPaths.add(resolved);
-               }
-            } else {
-               Path resolved = PathUtil.resolvePathWithinDir(prefabRoot, this.unprocessedPrefabPath);
-               if (resolved == null) {
-                  PrefabListAsset.getAssetStore().getLogger().at(Level.SEVERE).log("Invalid prefab path: %s", this.unprocessedPrefabPath);
-               } else {
-                  try (Stream<Path> walk = Files.walk(resolved, this.recursive ? 5 : 1)) {
-                     walk.filter(x$0 -> Files.isRegularFile(x$0)).filter(path -> path.toString().endsWith(".prefab.json")).forEach(this.prefabPaths::add);
-                  } catch (IOException e) {
-                     PrefabListAsset.getAssetStore()
-                        .getLogger()
-                        .at(Level.SEVERE)
-                        .withCause(e)
-                        .log("Failed to process prefab path: %s", this.unprocessedPrefabPath);
-                  }
-               }
+               this.prefabPaths.add(this.rootDirectory.getPrefabPath().resolve(this.unprocessedPrefabPath));
             }
          }
       }

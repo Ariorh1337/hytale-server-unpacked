@@ -77,8 +77,8 @@ public class EntityUpdate {
          }
 
          int varIntLen = VarInt.length(buf, varPos1);
-         if (varPos1 + varIntLen + updatesCount * 160L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Updates", varPos1 + varIntLen + updatesCount * 160, buf.readableBytes());
+         if (varPos1 + varIntLen + updatesCount * 159L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Updates", varPos1 + varIntLen + updatesCount * 159, buf.readableBytes());
          }
 
          obj.updates = new ComponentUpdate[updatesCount];

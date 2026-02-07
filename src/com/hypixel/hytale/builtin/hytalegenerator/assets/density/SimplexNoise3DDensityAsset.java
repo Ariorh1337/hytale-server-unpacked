@@ -12,7 +12,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class SimplexNoise3DDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<SimplexNoise3DDensityAsset> CODEC = BuilderCodec.builder(
          SimplexNoise3DDensityAsset.class, SimplexNoise3DDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )

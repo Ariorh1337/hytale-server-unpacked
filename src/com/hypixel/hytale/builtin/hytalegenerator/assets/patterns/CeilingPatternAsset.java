@@ -7,7 +7,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class CeilingPatternAsset extends PatternAsset {
-   @Nonnull
    public static final BuilderCodec<CeilingPatternAsset> CODEC = BuilderCodec.builder(
          CeilingPatternAsset.class, CeilingPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )

@@ -623,7 +623,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
    private void handleRegularNavigation(@Nonnull String fileName) {
       Path file = this.browserRoot.resolve(this.browserCurrent).resolve(fileName);
-      if (!PathUtil.isChildOf(this.browserRoot, file)) {
+      if (!file.normalize().startsWith(this.browserRoot.normalize())) {
          this.sendUpdate();
       } else {
          if (Files.isDirectory(file)) {

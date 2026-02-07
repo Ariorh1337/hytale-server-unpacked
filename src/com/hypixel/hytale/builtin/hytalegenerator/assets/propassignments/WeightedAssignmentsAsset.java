@@ -16,7 +16,6 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import javax.annotation.Nonnull;
 
 public class WeightedAssignmentsAsset extends AssignmentsAsset {
-   @Nonnull
    public static final BuilderCodec<WeightedAssignmentsAsset> CODEC = BuilderCodec.builder(
          WeightedAssignmentsAsset.class, WeightedAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC
       )
@@ -62,7 +61,6 @@ public class WeightedAssignmentsAsset extends AssignmentsAsset {
    }
 
    public static class WeightedAssets implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, WeightedAssignmentsAsset.WeightedAssets>> {
-      @Nonnull
       public static final AssetBuilderCodec<String, WeightedAssignmentsAsset.WeightedAssets> CODEC = AssetBuilderCodec.builder(
             WeightedAssignmentsAsset.WeightedAssets.class,
             WeightedAssignmentsAsset.WeightedAssets::new,

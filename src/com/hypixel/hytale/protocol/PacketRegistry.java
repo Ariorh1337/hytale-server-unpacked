@@ -126,7 +126,6 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionTool
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolReplyWithClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionTransform;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionUpdate;
-import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityCollision;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityLight;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityPickupEnabled;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityScale;
@@ -265,7 +264,6 @@ import com.hypixel.hytale.protocol.packets.world.UpdateTime;
 import com.hypixel.hytale.protocol.packets.world.UpdateTimeSettings;
 import com.hypixel.hytale.protocol.packets.world.UpdateWeather;
 import com.hypixel.hytale.protocol.packets.worldmap.ClearWorldMap;
-import com.hypixel.hytale.protocol.packets.worldmap.CreateUserMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapPosition;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
@@ -337,7 +335,7 @@ public final class PacketRegistry {
       register(17, "PasswordRejected", PasswordRejected.class, 5, 74, false, PasswordRejected::validateStructure, PasswordRejected::deserialize);
       register(18, "ClientReferral", ClientReferral.class, 1, 5141, false, ClientReferral::validateStructure, ClientReferral::deserialize);
       register(20, "WorldSettings", WorldSettings.class, 5, 1677721600, true, WorldSettings::validateStructure, WorldSettings::deserialize);
-      register(21, "WorldLoadProgress", WorldLoadProgress.class, 9, 1677721600, false, WorldLoadProgress::validateStructure, WorldLoadProgress::deserialize);
+      register(21, "WorldLoadProgress", WorldLoadProgress.class, 9, 16384014, false, WorldLoadProgress::validateStructure, WorldLoadProgress::deserialize);
       register(22, "WorldLoadFinished", WorldLoadFinished.class, 0, 0, false, WorldLoadFinished::validateStructure, WorldLoadFinished::deserialize);
       register(23, "RequestAssets", RequestAssets.class, 1, 1677721600, true, RequestAssets::validateStructure, RequestAssets::deserialize);
       register(24, "AssetInitialize", AssetInitialize.class, 4, 2121, false, AssetInitialize::validateStructure, AssetInitialize::deserialize);
@@ -501,7 +499,7 @@ public final class PacketRegistry {
       );
       register(70, "UntrackObjective", UntrackObjective.class, 16, 16, false, UntrackObjective::validateStructure, UntrackObjective::deserialize);
       register(
-         71, "UpdateObjectiveTask", UpdateObjectiveTask.class, 21, 1677721600, false, UpdateObjectiveTask::validateStructure, UpdateObjectiveTask::deserialize
+         71, "UpdateObjectiveTask", UpdateObjectiveTask.class, 21, 16384035, false, UpdateObjectiveTask::validateStructure, UpdateObjectiveTask::deserialize
       );
       register(
          72,
@@ -614,7 +612,7 @@ public final class PacketRegistry {
       register(111, "MouseInteraction", MouseInteraction.class, 44, 20480071, false, MouseInteraction::validateStructure, MouseInteraction::deserialize);
       register(112, "DamageInfo", DamageInfo.class, 29, 32768048, false, DamageInfo::validateStructure, DamageInfo::deserialize);
       register(113, "ReticleEvent", ReticleEvent.class, 4, 4, false, ReticleEvent::validateStructure, ReticleEvent::deserialize);
-      register(114, "DisplayDebug", DisplayDebug.class, 23, 32768041, false, DisplayDebug::validateStructure, DisplayDebug::deserialize);
+      register(114, "DisplayDebug", DisplayDebug.class, 19, 32768037, false, DisplayDebug::validateStructure, DisplayDebug::deserialize);
       register(115, "ClearDebugShapes", ClearDebugShapes.class, 0, 0, false, ClearDebugShapes::validateStructure, ClearDebugShapes::deserialize);
       register(
          116, "SyncPlayerPreferences", SyncPlayerPreferences.class, 12, 12, false, SyncPlayerPreferences::validateStructure, SyncPlayerPreferences::deserialize
@@ -844,7 +842,7 @@ public final class PacketRegistry {
          240,
          "UpdateWorldMapSettings",
          UpdateWorldMapSettings.class,
-         20,
+         16,
          1677721600,
          false,
          UpdateWorldMapSettings::validateStructure,
@@ -875,7 +873,6 @@ public final class PacketRegistry {
          TeleportToWorldMapPosition::validateStructure,
          TeleportToWorldMapPosition::deserialize
       );
-      register(246, "CreateUserMarker", CreateUserMarker.class, 13, 32768031, false, CreateUserMarker::validateStructure, CreateUserMarker::deserialize);
       register(250, "RequestServerAccess", RequestServerAccess.class, 3, 3, false, RequestServerAccess::validateStructure, RequestServerAccess::deserialize);
       register(
          251, "UpdateServerAccess", UpdateServerAccess.class, 2, 1677721600, false, UpdateServerAccess::validateStructure, UpdateServerAccess::deserialize
@@ -1679,16 +1676,6 @@ public final class PacketRegistry {
          false,
          BuilderToolSetNPCDebug::validateStructure,
          BuilderToolSetNPCDebug::deserialize
-      );
-      register(
-         425,
-         "BuilderToolSetEntityCollision",
-         BuilderToolSetEntityCollision.class,
-         5,
-         16384010,
-         false,
-         BuilderToolSetEntityCollision::validateStructure,
-         BuilderToolSetEntityCollision::deserialize
       );
    }
 

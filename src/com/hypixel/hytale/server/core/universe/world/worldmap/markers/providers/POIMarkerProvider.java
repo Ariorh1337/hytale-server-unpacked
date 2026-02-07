@@ -1,10 +1,9 @@
 package com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers;
 
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
 import java.util.Map;
 import javax.annotation.Nonnull;
 
@@ -15,11 +14,11 @@ public class POIMarkerProvider implements WorldMapManager.MarkerProvider {
    }
 
    @Override
-   public void update(@Nonnull World world, @Nonnull Player player, @Nonnull MarkersCollector collector) {
+   public void update(@Nonnull World world, @Nonnull MapMarkerTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
       Map<String, MapMarker> globalMarkers = world.getWorldMapManager().getPointsOfInterest();
       if (!globalMarkers.isEmpty()) {
          for (MapMarker marker : globalMarkers.values()) {
-            collector.add(marker);
+            tracker.trySendMarker(chunkViewRadius, playerChunkX, playerChunkZ, marker);
          }
       }
    }

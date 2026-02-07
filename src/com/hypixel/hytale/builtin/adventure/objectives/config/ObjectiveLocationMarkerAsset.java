@@ -20,7 +20,6 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class ObjectiveLocationMarkerAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, ObjectiveLocationMarkerAsset>> {
-   @Nonnull
    public static final AssetBuilderCodec<String, ObjectiveLocationMarkerAsset> CODEC = AssetBuilderCodec.builder(
          ObjectiveLocationMarkerAsset.class,
          ObjectiveLocationMarkerAsset::new,
@@ -75,7 +74,6 @@ public class ObjectiveLocationMarkerAsset implements JsonAssetWithMap<String, De
          }
       })
       .build();
-   @Nonnull
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(ObjectiveLocationMarkerAsset::getAssetStore));
    private static AssetStore<String, ObjectiveLocationMarkerAsset, DefaultAssetMap<String, ObjectiveLocationMarkerAsset>> ASSET_STORE;
    protected AssetExtraInfo.Data data;

@@ -10,7 +10,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class SmoothFloorDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<SmoothFloorDensityAsset> CODEC = BuilderCodec.builder(
          SmoothFloorDensityAsset.class, SmoothFloorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -21,7 +20,7 @@ public class SmoothFloorDensityAsset extends DensityAsset {
       .add()
       .build();
    private double smoothRange = 1.0;
-   private double limit;
+   private double limit = 0.0;
 
    @Nonnull
    @Override

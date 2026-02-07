@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.plugin.PluginClassLoader;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import java.lang.reflect.Constructor;
 import java.nio.file.Path;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -32,18 +33,28 @@ public class PendingLoadJavaPlugin extends PendingLoadPlugin {
       return this.urlClassLoader.isInServerClassPath();
    }
 
-   @Nonnull
-   public JavaPlugin load() throws Exception {
-      PluginManifest manifest = this.getManifest();
-      Class<?> mainClass = this.urlClassLoader.loadLocalClass(manifest.getMain());
-      if (JavaPlugin.class.isAssignableFrom(mainClass)) {
-         Constructor<?> constructor = mainClass.getConstructor(JavaPluginInit.class);
-         Path dataDirectory = PluginManager.MODS_PATH.resolve(manifest.getGroup() + "_" + manifest.getName());
-         JavaPluginInit init = new JavaPluginInit(manifest, dataDirectory, this.getPath(), this.urlClassLoader);
-         return (JavaPlugin)constructor.newInstance(init);
-      } else {
+   @Nullable
+   public JavaPlugin load() {
+      try {
+         PluginManifest manifest = this.getManifest();
+         Class<?> mainClass = this.urlClassLoader.loadLocalClass(manifest.getMain());
+         if (JavaPlugin.class.isAssignableFrom(mainClass)) {
+            Constructor<?> constructor = mainClass.getConstructor(JavaPluginInit.class);
+            Path dataDirectory = PluginManager.MODS_PATH.resolve(manifest.getGroup() + "_" + manifest.getName());
+            JavaPluginInit init = new JavaPluginInit(manifest, dataDirectory, this.getPath(), this.urlClassLoader);
+            return (JavaPlugin)constructor.newInstance(init);
+         }
+
          throw new ClassCastException(manifest.getMain() + " does not extend JavaPlugin");
+      } catch (ClassNotFoundException e) {
+         LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s. Failed to find main class!", this.getPath());
+      } catch (NoSuchMethodException e) {
+         LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s. Requires default constructor!", this.getPath());
+      } catch (Throwable e) {
+         LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s", this.getPath());
       }
+
+      return null;
    }
 
    @Nonnull

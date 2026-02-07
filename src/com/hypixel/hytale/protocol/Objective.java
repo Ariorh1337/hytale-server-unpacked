@@ -20,9 +20,9 @@ public class Objective {
    @Nonnull
    public UUID objectiveUuid = new UUID(0L, 0L);
    @Nullable
-   public FormattedMessage objectiveTitleKey;
+   public String objectiveTitleKey;
    @Nullable
-   public FormattedMessage objectiveDescriptionKey;
+   public String objectiveDescriptionKey;
    @Nullable
    public String objectiveLineId;
    @Nullable
@@ -33,8 +33,8 @@ public class Objective {
 
    public Objective(
       @Nonnull UUID objectiveUuid,
-      @Nullable FormattedMessage objectiveTitleKey,
-      @Nullable FormattedMessage objectiveDescriptionKey,
+      @Nullable String objectiveTitleKey,
+      @Nullable String objectiveDescriptionKey,
       @Nullable String objectiveLineId,
       @Nullable ObjectiveTask[] tasks
    ) {
@@ -60,12 +60,30 @@ public class Objective {
       obj.objectiveUuid = PacketIO.readUUID(buf, offset + 1);
       if ((nullBits & 1) != 0) {
          int varPos0 = offset + 33 + buf.getIntLE(offset + 17);
-         obj.objectiveTitleKey = FormattedMessage.deserialize(buf, varPos0);
+         int objectiveTitleKeyLen = VarInt.peek(buf, varPos0);
+         if (objectiveTitleKeyLen < 0) {
+            throw ProtocolException.negativeLength("ObjectiveTitleKey", objectiveTitleKeyLen);
+         }
+
+         if (objectiveTitleKeyLen > 4096000) {
+            throw ProtocolException.stringTooLong("ObjectiveTitleKey", objectiveTitleKeyLen, 4096000);
+         }
+
+         obj.objectiveTitleKey = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
          int varPos1 = offset + 33 + buf.getIntLE(offset + 21);
-         obj.objectiveDescriptionKey = FormattedMessage.deserialize(buf, varPos1);
+         int objectiveDescriptionKeyLen = VarInt.peek(buf, varPos1);
+         if (objectiveDescriptionKeyLen < 0) {
+            throw ProtocolException.negativeLength("ObjectiveDescriptionKey", objectiveDescriptionKeyLen);
+         }
+
+         if (objectiveDescriptionKeyLen > 4096000) {
+            throw ProtocolException.stringTooLong("ObjectiveDescriptionKey", objectiveDescriptionKeyLen, 4096000);
+         }
+
+         obj.objectiveDescriptionKey = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
@@ -116,7 +134,8 @@ public class Objective {
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 17);
          int pos0 = offset + 33 + fieldOffset0;
-         pos0 += FormattedMessage.computeBytesConsumed(buf, pos0);
+         int sl = VarInt.peek(buf, pos0);
+         pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -125,7 +144,8 @@ public class Objective {
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 21);
          int pos1 = offset + 33 + fieldOffset1;
-         pos1 += FormattedMessage.computeBytesConsumed(buf, pos1);
+         int sl = VarInt.peek(buf, pos1);
+         pos1 += VarInt.length(buf, pos1) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -191,14 +211,14 @@ public class Objective {
       int varBlockStart = buf.writerIndex();
       if (this.objectiveTitleKey != null) {
          buf.setIntLE(objectiveTitleKeyOffsetSlot, buf.writerIndex() - varBlockStart);
-         this.objectiveTitleKey.serialize(buf);
+         PacketIO.writeVarString(buf, this.objectiveTitleKey, 4096000);
       } else {
          buf.setIntLE(objectiveTitleKeyOffsetSlot, -1);
       }
 
       if (this.objectiveDescriptionKey != null) {
          buf.setIntLE(objectiveDescriptionKeyOffsetSlot, buf.writerIndex() - varBlockStart);
-         this.objectiveDescriptionKey.serialize(buf);
+         PacketIO.writeVarString(buf, this.objectiveDescriptionKey, 4096000);
       } else {
          buf.setIntLE(objectiveDescriptionKeyOffsetSlot, -1);
       }
@@ -229,11 +249,11 @@ public class Objective {
    public int computeSize() {
       int size = 33;
       if (this.objectiveTitleKey != null) {
-         size += this.objectiveTitleKey.computeSize();
+         size += PacketIO.stringSize(this.objectiveTitleKey);
       }
 
       if (this.objectiveDescriptionKey != null) {
-         size += this.objectiveDescriptionKey.computeSize();
+         size += PacketIO.stringSize(this.objectiveDescriptionKey);
       }
 
       if (this.objectiveLineId != null) {
@@ -270,12 +290,20 @@ public class Objective {
             return ValidationResult.error("Offset out of bounds for ObjectiveTitleKey");
          }
 
-         ValidationResult objectiveTitleKeyResult = FormattedMessage.validateStructure(buffer, pos);
-         if (!objectiveTitleKeyResult.isValid()) {
-            return ValidationResult.error("Invalid ObjectiveTitleKey: " + objectiveTitleKeyResult.error());
+         int objectiveTitleKeyLen = VarInt.peek(buffer, pos);
+         if (objectiveTitleKeyLen < 0) {
+            return ValidationResult.error("Invalid string length for ObjectiveTitleKey");
          }
 
-         pos += FormattedMessage.computeBytesConsumed(buffer, pos);
+         if (objectiveTitleKeyLen > 4096000) {
+            return ValidationResult.error("ObjectiveTitleKey exceeds max length 4096000");
+         }
+
+         pos += VarInt.length(buffer, pos);
+         pos += objectiveTitleKeyLen;
+         if (pos > buffer.writerIndex()) {
+            return ValidationResult.error("Buffer overflow reading ObjectiveTitleKey");
+         }
       }
 
       if ((nullBits & 2) != 0) {
@@ -289,12 +317,20 @@ public class Objective {
             return ValidationResult.error("Offset out of bounds for ObjectiveDescriptionKey");
          }
 
-         ValidationResult objectiveDescriptionKeyResult = FormattedMessage.validateStructure(buffer, pos);
-         if (!objectiveDescriptionKeyResult.isValid()) {
-            return ValidationResult.error("Invalid ObjectiveDescriptionKey: " + objectiveDescriptionKeyResult.error());
+         int objectiveDescriptionKeyLen = VarInt.peek(buffer, pos);
+         if (objectiveDescriptionKeyLen < 0) {
+            return ValidationResult.error("Invalid string length for ObjectiveDescriptionKey");
          }
 
-         pos += FormattedMessage.computeBytesConsumed(buffer, pos);
+         if (objectiveDescriptionKeyLen > 4096000) {
+            return ValidationResult.error("ObjectiveDescriptionKey exceeds max length 4096000");
+         }
+
+         pos += VarInt.length(buffer, pos);
+         pos += objectiveDescriptionKeyLen;
+         if (pos > buffer.writerIndex()) {
+            return ValidationResult.error("Buffer overflow reading ObjectiveDescriptionKey");
+         }
       }
 
       if ((nullBits & 4) != 0) {
@@ -362,8 +398,8 @@ public class Objective {
    public Objective clone() {
       Objective copy = new Objective();
       copy.objectiveUuid = this.objectiveUuid;
-      copy.objectiveTitleKey = this.objectiveTitleKey != null ? this.objectiveTitleKey.clone() : null;
-      copy.objectiveDescriptionKey = this.objectiveDescriptionKey != null ? this.objectiveDescriptionKey.clone() : null;
+      copy.objectiveTitleKey = this.objectiveTitleKey;
+      copy.objectiveDescriptionKey = this.objectiveDescriptionKey;
       copy.objectiveLineId = this.objectiveLineId;
       copy.tasks = this.tasks != null ? Arrays.stream(this.tasks).map(e -> e.clone()).toArray(ObjectiveTask[]::new) : null;
       return copy;

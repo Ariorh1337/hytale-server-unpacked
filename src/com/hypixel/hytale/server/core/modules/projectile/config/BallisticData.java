@@ -7,8 +7,6 @@ public interface BallisticData {
 
    double getVerticalCenterShot();
 
-   double getHorizontalCenterShot();
-
    double getDepthShot();
 
    boolean isPitchAdjustShot();

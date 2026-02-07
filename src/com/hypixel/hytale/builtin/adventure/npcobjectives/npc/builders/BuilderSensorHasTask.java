@@ -15,7 +15,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BuilderSensorHasTask extends BuilderSensorBase {
-   @Nonnull
    protected final StringArrayHolder tasksById = new StringArrayHolder();
 
    @Nonnull

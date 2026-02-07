@@ -16,11 +16,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class StartVoidEventCommand extends AbstractWorldCommand {
-   @Nonnull
    private final FlagArg overrideWorld = this.withFlagArg("override", "server.commands.voidevent.start.overrideArg");
-   @Nonnull
    private static final String HARDCODED_GAMEPLAY_CONFIG = "Portal";
-   @Nonnull
    private static final String HARDCODED_PORTAL_TYPE = "Hederas_Lair";
 
    public StartVoidEventCommand() {
@@ -52,7 +49,7 @@ public class StartVoidEventCommand extends AbstractWorldCommand {
             context.sendMessage(Message.translation("server.commands.voidevent.start.overrode"));
          }
 
-         PortalWorld.setRemainingSeconds(world, 1.0);
+         portalWorld.setRemainingSeconds(world, 1.0);
          context.sendMessage(Message.translation("server.commands.voidevent.start.success"));
       }
    }

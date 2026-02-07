@@ -32,7 +32,7 @@ public class AnchorPositionProvider extends PositionProvider {
                if (VectorUtil.isInside(newPoint, context.minInclusive, context.maxExclusive)) {
                   context.consumer.accept(newPoint);
                }
-            }, context.anchor);
+            }, context.anchor, context.workerId);
             this.positionProvider.positionsIn(childContext);
          }
       }

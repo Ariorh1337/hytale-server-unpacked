@@ -35,13 +35,8 @@ public class ValidateCPBCommand extends AbstractAsyncCommand {
    @Override
    protected CompletableFuture<Void> executeAsync(@Nonnull CommandContext context) {
       if (this.pathArg.provided(context)) {
-         Path assetPath = Path.of(this.pathArg.get(context));
-         if (!PathUtil.isInTrustedRoot(assetPath)) {
-            context.sendMessage(Message.translation("server.commands.validatecpb.invalidPath"));
-            return CompletableFuture.completedFuture(null);
-         } else {
-            return CompletableFuture.runAsync(() -> convertPrefabs(context, assetPath));
-         }
+         String path = this.pathArg.get(context);
+         return CompletableFuture.runAsync(() -> convertPrefabs(context, PathUtil.get(path)));
       } else {
          return CompletableFuture.runAsync(() -> {
             for (AssetPack pack : AssetModule.get().getAssetPacks()) {

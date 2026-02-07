@@ -8,9 +8,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class OriginScanner extends Scanner {
-   @Nonnull
    private static final OriginScanner instance = new OriginScanner();
-   @Nonnull
    private static final SpaceSize SCAN_SPACE_SIZE = new SpaceSize(new Vector3i(0, 0, 0), new Vector3i(1, 0, 1));
 
    private OriginScanner() {
@@ -19,7 +17,7 @@ public class OriginScanner extends Scanner {
    @Nonnull
    @Override
    public List<Vector3i> scan(@Nonnull Scanner.Context context) {
-      Pattern.Context patternContext = new Pattern.Context(context.position, context.materialSpace);
+      Pattern.Context patternContext = new Pattern.Context(context.position, context.materialSpace, context.workerId);
       return context.pattern.matches(patternContext) ? Collections.singletonList(context.position.clone()) : Collections.emptyList();
    }
 
@@ -29,7 +27,6 @@ public class OriginScanner extends Scanner {
       return SCAN_SPACE_SIZE.clone();
    }
 
-   @Nonnull
    public static OriginScanner getInstance() {
       return instance;
    }

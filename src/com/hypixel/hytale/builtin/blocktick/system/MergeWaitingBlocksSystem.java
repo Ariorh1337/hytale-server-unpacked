@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import javax.annotation.Nonnull;
 
 public class MergeWaitingBlocksSystem extends RefSystem<ChunkStore> {
-   @Nonnull
    private static final ComponentType<ChunkStore, WorldChunk> COMPONENT_TYPE = WorldChunk.getComponentType();
 
    @Override
@@ -28,10 +27,9 @@ public class MergeWaitingBlocksSystem extends RefSystem<ChunkStore> {
       @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
    ) {
       ChunkStore chunkStore = store.getExternalData();
-      WorldChunk worldChunkComponent = store.getComponent(ref, COMPONENT_TYPE);
-      assert worldChunkComponent != null;
-      int x = worldChunkComponent.getX();
-      int z = worldChunkComponent.getZ();
+      WorldChunk chunk = store.getComponent(ref, COMPONENT_TYPE);
+      int x = chunk.getX();
+      int z = chunk.getZ();
       mergeTickingBlocks(chunkStore, x - 1, z);
       mergeTickingBlocks(chunkStore, x + 1, z);
       mergeTickingBlocks(chunkStore, x, z - 1);
@@ -45,10 +43,9 @@ public class MergeWaitingBlocksSystem extends RefSystem<ChunkStore> {
    }
 
    public static void mergeTickingBlocks(@Nonnull ChunkStore store, int x, int z) {
-      long chunkIndex = ChunkUtil.indexChunk(x, z);
-      BlockChunk blockChunkComponent = store.getChunkComponent(chunkIndex, BlockChunk.getComponentType());
-      if (blockChunkComponent != null) {
-         blockChunkComponent.mergeTickingBlocks();
+      BlockChunk blockChunk = store.getChunkComponent(ChunkUtil.indexChunk(x, z), BlockChunk.getComponentType());
+      if (blockChunk != null) {
+         blockChunk.mergeTickingBlocks();
       }
    }
 }

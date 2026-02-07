@@ -35,9 +35,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ChangeFarmingStageInteraction extends SimpleBlockInteraction {
-   @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-   @Nonnull
    public static final BuilderCodec<ChangeFarmingStageInteraction> CODEC = BuilderCodec.builder(
          ChangeFarmingStageInteraction.class, ChangeFarmingStageInteraction::new, SimpleBlockInteraction.CODEC
       )
@@ -77,11 +75,11 @@ public class ChangeFarmingStageInteraction extends SimpleBlockInteraction {
       .build();
    protected int targetStage = -1;
    @Nullable
-   protected Integer increaseBy;
+   protected Integer increaseBy = null;
    @Nullable
-   protected Integer decreaseBy;
+   protected Integer decreaseBy = null;
    @Nullable
-   protected String targetStageSet;
+   protected String targetStageSet = null;
 
    @Nonnull
    @Override
@@ -276,16 +274,16 @@ public class ChangeFarmingStageInteraction extends SimpleBlockInteraction {
                                  );
                               Ref<ChunkStore> sectionRef = world.getChunkStore()
                                  .getChunkSectionReference(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(y), ChunkUtil.chunkCoordinate(z));
-                              if (sectionRef != null && sectionRef.isValid()) {
-                                 BlockSection blockSectionComponent = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
-                                 if (blockSectionComponent != null) {
-                                    blockSectionComponent.scheduleTick(ChunkUtil.indexBlock(x, y, z), now);
+                              if (sectionRef != null) {
+                                 BlockSection section = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
+                                 if (section != null) {
+                                    section.scheduleTick(ChunkUtil.indexBlock(x, y, z), now);
                                  }
 
                                  stages[stageIndex].apply(chunkStore, sectionRef, blockRef, x, y, z, previousStage);
                                  LOGGER.atInfo().log("[ChangeFarmingStage] Applied stage %d via stages[%d].apply()", (int)stageIndex, (int)stageIndex);
                               } else {
-                                 LOGGER.atWarning().log("[ChangeFarmingStage] sectionRef was null or invalid - could not apply stage!");
+                                 LOGGER.atWarning().log("[ChangeFarmingStage] sectionRef was null - could not apply stage!");
                               }
 
                               worldChunk.setTicking(x, y, z, true);

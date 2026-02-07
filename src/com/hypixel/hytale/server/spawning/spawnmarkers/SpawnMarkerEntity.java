@@ -4,7 +4,6 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
@@ -58,7 +57,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       InvalidatablePersistentRef.CODEC, InvalidatablePersistentRef[]::new
    );
    @Nonnull
-   public static final BuilderCodec<SpawnMarkerEntity> CODEC = BuilderCodec.<SpawnMarkerEntity>builder(SpawnMarkerEntity.class, SpawnMarkerEntity::new)
+   public static final BuilderCodec<SpawnMarkerEntity> CODEC = BuilderCodec.builder(SpawnMarkerEntity.class, SpawnMarkerEntity::new)
       .addField(
          new KeyedCodec<>("SpawnMarker", Codec.STRING),
          (spawnMarkerEntity, s) -> spawnMarkerEntity.spawnMarkerId = s,
@@ -112,7 +111,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
    @Nullable
    private Set<UUID> suppressedBy;
    private int failedSpawns;
-   @Nullable
+   @Nonnull
    private final SpawningContext context;
    private final Vector3d spawnPosition = new Vector3d();
    private InvalidatablePersistentRef[] npcReferences;
@@ -129,11 +128,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
    }
 
    public SpawnMarkerEntity() {
-      this(new SpawningContext());
-   }
-
-   private SpawnMarkerEntity(@Nullable SpawningContext context) {
-      this.context = context;
+      this.context = new SpawningContext();
       this.npcReferences = EMPTY_REFERENCES;
    }
 
@@ -246,14 +241,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
    }
 
    public boolean spawnNPC(@Nonnull Ref<EntityStore> ref, @Nonnull SpawnMarker marker, @Nonnull Store<EntityStore> store) {
-      IWeightedMap<SpawnMarker.SpawnConfiguration> configs = marker.getWeightedConfigurations();
-      if (configs == null) {
-         SpawningPlugin.get().getLogger().at(Level.SEVERE).log("Marker %s has no spawn configurations to spawn", ref);
-         this.refreshTimeout();
-         return false;
-      }
-
-      SpawnMarker.SpawnConfiguration spawn = configs.get(ThreadLocalRandom.current());
+      SpawnMarker.SpawnConfiguration spawn = marker.getWeightedConfigurations().get(ThreadLocalRandom.current());
       if (spawn == null) {
          SpawningPlugin.get().getLogger().at(Level.SEVERE).log("Marker %s has no spawn configuration to spawn", ref);
          this.refreshTimeout();
@@ -482,21 +470,6 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       spawnMarker.timeToDeactivation = this.timeToDeactivation;
       spawnMarker.despawnStarted = this.despawnStarted;
       spawnMarker.spawnLostTimeoutCounter = this.spawnLostTimeoutCounter;
-      return spawnMarker;
-   }
-
-   @Nullable
-   @Override
-   public Component<EntityStore> cloneSerializable() {
-      SpawnMarkerEntity spawnMarker = new SpawnMarkerEntity(null);
-      spawnMarker.spawnMarkerId = this.spawnMarkerId;
-      spawnMarker.respawnCounter = this.respawnCounter;
-      spawnMarker.spawnCount = this.spawnCount;
-      spawnMarker.gameTimeRespawn = this.gameTimeRespawn;
-      spawnMarker.spawnAfter = this.spawnAfter;
-      spawnMarker.npcReferences = this.npcReferences;
-      spawnMarker.storedFlock = this.storedFlock != null ? this.storedFlock.cloneSerializable() : null;
-      spawnMarker.spawnPosition.assign(this.spawnPosition);
       return spawnMarker;
    }
 

@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import javax.annotation.Nonnull;
 
 public class ColumnPropAsset extends PropAsset {
-   @Nonnull
    public static final BuilderCodec<ColumnPropAsset> CODEC = BuilderCodec.builder(ColumnPropAsset.class, ColumnPropAsset::new, PropAsset.ABSTRACT_CODEC)
       .append(
          new KeyedCodec<>("ColumnBlocks", new ArrayCodec<>(ColumnPropAsset.ColumnBlock.CODEC, ColumnPropAsset.ColumnBlock[]::new), true),
@@ -65,7 +64,7 @@ public class ColumnPropAsset extends PropAsset {
          blockTypes.add(this.columnBlocks[i].materialAsset.build(argument.materialCache));
       }
 
-      BlockMask blockMask;
+      BlockMask blockMask = null;
       if (this.blockMaskAsset != null) {
          blockMask = this.blockMaskAsset.build(argument.materialCache);
       } else {
@@ -85,7 +84,6 @@ public class ColumnPropAsset extends PropAsset {
    }
 
    public static class ColumnBlock implements JsonAssetWithMap<String, DefaultAssetMap<String, ColumnPropAsset.ColumnBlock>> {
-      @Nonnull
       public static final AssetBuilderCodec<String, ColumnPropAsset.ColumnBlock> CODEC = AssetBuilderCodec.builder(
             ColumnPropAsset.ColumnBlock.class,
             ColumnPropAsset.ColumnBlock::new,
@@ -103,7 +101,7 @@ public class ColumnPropAsset extends PropAsset {
       private String id;
       private AssetExtraInfo.Data data;
       private int y = 1;
-      private MaterialAsset materialAsset = new MaterialAsset("Empty", "Empty", false);
+      private MaterialAsset materialAsset = new MaterialAsset("Empty", "Empty");
 
       public String getId() {
          return this.id;

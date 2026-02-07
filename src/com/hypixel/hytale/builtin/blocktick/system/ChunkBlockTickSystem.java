@@ -21,23 +21,20 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Instant;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class ChunkBlockTickSystem {
-   @Nonnull
    protected static final HytaleLogger LOGGER = BlockTickPlugin.get().getLogger();
 
    public static class PreTick extends EntityTickingSystem<ChunkStore> {
-      @Nonnull
-      private static final ComponentType<ChunkStore, BlockChunk> COMPONENT_TYPE_WORLD_CHUNK = BlockChunk.getComponentType();
+      private static final ComponentType<ChunkStore, BlockChunk> COMPONENT_TYPE = BlockChunk.getComponentType();
 
       @Override
       public Query<ChunkStore> getQuery() {
-         return COMPONENT_TYPE_WORLD_CHUNK;
+         return COMPONENT_TYPE;
       }
 
       @Override
@@ -53,29 +50,25 @@ public class ChunkBlockTickSystem {
          @Nonnull Store<ChunkStore> store,
          @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         World world = commandBuffer.getExternalData().getWorld();
-         Store<EntityStore> entityStore = world.getEntityStore().getStore();
-         Instant timeResource = entityStore.getResource(WorldTimeResource.getResourceType()).getGameTime();
-         BlockChunk blockChunkComponent = archetypeChunk.getComponent(index, COMPONENT_TYPE_WORLD_CHUNK);
-         assert blockChunkComponent != null;
+         Instant time = commandBuffer.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType()).getGameTime();
+         BlockChunk chunk = archetypeChunk.getComponent(index, COMPONENT_TYPE);
+         assert chunk != null;
 
          try {
-            blockChunkComponent.preTick(timeResource);
+            chunk.preTick(time);
          } catch (Throwable t) {
-            ChunkBlockTickSystem.LOGGER.at(Level.SEVERE).withCause(t).log("Failed to pre-tick chunk: %s", blockChunkComponent);
+            ChunkBlockTickSystem.LOGGER.at(Level.SEVERE).withCause(t).log("Failed to pre-tick chunk: %s", chunk);
          }
       }
    }
 
    public static class Ticking extends EntityTickingSystem<ChunkStore> {
-      @Nonnull
-      private static final ComponentType<ChunkStore, WorldChunk> COMPONENT_TYPE_WORLD_CHUNK = WorldChunk.getComponentType();
-      @Nonnull
+      private static final ComponentType<ChunkStore, WorldChunk> COMPONENT_TYPE = WorldChunk.getComponentType();
       private static final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(new SystemDependency<>(Order.AFTER, ChunkBlockTickSystem.PreTick.class));
 
       @Override
       public Query<ChunkStore> getQuery() {
-         return COMPONENT_TYPE_WORLD_CHUNK;
+         return COMPONENT_TYPE;
       }
 
       @Nonnull
@@ -93,32 +86,24 @@ public class ChunkBlockTickSystem {
          @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          Ref<ChunkStore> reference = archetypeChunk.getReferenceTo(index);
-         WorldChunk worldChunkComponent = archetypeChunk.getComponent(index, COMPONENT_TYPE_WORLD_CHUNK);
-         assert worldChunkComponent != null;
+         WorldChunk worldChunk = archetypeChunk.getComponent(index, COMPONENT_TYPE);
 
          try {
-            tick(reference, worldChunkComponent);
+            tick(reference, worldChunk);
          } catch (Throwable t) {
-            ChunkBlockTickSystem.LOGGER.at(Level.SEVERE).withCause(t).log("Failed to tick chunk: %s", worldChunkComponent);
+            ChunkBlockTickSystem.LOGGER.at(Level.SEVERE).withCause(t).log("Failed to tick chunk: %s", worldChunk);
          }
       }
 
-      protected static void tick(@Nonnull Ref<ChunkStore> ref, @Nonnull WorldChunk worldChunk) {
-         BlockChunk blockChunkComponent = worldChunk.getBlockChunk();
-         if (blockChunkComponent == null) {
-            ChunkBlockTickSystem.LOGGER
-               .at(Level.WARNING)
-               .log("World chunk (%d, %d) has no BlockChunk component, skipping block ticking.", (int)worldChunk.getX(), (int)worldChunk.getZ());
-         } else {
-            int ticked = blockChunkComponent.forEachTicking(ref, worldChunk, (r, c, localX, localY, localZ, blockId) -> {
-               World world = c.getWorld();
-               int blockX = c.getX() << 5 | localX;
-               int blockZ = c.getZ() << 5 | localZ;
-               return tickProcedure(world, c, blockX, localY, blockZ, blockId);
-            });
-            if (ticked > 0) {
-               ChunkBlockTickSystem.LOGGER.at(Level.FINER).log("Ticked %d blocks in chunk (%d, %d)", ticked, worldChunk.getX(), worldChunk.getZ());
-            }
+      protected static void tick(Ref<ChunkStore> ref, @Nonnull WorldChunk worldChunk) {
+         int ticked = worldChunk.getBlockChunk().forEachTicking(ref, worldChunk, (r, c, localX, localY, localZ, blockId) -> {
+            World world = c.getWorld();
+            int blockX = c.getX() << 5 | localX;
+            int blockZ = c.getZ() << 5 | localZ;
+            return tickProcedure(world, c, blockX, localY, blockZ, blockId);
+         });
+         if (ticked > 0) {
+            ChunkBlockTickSystem.LOGGER.at(Level.FINER).log("Ticked %d blocks in chunk (%d, %d)", ticked, worldChunk.getX(), worldChunk.getZ());
          }
       }
 

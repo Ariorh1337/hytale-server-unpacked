@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class ScaleDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<ScaleDensityAsset> CODEC = BuilderCodec.builder(
          ScaleDensityAsset.class, ScaleDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )

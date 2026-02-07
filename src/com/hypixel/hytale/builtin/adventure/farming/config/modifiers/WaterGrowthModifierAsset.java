@@ -28,7 +28,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class WaterGrowthModifierAsset extends GrowthModifierAsset {
-   @Nonnull
    public static final BuilderCodec<WaterGrowthModifierAsset> CODEC = BuilderCodec.builder(
          WaterGrowthModifierAsset.class, WaterGrowthModifierAsset::new, ABSTRACT_CODEC
       )
@@ -85,28 +84,19 @@ public class WaterGrowthModifierAsset extends GrowthModifierAsset {
 
    @Override
    public double getCurrentGrowthMultiplier(
-      @Nonnull CommandBuffer<ChunkStore> commandBuffer,
-      @Nonnull Ref<ChunkStore> sectionRef,
-      @Nonnull Ref<ChunkStore> blockRef,
-      int x,
-      int y,
-      int z,
-      boolean initialTick
+      CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, boolean initialTick
    ) {
-      boolean hasWaterBlock = this.checkIfWaterSource(commandBuffer, sectionRef, x, y, z);
+      boolean hasWaterBlock = this.checkIfWaterSource(commandBuffer, sectionRef, blockRef, x, y, z);
       boolean isRaining = this.checkIfRaining(commandBuffer, sectionRef, x, y, z);
       boolean active = hasWaterBlock || isRaining;
       TilledSoilBlock soil = getSoil(commandBuffer, sectionRef, x, y, z);
       if (soil != null) {
          if (soil.hasExternalWater() != active) {
             soil.setExternalWater(active);
-            BlockSection blockSectionComponent = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
-            if (blockSectionComponent != null) {
-               blockSectionComponent.setTicking(x, y, z, true);
-            }
+            commandBuffer.getComponent(sectionRef, BlockSection.getComponentType()).setTicking(x, y, z, true);
          }
 
-         active |= isSoilWaterExpiring(
+         active |= this.isSoilWaterExpiring(
             commandBuffer.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType()), soil
          );
       }
@@ -115,28 +105,15 @@ public class WaterGrowthModifierAsset extends GrowthModifierAsset {
    }
 
    @Nullable
-   private static TilledSoilBlock getSoil(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, int x, int y, int z) {
-      ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-      if (chunkSectionComponent == null) {
-         return null;
-      }
-
-      Ref<ChunkStore> chunkRef = chunkSectionComponent.getChunkColumnReference();
-      if (chunkRef != null && chunkRef.isValid()) {
-         BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(chunkRef, BlockComponentChunk.getComponentType());
-         if (blockComponentChunk == null) {
-            return null;
-         }
-
-         int blockBelowIndex = ChunkUtil.indexBlockInColumn(x, y - 1, z);
-         Ref<ChunkStore> blockBelowRef = blockComponentChunk.getEntityReference(blockBelowIndex);
-         return blockBelowRef == null ? null : commandBuffer.getComponent(blockBelowRef, TilledSoilBlock.getComponentType());
-      } else {
-         return null;
-      }
+   private static TilledSoilBlock getSoil(CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, int x, int y, int z) {
+      ChunkSection chunkSection = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+      Ref<ChunkStore> chunk = chunkSection.getChunkColumnReference();
+      BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(chunk, BlockComponentChunk.getComponentType());
+      Ref<ChunkStore> blockRefBelow = blockComponentChunk.getEntityReference(ChunkUtil.indexBlockInColumn(x, y - 1, z));
+      return blockRefBelow == null ? null : commandBuffer.getComponent(blockRefBelow, TilledSoilBlock.getComponentType());
    }
 
-   protected boolean checkIfWaterSource(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, int x, int y, int z) {
+   protected boolean checkIfWaterSource(CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z) {
       IntOpenHashSet waterBlocks = this.fluidIds;
       if (waterBlocks == null) {
          return false;
@@ -147,10 +124,7 @@ public class WaterGrowthModifierAsset extends GrowthModifierAsset {
          return false;
       }
 
-      int[] fluids = getNeighbourFluids(commandBuffer, sectionRef, x, y - 1, z);
-      if (fluids == null) {
-         return false;
-      }
+      int[] fluids = this.getNeighbourFluids(commandBuffer, sectionRef, x, y - 1, z);
 
       for (int block : fluids) {
          if (waterBlocks.contains(block)) {
@@ -161,26 +135,18 @@ public class WaterGrowthModifierAsset extends GrowthModifierAsset {
       return false;
    }
 
-   @Nullable
-   private static int[] getNeighbourFluids(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, int x, int y, int z) {
-      ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-      return chunkSectionComponent == null
-         ? null
-         : new int[]{
-            getFluidAtPos(x - 1, y, z, sectionRef, chunkSectionComponent, commandBuffer),
-            getFluidAtPos(x + 1, y, z, sectionRef, chunkSectionComponent, commandBuffer),
-            getFluidAtPos(x, y, z - 1, sectionRef, chunkSectionComponent, commandBuffer),
-            getFluidAtPos(x, y, z + 1, sectionRef, chunkSectionComponent, commandBuffer)
-         };
+   private int[] getNeighbourFluids(CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, int x, int y, int z) {
+      ChunkSection section = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+      return new int[]{
+         this.getFluidAtPos(x - 1, y, z, sectionRef, section, commandBuffer),
+         this.getFluidAtPos(x + 1, y, z, sectionRef, section, commandBuffer),
+         this.getFluidAtPos(x, y, z - 1, sectionRef, section, commandBuffer),
+         this.getFluidAtPos(x, y, z + 1, sectionRef, section, commandBuffer)
+      };
    }
 
-   private static int getFluidAtPos(
-      int posX,
-      int posY,
-      int posZ,
-      @Nonnull Ref<ChunkStore> sectionRef,
-      @Nonnull ChunkSection currentChunkSection,
-      @Nonnull CommandBuffer<ChunkStore> commandBuffer
+   private int getFluidAtPos(
+      int posX, int posY, int posZ, Ref<ChunkStore> sectionRef, ChunkSection currentChunkSection, CommandBuffer<ChunkStore> commandBuffer
    ) {
       Ref<ChunkStore> chunkToUse = sectionRef;
       int chunkX = ChunkUtil.worldCoordFromLocalCoord(currentChunkSection.getX(), posX);
@@ -190,34 +156,22 @@ public class WaterGrowthModifierAsset extends GrowthModifierAsset {
          chunkToUse = commandBuffer.getExternalData().getChunkSectionReference(chunkX, chunkY, chunkZ);
       }
 
-      if (chunkToUse == null) {
-         return Integer.MIN_VALUE;
-      }
-
-      FluidSection fluidSectionComponent = commandBuffer.getComponent(chunkToUse, FluidSection.getComponentType());
-      return fluidSectionComponent == null ? Integer.MIN_VALUE : fluidSectionComponent.getFluidId(posX, posY, posZ);
+      return chunkToUse == null ? Integer.MIN_VALUE : commandBuffer.getComponent(chunkToUse, FluidSection.getComponentType()).getFluidId(posX, posY, posZ);
    }
 
-   protected boolean checkIfRaining(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, int x, int y, int z) {
+   protected boolean checkIfRaining(CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, int x, int y, int z) {
       if (this.weatherIds == null) {
          return false;
       }
 
-      ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-      if (chunkSectionComponent == null) {
-         return false;
-      }
-
-      Ref<ChunkStore> chunkRef = chunkSectionComponent.getChunkColumnReference();
-      BlockChunk blockChunkComponent = commandBuffer.getComponent(chunkRef, BlockChunk.getComponentType());
-      if (blockChunkComponent == null) {
-         return false;
-      }
-
-      int blockId = blockChunkComponent.getBlock(x, y, z);
-      Store<EntityStore> entityStore = commandBuffer.getExternalData().getWorld().getEntityStore().getStore();
-      WeatherResource weatherResource = entityStore.getResource(WeatherResource.getResourceType());
-      int environment = blockChunkComponent.getEnvironment(x, y, z);
+      ChunkSection section = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+      Ref<ChunkStore> chunk = section.getChunkColumnReference();
+      BlockChunk blockChunk = commandBuffer.getComponent(chunk, BlockChunk.getComponentType());
+      int cropId = blockChunk.getBlock(x, y, z);
+      Store<EntityStore> store = commandBuffer.getExternalData().getWorld().getEntityStore().getStore();
+      WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
+      WeatherResource weatherResource = store.getResource(WeatherResource.getResourceType());
+      int environment = blockChunk.getEnvironment(x, y, z);
       int weatherId;
       if (weatherResource.getForcedWeatherIndex() != 0) {
          weatherId = weatherResource.getForcedWeatherIndex();
@@ -225,24 +179,26 @@ public class WaterGrowthModifierAsset extends GrowthModifierAsset {
          weatherId = weatherResource.getWeatherIndexForEnvironment(environment);
       }
 
-      if (!this.weatherIds.contains(weatherId)) {
-         return false;
-      }
+      if (this.weatherIds.contains(weatherId)) {
+         boolean unobstructed = true;
 
-      boolean unobstructed = true;
+         for (int searchY = y + 1; searchY < 320; searchY++) {
+            int block = blockChunk.getBlock(x, searchY, z);
+            if (block != 0 && block != cropId) {
+               unobstructed = false;
+               break;
+            }
+         }
 
-      for (int searchY = y + 1; searchY < 320; searchY++) {
-         int block = blockChunkComponent.getBlock(x, searchY, z);
-         if (block != 0 && block != blockId) {
-            unobstructed = false;
-            break;
+         if (unobstructed) {
+            return true;
          }
       }
 
-      return unobstructed;
+      return false;
    }
 
-   private static boolean isSoilWaterExpiring(@Nonnull WorldTimeResource worldTimeResource, @Nonnull TilledSoilBlock soilBlock) {
+   private boolean isSoilWaterExpiring(WorldTimeResource worldTimeResource, TilledSoilBlock soilBlock) {
       Instant until = soilBlock.getWateredUntil();
       if (until == null) {
          return false;

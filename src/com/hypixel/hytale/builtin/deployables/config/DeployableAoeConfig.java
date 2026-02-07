@@ -26,10 +26,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class DeployableAoeConfig extends DeployableConfig {
-   @Nonnull
    public static final BuilderCodec<DeployableAoeConfig> CODEC = BuilderCodec.builder(
          DeployableAoeConfig.class, DeployableAoeConfig::new, DeployableConfig.BASE_CODEC
       )
@@ -121,7 +119,6 @@ public class DeployableAoeConfig extends DeployableConfig {
    protected boolean attackEnemies = true;
    protected DeployableAoeConfig.Shape shape = DeployableAoeConfig.Shape.Sphere;
    protected float height = 1.0F;
-   @Nullable
    protected DamageCause processedDamageCause;
 
    protected DeployableAoeConfig() {
@@ -136,49 +133,46 @@ public class DeployableAoeConfig extends DeployableConfig {
       @Nonnull Store<EntityStore> store,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-      if (transformComponent != null) {
-         Vector3d position = transformComponent.getPosition();
-         World world = store.getExternalData().getWorld();
-         Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
-         float radius = this.getRadius(store, deployableComponent.getSpawnInstant());
-         this.handleDebugGraphics(world, deployableComponent.getDebugColor(), position, radius * 2.0F);
-         switch (deployableComponent.getFlag(DeployableComponent.DeployableFlag.STATE)) {
-            case 0:
-               deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 1);
-               break;
-            case 1:
-               deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 2);
-               playAnimation(store, entityRef, this, "Grow");
-               break;
-            case 2:
-               if (radius >= this.endRadius) {
-                  deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 3);
-                  playAnimation(store, entityRef, this, "Looping");
-               }
-         }
-
-         Ref<EntityStore> deployableRef = archetypeChunk.getReferenceTo(index);
-         if (deployableComponent.incrementTimeSinceLastAttack(dt) > this.damageInterval) {
-            deployableComponent.setTimeSinceLastAttack(0.0F);
-            this.handleDetection(store, commandBuffer, deployableRef, deployableComponent, position, radius, DamageCause.PHYSICAL);
-         }
-
-         super.tick(deployableComponent, dt, index, archetypeChunk, store, commandBuffer);
+      Vector3d position = archetypeChunk.getComponent(index, TransformComponent.getComponentType()).getPosition();
+      World world = store.getExternalData().getWorld();
+      Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
+      float radius = this.getRadius(store, deployableComponent.getSpawnInstant());
+      this.handleDebugGraphics(world, deployableComponent.getDebugColor(), position, radius * 2.0F);
+      switch (deployableComponent.getFlag(DeployableComponent.DeployableFlag.STATE)) {
+         case 0:
+            deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 1);
+            break;
+         case 1:
+            deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 2);
+            playAnimation(store, entityRef, this, "Grow");
+            break;
+         case 2:
+            if (radius >= this.endRadius) {
+               deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 3);
+               playAnimation(store, entityRef, this, "Looping");
+            }
       }
+
+      Ref<EntityStore> deployableRef = archetypeChunk.getReferenceTo(index);
+      if (deployableComponent.incrementTimeSinceLastAttack(dt) > this.damageInterval) {
+         deployableComponent.setTimeSinceLastAttack(0.0F);
+         this.handleDetection(store, commandBuffer, deployableRef, deployableComponent, position, radius, DamageCause.PHYSICAL);
+      }
+
+      super.tick(deployableComponent, dt, index, archetypeChunk, store, commandBuffer);
    }
 
    protected void handleDetection(
-      @Nonnull final Store<EntityStore> store,
-      @Nonnull final CommandBuffer<EntityStore> commandBuffer,
-      @Nonnull final Ref<EntityStore> deployableRef,
-      @Nonnull DeployableComponent deployableComponent,
-      @Nonnull Vector3d position,
+      final Store<EntityStore> store,
+      final CommandBuffer<EntityStore> commandBuffer,
+      final Ref<EntityStore> deployableRef,
+      DeployableComponent deployableComponent,
+      Vector3d position,
       float radius,
-      @Nonnull final DamageCause damageCause
+      final DamageCause damageCause
    ) {
       var attackConsumer = new Consumer<Ref<EntityStore>>() {
-         public void accept(@Nonnull Ref<EntityStore> entityStoreRef) {
+         public void accept(Ref<EntityStore> entityStoreRef) {
             if (entityStoreRef != deployableRef) {
                DeployableAoeConfig.this.attackTarget(entityStoreRef, deployableRef, damageCause, commandBuffer);
                DeployableAoeConfig.this.applyEffectToTarget(store, entityStoreRef);
@@ -204,12 +198,7 @@ public class DeployableAoeConfig extends DeployableConfig {
       }
    }
 
-   protected void attackTarget(
-      @Nonnull Ref<EntityStore> targetRef,
-      @Nonnull Ref<EntityStore> ownerRef,
-      @Nonnull DamageCause damageCause,
-      @Nonnull CommandBuffer<EntityStore> commandBuffer
-   ) {
+   protected void attackTarget(Ref<EntityStore> targetRef, Ref<EntityStore> ownerRef, DamageCause damageCause, CommandBuffer<EntityStore> commandBuffer) {
       if (!(this.damageAmount <= 0.0F)) {
          Damage damageEntry = new Damage(new Damage.EntitySource(ownerRef), damageCause, this.damageAmount);
          if (targetRef.equals(ownerRef)) {
@@ -220,15 +209,15 @@ public class DeployableAoeConfig extends DeployableConfig {
       }
    }
 
-   protected void applyEffectToTarget(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> targetRef) {
+   protected void applyEffectToTarget(Store<EntityStore> store, Ref<EntityStore> targetRef) {
       if (this.effectsToApply != null) {
-         EffectControllerComponent effectControllerComponent = store.getComponent(targetRef, EffectControllerComponent.getComponentType());
-         if (effectControllerComponent != null) {
+         EffectControllerComponent effectController = store.getComponent(targetRef, EffectControllerComponent.getComponentType());
+         if (effectController != null) {
             for (String effect : this.effectsToApply) {
                if (effect != null) {
                   EntityEffect effectAsset = EntityEffect.getAssetMap().getAsset(effect);
                   if (effectAsset != null) {
-                     effectControllerComponent.addEffect(targetRef, effectAsset, store);
+                     effectController.addEffect(targetRef, effectAsset, store);
                   }
                }
             }
@@ -236,12 +225,12 @@ public class DeployableAoeConfig extends DeployableConfig {
       }
    }
 
-   protected boolean canAttackEntity(@Nonnull Ref<EntityStore> targetRef, @Nonnull DeployableComponent deployable) {
-      boolean isOwner = targetRef.equals(deployable.getOwner());
+   protected boolean canAttackEntity(Ref<EntityStore> target, DeployableComponent deployable) {
+      boolean isOwner = target.equals(deployable.getOwner());
       return !isOwner || this.attackOwner;
    }
 
-   protected float getRadius(@Nonnull Store<EntityStore> store, @Nonnull Instant startInstant) {
+   protected float getRadius(Store<EntityStore> store, Instant startInstant) {
       if (!(this.radiusChangeTime <= 0.0F) && !(this.endRadius < 0.0F)) {
          float radiusDiff = this.endRadius - this.startRadius;
          float increment = radiusDiff / this.radiusChangeTime;
@@ -258,7 +247,6 @@ public class DeployableAoeConfig extends DeployableConfig {
       }
    }
 
-   @Nullable
    protected DamageCause getDamageCause() {
       if (this.processedDamageCause == null) {
          this.processedDamageCause = DamageCause.getAssetMap().getAsset(this.damageCause);

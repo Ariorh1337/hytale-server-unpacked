@@ -92,7 +92,7 @@ public abstract class FluidTicker {
       int worldZ
    ) {
       int block = blockSection.get(worldX, worldY, worldZ);
-      if (!this.canOccupySolidBlocks() && isFullySolid(BlockType.getAssetMap().getAsset(block))) {
+      if (isFullySolid(BlockType.getAssetMap().getAsset(block))) {
          fluidSection.setFluid(worldX, worldY, worldZ, 0, (byte)0);
          setTickingSurrounding(cachedAccessor, blockSection, worldX, worldY, worldZ);
          return BlockTickStrategy.SLEEP;
@@ -105,10 +105,6 @@ public abstract class FluidTicker {
             ? BlockTickStrategy.CONTINUE
             : this.process(world, tick, cachedAccessor, fluidSection, blockSection, fluid, fluidId, worldX, worldY, worldZ);
       }
-   }
-
-   public boolean canOccupySolidBlocks() {
-      return false;
    }
 
    public BlockTickStrategy process(
@@ -192,8 +188,7 @@ public abstract class FluidTicker {
                   if (sourceBlock != null) {
                      int sourceRotation = otherBlockSection.getRotationIndex(blockX, blockY, blockZ);
                      int sourceFiller = otherBlockSection.getFiller(blockX, blockY, blockZ);
-                     if (!this.blocksFluidFrom(sourceBlock, sourceRotation, x, z, sourceFiller)
-                        && !this.blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) {
+                     if (!blocksFluidFrom(sourceBlock, sourceRotation, x, z, sourceFiller) && !blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) {
                         return FluidTicker.AliveStatus.ALIVE;
                      }
                   }
@@ -204,8 +199,7 @@ public abstract class FluidTicker {
                      if (sourceBlock != null) {
                         int sourceRotation = otherBlockSection.getRotationIndex(blockX, blockY, blockZ);
                         int sourceFiller = otherBlockSection.getFiller(blockX, blockY, blockZ);
-                        if (!this.blocksFluidFrom(sourceBlock, sourceRotation, x, z, sourceFiller)
-                           && !this.blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) {
+                        if (!blocksFluidFrom(sourceBlock, sourceRotation, x, z, sourceFiller) && !blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) {
                            return FluidTicker.AliveStatus.ALIVE;
                         }
                      }
@@ -356,11 +350,11 @@ public abstract class FluidTicker {
       return drawType == DrawType.Cube || drawType == DrawType.CubeWithModel;
    }
 
-   public boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ) {
-      return this.blocksFluidFrom(blockType, rotationIndex, offsetX, offsetZ, 0);
+   public static boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ) {
+      return blocksFluidFrom(blockType, rotationIndex, offsetX, offsetZ, 0);
    }
 
-   public boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ, int filler) {
+   public static boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ, int filler) {
       if (blockType.getMaterial() != BlockMaterial.Solid) {
          return false;
       }
@@ -510,7 +504,7 @@ public abstract class FluidTicker {
       void setBlock(int var1, int var2, int var3, int var4);
    }
 
-   public enum AliveStatus {
+   protected enum AliveStatus {
       ALIVE,
       DEMOTE,
       WAIT_FOR_ADJACENT_CHUNK;

@@ -11,7 +11,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class DensityTerrainAsset extends TerrainAsset {
-   @Nonnull
    public static final BuilderCodec<DensityTerrainAsset> CODEC = BuilderCodec.builder(
          DensityTerrainAsset.class, DensityTerrainAsset::new, TerrainAsset.ABSTRACT_CODEC
       )
@@ -23,8 +22,8 @@ public class DensityTerrainAsset extends TerrainAsset {
 
    @Nonnull
    @Override
-   public Density buildDensity(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
-      return this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerId));
+   public Density buildDensity(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+      return this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer));
    }
 
    @Override

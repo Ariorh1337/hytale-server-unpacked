@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class TimerFragmentCommand extends PortalWorldCommandBase {
-   @Nonnull
    private final RequiredArg<Integer> remainingSecondsArg = this.withRequiredArg("seconds", "server.commands.fragment.timer.arg.seconds.desc", ArgTypes.INTEGER);
 
    public TimerFragmentCommand() {
@@ -22,7 +21,7 @@ public class TimerFragmentCommand extends PortalWorldCommandBase {
    protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull PortalWorld portalWorld, @Nonnull Store<EntityStore> store) {
       int before = (int)portalWorld.getRemainingSeconds(world);
       int desired = this.remainingSecondsArg.get(context);
-      PortalWorld.setRemainingSeconds(world, desired);
+      portalWorld.setRemainingSeconds(world, desired);
       context.sendMessage(Message.translation("server.commands.fragment.timer.success").param("before", before).param("after", desired));
    }
 }

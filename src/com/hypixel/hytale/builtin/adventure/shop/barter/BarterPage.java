@@ -25,12 +25,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalTime;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventData> {
-   @Nullable
    private final BarterShopAsset shopAsset;
 
    public BarterPage(@Nonnull PlayerRef playerRef, @Nonnull String shopId) {
@@ -38,7 +35,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
       this.shopAsset = BarterShopAsset.getAssetMap().getAsset(shopId);
    }
 
-   private boolean isTradeValid(@Nonnull BarterTrade trade) {
+   private boolean isTradeValid(BarterTrade trade) {
       if (!ItemModule.exists(trade.getOutput().getItemId())) {
          return false;
       }
@@ -52,8 +49,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
       return true;
    }
 
-   @Nonnull
-   private String getSafeItemId(@Nonnull String itemId) {
+   private String getSafeItemId(String itemId) {
       return ItemModule.exists(itemId) ? itemId : "Unknown";
    }
 
@@ -66,12 +62,12 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
          String titleKey = this.shopAsset.getDisplayNameKey() != null ? this.shopAsset.getDisplayNameKey() : this.shopAsset.getId();
          commandBuilder.set("#ShopTitle.Text", Message.translation(titleKey));
          WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
-         Instant gameTime = timeResource.getGameTime();
+         Instant gameTime = timeResource != null ? timeResource.getGameTime() : Instant.now();
          BarterShopState barterState = BarterShopState.get();
          int[] stockArray = barterState.getStockArray(this.shopAsset, gameTime);
-         Message refreshMessage = this.getRefreshTimerText(barterState, gameTime);
-         if (refreshMessage != null) {
-            commandBuilder.set("#RefreshTimer.Text", refreshMessage);
+         Message refreshText = this.getRefreshTimerText(barterState, gameTime);
+         if (refreshText != null) {
+            commandBuilder.set("#RefreshTimer.Text", refreshText);
          }
 
          commandBuilder.clear("#TradeGrid");
@@ -109,23 +105,21 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
                }
 
                commandBuilder.set(selector + " #InputSlotBorder.Background", canAfford ? "#2a5a3a" : "#5a2a2a");
-               commandBuilder.set(
-                  selector + " #HaveNeedLabel.Text", Message.translation("server.barter.customUI.barterPage.quantityStock").param("count", playerHas)
-               );
+               commandBuilder.set(selector + " #HaveNeedLabel.Text", "Have: " + playerHas);
                commandBuilder.set(selector + " #HaveNeedLabel.Style.TextColor", canAfford ? "#3d913f" : "#962f2f");
             }
 
             if (!tradeValid) {
                commandBuilder.set(selector + " #Stock.Visible", false);
                commandBuilder.set(selector + " #OutOfStockOverlay.Visible", true);
-               commandBuilder.set(selector + " #OutOfStockLabel.Text", Message.translation("server.barter.customUI.barterPage.invalidItem"));
+               commandBuilder.set(selector + " #OutOfStockLabel.Text", "INVALID ITEM");
                commandBuilder.set(selector + " #OutOfStockLabel.Style.TextColor", "#cc8844");
                commandBuilder.set(selector + " #TradeButton.Disabled", true);
                commandBuilder.set(selector + " #TradeButton.Style.Disabled.Background", "#4a3020");
             } else if (stock <= 0) {
                commandBuilder.set(selector + " #Stock.Visible", false);
                commandBuilder.set(selector + " #OutOfStockOverlay.Visible", true);
-               commandBuilder.set(selector + " #OutOfStockLabel.Text", Message.translation("server.barter.customUI.barterPage.noStock"));
+               commandBuilder.set(selector + " #OutOfStockLabel.Text", "OUT OF STOCK");
                commandBuilder.set(selector + " #OutOfStockLabel.Style.TextColor", "#cc4444");
                commandBuilder.set(selector + " #TradeButton.Disabled", true);
                commandBuilder.set(selector + " #TradeButton.Style.Disabled.Background", "#4a2020");
@@ -142,9 +136,9 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
          }
 
          int cardsPerRow = 3;
-         int remainder = trades.length % 3;
+         int remainder = trades.length % cardsPerRow;
          if (remainder > 0) {
-            int spacersNeeded = 3 - remainder;
+            int spacersNeeded = cardsPerRow - remainder;
 
             for (int s = 0; s < spacersNeeded; s++) {
                commandBuilder.append("#TradeGrid", "Pages/BarterGridSpacer.ui");
@@ -159,7 +153,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
          int requestedQuantity = data.getQuantity();
          if (requestedQuantity > 0) {
             WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
-            Instant gameTime = timeResource.getGameTime();
+            Instant gameTime = timeResource != null ? timeResource.getGameTime() : Instant.now();
             BarterShopState barterState = BarterShopState.get();
             BarterTrade[] trades = barterState.getResolvedTrades(this.shopAsset, gameTime);
             if (tradeIndex >= 0 && tradeIndex < trades.length) {
@@ -220,7 +214,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
    private void updateAfterTrade(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, int tradedIndex) {
       UICommandBuilder commandBuilder = new UICommandBuilder();
       WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
-      Instant gameTime = timeResource.getGameTime();
+      Instant gameTime = timeResource != null ? timeResource.getGameTime() : Instant.now();
       BarterShopState barterState = BarterShopState.get();
       int[] stockArray = barterState.getStockArray(this.shopAsset, gameTime);
       BarterTrade[] trades = barterState.getResolvedTrades(this.shopAsset, gameTime);
@@ -246,9 +240,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
             }
 
             commandBuilder.set(selector + " #InputSlotBorder.Background", canAfford ? "#2a5a3a" : "#5a2a2a");
-            commandBuilder.set(
-               selector + " #HaveNeedLabel.Text", Message.translation("server.barter.customUI.barterPage.quantityStock").param("count", playerHas)
-            );
+            commandBuilder.set(selector + " #HaveNeedLabel.Text", "Have: " + playerHas);
             commandBuilder.set(selector + " #HaveNeedLabel.Style.TextColor", canAfford ? "#3d913f" : "#962f2f");
          }
 
@@ -259,7 +251,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
          } else if (stock <= 0) {
             commandBuilder.set(selector + " #Stock.Visible", false);
             commandBuilder.set(selector + " #OutOfStockOverlay.Visible", true);
-            commandBuilder.set(selector + " #OutOfStockLabel.Text", Message.translation("server.barter.customUI.barterPage.noStock"));
+            commandBuilder.set(selector + " #OutOfStockLabel.Text", "OUT OF STOCK");
             commandBuilder.set(selector + " #OutOfStockLabel.Style.TextColor", "#cc4444");
             commandBuilder.set(selector + " #TradeButton.Disabled", true);
             commandBuilder.set(selector + " #TradeButton.Style.Disabled.Background", "#4a2020");
@@ -275,11 +267,11 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
       this.sendUpdate(commandBuilder, new UIEventBuilder(), false);
    }
 
-   private int countItemsInContainer(@Nonnull ItemContainer container, @Nonnull String itemId) {
+   private int countItemsInContainer(ItemContainer container, String itemId) {
       return container.countItemStacks(stack -> itemId.equals(stack.getItemId()));
    }
 
-   private void removeItemsFromContainer(@Nonnull ItemContainer container, @Nonnull String itemId, int amount) {
+   private void removeItemsFromContainer(ItemContainer container, String itemId, int amount) {
       container.removeItemStack(new ItemStack(itemId, amount));
    }
 
@@ -290,8 +282,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
       this.sendUpdate(commandBuilder, eventBuilder, true);
    }
 
-   @Nullable
-   private Message getRefreshTimerText(@Nonnull BarterShopState barterState, @Nonnull Instant gameTime) {
+   private Message getRefreshTimerText(BarterShopState barterState, Instant gameTime) {
       if (this.shopAsset == null) {
          return null;
       }
@@ -312,8 +303,14 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
          long currentDayNumber = gameTime.getEpochSecond() / WorldTimeResource.SECONDS_PER_DAY;
          long refreshDayNumber = nextRefresh.getEpochSecond() / WorldTimeResource.SECONDS_PER_DAY;
          long daysUntilRefresh = refreshDayNumber - currentDayNumber;
-         LocalTime restockTime = LocalTime.of(this.shopAsset.getRestockHour(), 0);
-         String timeString = restockTime.toString();
+         int hour = this.shopAsset.getRestockHour();
+         String amPm = hour >= 12 ? "PM" : "AM";
+         int displayHour = hour % 12;
+         if (displayHour == 0) {
+            displayHour = 12;
+         }
+
+         String timeString = String.format("%d:00 %s", displayHour, amPm);
          if (daysUntilRefresh <= 0L) {
             return Message.translation("server.barter.customUI.barterPage.restocksToday").param("restockTime", timeString);
          } else {
@@ -327,13 +324,9 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
    }
 
    public static class BarterEventData {
-      @Nonnull
       static final String TRADE_INDEX = "TradeIndex";
-      @Nonnull
       static final String QUANTITY = "Quantity";
-      @Nonnull
       static final String SHIFT_HELD = "ShiftHeld";
-      @Nonnull
       public static final BuilderCodec<BarterPage.BarterEventData> CODEC = BuilderCodec.builder(
             BarterPage.BarterEventData.class, BarterPage.BarterEventData::new
          )

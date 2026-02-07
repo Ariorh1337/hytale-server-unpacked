@@ -9,7 +9,6 @@ import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
 
 public class SmoothMinCurveAsset extends CurveAsset {
-   @Nonnull
    public static final BuilderCodec<SmoothMinCurveAsset> CODEC = BuilderCodec.builder(
          SmoothMinCurveAsset.class, SmoothMinCurveAsset::new, CurveAsset.ABSTRACT_CODEC
       )
@@ -23,7 +22,7 @@ public class SmoothMinCurveAsset extends CurveAsset {
       .build();
    private CurveAsset curveAAsset = new ConstantCurveAsset();
    private CurveAsset curveBAsset = new ConstantCurveAsset();
-   private double range;
+   private double range = 0.0;
 
    @Nonnull
    @Override

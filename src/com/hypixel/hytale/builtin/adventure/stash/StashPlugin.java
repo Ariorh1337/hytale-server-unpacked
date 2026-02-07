@@ -38,7 +38,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class StashPlugin extends JavaPlugin {
-   @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
    public StashPlugin(@Nonnull JavaPluginInit init) {
@@ -96,19 +95,18 @@ public class StashPlugin extends JavaPlugin {
    }
 
    private static class StashSystem extends RefSystem<ChunkStore> {
-      @Nonnull
-      private final ComponentType<ChunkStore, ItemContainerState> itemContainerStateComponentType;
+      private final ComponentType<ChunkStore, ItemContainerState> componentType;
       @Nonnull
       private final Set<Dependency<ChunkStore>> dependencies;
 
-      public StashSystem(@Nonnull ComponentType<ChunkStore, ItemContainerState> itemContainerStateComponentType) {
-         this.itemContainerStateComponentType = itemContainerStateComponentType;
+      public StashSystem(ComponentType<ChunkStore, ItemContainerState> componentType) {
+         this.componentType = componentType;
          this.dependencies = Set.of(new SystemDependency<>(Order.AFTER, BlockStateModule.LegacyBlockStateRefSystem.class));
       }
 
       @Override
       public Query<ChunkStore> getQuery() {
-         return this.itemContainerStateComponentType;
+         return this.componentType;
       }
 
       @Override
@@ -117,11 +115,9 @@ public class StashPlugin extends JavaPlugin {
       ) {
          World world = store.getExternalData().getWorld();
          if (world.getWorldConfig().getGameMode() != GameMode.Creative) {
-            ItemContainerState itemContainerStateComponent = store.getComponent(ref, this.itemContainerStateComponentType);
-            assert itemContainerStateComponent != null;
             StashGameplayConfig stashGameplayConfig = StashGameplayConfig.getOrDefault(world.getGameplayConfig());
             boolean clearContainerDropList = stashGameplayConfig.isClearContainerDropList();
-            StashPlugin.stash(itemContainerStateComponent, clearContainerDropList);
+            StashPlugin.stash(store.getComponent(ref, this.componentType), clearContainerDropList);
          }
       }
 

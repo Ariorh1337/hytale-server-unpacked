@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import javax.annotation.Nonnull;
 
 public class BasicChanceBlockGrowthProcedure extends TickProcedure {
-   @Nonnull
    public static final BuilderCodec<BasicChanceBlockGrowthProcedure> CODEC = BuilderCodec.<TickProcedure>builder(
          BasicChanceBlockGrowthProcedure.class, BasicChanceBlockGrowthProcedure::new, TickProcedure.BASE_CODEC
       )

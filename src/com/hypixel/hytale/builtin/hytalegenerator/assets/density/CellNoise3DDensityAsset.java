@@ -13,7 +13,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class CellNoise3DDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<CellNoise3DDensityAsset> CODEC = BuilderCodec.builder(
          CellNoise3DDensityAsset.class, CellNoise3DDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -44,7 +43,6 @@ public class CellNoise3DDensityAsset extends DensityAsset {
    private double jitter = 0.5;
    private int octaves = 1;
    private String seedKey = "A";
-   @Nonnull
    private FastNoiseLite.CellularReturnType cellType = FastNoiseLite.CellularReturnType.CellValue;
 
    @Nonnull

@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import javax.annotation.Nonnull;
 
 public class SurfacePatternAsset extends PatternAsset {
-   @Nonnull
    public static final BuilderCodec<SurfacePatternAsset> CODEC = BuilderCodec.builder(
          SurfacePatternAsset.class, SurfacePatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
@@ -44,12 +43,12 @@ public class SurfacePatternAsset extends PatternAsset {
       .build();
    private PatternAsset surface = new ConstantPatternAsset();
    private PatternAsset origin = new ConstantPatternAsset();
-   private double surfaceRadius;
-   private double originRadius;
-   private int surfaceGap;
-   private int originGap;
+   private double surfaceRadius = 0.0;
+   private double originRadius = 0.0;
+   private int surfaceGap = 0;
+   private int originGap = 0;
    private SurfacePattern.Facing[] facings = new SurfacePattern.Facing[0];
-   private boolean requireAllFacings;
+   private boolean requireAllFacings = false;
 
    @Nonnull
    @Override

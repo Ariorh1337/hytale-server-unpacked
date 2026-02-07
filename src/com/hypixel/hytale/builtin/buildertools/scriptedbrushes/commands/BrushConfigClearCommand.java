@@ -23,7 +23,7 @@ public class BrushConfigClearCommand extends AbstractPlayerCommand {
    private static final Message MESSAGE_COMMANDS_BRUSH_CONFIG_CLEARED = Message.translation("server.commands.brushConfig.cleared");
 
    public BrushConfigClearCommand() {
-      super("clear", "server.commands.scriptedbrushes.clear.desc");
+      super("clear", "Clear your brush config and disable it");
       this.addAliases("disable");
    }
 

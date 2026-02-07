@@ -23,19 +23,10 @@ import javax.annotation.Nullable;
 
 public class CameraEffectSystem extends DamageEventSystem {
    @Nonnull
-   private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+   private static final ComponentType<EntityStore, PlayerRef> PLAYER_REF_COMPONENT_TYPE = PlayerRef.getComponentType();
+   private static final ComponentType<EntityStore, EntityStatMap> ENTITY_STAT_MAP_COMPONENT_TYPE = EntityStatMap.getComponentType();
    @Nonnull
-   private final ComponentType<EntityStore, EntityStatMap> entityStatMapComponentType;
-   @Nonnull
-   private final Query<EntityStore> query;
-
-   public CameraEffectSystem(
-      @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType, @Nonnull ComponentType<EntityStore, EntityStatMap> entityStatMapComponentType
-   ) {
-      this.playerRefComponentType = playerRefComponentType;
-      this.entityStatMapComponentType = entityStatMapComponentType;
-      this.query = Query.and(playerRefComponentType, entityStatMapComponentType);
-   }
+   private static final Query<EntityStore> QUERY = Query.and(PLAYER_REF_COMPONENT_TYPE, ENTITY_STAT_MAP_COMPONENT_TYPE);
 
    @Nullable
    @Override
@@ -46,7 +37,7 @@ public class CameraEffectSystem extends DamageEventSystem {
    @Nonnull
    @Override
    public Query<EntityStore> getQuery() {
-      return this.query;
+      return QUERY;
    }
 
    public void handle(
@@ -56,13 +47,13 @@ public class CameraEffectSystem extends DamageEventSystem {
       @Nonnull CommandBuffer<EntityStore> commandBuffer,
       @Nonnull Damage damage
    ) {
-      EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, this.entityStatMapComponentType);
+      EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, ENTITY_STAT_MAP_COMPONENT_TYPE);
       assert entityStatMapComponent != null;
       EntityStatValue healthStat = entityStatMapComponent.get(DefaultEntityStatTypes.getHealth());
       if (healthStat != null) {
          float health = healthStat.getMax() - healthStat.getMin();
          if (!(health <= 0.0F)) {
-            PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
+            PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PLAYER_REF_COMPONENT_TYPE);
             assert playerRefComponent != null;
             World world = commandBuffer.getExternalData().getWorld();
             CameraEffectsConfig cameraEffectsConfig = world.getGameplayConfig().getCameraEffectsConfig();

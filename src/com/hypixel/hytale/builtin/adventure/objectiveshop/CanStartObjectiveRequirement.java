@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class CanStartObjectiveRequirement extends ChoiceRequirement {
-   @Nonnull
    public static final BuilderCodec<CanStartObjectiveRequirement> CODEC = BuilderCodec.builder(
          CanStartObjectiveRequirement.class, CanStartObjectiveRequirement::new, ChoiceRequirement.BASE_CODEC
       )

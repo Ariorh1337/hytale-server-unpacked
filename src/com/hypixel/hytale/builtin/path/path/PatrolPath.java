@@ -80,9 +80,7 @@ public class PatrolPath implements IPrefabPath {
 
       for (int i = 0; i < index; i++) {
          PatrolPathMarkerEntity wp = (PatrolPathMarkerEntity)this.waypoints.get(i);
-         if (wp != null) {
-            wp.markNeedsSave();
-         }
+         wp.markNeedsSave();
       }
 
       this.pathChanged.set(true);
@@ -93,19 +91,13 @@ public class PatrolPath implements IPrefabPath {
    public void registerNewWaypointAt(int index, @Nonnull IPrefabPathWaypoint waypoint, int worldGenId) {
       for (int i = 0; i < index; i++) {
          PatrolPathMarkerEntity wp = (PatrolPathMarkerEntity)this.waypoints.get(i);
-         if (wp != null) {
-            wp.markNeedsSave();
-         }
+         wp.markNeedsSave();
       }
 
       for (int i = this.waypoints.size() - 1; i >= index; i--) {
          PatrolPathMarkerEntity wp = (PatrolPathMarkerEntity)this.waypoints.remove(i);
-         if (wp == null) {
-            this.waypoints.remove(i + 1);
-         } else {
-            wp.setOrder((short)(i + 1));
-            this.waypoints.put(i + 1, wp);
-         }
+         wp.setOrder((short)(i + 1));
+         this.waypoints.put(i + 1, wp);
       }
 
       this.length.getAndIncrement();
@@ -135,19 +127,13 @@ public class PatrolPath implements IPrefabPath {
 
       for (int i = 0; i < index; i++) {
          PatrolPathMarkerEntity wp = (PatrolPathMarkerEntity)this.waypoints.get(i);
-         if (wp != null) {
-            wp.markNeedsSave();
-         }
+         wp.markNeedsSave();
       }
 
       for (int i = index; i < this.waypoints.size(); i++) {
          PatrolPathMarkerEntity wp = (PatrolPathMarkerEntity)this.waypoints.remove(i + 1);
-         if (wp == null) {
-            this.waypoints.remove(i);
-         } else {
-            wp.setOrder(i);
-            this.waypoints.put(i, wp);
-         }
+         wp.setOrder(i);
+         this.waypoints.put(i, wp);
       }
 
       this.pathChanged.set(true);

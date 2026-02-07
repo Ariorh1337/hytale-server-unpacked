@@ -44,11 +44,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.PageEventData> {
-   @Nonnull
    private static final String COMMON_TEXT_BUTTON_DOCUMENT = "Common/TextButton.ui";
-   @Nonnull
    private static final Value<String> BUTTON_LABEL_STYLE = Value.ref("Common/TextButton.ui", "LabelStyle");
-   @Nonnull
    private static final Value<String> BUTTON_LABEL_STYLE_SELECTED = Value.ref("Common/TextButton.ui", "SelectedLabelStyle");
    @Nonnull
    private String searchQuery = "";
@@ -225,15 +222,10 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
    }
 
    public static class PageEventData {
-      @Nonnull
       static final String KEY_MODEL = "Model";
-      @Nonnull
       static final String KEY_TYPE = "Type";
-      @Nonnull
       static final String KEY_SEARCH_QUERY = "@SearchQuery";
-      @Nonnull
       static final String KEY_SCALE = "@Scale";
-      @Nonnull
       public static final BuilderCodec<ChangeModelPage.PageEventData> CODEC = BuilderCodec.builder(
             ChangeModelPage.PageEventData.class, ChangeModelPage.PageEventData::new
          )

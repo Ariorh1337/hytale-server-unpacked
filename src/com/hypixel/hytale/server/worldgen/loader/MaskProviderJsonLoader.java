@@ -2,8 +2,6 @@ package com.hypixel.hytale.server.worldgen.loader;
 
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.procedurallib.file.AssetLoader;
-import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.CoordinateRandomizerJsonLoader;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
@@ -12,25 +10,13 @@ import com.hypixel.hytale.server.worldgen.chunk.MaskProvider;
 import com.hypixel.hytale.server.worldgen.zoom.FuzzyZoom;
 import com.hypixel.hytale.server.worldgen.zoom.PixelProvider;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.imageio.ImageIO;
 
 public class MaskProviderJsonLoader extends JsonLoader<SeedStringResource, MaskProvider> {
-   public static final AssetLoader<BufferedImage> IMAGE_LOADER = new AssetLoader<BufferedImage>() {
-      @Override
-      public Class<BufferedImage> type() {
-         return BufferedImage.class;
-      }
-
-      @Nonnull
-      public BufferedImage load(@Nonnull InputStream in) throws IOException {
-         return ImageIO.read(new BufferedInputStream(in));
-      }
-   };
    protected final Path file;
    protected final Vector2i zoomSize;
    protected final Vector2i worldOffset;
@@ -56,7 +42,7 @@ public class MaskProviderJsonLoader extends JsonLoader<SeedStringResource, MaskP
 
    public static BufferedImage loadImage(@Nonnull Path file) throws IOException {
       try {
-         return FileIO.load(file, IMAGE_LOADER);
+         return ImageIO.read(Files.newInputStream(file));
       } catch (IOException e) {
          throw new IOException("Failed to load image " + file, e);
       }

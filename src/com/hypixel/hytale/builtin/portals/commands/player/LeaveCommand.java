@@ -29,18 +29,17 @@ public class LeaveCommand extends AbstractPlayerCommand {
       @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         PortalWorld portalWorldResource = store.getResource(PortalWorld.getResourceType());
-         if (!portalWorldResource.exists()) {
-            playerRef.sendMessage(MESSAGE_COMMANDS_LEAVE_NOT_IN_PORTAL);
-         } else {
-            boolean uncursedAny = CursedItems.uncurseAll(playerComponent.getInventory().getCombinedEverything());
-            if (uncursedAny) {
-               playerRef.sendMessage(MESSAGE_COMMANDS_LEAVE_UNCURSED_TEMP);
-            }
-
-            InstancesPlugin.exitInstance(ref, store);
+      assert playerComponent != null;
+      PortalWorld portalWorldResource = store.getResource(PortalWorld.getResourceType());
+      if (!portalWorldResource.exists()) {
+         playerRef.sendMessage(MESSAGE_COMMANDS_LEAVE_NOT_IN_PORTAL);
+      } else {
+         boolean uncursedAny = CursedItems.uncurseAll(playerComponent.getInventory().getCombinedEverything());
+         if (uncursedAny) {
+            playerRef.sendMessage(MESSAGE_COMMANDS_LEAVE_UNCURSED_TEMP);
          }
+
+         InstancesPlugin.exitInstance(ref, store);
       }
    }
 }

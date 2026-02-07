@@ -38,12 +38,10 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
    private int maxFuel;
    private float progress;
    private boolean active;
-   @Nonnull
    private final Set<Short> processingSlots = new HashSet<>();
-   @Nonnull
    private final Set<Short> processingFuelSlots = new HashSet<>();
 
-   public ProcessingBenchWindow(@Nonnull ProcessingBenchState benchState) {
+   public ProcessingBenchWindow(ProcessingBenchState benchState) {
       super(WindowType.Processing, benchState);
       ProcessingBench processingBench = (ProcessingBench)this.blockType.getBench();
       CraftingRecipe recipe = benchState.getRecipe();
@@ -138,7 +136,7 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
       }
    }
 
-   public void setProcessingSlots(@Nonnull Set<Short> slots) {
+   public void setProcessingSlots(Set<Short> slots) {
       if (!this.processingSlots.equals(slots)) {
          this.processingSlots.clear();
          this.processingSlots.addAll(slots);
@@ -153,7 +151,7 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
       }
    }
 
-   public void setProcessingFuelSlots(@Nonnull Set<Short> slots) {
+   public void setProcessingFuelSlots(Set<Short> slots) {
       if (!this.processingFuelSlots.equals(slots)) {
          this.processingFuelSlots.clear();
          this.processingFuelSlots.addAll(slots);

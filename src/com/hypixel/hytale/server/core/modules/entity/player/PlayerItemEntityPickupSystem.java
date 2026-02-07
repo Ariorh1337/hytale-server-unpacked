@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
@@ -151,16 +152,20 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                   if (!store.getArchetype(targetPlayerRef).contains(DeathComponent.getComponentType())) {
                      Player playerComponent = store.getComponent(targetPlayerRef, this.playerComponentType);
                      assert playerComponent != null;
-                     ItemStackTransaction transaction = playerComponent.giveItem(itemStack, targetPlayerRef, commandBuffer);
+                     PlayerSettings playerSettings = commandBuffer.getComponent(targetPlayerRef, PlayerSettings.getComponentType());
+                     if (playerSettings == null) {
+                        playerSettings = PlayerSettings.defaults();
+                     }
+
+                     ItemContainer itemContainer = playerComponent.getInventory().getContainerForItemPickup(item, playerSettings);
+                     ItemStackTransaction transaction = itemContainer.addItemStack(itemStack);
                      ItemStack remainder = transaction.getRemainder();
                      if (ItemStack.isEmpty(remainder)) {
                         itemComponent.setRemovedByPlayerPickup(true);
                         commandBuffer.removeEntity(itemRef, RemoveReason.REMOVE);
                         playerComponent.notifyPickupItem(targetPlayerRef, itemStack, itemEntityPosition, commandBuffer);
                         Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(itemRef, commandBuffer, targetPlayerRef, itemEntityPosition);
-                        if (pickupItemHolder != null) {
-                           commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
-                        }
+                        commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
                         break;
                      }
 
@@ -171,10 +176,7 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                         float newLifetime = itemComponent.computeLifetimeSeconds(commandBuffer);
                         DespawnComponent.trySetDespawn(commandBuffer, timeResource, itemRef, despawnComponent, newLifetime);
                         Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(itemRef, commandBuffer, targetPlayerRef, itemEntityPosition);
-                        if (pickupItemHolder != null) {
-                           commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
-                        }
-
+                        commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
                         if (quantity > 0) {
                            playerComponent.notifyPickupItem(targetPlayerRef, itemStack.withQuantity(quantity), itemEntityPosition, commandBuffer);
                         }

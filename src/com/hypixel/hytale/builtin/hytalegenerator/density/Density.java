@@ -5,6 +5,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.Environme
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.TerrainDensityProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.tintproviders.TintProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -12,7 +13,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class Density {
-   @Nonnull
    private static final Bounds3i DEFAULT_READ_BOUNDS = new Bounds3i();
    public static final double DEFAULT_VALUE = Double.MAX_VALUE;
    public static final double DEFAULT_DENSITY = 0.0;
@@ -25,6 +25,8 @@ public abstract class Density {
    public static class Context {
       @Nonnull
       public Vector3d position;
+      @Nonnull
+      public WorkerIndexer.Id workerId;
       @Nullable
       public Vector3d densityAnchor;
       @Nullable
@@ -37,6 +39,7 @@ public abstract class Density {
 
       public Context() {
          this.position = new Vector3d();
+         this.workerId = WorkerIndexer.Id.UNKNOWN;
          this.densityAnchor = null;
          this.positionsAnchor = null;
          this.switchState = 0;
@@ -47,6 +50,7 @@ public abstract class Density {
 
       public Context(
          @Nonnull Vector3d position,
+         @Nonnull WorkerIndexer.Id workerId,
          @Nullable Vector3d densityAnchor,
          int switchState,
          double distanceFromCellWall,
@@ -54,6 +58,7 @@ public abstract class Density {
          double distanceToBiomeEdge
       ) {
          this.position = position;
+         this.workerId = workerId;
          this.densityAnchor = densityAnchor;
          this.switchState = switchState;
          this.distanceFromCellWall = distanceFromCellWall;
@@ -68,60 +73,37 @@ public abstract class Density {
          this.switchState = other.switchState;
          this.distanceFromCellWall = other.distanceFromCellWall;
          this.positionsAnchor = other.positionsAnchor;
+         this.workerId = other.workerId;
          this.terrainDensityProvider = other.terrainDensityProvider;
          this.distanceToBiomeEdge = other.distanceToBiomeEdge;
       }
 
       public Context(@Nonnull VectorProvider.Context context) {
          this.position = context.position;
+         this.workerId = context.workerId;
          this.terrainDensityProvider = context.terrainDensityProvider;
       }
 
       public Context(@Nonnull TintProvider.Context context) {
          this.position = context.position.toVector3d();
+         this.workerId = context.workerId;
       }
 
       public Context(@Nonnull EnvironmentProvider.Context context) {
          this.position = context.position.toVector3d();
+         this.workerId = context.workerId;
       }
 
       public Context(@Nonnull MaterialProvider.Context context) {
          this.position = context.position.toVector3d();
+         this.workerId = context.workerId;
          this.terrainDensityProvider = context.terrainDensityProvider;
          this.distanceToBiomeEdge = context.distanceToBiomeEdge;
       }
 
       public Context(@Nonnull Pattern.Context context) {
          this.position = context.position.toVector3d();
-      }
-
-      public void assign(@Nonnull Density.Context other) {
-         this.position = other.position;
-         this.densityAnchor = other.densityAnchor;
-         this.switchState = other.switchState;
-         this.distanceFromCellWall = other.distanceFromCellWall;
-         this.positionsAnchor = other.positionsAnchor;
-         this.terrainDensityProvider = other.terrainDensityProvider;
-         this.distanceToBiomeEdge = other.distanceToBiomeEdge;
-      }
-
-      public void assign(@Nonnull VectorProvider.Context context) {
-         this.position = context.position;
-         this.terrainDensityProvider = context.terrainDensityProvider;
-      }
-
-      public void assign(@Nonnull MaterialProvider.Context context) {
-         this.position.assign(context.position.x, context.position.y, context.position.z);
-         this.terrainDensityProvider = context.terrainDensityProvider;
-         this.distanceToBiomeEdge = context.distanceToBiomeEdge;
-      }
-
-      public void assign(@Nonnull EnvironmentProvider.Context context) {
-         this.position.assign(context.position.x, context.position.y, context.position.z);
-      }
-
-      public void assign(@Nonnull Pattern.Context context) {
-         this.position.assign(context.position.x, context.position.y, context.position.z);
+         this.workerId = context.workerId;
       }
    }
 }

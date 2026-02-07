@@ -16,7 +16,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockSpawnerTable implements JsonAssetWithMap<String, DefaultAssetMap<String, BlockSpawnerTable>> {
-   @Nonnull
    public static final AssetBuilderCodec<String, BlockSpawnerTable> CODEC = AssetBuilderCodec.builder(
          BlockSpawnerTable.class,
          BlockSpawnerTable::new,

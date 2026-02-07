@@ -2,7 +2,7 @@ package com.hypixel.hytale.builtin.crafting.interaction;
 
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.builtin.crafting.state.BenchState;
-import com.hypixel.hytale.builtin.crafting.window.CraftingWindow;
+import com.hypixel.hytale.builtin.crafting.window.BenchWindow;
 import com.hypixel.hytale.builtin.crafting.window.DiagramCraftingWindow;
 import com.hypixel.hytale.builtin.crafting.window.SimpleCraftingWindow;
 import com.hypixel.hytale.builtin.crafting.window.StructuralCraftingWindow;
@@ -30,23 +30,17 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class OpenBenchPageInteraction extends SimpleBlockInteraction {
-   @Nonnull
    public static final OpenBenchPageInteraction SIMPLE_CRAFTING = new OpenBenchPageInteraction(
       "*Simple_Crafting_Default", OpenBenchPageInteraction.PageType.SIMPLE_CRAFTING
    );
-   @Nonnull
    public static final RootInteraction SIMPLE_CRAFTING_ROOT = new RootInteraction(SIMPLE_CRAFTING.getId(), SIMPLE_CRAFTING.getId());
-   @Nonnull
    public static final OpenBenchPageInteraction DIAGRAM_CRAFTING = new OpenBenchPageInteraction(
       "*Diagram_Crafting_Default", OpenBenchPageInteraction.PageType.DIAGRAM_CRAFTING
    );
-   @Nonnull
    public static final RootInteraction DIAGRAM_CRAFTING_ROOT = new RootInteraction(DIAGRAM_CRAFTING.getId(), DIAGRAM_CRAFTING.getId());
-   @Nonnull
    public static final OpenBenchPageInteraction STRUCTURAL_CRAFTING = new OpenBenchPageInteraction(
       "*Structural_Crafting_Default", OpenBenchPageInteraction.PageType.STRUCTURAL_CRAFTING
    );
-   @Nonnull
    public static final RootInteraction STRUCTURAL_CRAFTING_ROOT = new RootInteraction(STRUCTURAL_CRAFTING.getId(), STRUCTURAL_CRAFTING.getId());
    @Nonnull
    public static final BuilderCodec<OpenBenchPageInteraction> CODEC = BuilderCodec.<SimpleBlockInteraction>builder(
@@ -88,18 +82,16 @@ public class OpenBenchPageInteraction extends SimpleBlockInteraction {
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
          CraftingManager craftingManagerComponent = commandBuffer.getComponent(ref, CraftingManager.getComponentType());
-         if (craftingManagerComponent != null && !craftingManagerComponent.hasBenchSet()) {
+         assert craftingManagerComponent != null;
+         if (!craftingManagerComponent.hasBenchSet()) {
             if (world.getState(targetBlock.x, targetBlock.y, targetBlock.z, true) instanceof BenchState benchState) {
-               CraftingWindow benchWindow = switch (this.pageType) {
+               BenchWindow benchWindow = switch (this.pageType) {
                   case SIMPLE_CRAFTING -> new SimpleCraftingWindow(benchState);
                   case DIAGRAM_CRAFTING -> new DiagramCraftingWindow(ref, commandBuffer, benchState);
                   case STRUCTURAL_CRAFTING -> new StructuralCraftingWindow(benchState);
                };
                UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-               if (uuidComponent == null) {
-                  return;
-               }
-
+               assert uuidComponent != null;
                UUID uuid = uuidComponent.getUuid();
                if (benchState.getWindows().putIfAbsent(uuid, benchWindow) == null) {
                   benchWindow.registerCloseEvent(event -> benchState.getWindows().remove(uuid, benchWindow));
@@ -117,7 +109,7 @@ public class OpenBenchPageInteraction extends SimpleBlockInteraction {
    ) {
    }
 
-   public enum PageType {
+   private enum PageType {
       SIMPLE_CRAFTING,
       DIAGRAM_CRAFTING,
       STRUCTURAL_CRAFTING;

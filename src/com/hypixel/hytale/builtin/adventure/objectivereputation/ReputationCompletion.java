@@ -28,10 +28,7 @@ public class ReputationCompletion extends ObjectiveCompletion {
          Player playerComponent = componentAccessor.getComponent(participantReference, Player.getComponentType());
          if (playerComponent != null) {
             UUIDComponent uuidComponent = componentAccessor.getComponent(participantReference, UUIDComponent.getComponentType());
-            if (uuidComponent == null) {
-               return;
-            }
-
+            assert uuidComponent != null;
             String reputationGroupId = asset.getReputationGroupId();
             int amount = asset.getAmount();
             reputationModule.changeReputation(playerComponent, reputationGroupId, amount, componentAccessor);

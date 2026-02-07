@@ -16,7 +16,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class CellValueReturnTypeAsset extends ReturnTypeAsset {
-   @Nonnull
    public static final BuilderCodec<CellValueReturnTypeAsset> CODEC = BuilderCodec.builder(
          CellValueReturnTypeAsset.class, CellValueReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC
       )
@@ -26,14 +25,14 @@ public class CellValueReturnTypeAsset extends ReturnTypeAsset {
       .add()
       .build();
    private DensityAsset densityAsset = new ConstantDensityAsset();
-   private double defaultValue;
+   private double defaultValue = 0.0;
 
    @Nonnull
    @Override
-   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
-      Density densityNode = this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerId));
-      Density cache = new MultiCacheDensity(densityNode, CacheDensityAsset.DEFAULT_CAPACITY);
-      return new CellValueReturnType(cache, this.defaultValue);
+   public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+      Density densityNode = this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer));
+      Density cache = new MultiCacheDensity(densityNode, workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+      return new CellValueReturnType(cache, this.defaultValue, workerIndexer.getWorkerCount());
    }
 
    @Override

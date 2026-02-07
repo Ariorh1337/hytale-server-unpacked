@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.worldgen.loader.util.FileMaskCache;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabStoreRoot;
 import com.hypixel.hytale.server.worldgen.util.LogUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -21,15 +22,15 @@ public class SeedStringResource implements SeedResource {
    @Nonnull
    protected final BlockPlacementMaskRegistry blockMaskRegistry;
    @Nonnull
-   protected WorldGenConfig config;
+   protected Path dataFolder;
    @Nonnull
    protected WorldGenPrefabLoader loader;
    @Nonnull
    protected final Map<String, AtomicInteger> uniqueIds;
 
-   public SeedStringResource(@Nonnull PrefabStoreRoot prefabStore, @Nonnull WorldGenConfig config) {
-      this.config = config;
-      this.loader = new WorldGenPrefabLoader(prefabStore, config);
+   public SeedStringResource(@Nonnull PrefabStoreRoot prefabStore, @Nonnull Path dataFolder) {
+      this.dataFolder = dataFolder;
+      this.loader = new WorldGenPrefabLoader(prefabStore, dataFolder);
       this.biomeMaskRegistry = new FileMaskCache<>();
       this.blockMaskRegistry = new BlockPlacementMaskRegistry();
       this.uniqueIds = new Object2ObjectOpenHashMap<>();
@@ -40,16 +41,22 @@ public class SeedStringResource implements SeedResource {
       return prefix + this.uniqueIds.computeIfAbsent(prefix, k -> new AtomicInteger(0)).getAndIncrement();
    }
 
-   @Nonnull
    public WorldGenPrefabLoader getLoader() {
       return this.loader;
    }
 
-   public void setPrefabConfig(@Nonnull WorldGenConfig config, @Nonnull PrefabStoreRoot prefabStore) {
-      if (config != this.config || prefabStore != this.loader.getStore()) {
-         LogUtil.getLogger().at(Level.INFO).log("Set prefab-loader config: path=%s, store=%s", config.path(), prefabStore.name());
-         this.config = config;
-         this.loader = new WorldGenPrefabLoader(prefabStore, config);
+   public void setPrefabStore(@Nonnull PrefabStoreRoot prefabStore) {
+      if (prefabStore != this.loader.getStore()) {
+         LogUtil.getLogger().at(Level.INFO).log("Set prefab-store to: %s", prefabStore.name());
+         this.loader = new WorldGenPrefabLoader(prefabStore, this.dataFolder);
+      }
+   }
+
+   public void setDataFolder(@Nonnull Path dataFolder) {
+      if (!dataFolder.equals(this.dataFolder)) {
+         LogUtil.getLogger().at(Level.INFO).log("Set data-folder to: %s", dataFolder);
+         this.dataFolder = dataFolder;
+         this.loader = new WorldGenPrefabLoader(this.loader.getStore(), dataFolder);
       }
    }
 

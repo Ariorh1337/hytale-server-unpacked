@@ -21,17 +21,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public abstract class EnvironmentProviderAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, EnvironmentProviderAsset>> {
-   @Nonnull
    public static final AssetCodecMapCodec<String, EnvironmentProviderAsset> CODEC = new AssetCodecMapCodec<>(
       Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
    );
-   @Nonnull
    private static final Map<String, EnvironmentProviderAsset> exportedNodes = new ConcurrentHashMap<>();
-   @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(EnvironmentProviderAsset.class, CODEC);
-   @Nonnull
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
-   @Nonnull
    public static final BuilderCodec<EnvironmentProviderAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(EnvironmentProviderAsset.class)
       .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
       .add()
@@ -83,22 +78,22 @@ public abstract class EnvironmentProviderAsset implements Cleanable, JsonAssetWi
       public SeedBox parentSeed;
       public MaterialCache materialCache;
       public ReferenceBundle referenceBundle;
-      public WorkerIndexer.Id workerId;
+      public WorkerIndexer workerIndexer;
 
       public Argument(
-         @Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId
+         @Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer
       ) {
          this.parentSeed = parentSeed;
          this.materialCache = materialCache;
          this.referenceBundle = referenceBundle;
-         this.workerId = workerId;
+         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull EnvironmentProviderAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.materialCache = argument.materialCache;
          this.referenceBundle = argument.referenceBundle;
-         this.workerId = argument.workerId;
+         this.workerIndexer = argument.workerIndexer;
       }
    }
 }

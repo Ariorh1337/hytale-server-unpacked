@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 
 public class ActionOpenShop extends ActionBase {
-   @Nonnull
    protected final String shopId;
 
    public ActionOpenShop(@Nonnull BuilderActionOpenShop builder, @Nonnull BuilderSupport support) {
@@ -36,15 +35,9 @@ public class ActionOpenShop extends ActionBase {
       }
 
       PlayerRef playerRefComponent = store.getComponent(playerReference, PlayerRef.getComponentType());
-      if (playerRefComponent == null) {
-         return false;
-      }
-
+      assert playerRefComponent != null;
       Player playerComponent = store.getComponent(playerReference, Player.getComponentType());
-      if (playerComponent == null) {
-         return false;
-      }
-
+      assert playerComponent != null;
       playerComponent.getPageManager().openCustomPage(ref, store, new ShopPage(playerRefComponent, this.shopId));
       return true;
    }

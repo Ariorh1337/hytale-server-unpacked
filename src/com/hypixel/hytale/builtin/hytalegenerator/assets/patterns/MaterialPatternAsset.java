@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class MaterialPatternAsset extends PatternAsset {
-   @Nonnull
    public static final BuilderCodec<MaterialPatternAsset> CODEC = BuilderCodec.builder(
          MaterialPatternAsset.class, MaterialPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
@@ -18,7 +17,6 @@ public class MaterialPatternAsset extends PatternAsset {
       .build();
    private MaterialAsset materialAsset = new MaterialAsset();
 
-   @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
       if (super.isSkipped()) {

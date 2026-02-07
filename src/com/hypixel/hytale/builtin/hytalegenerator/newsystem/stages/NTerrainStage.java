@@ -1,7 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages;
 
-import com.hypixel.hytale.builtin.hytalegenerator.Registry;
-import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
+import com.hypixel.hytale.builtin.hytalegenerator.biome.BiomeType;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
@@ -19,7 +18,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.newsystem.containers.FloatCont
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.views.NPixelBufferView;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.views.NVoxelBufferView;
 import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
-import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,35 +30,20 @@ public class NTerrainStage implements NStage {
    public static final double ORIGIN_REACH = 1.0;
    public static final double ORIGIN_REACH_HALF = 0.5;
    public static final double QUARTER_PI = Math.PI / 4;
-   @Nonnull
    public static final Class<NCountedPixelBuffer> biomeBufferClass = NCountedPixelBuffer.class;
-   @Nonnull
-   public static final Class<Integer> biomeClass = Integer.class;
-   @Nonnull
+   public static final Class<BiomeType> biomeClass = BiomeType.class;
    public static final Class<NSimplePixelBuffer> biomeDistanceBufferClass = NSimplePixelBuffer.class;
-   @Nonnull
    public static final Class<NBiomeDistanceStage.BiomeDistanceEntries> biomeDistanceClass = NBiomeDistanceStage.BiomeDistanceEntries.class;
-   @Nonnull
    public static final Class<NVoxelBuffer> materialBufferClass = NVoxelBuffer.class;
-   @Nonnull
    public static final Class<Material> materialClass = Material.class;
-   @Nonnull
    private final NParametrizedBufferType biomeInputBufferType;
-   @Nonnull
    private final NParametrizedBufferType biomeDistanceInputBufferType;
-   @Nonnull
    private final NParametrizedBufferType materialOutputBufferType;
-   @Nonnull
    private final Bounds3i inputBounds_bufferGrid;
-   @Nonnull
    private final String stageName;
    private final int maxInterpolationRadius_voxelGrid;
-   @Nonnull
    private final MaterialCache materialCache;
-   @Nonnull
    private final WorkerIndexer.Data<FloatContainer3d> densityContainers;
-   @Nonnull
-   private final WorkerIndexer.Data<WorldStructure> worldStructure_workerdata;
 
    public NTerrainStage(
       @Nonnull String stageName,
@@ -69,14 +52,12 @@ public class NTerrainStage implements NStage {
       @Nonnull NParametrizedBufferType materialOutputBufferType,
       int maxInterpolationRadius_voxelGrid,
       @Nonnull MaterialCache materialCache,
-      @Nonnull WorkerIndexer workerIndexer,
-      @Nonnull WorkerIndexer.Data<WorldStructure> worldStructure_workerdata
+      @Nonnull WorkerIndexer workerIndexer
    ) {
       assert biomeInputBufferType.isValidType(biomeBufferClass, biomeClass);
       assert biomeDistanceInputBufferType.isValidType(biomeDistanceBufferClass, biomeDistanceClass);
       assert materialOutputBufferType.isValidType(materialBufferClass, materialClass);
       assert maxInterpolationRadius_voxelGrid >= 0;
-      this.worldStructure_workerdata = worldStructure_workerdata;
       this.biomeInputBufferType = biomeInputBufferType;
       this.biomeDistanceInputBufferType = biomeDistanceInputBufferType;
       this.materialOutputBufferType = materialOutputBufferType;
@@ -95,7 +76,7 @@ public class NTerrainStage implements NStage {
    @Override
    public void run(@Nonnull NStage.Context context) {
       NBufferBundle.Access.View biomeAccess = context.bufferAccess.get(this.biomeInputBufferType);
-      NPixelBufferView<Integer> biomeSpace = new NPixelBufferView<>(biomeAccess, biomeClass);
+      NPixelBufferView<BiomeType> biomeSpace = new NPixelBufferView<>(biomeAccess, biomeClass);
       NBufferBundle.Access.View biomeDistanceAccess = context.bufferAccess.get(this.biomeDistanceInputBufferType);
       NPixelBufferView<NBiomeDistanceStage.BiomeDistanceEntries> biomeDistanceSpace = new NPixelBufferView<>(biomeDistanceAccess, biomeDistanceClass);
       NBufferBundle.Access.View materialAccess = context.bufferAccess.get(this.materialOutputBufferType);
@@ -103,9 +84,8 @@ public class NTerrainStage implements NStage {
       Bounds3i outputBounds_voxelGrid = materialSpace.getBounds();
       FloatContainer3d densityContainer = this.densityContainers.get(context.workerId);
       densityContainer.moveMinTo(outputBounds_voxelGrid.min);
-      Registry<Biome> biomeRegistry = this.worldStructure_workerdata.get(context.workerId).getBiomeRegistry();
-      this.generateDensity(densityContainer, biomeSpace, biomeDistanceSpace, biomeRegistry);
-      this.generateMaterials(biomeSpace, biomeDistanceSpace, densityContainer, materialSpace, biomeRegistry);
+      this.generateDensity(densityContainer, biomeSpace, biomeDistanceSpace, context.workerId);
+      this.generateMaterials(biomeSpace, biomeDistanceSpace, densityContainer, materialSpace, context.workerId);
    }
 
    @Nonnull
@@ -131,14 +111,15 @@ public class NTerrainStage implements NStage {
 
    private void generateDensity(
       @Nonnull FloatContainer3d densityBuffer,
-      @Nonnull NPixelBufferView<Integer> biomeSpace,
+      @Nonnull NPixelBufferView<BiomeType> biomeSpace,
       @Nonnull NPixelBufferView<NBiomeDistanceStage.BiomeDistanceEntries> distanceSpace,
-      @Nonnull Registry<Biome> biomeRegistry
+      @Nonnull WorkerIndexer.Id workerId
    ) {
       Bounds3i bounds_voxelGrid = densityBuffer.getBounds_voxelGrid();
       Vector3i position_voxelGrid = new Vector3i(bounds_voxelGrid.min);
       Density.Context densityContext = new Density.Context();
       densityContext.position = position_voxelGrid.toVector3d();
+      densityContext.workerId = workerId;
 
       for (position_voxelGrid.x = bounds_voxelGrid.min.x; position_voxelGrid.x < bounds_voxelGrid.max.x; position_voxelGrid.x++) {
          densityContext.position.x = position_voxelGrid.x;
@@ -147,18 +128,14 @@ public class NTerrainStage implements NStage {
             densityContext.position.z = position_voxelGrid.z;
             position_voxelGrid.y = 0;
             position_voxelGrid.dropHash();
-            Integer biomeIdAtOrigin = biomeSpace.getContent(position_voxelGrid);
-            assert biomeIdAtOrigin != null;
-            Biome biomeAtOrigin = biomeRegistry.getObject(biomeIdAtOrigin);
-            assert biomeAtOrigin != null;
+            BiomeType biomeAtOrigin = biomeSpace.getContent(position_voxelGrid);
             NBiomeDistanceStage.BiomeDistanceEntries biomeDistances = distanceSpace.getContent(position_voxelGrid);
-            NTerrainStage.BiomeWeights biomeWeights = createWeights(biomeDistances, biomeIdAtOrigin, this.maxInterpolationRadius_voxelGrid);
-            densityContext.distanceToBiomeEdge = biomeDistances.distanceToClosestOtherBiome(biomeIdAtOrigin);
+            NTerrainStage.BiomeWeights biomeWeights = createWeights(biomeDistances, biomeAtOrigin, this.maxInterpolationRadius_voxelGrid);
+            densityContext.distanceToBiomeEdge = biomeDistances.distanceToClosestOtherBiome(biomeAtOrigin);
             boolean isFirstBiome = true;
 
             for (NTerrainStage.BiomeWeights.Entry biomeWeight : biomeWeights.entries) {
-               Biome biome = biomeRegistry.getObject(biomeWeight.biomeId);
-               Density density = biome.getTerrainDensity();
+               Density density = biomeWeight.biomeType.getTerrainDensity();
                if (isFirstBiome) {
                   for (position_voxelGrid.y = bounds_voxelGrid.min.y; position_voxelGrid.y < bounds_voxelGrid.max.y; position_voxelGrid.y++) {
                      position_voxelGrid.dropHash();
@@ -189,20 +166,20 @@ public class NTerrainStage implements NStage {
    private float getOrGenerateDensity(
       @Nonnull Vector3i position_voxelGrid,
       @Nonnull FloatContainer3d densityBuffer,
-      @Nonnull NPixelBufferView<Integer> biomeSpace,
+      @Nonnull NPixelBufferView<BiomeType> biomeSpace,
       @Nonnull NPixelBufferView<NBiomeDistanceStage.BiomeDistanceEntries> distanceSpace,
-      @Nonnull Registry<Biome> biomeRegistry
+      @Nonnull WorkerIndexer.Id workerId
    ) {
       return densityBuffer.getBounds_voxelGrid().contains(position_voxelGrid)
          ? densityBuffer.get(position_voxelGrid)
-         : this.generateDensity(position_voxelGrid, biomeSpace, distanceSpace, biomeRegistry);
+         : this.generateDensity(position_voxelGrid, biomeSpace, distanceSpace, workerId);
    }
 
    private float generateDensity(
       @Nonnull Vector3i position_voxelGrid,
-      @Nonnull NPixelBufferView<Integer> biomeSpace,
+      @Nonnull NPixelBufferView<BiomeType> biomeSpace,
       @Nonnull NPixelBufferView<NBiomeDistanceStage.BiomeDistanceEntries> distanceSpace,
-      @Nonnull Registry<Biome> biomeRegistry
+      @Nonnull WorkerIndexer.Id workerId
    ) {
       if (!distanceSpace.isInsideSpace(position_voxelGrid.x, 0, position_voxelGrid.z)) {
          return 0.0F;
@@ -210,15 +187,14 @@ public class NTerrainStage implements NStage {
 
       Density.Context densityContext = new Density.Context();
       densityContext.position = position_voxelGrid.toVector3d();
-      Integer biomeIdAtOrigin = biomeSpace.getContent(position_voxelGrid.x, 0, position_voxelGrid.z);
-      assert biomeIdAtOrigin != null;
+      densityContext.workerId = workerId;
+      BiomeType biomeAtOrigin = biomeSpace.getContent(position_voxelGrid.x, 0, position_voxelGrid.z);
       NBiomeDistanceStage.BiomeDistanceEntries biomeDistances = distanceSpace.getContent(position_voxelGrid.x, 0, position_voxelGrid.z);
-      NTerrainStage.BiomeWeights biomeWeights = createWeights(biomeDistances, biomeIdAtOrigin, this.maxInterpolationRadius_voxelGrid);
+      NTerrainStage.BiomeWeights biomeWeights = createWeights(biomeDistances, biomeAtOrigin, this.maxInterpolationRadius_voxelGrid);
       float densityResult = 0.0F;
 
       for (NTerrainStage.BiomeWeights.Entry biomeWeight : biomeWeights.entries) {
-         Biome biome = biomeRegistry.getObject(biomeWeight.biomeId);
-         Density density = biome.getTerrainDensity();
+         Density density = biomeWeight.biomeType.getTerrainDensity();
          float densityValue = (float)density.process(densityContext);
          float scaledDensityValue = densityValue * biomeWeight.weight;
          densityResult += scaledDensityValue;
@@ -228,42 +204,43 @@ public class NTerrainStage implements NStage {
    }
 
    private void generateMaterials(
-      @Nonnull NPixelBufferView<Integer> biomeSpace,
+      @Nonnull NPixelBufferView<BiomeType> biomeSpace,
       @Nonnull NPixelBufferView<NBiomeDistanceStage.BiomeDistanceEntries> distanceSpace,
       @Nonnull FloatContainer3d densityBuffer,
       @Nonnull NVoxelBufferView<Material> materialSpace,
-      @Nonnull Registry<Biome> biomeRegistry
+      @Nonnull WorkerIndexer.Id workerId
    ) {
       Bounds3i bounds_voxelGrid = materialSpace.getBounds();
-      MaterialProvider.Context context = new MaterialProvider.Context(
-         new Vector3i(), 0.0, 0, 0, 0, 0, position -> this.getOrGenerateDensity(position, densityBuffer, biomeSpace, distanceSpace, biomeRegistry), 0.0
-      );
-      NTerrainStage.ColumnData columnData = new NTerrainStage.ColumnData(bounds_voxelGrid.min.y, bounds_voxelGrid.max.y, densityBuffer);
       Vector3i position_voxelGrid = new Vector3i();
 
       for (position_voxelGrid.x = bounds_voxelGrid.min.x; position_voxelGrid.x < bounds_voxelGrid.max.x; position_voxelGrid.x++) {
          for (position_voxelGrid.z = bounds_voxelGrid.min.z; position_voxelGrid.z < bounds_voxelGrid.max.z; position_voxelGrid.z++) {
             position_voxelGrid.y = bounds_voxelGrid.min.y;
-            Integer biomeId = biomeSpace.getContent(position_voxelGrid.x, 0, position_voxelGrid.z);
-            Biome biome = biomeRegistry.getObject(biomeId);
+            BiomeType biome = biomeSpace.getContent(position_voxelGrid.x, 0, position_voxelGrid.z);
             MaterialProvider<Material> materialProvider = biome.getMaterialProvider();
-            columnData.resolve(position_voxelGrid.x, position_voxelGrid.z, materialProvider);
-            double distanceToOtherBiome_voxelGrid = distanceSpace.getContent(position_voxelGrid).distanceToClosestOtherBiome(biomeId);
+            NTerrainStage.ColumnData columnData = new NTerrainStage.ColumnData(
+               bounds_voxelGrid.min.y, bounds_voxelGrid.max.y, position_voxelGrid.x, position_voxelGrid.z, densityBuffer, materialProvider
+            );
+            double distanceToOtherBiome_voxelGrid = distanceSpace.getContent(position_voxelGrid).distanceToClosestOtherBiome(biome);
 
             for (position_voxelGrid.y = bounds_voxelGrid.min.y; position_voxelGrid.y < bounds_voxelGrid.max.y; position_voxelGrid.y++) {
                int i = position_voxelGrid.y - bounds_voxelGrid.min.y;
-               context.position.assign(position_voxelGrid);
-               context.density = densityBuffer.get(position_voxelGrid);
-               context.depthIntoFloor = columnData.depthIntoFloor[i];
-               context.depthIntoCeiling = columnData.depthIntoCeiling[i];
-               context.spaceAboveFloor = columnData.spaceAboveFloor[i];
-               context.spaceBelowCeiling = columnData.spaceBelowCeiling[i];
-               context.distanceToBiomeEdge = distanceToOtherBiome_voxelGrid;
+               MaterialProvider.Context context = new MaterialProvider.Context(
+                  position_voxelGrid,
+                  0.0,
+                  columnData.depthIntoFloor[i],
+                  columnData.depthIntoCeiling[i],
+                  columnData.spaceAboveFloor[i],
+                  columnData.spaceBelowCeiling[i],
+                  workerId,
+                  (position, id) -> this.getOrGenerateDensity(position, densityBuffer, biomeSpace, distanceSpace, workerId),
+                  distanceToOtherBiome_voxelGrid
+               );
                Material material = columnData.materialProvider.getVoxelTypeAt(context);
                if (material != null) {
-                  materialSpace.set(material, position_voxelGrid);
+                  materialSpace.set(material, position_voxelGrid.x, position_voxelGrid.y, position_voxelGrid.z);
                } else {
-                  materialSpace.set(this.materialCache.EMPTY, position_voxelGrid);
+                  materialSpace.set(this.materialCache.EMPTY, position_voxelGrid.x, position_voxelGrid.y, position_voxelGrid.z);
                }
             }
          }
@@ -272,7 +249,7 @@ public class NTerrainStage implements NStage {
 
    @Nonnull
    private static NTerrainStage.BiomeWeights createWeights(
-      @Nonnull NBiomeDistanceStage.BiomeDistanceEntries distances, int biomeIdAtOrigin, double interpolationRange
+      @Nonnull NBiomeDistanceStage.BiomeDistanceEntries distances, @Nonnull BiomeType biomeAtOrigin, double interpolationRange
    ) {
       double circleRadius = interpolationRange + 0.5;
       NTerrainStage.BiomeWeights biomeWeights = new NTerrainStage.BiomeWeights();
@@ -284,13 +261,13 @@ public class NTerrainStage implements NStage {
          NBiomeDistanceStage.BiomeDistanceEntry distanceEntry = distances.entries.get(i);
          NTerrainStage.BiomeWeights.Entry weightEntry = new NTerrainStage.BiomeWeights.Entry();
          if (!(distanceEntry.distance_voxelGrid >= interpolationRange)) {
-            if (distanceEntry.biomeId == biomeIdAtOrigin) {
+            if (distanceEntry.biomeType == biomeAtOrigin) {
                originIndex = biomeWeights.entries.size();
             } else if (distanceEntry.distance_voxelGrid < smallestNonOriginDistance) {
                smallestNonOriginDistance = distanceEntry.distance_voxelGrid;
             }
 
-            weightEntry.biomeId = distanceEntry.biomeId;
+            weightEntry.biomeType = distanceEntry.biomeType;
             weightEntry.weight = (float)areaUnderCircleCurve(distanceEntry.distance_voxelGrid, circleRadius, circleRadius);
             biomeWeights.entries.add(weightEntry);
             total += weightEntry.weight;
@@ -335,7 +312,7 @@ public class NTerrainStage implements NStage {
       }
 
       static class Entry {
-         int biomeId;
+         BiomeType biomeType;
          float weight;
       }
    }
@@ -354,32 +331,31 @@ public class NTerrainStage implements NStage {
       int top;
       FloatContainer3d densityBuffer;
 
-      ColumnData(int bottom, int topExclusive, @Nonnull FloatContainer3d densityBuffer) {
+      private ColumnData(
+         int bottom, int topExclusive, int worldX, int worldZ, @Nonnull FloatContainer3d densityBuffer, @Nonnull MaterialProvider<Material> materialProvider
+      ) {
          this.topExclusive = topExclusive;
          this.bottom = bottom;
-         this.densityBuffer = densityBuffer;
-      }
-
-      void resolve(int worldX, int worldZ, @Nonnull MaterialProvider<Material> materialProvider) {
          this.worldX = worldX;
          this.worldZ = worldZ;
-         this.arrayLength = this.topExclusive - this.bottom;
+         this.arrayLength = topExclusive - bottom;
          this.depthIntoFloor = new int[this.arrayLength];
          this.spaceBelowCeiling = new int[this.arrayLength];
          this.depthIntoCeiling = new int[this.arrayLength];
          this.spaceAboveFloor = new int[this.arrayLength];
-         this.top = this.topExclusive - 1;
+         this.top = topExclusive - 1;
+         this.densityBuffer = densityBuffer;
          this.materialProvider = materialProvider;
          Vector3i position = new Vector3i(worldX, 0, worldZ);
          Vector3i positionAbove = new Vector3i(worldX, 0, worldZ);
          Vector3i positionBelow = new Vector3i(worldX, 0, worldZ);
 
-         for (int y = this.top; y >= this.bottom; y--) {
+         for (int y = this.top; y >= bottom; y--) {
             position.y = y;
             positionAbove.y = y + 1;
             positionBelow.y = y - 1;
-            int i = y - this.bottom;
-            float density = this.densityBuffer.get(position);
+            int i = y - bottom;
+            float density = densityBuffer.get(position);
             boolean solidity = density > 0.0;
             if (y == this.top) {
                if (solidity) {
@@ -394,7 +370,7 @@ public class NTerrainStage implements NStage {
                this.spaceAboveFloor[i] = this.spaceAboveFloor[i + 1];
             } else {
                this.depthIntoFloor[i] = 0;
-               if (this.densityBuffer.get(positionAbove) > 0.0) {
+               if (densityBuffer.get(positionAbove) > 0.0) {
                   this.spaceAboveFloor[i] = 0;
                } else {
                   this.spaceAboveFloor[i] = this.spaceAboveFloor[i + 1] + 1;
@@ -402,11 +378,11 @@ public class NTerrainStage implements NStage {
             }
          }
 
-         for (int y = this.bottom; y <= this.top; y++) {
-            int i = y - this.bottom;
-            double density = this.densityBuffer.get(position);
+         for (int y = bottom; y <= this.top; y++) {
+            int i = y - bottom;
+            double density = densityBuffer.get(position);
             boolean solidity = density > 0.0;
-            if (y == this.bottom) {
+            if (y == bottom) {
                if (solidity) {
                   this.depthIntoCeiling[i] = 1;
                } else {
@@ -419,7 +395,7 @@ public class NTerrainStage implements NStage {
                this.spaceBelowCeiling[i] = this.spaceBelowCeiling[i - 1];
             } else {
                this.depthIntoCeiling[i] = 0;
-               if (this.densityBuffer.get(positionBelow) > 0.0) {
+               if (densityBuffer.get(positionBelow) > 0.0) {
                   this.spaceBelowCeiling[i] = 0;
                } else {
                   this.spaceBelowCeiling[i] = this.spaceBelowCeiling[i - 1] + 1;

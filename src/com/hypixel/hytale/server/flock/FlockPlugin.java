@@ -108,7 +108,6 @@ public class FlockPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new PositionCacheSystems.OnFlockJoinSystem(NPCEntity.getComponentType(), this.flockMembershipComponentType));
       entityStoreRegistry.registerSystem(new FlockDeathSystems.EntityDeath());
       entityStoreRegistry.registerSystem(new FlockDeathSystems.PlayerDeath());
-      entityStoreRegistry.registerSystem(new FlockMembershipSystems.FilterPlayerFlockDamageSystem());
       entityStoreRegistry.registerSystem(new FlockMembershipSystems.OnDamageReceived());
       entityStoreRegistry.registerSystem(new FlockMembershipSystems.OnDamageDealt());
       entityStoreRegistry.registerSystem(new FlockMembershipSystems.NPCAddedFromWorldGen());
@@ -178,7 +177,7 @@ public class FlockPlugin extends JavaPlugin {
       int flockSize,
       FlockAsset flockDefinition,
       TriConsumer<NPCEntity, Holder<EntityStore>, Store<EntityStore>> preAddToWorld,
-      @Nullable TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn,
+      TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn,
       @Nonnull Store<EntityStore> store
    ) {
       if (flockSize > 1 && npcRef.isValid()) {

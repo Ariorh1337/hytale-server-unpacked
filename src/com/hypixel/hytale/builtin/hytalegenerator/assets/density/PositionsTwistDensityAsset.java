@@ -15,7 +15,6 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class PositionsTwistDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<PositionsTwistDensityAsset> CODEC = BuilderCodec.builder(
          PositionsTwistDensityAsset.class, PositionsTwistDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
@@ -38,9 +37,9 @@ public class PositionsTwistDensityAsset extends DensityAsset {
    private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
    private CurveAsset pinchCurveAsset = new ConstantCurveAsset();
    private Vector3d twistAxis = new Vector3d();
-   private double maxDistance;
-   private boolean normalizeDistance;
-   private boolean zeroPositionsY;
+   private double maxDistance = 0.0;
+   private boolean normalizeDistance = false;
+   private boolean zeroPositionsY = false;
 
    @Nonnull
    @Override
@@ -49,7 +48,7 @@ public class PositionsTwistDensityAsset extends DensityAsset {
          ? new ConstantValueDensity(0.0)
          : new PositionsTwistDensity(
             this.buildFirstInput(argument),
-            this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId)),
+            this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer)),
             this.pinchCurveAsset.build(),
             this.twistAxis,
             this.maxDistance,

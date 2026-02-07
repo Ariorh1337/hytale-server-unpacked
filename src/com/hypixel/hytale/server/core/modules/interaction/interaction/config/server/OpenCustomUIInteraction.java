@@ -177,19 +177,18 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
 
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
-         WorldChunk worldChunkComponent = world.getChunkIfInMemory(chunkIndex);
-         if (worldChunkComponent == null) {
+         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+         if (chunk == null) {
             return null;
          }
 
          BlockPosition targetBaseBlock = world.getBaseBlock(targetBlock);
-         BlockComponentChunk blockComponentChunk = worldChunkComponent.getBlockComponentChunk();
+         BlockComponentChunk blockComponentChunk = chunk.getBlockComponentChunk();
          int index = ChunkUtil.indexBlockInColumn(targetBaseBlock.x, targetBaseBlock.y, targetBaseBlock.z);
          Ref<ChunkStore> blockEntityRef = blockComponentChunk.getEntityReference(index);
-         if (blockEntityRef == null || !blockEntityRef.isValid()) {
+         if (blockEntityRef == null) {
             Holder<ChunkStore> holder = creator.get();
-            holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, worldChunkComponent.getReference()));
+            holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, chunk.getReference()));
             blockEntityRef = world.getChunkStore().getStore().addEntity(holder, AddReason.SPAWN);
          }
 
@@ -200,19 +199,17 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
 
    @FunctionalInterface
    public interface BlockCustomPageSupplier<T extends BlockState> {
-      CustomUIPage tryCreate(@Nonnull PlayerRef var1, @Nonnull T var2);
+      CustomUIPage tryCreate(PlayerRef var1, T var2);
    }
 
    @FunctionalInterface
    public interface BlockEntityCustomPageSupplier {
-      CustomUIPage tryCreate(@Nonnull PlayerRef var1, @Nonnull Ref<ChunkStore> var2);
+      CustomUIPage tryCreate(PlayerRef var1, Ref<ChunkStore> var2);
    }
 
    @FunctionalInterface
    public interface CustomPageSupplier {
       @Nullable
-      CustomUIPage tryCreate(
-         @Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2, @Nonnull PlayerRef var3, @Nonnull InteractionContext var4
-      );
+      CustomUIPage tryCreate(Ref<EntityStore> var1, ComponentAccessor<EntityStore> var2, PlayerRef var3, InteractionContext var4);
    }
 }

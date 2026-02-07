@@ -29,6 +29,7 @@ public class FieldFunctionAssignments extends Assignments {
 
       Density.Context context = new Density.Context();
       context.position = position;
+      context.workerId = id;
       context.distanceToBiomeEdge = distanceTOBiomeEdge;
       double fieldValue = this.density.process(context);
 

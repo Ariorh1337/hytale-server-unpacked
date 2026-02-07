@@ -13,7 +13,6 @@ import java.util.EnumSet;
 import javax.annotation.Nonnull;
 
 public class BuilderActionOpenShop extends BuilderActionBase {
-   @Nonnull
    protected final AssetHolder shopId = new AssetHolder();
 
    @Nonnull

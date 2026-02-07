@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.hypixel.hytale.server.core.util.message.MessageFormat;
 import javax.annotation.Nonnull;
 
 public class LANDiscoveryCommand extends CommandBase {
@@ -31,7 +32,7 @@ public class LANDiscoveryCommand extends CommandBase {
             context.sendMessage(MESSAGE_IO_LAN_DISCOVERY_DISABLED);
          }
       } else {
-         Boolean enabled = this.enabledArg.get(context);
+         boolean enabled = this.enabledArg.get(context);
          LANDiscoveryPlugin plugin = LANDiscoveryPlugin.get();
          if (!enabled && plugin.getLanDiscoveryThread() != null) {
             plugin.setLANDiscoveryEnabled(false);
@@ -40,7 +41,7 @@ public class LANDiscoveryCommand extends CommandBase {
             plugin.setLANDiscoveryEnabled(true);
             context.sendMessage(MESSAGE_IO_LAN_DISCOVERY_ENABLED);
          } else {
-            context.sendMessage(Message.translation("server.io.landiscovery.alreadyToggled").param("enabled", enabled.toString()));
+            context.sendMessage(Message.translation("server.io.landiscovery.alreadyToggled").param("status", MessageFormat.enabled(enabled)));
          }
       }
    }

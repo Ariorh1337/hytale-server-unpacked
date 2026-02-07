@@ -16,9 +16,7 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import javax.annotation.Nonnull;
 
 public class FieldFunctionPositionProviderAsset extends PositionProviderAsset {
-   @Nonnull
    private static final FieldFunctionPositionProviderAsset.DelimiterAsset[] EMPTY_DELIMITER_ASSETS = new FieldFunctionPositionProviderAsset.DelimiterAsset[0];
-   @Nonnull
    public static final BuilderCodec<FieldFunctionPositionProviderAsset> CODEC = BuilderCodec.builder(
          FieldFunctionPositionProviderAsset.class, FieldFunctionPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
@@ -50,9 +48,9 @@ public class FieldFunctionPositionProviderAsset extends PositionProviderAsset {
          return PositionProvider.noPositionProvider();
       }
 
-      Density density = this.densityAsset.build(DensityAsset.from(argument));
+      Density functionTree = this.densityAsset.build(DensityAsset.from(argument));
       PositionProvider positionProvider = this.positionProviderAsset.build(argument);
-      FieldFunctionPositionProvider out = new FieldFunctionPositionProvider(density, positionProvider);
+      FieldFunctionPositionProvider out = new FieldFunctionPositionProvider(functionTree, positionProvider);
 
       for (FieldFunctionPositionProviderAsset.DelimiterAsset asset : this.delimiterAssets) {
          out.addDelimiter(asset.min, asset.max);
@@ -68,7 +66,6 @@ public class FieldFunctionPositionProviderAsset extends PositionProviderAsset {
    }
 
    public static class DelimiterAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, FieldFunctionPositionProviderAsset.DelimiterAsset>> {
-      @Nonnull
       public static final AssetBuilderCodec<String, FieldFunctionPositionProviderAsset.DelimiterAsset> CODEC = AssetBuilderCodec.builder(
             FieldFunctionPositionProviderAsset.DelimiterAsset.class,
             FieldFunctionPositionProviderAsset.DelimiterAsset::new,

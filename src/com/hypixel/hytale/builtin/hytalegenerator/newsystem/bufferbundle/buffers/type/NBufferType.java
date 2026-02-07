@@ -5,12 +5,9 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 
 public class NBufferType {
-   @Nonnull
    public final Class bufferClass;
    public final int index;
-   @Nonnull
    public final Supplier<NBuffer> bufferSupplier;
-   @Nonnull
    public final String name;
 
    public NBufferType(@Nonnull String name, int index, @Nonnull Class bufferClass, @Nonnull Supplier<NBuffer> bufferSupplier) {

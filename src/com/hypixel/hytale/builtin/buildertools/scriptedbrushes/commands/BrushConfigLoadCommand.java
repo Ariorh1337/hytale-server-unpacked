@@ -27,7 +27,7 @@ public class BrushConfigLoadCommand extends AbstractPlayerCommand {
    );
 
    public BrushConfigLoadCommand() {
-      super("load", "server.commands.scriptedbrushes.load.desc");
+      super("load", "Load a scripted brush by name, or open the brush picker UI if no name is provided");
       this.addUsageVariant(new BrushConfigLoadCommand.LoadByNameCommand());
    }
 
@@ -55,14 +55,14 @@ public class BrushConfigLoadCommand extends AbstractPlayerCommand {
       @Nonnull
       private final RequiredArg<ScriptedBrushAsset> brushNameArg = this.withRequiredArg(
          "brushName",
-         "server.commands.scriptedbrushes.load.brushName.desc",
+         "The name of the scripted brush asset to load",
          new AssetArgumentType(
             "server.commands.parsing.argtype.asset.scriptedbrush.name", ScriptedBrushAsset.class, "server.commands.parsing.argtype.asset.scriptedbrush.usage"
          )
       );
 
       public LoadByNameCommand() {
-         super("server.commands.scriptedbrushes.load.byName.desc");
+         super("Load a scripted brush by name");
       }
 
       @Override

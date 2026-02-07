@@ -15,7 +15,6 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class PlayerMemories implements Component<EntityStore> {
-   @Nonnull
    public static final BuilderCodec<PlayerMemories> CODEC = BuilderCodec.builder(PlayerMemories.class, PlayerMemories::new)
       .append(
          new KeyedCodec<>("Capacity", Codec.INTEGER),
@@ -30,7 +29,6 @@ public class PlayerMemories implements Component<EntityStore> {
       }, playerMemories -> playerMemories.memories.toArray(Memory[]::new))
       .add()
       .build();
-   @Nonnull
    private final Set<Memory> memories = new LinkedHashSet<>();
    private int memoriesCapacity;
 

@@ -23,7 +23,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CanBreakRespawnPointInteraction extends SimpleBlockInteraction {
-   @Nonnull
    public static final BuilderCodec<CanBreakRespawnPointInteraction> CODEC = BuilderCodec.builder(
          CanBreakRespawnPointInteraction.class, CanBreakRespawnPointInteraction::new, SimpleBlockInteraction.CODEC
       )

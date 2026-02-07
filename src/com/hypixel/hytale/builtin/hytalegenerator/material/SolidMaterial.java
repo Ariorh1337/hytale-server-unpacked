@@ -7,7 +7,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class SolidMaterial {
-   @Nonnull
    private final MaterialCache materialCache;
    public final int blockId;
    public final int support;
@@ -46,7 +45,6 @@ public class SolidMaterial {
       return Objects.hash(blockId, support, rotation, filler, holder);
    }
 
-   @Nonnull
    @Override
    public String toString() {
       return "SolidMaterial{materialCache="

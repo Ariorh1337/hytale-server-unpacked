@@ -10,17 +10,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class AmbienceClearCommand extends AbstractWorldCommand {
-   @Nonnull
-   private static final Message MESSAGE_SERVER_COMMANDS_AMBIENCE_CLEAR_SUCCESS = Message.translation("server.commands.ambience.clear.success");
-
    public AmbienceClearCommand() {
       super("clear", "server.commands.ambience.clear.desc");
    }
 
    @Override
    protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
-      AmbienceResource ambienceResource = store.getResource(AmbienceResource.getResourceType());
-      ambienceResource.setForcedMusicAmbience(null);
-      context.sendMessage(MESSAGE_SERVER_COMMANDS_AMBIENCE_CLEAR_SUCCESS);
+      AmbienceResource resource = store.getResource(AmbienceResource.getResourceType());
+      resource.setForcedMusicAmbience(null);
+      context.sendMessage(Message.translation("server.commands.ambience.clear.success"));
    }
 }

@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import javax.annotation.Nonnull;
 
 public class UnionPositionProviderAsset extends PositionProviderAsset {
-   @Nonnull
    public static final BuilderCodec<UnionPositionProviderAsset> CODEC = BuilderCodec.builder(
          UnionPositionProviderAsset.class, UnionPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )

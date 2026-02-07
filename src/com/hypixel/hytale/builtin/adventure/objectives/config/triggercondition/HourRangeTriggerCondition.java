@@ -12,7 +12,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class HourRangeTriggerCondition extends ObjectiveLocationTriggerCondition {
-   @Nonnull
    public static final BuilderCodec<HourRangeTriggerCondition> CODEC = BuilderCodec.builder(HourRangeTriggerCondition.class, HourRangeTriggerCondition::new)
       .append(
          new KeyedCodec<>("MinHour", Codec.INTEGER),
@@ -27,7 +26,6 @@ public class HourRangeTriggerCondition extends ObjectiveLocationTriggerCondition
       )
       .add()
       .build();
-   @Nonnull
    protected static final ResourceType<EntityStore, WorldTimeResource> WORLD_TIME_RESOURCE_RESOURCE_TYPE = WorldTimeResource.getResourceType();
    protected int minHour;
    protected int maxHour;

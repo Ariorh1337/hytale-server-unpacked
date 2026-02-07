@@ -10,7 +10,6 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 
 public class SpawnEntityTransactionRecord extends TransactionRecord {
-   @Nonnull
    public static final BuilderCodec<SpawnEntityTransactionRecord> CODEC = BuilderCodec.builder(
          SpawnEntityTransactionRecord.class, SpawnEntityTransactionRecord::new, BASE_CODEC
       )

@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class ShopPageSupplier implements OpenCustomUIInteraction.CustomPageSupplier {
-   @Nonnull
    public static final BuilderCodec<ShopPageSupplier> CODEC = BuilderCodec.builder(ShopPageSupplier.class, ShopPageSupplier::new)
       .appendInherited(
          new KeyedCodec<>("ShopId", Codec.STRING), (data, o) -> data.shopId = o, data -> data.shopId, (data, parent) -> data.shopId = parent.shopId
@@ -25,10 +24,7 @@ public class ShopPageSupplier implements OpenCustomUIInteraction.CustomPageSuppl
    @Nonnull
    @Override
    public CustomUIPage tryCreate(
-      @Nonnull Ref<EntityStore> ref,
-      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
-      @Nonnull PlayerRef playerRef,
-      @Nonnull InteractionContext context
+      Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor, @Nonnull PlayerRef playerRef, InteractionContext context
    ) {
       return new ShopPage(playerRef, this.shopId);
    }

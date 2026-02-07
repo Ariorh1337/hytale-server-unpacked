@@ -35,14 +35,14 @@ public class HubCommand extends AbstractPlayerCommand {
    protected void execute(
       @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
    ) {
-      World parentWorld = findParentHubWorld(store, ref);
+      World parentWorld = this.findParentHubWorld(store, ref);
       if (parentWorld == null) {
          playerRef.sendMessage(MESSAGE_NOT_IN_HUB_WORLD);
       } else {
          CreativeHubWorldConfig hubConfig = CreativeHubWorldConfig.get(parentWorld.getWorldConfig());
          if (hubConfig != null && hubConfig.getStartupInstance() != null) {
             World currentHub = CreativeHubPlugin.get().getActiveHubInstance(parentWorld);
-            if (world.equals(currentHub)) {
+            if (currentHub != null && world.equals(currentHub)) {
                playerRef.sendMessage(MESSAGE_ALREADY_IN_HUB);
             } else {
                ISpawnProvider spawnProvider = parentWorld.getWorldConfig().getSpawnProvider();
@@ -57,7 +57,7 @@ public class HubCommand extends AbstractPlayerCommand {
    }
 
    @Nullable
-   private static World findParentHubWorld(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
+   private World findParentHubWorld(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
       CreativeHubEntityConfig hubEntityConfig = store.getComponent(ref, CreativeHubEntityConfig.getComponentType());
       if (hubEntityConfig != null && hubEntityConfig.getParentHubWorldUuid() != null) {
          World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());

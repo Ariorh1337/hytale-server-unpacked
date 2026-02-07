@@ -92,13 +92,6 @@ public class EntityStatType
          (entityStatType, parent) -> entityStatType.ignoreInvulnerability = parent.ignoreInvulnerability
       )
       .add()
-      .appendInherited(
-         new KeyedCodec<>("HideFromTooltip", Codec.BOOLEAN),
-         (entityStatType, aBoolean) -> entityStatType.hideFromTooltip = aBoolean,
-         entityStatType -> entityStatType.hideFromTooltip,
-         (entityStatType, parent) -> entityStatType.hideFromTooltip = parent.hideFromTooltip
-      )
-      .add()
       .build();
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(EntityStatType::getAssetStore));
    private static AssetStore<String, EntityStatType, IndexedLookupTableAssetMap<String, EntityStatType>> ASSET_STORE;
@@ -114,7 +107,6 @@ public class EntityStatType
    @Nullable
    protected EntityStatType.Regenerating[] regenerating;
    protected boolean ignoreInvulnerability;
-   protected boolean hideFromTooltip;
    protected EntityStatType.EntityStatEffects minValueEffects;
    protected EntityStatType.EntityStatEffects maxValueEffects;
    protected EntityStatResetBehavior resetBehavior = EntityStatResetBehavior.InitialValue;
@@ -223,7 +215,6 @@ public class EntityStatType
       }
 
       packet.resetBehavior = this.resetBehavior;
-      packet.hideFromTooltip = this.hideFromTooltip;
       this.cachedPacket = new SoftReference<>(packet);
       return packet;
    }
@@ -255,8 +246,6 @@ public class EntityStatType
          + this.resetBehavior
          + ", ignoreInvulnerability="
          + this.ignoreInvulnerability
-         + ", hideFromTooltip="
-         + this.hideFromTooltip
          + "}";
    }
 

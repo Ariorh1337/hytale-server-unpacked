@@ -43,7 +43,7 @@ public class PluginManifest {
       .add()
       .append(new KeyedCodec<>("Main", Codec.STRING), (manifest, o) -> manifest.main = o, manifest -> manifest.main)
       .add()
-      .append(new KeyedCodec<>("ServerVersion", Codec.STRING), (manifest, o) -> manifest.serverVersion = o, manifest -> manifest.serverVersion)
+      .append(new KeyedCodec<>("ServerVersion", SemverRange.CODEC), (manifest, o) -> manifest.serverVersion = o, manifest -> manifest.serverVersion)
       .add()
       .append(
          new KeyedCodec<>(
@@ -79,8 +79,8 @@ public class PluginManifest {
       .build();
    @Nonnull
    public static final Codec<PluginManifest[]> ARRAY_CODEC = new ArrayCodec<>(CODEC, PluginManifest[]::new);
-   public static final String CORE_GROUP = "Hytale";
-   private static final Semver CORE_VERSION = Semver.fromString(ManifestUtil.getVersion() == null ? "0.0.0-dev" : ManifestUtil.getVersion());
+   private static final String CORE_GROUP = "Hytale";
+   private static final Semver CORE_VERSION = ManifestUtil.getVersion() == null ? Semver.fromString("0.0.0-dev") : ManifestUtil.getVersion();
    private String group;
    private String name;
    private Semver version;
@@ -92,8 +92,7 @@ public class PluginManifest {
    private String website;
    @Nullable
    private String main;
-   @Nullable
-   private String serverVersion;
+   private SemverRange serverVersion;
    @Nonnull
    private Map<PluginIdentifier, SemverRange> dependencies = new Object2ObjectLinkedOpenHashMap<>();
    @Nonnull
@@ -116,7 +115,7 @@ public class PluginManifest {
       @Nonnull List<AuthorInfo> authors,
       @Nullable String website,
       @Nullable String main,
-      @Nonnull String serverVersion,
+      @Nullable SemverRange serverVersion,
       @Nonnull Map<PluginIdentifier, SemverRange> dependencies,
       @Nonnull Map<PluginIdentifier, SemverRange> optionalDependencies,
       @Nonnull Map<PluginIdentifier, SemverRange> loadBefore,
@@ -194,12 +193,8 @@ public class PluginManifest {
       return this.main;
    }
 
-   public String getServerVersion() {
+   public SemverRange getServerVersion() {
       return this.serverVersion;
-   }
-
-   public void setServerVersion(@Nullable String serverVersion) {
-      this.serverVersion = serverVersion;
    }
 
    @Nonnull
@@ -305,6 +300,8 @@ public class PluginManifest {
    }
 
    public static class CoreBuilder {
+      private static final String CORE_GROUP = "Hytale";
+      private static final Semver CORE_VERSION = ManifestUtil.getVersion() == null ? Semver.fromString("0.0.0-dev") : ManifestUtil.getVersion();
       @Nonnull
       private final String group;
       @Nonnull
@@ -324,7 +321,7 @@ public class PluginManifest {
 
       @Nonnull
       public static PluginManifest.CoreBuilder corePlugin(@Nonnull Class<?> pluginClass) {
-         return new PluginManifest.CoreBuilder("Hytale", pluginClass.getSimpleName(), PluginManifest.CORE_VERSION, pluginClass.getName());
+         return new PluginManifest.CoreBuilder("Hytale", pluginClass.getSimpleName(), CORE_VERSION, pluginClass.getName());
       }
 
       private CoreBuilder(@Nonnull String group, @Nonnull String name, @Nonnull Semver version, @Nonnull String main) {
@@ -380,7 +377,7 @@ public class PluginManifest {
             Collections.emptyList(),
             null,
             this.main,
-            ManifestUtil.getVersion() == null ? "0.0.0-dev" : ManifestUtil.getVersion(),
+            null,
             this.dependencies,
             this.optionalDependencies,
             this.loadBefore,

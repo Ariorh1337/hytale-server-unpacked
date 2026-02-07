@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import javax.annotation.Nonnull;
 
 public class SandwichAssignmentsAsset extends AssignmentsAsset {
-   @Nonnull
    public static final BuilderCodec<SandwichAssignmentsAsset> CODEC = BuilderCodec.builder(
          SandwichAssignmentsAsset.class, SandwichAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC
       )
@@ -54,7 +53,6 @@ public class SandwichAssignmentsAsset extends AssignmentsAsset {
    }
 
    public static class DelimiterAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, SandwichAssignmentsAsset.DelimiterAsset>> {
-      @Nonnull
       public static final AssetBuilderCodec<String, SandwichAssignmentsAsset.DelimiterAsset> CODEC = AssetBuilderCodec.builder(
             SandwichAssignmentsAsset.DelimiterAsset.class,
             SandwichAssignmentsAsset.DelimiterAsset::new,

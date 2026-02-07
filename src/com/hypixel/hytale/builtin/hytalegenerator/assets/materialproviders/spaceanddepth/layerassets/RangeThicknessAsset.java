@@ -12,7 +12,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class RangeThicknessAsset extends LayerAsset {
-   @Nonnull
    public static final BuilderCodec<RangeThicknessAsset> CODEC = BuilderCodec.builder(
          RangeThicknessAsset.class, RangeThicknessAsset::new, LayerAsset.ABSTRACT_CODEC
       )
@@ -28,8 +27,8 @@ public class RangeThicknessAsset extends LayerAsset {
       .build();
    private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
    private String seed = "";
-   private int rangeMin;
-   private int rangeMax;
+   private int rangeMin = 0;
+   private int rangeMax = 0;
 
    @Nonnull
    @Override

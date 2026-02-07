@@ -10,7 +10,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class DistanceDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<DistanceDensityAsset> CODEC = BuilderCodec.builder(
          DistanceDensityAsset.class, DistanceDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )

@@ -10,7 +10,6 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class SwitchStateDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<SwitchStateDensityAsset> CODEC = BuilderCodec.builder(
          SwitchStateDensityAsset.class, SwitchStateDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )

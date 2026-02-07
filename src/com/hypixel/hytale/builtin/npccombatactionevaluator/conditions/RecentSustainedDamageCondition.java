@@ -13,13 +13,11 @@ import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.base.ScaledCu
 import javax.annotation.Nonnull;
 
 public class RecentSustainedDamageCondition extends ScaledCurveCondition {
-   @Nonnull
    public static final BuilderCodec<RecentSustainedDamageCondition> CODEC = BuilderCodec.builder(
          RecentSustainedDamageCondition.class, RecentSustainedDamageCondition::new, ScaledCurveCondition.ABSTRACT_CODEC
       )
       .documentation("A scaled curve condition that returns a utility value based on damage taken since the combat action evaluator was last run.")
       .build();
-   @Nonnull
    protected static final ComponentType<EntityStore, DamageMemory> DAMAGE_MEMORY_COMPONENT_TYPE = DamageMemory.getComponentType();
 
    @Override
@@ -30,8 +28,8 @@ public class RecentSustainedDamageCondition extends ScaledCurveCondition {
       CommandBuffer<EntityStore> commandBuffer,
       EvaluationContext context
    ) {
-      DamageMemory damageMemoryComponent = archetypeChunk.getComponent(selfIndex, DAMAGE_MEMORY_COMPONENT_TYPE);
-      return damageMemoryComponent == null ? Double.MAX_VALUE : damageMemoryComponent.getRecentDamage();
+      DamageMemory memory = archetypeChunk.getComponent(selfIndex, DAMAGE_MEMORY_COMPONENT_TYPE);
+      return memory.getRecentDamage();
    }
 
    @Override

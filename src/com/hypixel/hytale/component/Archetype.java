@@ -162,10 +162,6 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
 
    @Nonnull
    public static <ECS_TYPE> Archetype<ECS_TYPE> of(@Nonnull ComponentType<ECS_TYPE, ?> componentTypes) {
-      if (componentTypes == null) {
-         throw new IllegalArgumentException("ComponentType in Archetype cannot be null");
-      }
-
       int index = componentTypes.getIndex();
       ComponentType<ECS_TYPE, ?>[] arr = new ComponentType[index + 1];
       arr[index] = componentTypes;
@@ -176,13 +172,6 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
    public static <ECS_TYPE> Archetype<ECS_TYPE> of(@Nonnull ComponentType<ECS_TYPE, ?>... componentTypes) {
       if (componentTypes.length == 0) {
          return EMPTY;
-      }
-
-      for (int i = 0; i < componentTypes.length; i++) {
-         ComponentType<ECS_TYPE, ?> componentType = componentTypes[i];
-         if (componentType == null) {
-            throw new IllegalArgumentException("ComponentType in Archetype cannot be null (Index: " + i + ")");
-         }
       }
 
       ComponentRegistry<ECS_TYPE> registry = componentTypes[0].getRegistry();

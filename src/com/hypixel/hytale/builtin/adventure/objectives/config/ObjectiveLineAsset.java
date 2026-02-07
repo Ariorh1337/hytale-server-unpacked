@@ -79,7 +79,6 @@ public class ObjectiveLineAsset implements JsonAssetWithMap<String, DefaultAsset
          }
       })
       .build();
-   @Nonnull
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(ObjectiveLineAsset::getAssetStore));
    private static AssetStore<String, ObjectiveLineAsset, DefaultAssetMap<String, ObjectiveLineAsset>> ASSET_STORE;
    protected AssetExtraInfo.Data extraData;

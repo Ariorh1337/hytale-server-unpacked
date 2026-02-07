@@ -9,13 +9,10 @@ public class CellValueReturnType extends ReturnType {
    @Nonnull
    private final Density sampleField;
    private final double defaultValue;
-   @Nonnull
-   private final Density.Context rChildContext;
 
-   public CellValueReturnType(@Nonnull Density sampleField, double defaultValue) {
+   public CellValueReturnType(@Nonnull Density sampleField, double defaultValue, int threadCount) {
       this.sampleField = sampleField;
       this.defaultValue = defaultValue;
-      this.rChildContext = new Density.Context();
    }
 
    @Override
@@ -31,8 +28,8 @@ public class CellValueReturnType extends ReturnType {
          return this.defaultValue;
       }
 
-      this.rChildContext.assign(context);
-      this.rChildContext.position = closestPoint0;
-      return this.sampleField.process(this.rChildContext);
+      Density.Context childContext = new Density.Context(context);
+      childContext.position = closestPoint0;
+      return this.sampleField.process(childContext);
    }
 }

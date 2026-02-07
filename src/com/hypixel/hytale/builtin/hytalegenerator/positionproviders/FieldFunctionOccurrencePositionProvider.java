@@ -27,6 +27,7 @@ public class FieldFunctionOccurrencePositionProvider extends PositionProvider {
          Density.Context densityContext = new Density.Context();
          densityContext.position = position;
          densityContext.positionsAnchor = context.anchor;
+         densityContext.workerId = context.workerId;
          double discardChance = 1.0 - this.field.process(densityContext);
          FastRandom random = new FastRandom(this.seedGenerator.seedAt(position.x, position.y, position.z, 100.0));
          if (!(discardChance > random.nextDouble())) {

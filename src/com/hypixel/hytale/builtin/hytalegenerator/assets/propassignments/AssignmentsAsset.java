@@ -21,17 +21,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, AssignmentsAsset>> {
-   @Nonnull
    public static final AssetCodecMapCodec<String, AssignmentsAsset> CODEC = new AssetCodecMapCodec<>(
       Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
    );
-   @Nonnull
    private static final Map<String, AssignmentsAsset> exportedNodes = new ConcurrentHashMap<>();
-   @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(AssignmentsAsset.class, CODEC);
-   @Nonnull
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
-   @Nonnull
    public static final BuilderCodec<AssignmentsAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(AssignmentsAsset.class)
       .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
       .add()
@@ -50,7 +45,7 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
       .build();
    private String id;
    private AssetExtraInfo.Data data;
-   private boolean skip;
+   private boolean skip = false;
    private String exportName = "";
 
    protected AssignmentsAsset() {
@@ -79,20 +74,20 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
       public MaterialCache materialCache;
       public ReferenceBundle referenceBundle;
       public int runtime;
-      public WorkerIndexer.Id workerId;
+      public WorkerIndexer workerIndexer;
 
       public Argument(
          @Nonnull SeedBox parentSeed,
          @Nonnull MaterialCache materialCache,
          @Nonnull ReferenceBundle referenceBundle,
          int runtime,
-         @Nonnull WorkerIndexer.Id workerId
+         @Nonnull WorkerIndexer workerIndexer
       ) {
          this.parentSeed = parentSeed;
          this.materialCache = materialCache;
          this.referenceBundle = referenceBundle;
          this.runtime = runtime;
-         this.workerId = workerId;
+         this.workerIndexer = workerIndexer;
       }
 
       public Argument(@Nonnull AssignmentsAsset.Argument argument) {
@@ -100,7 +95,7 @@ public abstract class AssignmentsAsset implements Cleanable, JsonAssetWithMap<St
          this.materialCache = argument.materialCache;
          this.referenceBundle = argument.referenceBundle;
          this.runtime = argument.runtime;
-         this.workerId = argument.workerId;
+         this.workerIndexer = argument.workerIndexer;
       }
    }
 }

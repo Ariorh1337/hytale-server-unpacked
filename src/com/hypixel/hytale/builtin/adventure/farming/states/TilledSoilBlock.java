@@ -13,12 +13,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.time.Instant;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class TilledSoilBlock implements Component<ChunkStore> {
    public static int VERSION = 1;
-   @Nonnull
    public static final BuilderCodec<TilledSoilBlock> CODEC = BuilderCodec.<TilledSoilBlock>builder(TilledSoilBlock.class, TilledSoilBlock::new)
       .versioned()
       .codecVersion(VERSION)
@@ -118,8 +116,7 @@ public class TilledSoilBlock implements Component<ChunkStore> {
       this.decayTime = decayTime;
    }
 
-   @Nullable
-   public String computeBlockType(@Nonnull Instant gameTime, @Nonnull BlockType type) {
+   public String computeBlockType(Instant gameTime, BlockType type) {
       boolean watered = this.hasExternalWater() || this.wateredUntil != null && this.wateredUntil.isAfter(gameTime);
       if (this.fertilized && watered) {
          return type.getBlockKeyForState("Fertilized_Watered");
@@ -130,7 +127,6 @@ public class TilledSoilBlock implements Component<ChunkStore> {
       }
    }
 
-   @Nonnull
    @Override
    public String toString() {
       return "TilledSoilBlock{planted="

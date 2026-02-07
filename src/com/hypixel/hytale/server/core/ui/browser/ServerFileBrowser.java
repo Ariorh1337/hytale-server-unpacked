@@ -213,9 +213,8 @@ public class ServerFileBrowser {
          }
 
          if (this.config.enableDirectoryNav()) {
-            Path currentPath = this.root.resolve(this.currentDir.toString());
-            Path targetPath = PathUtil.resolvePathWithinDir(currentPath, fileName);
-            if (targetPath != null && Files.isDirectory(targetPath) && PathUtil.isChildOf(this.root, targetPath)) {
+            Path targetPath = this.root.resolve(this.currentDir.toString()).resolve(fileName);
+            if (Files.isDirectory(targetPath)) {
                this.currentDir = PathUtil.relativize(this.root, targetPath);
                return true;
             }
@@ -332,8 +331,8 @@ public class ServerFileBrowser {
          if (pack != null) {
             Path packSubPath = this.getAssetPackSubPath(pack);
             if (packSubPath != null) {
-               Path targetDir = subDir.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subDir);
-               if (targetDir != null && Files.isDirectory(targetDir)) {
+               Path targetDir = subDir.isEmpty() ? packSubPath : packSubPath.resolve(subDir);
+               if (Files.isDirectory(targetDir)) {
                   try (DirectoryStream<Path> stream = Files.newDirectoryStream(targetDir)) {
                      for (Path file : stream) {
                         String fileName = file.getFileName().toString();
@@ -387,8 +386,8 @@ public class ServerFileBrowser {
          if (pack != null) {
             Path packSubPath = this.getAssetPackSubPath(pack);
             if (packSubPath != null) {
-               Path searchRoot = subDir.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subDir);
-               if (searchRoot != null && Files.isDirectory(searchRoot)) {
+               Path searchRoot = subDir.isEmpty() ? packSubPath : packSubPath.resolve(subDir);
+               if (Files.isDirectory(searchRoot)) {
                   this.searchInAssetPackDirectory(searchRoot, packName, subDir, allResults);
                }
             }
@@ -481,16 +480,8 @@ public class ServerFileBrowser {
             return false;
          }
 
-         Path targetDir = subDir.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subDir);
-         if (targetDir == null) {
-            return false;
-         }
-
-         Path targetPath = PathUtil.resolvePathWithinDir(targetDir, fileName);
-         if (targetPath == null) {
-            return false;
-         }
-
+         Path targetDir = subDir.isEmpty() ? packSubPath : packSubPath.resolve(subDir);
+         Path targetPath = targetDir.resolve(fileName);
          if (Files.isDirectory(targetPath)) {
             if (this.isTerminalDirectory(targetPath)) {
                return false;
@@ -550,7 +541,7 @@ public class ServerFileBrowser {
             if (packSubPath == null) {
                return null;
             } else {
-               return subPath.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subPath);
+               return subPath.isEmpty() ? packSubPath : packSubPath.resolve(subPath);
             }
          }
       } else {
@@ -588,11 +579,6 @@ public class ServerFileBrowser {
    }
 
    public void setCurrentDir(@Nonnull Path currentDir) {
-      Path resolved = this.root.resolve(currentDir.toString());
-      if (!PathUtil.isChildOf(this.root, resolved)) {
-         throw new IllegalArgumentException("Invalid path");
-      }
-
       this.currentDir = currentDir;
    }
 
@@ -614,7 +600,7 @@ public class ServerFileBrowser {
 
    public void navigateTo(@Nonnull Path relativePath) {
       Path targetPath = this.root.resolve(this.currentDir.toString()).resolve(relativePath.toString());
-      if (PathUtil.isChildOf(this.root, targetPath)) {
+      if (targetPath.normalize().startsWith(this.root.normalize())) {
          if (Files.isDirectory(targetPath)) {
             this.currentDir = PathUtil.relativize(this.root, targetPath);
          }
@@ -642,6 +628,18 @@ public class ServerFileBrowser {
    @Nonnull
    public FileBrowserConfig getConfig() {
       return this.config;
+   }
+
+   @Nullable
+   public Path resolveSecure(@Nonnull String relativePath) {
+      Path resolved = this.root.resolve(relativePath);
+      return !resolved.normalize().startsWith(this.root.normalize()) ? null : resolved;
+   }
+
+   @Nullable
+   public Path resolveFromCurrent(@Nonnull String fileName) {
+      Path resolved = this.root.resolve(this.currentDir.toString()).resolve(fileName);
+      return !resolved.normalize().startsWith(this.root.normalize()) ? null : resolved;
    }
 
    @Nullable

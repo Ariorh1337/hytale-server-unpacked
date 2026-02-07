@@ -81,32 +81,36 @@ public class DoorInteraction extends SimpleBlockInteraction {
             newDoorState = DoorInteraction.DoorState.OPENED_IN;
          }
 
-         DoorInteraction.DoorState checkResult = this.checkDoor(world, targetBlock, blockType, rotation, doorState, newDoorState);
-         if (checkResult == null) {
-            context.getState().state = InteractionState.Failed;
-         } else {
-            newDoorState = checkResult;
-            DoorInteraction.DoorState stateDoubleDoor = getOppositeDoorState(doorState);
-            BlockType interactionBlockState = activateDoor(world, blockType, targetBlock, doorState, newDoorState);
-            boolean doubleDoor = this.checkForDoubleDoor(world, targetBlock, blockType, rotation, newDoorState, stateDoubleDoor);
-            if (interactionBlockState != null) {
-               Vector3d pos = new Vector3d();
-               int hitboxTypeIndex = BlockType.getAssetMap().getAsset(blockType.getItem().getId()).getHitboxTypeIndex();
-               BlockBoundingBoxes blockBoundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(hitboxTypeIndex);
-               BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = blockBoundingBoxes.get(rotation);
-               Box hitbox = rotatedBoxes.getBoundingBox();
-               if (doubleDoor) {
-                  Vector3d offset = new Vector3d(hitbox.middleX(), 0.0, 0.0);
-                  Rotation rotationToCheck = RotationTuple.get(rotation).yaw();
-                  pos.add(MathUtil.rotateVectorYAxis(offset, rotationToCheck.getDegrees(), false));
-                  pos.add(hitbox.middleX(), hitbox.middleY(), hitbox.middleZ());
-               } else {
-                  pos.add(hitbox.middleX(), hitbox.middleY(), hitbox.middleZ());
-               }
-
-               pos.add(targetBlock);
-               SoundUtil.playSoundEvent3d(ref, interactionBlockState.getInteractionSoundEventIndex(), pos, commandBuffer);
+         if (newDoorState != DoorInteraction.DoorState.CLOSED) {
+            DoorInteraction.DoorState checkResult = this.checkDoor(world, targetBlock, blockType, rotation, doorState, newDoorState);
+            if (checkResult == null) {
+               context.getState().state = InteractionState.Failed;
+               return;
             }
+
+            newDoorState = checkResult;
+         }
+
+         DoorInteraction.DoorState stateDoubleDoor = getOppositeDoorState(doorState);
+         BlockType interactionBlockState = activateDoor(world, blockType, targetBlock, doorState, newDoorState);
+         boolean doubleDoor = this.checkForDoubleDoor(world, targetBlock, blockType, rotation, newDoorState, stateDoubleDoor);
+         if (interactionBlockState != null) {
+            Vector3d pos = new Vector3d();
+            int hitboxTypeIndex = BlockType.getAssetMap().getAsset(blockType.getItem().getId()).getHitboxTypeIndex();
+            BlockBoundingBoxes blockBoundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(hitboxTypeIndex);
+            BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = blockBoundingBoxes.get(rotation);
+            Box hitbox = rotatedBoxes.getBoundingBox();
+            if (doubleDoor) {
+               Vector3d offset = new Vector3d(hitbox.middleX(), 0.0, 0.0);
+               Rotation rotationToCheck = RotationTuple.get(rotation).yaw();
+               pos.add(MathUtil.rotateVectorYAxis(offset, rotationToCheck.getDegrees(), false));
+               pos.add(hitbox.middleX(), hitbox.middleY(), hitbox.middleZ());
+            } else {
+               pos.add(hitbox.middleX(), hitbox.middleY(), hitbox.middleZ());
+            }
+
+            pos.add(targetBlock);
+            SoundUtil.playSoundEvent3d(ref, interactionBlockState.getInteractionSoundEventIndex(), pos, commandBuffer);
          }
       }
    }
@@ -182,19 +186,14 @@ public class DoorInteraction extends SimpleBlockInteraction {
 
          chunkAccessor.setBlockInteractionState(blockPosition, blockType, "DoorBlocked");
          return null;
-      } else if (canOpenDoor(chunkAccessor, blockPosition, newOppositeDoorInteractionState) && !this.horizontal) {
-         if (doubleDoor != null && !canOpenDoor(chunkAccessor, doubleDoor.blockPosition, newDoorInteractionState)) {
-            chunkAccessor.setBlockInteractionState(blockPosition, blockType, "DoorBlocked");
-            return null;
-         } else {
-            return newOppositeDoorState;
-         }
-      } else {
-         if (newDoorState != DoorInteraction.DoorState.CLOSED) {
-            chunkAccessor.setBlockInteractionState(blockPosition, blockType, "DoorBlocked");
-         }
-
+      } else if (!canOpenDoor(chunkAccessor, blockPosition, newOppositeDoorInteractionState) || this.horizontal) {
+         chunkAccessor.setBlockInteractionState(blockPosition, blockType, "DoorBlocked");
          return null;
+      } else if (doubleDoor != null && !canOpenDoor(chunkAccessor, doubleDoor.blockPosition, newDoorInteractionState)) {
+         chunkAccessor.setBlockInteractionState(blockPosition, blockType, "DoorBlocked");
+         return null;
+      } else {
+         return newOppositeDoorState;
       }
    }
 

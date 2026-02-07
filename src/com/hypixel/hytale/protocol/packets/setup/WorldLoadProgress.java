@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol.packets.setup;
 
-import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
+import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -15,9 +17,9 @@ public class WorldLoadProgress implements Packet {
    public static final int FIXED_BLOCK_SIZE = 9;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 9;
-   public static final int MAX_SIZE = 1677721600;
+   public static final int MAX_SIZE = 16384014;
    @Nullable
-   public FormattedMessage status;
+   public String status;
    public int percentComplete;
    public int percentCompleteSubitem;
 
@@ -29,7 +31,7 @@ public class WorldLoadProgress implements Packet {
    public WorldLoadProgress() {
    }
 
-   public WorldLoadProgress(@Nullable FormattedMessage status, int percentComplete, int percentCompleteSubitem) {
+   public WorldLoadProgress(@Nullable String status, int percentComplete, int percentCompleteSubitem) {
       this.status = status;
       this.percentComplete = percentComplete;
       this.percentCompleteSubitem = percentCompleteSubitem;
@@ -49,8 +51,18 @@ public class WorldLoadProgress implements Packet {
       obj.percentCompleteSubitem = buf.getIntLE(offset + 5);
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
-         obj.status = FormattedMessage.deserialize(buf, pos);
-         pos += FormattedMessage.computeBytesConsumed(buf, pos);
+         int statusLen = VarInt.peek(buf, pos);
+         if (statusLen < 0) {
+            throw ProtocolException.negativeLength("Status", statusLen);
+         }
+
+         if (statusLen > 4096000) {
+            throw ProtocolException.stringTooLong("Status", statusLen, 4096000);
+         }
+
+         int statusVarLen = VarInt.length(buf, pos);
+         obj.status = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+         pos += statusVarLen + statusLen;
       }
 
       return obj;
@@ -60,7 +72,8 @@ public class WorldLoadProgress implements Packet {
       byte nullBits = buf.getByte(offset);
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
-         pos += FormattedMessage.computeBytesConsumed(buf, pos);
+         int sl = VarInt.peek(buf, pos);
+         pos += VarInt.length(buf, pos) + sl;
       }
 
       return pos - offset;
@@ -77,7 +90,7 @@ public class WorldLoadProgress implements Packet {
       buf.writeIntLE(this.percentComplete);
       buf.writeIntLE(this.percentCompleteSubitem);
       if (this.status != null) {
-         this.status.serialize(buf);
+         PacketIO.writeVarString(buf, this.status, 4096000);
       }
    }
 
@@ -85,7 +98,7 @@ public class WorldLoadProgress implements Packet {
    public int computeSize() {
       int size = 9;
       if (this.status != null) {
-         size += this.status.computeSize();
+         size += PacketIO.stringSize(this.status);
       }
 
       return size;
@@ -99,12 +112,20 @@ public class WorldLoadProgress implements Packet {
       byte nullBits = buffer.getByte(offset);
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
-         ValidationResult statusResult = FormattedMessage.validateStructure(buffer, pos);
-         if (!statusResult.isValid()) {
-            return ValidationResult.error("Invalid Status: " + statusResult.error());
+         int statusLen = VarInt.peek(buffer, pos);
+         if (statusLen < 0) {
+            return ValidationResult.error("Invalid string length for Status");
          }
 
-         pos += FormattedMessage.computeBytesConsumed(buffer, pos);
+         if (statusLen > 4096000) {
+            return ValidationResult.error("Status exceeds max length 4096000");
+         }
+
+         pos += VarInt.length(buffer, pos);
+         pos += statusLen;
+         if (pos > buffer.writerIndex()) {
+            return ValidationResult.error("Buffer overflow reading Status");
+         }
       }
 
       return ValidationResult.OK;
@@ -112,7 +133,7 @@ public class WorldLoadProgress implements Packet {
 
    public WorldLoadProgress clone() {
       WorldLoadProgress copy = new WorldLoadProgress();
-      copy.status = this.status != null ? this.status.clone() : null;
+      copy.status = this.status;
       copy.percentComplete = this.percentComplete;
       copy.percentCompleteSubitem = this.percentCompleteSubitem;
       return copy;

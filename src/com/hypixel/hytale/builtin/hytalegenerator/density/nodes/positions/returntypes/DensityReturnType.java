@@ -20,13 +20,9 @@ public class DensityReturnType extends ReturnType {
    @Nonnull
    private final Density[] sampleDensities;
    private final boolean calculateDistanceFromWall;
-   @Nonnull
-   private final Vector3d rScaledSamplePointClone;
-   @Nonnull
-   private final Density.Context rChildContext;
 
    public DensityReturnType(
-      @Nonnull Density choiceDensity, @Nonnull Map<Range, Density> densityDelimiters, boolean calculateDistanceFromWall, double defaultValue
+      @Nonnull Density choiceDensity, @Nonnull Map<Range, Density> densityDelimiters, boolean calculateDistanceFromWall, double defaultValue, int threadCount
    ) {
       this.choiceDensity = choiceDensity;
       this.defaultValue = defaultValue;
@@ -41,9 +37,6 @@ public class DensityReturnType extends ReturnType {
          this.sampleDensities[i] = entry.getValue();
          i++;
       }
-
-      this.rScaledSamplePointClone = new Vector3d();
-      this.rChildContext = new Density.Context();
    }
 
    @Override
@@ -57,18 +50,19 @@ public class DensityReturnType extends ReturnType {
    ) {
       double distanceFromWall = Double.MAX_VALUE;
       if (closestPoint0 != null && this.calculateDistanceFromWall) {
-         distance0 = this.rScaledSamplePointClone.assign(samplePoint).subtract(closestPoint0).length();
+         distance0 = samplePoint.clone().addScaled(closestPoint0, -1.0).length();
          double fromMaxDistance = Math.abs(super.maxDistance - distance0);
          if (closestPoint1 == null) {
             distanceFromWall = fromMaxDistance;
          } else {
-            distance1 = this.rScaledSamplePointClone.assign(samplePoint).subtract(closestPoint1).length();
+            distance1 = samplePoint.clone().addScaled(closestPoint1, -1.0).length();
             double l = distance1 / this.maxDistance;
             double fromOtherCell = Math.abs(distance1 - distance0) / 2.0;
             distanceFromWall = fromOtherCell;
          }
       }
 
+      Density.Context childContext = null;
       double choiceValue = this.defaultValue;
       if (closestPoint0 == null) {
          return this.defaultValue;
@@ -79,10 +73,10 @@ public class DensityReturnType extends ReturnType {
 
       for (double[] delimiter : this.delimiters) {
          if (choiceValue >= delimiter[0] && choiceValue < delimiter[1]) {
-            this.rChildContext.assign(context);
-            this.rChildContext.densityAnchor = closestPoint0;
-            this.rChildContext.distanceFromCellWall = distanceFromWall;
-            return this.sampleDensities[i].process(this.rChildContext);
+            childContext = new Density.Context(context);
+            childContext.densityAnchor = closestPoint0.clone();
+            childContext.distanceFromCellWall = distanceFromWall;
+            return this.sampleDensities[i].process(childContext);
          }
 
          i++;

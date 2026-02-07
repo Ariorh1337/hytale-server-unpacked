@@ -19,7 +19,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ObjectiveLocationMarker implements Component<EntityStore> {
-   @Nonnull
    public static final BuilderCodec<ObjectiveLocationMarker> CODEC = BuilderCodec.builder(ObjectiveLocationMarker.class, ObjectiveLocationMarker::new)
       .append(
          new KeyedCodec<>("ObjectiveLocationMarkerId", Codec.STRING),
@@ -69,7 +68,7 @@ public class ObjectiveLocationMarker implements Component<EntityStore> {
       return this.activeObjective;
    }
 
-   public void setActiveObjective(@Nonnull Objective activeObjective) {
+   public void setActiveObjective(Objective activeObjective) {
       this.activeObjective = activeObjective;
    }
 

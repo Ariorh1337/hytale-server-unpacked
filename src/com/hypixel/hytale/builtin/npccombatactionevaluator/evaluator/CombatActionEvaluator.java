@@ -42,9 +42,7 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    protected int runInState;
    protected float predictability;
    protected double minActionUtility;
-   @Nonnull
    protected final Int2ObjectMap<List<Evaluator<CombatActionOption>.OptionHolder>> optionsBySubState = new Int2ObjectOpenHashMap<>();
-   @Nonnull
    protected final Int2ObjectMap<CombatActionEvaluatorConfig.BasicAttacks> basicAttacksBySubState = new Int2ObjectOpenHashMap<>();
    protected int currentBasicAttackSubState = Integer.MIN_VALUE;
    protected CombatActionEvaluatorConfig.BasicAttacks currentBasicAttackSet;
@@ -79,7 +77,6 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    protected boolean positionFirst;
    protected double chargeDistance;
    protected float timeout;
-   @Nonnull
    protected final EvaluationContext evaluationContext = new EvaluationContext();
 
    public static ComponentType<EntityStore, CombatActionEvaluator> getComponentType() {
@@ -359,13 +356,13 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
          index, archetypeChunk, commandBuffer, this.evaluationContext
       );
       if (option != null) {
-         Ref<EntityStore> targetRef = option.getOptionTarget();
-         if (targetRef != null && targetRef.isValid()) {
+         Ref<EntityStore> target = option.getOptionTarget();
+         if (target != null) {
             if (((CombatActionOption)option.getOption()).getActionTarget() == CombatActionOption.Target.Friendly) {
                this.previousTarget = this.primaryTarget;
             }
 
-            this.primaryTarget = targetRef;
+            this.primaryTarget = target;
             role.getMarkedEntitySupport().setMarkedEntity(this.markedTargetSlot, this.primaryTarget);
          }
 
@@ -380,7 +377,7 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    public void completeCurrentAction(boolean forceClearAbility, boolean clearBasicAttack) {
       if (forceClearAbility || this.currentBasicAttack == null) {
          this.terminateCurrentAction();
-         this.lastRunNanos = System.nanoTime();
+         this.setLastRunNanos(System.nanoTime());
       }
 
       if (clearBasicAttack) {
@@ -489,7 +486,6 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
 
    public class MultipleTargetCombatOptionHolder extends CombatActionEvaluator.CombatOptionHolder {
       protected List<Ref<EntityStore>> targets;
-      @Nonnull
       protected final DoubleList targetUtilities = new DoubleArrayList();
       @Nullable
       protected Ref<EntityStore> pickedTarget;

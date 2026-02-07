@@ -284,9 +284,10 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
             WorldSettingsBox2DCommand.this.setter.accept(world, newValue);
             world.getWorldConfig().markChanged();
             context.sendMessage(
-               Message.translation("server.commands.world.settings.displaySetDefault")
+               Message.translation("server.commands.world.settings.displaySet")
                   .param("display", WorldSettingsBox2DCommand.this.display)
                   .param("worldName", world.getName())
+                  .param("isDefault", " default value ")
                   .param("newValue", Objects.toString(newValue))
                   .param("oldValue", Objects.toString(currentValue))
             );
@@ -319,6 +320,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
                Message.translation("server.commands.world.settings.displaySet")
                   .param("display", WorldSettingsBox2DCommand.this.display)
                   .param("worldName", world.getName())
+                  .param("isDefault", "")
                   .param("newValue", Objects.toString(newValue))
                   .param("oldValue", Objects.toString(currentValue))
             );
@@ -384,9 +386,10 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
             WorldSettingsSubCommand.this.setter.accept(world, newValue);
             world.getWorldConfig().markChanged();
             context.sendMessage(
-               Message.translation("server.commands.world.settings.displaySetDefault")
+               Message.translation("server.commands.world.settings.displaySet")
                   .param("display", WorldSettingsSubCommand.this.display)
                   .param("worldName", world.getName())
+                  .param("isDefault", " default value ")
                   .param("newValue", newValue.toString())
                   .param("oldValue", currentValue.toString())
             );
@@ -413,6 +416,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
                Message.translation("server.commands.world.settings.displaySet")
                   .param("display", WorldSettingsSubCommand.this.display)
                   .param("worldName", world.getName())
+                  .param("isDefault", "")
                   .param("newValue", newValue.toString())
                   .param("oldValue", currentValue.toString())
             );

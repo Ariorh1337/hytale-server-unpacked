@@ -7,11 +7,9 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class InvasionPortalConfig {
-   @Nonnull
    public static final BuilderCodec<InvasionPortalConfig> CODEC = BuilderCodec.builder(InvasionPortalConfig.class, InvasionPortalConfig::new)
       .append(new KeyedCodec<>("BlockKey", Codec.STRING), (config, o) -> config.blockKey = o, config -> config.blockKey)
       .documentation("The block used for evil portals that spawn around the world during the event")
@@ -31,7 +29,6 @@ public class InvasionPortalConfig {
       return this.blockKey;
    }
 
-   @Nullable
    public BlockType getBlockType() {
       return BlockType.getAssetMap().getAsset(this.blockKey);
    }
@@ -46,7 +43,6 @@ public class InvasionPortalConfig {
       return this.spawnBeacons;
    }
 
-   @Nonnull
    public List<String> getSpawnBeaconsList() {
       return this.spawnBeacons == null ? Collections.emptyList() : Arrays.asList(this.spawnBeacons);
    }

@@ -15,7 +15,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ReachLocationMarker implements Component<EntityStore> {
-   @Nonnull
    public static final BuilderCodec<ReachLocationMarker> CODEC = BuilderCodec.builder(ReachLocationMarker.class, ReachLocationMarker::new)
       .append(
          new KeyedCodec<>("MarkerId", Codec.STRING),
@@ -26,7 +25,6 @@ public class ReachLocationMarker implements Component<EntityStore> {
       .add()
       .build();
    private String markerId;
-   @Nonnull
    private final Set<UUID> players = new HashSet<>();
 
    public static ComponentType<EntityStore, ReachLocationMarker> getComponentType() {

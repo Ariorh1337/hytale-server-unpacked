@@ -30,8 +30,6 @@ public class BlockSpawnerSetCommand extends AbstractWorldCommand {
    @Nonnull
    private static final Message MESSAGE_COMMANDS_ERRORS_PROVIDE_POSITION = Message.translation("server.commands.errors.providePosition");
    @Nonnull
-   private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
-   @Nonnull
    private static final SingleArgumentType<BlockSpawnerTable> BLOCK_SPAWNER_ASSET_TYPE = new AssetArgumentType(
       "server.commands.parsing.argtype.asset.blockspawnertable.name", BlockSpawnerTable.class, "server.commands.parsing.argtype.asset.blockspawnertable.usage"
    );
@@ -62,10 +60,6 @@ public class BlockSpawnerSetCommand extends AbstractWorldCommand {
          }
 
          Ref<EntityStore> ref = context.senderAsPlayerRef();
-         if (ref == null || !ref.isValid()) {
-            throw new GeneralCommandException(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
-         }
-
          Vector3i targetBlock = TargetUtil.getTargetBlock(ref, 10.0, store);
          if (targetBlock == null) {
             throw new GeneralCommandException(MESSAGE_GENERAL_BLOCK_TARGET_NOT_IN_RANGE);
@@ -74,37 +68,32 @@ public class BlockSpawnerSetCommand extends AbstractWorldCommand {
          position = targetBlock;
       }
 
-      WorldChunk worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(position.x, position.z));
-      if (worldChunk == null) {
+      WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(position.x, position.z));
+      Ref<ChunkStore> blockRef = chunk.getBlockComponentEntity(position.x, position.y, position.z);
+      if (blockRef == null) {
          context.sendMessage(Message.translation("server.general.containerNotFound").param("block", position.toString()));
       } else {
-         Ref<ChunkStore> blockRef = worldChunk.getBlockComponentEntity(position.x, position.y, position.z);
-         if (blockRef != null && blockRef.isValid()) {
-            Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-            BlockSpawner spawnerState = chunkStore.getComponent(blockRef, BlockSpawner.getComponentType());
-            if (spawnerState == null) {
-               context.sendMessage(Message.translation("server.general.containerNotFound").param("block", position.toString()));
-            } else {
-               String spawnerId;
-               if (this.ignoreChecksFlag.get(context)) {
-                  String[] input = context.getInput(this.blockSpawnerIdArg);
-                  spawnerId = input != null && input.length > 0 ? input[0] : null;
-                  if (spawnerId == null) {
-                     context.sendMessage(
-                        Message.translation("errors.validation_failure").param("message", "blockSpawnerId is required when --ignoreChecks is set")
-                     );
-                     return;
-                  }
-               } else {
-                  spawnerId = this.blockSpawnerIdArg.get(context).getId();
-               }
-
-               spawnerState.setBlockSpawnerId(spawnerId);
-               worldChunk.markNeedsSaving();
-               context.sendMessage(Message.translation("server.commands.blockspawner.blockSpawnerSet").param("id", spawnerId));
-            }
-         } else {
+         BlockSpawner spawnerState = world.getChunkStore().getStore().getComponent(blockRef, BlockSpawner.getComponentType());
+         if (spawnerState == null) {
             context.sendMessage(Message.translation("server.general.containerNotFound").param("block", position.toString()));
+         } else {
+            String spawnerId;
+            if (this.ignoreChecksFlag.get(context)) {
+               String[] input = context.getInput(this.blockSpawnerIdArg);
+               spawnerId = input != null && input.length > 0 ? input[0] : null;
+               if (spawnerId == null) {
+                  context.sendMessage(
+                     Message.translation("errors.validation_failure").param("message", "blockSpawnerId is required when --ignoreChecks is set")
+                  );
+                  return;
+               }
+            } else {
+               spawnerId = this.blockSpawnerIdArg.get(context).getId();
+            }
+
+            spawnerState.setBlockSpawnerId(spawnerId);
+            chunk.markNeedsSaving();
+            context.sendMessage(Message.translation("server.commands.blockspawner.blockSpawnerSet").param("id", spawnerId));
          }
       }
    }

@@ -325,7 +325,7 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
       }
 
       if (this.sensor.matches(ref, role, dt, store)) {
-         if (!this.treeMode && !this.continueAfter && !this.invertTreeModeResult) {
+         if (!this.treeMode && !this.continueAfter) {
             role.notifySensorMatch();
          }
 
@@ -406,16 +406,14 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
    }
 
    public void onMatched(@Nonnull Role role) {
-      if (this.treeMode || this.invertTreeModeResult) {
+      if (this.treeMode) {
          this.parentTreeModeStep = role.swapTreeModeSteps(this);
-         if (this.treeMode) {
-            this.continueAfter = true;
-         }
+         this.continueAfter = true;
       }
    }
 
    public void onCompleted(@Nonnull Role role) {
-      if (this.treeMode || this.invertTreeModeResult) {
+      if (this.treeMode) {
          role.swapTreeModeSteps(this.parentTreeModeStep);
          if (this.parentTreeModeStep != null) {
             if (this.continueAfter == this.invertTreeModeResult) {

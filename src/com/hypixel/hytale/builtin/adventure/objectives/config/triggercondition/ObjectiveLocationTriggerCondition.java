@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public abstract class ObjectiveLocationTriggerCondition {
-   @Nonnull
    public static final CodecMapCodec<ObjectiveLocationTriggerCondition> CODEC = new CodecMapCodec<>("Type");
 
    @Nonnull

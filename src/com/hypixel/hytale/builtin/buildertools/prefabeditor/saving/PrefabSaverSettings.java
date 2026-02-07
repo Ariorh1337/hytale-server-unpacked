@@ -7,7 +7,6 @@ public class PrefabSaverSettings {
    private boolean blocks;
    private boolean entities;
    private boolean keepAnchors;
-   private boolean clearSupportValues;
 
    public boolean isRelativize() {
       return this.relativize;
@@ -55,13 +54,5 @@ public class PrefabSaverSettings {
 
    public void setKeepAnchors(boolean keepAnchors) {
       this.keepAnchors = keepAnchors;
-   }
-
-   public boolean isClearSupportValues() {
-      return this.clearSupportValues;
-   }
-
-   public void setClearSupportValues(boolean clearSupportValues) {
-      this.clearSupportValues = clearSupportValues;
    }
 }

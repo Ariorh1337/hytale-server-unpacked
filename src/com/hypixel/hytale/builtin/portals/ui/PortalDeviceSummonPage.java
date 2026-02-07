@@ -63,10 +63,10 @@ import javax.annotation.Nullable;
 public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDeviceSummonPage.Data> {
    private final PortalDeviceConfig config;
    private final Ref<ChunkStore> blockRef;
-   @Nullable
    private final ItemStack offeredItemStack;
+   private static final Transform DEFAULT_WORLDGEN_SPAWN = new Transform(0.0, 140.0, 0.0);
 
-   public PortalDeviceSummonPage(@Nonnull PlayerRef playerRef, PortalDeviceConfig config, Ref<ChunkStore> blockRef, @Nullable ItemStack offeredItemStack) {
+   public PortalDeviceSummonPage(@Nonnull PlayerRef playerRef, PortalDeviceConfig config, Ref<ChunkStore> blockRef, ItemStack offeredItemStack) {
       super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PortalDeviceSummonPage.Data.CODEC);
       this.config = config;
       this.blockRef = blockRef;
@@ -146,7 +146,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   private static void updateCustomPills(@Nonnull UICommandBuilder commandBuilder, @Nonnull PortalType portalType) {
+   private static void updateCustomPills(UICommandBuilder commandBuilder, PortalType portalType) {
       List<PillTag> pills = portalType.getDescription().getPillTags();
 
       for (int i = 0; i < pills.size(); i++) {
@@ -158,7 +158,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   private static void updateBulletList(@Nonnull UICommandBuilder commandBuilder, @Nonnull String selector, @Nonnull String[] messageKeys) {
+   private static void updateBulletList(UICommandBuilder commandBuilder, String selector, String[] messageKeys) {
       for (int i = 0; i < messageKeys.length; i++) {
          String messageKey = messageKeys[i];
          String child = selector + "[" + i + "]";
@@ -167,15 +167,13 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   @Nonnull
-   public static Message createDescription(@Nonnull PortalType portalType, int timeLimitSeconds) {
-      Message message = Message.empty();
-      Message durationMessage = formatDurationCrudely(timeLimitSeconds);
-      message.insert(Message.translation("server.customUI.portalDevice.timeLimit").param("limit", durationMessage.color("#f9cb13")));
-      return message;
+   public static Message createDescription(PortalType portalType, int timeLimitSeconds) {
+      Message msg = Message.empty();
+      Message durationMsg = formatDurationCrudely(timeLimitSeconds);
+      msg.insert(Message.translation("server.customUI.portalDevice.timeLimit").param("limit", durationMsg.color("#f9cb13")));
+      return msg;
    }
 
-   @Nonnull
    private static Message formatDurationCrudely(int seconds) {
       if (seconds < 0) {
          return Message.translation("server.customUI.portalDevice.durationUnlimited");
@@ -272,10 +270,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   @Nonnull
-   private static CompletableFuture<World> spawnReturnPortal(
-      @Nonnull World world, @Nonnull PortalWorld portalWorld, @Nonnull UUID sampleUuid, @Nonnull String portalBlockType
-   ) {
+   private static CompletableFuture<World> spawnReturnPortal(World world, PortalWorld portalWorld, UUID sampleUuid, String portalBlockType) {
       PortalSpawn portalSpawn = portalWorld.getPortalType().getPortalSpawn();
       return getSpawnTransform(world, sampleUuid, portalSpawn)
          .thenCompose(
@@ -307,27 +302,25 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
          );
    }
 
-   @Nonnull
-   private static CompletableFuture<Transform> getSpawnTransform(@Nonnull World world, @Nonnull UUID sampleUuid, @Nullable PortalSpawn portalSpawn) {
+   private static CompletableFuture<Transform> getSpawnTransform(World world, UUID sampleUuid, @Nullable PortalSpawn portalSpawn) {
       ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
       if (spawnProvider == null) {
          return CompletableFuture.completedFuture(null);
-      } else {
-         Transform worldSpawnPoint = spawnProvider.getSpawnPoint(world, sampleUuid);
-         if (portalSpawn == null) {
-            Transform uppedSpawnPoint = worldSpawnPoint.clone();
-            uppedSpawnPoint.getPosition().add(0.0, 0.5, 0.0);
-            return CompletableFuture.completedFuture(uppedSpawnPoint);
-         } else {
-            return CompletableFuture.supplyAsync(() -> {
-               Transform computedSpawn = PortalSpawnFinder.computeSpawnTransform(world, portalSpawn);
-               return computedSpawn == null ? worldSpawnPoint : computedSpawn;
-            }, world);
-         }
       }
+
+      Transform worldSpawnPoint = spawnProvider.getSpawnPoint(world, sampleUuid);
+      if (DEFAULT_WORLDGEN_SPAWN.equals(worldSpawnPoint) && portalSpawn != null) {
+         return CompletableFuture.supplyAsync(() -> {
+            Transform computedSpawn = PortalSpawnFinder.computeSpawnTransform(world, portalSpawn);
+            return computedSpawn == null ? worldSpawnPoint : computedSpawn;
+         }, world);
+      }
+
+      Transform uppedSpawnPoint = worldSpawnPoint.clone();
+      uppedSpawnPoint.getPosition().add(0.0, 0.5, 0.0);
+      return CompletableFuture.completedFuture(uppedSpawnPoint);
    }
 
-   @Nonnull
    private PortalDeviceSummonPage.State computeState(@Nonnull Player player, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.blockRef.isValid()) {
          return PortalDeviceSummonPage.Error.INVALID_BLOCK;
@@ -343,65 +336,65 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       PortalDevice portalDevice = chunkStore.getComponent(this.blockRef, PortalDevice.getComponentType());
       if (blockStateInfo != null && portalDevice != null) {
          Ref<ChunkStore> chunkRef = blockStateInfo.getChunkRef();
-         if (!chunkRef.isValid()) {
+         if (chunkRef != null && chunkRef.isValid()) {
+            WorldChunk worldChunk = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+            if (worldChunk == null) {
+               return PortalDeviceSummonPage.Error.INVALID_BLOCK;
+            }
+
+            World existingDestinationWorld = portalDevice.getDestinationWorld();
+            if (existingDestinationWorld != null) {
+               return PortalDeviceSummonPage.Error.INVALID_DESTINATION;
+            }
+
+            if (this.offeredItemStack == null) {
+               return PortalDeviceSummonPage.Error.NOTHING_OFFERED;
+            }
+
+            ItemStack inHand = player.getInventory().getItemInHand();
+            if (!this.offeredItemStack.equals(inHand)) {
+               return PortalDeviceSummonPage.Error.OFFERED_IS_NOT_HELD;
+            }
+
+            Item offeredItem = this.offeredItemStack.getItem();
+            PortalKey portalKey = offeredItem.getPortalKey();
+            if (portalKey == null) {
+               return PortalDeviceSummonPage.Error.NOT_A_PORTAL_KEY;
+            }
+
+            String portalTypeId = portalKey.getPortalTypeId();
+            PortalType portalType = PortalType.getAssetMap().getAsset(portalTypeId);
+            if (portalType == null) {
+               return new PortalDeviceSummonPage.PortalTypeNotFound(portalTypeId);
+            }
+
+            String instanceId = portalType.getInstanceId();
+            InstancesPlugin.get();
+            boolean instanceExists = InstancesPlugin.doesInstanceAssetExist(instanceId);
+            if (!instanceExists) {
+               return new PortalDeviceSummonPage.InstanceKeyNotFound(instanceId);
+            }
+
+            PortalWorld insidePortalWorld = componentAccessor.getResource(PortalWorld.getResourceType());
+            if (insidePortalWorld.exists()) {
+               return PortalDeviceSummonPage.Error.PORTAL_INSIDE_PORTAL;
+            }
+
+            String gameplayConfigId = portalType.getGameplayConfigId();
+            GameplayConfig gameplayConfig = GameplayConfig.getAssetMap().getAsset(gameplayConfigId);
+            PortalGameplayConfig portalGameplayConfig = gameplayConfig == null ? null : gameplayConfig.getPluginConfig().get(PortalGameplayConfig.class);
+            return portalGameplayConfig == null
+               ? PortalDeviceSummonPage.Error.BOTCHED_GAMEPLAY_CONFIG
+               : new PortalDeviceSummonPage.CanSpawnPortal(portalKey, portalType, worldChunk, blockStateInfo, portalDevice, portalGameplayConfig);
+         } else {
             return PortalDeviceSummonPage.Error.INVALID_BLOCK;
          }
-
-         WorldChunk worldChunk = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
-         if (worldChunk == null) {
-            return PortalDeviceSummonPage.Error.INVALID_BLOCK;
-         }
-
-         World existingDestinationWorld = portalDevice.getDestinationWorld();
-         if (existingDestinationWorld != null) {
-            return PortalDeviceSummonPage.Error.INVALID_DESTINATION;
-         }
-
-         if (this.offeredItemStack == null) {
-            return PortalDeviceSummonPage.Error.NOTHING_OFFERED;
-         }
-
-         ItemStack inHand = player.getInventory().getItemInHand();
-         if (!this.offeredItemStack.equals(inHand)) {
-            return PortalDeviceSummonPage.Error.OFFERED_IS_NOT_HELD;
-         }
-
-         Item offeredItem = this.offeredItemStack.getItem();
-         PortalKey portalKey = offeredItem.getPortalKey();
-         if (portalKey == null) {
-            return PortalDeviceSummonPage.Error.NOT_A_PORTAL_KEY;
-         }
-
-         String portalTypeId = portalKey.getPortalTypeId();
-         PortalType portalType = PortalType.getAssetMap().getAsset(portalTypeId);
-         if (portalType == null) {
-            return new PortalDeviceSummonPage.PortalTypeNotFound(portalTypeId);
-         }
-
-         String instanceId = portalType.getInstanceId();
-         InstancesPlugin.get();
-         boolean instanceExists = InstancesPlugin.doesInstanceAssetExist(instanceId);
-         if (!instanceExists) {
-            return new PortalDeviceSummonPage.InstanceKeyNotFound(instanceId);
-         }
-
-         PortalWorld insidePortalWorld = componentAccessor.getResource(PortalWorld.getResourceType());
-         if (insidePortalWorld.exists()) {
-            return PortalDeviceSummonPage.Error.PORTAL_INSIDE_PORTAL;
-         }
-
-         String gameplayConfigId = portalType.getGameplayConfigId();
-         GameplayConfig gameplayConfig = GameplayConfig.getAssetMap().getAsset(gameplayConfigId);
-         PortalGameplayConfig portalGameplayConfig = gameplayConfig == null ? null : gameplayConfig.getPluginConfig().get(PortalGameplayConfig.class);
-         return portalGameplayConfig == null
-            ? PortalDeviceSummonPage.Error.BOTCHED_GAMEPLAY_CONFIG
-            : new PortalDeviceSummonPage.CanSpawnPortal(portalKey, portalType, worldChunk, blockStateInfo, portalDevice, portalGameplayConfig);
       } else {
          return PortalDeviceSummonPage.Error.INVALID_BLOCK;
       }
    }
 
-   private static void decrementItemInHand(@Nonnull Inventory inventory, int amount) {
+   private static void decrementItemInHand(Inventory inventory, int amount) {
       if (!inventory.usingToolsItem()) {
          byte hotbarSlot = inventory.getActiveHotbarSlot();
          if (hotbarSlot != -1) {
@@ -425,9 +418,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    }
 
    protected static class Data {
-      @Nonnull
       private static final String KEY_ACTION = "Action";
-      @Nonnull
       public static final BuilderCodec<PortalDeviceSummonPage.Data> CODEC = BuilderCodec.builder(
             PortalDeviceSummonPage.Data.class, PortalDeviceSummonPage.Data::new
          )

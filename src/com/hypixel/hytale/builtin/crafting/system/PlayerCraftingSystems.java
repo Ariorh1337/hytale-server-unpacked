@@ -21,14 +21,11 @@ import javax.annotation.Nonnull;
 public class PlayerCraftingSystems {
    public static class CraftingHolderSystem extends HolderSystem<EntityStore> {
       @Nonnull
-      private final ComponentType<EntityStore, Player> playerComponentType;
+      private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
       @Nonnull
       private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
 
-      public CraftingHolderSystem(
-         @Nonnull ComponentType<EntityStore, Player> playerComponentType, @Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType
-      ) {
-         this.playerComponentType = playerComponentType;
+      public CraftingHolderSystem(@Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
          this.craftingManagerComponentType = craftingManagerComponentType;
       }
 
@@ -56,21 +53,18 @@ public class PlayerCraftingSystems {
 
    public static class CraftingRefSystem extends RefSystem<EntityStore> {
       @Nonnull
-      private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
+      private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
       @Nonnull
-      private final Query<EntityStore> query;
+      private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
 
-      public CraftingRefSystem(
-         @Nonnull ComponentType<EntityStore, Player> playerComponentType, @Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType
-      ) {
+      public CraftingRefSystem(@Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
          this.craftingManagerComponentType = craftingManagerComponentType;
-         this.query = Query.and(playerComponentType, craftingManagerComponentType);
       }
 
       @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
-         return this.query;
+         return Query.and(this.playerComponentType, this.craftingManagerComponentType);
       }
 
       @Override
@@ -83,7 +77,7 @@ public class PlayerCraftingSystems {
       public void onEntityRemove(
          @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         CraftingManager craftingManagerComponent = commandBuffer.getComponent(ref, this.craftingManagerComponentType);
+         CraftingManager craftingManagerComponent = commandBuffer.getComponent(ref, CraftingManager.getComponentType());
          assert craftingManagerComponent != null;
          craftingManagerComponent.cancelAllCrafting(ref, store);
       }

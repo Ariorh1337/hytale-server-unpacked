@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class DownwardDepthMaterialProviderAsset extends MaterialProviderAsset {
-   @Nonnull
    public static final BuilderCodec<DownwardDepthMaterialProviderAsset> CODEC = BuilderCodec.builder(
          DownwardDepthMaterialProviderAsset.class, DownwardDepthMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
@@ -18,7 +17,7 @@ public class DownwardDepthMaterialProviderAsset extends MaterialProviderAsset {
       .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
       .add()
       .build();
-   private int depth;
+   private int depth = 0;
    private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
 
    @Nonnull

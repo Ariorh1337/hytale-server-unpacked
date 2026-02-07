@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.buildertools.prefablist;
 
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.utils.PasteToolUtil;
-import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
@@ -162,8 +161,13 @@ public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
          this.buildFileList(commandBuilder, eventBuilder);
          this.sendUpdate(commandBuilder, eventBuilder, false);
       } else {
-         Path baseDir = isSearchResult ? this.browser.getRoot() : this.browser.getRoot().resolve(this.browser.getCurrentDir().toString());
-         Path file = PathUtil.resolvePathWithinDir(baseDir, selectedPath);
+         Path file;
+         if (isSearchResult) {
+            file = this.browser.resolveSecure(selectedPath);
+         } else {
+            file = this.browser.resolveFromCurrent(selectedPath);
+         }
+
          if (file != null && !Files.isDirectory(file)) {
             this.handlePrefabSelection(ref, store, file, selectedPath);
          } else {

@@ -15,10 +15,9 @@ public class CustomModelTexture {
       )
       .addValidator(CommonAssetValidator.TEXTURE_ITEM)
       .add()
-      .append(
+      .addField(
          new KeyedCodec<>("Weight", Codec.INTEGER), (customModelTexture, i) -> customModelTexture.weight = i, customModelTexture -> customModelTexture.weight
       )
-      .add()
       .build();
    private String texture;
    private int weight;

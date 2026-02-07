@@ -40,10 +40,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntityStore> {
-   @Nonnull
-   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final int MAX_PORTALS = 24;
-   @Nullable
    private CompletableFuture<Vector3d> findPortalSpawnPos;
 
    public VoidInvasionPortalsSpawnSystem() {
@@ -58,13 +55,12 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
       @Nonnull Store<EntityStore> store,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      VoidEvent voidEventComponent = archetypeChunk.getComponent(index, VoidEvent.getComponentType());
-      assert voidEventComponent != null;
+      VoidEvent voidEvent = archetypeChunk.getComponent(index, VoidEvent.getComponentType());
       World world = store.getExternalData().getWorld();
       if (this.findPortalSpawnPos == null) {
-         SpatialHashGrid<Ref<EntityStore>> spawners = cleanupAndGetSpawners(voidEventComponent);
+         SpatialHashGrid<Ref<EntityStore>> spawners = this.cleanupAndGetSpawners(voidEvent);
          if (spawners.size() < 24) {
-            this.findPortalSpawnPos = findPortalSpawnPosition(world, voidEventComponent, commandBuffer);
+            this.findPortalSpawnPos = this.findPortalSpawnPosition(world, voidEvent, commandBuffer);
          }
       } else if (this.findPortalSpawnPos.isDone()) {
          Vector3d portalPos;
@@ -72,7 +68,7 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
             portalPos = this.findPortalSpawnPos.join();
             this.findPortalSpawnPos = null;
          } catch (Throwable t) {
-            LOGGER.at(Level.SEVERE).withCause(t).log("Error trying to find a void event spawn position");
+            HytaleLogger.getLogger().at(Level.SEVERE).withCause(t).log("Error trying to find a void event spawn position");
             return;
          }
 
@@ -81,58 +77,35 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
             voidSpawnerHolder.addComponent(VoidSpawner.getComponentType(), new VoidSpawner());
             voidSpawnerHolder.addComponent(TransformComponent.getComponentType(), new TransformComponent(portalPos, new Vector3f()));
             Ref<EntityStore> voidSpawner = commandBuffer.addEntity(voidSpawnerHolder, AddReason.SPAWN);
-            voidEventComponent.getVoidSpawners().add(portalPos, voidSpawner);
-            VoidEventConfig eventConfig = VoidEvent.getConfig(world);
+            voidEvent.getVoidSpawners().add(portalPos, voidSpawner);
+            VoidEventConfig eventConfig = voidEvent.getConfig(world);
             if (eventConfig == null) {
-               LOGGER.at(Level.WARNING).log("There's a Void Event entity but no void event config in the gameplay config");
+               HytaleLogger.getLogger().at(Level.WARNING).log("There's a Void Event entity but no void event config in the gameplay config");
             } else {
                InvasionPortalConfig invasionPortalConfig = eventConfig.getInvasionPortalConfig();
                Vector3i portalBlockPos = portalPos.toVector3i();
-               long chunkIndex = ChunkUtil.indexChunkFromBlock(portalBlockPos.x, portalBlockPos.z);
-               world.getChunkAsync(chunkIndex)
-                  .thenAcceptAsync(
-                     chunk -> {
-                        BlockType blockType = invasionPortalConfig.getBlockType();
-                        if (blockType == null) {
-                           LOGGER.at(Level.WARNING)
-                              .log(
-                                 "Failed to place invasion portal block at %s, %s, %s. Block type is not configured",
-                                 portalBlockPos.x,
-                                 portalBlockPos.y,
-                                 portalBlockPos.z
-                              );
-                        } else {
-                           chunk.setBlock(portalBlockPos.x, portalBlockPos.y, portalBlockPos.z, blockType, 4);
-                        }
-                     },
-                     world
-                  );
+               world.getChunkAsync(ChunkUtil.indexChunkFromBlock(portalBlockPos.x, portalBlockPos.z)).thenAcceptAsync(chunk -> {
+                  BlockType blockType = invasionPortalConfig.getBlockType();
+                  chunk.setBlock(portalBlockPos.x, portalBlockPos.y, portalBlockPos.z, blockType, 4);
+               }, world);
             }
          }
       }
    }
 
-   @Nullable
-   private static CompletableFuture<Vector3d> findPortalSpawnPosition(
-      @Nonnull World world, @Nonnull VoidEvent voidEvent, @Nonnull CommandBuffer<EntityStore> commandBuffer
-   ) {
+   private CompletableFuture<Vector3d> findPortalSpawnPosition(World world, VoidEvent voidEvent, CommandBuffer<EntityStore> commandBuffer) {
       PortalWorld portalWorld = commandBuffer.getResource(PortalWorld.getResourceType());
       if (!portalWorld.exists()) {
          return null;
       }
 
-      Transform spawnPoint = portalWorld.getSpawnPoint();
-      if (spawnPoint == null) {
-         return null;
-      }
-
-      Vector3d spawnPos = spawnPoint.getPosition();
-      Transform playerTransform = findRandomPlayerTransform(world, commandBuffer);
+      Vector3d spawnPos = portalWorld.getSpawnPoint().getPosition();
+      Transform playerTransform = this.findRandomPlayerTransform(world, commandBuffer);
       if (playerTransform == null) {
          return null;
       }
 
-      Vector3d originPosition = playerTransform.getPosition().clone().add(0.0, 5.0, 0.0);
+      Vector3d origin = playerTransform.getPosition().clone().add(0.0, 5.0, 0.0);
       Vector3d direction = playerTransform.getDirection();
       SpatialHashGrid<Ref<EntityStore>> existingSpawners = voidEvent.getVoidSpawners();
       NotNearAnyInHashGrid noNearbySpawners = new NotNearAnyInHashGrid(existingSpawners, 62.0);
@@ -142,14 +115,14 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
             .filter(new NotNearPointXZ(spawnPos, 18.0))
             .then(new SearchBelow(12))
             .filter(new FitsAPortal())
-            .execute(world, originPosition)
+            .execute(world, origin)
             .orElse(null),
          world
       );
    }
 
    @Nullable
-   private static Transform findRandomPlayerTransform(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+   private Transform findRandomPlayerTransform(World world, CommandBuffer<EntityStore> commandBuffer) {
       Collection<PlayerRef> playerRefs = world.getPlayerRefs();
       if (playerRefs.isEmpty()) {
          return null;
@@ -167,8 +140,7 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
       return transformComponent.getTransform();
    }
 
-   @Nonnull
-   private static SpatialHashGrid<Ref<EntityStore>> cleanupAndGetSpawners(@Nonnull VoidEvent voidEvent) {
+   private SpatialHashGrid<Ref<EntityStore>> cleanupAndGetSpawners(VoidEvent voidEvent) {
       SpatialHashGrid<Ref<EntityStore>> spawners = voidEvent.getVoidSpawners();
       spawners.removeIf(ref -> !ref.isValid());
       return spawners;

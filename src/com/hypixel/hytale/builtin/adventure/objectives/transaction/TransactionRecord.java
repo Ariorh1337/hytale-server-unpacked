@@ -9,9 +9,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class TransactionRecord {
-   @Nonnull
    public static final CodecMapCodec<TransactionRecord> CODEC = new CodecMapCodec<>("Type");
-   @Nonnull
    public static final BuilderCodec<TransactionRecord> BASE_CODEC = BuilderCodec.abstractBuilder(TransactionRecord.class)
       .append(
          new KeyedCodec<>("Status", new EnumCodec<>(TransactionStatus.class, EnumCodec.EnumStyle.LEGACY)),
@@ -55,7 +53,7 @@ public abstract class TransactionRecord {
 
    @Nonnull
    public static <T extends TransactionRecord> TransactionRecord[] appendFailedTransaction(
-      @Nullable TransactionRecord[] transactions, @Nonnull T transaction, String reason
+      TransactionRecord[] transactions, @Nonnull T transaction, String reason
    ) {
       return appendTransaction(transactions, transaction.fail(reason));
    }

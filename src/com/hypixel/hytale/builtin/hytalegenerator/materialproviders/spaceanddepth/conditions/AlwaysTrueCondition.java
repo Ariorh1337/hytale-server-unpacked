@@ -1,10 +1,8 @@
 package com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions;
 
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
-import javax.annotation.Nonnull;
 
 public class AlwaysTrueCondition implements SpaceAndDepthMaterialProvider.Condition {
-   @Nonnull
    public static final AlwaysTrueCondition INSTANCE = new AlwaysTrueCondition();
 
    private AlwaysTrueCondition() {

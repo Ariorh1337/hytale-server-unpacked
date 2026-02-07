@@ -10,7 +10,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class FastGradientWarpDensityAsset extends DensityAsset {
-   @Nonnull
    public static final BuilderCodec<FastGradientWarpDensityAsset> CODEC = BuilderCodec.builder(
          FastGradientWarpDensityAsset.class, FastGradientWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )

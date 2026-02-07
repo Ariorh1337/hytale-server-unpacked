@@ -12,7 +12,6 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 
 public final class ObjectiveLineHistoryData extends CommonObjectiveHistoryData {
-   @Nonnull
    public static final BuilderCodec<ObjectiveLineHistoryData> CODEC = BuilderCodec.builder(
          ObjectiveLineHistoryData.class, ObjectiveLineHistoryData::new, BASE_CODEC
       )

@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.universe.datastore;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
-import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.util.BsonUtil;
@@ -34,13 +33,7 @@ public class DiskDataStore<T> implements DataStore<T> {
 
    public DiskDataStore(@Nonnull String path, BuilderCodec<T> codec) {
       this.logger = HytaleLogger.get("DataStore|" + path);
-      Path universePath = Universe.get().getPath();
-      Path resolved = PathUtil.resolvePathWithinDir(universePath, path);
-      if (resolved == null) {
-         throw new IllegalStateException("Data store path must be within universe directory: " + path);
-      }
-
-      this.path = resolved;
+      this.path = Universe.get().getPath().resolve(path);
       this.codec = codec;
       if (Files.isDirectory(this.path)) {
          try (DirectoryStream<Path> paths = Files.newDirectoryStream(this.path, "*.bson")) {
@@ -49,7 +42,7 @@ public class DiskDataStore<T> implements DataStore<T> {
 
                try {
                   Files.move(oldPath, newPath);
-               } catch (IOException var11) {
+               } catch (IOException var9) {
                }
             }
          } catch (IOException e) {
@@ -133,20 +126,12 @@ public class DiskDataStore<T> implements DataStore<T> {
 
    @Nonnull
    protected static Path getPathFromId(@Nonnull Path path, String id) {
-      if (!PathUtil.isValidName(id)) {
-         throw new IllegalArgumentException("Invalid ID: " + id);
-      } else {
-         return path.resolve(id + ".json");
-      }
+      return path.resolve(id + ".json");
    }
 
    @Nonnull
    protected static Path getBackupPathFromId(@Nonnull Path path, String id) {
-      if (!PathUtil.isValidName(id)) {
-         throw new IllegalArgumentException("Invalid ID: " + id);
-      } else {
-         return path.resolve(id + ".json.bak");
-      }
+      return path.resolve(id + ".json.bak");
    }
 
    @Nonnull

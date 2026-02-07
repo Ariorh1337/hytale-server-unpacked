@@ -64,13 +64,7 @@ public abstract class GrowthModifierAsset implements JsonAssetWithMap<String, De
    }
 
    public double getCurrentGrowthMultiplier(
-      @Nonnull CommandBuffer<ChunkStore> commandBuffer,
-      @Nonnull Ref<ChunkStore> sectionRef,
-      @Nonnull Ref<ChunkStore> blockRef,
-      int x,
-      int y,
-      int z,
-      boolean initialTick
+      CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, boolean initialTick
    ) {
       return this.modifier;
    }

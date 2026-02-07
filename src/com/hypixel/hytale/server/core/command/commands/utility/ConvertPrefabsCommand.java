@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.command.commands.utility;
 
-import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -86,58 +85,49 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
       String storeOption = this.storeArg.get(context);
       if (this.pathArg.provided(context)) {
          Path assetPath = Paths.get(this.pathArg.get(context));
-         if (!PathUtil.isInTrustedRoot(assetPath)) {
-            context.sendMessage(Message.translation("server.commands.convertprefabs.invalidPath"));
-            return CompletableFuture.completedFuture(null);
-         } else {
-            return this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+         return this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+            this.sendCompletionMessages(context, assetPath, failed, skipped);
+            return null;
+         });
+      }
+
+      return switch (storeOption) {
+         case "server" -> {
+            Path assetPath = PrefabStore.get().getServerPrefabsPath();
+            yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
                this.sendCompletionMessages(context, assetPath, failed, skipped);
                return null;
             });
          }
-      } else {
-         return switch (storeOption) {
-            case "server" -> {
-               Path assetPath = PrefabStore.get().getServerPrefabsPath();
-               yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+         case "asset" -> {
+            Path assetPath = PrefabStore.get().getAssetPrefabsPath();
+            yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+               this.sendCompletionMessages(context, assetPath, failed, skipped);
+               return null;
+            });
+         }
+         case "worldgen" -> {
+            Path assetPath = PrefabStore.get().getWorldGenPrefabsPath();
+            yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+               this.sendCompletionMessages(context, assetPath, failed, skipped);
+               return null;
+            });
+         }
+         case "all" -> {
+            Path assetPath = Path.of("");
+            yield this.convertPath(PrefabStore.get().getWorldGenPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped)
+               .thenCompose(_v -> this.convertPath(PrefabStore.get().getServerPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped))
+               .thenCompose(_v -> this.convertPath(PrefabStore.get().getAssetPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped))
+               .thenApply(_v -> {
                   this.sendCompletionMessages(context, assetPath, failed, skipped);
                   return null;
                });
-            }
-            case "asset" -> {
-               Path assetPath = PrefabStore.get().getAssetPrefabsPath();
-               yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
-                  this.sendCompletionMessages(context, assetPath, failed, skipped);
-                  return null;
-               });
-            }
-            case "worldgen" -> {
-               Path assetPath = PrefabStore.get().getWorldGenPrefabsPath();
-               yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
-                  this.sendCompletionMessages(context, assetPath, failed, skipped);
-                  return null;
-               });
-            }
-            case "all" -> {
-               Path assetPath = Path.of("");
-               yield this.convertPath(PrefabStore.get().getWorldGenPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped)
-                  .thenCompose(
-                     _v -> this.convertPath(PrefabStore.get().getServerPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped)
-                  )
-                  .thenCompose(
-                     _v -> this.convertPath(PrefabStore.get().getAssetPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped)
-                  )
-                  .thenApply(_v -> {
-                     this.sendCompletionMessages(context, assetPath, failed, skipped);
-                     return null;
-                  });
-            }
-            default -> {
-               context.sendMessage(Message.translation("server.commands.convertprefabs.invalidStore").param("store", storeOption));
-               yield CompletableFuture.completedFuture(null);
-            }
-         };
-      }
+         }
+         default -> {
+            context.sendMessage(Message.translation("server.commands.convertprefabs.invalidStore").param("store", storeOption));
+            yield CompletableFuture.completedFuture(null);
+         }
+      };
    }
 
    private void sendCompletionMessages(@Nonnull CommandContext context, @Nonnull Path assetPath, @Nonnull List<String> failed, @Nonnull List<String> skipped) {

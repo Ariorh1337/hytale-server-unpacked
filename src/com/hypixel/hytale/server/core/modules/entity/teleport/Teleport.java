@@ -8,7 +8,6 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -22,7 +21,6 @@ public class Teleport implements Component<EntityStore> {
    @Nullable
    private Vector3f headRotation;
    private boolean resetVelocity = true;
-   private CompletableFuture<Void> onComplete;
 
    @Nonnull
    public static ComponentType<EntityStore, Teleport> getComponentType() {
@@ -92,14 +90,6 @@ public class Teleport implements Component<EntityStore> {
    public Teleport withoutVelocityReset() {
       this.resetVelocity = false;
       return this;
-   }
-
-   public void setOnComplete(@Nonnull CompletableFuture<Void> onComplete) {
-      this.onComplete = onComplete;
-   }
-
-   public CompletableFuture<Void> getOnComplete() {
-      return this.onComplete;
    }
 
    @Nullable

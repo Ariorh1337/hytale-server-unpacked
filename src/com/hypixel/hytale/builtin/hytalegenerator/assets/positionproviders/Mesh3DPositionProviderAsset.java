@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class Mesh3DPositionProviderAsset extends PositionProviderAsset {
-   @Nonnull
    public static final BuilderCodec<Mesh3DPositionProviderAsset> CODEC = BuilderCodec.builder(
          Mesh3DPositionProviderAsset.class, Mesh3DPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )

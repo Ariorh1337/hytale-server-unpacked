@@ -8,36 +8,17 @@ import javax.annotation.Nonnull;
 
 public class AxisDensity extends Density {
    public static final double ZERO_DELTA = 1.0E-9;
-   @Nonnull
    private static final Vector3d ZERO_VECTOR = new Vector3d();
    @Nonnull
    private final Double2DoubleFunction distanceCurve;
    @Nonnull
    private final Vector3d axis;
    private final boolean isAnchored;
-   @Nonnull
-   private final Vector3d rPosition;
-   @Nonnull
-   private final Vector3d r0;
-   @Nonnull
-   private final Vector3d r1;
-   @Nonnull
-   private final Vector3d r2;
-   @Nonnull
-   private final Vector3d r3;
-   @Nonnull
-   private final Vector3d r4;
 
    public AxisDensity(@Nonnull Double2DoubleFunction distanceCurve, @Nonnull Vector3d axis, boolean isAnchored) {
       this.distanceCurve = distanceCurve;
       this.axis = axis;
       this.isAnchored = isAnchored;
-      this.rPosition = new Vector3d();
-      this.r0 = new Vector3d();
-      this.r1 = new Vector3d();
-      this.r2 = new Vector3d();
-      this.r3 = new Vector3d();
-      this.r4 = new Vector3d();
    }
 
    @Override
@@ -50,7 +31,7 @@ public class AxisDensity extends Density {
          return this.processAnchored(context);
       }
 
-      double distance = VectorUtil.distanceToLine3d(context.position, ZERO_VECTOR, this.axis, this.r0, this.r1, this.r2, this.r3, this.r4);
+      double distance = VectorUtil.distanceToLine3d(context.position, ZERO_VECTOR, this.axis);
       return this.distanceCurve.get(distance);
    }
 
@@ -64,8 +45,8 @@ public class AxisDensity extends Density {
          return 0.0;
       }
 
-      this.rPosition.assign(context.position).subtract(anchor);
-      double distance = VectorUtil.distanceToLine3d(this.rPosition, ZERO_VECTOR, this.axis, this.r0, this.r1, this.r2, this.r3, this.r4);
+      Vector3d position = context.position.clone().subtract(anchor);
+      double distance = VectorUtil.distanceToLine3d(position, ZERO_VECTOR, this.axis);
       return this.distanceCurve.get(distance);
    }
 }

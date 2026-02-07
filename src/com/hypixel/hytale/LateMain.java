@@ -7,7 +7,6 @@ import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Options;
-import com.hypixel.hytale.server.core.console.ConsoleModule;
 import io.sentry.Sentry;
 import java.util.Map.Entry;
 import java.util.logging.Level;
@@ -17,7 +16,6 @@ public class LateMain {
       try {
          if (!Options.parse(args)) {
             HytaleLogger.init();
-            ConsoleModule.initializeTerminal();
             HytaleFileHandler.INSTANCE.enable();
             HytaleLogger.replaceStd();
             HytaleLoggerBackend.LOG_LEVEL_LOADER = name -> {

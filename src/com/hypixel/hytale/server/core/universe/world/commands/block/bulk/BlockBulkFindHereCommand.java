@@ -29,13 +29,11 @@ import javax.annotation.Nonnull;
 
 public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
    @Nonnull
-   private final FlagArg printNameArg = this.withFlagArg("print", "server.commands.block.find-here.print.desc");
+   private final FlagArg printNameArg = this.withFlagArg("print", "");
    @Nonnull
-   private final RequiredArg<String> blockTypeArg = this.withRequiredArg("block", "server.commands.block.find-here.block.desc", ArgTypes.BLOCK_TYPE_KEY);
+   private final RequiredArg<String> blockTypeArg = this.withRequiredArg("block", "", ArgTypes.BLOCK_TYPE_KEY);
    @Nonnull
-   private final DefaultArg<Integer> radiusArg = this.withDefaultArg(
-      "radius", "server.commands.block.find-here.radius.desc", ArgTypes.INTEGER, 3, "server.commands.block.bulk.find-here.radius.default"
-   );
+   private final DefaultArg<Integer> radiusArg = this.withDefaultArg("radius", "", ArgTypes.INTEGER, 3, "");
 
    public BlockBulkFindHereCommand() {
       super("find-here", "server.commands.block.find-here.desc");

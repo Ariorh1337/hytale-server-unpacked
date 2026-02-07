@@ -11,7 +11,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class UseEntityObjectiveTaskAsset extends CountObjectiveTaskAsset {
-   @Nonnull
    public static final BuilderCodec<UseEntityObjectiveTaskAsset> CODEC = BuilderCodec.builder(
          UseEntityObjectiveTaskAsset.class, UseEntityObjectiveTaskAsset::new, CountObjectiveTaskAsset.CODEC
       )
