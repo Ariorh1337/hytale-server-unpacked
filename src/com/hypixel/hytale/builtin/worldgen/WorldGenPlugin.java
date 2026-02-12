@@ -49,15 +49,17 @@ public class WorldGenPlugin extends JavaPlugin {
       instance = this;
       this.getEntityStoreRegistry().registerSystem(new BiomeDataSystem());
       IWorldGenProvider.CODEC.register(Priority.DEFAULT.before(1), "Hytale", HytaleWorldGenProvider.class, HytaleWorldGenProvider.CODEC);
-      FileIO.setDefaultRoot(AssetModule.get().getBaseAssetPack().getRoot());
-      if (FeatureFlags.VERSION_OVERRIDES) {
-         AssetModule assets = AssetModule.get();
+      AssetModule assets = AssetModule.get();
+      if (assets.getAssetPacks().isEmpty()) {
+         this.getLogger().at(Level.SEVERE).log("No asset packs loaded");
+      } else {
+         FileIO.setDefaultRoot(assets.getBaseAssetPack().getRoot());
          List<WorldGenPlugin.Version> packs = loadVersionPacks(assets);
          Object2ObjectOpenHashMap<String, Semver> versions = new Object2ObjectOpenHashMap<>();
 
          for (WorldGenPlugin.Version version : packs) {
             validateVersion(version, packs);
-            assets.registerPack(version.getPackName(), version.path, version.manifest);
+            assets.registerPack(version.getPackName(), version.path, version.manifest, false);
             Semver latest = versions.get(version.name);
             if (latest == null || version.manifest.getVersion().compareTo(latest) > 0) {
                versions.put(version.name, version.manifest.getVersion());

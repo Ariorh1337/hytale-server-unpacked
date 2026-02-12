@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.adventure.teleporter.page;
 
 import com.hypixel.hytale.builtin.adventure.teleporter.component.Teleporter;
 import com.hypixel.hytale.builtin.adventure.teleporter.system.CreateWarpWhenTeleporterPlacedSystem;
+import com.hypixel.hytale.builtin.adventure.teleporter.system.TurnOffTeleportersSystem;
 import com.hypixel.hytale.builtin.adventure.teleporter.util.CannedWarpNames;
 import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
 import com.hypixel.hytale.builtin.teleport.Warp;
@@ -11,13 +12,11 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
@@ -34,6 +33,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -43,16 +43,11 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
    @Nonnull
    private final Ref<ChunkStore> blockRef;
    private final TeleporterSettingsPage.Mode mode;
-   @Nullable
-   private final String activeState;
 
-   public TeleporterSettingsPage(
-      @Nonnull PlayerRef playerRef, @Nonnull Ref<ChunkStore> blockRef, TeleporterSettingsPage.Mode mode, @Nullable String activeState
-   ) {
+   public TeleporterSettingsPage(@Nonnull PlayerRef playerRef, @Nonnull Ref<ChunkStore> blockRef, TeleporterSettingsPage.Mode mode) {
       super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, TeleporterSettingsPage.PageEventData.CODEC);
       this.blockRef = blockRef;
       this.mode = mode;
-      this.activeState = activeState;
    }
 
    @Override
@@ -180,10 +175,6 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
             } else {
                WorldChunk worldChunkComponent = chunkRef.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
                assert worldChunkComponent != null;
-               int index = blockStateInfo.getIndex();
-               int targetX = ChunkUtil.xFromBlockInColumn(index);
-               int targetY = ChunkUtil.yFromBlockInColumn(index);
-               int targetZ = ChunkUtil.zFromBlockInColumn(index);
                Teleporter teleporterComponent = this.blockRef.getStore().getComponent(this.blockRef, Teleporter.getComponentType());
                if (teleporterComponent == null) {
                   playerComponent.getPageManager().setPage(ref, store, Page.None);
@@ -225,6 +216,8 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
                   }
 
                   playerComponent.getPageManager().setPage(ref, store, Page.None);
+                  String ownedWarpBefore = teleporterComponent.getOwnedWarp();
+                  String destinationWarpBefore = teleporterComponent.getWarp();
                   CreateWarpWhenTeleporterPlacedSystem.createWarp(worldChunkComponent, blockStateInfo, data.warpName);
                   teleporterComponent.setOwnedWarp(data.warpName);
                   teleporterComponent.setIsCustomName(customName);
@@ -250,34 +243,20 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
                                  | (data.isBlockRelative ? 64 : 0)
                            )
                         );
-                        teleporterComponent.setWarp(data.warp != null && !data.warp.isEmpty() ? data.warp : null);
+                        teleporterComponent.setWarp(data.destinationWarp != null && !data.destinationWarp.isEmpty() ? data.destinationWarp : null);
                         break;
                      case WARP:
                         teleporterComponent.setWorldUuid(null);
                         teleporterComponent.setTransform(null);
-                        teleporterComponent.setWarp(data.warp != null && !data.warp.isEmpty() ? data.warp : null);
+                        teleporterComponent.setWarp(data.destinationWarp != null && !data.destinationWarp.isEmpty() ? data.destinationWarp : null);
                   }
 
-                  String newState = "default";
-                  if (teleporterComponent.isValid()) {
-                     newState = this.activeState != null ? this.activeState : "default";
+                  boolean ownChanged = !Objects.equals(ownedWarpBefore, teleporterComponent.getOwnedWarp());
+                  boolean destinationChanged = !Objects.equals(destinationWarpBefore, teleporterComponent.getWarp());
+                  if (ownChanged || destinationChanged) {
+                     World world = store.getExternalData().getWorld();
+                     TurnOffTeleportersSystem.updatePortalBlocksInWorld(world);
                   }
-
-                  boolean isDifferentState = false;
-                  BlockType blockType = worldChunkComponent.getBlockType(targetX, targetY, targetZ);
-                  if (blockType != null) {
-                     String currentState = blockType.getStateForBlock(blockType);
-                     isDifferentState = !newState.equals(currentState);
-                  }
-
-                  if (isDifferentState) {
-                     BlockType variantBlockType = blockType.getBlockForState(newState);
-                     if (variantBlockType != null) {
-                        worldChunkComponent.setBlockInteractionState(targetX, targetY, targetZ, variantBlockType, newState, true);
-                     }
-                  }
-
-                  blockStateInfo.markNeedsSaving();
                }
             }
          }
@@ -379,7 +358,9 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
          .add()
          .append(new KeyedCodec<>("@World", Codec.STRING), (pageEventData, o) -> pageEventData.world = o, pageEventData -> pageEventData.world)
          .add()
-         .append(new KeyedCodec<>("@Warp", Codec.STRING), (pageEventData, o) -> pageEventData.warp = o, pageEventData -> pageEventData.warp)
+         .append(
+            new KeyedCodec<>("@Warp", Codec.STRING), (pageEventData, o) -> pageEventData.destinationWarp = o, pageEventData -> pageEventData.destinationWarp
+         )
          .add()
          .append(new KeyedCodec<>("@NewWarp", Codec.STRING), (pageEventData, o) -> pageEventData.warpName = o, pageEventData -> pageEventData.warpName)
          .add()
@@ -398,7 +379,7 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
       public boolean pitchIsRelative;
       public boolean rollIsRelative;
       public String world;
-      public String warp;
+      public String destinationWarp;
       @Nullable
       public String warpName;
    }

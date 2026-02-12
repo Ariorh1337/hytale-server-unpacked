@@ -179,7 +179,10 @@ public class InstancesPlugin extends JavaPlugin {
             SneakyThrow.sneakyFunction(
                config -> {
                   config.setUuid(uuid);
-                  config.setDisplayName(WorldConfig.formatDisplayName(name));
+                  if (config.getDisplayName() == null) {
+                     config.setDisplayName(WorldConfig.formatDisplayName(name));
+                  }
+
                   InstanceWorldConfig instanceConfig = InstanceWorldConfig.ensureAndGet(config);
                   instanceConfig.setReturnPoint(
                      new WorldReturnPoint(forWorld.getWorldConfig().getUuid(), returnPoint, instanceConfig.shouldPreventReconnection())
@@ -566,7 +569,7 @@ public class InstancesPlugin extends JavaPlugin {
             Path instancePath = getInstanceAssetPath(name);
             Universe universe = Universe.get();
             WorldConfig config = WorldConfig.load(instancePath.resolve("instance.bson")).join();
-            IChunkStorageProvider storage = config.getChunkStorageProvider();
+            IChunkStorageProvider<?> storage = config.getChunkStorageProvider();
             config.setChunkStorageProvider(new MigrationChunkStorageProvider(new IChunkStorageProvider[]{storage}, EmptyChunkStorageProvider.INSTANCE));
             config.setResourceStorageProvider(EmptyResourceStorageProvider.INSTANCE);
             config.setUuid(UUID.randomUUID());

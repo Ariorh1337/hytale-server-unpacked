@@ -13,7 +13,7 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.HostAddress;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
@@ -74,6 +74,7 @@ import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.handlers.GenericPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.IPacketHandler;
+import com.hypixel.hytale.server.core.io.handlers.IWorldPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
 import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -152,7 +153,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    @Override
    public String getIdentifier() {
       return "{Playing("
-         + NettyUtil.formatRemoteAddress(this.channel)
+         + NettyUtil.formatRemoteAddress(this.getChannel())
          + "), "
          + (this.playerRef != null ? this.playerRef.getUuid() + ", " + this.playerRef.getUsername() : "null player")
          + "}";
@@ -171,50 +172,38 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       this.registerHandler(211, p -> this.handle((ChatMessage)p));
       this.registerHandler(23, p -> this.handle((RequestAssets)p));
       this.registerHandler(219, p -> this.handle((CustomPageEvent)p));
-      this.registerWorldHandler(32, this::handleViewRadius);
-      this.registerWorldHandler(232, this::handleUpdateLanguage);
-      this.registerWorldHandler(111, this::handleMouseInteraction);
+      IWorldPacketHandler.registerHandler(this, 32, this::handleViewRadius);
+      IWorldPacketHandler.registerHandler(this, 232, this::handleUpdateLanguage);
+      IWorldPacketHandler.registerHandler(this, 111, this::handleMouseInteraction);
       this.registerHandler(251, p -> this.handle((UpdateServerAccess)p));
       this.registerHandler(252, p -> this.handle((SetServerAccess)p));
-      this.registerWorldHandler(204, this::handleClientOpenWindow);
-      this.registerWorldHandler(203, this::handleSendWindowAction);
-      this.registerWorldHandler(202, this::handleCloseWindow);
+      IWorldPacketHandler.registerHandler(this, 204, this::handleClientOpenWindow);
+      IWorldPacketHandler.registerHandler(this, 203, this::handleSendWindowAction);
+      IWorldPacketHandler.registerHandler(this, 202, this::handleCloseWindow);
       this.registerHandler(260, p -> this.handle((RequestMachinimaActorModel)p));
-      this.registerWorldHandler(262, this::handleUpdateMachinimaScene);
+      IWorldPacketHandler.registerHandler(this, 262, this::handleUpdateMachinimaScene);
       this.registerHandler(105, p -> this.handle((ClientReady)p));
-      this.registerWorldHandler(166, this::handleMountMovement);
-      this.registerWorldHandler(116, this::handleSyncPlayerPreferences);
-      this.registerWorldHandler(117, this::handleClientPlaceBlock);
-      this.registerWorldHandler(119, this::handleRemoveMapMarker);
-      this.registerWorldHandler(243, this::handleUpdateWorldMapVisible);
-      this.registerWorldHandler(244, this::handleTeleportToWorldMapMarker);
-      this.registerWorldHandler(245, this::handleTeleportToWorldMapPosition);
-      this.registerWorldHandler(246, this::handleCreateUserMarker);
+      IWorldPacketHandler.registerHandler(this, 166, this::handleMountMovement);
+      IWorldPacketHandler.registerHandler(this, 116, this::handleSyncPlayerPreferences);
+      IWorldPacketHandler.registerHandler(this, 117, this::handleClientPlaceBlock);
+      IWorldPacketHandler.registerHandler(this, 119, this::handleRemoveMapMarker);
+      IWorldPacketHandler.registerHandler(this, 243, this::handleUpdateWorldMapVisible);
+      IWorldPacketHandler.registerHandler(this, 244, this::handleTeleportToWorldMapMarker);
+      IWorldPacketHandler.registerHandler(this, 245, this::handleTeleportToWorldMapPosition);
+      IWorldPacketHandler.registerHandler(this, 246, this::handleCreateUserMarker);
       this.registerHandler(290, p -> this.handle((SyncInteractionChains)p));
-      this.registerWorldHandler(158, this::handleSetPaused);
-      this.registerWorldHandler(282, this::handleRequestFlyCameraMode);
+      IWorldPacketHandler.registerHandler(this, 158, this::handleSetPaused);
+      IWorldPacketHandler.registerHandler(this, 282, this::handleRequestFlyCameraMode);
       this.packetHandlers.forEach(SubPacketHandler::registerHandlers);
-   }
-
-   private <T extends Packet> void registerWorldHandler(int packetId, @Nonnull GamePacketHandler.WorldPacketHandler<T> handler) {
-      this.registerHandler(packetId, packet -> {
-         Ref<EntityStore> ref = this.playerRef.getReference();
-         if (ref != null) {
-            Store<EntityStore> store = ref.getStore();
-            World world = store.getExternalData().getWorld();
-            world.execute(() -> {
-               if (ref.isValid()) {
-                  handler.consumer((T)packet, ref, world, store);
-               }
-            });
-         }
-      });
    }
 
    @Override
    public void closed(ChannelHandlerContext ctx) {
       super.closed(ctx);
-      Universe.get().removePlayer(this.playerRef);
+      NetworkChannel streamChannel = ctx.channel().attr(ProtocolUtil.STREAM_CHANNEL_KEY).get();
+      if (streamChannel == null || streamChannel == NetworkChannel.Default) {
+         Universe.get().removePlayer(this.playerRef);
+      }
    }
 
    @Override
@@ -226,7 +215,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             .log(
                "Disconnecting %s at %s (SNI: %s) with the message: %s",
                this.playerRef.getUsername(),
-               NettyUtil.formatRemoteAddress(this.channel),
+               NettyUtil.formatRemoteAddress(this.getChannel()),
                this.getSniHostname(),
                message
             );
@@ -245,17 +234,19 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             "%s - %s at %s left with reason: %s - %s",
             this.playerRef.getUuid(),
             this.playerRef.getUsername(),
-            NettyUtil.formatRemoteAddress(this.channel),
+            NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
             packet.reason
          );
-      ProtocolUtil.closeApplicationConnection(this.channel);
+      ProtocolUtil.closeApplicationConnection(this.getChannel());
    }
 
-   public void handleMouseInteraction(@Nonnull MouseInteraction packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleMouseInteraction(
+      @Nonnull MouseInteraction packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      InteractionModule.get().doMouseInteraction(ref, store, packet, playerComponent, this.playerRef);
+      InteractionModule.get().doMouseInteraction(ref, store, packet, playerComponent, playerRef);
    }
 
    public void handle(@Nonnull ClientMovement packet) {
@@ -411,17 +402,21 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
          world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            assert playerComponent != null;
-            PageManager pageManager = playerComponent.getPageManager();
-            pageManager.handleEvent(ref, store, packet);
+            if (ref.isValid()) {
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
+               assert playerComponent != null;
+               PageManager pageManager = playerComponent.getPageManager();
+               pageManager.handleEvent(ref, store, packet);
+            }
          });
       } else {
          this.playerRef.getPacketHandler().writeNoCache(new SetPage(Page.None, true));
       }
    }
 
-   public void handleViewRadius(@Nonnull ViewRadius packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleViewRadius(
+      @Nonnull ViewRadius packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       EntityTrackerSystems.EntityViewer entityViewerComponent = store.getComponent(ref, EntityTrackerSystems.EntityViewer.getComponentType());
@@ -431,12 +426,16 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       entityViewerComponent.viewRadiusBlocks = playerComponent.getViewRadius() * 32;
    }
 
-   public void handleUpdateLanguage(@Nonnull UpdateLanguage packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
-      this.playerRef.setLanguage(packet.language);
+   public void handleUpdateLanguage(
+      @Nonnull UpdateLanguage packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
+      playerRef.setLanguage(packet.language);
       I18nModule.get().sendTranslations(this, packet.language);
    }
 
-   protected void handleClientOpenWindow(@Nonnull ClientOpenWindow packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   protected void handleClientOpenWindow(
+      @Nonnull ClientOpenWindow packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       Supplier<? extends Window> supplier = Window.CLIENT_REQUESTABLE_WINDOW_TYPES.get(packet.type);
       if (supplier == null) {
          throw new RuntimeException("Unable to process ClientOpenWindow packet. Window type is not supported!");
@@ -450,7 +449,9 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       }
    }
 
-   public void handleSendWindowAction(@Nonnull SendWindowAction packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleSendWindowAction(
+      @Nonnull SendWindowAction packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       Window window = playerComponent.getWindowManager().getWindow(packet.id);
@@ -463,7 +464,13 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       }
    }
 
-   public void handleSyncPlayerPreferences(@Nonnull SyncPlayerPreferences packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleSyncPlayerPreferences(
+      @Nonnull SyncPlayerPreferences packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
       ComponentType<EntityStore, PlayerSettings> componentType = EntityModule.get().getPlayerSettingsComponentType();
       store.putComponent(
          ref,
@@ -485,7 +492,9 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       store.getComponent(ref, Player.getComponentType()).invalidateEquipmentNetwork();
    }
 
-   public void handleClientPlaceBlock(@Nonnull ClientPlaceBlock packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleClientPlaceBlock(
+      @Nonnull ClientPlaceBlock packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       Inventory inventory = playerComponent.getInventory();
@@ -547,11 +556,15 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       }
    }
 
-   public void handleRemoveMapMarker(@Nonnull RemoveMapMarker packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
-      world.getWorldMapManager().handleUserRemoveMarker(this.playerRef, packet);
+   public void handleRemoveMapMarker(
+      @Nonnull RemoveMapMarker packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
+      world.getWorldMapManager().handleUserRemoveMarker(playerRef, packet);
    }
 
-   public void handleCloseWindow(@Nonnull CloseWindow packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleCloseWindow(
+      @Nonnull CloseWindow packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       playerComponent.getWindowManager().closeWindow(ref, packet.id, store);
@@ -600,7 +613,13 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       this.writeNoCache(new SetMachinimaActorModel(Model.createUnitScaleModel(modelAsset).toPacket(), packet.sceneName, packet.actorName));
    }
 
-   public void handleUpdateMachinimaScene(@Nonnull UpdateMachinimaScene packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleUpdateMachinimaScene(
+      @Nonnull UpdateMachinimaScene packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
    }
 
    public void handle(@Nonnull ClientReady packet) {
@@ -621,20 +640,34 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
          world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            assert playerComponent != null;
-            playerComponent.handleClientReady(false);
+            if (ref.isValid()) {
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
+               assert playerComponent != null;
+               playerComponent.handleClientReady(false);
+            }
          });
       }
    }
 
-   public void handleUpdateWorldMapVisible(@Nonnull UpdateWorldMapVisible packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleUpdateWorldMapVisible(
+      @Nonnull UpdateWorldMapVisible packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       playerComponent.getWorldMapTracker().setClientHasWorldMapVisible(packet.visible);
    }
 
-   public void handleTeleportToWorldMapMarker(@Nonnull TeleportToWorldMapMarker packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleTeleportToWorldMapMarker(
+      @Nonnull TeleportToWorldMapMarker packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
@@ -653,12 +686,18 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             }
 
             Teleport teleportComponent = Teleport.createForPlayer(transform);
-            world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
+            world.getEntityStore().getStore().addComponent(playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
          }
       }
    }
 
-   public void handleTeleportToWorldMapPosition(@Nonnull TeleportToWorldMapPosition packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleTeleportToWorldMapPosition(
+      @Nonnull TeleportToWorldMapPosition packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
@@ -670,21 +709,25 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             assert blockChunkComponent != null;
             Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
             Teleport teleportComponent = Teleport.createForPlayer(null, position, new Vector3f(0.0F, 0.0F, 0.0F));
-            world.getEntityStore().getStore().addComponent(this.playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
+            world.getEntityStore().getStore().addComponent(playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
          }, world);
       }
    }
 
-   public void handleCreateUserMarker(@Nonnull CreateUserMarker packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleCreateUserMarker(
+      @Nonnull CreateUserMarker packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       WorldMapManager worldMapManager = world.getWorldMapManager();
-      worldMapManager.handleUserCreateMarker(this.playerRef, packet);
+      worldMapManager.handleUserCreateMarker(playerRef, packet);
    }
 
    public void handle(@Nonnull SyncInteractionChains packet) {
       Collections.addAll(this.interactionPacketQueue, packet.updates);
    }
 
-   public void handleMountMovement(@Nonnull MountMovement packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleMountMovement(
+      @Nonnull MountMovement packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       Ref<EntityStore> entityReference = world.getEntityStore().getRefFromNetworkId(playerComponent.getMountEntityId());
@@ -699,28 +742,32 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       }
    }
 
-   public void handleSetPaused(@Nonnull SetPaused packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleSetPaused(
+      @Nonnull SetPaused packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
       if (world.getPlayerCount() == 1 && Constants.SINGLEPLAYER) {
          world.setPaused(packet.paused);
       }
    }
 
-   public void handleRequestFlyCameraMode(@Nonnull RequestFlyCameraMode packet, Ref<EntityStore> ref, World world, Store<EntityStore> store) {
+   public void handleRequestFlyCameraMode(
+      @Nonnull RequestFlyCameraMode packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       if (playerComponent.hasPermission("hytale.camera.flycam")) {
          this.writeNoCache(new SetFlyCameraMode(packet.entering));
          if (packet.entering) {
-            this.playerRef.sendMessage(Message.translation("server.general.flyCamera.enabled"));
+            playerRef.sendMessage(Message.translation("server.general.flyCamera.enabled"));
          } else {
-            this.playerRef.sendMessage(Message.translation("server.general.flyCamera.disabled"));
+            playerRef.sendMessage(Message.translation("server.general.flyCamera.disabled"));
          }
       } else {
-         this.playerRef.sendMessage(Message.translation("server.general.flyCamera.noPermission"));
+         playerRef.sendMessage(Message.translation("server.general.flyCamera.noPermission"));
       }
-   }
-
-   private interface WorldPacketHandler<T extends Packet> {
-      void consumer(T var1, Ref<EntityStore> var2, World var3, Store<EntityStore> var4);
    }
 }

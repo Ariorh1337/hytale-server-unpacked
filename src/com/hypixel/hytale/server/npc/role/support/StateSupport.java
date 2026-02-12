@@ -4,9 +4,8 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.InteractableUpdate;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.group.EntityGroup;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
@@ -312,22 +311,24 @@ public class StateSupport {
          this.interactablePlayers.remove(playerReference);
       }
 
-      if (showPrompt) {
-         boolean hasComponent = store.getArchetype(entityRef).contains(Interactable.getComponentType());
-         if (interactable) {
-            boolean needsHint = hint != null && !hint.equals(this.lastHint);
-            if (!hasComponent) {
-               store.ensureComponent(entityRef, Interactable.getComponentType());
-               needsHint = hint != null;
-            }
-
-            if (needsHint) {
-               this.sendInteractionHintToPlayer(entityRef, playerReference, hint, store);
-               this.lastHint = hint;
-            }
-         } else if (hasComponent && this.interactablePlayers.isEmpty()) {
-            store.removeComponent(entityRef, Interactable.getComponentType());
+      boolean hasComponent = store.getArchetype(entityRef).contains(Interactable.getComponentType());
+      if (interactable) {
+         if (!showPrompt) {
+            hint = "";
          }
+
+         boolean needsHint = hint != null && !hint.equals(this.lastHint);
+         if (!hasComponent) {
+            store.ensureComponent(entityRef, Interactable.getComponentType());
+            needsHint = hint != null && !hint.isEmpty();
+         }
+
+         if (needsHint) {
+            this.sendInteractionHintToPlayer(entityRef, playerReference, hint, store);
+            this.lastHint = hint;
+         }
+      } else if (hasComponent && this.interactablePlayers.isEmpty()) {
+         store.removeComponent(entityRef, Interactable.getComponentType());
       }
    }
 
@@ -336,9 +337,7 @@ public class StateSupport {
    ) {
       EntityTrackerSystems.EntityViewer viewerComponent = store.getComponent(playerReference, EntityTrackerSystems.EntityViewer.getComponentType());
       if (viewerComponent != null && viewerComponent.visible.contains(entityRef)) {
-         ComponentUpdate update = new ComponentUpdate();
-         update.type = ComponentUpdateType.Interactable;
-         update.interactionHint = hint;
+         InteractableUpdate update = new InteractableUpdate(hint);
          viewerComponent.queueUpdate(entityRef, update);
       }
    }

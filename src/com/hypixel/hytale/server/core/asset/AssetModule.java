@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.HomeOrSpawnPoi
 import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
 import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.WorldSpawnPoint;
 import com.hypixel.hytale.server.core.asset.type.item.DroplistCommand;
+import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.BootEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
@@ -42,6 +43,7 @@ import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGen
 import com.hypixel.hytale.server.core.universe.world.worldmap.IWorldMap;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
+import it.unimi.dsi.fastutil.objects.ObjectBooleanPair;
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -69,7 +71,7 @@ public class AssetModule extends JavaPlugin {
    private AssetMonitor assetMonitor;
    @Nonnull
    private final List<AssetPack> assetPacks = new CopyOnWriteArrayList<>();
-   private final List<AssetPack> pendingAssetPacks = new ArrayList<>();
+   private final List<ObjectBooleanPair<AssetPack>> pendingAssetPacks = new ArrayList<>();
    private boolean hasSetup = false;
    private boolean hasLoaded = false;
    private final List<AssetStore<?, ?, ?>> pendingAssetStores = new CopyOnWriteArrayList<>();
@@ -101,7 +103,21 @@ public class AssetModule extends JavaPlugin {
       }
 
       this.hasSetup = true;
-      this.assetPacks.addAll(this.pendingAssetPacks);
+
+      for (ObjectBooleanPair<AssetPack> p : this.pendingAssetPacks) {
+         if (this.getAssetPack(p.left().getName()) != null) {
+            if (!p.rightBoolean()) {
+               throw new IllegalStateException("Asset pack with name '" + p.left().getName() + "' already exists");
+            }
+
+            this.getLogger()
+               .at(Level.WARNING)
+               .log("Asset pack with name '%s' already exists, skipping registration from path: %s", p.left().getName(), p.left().getRoot());
+         } else {
+            this.assetPacks.add(p.left());
+         }
+      }
+
       this.pendingAssetPacks.clear();
       this.loadPacksFromDirectory(PluginManager.MODS_PATH);
 
@@ -342,7 +358,7 @@ public class AssetModule extends JavaPlugin {
 
       PluginIdentifier packIdentifier = new PluginIdentifier(manifest);
       HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-      HytaleServerConfig.ModConfig modConfig = serverConfig.getModConfig().get(packIdentifier);
+      ModConfig modConfig = serverConfig.getModConfig().get(packIdentifier);
       boolean enabled;
       if (modConfig != null && modConfig.getEnabled() != null) {
          enabled = modConfig.getEnabled();
@@ -352,14 +368,14 @@ public class AssetModule extends JavaPlugin {
 
       String packId = packIdentifier.toString();
       if (enabled) {
-         this.registerPack(packId, packPath, manifest);
+         this.registerPack(packId, packPath, manifest, false);
          this.getLogger().at(Level.INFO).log("Loaded pack: %s from %s", packId, packPath.getFileName());
       } else {
          this.getLogger().at(Level.INFO).log("Skipped disabled pack: %s", packId);
       }
    }
 
-   public void registerPack(@Nonnull String name, @Nonnull Path path, @Nonnull PluginManifest manifest) {
+   public void registerPack(@Nonnull String name, @Nonnull Path path, @Nonnull PluginManifest manifest, boolean ignoreIfExists) {
       Path absolutePath = path.toAbsolutePath().normalize();
       Path packLocation = absolutePath;
       FileSystem fileSystem = null;
@@ -379,7 +395,13 @@ public class AssetModule extends JavaPlugin {
 
       AssetPack pack = new AssetPack(packLocation, name, absolutePath, fileSystem, isImmutable, manifest);
       if (!this.hasSetup) {
-         this.pendingAssetPacks.add(pack);
+         this.pendingAssetPacks.add(ObjectBooleanPair.of(pack, ignoreIfExists));
+      } else if (this.getAssetPack(name) != null) {
+         if (ignoreIfExists) {
+            this.getLogger().at(Level.WARNING).log("Asset pack with name '%s' already exists, skipping registration from path: %s", name, path);
+         } else {
+            throw new IllegalStateException("Asset pack with name '" + name + "' already exists");
+         }
       } else {
          this.assetPacks.add(pack);
          AssetRegistry.ASSET_LOCK.writeLock().lock();

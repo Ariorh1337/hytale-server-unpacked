@@ -136,6 +136,10 @@ public class DebugSupport {
       this.debugFlagsChangeListeners.add(listener);
    }
 
+   public void removeDebugFlagsListener(DebugSupport.DebugFlagsChangeListener listener) {
+      this.debugFlagsChangeListeners.remove(listener);
+   }
+
    public void notifyDebugFlagsListeners(EnumSet<RoleDebugFlags> flags) {
       for (DebugSupport.DebugFlagsChangeListener listener : this.debugFlagsChangeListeners) {
          listener.onDebugFlagsChanged(flags);

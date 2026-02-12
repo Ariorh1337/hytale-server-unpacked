@@ -35,7 +35,6 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PickupItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
-import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -63,12 +62,6 @@ public class NPCMemory extends Memory {
       .append(new KeyedCodec<>("TranslationKey", Codec.STRING), (npcMemory, s) -> npcMemory.memoryTitleKey = s, npcMemory -> npcMemory.memoryTitleKey)
       .add()
       .append(
-         new KeyedCodec<>("IsMemoriesNameOverridden", Codec.BOOLEAN),
-         (npcMemory, aBoolean) -> npcMemory.isMemoriesNameOverridden = aBoolean,
-         npcMemory -> npcMemory.isMemoriesNameOverridden
-      )
-      .add()
-      .append(
          new KeyedCodec<>("CapturedTimestamp", Codec.LONG),
          (npcMemory, aDouble) -> npcMemory.capturedTimestamp = aDouble,
          npcMemory -> npcMemory.capturedTimestamp
@@ -86,10 +79,8 @@ public class NPCMemory extends Memory {
          npcMemory -> npcMemory.foundLocationGeneralNameKey
       )
       .add()
-      .afterDecode(NPCMemory::processConfig)
       .build();
    private String npcRole;
-   private boolean isMemoriesNameOverridden;
    private long capturedTimestamp;
    private String foundLocationZoneNameKey;
    private String foundLocationGeneralNameKey;
@@ -98,11 +89,9 @@ public class NPCMemory extends Memory {
    private NPCMemory() {
    }
 
-   public NPCMemory(@Nonnull String npcRole, @Nonnull String nameTranslationKey, boolean isMemoriesNameOverridden) {
+   public NPCMemory(@Nonnull String npcRole, @Nonnull String nameTranslationKey) {
       this.npcRole = npcRole;
       this.memoryTitleKey = nameTranslationKey;
-      this.isMemoriesNameOverridden = isMemoriesNameOverridden;
-      this.processConfig();
    }
 
    @Override
@@ -126,19 +115,6 @@ public class NPCMemory extends Memory {
    @Override
    public String getIconPath() {
       return "UI/Custom/Pages/Memories/npcs/" + this.npcRole + ".png";
-   }
-
-   public void processConfig() {
-      if (this.isMemoriesNameOverridden) {
-         this.memoryTitleKey = "server.npcRoles." + this.npcRole + ".name";
-         if (I18nModule.get().getMessage("en-US", this.memoryTitleKey) == null) {
-            this.memoryTitleKey = "server.memories.names." + this.npcRole;
-         }
-      }
-
-      if (this.memoryTitleKey == null || this.memoryTitleKey.isEmpty()) {
-         this.memoryTitleKey = "server.npcRoles." + this.npcRole + ".name";
-      }
    }
 
    @Nonnull
@@ -180,14 +156,13 @@ public class NPCMemory extends Memory {
       }
 
       NPCMemory npcMemory = (NPCMemory)o;
-      return this.isMemoriesNameOverridden == npcMemory.isMemoriesNameOverridden && Objects.equals(this.npcRole, npcMemory.npcRole);
+      return Objects.equals(this.npcRole, npcMemory.npcRole);
    }
 
    @Override
    public int hashCode() {
       int result = super.hashCode();
-      result = 31 * result + Objects.hashCode(this.npcRole);
-      return 31 * result + Boolean.hashCode(this.isMemoriesNameOverridden);
+      return 31 * result + Objects.hashCode(this.npcRole);
    }
 
    @Nonnull
@@ -195,8 +170,6 @@ public class NPCMemory extends Memory {
    public String toString() {
       return "NPCMemory{npcRole='"
          + this.npcRole
-         + "', isMemoriesNameOverride="
-         + this.isMemoriesNameOverridden
          + "', capturedTimestamp="
          + this.capturedTimestamp
          + "', foundLocationZoneNameKey='"
@@ -265,44 +238,39 @@ public class NPCMemory extends Memory {
                   if (npcComponent != null) {
                      Role role = npcComponent.getRole();
                      if (role != null && role.isMemory()) {
-                        temp.isMemoriesNameOverridden = role.isMemoriesNameOverriden();
-                        temp.npcRole = temp.isMemoriesNameOverridden ? role.getMemoriesNameOverride() : npcComponent.getRoleName();
+                        String memoriesNameOverride = role.getMemoriesNameOverride();
+                        temp.npcRole = memoriesNameOverride != null && !memoriesNameOverride.isEmpty() ? memoriesNameOverride : npcComponent.getRoleName();
                         temp.memoryTitleKey = role.getNameTranslationKey();
                         temp.capturedTimestamp = System.currentTimeMillis();
                         temp.foundLocationGeneralNameKey = foundLocationZoneNameKey;
-                        if (!memoriesPlugin.hasRecordedMemory(temp)) {
-                           temp.processConfig();
-                           if (playerMemoriesComponent.recordMemory(temp)) {
-                              NotificationUtil.sendNotification(
-                                 playerRefComponent.getPacketHandler(),
-                                 Message.translation("server.memories.general.collected").param("memoryTitle", Message.translation(temp.getTitle())),
-                                 null,
-                                 "NotificationIcons/MemoriesIcon.png"
-                              );
-                              temp = new NPCMemory();
-                              TransformComponent npcTransformComponent = commandBuffer.getComponent(npcRef, TransformComponent.getComponentType());
-                              if (npcTransformComponent != null) {
-                                 MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(
-                                    store.getExternalData().getWorld().getGameplayConfig()
-                                 );
-                                 if (memoriesGameplayConfig != null) {
-                                    ItemStack memoryItemStack = new ItemStack(memoriesGameplayConfig.getMemoriesCatchItemId());
-                                    Vector3d memoryItemHolderPosition = npcTransformComponent.getPosition().clone();
-                                    BoundingBox boundingBoxComponent = commandBuffer.getComponent(npcRef, BoundingBox.getComponentType());
-                                    if (boundingBoxComponent != null) {
-                                       memoryItemHolderPosition.y = memoryItemHolderPosition.y + boundingBoxComponent.getBoundingBox().middleY();
-                                    }
-
-                                    Holder<EntityStore> memoryItemHolder = ItemComponent.generatePickedUpItem(
-                                       memoryItemStack, memoryItemHolderPosition, commandBuffer, ref
-                                    );
-                                    float memoryCatchItemLifetimeS = 0.62F;
-                                    PickupItemComponent pickupItemComponent = memoryItemHolder.getComponent(PickupItemComponent.getComponentType());
-                                    assert pickupItemComponent != null;
-                                    pickupItemComponent.setInitialLifeTime(0.62F);
-                                    commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
-                                    displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, npcRef, commandBuffer);
+                        if (!memoriesPlugin.hasRecordedMemory(temp) && playerMemoriesComponent.recordMemory(temp)) {
+                           NotificationUtil.sendNotification(
+                              playerRefComponent.getPacketHandler(),
+                              Message.translation("server.memories.general.collected").param("memoryTitle", Message.translation(temp.getTitle())),
+                              null,
+                              "NotificationIcons/MemoriesIcon.png"
+                           );
+                           temp = new NPCMemory();
+                           TransformComponent npcTransformComponent = commandBuffer.getComponent(npcRef, TransformComponent.getComponentType());
+                           if (npcTransformComponent != null) {
+                              MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(store.getExternalData().getWorld().getGameplayConfig());
+                              if (memoriesGameplayConfig != null) {
+                                 ItemStack memoryItemStack = new ItemStack(memoriesGameplayConfig.getMemoriesCatchItemId());
+                                 Vector3d memoryItemHolderPosition = npcTransformComponent.getPosition().clone();
+                                 BoundingBox boundingBoxComponent = commandBuffer.getComponent(npcRef, BoundingBox.getComponentType());
+                                 if (boundingBoxComponent != null) {
+                                    memoryItemHolderPosition.y = memoryItemHolderPosition.y + boundingBoxComponent.getBoundingBox().middleY();
                                  }
+
+                                 Holder<EntityStore> memoryItemHolder = ItemComponent.generatePickedUpItem(
+                                    memoryItemStack, memoryItemHolderPosition, commandBuffer, ref
+                                 );
+                                 float memoryCatchItemLifetimeS = 0.62F;
+                                 PickupItemComponent pickupItemComponent = memoryItemHolder.getComponent(PickupItemComponent.getComponentType());
+                                 assert pickupItemComponent != null;
+                                 pickupItemComponent.setInitialLifeTime(0.62F);
+                                 commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
+                                 displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, npcRef, commandBuffer);
                               }
                            }
                         }

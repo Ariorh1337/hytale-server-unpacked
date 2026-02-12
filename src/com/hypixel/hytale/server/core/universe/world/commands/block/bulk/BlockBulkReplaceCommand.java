@@ -97,7 +97,9 @@ public class BlockBulkReplaceCommand extends AbstractPlayerCommand {
 
             long diff = System.nanoTime() - start;
             playerRef.sendMessage(
-               Message.translation("Found and replaced " + replaced.get() + " blocks in " + TimeUnit.NANOSECONDS.toSeconds(diff) + " seconds!")
+               Message.translation("server.commands.block.bulk.replace.result")
+                  .param("count", replaced.get())
+                  .param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
             );
          }
       );

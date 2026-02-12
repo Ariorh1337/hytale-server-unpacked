@@ -44,6 +44,8 @@ public class Teleporter implements Component<ChunkStore> {
       .documentation("The ID of the Word list to select default warp names from")
       .add()
       .build();
+   public static final String ACTIVATE_STATE = "Active";
+   public static final String INACTIVE_STATE = "default";
    @Nullable
    private UUID worldUuid;
    @Nullable

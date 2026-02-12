@@ -101,7 +101,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
    @Nonnull
    @Override
    public String getIdentifier() {
-      return "{Editor(" + NettyUtil.formatRemoteAddress(this.channel) + "), " + this.editorClient.getUuid() + ", " + this.editorClient.getUsername() + "}";
+      return "{Editor(" + NettyUtil.formatRemoteAddress(this.getChannel()) + "), " + this.editorClient.getUuid() + ", " + this.editorClient.getUsername() + "}";
    }
 
    @Override
@@ -137,6 +137,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
       this.registerHandler(316, p -> this.handle((AssetEditorCreateAssetPack)p));
       this.registerHandler(315, p -> this.handle((AssetEditorUpdateAssetPack)p));
       this.registerHandler(317, p -> this.handle((AssetEditorDeleteAssetPack)p));
+      this.registerHandler(232, p -> this.handle((UpdateLanguage)p));
    }
 
    public void handle(@Nonnull AssetEditorSubscribeModifiedAssetsChanges packet) {
@@ -400,11 +401,11 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
             "%s - %s at %s left with reason: %s - %s",
             this.editorClient.getUuid(),
             this.editorClient.getUsername(),
-            NettyUtil.formatRemoteAddress(this.channel),
+            NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
             packet.reason
          );
-      this.channel.close();
+      this.getChannel().close();
    }
 
    private boolean lacksPermission(int token) {

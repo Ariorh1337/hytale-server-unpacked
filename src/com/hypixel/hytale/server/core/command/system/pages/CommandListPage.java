@@ -555,7 +555,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                RequiredArg<?> arg = requiredArgs.get(i);
                commandBuilder.append("#RequiredArgumentsList", "Pages/ParameterItem.ui");
                commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamName.TextSpans", Message.raw(arg.getName()));
-               commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamTag.TextSpans", Message.raw("[Required]"));
+               commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.required"));
                commandBuilder.set(
                   "#RequiredArgumentsList[" + i + "] #ParamType.TextSpans",
                   Message.translation("server.customUI.commandListPage.paramType").param("type", arg.getArgumentType().getName())
@@ -591,7 +591,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                   commandBuilder.set(
                      "#OptionalArgumentsList[" + optIndex + "] #ParamName.TextSpans", Message.raw("--" + optArg.getName() + " <" + optArg.getName() + ">")
                   );
-                  commandBuilder.set("#OptionalArgumentsList[" + optIndex + "] #ParamTag.TextSpans", Message.raw("[Optional]"));
+                  commandBuilder.set(
+                     "#OptionalArgumentsList[" + optIndex + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.optional")
+                  );
                   commandBuilder.set(
                      "#OptionalArgumentsList[" + optIndex + "] #ParamType.TextSpans",
                      Message.translation("server.customUI.commandListPage.paramType").param("type", optArg.getArgumentType().getName())
@@ -610,7 +612,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                   commandBuilder.set(
                      "#DefaultArgumentsList[" + defIndex + "] #ParamName.TextSpans", Message.raw("--" + defArg.getName() + " <" + defArg.getName() + ">")
                   );
-                  commandBuilder.set("#DefaultArgumentsList[" + defIndex + "] #ParamTag.TextSpans", Message.raw("[Default]"));
+                  commandBuilder.set(
+                     "#DefaultArgumentsList[" + defIndex + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.default")
+                  );
                   commandBuilder.set(
                      "#DefaultArgumentsList[" + defIndex + "] #ParamType.TextSpans",
                      Message.translation("server.customUI.commandListPage.paramTypeDefault")
@@ -628,7 +632,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
             } else if (arg instanceof FlagArg flagArg && (flagArg.getPermission() == null || playerComponent.hasPermission(flagArg.getPermission()))) {
                commandBuilder.append("#FlagArgumentsList", "Pages/ParameterItem.ui");
                commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamName.TextSpans", Message.raw("--" + flagArg.getName()));
-               commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamTag.TextSpans", Message.raw("[Flag]"));
+               commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.flag"));
                commandBuilder.set(
                   "#FlagArgumentsList[" + flagIndex + "] #ParamType.TextSpans", Message.translation("server.customUI.commandListPage.paramTypeFlag")
                );

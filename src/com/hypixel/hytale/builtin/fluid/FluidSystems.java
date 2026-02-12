@@ -19,7 +19,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.component.system.tick.RunWhenPausedSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.ServerSetFluid;
 import com.hypixel.hytale.protocol.packets.world.ServerSetFluids;
 import com.hypixel.hytale.protocol.packets.world.SetFluidCmd;
@@ -109,7 +109,7 @@ public class FluidSystems {
          Store<ChunkStore> store,
          @Nonnull CommandBuffer<ChunkStore> commandBuffer,
          PlayerRef query,
-         @Nonnull List<CompletableFuture<Packet>> results
+         @Nonnull List<CompletableFuture<ToClientPacket>> results
       ) {
          ChunkColumn chunkColumnComponent = archetypeChunk.getComponent(index, this.chunkColumnComponentType);
          assert chunkColumnComponent != null;

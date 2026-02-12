@@ -38,6 +38,7 @@ public class FieldFunctionPositionProvider extends PositionProvider {
          for (FieldFunctionPositionProvider.Delimiter d : this.delimiters) {
             if (d.isInside(value)) {
                context.consumer.accept(p);
+               return;
             }
          }
       };

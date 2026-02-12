@@ -50,6 +50,16 @@ public abstract class Registry<T extends Registration> {
       this.enabled = false;
    }
 
+   public void shutdownAndCleanup(boolean shutdown) {
+      this.enabled = false;
+
+      for (int i = this.registrations.size() - 1; i >= 0; i--) {
+         this.registrations.get(i).accept(shutdown);
+      }
+
+      this.registrations.clear();
+   }
+
    public T register(@Nonnull T registration) {
       if (!this.enabled) {
          registration.unregister();

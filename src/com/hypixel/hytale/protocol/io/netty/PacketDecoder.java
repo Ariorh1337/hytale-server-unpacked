@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.io.netty;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.PacketRegistry;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.PacketStatsRecorder;
@@ -80,30 +81,36 @@ public class PacketDecoder extends ByteToMessageDecoder {
          int payloadLength = in.readIntLE();
          if (payloadLength >= 0 && payloadLength <= 1677721600) {
             int packetId = in.readIntLE();
-            PacketRegistry.PacketInfo packetInfo = PacketRegistry.getById(packetId);
+            PacketRegistry.PacketInfo packetInfo = PacketRegistry.getToServerPacketById(packetId);
             if (packetInfo == null) {
                in.skipBytes(in.readableBytes());
                ProtocolUtil.closeConnection(ctx.channel());
             } else if (payloadLength > packetInfo.maxSize()) {
                in.skipBytes(in.readableBytes());
                ProtocolUtil.closeConnection(ctx.channel());
-            } else if (in.readableBytes() < payloadLength) {
-               in.resetReaderIndex();
             } else {
-               PacketStatsRecorder statsRecorder = ctx.channel().attr(PacketStatsRecorder.CHANNEL_KEY).get();
-               if (statsRecorder == null) {
-                  statsRecorder = PacketStatsRecorder.NOOP;
-               }
+               NetworkChannel channelVal = ctx.channel().attr(ProtocolUtil.STREAM_CHANNEL_KEY).get();
+               if (channelVal != null && channelVal != packetInfo.channel()) {
+                  in.skipBytes(in.readableBytes());
+                  ProtocolUtil.closeConnection(ctx.channel());
+               } else if (in.readableBytes() < payloadLength) {
+                  in.resetReaderIndex();
+               } else {
+                  PacketStatsRecorder statsRecorder = ctx.channel().attr(PacketStatsRecorder.CHANNEL_KEY).get();
+                  if (statsRecorder == null) {
+                     statsRecorder = PacketStatsRecorder.NOOP;
+                  }
 
-               try {
-                  out.add(PacketIO.readFramedPacketWithInfo(in, payloadLength, packetInfo, statsRecorder));
-                  this.lastPacketTimeNanos = System.nanoTime();
-               } catch (ProtocolException e) {
-                  in.skipBytes(in.readableBytes());
-                  ProtocolUtil.closeConnection(ctx.channel());
-               } catch (IndexOutOfBoundsException e) {
-                  in.skipBytes(in.readableBytes());
-                  ProtocolUtil.closeConnection(ctx.channel());
+                  try {
+                     out.add(PacketIO.readFramedPacketWithInfo(in, payloadLength, packetInfo, statsRecorder));
+                     this.lastPacketTimeNanos = System.nanoTime();
+                  } catch (ProtocolException e) {
+                     in.skipBytes(in.readableBytes());
+                     ProtocolUtil.closeConnection(ctx.channel());
+                  } catch (IndexOutOfBoundsException e) {
+                     in.skipBytes(in.readableBytes());
+                     ProtocolUtil.closeConnection(ctx.channel());
+                  }
                }
             }
          } else {

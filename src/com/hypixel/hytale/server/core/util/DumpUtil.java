@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.util;
 
-import com.hypixel.fastutil.longs.Long2ObjectConcurrentHashMap;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.StringUtil;
@@ -10,7 +9,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.metric.ArchetypeChunkData;
 import com.hypixel.hytale.component.system.ISystem;
 import com.hypixel.hytale.logger.backend.HytaleFileHandler;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.metrics.InitStackThread;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -33,9 +31,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.universe.world.storage.provider.IndexedStorageChunkStorageProvider;
 import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenTimingsCollector;
-import com.hypixel.hytale.storage.IndexedStorageFile;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -642,35 +638,6 @@ public class DumpUtil {
                      writer.println("\t\tGenerating Count: " + timings.getGeneratingCount());
                   } else {
                      writer.println("\t\tNo Timings Data Collected!");
-                  }
-
-                  IndexedStorageChunkStorageProvider.IndexedStorageCache storageCache = world.getChunkStore()
-                     .getStore()
-                     .getResource(IndexedStorageChunkStorageProvider.IndexedStorageCache.getResourceType());
-                  if (storageCache != null) {
-                     Long2ObjectConcurrentHashMap<IndexedStorageFile> cache = storageCache.getCache();
-                     writer.println();
-                     writer.println("\tIndexed Storage Cache:");
-
-                     for (Long2ObjectMap.Entry<IndexedStorageFile> entry : cache.long2ObjectEntrySet()) {
-                        long key = entry.getLongKey();
-                        writer.println("\t\t" + ChunkUtil.xOfChunkIndex(key) + ", " + ChunkUtil.zOfChunkIndex(key));
-                        IndexedStorageFile storageFile = entry.getValue();
-
-                        try {
-                           writer.println("\t\t- Size: " + FormatUtil.bytesToString(storageFile.size()));
-                        } catch (IOException e) {
-                           writer.println("\t\t- Size: ERROR: " + e.getMessage());
-                        }
-
-                        writer.println("\t\t- Blob Count: " + storageFile.keys().size());
-                        int segmentSize = storageFile.segmentSize();
-                        int segmentCount = storageFile.segmentCount();
-                        writer.println("\t\t- Segment Size: " + segmentSize);
-                        writer.println("\t\t- Segment Count: " + segmentCount);
-                        writer.println("\t\t- Segment Used %: " + (double)(segmentCount * 100) / segmentSize + "%");
-                        writer.println("\t\t- " + storageFile);
-                     }
                   }
                }
             );

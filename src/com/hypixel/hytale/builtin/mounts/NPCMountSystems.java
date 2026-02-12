@@ -10,6 +10,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.protocol.packets.interaction.MountNPC;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
@@ -119,6 +120,7 @@ public class NPCMountSystems {
             if (playerComponent != null) {
                playerComponent.setMountEntityId(networkId);
                playerRef.getPacketHandler().write(packet);
+               commandBuffer.removeComponent(ref, Interactable.getComponentType());
             }
          }
       }
@@ -133,6 +135,7 @@ public class NPCMountSystems {
          assert npcComponent != null;
          RoleChangeSystem.requestRoleChange(ref, npcComponent.getRole(), mountComponent.getOriginalRoleIndex(), false, "Idle", null, store);
          commandBuffer.removeComponent(ref, this.mountComponentType);
+         commandBuffer.ensureComponent(ref, Interactable.getComponentType());
       }
 
       @Override

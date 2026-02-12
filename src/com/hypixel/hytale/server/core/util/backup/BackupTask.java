@@ -1,7 +1,8 @@
 package com.hypixel.hytale.server.core.util.backup;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.config.BackupConfig;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -65,7 +66,8 @@ public class BackupTask {
    }
 
    private static void cleanOrArchiveOldBackups(@Nonnull Path sourceDir, @Nonnull Path archiveDir) throws IOException {
-      int maxCount = Options.getOptionSet().valueOf(Options.BACKUP_MAX_COUNT);
+      BackupConfig backupConfig = HytaleServer.get().getConfig().getBackupConfig();
+      int maxCount = backupConfig.getMaxCount();
       if (maxCount >= 1) {
          List<Path> oldBackups = BackupUtil.findOldBackups(sourceDir, maxCount);
          if (oldBackups != null && !oldBackups.isEmpty()) {
@@ -89,7 +91,8 @@ public class BackupTask {
    }
 
    private static void cleanOldArchives(@Nonnull Path dir) throws IOException {
-      int maxCount = Options.getOptionSet().valueOf(Options.BACKUP_ARCHIVE_MAX_COUNT);
+      BackupConfig backupConfig = HytaleServer.get().getConfig().getBackupConfig();
+      int maxCount = backupConfig.getArchiveMaxCount();
       if (maxCount >= 1) {
          List<Path> oldBackups = BackupUtil.findOldBackups(dir, maxCount);
          if (oldBackups != null && !oldBackups.isEmpty()) {

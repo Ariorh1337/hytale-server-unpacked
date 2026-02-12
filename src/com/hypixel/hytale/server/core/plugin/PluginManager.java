@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
+import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.plugin.commands.PluginCommand;
@@ -114,7 +115,7 @@ public class PluginManager {
    private boolean canLoadOnBoot(@Nonnull PendingLoadPlugin plugin) {
       PluginIdentifier identifier = plugin.getIdentifier();
       PluginManifest manifest = plugin.getManifest();
-      HytaleServerConfig.ModConfig modConfig = HytaleServer.get().getConfig().getModConfig().get(identifier);
+      ModConfig modConfig = HytaleServer.get().getConfig().getModConfig().get(identifier);
       boolean enabled;
       if (modConfig != null && modConfig.getEnabled() != null) {
          enabled = modConfig.getEnabled();
@@ -297,9 +298,9 @@ public class PluginManager {
 
       StringBuilder sb = new StringBuilder();
 
-      for (Entry<PluginIdentifier, HytaleServerConfig.ModConfig> entry : HytaleServer.get().getConfig().getModConfig().entrySet()) {
+      for (Entry<PluginIdentifier, ModConfig> entry : HytaleServer.get().getConfig().getModConfig().entrySet()) {
          PluginIdentifier identifier = entry.getKey();
-         HytaleServerConfig.ModConfig modConfig = entry.getValue();
+         ModConfig modConfig = entry.getValue();
          SemverRange requiredVersion = modConfig.getRequiredVersion();
          if (requiredVersion != null && !this.hasPlugin(identifier, requiredVersion)) {
             sb.append(String.format("%s, Version: %s\n", identifier, modConfig));

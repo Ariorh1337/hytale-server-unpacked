@@ -529,7 +529,7 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new ModelSystems.PlayerConnect());
       entityStoreRegistry.registerSystem(new ModelSystems.ModelChange());
       entityStoreRegistry.registerSystem(new ModelSystems.UpdateBoundingBox());
-      entityStoreRegistry.registerSystem(new ModelSystems.UpdateCrouchingBoundingBox());
+      entityStoreRegistry.registerSystem(new ModelSystems.UpdateMovementStateBoundingBox());
       entityStoreRegistry.registerSystem(new ModelSystems.PlayerUpdateMovementManager());
       entityStoreRegistry.registerSystem(new ModelSystems.AnimationEntityTrackerUpdate());
       entityStoreRegistry.registerSystem(new EntitySystems.NewSpawnEntityTrackerUpdate());

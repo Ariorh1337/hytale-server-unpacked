@@ -38,7 +38,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.event.IEventDispatcher;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAsset;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetListUpdate;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetPackSetup;
@@ -78,6 +78,7 @@ import com.hypixel.hytale.server.core.asset.AssetPackRegisterEvent;
 import com.hypixel.hytale.server.core.asset.AssetPackUnregisterEvent;
 import com.hypixel.hytale.server.core.asset.AssetRegistryLoader;
 import com.hypixel.hytale.server.core.asset.common.events.CommonAssetMonitorEvent;
+import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.handlers.InitialPacketHandler;
@@ -801,8 +802,8 @@ public class AssetEditorPlugin extends JavaPlugin {
                   String newPackId = newPackIdentifier.toString();
                   Path packPath = dataSource.getRootPath();
                   HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-                  HytaleServerConfig.ModConfig.setBoot(serverConfig, newPackIdentifier, true);
-                  Map<PluginIdentifier, HytaleServerConfig.ModConfig> modConfig = serverConfig.getModConfig();
+                  HytaleServerConfig.setBoot(serverConfig, newPackIdentifier, true);
+                  Map<PluginIdentifier, ModConfig> modConfig = serverConfig.getModConfig();
                   modConfig.remove(PluginIdentifier.fromString(packId));
                   serverConfig.markChanged();
                   if (serverConfig.consumeHasChanged()) {
@@ -811,7 +812,7 @@ public class AssetEditorPlugin extends JavaPlugin {
 
                   AssetModule assetModule = AssetModule.get();
                   assetModule.unregisterPack(packId);
-                  assetModule.registerPack(newPackId, packPath, manifest);
+                  assetModule.registerPack(newPackId, packPath, manifest, false);
                }
             }
          }
@@ -881,13 +882,13 @@ public class AssetEditorPlugin extends JavaPlugin {
                      Path manifestPath = packPath.resolve("manifest.json");
                      BsonUtil.writeSync(manifestPath, PluginManifest.CODEC, manifest, this.getLogger());
                      HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-                     HytaleServerConfig.ModConfig.setBoot(serverConfig, new PluginIdentifier(manifest), true);
+                     HytaleServerConfig.setBoot(serverConfig, new PluginIdentifier(manifest), true);
                      serverConfig.markChanged();
                      if (serverConfig.consumeHasChanged()) {
                         HytaleServerConfig.save(serverConfig).join();
                      }
 
-                     AssetModule.get().registerPack(packId, packPath, manifest);
+                     AssetModule.get().registerPack(packId, packPath, manifest, false);
                      editorClient.sendSuccessReply(requestToken, Messages.PACK_CREATED);
                      this.getLogger().at(Level.INFO).log("Created new pack: %s at %s", packId, packPath);
                   } catch (IOException e) {
@@ -960,7 +961,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                editorClient.getPacketHandler().write(new AssetEditorExportAssetInitialize(new AssetEditorAsset(null, assetPath.toPacket()), null, 0, false));
             } else {
                byte[][] parts = ArrayUtil.split(bytes, 2621440);
-               Packet[] packets = new Packet[2 + parts.length];
+               ToClientPacket[] packets = new ToClientPacket[2 + parts.length];
                packets[0] = new AssetEditorExportAssetInitialize(new AssetEditorAsset(null, assetPath.toPacket()), null, bytes.length, false);
 
                for (int partIndex = 0; partIndex < parts.length; partIndex++) {
@@ -1416,12 +1417,13 @@ public class AssetEditorPlugin extends JavaPlugin {
          editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.REQUEST_CHILD_IDS_ASSET_TYPE_MISSING);
       } else {
          AssetStore assetStore = assetStoreTypeHandler.getAssetStore();
+         AssetMap assetMap = assetStore.getAssetMap();
          Object key = assetStore.decodeFilePathKey(assetPath.path());
-         Set children = assetStore.getAssetMap().getChildren(key);
+         Set children = assetMap.getChildren(key);
          HashSet childrenIds = new HashSet();
          if (children != null) {
             for (Object child : children) {
-               if (assetStore.getAssetMap().getPath(child) != null) {
+               if (assetMap.getPath(child) != null) {
                   childrenIds.add(child.toString());
                }
             }
@@ -1791,13 +1793,13 @@ public class AssetEditorPlugin extends JavaPlugin {
       }
    }
 
-   private void sendPacketToAllEditorUsers(@Nonnull Packet packet) {
+   private void sendPacketToAllEditorUsers(@Nonnull ToClientPacket packet) {
       for (EditorClient editorClient : this.clientOpenAssetPathMapping.keySet()) {
          editorClient.getPacketHandler().write(packet);
       }
    }
 
-   private void sendPacketToAllEditorUsersExcept(@Nonnull Packet packet, EditorClient ignoreEditorClient) {
+   private void sendPacketToAllEditorUsersExcept(@Nonnull ToClientPacket packet, EditorClient ignoreEditorClient) {
       for (EditorClient editorClient : this.clientOpenAssetPathMapping.keySet()) {
          if (!editorClient.equals(ignoreEditorClient)) {
             editorClient.getPacketHandler().write(packet);

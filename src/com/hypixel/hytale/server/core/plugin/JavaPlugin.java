@@ -1,10 +1,8 @@
 package com.hypixel.hytale.server.core.plugin;
 
-import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import java.nio.file.Path;
-import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public abstract class JavaPlugin extends PluginBase {
@@ -31,13 +29,7 @@ public abstract class JavaPlugin extends PluginBase {
       if (this.getManifest().includesAssetPack()) {
          AssetModule assetModule = AssetModule.get();
          String id = new PluginIdentifier(this.getManifest()).toString();
-         AssetPack existing = assetModule.getAssetPack(id);
-         if (existing != null) {
-            this.getLogger().at(Level.WARNING).log("Asset pack %s already exists, skipping embedded pack", id);
-            return;
-         }
-
-         assetModule.registerPack(id, this.file, this.getManifest());
+         assetModule.registerPack(id, this.file, this.getManifest(), true);
       }
    }
 

@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
+import com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace.NullSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace.VoxelSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.math.vector.Vector3i;
@@ -49,12 +50,12 @@ public abstract class Pattern {
    public static class Context {
       @Nonnull
       public Vector3i position;
-      @Nullable
+      @Nonnull
       public VoxelSpace<Material> materialSpace;
 
       public Context() {
          this.position = new Vector3i();
-         this.materialSpace = null;
+         this.materialSpace = NullSpace.instance();
       }
 
       public Context(@Nonnull Vector3i position, @Nullable VoxelSpace<Material> materialSpace) {

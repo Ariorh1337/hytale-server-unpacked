@@ -830,6 +830,8 @@ public class ObjectivePlugin extends JavaPlugin {
                                  oldModel.getGradientId(),
                                  oldModel.getEyeHeight(),
                                  oldModel.getCrouchOffset(),
+                                 oldModel.getSittingOffset(),
+                                 oldModel.getSleepingOffset(),
                                  oldModel.getAnimationSetMap(),
                                  oldModel.getCamera(),
                                  oldModel.getLight(),

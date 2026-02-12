@@ -110,7 +110,7 @@ public class FireFluidTicker extends FluidTicker {
          int blockX = worldX + x;
          int blockY = worldY + y;
          int blockZ = worldZ + z;
-         if (blockY >= 0 && blockY < 256) {
+         if (blockY >= 0 && blockY < 320) {
             boolean isDifferentSection = !ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, blockX, blockY, blockZ);
             FluidSection otherFluidSection = isDifferentSection ? accessor.getFluidSectionByBlock(blockX, blockY, blockZ) : fluidSection;
             BlockSection otherBlockSection = isDifferentSection ? accessor.getBlockSectionByBlock(blockX, blockY, blockZ) : blockSection;

@@ -14,6 +14,7 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.worldmap.ClearWorldMap;
 import com.hypixel.hytale.protocol.packets.worldmap.MapChunk;
@@ -93,7 +94,7 @@ public class WorldMapTracker implements Tickable {
       }
 
       World world = this.player.getWorld();
-      if (world != null) {
+      if (world != null && this.player.getPlayerConnection().getChannel(NetworkChannel.WorldMap).isWritable()) {
          if (this.transformComponent == null) {
             this.transformComponent = this.player.getTransformComponent();
             if (this.transformComponent == null) {

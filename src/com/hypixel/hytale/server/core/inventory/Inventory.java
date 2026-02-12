@@ -579,6 +579,10 @@ public class Inventory implements NetworkSerializable<UpdatePlayerInventory> {
       return this.combinedBackpackStorageHotbar;
    }
 
+   public CombinedItemContainer getCombinedBackpackStorageHotbarFirst() {
+      return this.combinedHotbarStorageBackpack;
+   }
+
    public CombinedItemContainer getCombinedArmorHotbarUtilityStorage() {
       return this.combinedArmorHotbarUtilityStorage;
    }

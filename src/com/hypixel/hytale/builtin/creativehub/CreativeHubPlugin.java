@@ -4,6 +4,8 @@ import com.hypixel.hytale.builtin.creativehub.command.HubCommand;
 import com.hypixel.hytale.builtin.creativehub.config.CreativeHubEntityConfig;
 import com.hypixel.hytale.builtin.creativehub.config.CreativeHubWorldConfig;
 import com.hypixel.hytale.builtin.creativehub.interactions.HubPortalInteraction;
+import com.hypixel.hytale.builtin.creativehub.systems.ReturnToHubButtonSystem;
+import com.hypixel.hytale.builtin.creativehub.ui.ReturnToHubButtonUI;
 import com.hypixel.hytale.builtin.instances.InstancesPlugin;
 import com.hypixel.hytale.builtin.instances.config.InstanceEntityConfig;
 import com.hypixel.hytale.builtin.instances.config.InstanceWorldConfig;
@@ -103,7 +105,10 @@ public class CreativeHubPlugin extends JavaPlugin {
                config -> {
                   config.setUuid(UUID.randomUUID());
                   config.setDeleteOnRemove(false);
-                  config.setDisplayName(WorldConfig.formatDisplayName(instanceAssetName));
+                  if (config.getDisplayName() == null) {
+                     config.setDisplayName(WorldConfig.formatDisplayName(instanceAssetName));
+                  }
+
                   config.getPluginConfig().remove(InstanceWorldConfig.class);
                   config.markChanged();
                   long start = System.nanoTime();
@@ -150,9 +155,11 @@ public class CreativeHubPlugin extends JavaPlugin {
       this.getCodecRegistry(WorldConfig.PLUGIN_CODEC).register(CreativeHubWorldConfig.class, "CreativeHub", CreativeHubWorldConfig.CODEC);
       this.creativeHubEntityConfigComponentType = this.getEntityStoreRegistry()
          .registerComponent(CreativeHubEntityConfig.class, "CreativeHub", CreativeHubEntityConfig.CODEC);
+      this.getEntityStoreRegistry().registerSystem(new ReturnToHubButtonSystem());
       this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, CreativeHubPlugin::onPlayerConnect);
       this.getEventRegistry().registerGlobal(RemoveWorldEvent.class, CreativeHubPlugin::onWorldRemove);
       this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, CreativeHubPlugin::onPlayerAddToWorld);
+      ReturnToHubButtonUI.register();
    }
 
    private static void onWorldRemove(@Nonnull RemoveWorldEvent event) {
@@ -214,9 +221,11 @@ public class CreativeHubPlugin extends JavaPlugin {
          World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());
          if (parentWorld != null) {
             World hubInstance = get().getActiveHubInstance(parentWorld);
-            if (!world.equals(hubInstance)) {
-               PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
-               if (playerRef != null) {
+            boolean isInHubInstance = world.equals(hubInstance);
+            PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
+            if (playerRef != null) {
+               ReturnToHubButtonUI.send(playerRef, isInHubInstance);
+               if (!isInHubInstance) {
                   world.execute(() -> playerRef.sendMessage(MESSAGE_HUB_RETURN_HINT));
                }
             }

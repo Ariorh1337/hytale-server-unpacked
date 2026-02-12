@@ -398,6 +398,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          this.consumeTaskQueue();
          this.entityStore.shutdown();
          this.consumeTaskQueue();
+         this.eventRegistry.shutdownAndCleanup(true);
       } finally {
          this.logger.at(Level.INFO).log("Saving Config...");
          if (this.worldConfig.isSavingConfig()) {
@@ -955,7 +956,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          LegacyEntityTrackerSystems.clear(playerComponent, holder);
          ChunkTracker chunkTrackerComponent = holder.getComponent(ChunkTracker.getComponentType());
          if (chunkTrackerComponent != null) {
-            chunkTrackerComponent.clear();
+            chunkTrackerComponent.unloadAll(playerRefComponent);
          }
       }
 

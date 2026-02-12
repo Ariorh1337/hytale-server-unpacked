@@ -45,7 +45,7 @@ public class MultiMixDensityAsset extends DensityAsset {
       ArrayList<MultiMixDensity.Key> keys = new ArrayList<>(this.keyAssets.length);
 
       for (MultiMixDensityAsset.KeyAsset keyAsset : this.keyAssets) {
-         if (keyAsset.densityIndex <= 0) {
+         if (keyAsset.densityIndex < 0) {
             keys.add(new MultiMixDensity.Key(keyAsset.value, null));
          } else if (keyAsset.densityIndex >= densityInputs.size() - 1) {
             LoggerUtil.getLogger()

@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
 
-import com.hypixel.hytale.builtin.hytalegenerator.patterns.CeilingPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.SurfacePattern;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
@@ -28,7 +28,7 @@ public class CeilingPatternAsset extends PatternAsset {
 
       Pattern ceilingPattern = this.ceiling.build(argument);
       Pattern originPattern = this.origin.build(argument);
-      return new CeilingPattern(ceilingPattern, originPattern);
+      return new SurfacePattern(ceilingPattern, originPattern, 0.0, 0.0, SurfacePattern.Facing.D, 0, 0);
    }
 
    @Override

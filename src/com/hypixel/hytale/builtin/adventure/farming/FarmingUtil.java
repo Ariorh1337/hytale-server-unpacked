@@ -172,7 +172,7 @@ public class FarmingUtil {
       }
    }
 
-   public static void harvest(
+   public static boolean harvest(
       @Nonnull World world,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       @Nonnull Ref<EntityStore> ref,
@@ -180,9 +180,9 @@ public class FarmingUtil {
       int rotationIndex,
       @Nonnull Vector3i blockPosition
    ) {
-      if (world.getGameplayConfig().getWorldConfig().isBlockGatheringAllowed()) {
-         harvest0(componentAccessor, ref, blockType, rotationIndex, blockPosition);
-      }
+      return world.getGameplayConfig().getWorldConfig().isBlockGatheringAllowed()
+         ? harvest0(componentAccessor, ref, blockType, rotationIndex, blockPosition)
+         : false;
    }
 
    @Nullable
@@ -212,8 +212,9 @@ public class FarmingUtil {
       @Nonnull Vector3i blockPosition
    ) {
       FarmingData farmingConfig = blockType.getFarming();
+      boolean isFarmable = true;
       if (farmingConfig == null || farmingConfig.getStages() == null) {
-         return false;
+         isFarmable = false;
       }
 
       if (blockType.getGathering().getHarvest() == null) {
@@ -224,15 +225,7 @@ public class FarmingUtil {
       Vector3d centerPosition = new Vector3d();
       blockType.getBlockCenter(rotationIndex, centerPosition);
       centerPosition.add(blockPosition);
-      if (farmingConfig.getStageSetAfterHarvest() == null) {
-         giveDrops(store, ref, centerPosition, blockType);
-         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-         if (chunk != null) {
-            chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
-         }
-
-         return true;
-      } else {
+      if (isFarmable && farmingConfig.getStageSetAfterHarvest() != null) {
          giveDrops(store, ref, centerPosition, blockType);
          Map<String, FarmingStageData[]> stageSets = farmingConfig.getStages();
          FarmingStageData[] stages = stageSets.get(farmingConfig.getStartingStageSet());
@@ -305,6 +298,14 @@ public class FarmingUtil {
 
             return false;
          }
+      } else {
+         giveDrops(store, ref, centerPosition, blockType);
+         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
+         if (chunk != null) {
+            chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+         }
+
+         return true;
       }
    }
 

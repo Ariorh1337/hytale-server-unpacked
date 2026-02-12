@@ -21,8 +21,7 @@ import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
+import com.hypixel.hytale.protocol.ActiveAnimationsUpdate;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -104,9 +103,7 @@ public class ModelSystems {
          @Nonnull ActiveAnimationComponent animationComponent,
          @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
       ) {
-         ComponentUpdate update = new ComponentUpdate();
-         update.type = ComponentUpdateType.ActiveAnimations;
-         update.activeAnimations = animationComponent.getActiveAnimations();
+         ActiveAnimationsUpdate update = new ActiveAnimationsUpdate(animationComponent.getActiveAnimations());
 
          for (Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : visibleTo.entrySet()) {
             entry.getValue().queueUpdate(ref, update);
@@ -472,7 +469,7 @@ public class ModelSystems {
       }
    }
 
-   public static class UpdateCrouchingBoundingBox extends EntityTickingSystem<EntityStore> {
+   public static class UpdateMovementStateBoundingBox extends EntityTickingSystem<EntityStore> {
       @Nonnull
       public static final Set<Dependency<EntityStore>> DEPENDENCIES = Collections.singleton(
          new SystemDependency<>(Order.BEFORE, MovementStatesSystems.TickingSystem.class)
@@ -515,7 +512,12 @@ public class ModelSystems {
          assert movementStatesComponent != null;
          MovementStates newMovementStates = movementStatesComponent.getMovementStates();
          MovementStates sentMovementStates = movementStatesComponent.getSentMovementStates();
-         if (newMovementStates.crouching != sentMovementStates.crouching || newMovementStates.forcedCrouching != sentMovementStates.forcedCrouching) {
+         boolean crouchingChanged = newMovementStates.crouching != sentMovementStates.crouching
+            || newMovementStates.forcedCrouching != sentMovementStates.forcedCrouching;
+         boolean slidingChanged = newMovementStates.sliding != sentMovementStates.sliding;
+         boolean sittingChanged = newMovementStates.sitting != sentMovementStates.sitting;
+         boolean sleepingChanged = newMovementStates.sleeping != sentMovementStates.sleeping;
+         if (crouchingChanged || slidingChanged || sittingChanged || sleepingChanged) {
             ModelComponent modelComponent = archetypeChunk.getComponent(index, this.modelComponentType);
             assert modelComponent != null;
             Model model = modelComponent.getModel();

@@ -29,7 +29,7 @@ public interface FileIO {
    }
 
    @Nonnull
-   static FileIOSystem openFileIOSystem(@Nonnull FileIOSystem fs) {
+   static <FS extends FileIOSystem> FS openFileIOSystem(@Nonnull FS fs) {
       FileIOSystem.Provider.set(fs);
       return fs;
    }
@@ -71,16 +71,20 @@ public interface FileIO {
       Path assetDirPath = relativize(path, fs.baseRoot());
       ObjectArrayList<AssetPath> paths = new ObjectArrayList<>();
       ObjectOpenHashSet<AssetPath> visited = new ObjectOpenHashSet<>();
+      ObjectOpenHashSet<AssetPath> disabled = new ObjectOpenHashSet<>();
 
       for (Path root : fs.roots().paths) {
          Path rootAssetDirPath = append(root, assetDirPath);
          if (Files.exists(rootAssetDirPath) && Files.isDirectory(rootAssetDirPath)) {
             try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(rootAssetDirPath)) {
+               visited.addAll(disabled);
+               disabled.clear();
+
                for (Path filepath : dirStream) {
                   AssetPath assetPath = AssetPath.fromAbsolute(root, filepath);
                   AssetPath disabledPath = disableOp.apply(assetPath);
                   if (disabledPath != assetPath) {
-                     visited.add(disabledPath);
+                     disabled.add(disabledPath);
                   } else if (matcher.test(assetPath) && visited.add(assetPath)) {
                      paths.add(assetPath);
                   }

@@ -20,8 +20,9 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioChannelOption;
-import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
+import io.netty.handler.codec.quic.QLogConfiguration;
 import io.netty.handler.codec.quic.QuicChannel;
+import io.netty.handler.codec.quic.QuicChannelOption;
 import io.netty.handler.codec.quic.QuicCongestionControlAlgorithm;
 import io.netty.handler.codec.quic.QuicServerCodecBuilder;
 import io.netty.handler.codec.quic.QuicSslContext;
@@ -155,7 +156,8 @@ public class QUICTransport implements Transport {
          Duration playTimeout = HytaleServer.get().getConfig().getConnectionTimeouts().getPlay();
          ChannelHandler quicHandler = new QuicServerCodecBuilder()
             .sslContext(this.sslContext)
-            .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
+            .tokenHandler(null)
+            .activeMigration(false)
             .maxIdleTimeout(playTimeout.toMillis(), TimeUnit.MILLISECONDS)
             .ackDelayExponent(3L)
             .initialMaxData(524288L)
@@ -166,6 +168,7 @@ public class QUICTransport implements Transport {
             .initialMaxStreamsBidirectional(1L)
             .discoverPmtu(true)
             .congestionControlAlgorithm(QuicCongestionControlAlgorithm.BBR)
+            .option(QuicChannelOption.QLOG, System.getProperty("hytale.qlog") != null ? new QLogConfiguration(".", "hytale-server-quic-qlogs", "") : null)
             .handler(
                new ChannelInboundHandlerAdapter() {
                   @Override

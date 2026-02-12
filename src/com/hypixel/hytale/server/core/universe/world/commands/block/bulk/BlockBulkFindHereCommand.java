@@ -81,7 +81,12 @@ public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
             long diff = System.nanoTime() - start;
             BlockType findBlock = BlockType.getAssetMap().getAsset(blockId);
             String blockName = printBlockName ? " " + findBlock.getId() : "";
-            playerRef.sendMessage(Message.translation("Found " + found.get() + blockName + " blocks in " + TimeUnit.NANOSECONDS.toSeconds(diff) + " seconds!"));
+            playerRef.sendMessage(
+               Message.translation("server.commands.block.find-here.result")
+                  .param("count", found.get())
+                  .param("blockName", blockName)
+                  .param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
+            );
          }
       );
    }

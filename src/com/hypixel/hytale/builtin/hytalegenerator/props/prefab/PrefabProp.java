@@ -293,7 +293,9 @@ public class PrefabProp extends Prop {
                      Material worldMaterial = materialSpace.getContent(worldX, worldY, worldZ);
                      int worldMaterialHash = worldMaterial.hashMaterialIds();
                      if (this.materialMask.canReplace(materialHash, worldMaterialHash)) {
-                        materialSpace.set(material, worldX, worldY, worldZ);
+                        if (filler == 0) {
+                           materialSpace.set(material, worldX, worldY, worldZ);
+                        }
                      }
                   }
                }

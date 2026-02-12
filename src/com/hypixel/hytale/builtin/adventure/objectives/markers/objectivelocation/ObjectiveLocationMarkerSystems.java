@@ -171,6 +171,8 @@ public class ObjectiveLocationMarkerSystems {
                      model.getGradientId(),
                      model.getEyeHeight(),
                      model.getCrouchOffset(),
+                     model.getSittingOffset(),
+                     model.getSleepingOffset(),
                      model.getAnimationSetMap(),
                      model.getCamera(),
                      model.getLight(),

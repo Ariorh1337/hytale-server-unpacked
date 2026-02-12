@@ -40,6 +40,8 @@ public enum RoleDebugFlags implements Supplier<String> {
    VisAiming("Visualize aiming"),
    VisMarkedTargets("Visualize arrows to marked targets"),
    VisSensorRanges("Visualize entity sensor detection ranges"),
+   VisLeashPosition("Visualize NPC leash position"),
+   VisFlock("Visualize flock member connections"),
    BeaconMessages("Enable debugging of beacon message sending and receiving");
 
    private static final RoleDebugFlags.RoleDebugPreset[] presets = new RoleDebugFlags.RoleDebugPreset[]{

@@ -42,18 +42,9 @@ public class TeleporterSettingsPageSupplier implements OpenCustomUIInteraction.C
          (supplier, parent) -> supplier.mode = parent.mode
       )
       .add()
-      .appendInherited(
-         new KeyedCodec<>("ActiveState", Codec.STRING),
-         (supplier, o) -> supplier.activeState = o,
-         supplier -> supplier.activeState,
-         (supplier, parent) -> supplier.activeState = parent.activeState
-      )
-      .add()
       .build();
    private boolean create = true;
    private TeleporterSettingsPage.Mode mode = TeleporterSettingsPage.Mode.FULL;
-   @Nullable
-   private String activeState;
 
    @Nullable
    @Override
@@ -93,6 +84,6 @@ public class TeleporterSettingsPageSupplier implements OpenCustomUIInteraction.C
          blockRef = chunkComponentStore.addEntity(holder, AddReason.SPAWN);
       }
 
-      return blockRef != null && blockRef.isValid() ? new TeleporterSettingsPage(playerRef, blockRef, this.mode, this.activeState) : null;
+      return blockRef != null && blockRef.isValid() ? new TeleporterSettingsPage(playerRef, blockRef, this.mode) : null;
    }
 }

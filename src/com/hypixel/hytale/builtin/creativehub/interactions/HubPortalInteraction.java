@@ -155,47 +155,49 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
             } else {
                UUID playerUUID = uuidComponent.getUuid();
                CreativeHubEntityConfig hubEntityConfig = componentAccessor.getComponent(playerRef, CreativeHubEntityConfig.getComponentType());
-               originalWorld.execute(playerRefComponent::removeFromStore);
-               worldFuture.orTimeout(1L, TimeUnit.MINUTES).thenCompose(world -> {
-                  PlayerWorldData worldData = perWorldData.get(world.getName());
-                  if (worldData != null && worldData.getLastPosition() != null) {
-                     return world.addPlayer(playerRefComponent, worldData.getLastPosition(), Boolean.TRUE, Boolean.FALSE);
-                  }
+               CompletableFuture.runAsync(playerRefComponent::removeFromStore, originalWorld)
+                  .thenCombine(worldFuture.orTimeout(1L, TimeUnit.MINUTES), (v, world) -> (World)world)
+                  .thenCompose(world -> {
+                     PlayerWorldData worldData = perWorldData.get(world.getName());
+                     if (worldData != null && worldData.getLastPosition() != null) {
+                        return world.addPlayer(playerRefComponent, worldData.getLastPosition(), Boolean.TRUE, Boolean.FALSE);
+                     }
 
-                  ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
-                  Transform spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
-                  return world.addPlayer(playerRefComponent, spawnPoint, Boolean.TRUE, Boolean.FALSE);
-               }).whenComplete((ret, ex) -> {
-                  if (ex != null) {
-                     LOGGER.at(Level.SEVERE).withCause(ex).log("Failed to teleport %s to permanent world", playerRefComponent.getUsername());
-                  }
+                     ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+                     Transform spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
+                     return world.addPlayer(playerRefComponent, spawnPoint, Boolean.TRUE, Boolean.FALSE);
+                  })
+                  .whenComplete((ret, ex) -> {
+                     if (ex != null) {
+                        LOGGER.at(Level.SEVERE).withCause(ex).log("Failed to teleport %s to permanent world", playerRefComponent.getUsername());
+                     }
 
-                  if (ret == null) {
-                     if (originalWorld.isAlive()) {
-                        originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
-                     } else {
-                        if (hubEntityConfig != null && hubEntityConfig.getParentHubWorldUuid() != null) {
-                           World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());
-                           if (parentWorld != null) {
-                              CreativeHubWorldConfig parentHubConfig = CreativeHubWorldConfig.get(parentWorld.getWorldConfig());
-                              if (parentHubConfig != null && parentHubConfig.getStartupInstance() != null) {
-                                 World hubInstance = CreativeHubPlugin.get().getOrSpawnHubInstance(parentWorld, parentHubConfig, new Transform());
-                                 hubInstance.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
-                                 return;
+                     if (ret == null) {
+                        if (originalWorld.isAlive()) {
+                           originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
+                        } else {
+                           if (hubEntityConfig != null && hubEntityConfig.getParentHubWorldUuid() != null) {
+                              World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());
+                              if (parentWorld != null) {
+                                 CreativeHubWorldConfig parentHubConfig = CreativeHubWorldConfig.get(parentWorld.getWorldConfig());
+                                 if (parentHubConfig != null && parentHubConfig.getStartupInstance() != null) {
+                                    World hubInstance = CreativeHubPlugin.get().getOrSpawnHubInstance(parentWorld, parentHubConfig, new Transform());
+                                    hubInstance.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
+                                    return;
+                                 }
                               }
                            }
-                        }
 
-                        World defaultWorld = Universe.get().getDefaultWorld();
-                        if (defaultWorld != null) {
-                           defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
-                        } else {
-                           LOGGER.at(Level.SEVERE).log("No fallback world available for %s, disconnecting", playerRefComponent.getUsername());
-                           playerRefComponent.getPacketHandler().disconnect("Failed to teleport - no world available");
+                           World defaultWorld = Universe.get().getDefaultWorld();
+                           if (defaultWorld != null) {
+                              defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
+                           } else {
+                              LOGGER.at(Level.SEVERE).log("No fallback world available for %s, disconnecting", playerRefComponent.getUsername());
+                              playerRefComponent.getPacketHandler().disconnect("Failed to teleport - no world available");
+                           }
                         }
                      }
-                  }
-               });
+                  });
             }
          }
       }

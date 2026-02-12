@@ -86,7 +86,10 @@ public class StandardDataSource implements DataSource {
 
    @Override
    public void shutdown() {
-      this.saveSchedule.cancel(false);
+      if (this.saveSchedule != null) {
+         this.saveSchedule.cancel(false);
+      }
+
       this.saveRecentModifications();
    }
 

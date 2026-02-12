@@ -1,6 +1,6 @@
 package com.hypixel.hytale.server.core.io.netty;
 
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,7 +26,7 @@ public class PlayerChannelHandler extends ChannelInboundHandlerAdapter {
    @Override
    public void channelRead(ChannelHandlerContext ctx, Object msg) {
       if (ctx.channel().isActive()) {
-         Packet packet = (Packet)msg;
+         ToServerPacket packet = (ToServerPacket)msg;
          if (!PacketAdapters.__handleInbound(this.handler, packet)) {
             this.handler.handle(packet);
          }

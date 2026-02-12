@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.worldgen.loader;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabLoader;
@@ -14,6 +15,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenCustomHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
@@ -74,7 +76,8 @@ public class WorldGenPrefabLoader {
       AssetModule assets = AssetModule.get();
       Path root = assets.getBaseAssetPack().getRoot();
       Path assetPath = FileIO.relativize(prefabStorePath, root);
-      Path[] roots = AssetFileSystem.getAssetRoots(config, packRoot -> FileIO.exists(packRoot, assetPath));
+      List<AssetPack> packs = AssetFileSystem.getAssetPacks(config, packRoot -> FileIO.exists(packRoot, assetPath));
+      Path[] roots = AssetFileSystem.getAssetRoots(packs);
       PrefabLoader[] loaders = new PrefabLoader[roots.length];
 
       for (int i = 0; i < roots.length; i++) {

@@ -5,6 +5,7 @@ import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
@@ -256,7 +257,13 @@ public class BlockModule extends JavaPlugin {
 
       public void markNeedsSaving() {
          if (this.chunkRef.isValid()) {
-            BlockComponentChunk blockComponentChunk = this.chunkRef.getStore().getComponent(this.chunkRef, BlockComponentChunk.getComponentType());
+            this.markNeedsSaving(this.chunkRef.getStore());
+         }
+      }
+
+      public void markNeedsSaving(ComponentAccessor<ChunkStore> accessor) {
+         if (this.chunkRef.isValid()) {
+            BlockComponentChunk blockComponentChunk = accessor.getComponent(this.chunkRef, BlockComponentChunk.getComponentType());
             if (blockComponentChunk != null) {
                blockComponentChunk.markNeedsSaving();
             }

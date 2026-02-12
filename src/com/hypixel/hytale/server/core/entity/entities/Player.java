@@ -208,7 +208,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
                Store<EntityStore> store = ref.getStore();
                ChunkTracker tracker = store.getComponent(ref, ChunkTracker.getComponentType());
                if (tracker != null) {
-                  tracker.clear();
+                  tracker.unloadAll(this.playerRef);
                }
 
                this.playerRef.removeFromStore();
@@ -220,7 +220,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
                   Store<EntityStore> storex = ref.getStore();
                   ChunkTracker trackerx = storex.getComponent(ref, ChunkTracker.getComponentType());
                   if (trackerx != null) {
-                     trackerx.clear();
+                     trackerx.unloadAll(this.playerRef);
                   }
 
                   this.playerRef.removeFromStore();

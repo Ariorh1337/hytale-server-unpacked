@@ -534,7 +534,19 @@
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:I18nModule": "*",
-    "Hytale:Instances": "*"
+    "Hytale:Instances": "*",
+    "Hytale:AnchorActionModule": "*"
+  }
+}
+,{
+  "Group": "Hytale",
+  "Name": "RandomTick",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.randomtick.RandomTickPlugin",
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:LegacyModule": "*"
   }
 }
 ]

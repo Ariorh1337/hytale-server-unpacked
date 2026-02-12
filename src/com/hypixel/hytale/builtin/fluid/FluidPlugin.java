@@ -108,21 +108,21 @@ public class FluidPlugin extends JavaPlugin {
                                        int y = ChunkUtil.minBlock(fluidSectionComponent.getY()) + ChunkUtil.yFromIndex(idx);
                                        int z = ChunkUtil.minBlock(fluidSectionComponent.getZ()) + ChunkUtil.zFromIndex(idx);
                                        boolean canSpread = ChunkUtil.isBorderBlock(x, z)
-                                          || fluidSectionComponent.getFluidId(x - 1, y, z) == 0
+                                          || fluidSectionComponent.getFluidId(x - 1, y, z) != fluidId
                                              && !FluidTicker.isSolid(blockMap.getAsset(blockSectionComponent.get(x - 1, y, z)))
-                                          || fluidSectionComponent.getFluidId(x + 1, y, z) == 0
+                                          || fluidSectionComponent.getFluidId(x + 1, y, z) != fluidId
                                              && !FluidTicker.isSolid(blockMap.getAsset(blockSectionComponent.get(x + 1, y, z)))
-                                          || fluidSectionComponent.getFluidId(x, y, z - 1) == 0
+                                          || fluidSectionComponent.getFluidId(x, y, z - 1) != fluidId
                                              && !FluidTicker.isSolid(blockMap.getAsset(blockSectionComponent.get(x, y, z - 1)))
-                                          || fluidSectionComponent.getFluidId(x, y, z + 1) == 0
+                                          || fluidSectionComponent.getFluidId(x, y, z + 1) != fluidId
                                              && !FluidTicker.isSolid(blockMap.getAsset(blockSectionComponent.get(x, y, z + 1)));
                                        if (y > 0) {
                                           if (ChunkUtil.chunkCoordinate(y) == ChunkUtil.chunkCoordinate(y - 1)) {
-                                             canSpread |= fluidSectionComponent.getFluidId(x, y - 1, z) == 0
+                                             canSpread |= fluidSectionComponent.getFluidId(x, y - 1, z) != fluidId
                                                 && !FluidTicker.isSolid(blockMap.getAsset(blockSectionComponent.get(x, y - 1, z)));
                                           } else {
                                              FluidSection fluidSection2 = sections[i - 1].getComponent(FluidSection.getComponentType());
-                                             canSpread |= fluidSection2.getFluidId(x, y - 1, z) == 0
+                                             canSpread |= fluidSection2.getFluidId(x, y - 1, z) != fluidId
                                                 && !FluidTicker.isSolid(blockMap.getAsset(blockChunkComponent.getBlock(x, y - 1, z)));
                                           }
                                        }

@@ -11,7 +11,7 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.event.EventBus;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.protocol.ItemWithAllMetadata;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
@@ -42,11 +42,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends AssetMap<K, T>> extends AssetStore<K, T, M> {
-   public static final Queue<Consumer<Packet>> SETUP_PACKET_CONSUMERS = new ConcurrentLinkedQueue<>();
+   public static final Queue<Consumer<ToClientPacket>> SETUP_PACKET_CONSUMERS = new ConcurrentLinkedQueue<>();
    protected final AssetPacketGenerator<K, T, M> packetGenerator;
    protected final Function<K, ItemWithAllMetadata> notificationItemFunction;
    @Nullable
-   protected SoftReference<Packet[]> cachedInitPackets;
+   protected SoftReference<ToClientPacket[]> cachedInitPackets;
 
    public HytaleAssetStore(@Nonnull HytaleAssetStore.Builder<K, T, M> builder) {
       super(builder);
@@ -90,19 +90,19 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
          Universe universe = Universe.get();
          if (universe.getPlayerCount() != 0 || !SETUP_PACKET_CONSUMERS.isEmpty()) {
             if (toBeRemoved != null && !toBeRemoved.isEmpty()) {
-               Packet packet = this.packetGenerator.generateRemovePacket(this.assetMap, toBeRemoved, query);
+               ToClientPacket packet = this.packetGenerator.generateRemovePacket(this.assetMap, toBeRemoved, query);
                universe.broadcastPacketNoCache(packet);
 
-               for (Consumer<Packet> c : SETUP_PACKET_CONSUMERS) {
+               for (Consumer<ToClientPacket> c : SETUP_PACKET_CONSUMERS) {
                   c.accept(packet);
                }
             }
 
             if (toBeUpdated != null && !toBeUpdated.isEmpty()) {
-               Packet packet = this.packetGenerator.generateUpdatePacket(this.assetMap, toBeUpdated, query);
+               ToClientPacket packet = this.packetGenerator.generateUpdatePacket(this.assetMap, toBeUpdated, query);
                universe.broadcastPacketNoCache(packet);
 
-               for (Consumer<Packet> c : SETUP_PACKET_CONSUMERS) {
+               for (Consumer<ToClientPacket> c : SETUP_PACKET_CONSUMERS) {
                   c.accept(packet);
                }
             }
@@ -110,15 +110,15 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
       }
    }
 
-   public void sendAssets(@Nonnull Consumer<Packet[]> packetConsumer) {
+   public void sendAssets(@Nonnull Consumer<ToClientPacket[]> packetConsumer) {
       if (this.packetGenerator != null) {
-         Packet[] packets = this.cachedInitPackets == null ? null : this.cachedInitPackets.get();
+         ToClientPacket[] packets = this.cachedInitPackets == null ? null : this.cachedInitPackets.get();
          if (packets != null) {
             packetConsumer.accept(packets);
          } else {
             Map<K, T> map = this.assetMap.getAssetMap();
-            Packet packet = this.packetGenerator.generateInitPacket(this.assetMap, map);
-            this.cachedInitPackets = new SoftReference<>(packets = new Packet[]{packet});
+            ToClientPacket packet = this.packetGenerator.generateInitPacket(this.assetMap, map);
+            this.cachedInitPackets = new SoftReference<>(packets = new ToClientPacket[]{packet});
             packetConsumer.accept(packets);
          }
       }

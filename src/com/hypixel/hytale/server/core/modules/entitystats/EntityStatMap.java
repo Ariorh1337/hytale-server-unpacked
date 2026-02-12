@@ -505,12 +505,30 @@ public class EntityStatMap implements Component<EntityStore> {
       map.update();
 
       for (int i = 0; i < this.values.length; i++) {
-         map.values[i].set(this.values[i].get());
+         if (this.values[i] != null) {
+            EntityStatValue value = this.values[i];
+            map.values[i].set(value.get());
+            Map<String, Modifier> modifiers = value.getModifiers();
+            if (modifiers != null) {
+               for (Entry<String, Modifier> entry : modifiers.entrySet()) {
+                  map.values[i].putModifier(entry.getKey(), entry.getValue());
+               }
+            }
+         }
       }
 
-      map.selfUpdates.putAll(this.selfUpdates);
-      map.selfStatValues.putAll(this.selfStatValues);
-      map.otherUpdates.putAll(this.otherUpdates);
+      for (Int2ObjectMap.Entry<List<EntityStatUpdate>> entry : this.selfUpdates.int2ObjectEntrySet()) {
+         map.selfUpdates.put(entry.getIntKey(), new ObjectArrayList<>(entry.getValue()));
+      }
+
+      for (Int2ObjectMap.Entry<FloatList> entry : this.selfStatValues.int2ObjectEntrySet()) {
+         map.selfStatValues.put(entry.getIntKey(), new FloatArrayList(entry.getValue()));
+      }
+
+      for (Int2ObjectMap.Entry<List<EntityStatUpdate>> entry : this.otherUpdates.int2ObjectEntrySet()) {
+         map.otherUpdates.put(entry.getIntKey(), new ObjectArrayList<>(entry.getValue()));
+      }
+
       return map;
    }
 

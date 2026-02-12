@@ -100,6 +100,7 @@ public class FlockPlugin extends JavaPlugin {
       });
       entityStoreRegistry.registerSystem(new FlockSystems.EntityRemoved(this.flockComponentType));
       entityStoreRegistry.registerSystem(new FlockSystems.Ticking(this.flockComponentType));
+      entityStoreRegistry.registerSystem(new FlockSystems.FlockDebugSystem(this.flockComponentType));
       entityStoreRegistry.registerSystem(new FlockSystems.PlayerChangeGameModeEventSystem());
       this.flockMembershipComponentType = entityStoreRegistry.registerComponent(FlockMembership.class, "FlockMembership", FlockMembership.CODEC);
       this.persistentFlockDataComponentType = entityStoreRegistry.registerComponent(PersistentFlockData.class, "FlockData", PersistentFlockData.CODEC);

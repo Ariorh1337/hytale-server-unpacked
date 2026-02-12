@@ -13,10 +13,11 @@ import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
-import com.hypixel.hytale.protocol.Equipment;
+import com.hypixel.hytale.protocol.EquipmentUpdate;
 import com.hypixel.hytale.protocol.ItemArmorSlot;
+import com.hypixel.hytale.protocol.ModelUpdate;
+import com.hypixel.hytale.protocol.PlayerSkinUpdate;
+import com.hypixel.hytale.protocol.PropUpdate;
 import com.hypixel.hytale.server.core.asset.type.gameplay.PlayerConfig;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
@@ -128,19 +129,14 @@ public class LegacyEntityTrackerSystems {
          boolean isProp,
          @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
       ) {
-         ComponentUpdate update = new ComponentUpdate();
-         update.type = ComponentUpdateType.Model;
-         update.model = model != null ? model.getModel().toPacket() : null;
-         update.entityScale = entityScale;
+         ModelUpdate update = new ModelUpdate(model != null ? model.getModel().toPacket() : null, entityScale);
 
          for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
             viewer.queueUpdate(ref, update);
          }
 
          if (isProp) {
-            ComponentUpdate propUpdate = new ComponentUpdate();
-            propUpdate.type = ComponentUpdateType.Prop;
-            propUpdate.isProp = true;
+            PropUpdate propUpdate = new PropUpdate();
 
             for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
                viewer.queueUpdate(ref, propUpdate);
@@ -203,8 +199,7 @@ public class LegacyEntityTrackerSystems {
       private static void queueUpdatesFor(
          Ref<EntityStore> ref, @Nonnull PlayerSkinComponent component, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
       ) {
-         ComponentUpdate update = new ComponentUpdate();
-         update.type = ComponentUpdateType.PlayerSkin;
+         PlayerSkinUpdate update = new PlayerSkinUpdate();
          update.skin = component.getPlayerSkin();
 
          for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
@@ -262,14 +257,12 @@ public class LegacyEntityTrackerSystems {
       private static void queueUpdatesFor(
          @Nonnull Ref<EntityStore> ref, @Nonnull LivingEntity entity, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
       ) {
-         ComponentUpdate update = new ComponentUpdate();
-         update.type = ComponentUpdateType.Equipment;
-         update.equipment = new Equipment();
+         EquipmentUpdate update = new EquipmentUpdate();
          Inventory inventory = entity.getInventory();
          ItemContainer armor = inventory.getArmor();
-         update.equipment.armorIds = new String[armor.getCapacity()];
-         Arrays.fill(update.equipment.armorIds, "");
-         armor.forEachWithMeta((slot, itemStack, armorIds) -> armorIds[slot] = itemStack.getItemId(), update.equipment.armorIds);
+         update.armorIds = new String[armor.getCapacity()];
+         Arrays.fill(update.armorIds, "");
+         armor.forEachWithMeta((slot, itemStack, armorIds) -> armorIds[slot] = itemStack.getItemId(), update.armorIds);
          Store<EntityStore> store = ref.getStore();
          PlayerSettings playerSettings = store.getComponent(ref, PlayerSettings.getComponentType());
          if (playerSettings != null) {
@@ -279,26 +272,26 @@ public class LegacyEntityTrackerSystems {
                .getPlayerConfig()
                .getArmorVisibilityOption();
             if (armorVisibilityOption.canHideHelmet() && playerSettings.hideHelmet()) {
-               update.equipment.armorIds[ItemArmorSlot.Head.ordinal()] = "";
+               update.armorIds[ItemArmorSlot.Head.ordinal()] = "";
             }
 
             if (armorVisibilityOption.canHideCuirass() && playerSettings.hideCuirass()) {
-               update.equipment.armorIds[ItemArmorSlot.Chest.ordinal()] = "";
+               update.armorIds[ItemArmorSlot.Chest.ordinal()] = "";
             }
 
             if (armorVisibilityOption.canHideGauntlets() && playerSettings.hideGauntlets()) {
-               update.equipment.armorIds[ItemArmorSlot.Hands.ordinal()] = "";
+               update.armorIds[ItemArmorSlot.Hands.ordinal()] = "";
             }
 
             if (armorVisibilityOption.canHidePants() && playerSettings.hidePants()) {
-               update.equipment.armorIds[ItemArmorSlot.Legs.ordinal()] = "";
+               update.armorIds[ItemArmorSlot.Legs.ordinal()] = "";
             }
          }
 
          ItemStack itemInHand = inventory.getItemInHand();
-         update.equipment.rightHandItemId = itemInHand != null ? itemInHand.getItemId() : "Empty";
+         update.rightHandItemId = itemInHand != null ? itemInHand.getItemId() : "Empty";
          ItemStack utilityItem = inventory.getUtilityItem();
-         update.equipment.leftHandItemId = utilityItem != null ? utilityItem.getItemId() : "Empty";
+         update.leftHandItemId = utilityItem != null ? utilityItem.getItemId() : "Empty";
 
          for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
             viewer.queueUpdate(ref, update);

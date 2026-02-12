@@ -169,6 +169,29 @@ public class DebugUtils {
       }
    }
 
+   public static void addDisc(
+      @Nonnull World world,
+      @Nonnull Matrix4d matrix,
+      double outerRadius,
+      double innerRadius,
+      @Nonnull Vector3f color,
+      float opacity,
+      int segmentCount,
+      float time,
+      boolean fade
+   ) {
+      float[] shapeParams = new float[]{
+         (float)outerRadius, segmentCount, (float)innerRadius, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F
+      };
+      add(world, DebugShape.Disc, matrix, color, opacity, time, fade, shapeParams);
+   }
+
+   public static void addDisc(
+      @Nonnull World world, @Nonnull Matrix4d matrix, double outerRadius, double innerRadius, @Nonnull Vector3f color, float opacity, float time, boolean fade
+   ) {
+      addDisc(world, matrix, outerRadius, innerRadius, color, opacity, 32, time, fade);
+   }
+
    public static void addDisc(@Nonnull World world, @Nonnull Vector3d center, double radius, @Nonnull Vector3f color, float time, boolean fade) {
       addDisc(world, center.x, center.y, center.z, radius, 0.0, color, 0.8F, time, fade);
    }
@@ -214,10 +237,7 @@ public class DebugUtils {
       Matrix4d matrix = new Matrix4d();
       matrix.identity();
       matrix.translate(x, y, z);
-      float[] shapeParams = new float[]{
-         (float)outerRadius, segmentCount, (float)innerRadius, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F
-      };
-      add(world, DebugShape.Disc, matrix, color, opacity, time, fade, shapeParams);
+      addDisc(world, matrix, outerRadius, innerRadius, color, opacity, segmentCount, time, fade);
    }
 
    public static void addSector(

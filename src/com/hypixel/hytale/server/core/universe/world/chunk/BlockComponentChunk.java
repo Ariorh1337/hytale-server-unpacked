@@ -21,7 +21,7 @@ import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -389,7 +389,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
          @Nonnull Store<ChunkStore> store,
          CommandBuffer<ChunkStore> commandBuffer,
          PlayerRef player,
-         @Nonnull List<Packet> results
+         @Nonnull List<ToClientPacket> results
       ) {
          BlockComponentChunk component = archetypeChunk.getComponent(index, this.componentType);
          ObjectCollection<Ref<ChunkStore>> references = component.entityReferences.values();
@@ -416,7 +416,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
          @Nonnull Store<ChunkStore> store,
          CommandBuffer<ChunkStore> commandBuffer,
          PlayerRef player,
-         @Nonnull List<Packet> results
+         @Nonnull List<ToClientPacket> results
       ) {
          BlockComponentChunk component = archetypeChunk.getComponent(index, this.componentType);
          ObjectCollection<Ref<ChunkStore>> references = component.entityReferences.values();

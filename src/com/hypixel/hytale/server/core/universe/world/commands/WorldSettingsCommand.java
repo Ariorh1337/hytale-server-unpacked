@@ -54,8 +54,8 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "type",
          ArgTypes.STRING,
          "ChunkStorage Type",
-         worldConfig -> IChunkStorageProvider.CODEC.getIdFor((Class<? extends IChunkStorageProvider>)worldConfig.getChunkStorageProvider().getClass()),
-         (worldConfig, path) -> worldConfig.setChunkStorageProvider(IChunkStorageProvider.CODEC.getCodecFor(path).getDefaultValue())
+         worldConfig -> IChunkStorageProvider.CODEC.getIdFor((Class<? extends IChunkStorageProvider<?>>)worldConfig.getChunkStorageProvider().getClass()),
+         (worldConfig, path) -> worldConfig.setChunkStorageProvider((IChunkStorageProvider<?>)IChunkStorageProvider.CODEC.getCodecFor(path).getDefaultValue())
       );
       this.generateSubCommand(
          "ticking", "server.commands.world.settings.ticking.desc", "ticking", ArgTypes.BOOLEAN, "Ticking", WorldConfig::isTicking, WorldConfig::setTicking
