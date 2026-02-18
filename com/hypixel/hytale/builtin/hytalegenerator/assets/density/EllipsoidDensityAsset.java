@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class EllipsoidDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<EllipsoidDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(EllipsoidDensityAsset.class, EllipsoidDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.densityCurveAsset = k;
     }, k -> k.densityCurveAsset).add()).append(new KeyedCodec<Vector3d>("Scale", Vector3d.CODEC, false), (t, k) -> {

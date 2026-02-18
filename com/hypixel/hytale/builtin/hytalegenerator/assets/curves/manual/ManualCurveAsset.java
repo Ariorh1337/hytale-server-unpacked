@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class ManualCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<ManualCurveAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ManualCurveAsset.class, ManualCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Points", new ArrayCodec(PointInOutAsset.CODEC, PointInOutAsset[]::new), true), (t, k) -> {
         t.nodes = k;
     }, t -> t.nodes).addValidator((v, r) -> {

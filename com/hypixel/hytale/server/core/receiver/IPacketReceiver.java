@@ -3,12 +3,12 @@
  */
 package com.hypixel.hytale.server.core.receiver;
 
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import javax.annotation.Nonnull;
 
 public interface IPacketReceiver {
-    public void write(@Nonnull Packet var1);
+    public void write(@Nonnull ToClientPacket var1);
 
-    public void writeNoCache(@Nonnull Packet var1);
+    public void writeNoCache(@Nonnull ToClientPacket var1);
 }
 

@@ -28,7 +28,6 @@ public class Holder<ECS_TYPE> {
     @Nullable
     private final ComponentRegistry<ECS_TYPE> registry;
     private final StampedLock lock = new StampedLock();
-    @Nullable
     private Archetype<ECS_TYPE> archetype;
     @Nullable
     private Component<ECS_TYPE>[] components;
@@ -108,7 +107,6 @@ public class Holder<ECS_TYPE> {
         }
     }
 
-    @Nullable
     public Archetype<ECS_TYPE> getArchetype() {
         return this.archetype;
     }

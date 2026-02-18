@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 
 public class SetupObjectiveLine
 extends ObjectiveTypeSetup {
+    @Nonnull
     public static final BuilderCodec<SetupObjectiveLine> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(SetupObjectiveLine.class, SetupObjectiveLine::new).append(new KeyedCodec<String>("ObjectiveLineId", Codec.STRING), (setupObjectiveLine, s) -> {
         setupObjectiveLine.objectiveLineId = s;
     }, setupObjectiveLine -> setupObjectiveLine.objectiveLineId).addValidator(Validators.nonNull()).addValidatorLate(() -> ObjectiveLineAsset.VALIDATOR_CACHE.getValidator().late()).add()).build();

@@ -12,7 +12,7 @@ import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.ListUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetListSetup;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFileEntry;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFileTree;
@@ -82,8 +82,8 @@ public class AssetTree {
     public void sendPackets(@Nonnull EditorClient editorClient) {
         long stamp = this.lock.readLock();
         try {
-            editorClient.getPacketHandler().write((Packet)new AssetEditorAssetListSetup(this.packKey, this.isReadOnly, this.canBeDeleted, AssetEditorFileTree.Server, (AssetEditorFileEntry[])this.serverAssets.toArray(AssetEditorFileEntry[]::new)));
-            editorClient.getPacketHandler().write((Packet)new AssetEditorAssetListSetup(this.packKey, this.isReadOnly, this.canBeDeleted, AssetEditorFileTree.Common, (AssetEditorFileEntry[])this.commonAssets.toArray(AssetEditorFileEntry[]::new)));
+            editorClient.getPacketHandler().write((ToClientPacket)new AssetEditorAssetListSetup(this.packKey, this.isReadOnly, this.canBeDeleted, AssetEditorFileTree.Server, (AssetEditorFileEntry[])this.serverAssets.toArray(AssetEditorFileEntry[]::new)));
+            editorClient.getPacketHandler().write((ToClientPacket)new AssetEditorAssetListSetup(this.packKey, this.isReadOnly, this.canBeDeleted, AssetEditorFileTree.Common, (AssetEditorFileEntry[])this.commonAssets.toArray(AssetEditorFileEntry[]::new)));
         }
         finally {
             this.lock.unlockRead(stamp);

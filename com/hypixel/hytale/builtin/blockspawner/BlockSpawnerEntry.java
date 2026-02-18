@@ -30,6 +30,7 @@ implements IWeightedElement {
     }, (entry, extraInfo) -> null).add()).append(new KeyedCodec<Holder<ChunkStore>>("Components", new StoredCodec<Holder<ChunkStore>>(ChunkStore.HOLDER_CODEC_KEY)), (entry, holder) -> {
         entry.blockComponents = holder;
     }, entry -> entry.blockComponents).add()).build();
+    @Nonnull
     public static final BlockSpawnerEntry[] EMPTY_ARRAY = new BlockSpawnerEntry[0];
     private String blockName;
     private Holder<ChunkStore> blockComponents;
@@ -58,6 +59,7 @@ implements IWeightedElement {
         RANDOM,
         INHERIT;
 
+        @Nonnull
         public static final Codec<RotationMode> CODEC;
 
         static {

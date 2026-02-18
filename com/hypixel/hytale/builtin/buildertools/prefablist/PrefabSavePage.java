@@ -46,7 +46,8 @@ extends InteractiveCustomUIPage<PageData> {
         commandBuilder.set("#Overwrite #CheckBox.Value", false);
         commandBuilder.set("#FromClipboard #CheckBox.Value", false);
         commandBuilder.set("#UsePlayerAnchor #CheckBox.Value", false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveButton", new EventData().append("Action", Action.Save.name()).append("@Name", "#NameInput.Value").append("@Entities", "#Entities #CheckBox.Value").append("@Empty", "#Empty #CheckBox.Value").append("@Overwrite", "#Overwrite #CheckBox.Value").append("@FromClipboard", "#FromClipboard #CheckBox.Value").append("@UsePlayerAnchor", "#UsePlayerAnchor #CheckBox.Value"));
+        commandBuilder.set("#ClearSupport #CheckBox.Value", false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SaveButton", new EventData().append("Action", Action.Save.name()).append("@Name", "#NameInput.Value").append("@Entities", "#Entities #CheckBox.Value").append("@Empty", "#Empty #CheckBox.Value").append("@Overwrite", "#Overwrite #CheckBox.Value").append("@FromClipboard", "#FromClipboard #CheckBox.Value").append("@UsePlayerAnchor", "#UsePlayerAnchor #CheckBox.Value").append("@ClearSupport", "#ClearSupport #CheckBox.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton", new EventData().append("Action", Action.Cancel.name()));
     }
 
@@ -65,9 +66,9 @@ extends InteractiveCustomUIPage<PageData> {
                 Vector3i playerAnchor = this.getPlayerAnchor(ref, store, data.usePlayerAnchor && !data.fromClipboard);
                 BuilderToolsPlugin.addToQueue(playerComponent, this.playerRef, (r, s, componentAccessor) -> {
                     if (data.fromClipboard) {
-                        s.save((Ref<EntityStore>)r, data.name, true, data.overwrite, (ComponentAccessor<EntityStore>)componentAccessor);
+                        s.save((Ref<EntityStore>)r, data.name, true, data.overwrite, data.clearSupport, (ComponentAccessor<EntityStore>)componentAccessor);
                     } else {
-                        s.saveFromSelection((Ref<EntityStore>)r, data.name, true, data.overwrite, data.entities, data.empty, playerAnchor, (ComponentAccessor<EntityStore>)componentAccessor);
+                        s.saveFromSelection((Ref<EntityStore>)r, data.name, true, data.overwrite, data.entities, data.empty, playerAnchor, data.clearSupport, (ComponentAccessor<EntityStore>)componentAccessor);
                     }
                 });
                 break;
@@ -98,7 +99,8 @@ extends InteractiveCustomUIPage<PageData> {
         public static final String OVERWRITE = "@Overwrite";
         public static final String FROM_CLIPBOARD = "@FromClipboard";
         public static final String USE_PLAYER_ANCHOR = "@UsePlayerAnchor";
-        public static final BuilderCodec<PageData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PageData.class, PageData::new).append(new KeyedCodec<Action>("Action", new EnumCodec<Action>(Action.class, EnumCodec.EnumStyle.LEGACY)), (o, action) -> {
+        public static final String CLEAR_SUPPORT = "@ClearSupport";
+        public static final BuilderCodec<PageData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PageData.class, PageData::new).append(new KeyedCodec<Action>("Action", new EnumCodec<Action>(Action.class, EnumCodec.EnumStyle.LEGACY)), (o, action) -> {
             o.action = action;
         }, o -> o.action).add()).append(new KeyedCodec<String>("@Name", Codec.STRING), (o, name) -> {
             o.name = name;
@@ -112,7 +114,9 @@ extends InteractiveCustomUIPage<PageData> {
             o.fromClipboard = fromClipboard;
         }, o -> o.fromClipboard).add()).append(new KeyedCodec<Boolean>("@UsePlayerAnchor", Codec.BOOLEAN), (o, usePlayerAnchor) -> {
             o.usePlayerAnchor = usePlayerAnchor;
-        }, o -> o.usePlayerAnchor).add()).build();
+        }, o -> o.usePlayerAnchor).add()).append(new KeyedCodec<Boolean>("@ClearSupport", Codec.BOOLEAN), (o, clearSupport) -> {
+            o.clearSupport = clearSupport;
+        }, o -> o.clearSupport).add()).build();
         public Action action;
         public String name;
         public boolean entities = true;
@@ -120,6 +124,7 @@ extends InteractiveCustomUIPage<PageData> {
         public boolean overwrite = false;
         public boolean fromClipboard = false;
         public boolean usePlayerAnchor = false;
+        public boolean clearSupport = false;
     }
 
     public static enum Action {

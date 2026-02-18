@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class DistanceSCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<DistanceSCurveAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DistanceSCurveAsset.class, DistanceSCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("ExponentA", Codec.DOUBLE, true), (t, k) -> {
         t.exponentA = k;
     }, k -> k.exponentA).addValidator(Validators.greaterThanOrEqual(0.0)).add()).append(new KeyedCodec<Double>("ExponentB", Codec.DOUBLE, true), (t, k) -> {

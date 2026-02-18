@@ -10,6 +10,8 @@ public interface BallisticData {
 
     public double getVerticalCenterShot();
 
+    public double getHorizontalCenterShot();
+
     public double getDepthShot();
 
     public boolean isPitchAdjustShot();

@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 public class BlockMaskEntryAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, BlockMaskEntryAsset>>,
 Cleanable {
+    @Nonnull
     public static final AssetBuilderCodec<String, BlockMaskEntryAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(BlockMaskEntryAsset.class, BlockMaskEntryAsset::new, Codec.STRING, (asset, id) -> {
         asset.id = id;
     }, config -> config.id, (config, data) -> {
@@ -35,10 +36,12 @@ Cleanable {
     protected BlockMaskEntryAsset() {
     }
 
+    @Nonnull
     public MaterialSet getPropBlockSet(@Nonnull MaterialCache materialCache) {
         return this.propBlockSet.build(materialCache);
     }
 
+    @Nonnull
     public MaterialSet getReplacesBlockSet(@Nonnull MaterialCache materialCache) {
         return this.replacesBlockSet.build(materialCache);
     }

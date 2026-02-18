@@ -7,6 +7,7 @@ import com.hypixel.hytale.builtin.adventure.objectives.Objective;
 import com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin;
 import com.hypixel.hytale.builtin.adventure.objectives.config.task.ObjectiveTaskAsset;
 import com.hypixel.hytale.builtin.adventure.objectives.config.taskcondition.TaskConditionAsset;
+import com.hypixel.hytale.builtin.adventure.objectives.markers.ObjectiveTaskMarker;
 import com.hypixel.hytale.builtin.adventure.objectives.task.ObjectiveTaskRef;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.TransactionRecord;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.TransactionUtil;
@@ -24,19 +25,14 @@ import com.hypixel.hytale.function.consumer.BooleanConsumer;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.assets.UpdateObjectiveTask;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.io.NetworkSerializer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -46,7 +42,9 @@ import javax.annotation.Nullable;
 
 public abstract class ObjectiveTask
 implements NetworkSerializer<Objective, com.hypixel.hytale.protocol.ObjectiveTask> {
+    @Nonnull
     public static final CodecMapCodec<ObjectiveTask> CODEC = new CodecMapCodec("Type");
+    @Nonnull
     public static final BuilderCodec<ObjectiveTask> BASE_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(ObjectiveTask.class).append(new KeyedCodec<ObjectiveTaskAsset>("Task", ObjectiveTaskAsset.CODEC), (aObjectiveTask, objectiveTaskAsset) -> {
         aObjectiveTask.asset = objectiveTaskAsset;
     }, aObjectiveTask -> aObjectiveTask.asset).add()).append(new KeyedCodec<Boolean>("Complete", Codec.BOOLEAN), (aObjectiveTask, aBoolean) -> {
@@ -55,12 +53,11 @@ implements NetworkSerializer<Objective, com.hypixel.hytale.protocol.ObjectiveTas
         objectiveTask.serializedTransactionRecords = transactionRecords;
     }, objectiveTask -> objectiveTask.serializedTransactionRecords).add()).append(new KeyedCodec<Integer>("TaskIndex", Codec.INTEGER), (objectiveTask, integer) -> {
         objectiveTask.taskIndex = integer;
-    }, objectiveTask -> objectiveTask.taskIndex).add()).append(new KeyedCodec<T[]>("Markers", ProtocolCodecs.MARKER_ARRAY), (objectiveTask, markers) -> {
-        objectiveTask.markers.clear();
-        Collections.addAll(objectiveTask.markers, markers);
-    }, objectiveTask -> (MapMarker[])objectiveTask.markers.toArray(MapMarker[]::new)).add()).append(new KeyedCodec<Integer>("TaskSetIndex", Codec.INTEGER), (objectiveTask, integer) -> {
+    }, objectiveTask -> objectiveTask.taskIndex).add()).append(new KeyedCodec<Integer>("TaskSetIndex", Codec.INTEGER), (objectiveTask, integer) -> {
         objectiveTask.taskSetIndex = integer;
-    }, objectiveTask -> objectiveTask.taskSetIndex).add()).build();
+    }, objectiveTask -> objectiveTask.taskSetIndex).add()).append(new KeyedCodec<T[]>("Markers", ObjectiveTaskMarker.ARRAY_CODEC), (objectiveTask, markers) -> {
+        objectiveTask.markers = new ObjectArrayList<ObjectiveTaskMarker>(Arrays.asList(markers));
+    }, objectiveTask -> (ObjectiveTaskMarker[])objectiveTask.markers.toArray(ObjectiveTaskMarker[]::new)).add()).build();
     protected ObjectiveTaskAsset asset;
     protected boolean complete = false;
     @Nullable
@@ -71,7 +68,7 @@ implements NetworkSerializer<Objective, com.hypixel.hytale.protocol.ObjectiveTas
     protected TransactionRecord[] nonSerializedTransactionRecords;
     protected int taskIndex;
     @Nonnull
-    protected List<MapMarker> markers = new ObjectArrayList<MapMarker>();
+    protected List<ObjectiveTaskMarker> markers = new ObjectArrayList<ObjectiveTaskMarker>();
     protected int taskSetIndex;
     protected ObjectiveTaskRef<? extends ObjectiveTask> taskRef;
 
@@ -108,22 +105,17 @@ implements NetworkSerializer<Objective, com.hypixel.hytale.protocol.ObjectiveTas
     }
 
     @Nonnull
-    public Message getInfoMessage(@Nonnull Objective objective) {
-        return Message.translation(this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex));
-    }
-
-    @Nonnull
-    public List<MapMarker> getMarkers() {
+    public List<ObjectiveTaskMarker> getMarkers() {
         return this.markers;
     }
 
-    public void addMarker(@Nonnull MapMarker marker) {
+    public void addMarker(@Nonnull ObjectiveTaskMarker marker) {
         this.markers.add(marker);
     }
 
     public void removeMarker(String id) {
-        for (MapMarker marker : this.markers) {
-            if (!marker.id.equals(id)) continue;
+        for (ObjectiveTaskMarker marker : this.markers) {
+            if (!marker.getId().equals(id)) continue;
             this.markers.remove(marker);
             return;
         }
@@ -147,10 +139,11 @@ implements NetworkSerializer<Objective, com.hypixel.hytale.protocol.ObjectiveTas
         this.eventRegistry = new EventRegistry(new CopyOnWriteArrayList<BooleanConsumer>(), () -> true, null, world.getEventRegistry());
         Vector3i[] mapMarkerPositions = this.asset.getMapMarkers();
         if (mapMarkerPositions != null) {
-            String objectiveUUIDString = objective.getObjectiveUUID().toString();
+            String objectiveIdStr = objective.getObjectiveUUID().toString();
             for (int i = 0; i < mapMarkerPositions.length; ++i) {
-                TransactionRecord[] mapMarkerPosition = mapMarkerPositions[i];
-                this.addMarker(new MapMarker("ObjectiveMarker_" + objectiveUUIDString + "_" + i, "Objective", "Home.png", PositionUtil.toTransformPacket(new Transform((Vector3i)mapMarkerPosition)), null));
+                TransactionRecord[] mapMarkerPosition = new Transform(mapMarkerPositions[i]);
+                String markerId = "ObjectiveMarker_" + objectiveIdStr + "_" + i;
+                this.addMarker(new ObjectiveTaskMarker(markerId, (Transform)mapMarkerPosition, "Home.png", Message.translation("server.assetTypes.ObjectiveAsset.title")));
             }
         }
         this.taskRef = new ObjectiveTaskRef<ObjectiveTask>(objective.getObjectiveUUID(), this);
@@ -181,14 +174,6 @@ implements NetworkSerializer<Objective, com.hypixel.hytale.protocol.ObjectiveTas
     public void complete(@Nonnull Objective objective, @Nullable ComponentAccessor<EntityStore> componentAccessor) {
         if (this.complete) {
             return;
-        }
-        if (componentAccessor != null) {
-            objective.forEachParticipant((participantReference, message) -> {
-                Player playerComponent = componentAccessor.getComponent((Ref<EntityStore>)participantReference, Player.getComponentType());
-                if (playerComponent != null) {
-                    playerComponent.sendMessage((Message)message);
-                }
-            }, Message.translation("server.modules.objective.task.completed").insert(this.getInfoMessage(objective)));
         }
         this.markers.clear();
         this.complete = true;
@@ -232,7 +217,7 @@ implements NetworkSerializer<Objective, com.hypixel.hytale.protocol.ObjectiveTas
 
     private void shutdownEventRegistry() {
         if (this.eventRegistry != null) {
-            this.eventRegistry.shutdown();
+            this.eventRegistry.shutdownAndCleanup(true);
             this.eventRegistry = null;
         }
     }

@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class SimpleHorizontalPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<SimpleHorizontalPositionProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SimpleHorizontalPositionProviderAsset.class, SimpleHorizontalPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("RangeY", RangeDoubleAsset.CODEC, true), (asset, value) -> {
         asset.rangeYAsset = value;
     }, asset -> asset.rangeYAsset).add()).append(new KeyedCodec("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> {

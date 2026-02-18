@@ -22,6 +22,20 @@ extends Density {
     private final ReturnType returnType;
     @Nonnull
     private final DistanceFunction distanceFunction;
+    @Nonnull
+    private final Vector3d rMin;
+    @Nonnull
+    private final Vector3d rMax;
+    @Nonnull
+    private final Vector3d rClosestPoint;
+    @Nonnull
+    private final Vector3d rPreviousClosestPoint;
+    @Nonnull
+    private final Vector3d rLocalPoint;
+    @Nonnull
+    private final double[] rDistance;
+    @Nonnull
+    private final boolean[] rHasClosestPoint;
 
     public PositionsDensity(@Nonnull PositionProvider positionsField, @Nonnull ReturnType returnType, @Nonnull DistanceFunction distanceFunction, double maxDistance) {
         if (maxDistance < 0.0) {
@@ -32,6 +46,13 @@ extends Density {
         this.maxDistanceRaw = maxDistance * maxDistance;
         this.returnType = returnType;
         this.distanceFunction = distanceFunction;
+        this.rMin = new Vector3d();
+        this.rMax = new Vector3d();
+        this.rClosestPoint = new Vector3d();
+        this.rPreviousClosestPoint = new Vector3d();
+        this.rLocalPoint = new Vector3d();
+        this.rDistance = new double[2];
+        this.rHasClosestPoint = new boolean[2];
     }
 
     @Nonnull
@@ -41,39 +62,40 @@ extends Density {
 
     @Override
     public double process(@Nonnull Density.Context context) {
-        Vector3d min = context.position.clone().subtract(this.maxDistance);
-        Vector3d max = context.position.clone().add(this.maxDistance);
-        double[] distance = new double[]{Double.MAX_VALUE, Double.MAX_VALUE};
-        boolean[] hasClosestPoint = new boolean[2];
-        Vector3d closestPoint = new Vector3d();
-        Vector3d previousClosestPoint = new Vector3d();
-        Vector3d localPoint = new Vector3d();
+        this.rMin.assign(context.position).subtract(this.maxDistance);
+        this.rMax.assign(context.position).add(this.maxDistance);
+        this.rDistance[0] = Double.MAX_VALUE;
+        this.rDistance[1] = Double.MAX_VALUE;
+        this.rHasClosestPoint[0] = false;
+        this.rHasClosestPoint[1] = false;
+        this.rClosestPoint.assign(0.0, 0.0, 0.0);
+        this.rPreviousClosestPoint.assign(0.0, 0.0, 0.0);
+        this.rLocalPoint.assign(0.0, 0.0, 0.0);
         Consumer<Vector3d> positionsConsumer = providedPoint -> {
-            localPoint.x = providedPoint.x - context.position.x;
-            localPoint.y = providedPoint.y - context.position.y;
-            localPoint.z = providedPoint.z - context.position.z;
-            double newDistance = this.distanceFunction.getDistance(localPoint);
+            this.rLocalPoint.x = providedPoint.x - context.position.x;
+            this.rLocalPoint.y = providedPoint.y - context.position.y;
+            this.rLocalPoint.z = providedPoint.z - context.position.z;
+            double newDistance = this.distanceFunction.getDistance(this.rLocalPoint);
             if (this.maxDistanceRaw < newDistance) {
                 return;
             }
-            distance[1] = Math.max(Math.min(distance[1], newDistance), distance[0]);
-            if (newDistance < distance[0]) {
-                distance[0] = newDistance;
-                previousClosestPoint.assign(closestPoint);
-                closestPoint.assign((Vector3d)providedPoint);
-                hasClosestPoint[1] = hasClosestPoint[0];
-                hasClosestPoint[0] = true;
+            this.rDistance[1] = Math.max(Math.min(this.rDistance[1], newDistance), this.rDistance[0]);
+            if (newDistance < this.rDistance[0]) {
+                this.rDistance[0] = newDistance;
+                this.rPreviousClosestPoint.assign(this.rClosestPoint);
+                this.rClosestPoint.assign((Vector3d)providedPoint);
+                this.rHasClosestPoint[1] = this.rHasClosestPoint[0];
+                this.rHasClosestPoint[0] = true;
             }
         };
         PositionProvider.Context positionsContext = new PositionProvider.Context();
-        positionsContext.minInclusive = min;
-        positionsContext.maxExclusive = max;
+        positionsContext.minInclusive = this.rMin;
+        positionsContext.maxExclusive = this.rMax;
         positionsContext.consumer = positionsConsumer;
-        positionsContext.workerId = context.workerId;
         this.positionProvider.positionsIn(positionsContext);
-        distance[0] = Math.sqrt(distance[0]);
-        distance[1] = Math.sqrt(distance[1]);
-        return this.returnType.get(distance[0], distance[1], context.position.clone(), hasClosestPoint[0] ? closestPoint : null, hasClosestPoint[1] ? previousClosestPoint : null, context);
+        this.rDistance[0] = Math.sqrt(this.rDistance[0]);
+        this.rDistance[1] = Math.sqrt(this.rDistance[1]);
+        return this.returnType.get(this.rDistance[0], this.rDistance[1], context.position.clone(), this.rHasClosestPoint[0] ? this.rClosestPoint : null, this.rHasClosestPoint[1] ? this.rPreviousClosestPoint : null, context);
     }
 }
 

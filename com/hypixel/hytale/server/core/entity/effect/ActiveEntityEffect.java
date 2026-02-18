@@ -182,15 +182,17 @@ implements Damage.Source {
     @Override
     @Nonnull
     public Message getDeathMessage(@Nonnull Damage info, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-        Message damageCauseMessage;
         EntityEffect entityEffect = EntityEffect.getAssetMap().getAsset(this.entityEffectIndex);
-        if (entityEffect != null) {
-            String locale = entityEffect.getLocale();
-            String reason = locale != null ? locale : entityEffect.getId().toLowerCase(Locale.ROOT);
-            damageCauseMessage = Message.translation("server.general.damageCauses." + reason);
-        } else {
-            damageCauseMessage = MESSAGE_GENERAL_DAMAGE_CAUSES_UNKNOWN;
+        if (entityEffect == null) {
+            return Message.translation("server.general.killedBy").param("damageSource", MESSAGE_GENERAL_DAMAGE_CAUSES_UNKNOWN);
         }
+        String deathMessageKey = entityEffect.getDeathMessageKey();
+        if (deathMessageKey != null) {
+            return Message.translation(deathMessageKey);
+        }
+        String locale = entityEffect.getLocale();
+        String reason = locale != null ? locale : entityEffect.getId().toLowerCase(Locale.ROOT);
+        Message damageCauseMessage = Message.translation("server.general.damageCauses." + reason);
         return Message.translation("server.general.killedBy").param("damageSource", damageCauseMessage);
     }
 

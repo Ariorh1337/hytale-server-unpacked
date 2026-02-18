@@ -88,6 +88,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.MovementAudioComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.NPCMarkerComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.NewSpawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentDynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
@@ -216,6 +217,7 @@ extends JavaPlugin {
     private ComponentType<EntityStore, ModelComponent> modelComponentType;
     private ComponentType<EntityStore, PersistentModel> persistentModelComponentType;
     private ComponentType<EntityStore, PropComponent> propComponentType;
+    private ComponentType<EntityStore, NPCMarkerComponent> npcMarkerComponentType;
     private ComponentType<EntityStore, BoundingBox> boundingBoxComponentType;
     private ComponentType<EntityStore, PlayerSkinComponent> playerSkinComponentType;
     private ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialResourceType;
@@ -346,7 +348,7 @@ extends JavaPlugin {
         entityStoreRegistry.registerSystem(new EntityStore.NetworkIdSystem());
         entityStoreRegistry.registerSystem(new EntityStore.UUIDSystem());
         entityStoreRegistry.registerSystem(new VelocitySystems.AddSystem(this.velocityComponentType));
-        entityStoreRegistry.registerSystem(new TangiableEntitySpatialSystem(CollisionModule.get().getTangiableEntitySpatialComponent()));
+        entityStoreRegistry.registerSystem(new TangiableEntitySpatialSystem(CollisionModule.get().getTangibleEntitySpatialResourceType()));
         SystemGroup<EntityStore> _trackerGroup = EntityTrackerSystems.FIND_VISIBLE_ENTITIES_GROUP;
         this.visibleComponentType = entityStoreRegistry.registerComponent(EntityTrackerSystems.Visible.class, EntityTrackerSystems.Visible::new);
         entityStoreRegistry.registerSystem(new TransformSystems.EntityTrackerUpdate());
@@ -388,6 +390,7 @@ extends JavaPlugin {
         });
         this.persistentModelComponentType = entityStoreRegistry.registerComponent(PersistentModel.class, "Model", PersistentModel.CODEC);
         this.propComponentType = entityStoreRegistry.registerComponent(PropComponent.class, "Prop", PropComponent.CODEC);
+        this.npcMarkerComponentType = entityStoreRegistry.registerComponent(NPCMarkerComponent.class, NPCMarkerComponent::get);
         entityStoreRegistry.registerSystem(new LegacyEntityHolderSystem<Player>(this.playerComponentType), true);
         entityStoreRegistry.registerSystem(new LegacyEntityRefSystem<Player>(this.playerComponentType), true);
         this.playerInputComponentType = entityStoreRegistry.registerComponent(PlayerInput.class, PlayerInput::new);
@@ -520,7 +523,7 @@ extends JavaPlugin {
         entityStoreRegistry.registerSystem(new ModelSystems.PlayerConnect());
         entityStoreRegistry.registerSystem(new ModelSystems.ModelChange());
         entityStoreRegistry.registerSystem(new ModelSystems.UpdateBoundingBox());
-        entityStoreRegistry.registerSystem(new ModelSystems.UpdateCrouchingBoundingBox());
+        entityStoreRegistry.registerSystem(new ModelSystems.UpdateMovementStateBoundingBox());
         entityStoreRegistry.registerSystem(new ModelSystems.PlayerUpdateMovementManager());
         entityStoreRegistry.registerSystem(new ModelSystems.AnimationEntityTrackerUpdate());
         entityStoreRegistry.registerSystem(new EntitySystems.NewSpawnEntityTrackerUpdate());
@@ -781,6 +784,10 @@ extends JavaPlugin {
 
     public ComponentType<EntityStore, PropComponent> getPropComponentType() {
         return this.propComponentType;
+    }
+
+    public ComponentType<EntityStore, NPCMarkerComponent> getNPCMarkerComponentType() {
+        return this.npcMarkerComponentType;
     }
 
     public ComponentType<EntityStore, BoundingBox> getBoundingBoxComponentType() {

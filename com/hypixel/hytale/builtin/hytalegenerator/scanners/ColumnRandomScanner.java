@@ -4,7 +4,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.scanners;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiDouble2DoubleFunction;
 import com.hypixel.hytale.builtin.hytalegenerator.framework.math.SeedGenerator;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
@@ -14,15 +13,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class ColumnRandomScanner
 extends Scanner {
     private final int minY;
     private final int maxY;
     private final boolean isRelativeToPosition;
-    @Nullable
-    private final BiDouble2DoubleFunction bedFunction;
+    private final double baseHeight;
     private final int resultsCap;
     @Nonnull
     private final SeedGenerator seedGenerator;
@@ -31,11 +28,11 @@ extends Scanner {
     @Nonnull
     private final SpaceSize scanSpaceSize;
 
-    public ColumnRandomScanner(int minY, int maxY, int resultsCap, int seed, @Nonnull Strategy strategy, boolean isRelativeToPosition, @Nullable BiDouble2DoubleFunction bedFunction) {
+    public ColumnRandomScanner(int minY, int maxY, int resultsCap, int seed, @Nonnull Strategy strategy, boolean isRelativeToPosition, double baseHeight) {
         if (resultsCap < 0) {
             throw new IllegalArgumentException();
         }
-        this.bedFunction = bedFunction;
+        this.baseHeight = baseHeight;
         this.minY = minY;
         this.maxY = maxY;
         this.isRelativeToPosition = isRelativeToPosition;
@@ -65,18 +62,15 @@ extends Scanner {
         if (this.isRelativeToPosition) {
             scanMinY = Math.max(context.position.y + this.minY, context.materialSpace.minY());
             scanMaxY = Math.min(context.position.y + this.maxY, context.materialSpace.maxY());
-        } else if (this.bedFunction != null) {
-            int bedY = (int)this.bedFunction.apply(context.position.x, context.position.z);
+        } else {
+            int bedY = (int)this.baseHeight;
             scanMinY = Math.max(bedY + this.minY, context.materialSpace.minY());
             scanMaxY = Math.min(bedY + this.maxY, context.materialSpace.maxY());
-        } else {
-            scanMinY = Math.max(this.minY, context.materialSpace.minY());
-            scanMaxY = Math.min(this.maxY, context.materialSpace.maxY());
         }
         int numberOfPossiblePositions = Math.max(0, scanMaxY - scanMinY);
         ArrayList<Vector3i> validPositions = new ArrayList<Vector3i>(numberOfPossiblePositions);
         Vector3i patternPosition = context.position.clone();
-        Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace, context.workerId);
+        Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace);
         for (int y = scanMinY; y < scanMaxY; ++y) {
             patternPosition.y = y;
             if (!context.pattern.matches(patternContext)) continue;
@@ -119,7 +113,7 @@ extends Scanner {
         FastRandom random = new FastRandom(this.seedGenerator.seedAt(context.position.x, context.position.y, context.position.z));
         ArrayList<Integer> usedYs = new ArrayList<Integer>(this.resultsCap);
         Vector3i patternPosition = context.position.clone();
-        Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace, context.workerId);
+        Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace);
         for (int i = 0; i < numberOfTries; ++i) {
             patternPosition.y = random.nextInt(range) + scanMinY;
             if (!context.pattern.matches(patternContext) || usedYs.contains(patternPosition.y)) continue;

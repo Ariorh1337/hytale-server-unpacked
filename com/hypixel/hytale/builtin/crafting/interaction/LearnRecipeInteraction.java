@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 
 public class LearnRecipeInteraction
 extends SimpleInstantInteraction {
+    @Nonnull
     public static final KeyedCodec<String> ITEM_ID = new KeyedCodec<String>("ItemId", Codec.STRING);
     @Nonnull
     public static final BuilderCodec<LearnRecipeInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(LearnRecipeInteraction.class, LearnRecipeInteraction::new, SimpleInstantInteraction.CODEC).documentation("Causes the user to learn the given recipe.")).appendInherited(new KeyedCodec<String>("ItemId", Codec.STRING), (data, o) -> {
@@ -35,7 +36,6 @@ extends SimpleInstantInteraction {
     }, data -> data.itemId, (data, parent) -> {
         data.itemId = parent.itemId;
     }).add()).build();
-    public static final Message MESSAGE_MODULES_LEARN_RECIPE_INVALID_ITEM = Message.translation("server.modules.learnrecipe.invalidItem");
     @Nullable
     protected String itemId;
 

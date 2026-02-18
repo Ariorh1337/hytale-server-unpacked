@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.server.core.prefab.selection.buffer;
 
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferUtil;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import java.io.File;
@@ -11,7 +12,6 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -41,8 +41,11 @@ public class PrefabLoader {
             PrefabLoader.resolvePrefabFolder(rootFolder, prefabName, pathConsumer);
         } else {
             Path prefabPath = rootFolder.resolve(prefabName.replace('.', File.separatorChar) + ".prefab.json");
+            if (!PathUtil.isChildOf(rootFolder, prefabPath)) {
+                throw new IllegalArgumentException("Invalid prefab name: " + prefabName);
+            }
             if (!Files.exists(prefabPath, new LinkOption[0])) {
-                throw new NoSuchFileException(prefabPath.toString());
+                return;
             }
             pathConsumer.accept(prefabPath);
         }
@@ -51,6 +54,12 @@ public class PrefabLoader {
     public static void resolvePrefabFolder(@Nonnull Path rootFolder, @Nonnull String prefabName, final @Nonnull Consumer<Path> pathConsumer) throws IOException {
         String prefabDirectory = prefabName.substring(0, prefabName.length() - 2);
         Path directoryPath = rootFolder.resolve(prefabDirectory.replace('.', File.separatorChar));
+        if (!PathUtil.isChildOf(rootFolder, directoryPath)) {
+            throw new IllegalArgumentException("Invalid prefab name: " + prefabName);
+        }
+        if (!Files.exists(directoryPath, new LinkOption[0])) {
+            return;
+        }
         if (!Files.isDirectory(directoryPath, new LinkOption[0])) {
             throw new NotDirectoryException(directoryPath.toString());
         }

@@ -10,6 +10,7 @@ import com.hypixel.hytale.builtin.adventure.npcobjectives.transaction.KillTaskTr
 import com.hypixel.hytale.builtin.adventure.objectives.Objective;
 import com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin;
 import com.hypixel.hytale.builtin.adventure.objectives.config.task.ObjectiveTaskAsset;
+import com.hypixel.hytale.builtin.adventure.objectives.markers.ObjectiveTaskMarker;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.RegistrationTransactionRecord;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.SpawnEntityTransactionRecord;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.TransactionRecord;
@@ -18,28 +19,32 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.ObjectiveTask;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.npc.INonPlayerCharacter;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.PositionUtil;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.Pair;
 import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class BountyObjectiveTask
 extends com.hypixel.hytale.builtin.adventure.objectives.task.ObjectiveTask
 implements KillTask {
+    @Nonnull
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    @Nonnull
     public static final BuilderCodec<BountyObjectiveTask> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BountyObjectiveTask.class, BountyObjectiveTask::new, com.hypixel.hytale.builtin.adventure.objectives.task.ObjectiveTask.BASE_CODEC).append(new KeyedCodec<Boolean>("Completed", Codec.BOOLEAN), (bountyObjectiveTask, aBoolean) -> {
         bountyObjectiveTask.completed = aBoolean;
     }, bountyObjectiveTask -> bountyObjectiveTask.completed).add()).append(new KeyedCodec<UUID>("EntityUUID", Codec.UUID_BINARY), (bountyObjectiveTask, uuid) -> {
@@ -62,24 +67,36 @@ implements KillTask {
     }
 
     @Override
-    @Nonnull
+    @Nullable
     protected TransactionRecord[] setup0(@Nonnull Objective objective, @Nonnull World world, @Nonnull Store<EntityStore> store) {
         if (this.serializedTransactionRecords != null) {
             return RegistrationTransactionRecord.append(this.serializedTransactionRecords, this.eventRegistry);
         }
         Vector3d objectivePosition = objective.getPosition(store);
-        assert (objectivePosition != null);
+        if (objectivePosition == null) {
+            return null;
+        }
         Vector3i spawnPosition = this.getAsset().getWorldLocationProvider().runCondition(world, objectivePosition.clone().floor().toVector3i());
+        if (spawnPosition == null) {
+            return null;
+        }
         TransactionRecord[] transactionRecords = new TransactionRecord[2];
-        Pair<Ref<EntityStore>, INonPlayerCharacter> npcPair = NPCPlugin.get().spawnNPC(store, this.getAsset().getNpcId(), null, spawnPosition.toVector3d(), Vector3f.ZERO);
+        String npcId = this.getAsset().getNpcId();
+        Pair<Ref<EntityStore>, INonPlayerCharacter> npcPair = NPCPlugin.get().spawnNPC(store, npcId, null, spawnPosition.toVector3d(), Vector3f.ZERO);
+        if (npcPair == null) {
+            return null;
+        }
         Ref<EntityStore> npcReference = npcPair.first();
         UUIDComponent npcUuidComponent = store.getComponent(npcReference, UUIDComponent.getComponentType());
-        assert (npcUuidComponent != null);
+        if (npcUuidComponent == null) {
+            return null;
+        }
         UUID npcUuid = npcUuidComponent.getUuid();
-        ObjectivePlugin.get().getLogger().at(Level.INFO).log("Spawned Entity '" + this.getAsset().getNpcId() + "' at position: " + String.valueOf(spawnPosition));
+        ObjectivePlugin.get().getLogger().at(Level.INFO).log("Spawned Entity '" + npcId + "' at position: " + String.valueOf(spawnPosition));
         transactionRecords[0] = new SpawnEntityTransactionRecord(world.getWorldConfig().getUuid(), npcUuid);
         this.entityUuid = npcUuid;
-        this.addMarker(new MapMarker(BountyObjectiveTask.getBountyMarkerIDFromUUID(npcUuid), "Bounty Target", "Home.png", PositionUtil.toTransformPacket(new Transform(spawnPosition)), null));
+        ObjectiveTaskMarker marker = new ObjectiveTaskMarker(BountyObjectiveTask.getBountyMarkerIDFromUUID(npcUuid), new Transform(spawnPosition), "Home.png", Message.translation("server.objectives.bounty.marker"));
+        this.addMarker(marker);
         KillTaskTransaction transaction = new KillTaskTransaction(this, objective, store);
         store.getResource(KillTrackerResource.getResourceType()).watch(transaction);
         transactionRecords[1] = transaction;
@@ -97,7 +114,7 @@ implements KillTask {
     }
 
     @Override
-    public void checkKilledEntity(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef, @Nonnull Objective objective, NPCEntity npc, Damage damageInfo) {
+    public void checkKilledEntity(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef, @Nonnull Objective objective, @Nonnull NPCEntity npc, @Nonnull Damage damageInfo) {
         UUIDComponent uuidComponent = store.getComponent(npcRef, UUIDComponent.getComponentType());
         assert (uuidComponent != null);
         UUID uuid = uuidComponent.getUuid();
@@ -115,7 +132,7 @@ implements KillTask {
     @Nonnull
     public ObjectiveTask toPacket(@Nonnull Objective objective) {
         ObjectiveTask packet = new ObjectiveTask();
-        packet.taskDescriptionKey = this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex);
+        packet.taskDescriptionKey = Message.translation(this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex)).getFormattedMessage();
         packet.currentCompletion = this.completed ? 1 : 0;
         packet.completionNeeded = 1;
         return packet;

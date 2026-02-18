@@ -13,6 +13,7 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncPlayerCommand;
@@ -42,10 +43,19 @@ extends AbstractAsyncPlayerCommand {
     private final FlagArg emptyArg = this.withFlagArg("empty", "server.commands.editprefab.save.empty.desc");
     @Nonnull
     private final FlagArg confirmArg = this.withFlagArg("confirm", "server.commands.editprefab.save.confirm.desc");
+    @Nonnull
+    private final FlagArg clearSupportArg = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
 
     private static boolean isPathInAllowedPrefabDirectory(@Nonnull Path path) {
         PrefabStore prefabStore = PrefabStore.get();
-        return PathUtil.isChildOf(prefabStore.getServerPrefabsPath(), path) || PathUtil.isChildOf(prefabStore.getAssetPrefabsPath(), path) || PathUtil.isChildOf(prefabStore.getWorldGenPrefabsPath(), path);
+        if (PathUtil.isChildOf(prefabStore.getServerPrefabsPath(), path)) {
+            return true;
+        }
+        if (PathUtil.isChildOf(prefabStore.getWorldGenPrefabsPath(), path)) {
+            return true;
+        }
+        AssetModule assetModule = AssetModule.get();
+        return assetModule.isWithinPackSubDir(path, "Server/Prefabs") && !assetModule.isAssetPathImmutable(path);
     }
 
     public PrefabEditSaveCommand() {
@@ -68,6 +78,7 @@ extends AbstractAsyncPlayerCommand {
         prefabSaverSettings.setEntities(!this.noEntitiesArg.provided(context));
         prefabSaverSettings.setOverwriteExisting(true);
         prefabSaverSettings.setEmpty((Boolean)this.emptyArg.get(context));
+        prefabSaverSettings.setClearSupportValues((Boolean)this.clearSupportArg.get(context));
         boolean confirm = this.confirmArg.provided(context);
         if (this.saveAllArg.provided(context)) {
             PrefabEditingMetadata[] values = prefabEditSession.getLoadedPrefabMetadata().values().toArray(new PrefabEditingMetadata[0]);

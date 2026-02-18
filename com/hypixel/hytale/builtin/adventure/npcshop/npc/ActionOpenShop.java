@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class ActionOpenShop
 extends ActionBase {
+    @Nonnull
     protected final String shopId;
 
     public ActionOpenShop(@Nonnull BuilderActionOpenShop builder, @Nonnull BuilderSupport support) {
@@ -38,9 +39,13 @@ extends ActionBase {
             return false;
         }
         PlayerRef playerRefComponent = store.getComponent(playerReference, PlayerRef.getComponentType());
-        assert (playerRefComponent != null);
+        if (playerRefComponent == null) {
+            return false;
+        }
         Player playerComponent = store.getComponent(playerReference, Player.getComponentType());
-        assert (playerComponent != null);
+        if (playerComponent == null) {
+            return false;
+        }
         playerComponent.getPageManager().openCustomPage(ref, store, new ShopPage(playerRefComponent, this.shopId));
         return true;
     }

@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class DistanceDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<DistanceDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(DistanceDensityAsset.class, DistanceDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, false), (t, k) -> {
         t.densityCurveAsset = k;
     }, k -> k.densityCurveAsset).add()).build();

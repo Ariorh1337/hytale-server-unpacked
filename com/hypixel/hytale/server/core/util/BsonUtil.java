@@ -12,6 +12,7 @@ import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
+import com.hypixel.hytale.server.core.util.io.FileUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import io.netty.buffer.ByteBuf;
 import java.io.BufferedWriter;
@@ -20,9 +21,7 @@ import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
@@ -87,25 +86,6 @@ public class BsonUtil {
     }
 
     @Nonnull
-    public static CompletableFuture<Void> writeDocumentBytes(@Nonnull Path file, BsonDocument document) {
-        try {
-            byte[] bytes;
-            if (Files.isRegularFile(file, new LinkOption[0])) {
-                Path resolve = file.resolveSibling(String.valueOf(file.getFileName()) + ".bak");
-                Files.move(file, resolve, StandardCopyOption.REPLACE_EXISTING);
-            }
-            try (BasicOutputBuffer bob = new BasicOutputBuffer();){
-                codec.encode((BsonWriter)new BsonBinaryWriter(bob), document, encoderContext);
-                bytes = bob.toByteArray();
-            }
-            return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> Files.write(file, bytes, new OpenOption[0])));
-        }
-        catch (IOException e) {
-            return CompletableFuture.failedFuture(e);
-        }
-    }
-
-    @Nonnull
     public static CompletableFuture<Void> writeDocument(@Nonnull Path file, BsonDocument document) {
         return BsonUtil.writeDocument(file, document, true);
     }
@@ -117,12 +97,8 @@ public class BsonUtil {
             if (!Files.exists(parent, new LinkOption[0])) {
                 Files.createDirectories(parent, new FileAttribute[0]);
             }
-            if (backup && Files.isRegularFile(file, new LinkOption[0])) {
-                Path resolve = file.resolveSibling(String.valueOf(file.getFileName()) + ".bak");
-                Files.move(file, resolve, StandardCopyOption.REPLACE_EXISTING);
-            }
             String json = BsonUtil.toJson(document);
-            return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> Files.writeString(file, (CharSequence)json, new OpenOption[0])));
+            return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> FileUtil.writeStringAtomic(file, json, backup)));
         }
         catch (IOException e) {
             return CompletableFuture.failedFuture(e);
@@ -241,17 +217,19 @@ public class BsonUtil {
         if (!Files.exists(parent, new LinkOption[0])) {
             Files.createDirectories(parent, new FileAttribute[0]);
         }
-        if (Files.isRegularFile(path, new LinkOption[0])) {
-            Path resolve = path.resolveSibling(String.valueOf(path.getFileName()) + ".bak");
-            Files.move(path, resolve, StandardCopyOption.REPLACE_EXISTING);
-        }
         ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
         BsonValue bsonValue = codec.encode(value, extraInfo);
         extraInfo.getValidationResults().logOrThrowValidatorExceptions(logger);
         BsonDocument document = bsonValue.asDocument();
-        try (BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.WRITE, StandardOpenOption.CREATE);){
+        Path tmpPath = path.resolveSibling(String.valueOf(path.getFileName()) + ".tmp");
+        Path bakPath = path.resolveSibling(String.valueOf(path.getFileName()) + ".bak");
+        try (BufferedWriter writer = Files.newBufferedWriter(tmpPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);){
             BSON_DOCUMENT_CODEC.encode((BsonWriter)new JsonWriter(writer, SETTINGS), document, encoderContext);
         }
+        if (Files.isRegularFile(path, new LinkOption[0])) {
+            FileUtil.atomicMove(path, bakPath);
+        }
+        FileUtil.atomicMove(tmpPath, path);
     }
 }
 

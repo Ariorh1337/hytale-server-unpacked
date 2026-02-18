@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class EqualsConditionAsset
 extends ConditionAsset {
+    @Nonnull
     public static final BuilderCodec<EqualsConditionAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(EqualsConditionAsset.class, EqualsConditionAsset::new, ConditionAsset.ABSTRACT_CODEC).append(new KeyedCodec<ConditionParameter>("ContextToCheck", ConditionParameter.CODEC, true), (t, k) -> {
         t.parameter = k;
     }, k -> k.parameter).add()).append(new KeyedCodec<Integer>("Value", Codec.INTEGER, true), (t, k) -> {

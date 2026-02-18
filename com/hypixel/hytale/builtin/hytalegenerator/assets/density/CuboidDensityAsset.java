@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class CuboidDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<CuboidDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CuboidDensityAsset.class, CuboidDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.densityCurveAsset = k;
     }, k -> k.densityCurveAsset).add()).append(new KeyedCodec<Vector3d>("Scale", Vector3d.CODEC, false), (t, k) -> {
@@ -38,7 +39,7 @@ extends DensityAsset {
     private Vector3d scaleVector = new Vector3d(1.0, 1.0, 1.0);
     @Nonnull
     private Vector3d newYAxis = new Vector3d(0.0, 1.0, 0.0);
-    private double spinAngle = 0.0;
+    private double spinAngle;
 
     @Override
     @Nonnull

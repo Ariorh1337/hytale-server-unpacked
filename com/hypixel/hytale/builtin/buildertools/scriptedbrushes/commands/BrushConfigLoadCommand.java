@@ -29,7 +29,7 @@ extends AbstractPlayerCommand {
     private static final Message MESSAGE_COMMANDS_BRUSH_CONFIG_CANNOT_USE_COMMAND_DURING_EXEC = Message.translation("server.commands.brushConfig.cannotUseCommandDuringExec");
 
     public BrushConfigLoadCommand() {
-        super("load", "Load a scripted brush by name, or open the brush picker UI if no name is provided");
+        super("load", "server.commands.scriptedbrushes.load.desc");
         this.addUsageVariant(new LoadByNameCommand());
     }
 
@@ -52,10 +52,10 @@ extends AbstractPlayerCommand {
         @Nonnull
         private static final Message MESSAGE_COMMANDS_BRUSH_CONFIG_CANNOT_USE_COMMAND_DURING_EXEC = Message.translation("server.commands.brushConfig.cannotUseCommandDuringExec");
         @Nonnull
-        private final RequiredArg<ScriptedBrushAsset> brushNameArg = this.withRequiredArg("brushName", "The name of the scripted brush asset to load", new AssetArgumentType("server.commands.parsing.argtype.asset.scriptedbrush.name", ScriptedBrushAsset.class, "server.commands.parsing.argtype.asset.scriptedbrush.usage"));
+        private final RequiredArg<ScriptedBrushAsset> brushNameArg = this.withRequiredArg("brushName", "server.commands.scriptedbrushes.load.brushName.desc", new AssetArgumentType("server.commands.parsing.argtype.asset.scriptedbrush.name", ScriptedBrushAsset.class, "server.commands.parsing.argtype.asset.scriptedbrush.usage"));
 
         public LoadByNameCommand() {
-            super("Load a scripted brush by name");
+            super("server.commands.scriptedbrushes.load.byName.desc");
         }
 
         @Override

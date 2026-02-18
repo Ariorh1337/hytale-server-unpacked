@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.modules.projectile.config;
 
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateProjectileConfigs;
 import com.hypixel.hytale.server.core.asset.packet.DefaultAssetPacketGenerator;
@@ -19,7 +19,7 @@ public class ProjectileConfigPacketGenerator
 extends DefaultAssetPacketGenerator<String, ProjectileConfig> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull DefaultAssetMap<String, ProjectileConfig> assetMap, Map<String, ProjectileConfig> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull DefaultAssetMap<String, ProjectileConfig> assetMap, Map<String, ProjectileConfig> assets) {
         UpdateProjectileConfigs packet = new UpdateProjectileConfigs();
         packet.type = UpdateType.Init;
         Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.ProjectileConfig> map = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.ProjectileConfig>();
@@ -33,7 +33,7 @@ extends DefaultAssetPacketGenerator<String, ProjectileConfig> {
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull Map<String, ProjectileConfig> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull Map<String, ProjectileConfig> loadedAssets) {
         UpdateProjectileConfigs packet = new UpdateProjectileConfigs();
         packet.type = UpdateType.AddOrUpdate;
         Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.ProjectileConfig> map = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.ProjectileConfig>();
@@ -47,7 +47,7 @@ extends DefaultAssetPacketGenerator<String, ProjectileConfig> {
 
     @Override
     @Nullable
-    public Packet generateRemovePacket(@Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull Set<String> removed) {
         UpdateProjectileConfigs packet = new UpdateProjectileConfigs();
         packet.type = UpdateType.Remove;
         packet.removedConfigs = (String[])removed.toArray(String[]::new);

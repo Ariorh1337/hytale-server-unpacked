@@ -14,12 +14,14 @@ import javax.annotation.Nonnull;
 
 public class MaterialPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<MaterialPatternAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(MaterialPatternAsset.class, MaterialPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Material", MaterialAsset.CODEC, true), (asset, value) -> {
         asset.materialAsset = value;
     }, value -> value.materialAsset).add()).build();
     private MaterialAsset materialAsset = new MaterialAsset();
 
     @Override
+    @Nonnull
     public Pattern build(@Nonnull PatternAsset.Argument argument) {
         if (super.isSkipped()) {
             return Pattern.noPattern();

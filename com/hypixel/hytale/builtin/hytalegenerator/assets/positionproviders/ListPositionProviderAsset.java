@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class ListPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<ListPositionProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ListPositionProviderAsset.class, ListPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Positions", new ArrayCodec(PositionAsset.CODEC, PositionAsset[]::new), true), (asset, v) -> {
         asset.positions = v;
     }, asset -> asset.positions).add()).build();
@@ -41,6 +42,7 @@ extends PositionProviderAsset {
 
     public static class PositionAsset
     implements JsonAssetWithMap<String, DefaultAssetMap<String, PositionAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, PositionAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(PositionAsset.class, PositionAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

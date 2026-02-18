@@ -5,7 +5,7 @@ package com.hypixel.hytale.server.core.asset.type.blockset;
 
 import com.hypixel.hytale.assetstore.AssetUpdateQuery;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockSets;
 import com.hypixel.hytale.server.core.asset.packet.AssetPacketGenerator;
@@ -21,7 +21,7 @@ public class BlockSetPacketGenerator
 extends AssetPacketGenerator<String, BlockSet, IndexedLookupTableAssetMap<String, BlockSet>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSet> assetMap, Map<String, BlockSet> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSet> assetMap, Map<String, BlockSet> assets) {
         UpdateBlockSets packet = new UpdateBlockSets();
         packet.type = UpdateType.Init;
         packet.blockSets = assetMap.getAssetMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> ((BlockSet)entry.getValue()).toPacket()));
@@ -30,7 +30,7 @@ extends AssetPacketGenerator<String, BlockSet, IndexedLookupTableAssetMap<String
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(IndexedLookupTableAssetMap<String, BlockSet> assetMap, @Nonnull Map<String, BlockSet> loadedAssets, @Nonnull AssetUpdateQuery query) {
+    public ToClientPacket generateUpdatePacket(IndexedLookupTableAssetMap<String, BlockSet> assetMap, @Nonnull Map<String, BlockSet> loadedAssets, @Nonnull AssetUpdateQuery query) {
         UpdateBlockSets packet = new UpdateBlockSets();
         packet.type = UpdateType.AddOrUpdate;
         packet.blockSets = loadedAssets.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> ((BlockSet)entry.getValue()).toPacket()));
@@ -39,7 +39,7 @@ extends AssetPacketGenerator<String, BlockSet, IndexedLookupTableAssetMap<String
 
     @Override
     @Nullable
-    public Packet generateRemovePacket(IndexedLookupTableAssetMap<String, BlockSet> assetMap, @Nonnull Set<String> removed, @Nonnull AssetUpdateQuery query) {
+    public ToClientPacket generateRemovePacket(IndexedLookupTableAssetMap<String, BlockSet> assetMap, @Nonnull Set<String> removed, @Nonnull AssetUpdateQuery query) {
         UpdateBlockSets packet = new UpdateBlockSets();
         packet.type = UpdateType.Remove;
         packet.blockSets = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.BlockSet>();

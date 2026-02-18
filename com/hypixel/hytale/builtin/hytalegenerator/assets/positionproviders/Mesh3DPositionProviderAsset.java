@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class Mesh3DPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<Mesh3DPositionProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(Mesh3DPositionProviderAsset.class, Mesh3DPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("PointGenerator", PointGeneratorAsset.CODEC, true), (asset, v) -> {
         asset.pointGeneratorAsset = v;
     }, asset -> asset.pointGeneratorAsset).add()).build();

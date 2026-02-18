@@ -5,6 +5,8 @@ package com.hypixel.hytale.server.core.universe.world.storage;
 
 import com.hypixel.fastutil.longs.Long2ObjectConcurrentHashMap;
 import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.store.CodecKey;
 import com.hypixel.hytale.codec.store.CodecStore;
 import com.hypixel.hytale.common.util.FormatUtil;
@@ -17,6 +19,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.IResourceStorage;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
@@ -28,7 +31,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricsRegistry;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -85,6 +88,7 @@ implements WorldProvider {
     @Nonnull
     private final Long2ObjectConcurrentHashMap<ChunkLoadState> chunks = new Long2ObjectConcurrentHashMap(true, ChunkUtil.NOT_FOUND);
     private Store<ChunkStore> store;
+    private Object storageData;
     @Nullable
     private IChunkLoader loader;
     @Nullable
@@ -110,6 +114,10 @@ implements WorldProvider {
     @Nonnull
     public Store<ChunkStore> getStore() {
         return this.store;
+    }
+
+    public Object getStorageData() {
+        return this.storageData;
     }
 
     @Nullable
@@ -708,19 +716,21 @@ implements WorldProvider {
     }
 
     public static abstract class LoadPacketDataQuerySystem
-    extends EntityDataSystem<ChunkStore, PlayerRef, Packet> {
+    extends EntityDataSystem<ChunkStore, PlayerRef, ToClientPacket> {
     }
 
     public static abstract class LoadFuturePacketDataQuerySystem
-    extends EntityDataSystem<ChunkStore, PlayerRef, CompletableFuture<Packet>> {
+    extends EntityDataSystem<ChunkStore, PlayerRef, CompletableFuture<ToClientPacket>> {
     }
 
     public static abstract class UnloadPacketDataQuerySystem
-    extends EntityDataSystem<ChunkStore, PlayerRef, Packet> {
+    extends EntityDataSystem<ChunkStore, PlayerRef, ToClientPacket> {
     }
 
     public static class ChunkLoaderSaverSetupSystem
     extends StoreSystem<ChunkStore> {
+        private final ResourceType<ChunkStore, ChunkStorage> chunkStorageResourceType = this.registerResource(ChunkStorage.class, "ChunkStorage", ChunkStorage.CODEC);
+
         @Override
         @Nullable
         public SystemGroup<ChunkStore> getGroup() {
@@ -731,10 +741,13 @@ implements WorldProvider {
         public void onSystemAddedToStore(@Nonnull Store<ChunkStore> store) {
             ChunkStore data = store.getExternalData();
             World world = data.getWorld();
-            IChunkStorageProvider chunkStorageProvider = world.getWorldConfig().getChunkStorageProvider();
+            IChunkStorageProvider<?> chunkStorageProvider = world.getWorldConfig().getChunkStorageProvider();
+            ChunkStorage chunkStorage = store.getResource(this.chunkStorageResourceType);
             try {
-                data.loader = chunkStorageProvider.getLoader(store);
-                data.saver = chunkStorageProvider.getSaver(store);
+                data.storageData = chunkStorage.currentProvider == null || chunkStorage.currentProvider.isSame(chunkStorageProvider) ? chunkStorageProvider.initialize(store) : chunkStorageProvider.migrateFrom(store, chunkStorage.currentProvider);
+                chunkStorage.currentProvider = chunkStorageProvider;
+                data.loader = chunkStorageProvider.getLoader(data.storageData, store);
+                data.saver = chunkStorageProvider.getSaver(data.storageData, store);
             }
             catch (IOException e) {
                 throw SneakyThrow.sneakyThrow(e);
@@ -755,10 +768,35 @@ implements WorldProvider {
                     data.saver = null;
                     oldSaver.close();
                 }
+                World world = data.getWorld();
+                IChunkStorageProvider<?> chunkStorageProvider = world.getWorldConfig().getChunkStorageProvider();
+                chunkStorageProvider.close(data.storageData, store);
             }
             catch (IOException e) {
                 ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to close storage!");
             }
+        }
+    }
+
+    private static class ChunkStorage
+    implements Resource<ChunkStore> {
+        public static final BuilderCodec<ChunkStorage> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ChunkStorage.class, ChunkStorage::new).append(new KeyedCodec("CurrentProvider", IChunkStorageProvider.CODEC), (o, i) -> {
+            o.currentProvider = i;
+        }, o -> o.currentProvider).add()).build();
+        @Nullable
+        private IChunkStorageProvider<?> currentProvider;
+
+        public ChunkStorage(@Nullable IChunkStorageProvider<?> currentProvider) {
+            this.currentProvider = currentProvider;
+        }
+
+        public ChunkStorage() {
+        }
+
+        @Override
+        @Nullable
+        public Resource<ChunkStore> clone() {
+            return new ChunkStorage(this.currentProvider);
         }
     }
 }

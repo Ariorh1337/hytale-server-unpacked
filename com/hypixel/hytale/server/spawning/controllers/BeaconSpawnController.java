@@ -75,7 +75,9 @@ extends SpawnController<NPCBeaconSpawnJob> {
     @Nullable
     public NPCBeaconSpawnJob createRandomSpawnJob(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         LegacySpawnBeaconEntity legacySpawnBeaconComponent = componentAccessor.getComponent(this.ownerRef, LegacySpawnBeaconEntity.getComponentType());
-        assert (legacySpawnBeaconComponent != null);
+        if (legacySpawnBeaconComponent == null) {
+            return null;
+        }
         BeaconSpawnWrapper wrapper = legacySpawnBeaconComponent.getSpawnWrapper();
         RoleSpawnParameters spawn = wrapper.pickRole(ThreadLocalRandom.current());
         if (spawn == null) {
@@ -133,6 +135,7 @@ extends SpawnController<NPCBeaconSpawnJob> {
         this.roundStart = roundStart;
     }
 
+    @Nonnull
     public Ref<EntityStore> getOwnerRef() {
         return this.ownerRef;
     }

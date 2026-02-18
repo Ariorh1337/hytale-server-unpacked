@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public final class ObjectiveLineHistoryData
 extends CommonObjectiveHistoryData {
+    @Nonnull
     public static final BuilderCodec<ObjectiveLineHistoryData> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ObjectiveLineHistoryData.class, ObjectiveLineHistoryData::new, BASE_CODEC).append(new KeyedCodec<T[]>("Objectives", new ArrayCodec<ObjectiveHistoryData>(ObjectiveHistoryData.CODEC, ObjectiveHistoryData[]::new)), (objectiveLineDetails, objectiveDetails) -> {
         objectiveLineDetails.objectiveHistoryDataArray = objectiveDetails;
     }, objectiveLineDetails -> objectiveLineDetails.objectiveHistoryDataArray).add()).build();

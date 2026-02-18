@@ -78,8 +78,8 @@ public class EntityUpdate {
                 throw ProtocolException.arrayTooLong("Updates", updatesCount, 4096000);
             }
             varIntLen = VarInt.length(buf, varPos1);
-            if ((long)(varPos1 + varIntLen) + (long)updatesCount * 159L > (long)buf.readableBytes()) {
-                throw ProtocolException.bufferTooSmall("Updates", varPos1 + varIntLen + updatesCount * 159, buf.readableBytes());
+            if ((long)(varPos1 + varIntLen) + (long)updatesCount * 1L > (long)buf.readableBytes()) {
+                throw ProtocolException.bufferTooSmall("Updates", varPos1 + varIntLen + updatesCount * 1, buf.readableBytes());
             }
             obj.updates = new ComponentUpdate[updatesCount];
             elemPos = varPos1 + varIntLen;
@@ -153,7 +153,7 @@ public class EntityUpdate {
             }
             VarInt.write(buf, this.updates.length);
             for (ComponentUpdate componentUpdate : this.updates) {
-                componentUpdate.serialize(buf);
+                componentUpdate.serializeWithTypeId(buf);
             }
         } else {
             buf.setIntLE(updatesOffsetSlot, -1);
@@ -168,7 +168,7 @@ public class EntityUpdate {
         if (this.updates != null) {
             int updatesSize = 0;
             for (ComponentUpdate elem : this.updates) {
-                updatesSize += elem.computeSize();
+                updatesSize += elem.computeSizeWithTypeId();
             }
             size += VarInt.size(this.updates.length) + updatesSize;
         }
@@ -234,7 +234,7 @@ public class EntityUpdate {
         EntityUpdate copy = new EntityUpdate();
         copy.networkId = this.networkId;
         copy.removed = this.removed != null ? Arrays.copyOf(this.removed, this.removed.length) : null;
-        copy.updates = this.updates != null ? (ComponentUpdate[])Arrays.stream(this.updates).map(e -> e.clone()).toArray(ComponentUpdate[]::new) : null;
+        copy.updates = this.updates != null ? Arrays.copyOf(this.updates, this.updates.length) : null;
         return copy;
     }
 

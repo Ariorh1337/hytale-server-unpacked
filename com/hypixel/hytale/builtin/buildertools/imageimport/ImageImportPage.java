@@ -18,6 +18,7 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
@@ -242,6 +243,10 @@ extends InteractiveCustomUIPage<PageData> {
             return;
         }
         Path path = Paths.get(this.imagePath, new String[0]);
+        if (!AssetModule.get().isWithinPackSubDir(path, ASSET_PACK_SUB_PATH)) {
+            this.setError("File must be within an asset pack's imports directory");
+            return;
+        }
         if (!Files.exists(path, new LinkOption[0])) {
             this.setError("File not found: " + this.imagePath);
             return;

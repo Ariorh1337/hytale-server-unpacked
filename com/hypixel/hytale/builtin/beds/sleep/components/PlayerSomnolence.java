@@ -8,11 +8,14 @@ import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSleep;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PlayerSomnolence
 implements Component<EntityStore> {
+    @Nonnull
     public static PlayerSomnolence AWAKE = new PlayerSomnolence(PlayerSleep.FullyAwake.INSTANCE);
+    @Nonnull
     private PlayerSleep state = PlayerSleep.FullyAwake.INSTANCE;
 
     public static ComponentType<EntityStore, PlayerSomnolence> getComponentType() {
@@ -22,10 +25,11 @@ implements Component<EntityStore> {
     public PlayerSomnolence() {
     }
 
-    public PlayerSomnolence(PlayerSleep state) {
+    public PlayerSomnolence(@Nonnull PlayerSleep state) {
         this.state = state;
     }
 
+    @Nonnull
     public PlayerSleep getSleepState() {
         return this.state;
     }

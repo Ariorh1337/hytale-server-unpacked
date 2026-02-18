@@ -6,13 +6,12 @@ package com.hypixel.hytale.procedurallib.json;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
+import com.hypixel.hytale.procedurallib.file.FileIO;
+import com.hypixel.hytale.procedurallib.json.JsonResourceLoader;
 import com.hypixel.hytale.procedurallib.json.Loader;
 import com.hypixel.hytale.procedurallib.json.SeedResource;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Function;
@@ -22,6 +21,9 @@ import javax.annotation.Nullable;
 
 public abstract class JsonLoader<K extends SeedResource, T>
 extends Loader<K, T> {
+    public static final JsonResourceLoader<JsonElement> JSON_LOADER = new JsonResourceLoader<JsonElement>(JsonElement.class, e -> !e.isJsonNull(), Function.identity());
+    public static final JsonResourceLoader<JsonArray> JSON_ARR_LOADER = new JsonResourceLoader<JsonArray>(JsonArray.class, JsonElement::isJsonArray, JsonElement::getAsJsonArray);
+    public static final JsonResourceLoader<JsonObject> JSON_OBJ_LOADER = new JsonResourceLoader<JsonObject>(JsonObject.class, JsonElement::isJsonObject, JsonElement::getAsJsonObject);
     @Nullable
     protected final JsonElement json;
 
@@ -66,28 +68,16 @@ extends Loader<K, T> {
     }
 
     protected JsonElement loadFile(@Nonnull String filePath) {
-        JsonElement jsonElement;
         Path file = this.dataFolder.resolve(filePath.replace('.', File.separatorChar) + ".json");
-        JsonReader reader = new JsonReader(Files.newBufferedReader(file));
+        if (!file.normalize().startsWith(this.dataFolder.normalize())) {
+            throw new IllegalArgumentException("Invalid file reference: " + filePath);
+        }
         try {
-            jsonElement = JsonParser.parseReader(reader);
+            return FileIO.load(file, JSON_LOADER);
         }
-        catch (Throwable throwable) {
-            try {
-                try {
-                    reader.close();
-                }
-                catch (Throwable throwable2) {
-                    throwable.addSuppressed(throwable2);
-                }
-                throw throwable;
-            }
-            catch (Throwable e) {
-                throw new Error("Error while loading file reference." + file.toString(), e);
-            }
+        catch (Throwable e) {
+            throw new Error("Error while loading file reference." + file.toString(), e);
         }
-        reader.close();
-        return jsonElement;
     }
 
     protected JsonElement loadFileElem(@Nonnull String filePath) {

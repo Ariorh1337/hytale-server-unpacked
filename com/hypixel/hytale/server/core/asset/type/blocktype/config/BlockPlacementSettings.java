@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
  */
 public class BlockPlacementSettings
 implements NetworkSerializable<com.hypixel.hytale.protocol.BlockPlacementSettings> {
-    public static final BuilderCodec<BlockPlacementSettings> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BlockPlacementSettings.class, BlockPlacementSettings::new).append(new KeyedCodec<Boolean>("AllowRotationKey", Codec.BOOLEAN), (placementSettings, o) -> {
+    public static final BuilderCodec<BlockPlacementSettings> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BlockPlacementSettings.class, BlockPlacementSettings::new).append(new KeyedCodec<Boolean>("AllowRotationKey", Codec.BOOLEAN), (placementSettings, o) -> {
         placementSettings.allowRotationKey = o;
     }, placementSettings -> placementSettings.allowRotationKey).add()).append(new KeyedCodec<Boolean>("PlaceInEmptyBlocks", Codec.BOOLEAN), (placementSettings, o) -> {
         placementSettings.placeInEmptyBlocks = o;
@@ -29,7 +29,9 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.BlockPlacementSetting
         placementSettings.floorPlacementOverrideBlockId = o;
     }, placementSettings -> placementSettings.floorPlacementOverrideBlockId).add()).append(new KeyedCodec<String>("CeilingPlacementOverrideBlockId", Codec.STRING), (placementSettings, o) -> {
         placementSettings.ceilingPlacementOverrideBlockId = o;
-    }, placementSettings -> placementSettings.ceilingPlacementOverrideBlockId).add()).build();
+    }, placementSettings -> placementSettings.ceilingPlacementOverrideBlockId).add()).append(new KeyedCodec<Boolean>("AllowBreakReplace", Codec.BOOLEAN), (o, v) -> {
+        o.allowBreakReplace = v;
+    }, o -> o.allowBreakReplace).add()).build();
     protected String wallPlacementOverrideBlockId;
     protected String floorPlacementOverrideBlockId;
     protected String ceilingPlacementOverrideBlockId;
@@ -37,6 +39,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.BlockPlacementSetting
     private boolean placeInEmptyBlocks;
     private BlockPreviewVisibility previewVisibility = BlockPreviewVisibility.DEFAULT;
     private RotationMode rotationMode = RotationMode.DEFAULT;
+    protected boolean allowBreakReplace;
 
     protected BlockPlacementSettings() {
     }
@@ -50,7 +53,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.BlockPlacementSetting
         /*
          * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
          * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=18,277
+         * org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=20,288
          *     at org.benf.cfr.reader.bytecode.analysis.parse.literal.TypedLiteral.getConstantPoolEntry(TypedLiteral.java:340)
          *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op02WithProcessedDataAndRefs.getBootstrapArg(Op02WithProcessedDataAndRefs.java:538)
          *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op02WithProcessedDataAndRefs.getVarArgs(Op02WithProcessedDataAndRefs.java:671)

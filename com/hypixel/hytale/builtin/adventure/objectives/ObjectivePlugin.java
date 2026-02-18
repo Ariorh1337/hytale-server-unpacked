@@ -51,10 +51,12 @@ import com.hypixel.hytale.builtin.adventure.objectives.task.ReachLocationTask;
 import com.hypixel.hytale.builtin.adventure.objectives.task.TreasureMapObjectiveTask;
 import com.hypixel.hytale.builtin.adventure.objectives.task.UseBlockObjectiveTask;
 import com.hypixel.hytale.builtin.adventure.objectives.task.UseEntityObjectiveTask;
+import com.hypixel.hytale.builtin.weather.components.WeatherTracker;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
@@ -62,6 +64,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.AndQuery;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
+import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.assets.TrackOrUpdateObjective;
@@ -77,7 +80,6 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
@@ -89,9 +91,11 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.datastore.DataStoreProvider;
@@ -116,15 +120,20 @@ import javax.annotation.Nullable;
 public class ObjectivePlugin
 extends JavaPlugin {
     protected static ObjectivePlugin instance;
+    @Nonnull
     public static final String OBJECTIVE_LOCATION_MARKER_MODEL_ID = "Objective_Location_Marker";
     public static final long SAVE_INTERVAL_MINUTES = 5L;
+    @Nonnull
     private final Map<Class<? extends ObjectiveTaskAsset>, TriFunction<ObjectiveTaskAsset, Integer, Integer, ? extends ObjectiveTask>> taskGenerators = new ConcurrentHashMap<Class<? extends ObjectiveTaskAsset>, TriFunction<ObjectiveTaskAsset, Integer, Integer, ? extends ObjectiveTask>>();
+    @Nonnull
     private final Map<Class<? extends ObjectiveCompletionAsset>, Function<ObjectiveCompletionAsset, ? extends ObjectiveCompletion>> completionGenerators = new ConcurrentHashMap<Class<? extends ObjectiveCompletionAsset>, Function<ObjectiveCompletionAsset, ? extends ObjectiveCompletion>>();
+    @Nonnull
     private final Config<ObjectivePluginConfig> config = this.withConfig(ObjectivePluginConfig.CODEC);
     private Model objectiveLocationMarkerModel;
     private ComponentType<EntityStore, ObjectiveHistoryComponent> objectiveHistoryComponentType;
     private ComponentType<EntityStore, ReachLocationMarker> reachLocationMarkerComponentType;
     private ComponentType<EntityStore, ObjectiveLocationMarker> objectiveLocationMarkerComponentType;
+    @Nullable
     private ObjectiveDataStore objectiveDataStore;
 
     public static ObjectivePlugin get() {
@@ -143,6 +152,7 @@ extends JavaPlugin {
         return this.objectiveLocationMarkerModel;
     }
 
+    @Nullable
     public ObjectiveDataStore getObjectiveDataStore() {
         return this.objectiveDataStore;
     }
@@ -150,13 +160,15 @@ extends JavaPlugin {
     @Override
     protected void setup() {
         instance = this;
+        EventRegistry eventRegistry = this.getEventRegistry();
+        ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
         AssetRegistry.register(((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ObjectiveAsset.class, new DefaultAssetMap()).setPath("Objective/Objectives")).setCodec((AssetCodec)ObjectiveAsset.CODEC)).setKeyFunction(ObjectiveAsset::getId)).loadsAfter(ItemDropList.class, Item.class, BlockType.class, ReachLocationMarkerAsset.class)).build());
         AssetRegistry.register(((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ObjectiveLineAsset.class, new DefaultAssetMap()).setPath("Objective/ObjectiveLines")).setCodec((AssetCodec)ObjectiveLineAsset.CODEC)).setKeyFunction(ObjectiveLineAsset::getId)).loadsAfter(ObjectiveAsset.class)).loadsBefore(GameplayConfig.class)).build());
         AssetRegistry.register(((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ObjectiveLocationMarkerAsset.class, new DefaultAssetMap()).setPath("Objective/ObjectiveLocationMarkers")).setCodec((AssetCodec)ObjectiveLocationMarkerAsset.CODEC)).setKeyFunction(ObjectiveLocationMarkerAsset::getId)).loadsAfter(ObjectiveAsset.class, Environment.class, Weather.class)).build());
         AssetRegistry.register(((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ReachLocationMarkerAsset.class, new DefaultAssetMap()).setPath("Objective/ReachLocationMarkers")).setCodec((AssetCodec)ReachLocationMarkerAsset.CODEC)).setKeyFunction(ReachLocationMarkerAsset::getId)).build());
         this.objectiveDataStore = new ObjectiveDataStore(this.config.get().getDataStoreProvider().create(Objective.CODEC));
-        this.reachLocationMarkerComponentType = this.getEntityStoreRegistry().registerComponent(ReachLocationMarker.class, "ReachLocationMarker", ReachLocationMarker.CODEC);
-        this.objectiveLocationMarkerComponentType = this.getEntityStoreRegistry().registerComponent(ObjectiveLocationMarker.class, "ObjectiveLocation", ObjectiveLocationMarker.CODEC);
+        this.reachLocationMarkerComponentType = entityStoreRegistry.registerComponent(ReachLocationMarker.class, "ReachLocationMarker", ReachLocationMarker.CODEC);
+        this.objectiveLocationMarkerComponentType = entityStoreRegistry.registerComponent(ObjectiveLocationMarker.class, "ObjectiveLocation", ObjectiveLocationMarker.CODEC);
         this.registerTask("Craft", CraftObjectiveTaskAsset.class, CraftObjectiveTaskAsset.CODEC, CraftObjectiveTask.class, CraftObjectiveTask.CODEC, CraftObjectiveTask::new);
         this.registerTask("Gather", GatherObjectiveTaskAsset.class, GatherObjectiveTaskAsset.CODEC, GatherObjectiveTask.class, GatherObjectiveTask.CODEC, GatherObjectiveTask::new);
         this.registerTask("UseBlock", UseBlockObjectiveTaskAsset.class, UseBlockObjectiveTaskAsset.CODEC, UseBlockObjectiveTask.class, UseBlockObjectiveTask.CODEC, UseBlockObjectiveTask::new);
@@ -165,35 +177,41 @@ extends JavaPlugin {
         this.registerTask("ReachLocation", ReachLocationTaskAsset.class, ReachLocationTaskAsset.CODEC, ReachLocationTask.class, ReachLocationTask.CODEC, ReachLocationTask::new);
         this.registerCompletion("GiveItems", GiveItemsCompletionAsset.class, GiveItemsCompletionAsset.CODEC, GiveItemsCompletion::new);
         this.registerCompletion("ClearObjectiveItems", ClearObjectiveItemsCompletionAsset.class, ClearObjectiveItemsCompletionAsset.CODEC, ClearObjectiveItemsCompletion::new);
-        this.getEventRegistry().register(LoadedAssetsEvent.class, ObjectiveLineAsset.class, this::onObjectiveLineAssetLoaded);
-        this.getEventRegistry().register(LoadedAssetsEvent.class, ObjectiveAsset.class, this::onObjectiveAssetLoaded);
-        this.getEventRegistry().register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
-        this.getEventRegistry().register(LoadedAssetsEvent.class, ObjectiveLocationMarkerAsset.class, ObjectivePlugin::onObjectiveLocationMarkerChange);
-        this.getEventRegistry().register(LoadedAssetsEvent.class, ModelAsset.class, this::onModelAssetChange);
-        this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, this::onLivingEntityInventoryChange);
-        this.getEventRegistry().registerGlobal(AddWorldEvent.class, this::onWorldAdded);
+        eventRegistry.register(LoadedAssetsEvent.class, ObjectiveLineAsset.class, this::onObjectiveLineAssetLoaded);
+        eventRegistry.register(LoadedAssetsEvent.class, ObjectiveAsset.class, this::onObjectiveAssetLoaded);
+        eventRegistry.register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+        eventRegistry.register(LoadedAssetsEvent.class, ObjectiveLocationMarkerAsset.class, ObjectivePlugin::onObjectiveLocationMarkerChange);
+        eventRegistry.register(LoadedAssetsEvent.class, ModelAsset.class, this::onModelAssetChange);
+        eventRegistry.registerGlobal(LivingEntityInventoryChangeEvent.class, this::onLivingEntityInventoryChange);
+        eventRegistry.registerGlobal(AddWorldEvent.class, this::onWorldAdded);
         this.getCommandRegistry().registerCommand(new ObjectiveCommand());
         EntityModule entityModule = EntityModule.get();
         ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
         ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent = entityModule.getPlayerSpatialResourceType();
-        this.getEntityStoreRegistry().registerSystem(new ReachLocationMarkerSystems.EntityAdded(this.reachLocationMarkerComponentType));
-        this.getEntityStoreRegistry().registerSystem(new ReachLocationMarkerSystems.EnsureNetworkSendable());
-        this.getEntityStoreRegistry().registerSystem(new ReachLocationMarkerSystems.Ticking(this.reachLocationMarkerComponentType, playerSpatialComponent));
-        this.getEntityStoreRegistry().registerSystem(new ObjectiveLocationMarkerSystems.EnsureNetworkSendableSystem());
-        this.getEntityStoreRegistry().registerSystem(new ObjectiveLocationMarkerSystems.InitSystem(this.objectiveLocationMarkerComponentType));
-        this.getEntityStoreRegistry().registerSystem(new ObjectiveLocationMarkerSystems.TickingSystem(this.objectiveLocationMarkerComponentType, playerRefComponentType, playerSpatialComponent));
+        ComponentType<EntityStore, NetworkId> networkIdComponentType = NetworkId.getComponentType();
+        ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
+        ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
+        ComponentType<EntityStore, WeatherTracker> weatherTrackerComponentType = WeatherTracker.getComponentType();
+        ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType = PrefabCopyableComponent.getComponentType();
+        entityStoreRegistry.registerSystem(new ReachLocationMarkerSystems.EntityAdded(this.reachLocationMarkerComponentType, transformComponentType));
+        entityStoreRegistry.registerSystem(new ReachLocationMarkerSystems.EnsureNetworkSendable(this.reachLocationMarkerComponentType, networkIdComponentType));
+        entityStoreRegistry.registerSystem(new ReachLocationMarkerSystems.Ticking(this.reachLocationMarkerComponentType, playerSpatialComponent, transformComponentType, uuidComponentType));
+        entityStoreRegistry.registerSystem(new ObjectiveLocationMarkerSystems.EnsureNetworkSendableSystem(this.objectiveLocationMarkerComponentType, networkIdComponentType));
+        entityStoreRegistry.registerSystem(new ObjectiveLocationMarkerSystems.InitSystem(this.objectiveLocationMarkerComponentType, modelComponentType, transformComponentType, prefabCopyableComponentType));
+        entityStoreRegistry.registerSystem(new ObjectiveLocationMarkerSystems.TickingSystem(this.objectiveLocationMarkerComponentType, playerRefComponentType, playerSpatialComponent, transformComponentType, weatherTrackerComponentType, uuidComponentType));
         CommonObjectiveHistoryData.CODEC.register("Objective", (Class<CommonObjectiveHistoryData>)ObjectiveHistoryData.class, (Codec<CommonObjectiveHistoryData>)ObjectiveHistoryData.CODEC);
         CommonObjectiveHistoryData.CODEC.register("ObjectiveLine", (Class<CommonObjectiveHistoryData>)ObjectiveLineHistoryData.class, (Codec<CommonObjectiveHistoryData>)ObjectiveLineHistoryData.CODEC);
         ObjectiveRewardHistoryData.CODEC.register("Item", (Class<ObjectiveRewardHistoryData>)ItemObjectiveRewardHistoryData.class, (Codec<ObjectiveRewardHistoryData>)ItemObjectiveRewardHistoryData.CODEC);
-        this.objectiveHistoryComponentType = this.getEntityStoreRegistry().registerComponent(ObjectiveHistoryComponent.class, "ObjectiveHistory", ObjectiveHistoryComponent.CODEC);
-        this.getEntityStoreRegistry().registerSystem(new ObjectivePlayerSetupSystem(this.objectiveHistoryComponentType, Player.getComponentType()));
-        this.getEntityStoreRegistry().registerSystem(new ObjectiveItemEntityRemovalSystem());
+        this.objectiveHistoryComponentType = entityStoreRegistry.registerComponent(ObjectiveHistoryComponent.class, "ObjectiveHistory", ObjectiveHistoryComponent.CODEC);
+        entityStoreRegistry.registerSystem(new ObjectivePlayerSetupSystem(this.objectiveHistoryComponentType, Player.getComponentType()));
+        entityStoreRegistry.registerSystem(new ObjectiveItemEntityRemovalSystem());
         this.getCodecRegistry(Interaction.CODEC).register("StartObjective", StartObjectiveInteraction.class, StartObjectiveInteraction.CODEC);
         this.getCodecRegistry(Interaction.CODEC).register("CanBreakRespawnPoint", CanBreakRespawnPointInteraction.class, CanBreakRespawnPointInteraction.CODEC);
         BlockStateModule.get().registerBlockState(TreasureChestState.class, "TreasureChest", TreasureChestState.CODEC);
         this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(ObjectiveGameplayConfig.class, "Objective", ObjectiveGameplayConfig.CODEC);
-        this.getEntityStoreRegistry().registerSystem(new EntityModule.TangibleMigrationSystem(Query.or(ObjectiveLocationMarker.getComponentType(), ReachLocationMarker.getComponentType())), true);
-        this.getEntityStoreRegistry().registerSystem(new EntityModule.HiddenFromPlayerMigrationSystem(Query.or(ObjectiveLocationMarker.getComponentType(), ReachLocationMarker.getComponentType())), true);
+        entityStoreRegistry.registerSystem(new EntityModule.TangibleMigrationSystem(Query.or(ObjectiveLocationMarker.getComponentType(), ReachLocationMarker.getComponentType())), true);
+        entityStoreRegistry.registerSystem(new EntityModule.HiddenFromPlayerMigrationSystem(Query.or(ObjectiveLocationMarker.getComponentType(), ReachLocationMarker.getComponentType())), true);
     }
 
     @Override
@@ -203,12 +221,16 @@ extends JavaPlugin {
             throw new IllegalStateException(String.format("Default objective location marker model '%s' not found", OBJECTIVE_LOCATION_MARKER_MODEL_ID));
         }
         this.objectiveLocationMarkerModel = Model.createUnitScaleModel(modelAsset);
-        HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> this.objectiveDataStore.saveToDiskAllObjectives(), 5L, 5L, TimeUnit.MINUTES);
+        if (this.objectiveDataStore != null) {
+            HytaleServer.SCHEDULED_EXECUTOR.scheduleWithFixedDelay(() -> this.objectiveDataStore.saveToDiskAllObjectives(), 5L, 5L, TimeUnit.MINUTES);
+        }
     }
 
     @Override
     protected void shutdown() {
-        this.objectiveDataStore.saveToDiskAllObjectives();
+        if (this.objectiveDataStore != null) {
+            this.objectiveDataStore.saveToDiskAllObjectives();
+        }
     }
 
     public ComponentType<EntityStore, ReachLocationMarker> getReachLocationMarkerComponentType() {
@@ -220,6 +242,9 @@ extends JavaPlugin {
     }
 
     public <T extends ObjectiveTaskAsset, U extends ObjectiveTask> void registerTask(String id, Class<T> assetClass, Codec<T> assetCodec, Class<U> implementationClass, Codec<U> implementationCodec, TriFunction<T, Integer, Integer, U> generator) {
+        if (this.objectiveDataStore == null) {
+            return;
+        }
         ObjectiveTaskAsset.CODEC.register(id, assetClass, assetCodec);
         ObjectiveTask.CODEC.register(id, implementationClass, implementationCodec);
         this.taskGenerators.put(assetClass, generator);
@@ -246,6 +271,9 @@ extends JavaPlugin {
 
     @Nullable
     public Objective startObjective(@Nonnull String objectiveId, @Nullable UUID objectiveUUID, @Nonnull Set<UUID> playerUUIDs, @Nonnull UUID worldUUID, @Nullable UUID markerUUID, @Nonnull Store<EntityStore> store) {
+        if (this.objectiveDataStore == null) {
+            return null;
+        }
         ObjectiveAsset asset = ObjectiveAsset.getAssetMap().getAsset(objectiveId);
         if (asset == null) {
             this.getLogger().at(Level.WARNING).log("Failed to find objective asset '%s'", objectiveId);
@@ -295,7 +323,6 @@ extends JavaPlugin {
             activeObjectiveUUIDs.add(objective.getObjectiveUUID());
             playerConfigData.setActiveObjectiveUUIDs(activeObjectiveUUIDs);
             playerRefComponent.sendMessage(Message.translation("server.modules.objective.start.success").param("title", assetTitleMessage));
-            playerRefComponent.sendMessage(objective.getTaskInfoMessage());
             playerRefComponent.getPacketHandler().writeNoCache(trackObjectivePacket);
         });
         objective.markDirty();
@@ -303,6 +330,9 @@ extends JavaPlugin {
     }
 
     public boolean canPlayerDoObjective(@Nonnull Player player, @Nonnull String objectiveAssetId) {
+        if (this.objectiveDataStore == null) {
+            return false;
+        }
         Set<UUID> activeObjectiveUUIDs = player.getPlayerConfigData().getActiveObjectiveUUIDs();
         if (activeObjectiveUUIDs == null) {
             return true;
@@ -350,6 +380,9 @@ extends JavaPlugin {
     }
 
     public boolean canPlayerDoObjectiveLine(@Nonnull Player player, @Nonnull String objectiveLineId) {
+        if (this.objectiveDataStore == null) {
+            return false;
+        }
         Set<UUID> activeObjectiveUUIDs = player.getPlayerConfigData().getActiveObjectiveUUIDs();
         if (activeObjectiveUUIDs == null) {
             return true;
@@ -364,6 +397,9 @@ extends JavaPlugin {
     }
 
     public void objectiveCompleted(@Nonnull Objective objective, @Nonnull Store<EntityStore> store) {
+        if (this.objectiveDataStore == null) {
+            return;
+        }
         for (UUID playerUUID : objective.getPlayerUUIDs()) {
             this.untrackObjectiveForPlayer(objective, playerUUID);
         }
@@ -449,6 +485,9 @@ extends JavaPlugin {
     }
 
     public void cancelObjective(@Nonnull UUID objectiveUUID, @Nonnull Store<EntityStore> store) {
+        if (this.objectiveDataStore == null) {
+            return;
+        }
         Objective objective = this.objectiveDataStore.loadObjective(objectiveUUID, store);
         if (objective == null) {
             return;
@@ -463,10 +502,14 @@ extends JavaPlugin {
 
     public void untrackObjectiveForPlayer(@Nonnull Objective objective, @Nonnull UUID playerUUID) {
         ObjectiveTask[] currentTasks;
+        if (this.objectiveDataStore == null) {
+            return;
+        }
         UUID objectiveUUID = objective.getObjectiveUUID();
         for (ObjectiveTask task : currentTasks = objective.getCurrentTasks()) {
             if (!(task instanceof UseEntityObjectiveTask)) continue;
-            this.objectiveDataStore.removeEntityTaskForPlayer(objectiveUUID, ((UseEntityObjectiveTask)task).getAsset().getTaskId(), playerUUID);
+            UseEntityObjectiveTask useEntityObjectiveTask = (UseEntityObjectiveTask)task;
+            this.objectiveDataStore.removeEntityTaskForPlayer(objectiveUUID, useEntityObjectiveTask.getAsset().getTaskId(), playerUUID);
         }
         PlayerRef playerRef = Universe.get().getPlayer(playerUUID);
         if (playerRef == null) {
@@ -481,6 +524,9 @@ extends JavaPlugin {
 
     public void addPlayerToExistingObjective(@Nonnull Store<EntityStore> store, @Nonnull UUID playerUUID, @Nonnull UUID objectiveUUID) {
         ObjectiveTask[] currentTasks;
+        if (this.objectiveDataStore == null) {
+            return;
+        }
         Objective objective = this.objectiveDataStore.loadObjective(objectiveUUID, store);
         if (objective == null) {
             return;
@@ -508,6 +554,9 @@ extends JavaPlugin {
     }
 
     public void removePlayerFromExistingObjective(@Nonnull Store<EntityStore> store, @Nonnull UUID playerUUID, @Nonnull UUID objectiveUUID) {
+        if (this.objectiveDataStore == null) {
+            return;
+        }
         Objective objective = this.objectiveDataStore.loadObjective(objectiveUUID, store);
         if (objective == null) {
             return;
@@ -521,6 +570,9 @@ extends JavaPlugin {
     }
 
     private void onPlayerDisconnect(@Nonnull PlayerDisconnectEvent event) {
+        if (this.objectiveDataStore == null) {
+            return;
+        }
         PlayerRef playerRef = event.getPlayerRef();
         Ref<EntityStore> ref = playerRef.getReference();
         if (ref == null) {
@@ -577,7 +629,12 @@ extends JavaPlugin {
     }
 
     private void onObjectiveAssetLoaded(@Nonnull LoadedAssetsEvent<String, ObjectiveAsset, DefaultAssetMap<String, ObjectiveAsset>> event) {
-        this.objectiveDataStore.getObjectiveCollection().forEach(objective -> objective.reloadObjectiveAsset(event.getLoadedAssets()));
+        if (this.objectiveDataStore == null) {
+            return;
+        }
+        for (Objective objective : this.objectiveDataStore.getObjectiveCollection()) {
+            objective.reloadObjectiveAsset(event.getLoadedAssets());
+        }
     }
 
     private static void onObjectiveLocationMarkerChange(@Nonnull LoadedAssetsEvent<String, ObjectiveLocationMarkerAsset, DefaultAssetMap<String, ObjectiveLocationMarkerAsset>> event) {
@@ -600,7 +657,7 @@ extends JavaPlugin {
                     Model oldModel = modelComponent.getModel();
                     PersistentModel persistentModelComponent = archetypeChunk.getComponent(index, PersistentModel.getComponentType());
                     assert (persistentModelComponent != null);
-                    Model newModel = new Model(oldModel.getModelAssetId(), oldModel.getScale(), oldModel.getRandomAttachmentIds(), oldModel.getAttachments(), objectiveLocationMarkerComponent.getArea().getBoxForEntryArea(), oldModel.getModel(), oldModel.getTexture(), oldModel.getGradientSet(), oldModel.getGradientId(), oldModel.getEyeHeight(), oldModel.getCrouchOffset(), oldModel.getAnimationSetMap(), oldModel.getCamera(), oldModel.getLight(), oldModel.getParticles(), oldModel.getTrails(), oldModel.getPhysicsValues(), oldModel.getDetailBoxes(), oldModel.getPhobia(), oldModel.getPhobiaModelAssetId());
+                    Model newModel = new Model(oldModel.getModelAssetId(), oldModel.getScale(), oldModel.getRandomAttachmentIds(), oldModel.getAttachments(), objectiveLocationMarkerComponent.getArea().getBoxForEntryArea(), oldModel.getModel(), oldModel.getTexture(), oldModel.getGradientSet(), oldModel.getGradientId(), oldModel.getEyeHeight(), oldModel.getCrouchOffset(), oldModel.getSittingOffset(), oldModel.getSleepingOffset(), oldModel.getAnimationSetMap(), oldModel.getCamera(), oldModel.getLight(), oldModel.getParticles(), oldModel.getTrails(), oldModel.getPhysicsValues(), oldModel.getDetailBoxes(), oldModel.getPhobia(), oldModel.getPhobiaModelAssetId());
                     persistentModelComponent.setModelReference(newModel.toReference());
                     commandBuffer.putComponent(archetypeChunk.getReferenceTo(index), ModelComponent.getComponentType(), new ModelComponent(newModel));
                 }
@@ -618,17 +675,20 @@ extends JavaPlugin {
     }
 
     private void onLivingEntityInventoryChange(@Nonnull LivingEntityInventoryChangeEvent event) {
-        LivingEntity entity = (LivingEntity)event.getEntity();
-        if (!(entity instanceof Player)) {
+        if (this.objectiveDataStore == null) {
             return;
         }
-        Player player = (Player)entity;
+        Object EntityType = event.getEntity();
+        if (!(EntityType instanceof Player)) {
+            return;
+        }
+        Player player = (Player)EntityType;
         Set<UUID> activeObjectiveUUIDs = player.getPlayerConfigData().getActiveObjectiveUUIDs();
         if (activeObjectiveUUIDs.isEmpty()) {
             return;
         }
         HashSet<UUID> inventoryItemObjectiveUUIDs = null;
-        CombinedItemContainer inventory = entity.getInventory().getCombinedHotbarFirst();
+        CombinedItemContainer inventory = player.getInventory().getCombinedHotbarFirst();
         for (short i = 0; i < inventory.getCapacity(); i = (short)(i + 1)) {
             UUID objectiveUUID;
             ItemStack itemStack = inventory.getItemStack(i);
@@ -638,13 +698,16 @@ extends JavaPlugin {
             }
             inventoryItemObjectiveUUIDs.add(objectiveUUID);
         }
+        Ref<EntityStore> reference = player.getReference();
+        if (reference == null || !reference.isValid()) {
+            return;
+        }
+        Store<EntityStore> store = reference.getStore();
+        World world = store.getExternalData().getWorld();
         for (UUID activeObjectiveUUID : activeObjectiveUUIDs) {
             ObjectiveAsset objectiveAsset;
             Objective objective;
             if (inventoryItemObjectiveUUIDs != null && inventoryItemObjectiveUUIDs.contains(activeObjectiveUUID) || (objective = this.objectiveDataStore.getObjective(activeObjectiveUUID)) == null || (objectiveAsset = objective.getObjectiveAsset()) == null || !objectiveAsset.isRemoveOnItemDrop()) continue;
-            Ref<EntityStore> reference = entity.getReference();
-            Store<EntityStore> store = reference.getStore();
-            World world = store.getExternalData().getWorld();
             world.execute(() -> {
                 UUIDComponent uuidComponent = store.getComponent(reference, UUIDComponent.getComponentType());
                 assert (uuidComponent != null);
@@ -653,20 +716,25 @@ extends JavaPlugin {
         }
     }
 
-    private void onWorldAdded(AddWorldEvent event) {
+    private void onWorldAdded(@Nonnull AddWorldEvent event) {
         event.getWorld().getWorldMapManager().addMarkerProvider("objectives", ObjectiveMarkerProvider.INSTANCE);
     }
 
     @Nonnull
     public String getObjectiveDataDump() {
         StringBuilder sb = new StringBuilder("Objective Data\n");
-        for (Objective objective : this.objectiveDataStore.getObjectiveCollection()) {
-            sb.append("Objective ID: ").append(objective.getObjectiveId()).append("\n\t").append("UUID: ").append(objective.getObjectiveUUID()).append("\n\t").append("Players: ").append(Arrays.toString(objective.getPlayerUUIDs().toArray())).append("\n\t").append("Active players: ").append(Arrays.toString(objective.getActivePlayerUUIDs().toArray())).append("\n\n");
+        if (this.objectiveDataStore != null) {
+            for (Objective objective : this.objectiveDataStore.getObjectiveCollection()) {
+                sb.append("Objective ID: ").append(objective.getObjectiveId()).append("\n\t").append("UUID: ").append(objective.getObjectiveUUID()).append("\n\t").append("Players: ").append(Arrays.toString(objective.getPlayerUUIDs().toArray())).append("\n\t").append("Active players: ").append(Arrays.toString(objective.getActivePlayerUUIDs().toArray())).append("\n\n");
+            }
+        } else {
+            sb.append("Objective data store is not initialized.\n");
         }
         return sb.toString();
     }
 
     public static class ObjectivePluginConfig {
+        @Nonnull
         public static final BuilderCodec<ObjectivePluginConfig> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ObjectivePluginConfig.class, ObjectivePluginConfig::new).append(new KeyedCodec<DataStoreProvider>("DataStore", DataStoreProvider.CODEC), (objectivePluginConfig, s) -> {
             objectivePluginConfig.dataStoreProvider = s;
         }, objectivePluginConfig -> objectivePluginConfig.dataStoreProvider).add()).build();

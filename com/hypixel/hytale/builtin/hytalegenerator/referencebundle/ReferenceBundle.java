@@ -3,7 +3,6 @@
  */
 package com.hypixel.hytale.builtin.hytalegenerator.referencebundle;
 
-import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.Reference;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -11,29 +10,20 @@ import javax.annotation.Nullable;
 
 public class ReferenceBundle {
     @Nonnull
-    private final Map<String, Reference> dataLayerMap = new HashMap<String, Reference>();
+    private final Map<String, Object> dataLayerMap = new HashMap<String, Object>();
     @Nonnull
-    private final Map<String, String> layerTypeMap = new HashMap<String, String>();
+    private final Map<String, Class<?>> layerTypeMap = new HashMap();
 
-    public <T extends Reference> void put(@Nonnull String name, @Nonnull Reference reference, @Nonnull Class<T> type) {
+    public <T> void put(@Nonnull String name, @Nonnull T reference, @Nonnull Class<T> type) {
         this.dataLayerMap.put(name, reference);
-        this.layerTypeMap.put(name, type.getName());
+        this.layerTypeMap.put(name, type);
     }
 
     @Nullable
-    public Reference getLayerWithName(@Nonnull String name) {
-        return this.dataLayerMap.get(name);
-    }
-
-    @Nullable
-    public <T extends Reference> T getLayerWithName(@Nonnull String name, @Nonnull Class<T> type) {
-        String storedType = this.layerTypeMap.get(name);
-        if (storedType == null) {
-            return null;
-        }
-        if (!storedType.equals(type.getName())) {
-            return null;
-        }
+    public <T> T get(@Nonnull String name, @Nonnull Class<T> type) {
+        Class<?> storedType = this.layerTypeMap.get(name);
+        assert (storedType != null);
+        assert (type.isAssignableFrom(storedType));
         return (T)this.dataLayerMap.get(name);
     }
 }

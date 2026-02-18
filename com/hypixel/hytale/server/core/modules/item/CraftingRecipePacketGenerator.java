@@ -5,7 +5,7 @@ package com.hypixel.hytale.server.core.modules.item;
 
 import com.hypixel.hytale.assetstore.AssetUpdateQuery;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateRecipes;
 import com.hypixel.hytale.server.core.asset.packet.AssetPacketGenerator;
@@ -19,7 +19,7 @@ public class CraftingRecipePacketGenerator
 extends AssetPacketGenerator<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(DefaultAssetMap<String, CraftingRecipe> assetMap, @Nonnull Map<String, CraftingRecipe> assets) {
+    public ToClientPacket generateInitPacket(DefaultAssetMap<String, CraftingRecipe> assetMap, @Nonnull Map<String, CraftingRecipe> assets) {
         UpdateRecipes packet = new UpdateRecipes();
         packet.type = UpdateType.Init;
         packet.recipes = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.CraftingRecipe>();
@@ -31,7 +31,7 @@ extends AssetPacketGenerator<String, CraftingRecipe, DefaultAssetMap<String, Cra
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(DefaultAssetMap<String, CraftingRecipe> assetMap, @Nonnull Map<String, CraftingRecipe> loadedAssets, @Nonnull AssetUpdateQuery query) {
+    public ToClientPacket generateUpdatePacket(DefaultAssetMap<String, CraftingRecipe> assetMap, @Nonnull Map<String, CraftingRecipe> loadedAssets, @Nonnull AssetUpdateQuery query) {
         UpdateRecipes packet = new UpdateRecipes();
         packet.type = UpdateType.AddOrUpdate;
         packet.recipes = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.CraftingRecipe>();
@@ -43,7 +43,7 @@ extends AssetPacketGenerator<String, CraftingRecipe, DefaultAssetMap<String, Cra
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(DefaultAssetMap<String, CraftingRecipe> assetMap, @Nonnull Set<String> removed, @Nonnull AssetUpdateQuery query) {
+    public ToClientPacket generateRemovePacket(DefaultAssetMap<String, CraftingRecipe> assetMap, @Nonnull Set<String> removed, @Nonnull AssetUpdateQuery query) {
         UpdateRecipes packet = new UpdateRecipes();
         packet.type = UpdateType.Remove;
         packet.removedRecipes = (String[])removed.toArray(String[]::new);

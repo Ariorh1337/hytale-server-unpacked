@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 public class BasicAttackTargetCombatAction
 extends CombatActionOption {
     private static final double BASIC_ATTACK_DISTANCE_OFFSET = 0.1;
+    @Nonnull
     public static final BuilderCodec<BasicAttackTargetCombatAction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BasicAttackTargetCombatAction.class, BasicAttackTargetCombatAction::new, Option.ABSTRACT_CODEC).documentation("A combat action which simply selects a target and sets up distances for use with substates that only contain basic attacks.")).appendInherited(new KeyedCodec<Integer>("WeaponSlot", Codec.INTEGER), (option, i) -> {
         option.weaponSlot = i;
     }, option -> option.weaponSlot, (option, parent) -> {

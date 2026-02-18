@@ -5,8 +5,10 @@ package com.hypixel.hytale.protocol.packets.entities;
 
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.MovementStates;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.Position;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -14,7 +16,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MountMovement
-implements Packet {
+implements Packet,
+ToServerPacket {
     public static final int PACKET_ID = 166;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -32,6 +35,11 @@ implements Packet {
     @Override
     public int getId() {
         return 166;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public MountMovement() {

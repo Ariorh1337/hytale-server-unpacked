@@ -9,6 +9,8 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -16,6 +18,20 @@ import javax.annotation.Nullable;
 
 public class PathUtil {
     private static final Pattern PATH_PATTERN = Pattern.compile("[\\\\/]");
+    private static final Set<Path> TRUSTED_PATH_ROOTS = ConcurrentHashMap.newKeySet();
+
+    public static void addTrustedRoot(@Nonnull Path root) {
+        TRUSTED_PATH_ROOTS.add(root.toAbsolutePath().normalize());
+    }
+
+    public static boolean isInTrustedRoot(@Nonnull Path path) {
+        Path normalized = path.toAbsolutePath().normalize();
+        for (Path trusted : TRUSTED_PATH_ROOTS) {
+            if (!PathUtil.isChildOf(trusted, normalized)) continue;
+            return true;
+        }
+        return false;
+    }
 
     @Nonnull
     public static Path getParent(@Nonnull Path path) {
@@ -60,6 +76,27 @@ public class PathUtil {
             return absolutePathA.relativize(absolutePathB).normalize();
         }
         return absolutePathB;
+    }
+
+    public static boolean isValidName(@Nonnull String name) {
+        return !name.isBlank() && name.indexOf(47) < 0 && name.indexOf(92) < 0 && !".".equals(name) && !"..".equals(name);
+    }
+
+    @Nullable
+    public static Path resolvePathWithinDir(@Nonnull Path directory, @Nonnull String relativePath) {
+        Path resolved = directory.resolve(relativePath);
+        if (!PathUtil.isChildOf(directory, resolved)) {
+            return null;
+        }
+        return resolved;
+    }
+
+    @Nullable
+    public static Path resolveName(@Nonnull Path directory, @Nonnull String name) {
+        if (!PathUtil.isValidName(name)) {
+            return null;
+        }
+        return directory.resolve(name);
     }
 
     @Nonnull
@@ -119,6 +156,11 @@ public class PathUtil {
             return path.toString().replace("\\", "/");
         }
         return path.toString();
+    }
+
+    static {
+        TRUSTED_PATH_ROOTS.add(Path.of("", new String[0]).toAbsolutePath().normalize());
+        TRUSTED_PATH_ROOTS.add(Path.of(System.getProperty("java.io.tmpdir"), new String[0]).toAbsolutePath().normalize());
     }
 }
 

@@ -5,7 +5,7 @@ package com.hypixel.hytale.server.core.entity.entities.player.pages;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPage;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageEvent;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -14,6 +14,7 @@ import com.hypixel.hytale.protocol.packets.window.OpenWindow;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManager;
+import com.hypixel.hytale.server.core.modules.anchoraction.AnchorActionModule;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -80,7 +81,7 @@ public class PageManager {
         }
         this.setPage(ref, store, page, canCloseThroughInteraction);
         for (OpenWindow packet : windowPackets) {
-            this.playerRef.getPacketHandler().write((Packet)packet);
+            this.playerRef.getPacketHandler().write((ToClientPacket)packet);
         }
         return true;
     }
@@ -95,14 +96,14 @@ public class PageManager {
         }
         this.openCustomPage(ref, store, page);
         for (OpenWindow packet : windowPackets) {
-            this.playerRef.getPacketHandler().write((Packet)packet);
+            this.playerRef.getPacketHandler().write((ToClientPacket)packet);
         }
         return true;
     }
 
     public void updateCustomPage(@Nonnull CustomPage page) {
         this.customPageRequiredAcknowledgments.incrementAndGet();
-        this.playerRef.getPacketHandler().write((Packet)page);
+        this.playerRef.getPacketHandler().write((ToClientPacket)page);
     }
 
     public void handleEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull CustomPageEvent event) {
@@ -116,10 +117,14 @@ public class PageManager {
                 break;
             }
             case Data: {
-                if (this.customPageRequiredAcknowledgments.get() != 0 || this.customPage == null) {
+                if (this.customPageRequiredAcknowledgments.get() != 0) {
                     return;
                 }
-                this.customPage.handleDataEvent(ref, store, event.data);
+                if (this.customPage != null) {
+                    this.customPage.handleDataEvent(ref, store, event.data);
+                    break;
+                }
+                AnchorActionModule.get().tryHandle(this.playerRef, event.data);
                 break;
             }
             case Acknowledge: {

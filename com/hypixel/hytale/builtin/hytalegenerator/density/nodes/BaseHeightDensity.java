@@ -4,26 +4,25 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiDouble2DoubleFunction;
 import javax.annotation.Nonnull;
 
 public class BaseHeightDensity
 extends Density {
     @Nonnull
-    private final BiDouble2DoubleFunction heightFunction;
+    private final double baseHeight;
     private final boolean isDistance;
 
-    public BaseHeightDensity(@Nonnull BiDouble2DoubleFunction heightFunction, boolean isDistance) {
-        this.heightFunction = heightFunction;
+    public BaseHeightDensity(double baseHeight, boolean isDistance) {
+        this.baseHeight = baseHeight;
         this.isDistance = isDistance;
     }
 
     @Override
     public double process(@Nonnull Density.Context context) {
         if (this.isDistance) {
-            return context.position.y - this.heightFunction.apply(context.position.x, context.position.z);
+            return context.position.y - this.baseHeight;
         }
-        return this.heightFunction.apply(context.position.x, context.position.z);
+        return this.baseHeight;
     }
 
     public boolean skipInputs(double y) {

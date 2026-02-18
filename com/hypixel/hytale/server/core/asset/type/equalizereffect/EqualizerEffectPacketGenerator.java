@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.equalizereffect;
 
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateEqualizerEffects;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class EqualizerEffectPacketGenerator
 extends SimpleAssetPacketGenerator<String, EqualizerEffect, IndexedLookupTableAssetMap<String, EqualizerEffect>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, EqualizerEffect> assetMap, @Nonnull Map<String, EqualizerEffect> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, EqualizerEffect> assetMap, @Nonnull Map<String, EqualizerEffect> assets) {
         UpdateEqualizerEffects packet = new UpdateEqualizerEffects();
         packet.type = UpdateType.Init;
         packet.effects = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.EqualizerEffect>(assets.size());
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, EqualizerEffect, IndexedLookupTableAs
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, EqualizerEffect> assetMap, @Nonnull Map<String, EqualizerEffect> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, EqualizerEffect> assetMap, @Nonnull Map<String, EqualizerEffect> loadedAssets) {
         UpdateEqualizerEffects packet = new UpdateEqualizerEffects();
         packet.type = UpdateType.AddOrUpdate;
         packet.effects = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.EqualizerEffect>(loadedAssets.size());
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, EqualizerEffect, IndexedLookupTableAs
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, EqualizerEffect> assetMap, @Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, EqualizerEffect> assetMap, @Nonnull Set<String> removed) {
         UpdateEqualizerEffects packet = new UpdateEqualizerEffects();
         packet.type = UpdateType.Remove;
         packet.effects = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.EqualizerEffect>(removed.size());

@@ -18,8 +18,14 @@ import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import java.lang.runtime.SwitchBootstraps;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.FormatStyle;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -142,7 +148,7 @@ public class MessageUtil {
                     String formattedReplacement = "";
                     ParamValue paramValue = format;
                     int n = 0;
-                    block0 : switch (SwitchBootstraps.typeSwitch("typeSwitch", new Object[]{"upper", "lower", "number", "plural"}, paramValue, n)) {
+                    block0 : switch (SwitchBootstraps.typeSwitch("typeSwitch", new Object[]{"upper", "lower", "number", "plural", "date", "time", "select"}, paramValue, n)) {
                         case 0: {
                             if (!(replacement instanceof StringParamValue)) break;
                             s = (StringParamValue)replacement;
@@ -234,6 +240,34 @@ public class MessageUtil {
                             if (options == null) break;
                             Map<String, String> pluralTexts = MessageUtil.parsePluralOptions(options);
                             String selected = pluralTexts.containsKey(category = MessageUtil.getPluralCategory(value = Integer.parseInt(replacement.toString()), "en-US")) ? pluralTexts.get(category) : (pluralTexts.containsKey("other") ? pluralTexts.get("other") : (pluralTexts.isEmpty() ? "" : pluralTexts.values().iterator().next()));
+                            formattedReplacement = MessageUtil.formatText(selected, params, messageParams);
+                            break;
+                        }
+                        case 4: {
+                            Instant instant = MessageUtil.parseDateTime(replacement);
+                            if (instant != null) {
+                                DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault());
+                                formattedReplacement = formatter.format(instant.atZone(ZoneId.systemDefault()));
+                                break;
+                            }
+                            formattedReplacement = "";
+                            break;
+                        }
+                        case 5: {
+                            Instant instant = MessageUtil.parseDateTime(replacement);
+                            if (instant != null) {
+                                DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault());
+                                formattedReplacement = formatter.format(instant.atZone(ZoneId.systemDefault()));
+                                break;
+                            }
+                            formattedReplacement = "";
+                            break;
+                        }
+                        case 6: {
+                            String selectKey;
+                            if (options == null) break;
+                            Map<String, String> selectOptions = MessageUtil.parseSelectOptions(options);
+                            String selected = selectOptions.containsKey(selectKey = replacement.toString()) ? selectOptions.get(selectKey) : (selectOptions.containsKey("other") ? selectOptions.get("other") : (selectOptions.isEmpty() ? "" : selectOptions.values().iterator().next()));
                             formattedReplacement = MessageUtil.formatText(selected, params, messageParams);
                             break;
                         }
@@ -485,6 +519,68 @@ public class MessageUtil {
     @Nonnull
     private static String getKoreanPluralCategory(int n) {
         return "other";
+    }
+
+    @Nonnull
+    private static Map<String, String> parseSelectOptions(@Nonnull String options) {
+        HashMap<String, String> result = new HashMap<String, String>();
+        int i = 0;
+        int len = options.length();
+        while (i < len) {
+            int braceStart;
+            int braceEnd;
+            while (i < len && Character.isWhitespace(options.charAt(i))) {
+                ++i;
+            }
+            if (i >= len) break;
+            int keyStart = i;
+            while (i < len && !Character.isWhitespace(options.charAt(i)) && options.charAt(i) != '{') {
+                ++i;
+            }
+            if (i == keyStart) break;
+            String key = options.substring(keyStart, i);
+            while (i < len && Character.isWhitespace(options.charAt(i))) {
+                ++i;
+            }
+            if (i >= len || options.charAt(i) != '{' || (braceEnd = MessageUtil.findMatchingBrace(options, braceStart = i)) < 0) break;
+            if (braceEnd > braceStart + 1) {
+                result.put(key, options.substring(braceStart + 1, braceEnd));
+            } else {
+                result.put(key, "");
+            }
+            i = braceEnd + 1;
+        }
+        return result;
+    }
+
+    @Nullable
+    private static Instant parseDateTime(@Nonnull ParamValue value) {
+        ParamValue paramValue = value;
+        Objects.requireNonNull(paramValue);
+        ParamValue paramValue2 = paramValue;
+        int n = 0;
+        return switch (SwitchBootstraps.typeSwitch("typeSwitch", new Object[]{LongParamValue.class, StringParamValue.class}, (Object)paramValue2, n)) {
+            case 0 -> {
+                Instant var3_4;
+                LongParamValue l = (LongParamValue)paramValue2;
+                yield var3_4 = Instant.ofEpochMilli(l.value);
+            }
+            case 1 -> {
+                StringParamValue s = (StringParamValue)paramValue2;
+                try {
+                    Instant var3_5;
+                    yield var3_5 = Instant.parse(s.value);
+                }
+                catch (DateTimeParseException e) {
+                    Object var3_6 = null;
+                    yield var3_6;
+                }
+            }
+            default -> {
+                Instant var3_7;
+                yield var3_7 = null;
+            }
+        };
     }
 }
 

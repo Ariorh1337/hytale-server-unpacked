@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
 public class SpreadFarmingStageData
 extends FarmingStageData {
     @Nonnull
-    public static BuilderCodec<SpreadFarmingStageData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpreadFarmingStageData.class, SpreadFarmingStageData::new, FarmingStageData.BASE_CODEC).append(new KeyedCodec<IntRange>("Executions", IntRange.CODEC), (spreadFarmingStageData, intRange) -> {
+    public static final BuilderCodec<SpreadFarmingStageData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpreadFarmingStageData.class, SpreadFarmingStageData::new, FarmingStageData.BASE_CODEC).append(new KeyedCodec<IntRange>("Executions", IntRange.CODEC), (spreadFarmingStageData, intRange) -> {
         spreadFarmingStageData.executions = intRange;
     }, spreadFarmingStageData -> spreadFarmingStageData.executions).documentation("Defines the number of times the stage will be repeated. Range must be positive, min value must be >= 1.").addValidator(Validators.nonNull()).add()).append(new KeyedCodec<IntRange>("SpreadDecayPercent", IntRange.CODEC), (spreadFarmingStageData, intRange) -> {
         spreadFarmingStageData.spreadDecayPercent = intRange;
@@ -60,42 +60,55 @@ extends FarmingStageData {
     }
 
     @Override
-    public boolean shouldStop(ComponentAccessor<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z) {
-        FarmingBlock farming = commandBuffer.getComponent(blockRef, FarmingBlock.getComponentType());
-        float spreadRate = farming.getSpreadRate();
-        ChunkSection section = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-        int worldX = ChunkUtil.worldCoordFromLocalCoord(section.getX(), x);
-        int worldY = ChunkUtil.worldCoordFromLocalCoord(section.getY(), y);
-        int worldZ = ChunkUtil.worldCoordFromLocalCoord(section.getZ(), z);
-        float executions = (float)this.executions.getInt(HashUtil.random(worldX, worldY, worldZ, farming.getGeneration())) * spreadRate;
-        int executed = farming.getExecutions();
+    public boolean shouldStop(@Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z) {
+        FarmingBlock farmingBlockComponent = commandBuffer.getComponent(blockRef, FarmingBlock.getComponentType());
+        if (farmingBlockComponent == null) {
+            return true;
+        }
+        ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+        if (chunkSectionComponent == null) {
+            return true;
+        }
+        int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
+        int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
+        int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
+        float spreadRate = farmingBlockComponent.getSpreadRate();
+        float executions = (float)this.executions.getInt(HashUtil.random(worldX, worldY, worldZ, farmingBlockComponent.getGeneration())) * spreadRate;
+        int executed = farmingBlockComponent.getExecutions();
         return spreadRate <= 0.0f || (float)executed >= executions;
     }
 
     @Override
-    public void apply(ComponentAccessor<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, @Nullable FarmingStageData previousStage) {
+    public void apply(@Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z, @Nullable FarmingStageData previousStage) {
         super.apply(commandBuffer, sectionRef, blockRef, x, y, z, previousStage);
-        FarmingBlock farming = commandBuffer.getComponent(blockRef, FarmingBlock.getComponentType());
-        ChunkSection section = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-        int worldX = ChunkUtil.worldCoordFromLocalCoord(section.getX(), x);
-        int worldY = ChunkUtil.worldCoordFromLocalCoord(section.getY(), y);
-        int worldZ = ChunkUtil.worldCoordFromLocalCoord(section.getZ(), z);
-        float spreadRate = farming.getSpreadRate();
-        double executions = Math.floor((float)this.executions.getInt(HashUtil.random(worldX, worldY, worldZ, farming.getGeneration())) * spreadRate);
-        int executed = farming.getExecutions();
+        FarmingBlock farmingBlockComponent = commandBuffer.getComponent(blockRef, FarmingBlock.getComponentType());
+        if (farmingBlockComponent == null) {
+            return;
+        }
+        ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+        if (chunkSectionComponent == null) {
+            return;
+        }
+        int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
+        int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
+        int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
+        float spreadRate = farmingBlockComponent.getSpreadRate();
+        int generation = farmingBlockComponent.getGeneration();
+        double executions = Math.floor((float)this.executions.getInt(HashUtil.random(worldX, worldY, worldZ, generation)) * spreadRate);
+        int executed = farmingBlockComponent.getExecutions();
         if (spreadRate <= 0.0f || (double)executed >= executions) {
             return;
         }
         for (int i = 0; i < this.spreadGrowthBehaviours.length; ++i) {
             SpreadGrowthBehaviour spreadGrowthBehaviour = this.spreadGrowthBehaviours[i];
-            float decayRate = (float)this.spreadDecayPercent.getInt(HashUtil.random((long)i | (long)farming.getGeneration() << 32, worldX, worldY, worldZ)) / 100.0f;
+            float decayRate = (float)this.spreadDecayPercent.getInt(HashUtil.random((long)i | (long)generation << 32, worldX, worldY, worldZ)) / 100.0f;
             spreadGrowthBehaviour.execute(commandBuffer, sectionRef, blockRef, worldX, worldY, worldZ, spreadRate - decayRate);
         }
-        farming.setExecutions(++executed);
+        farmingBlockComponent.setExecutions(++executed);
     }
 
     @Override
-    public void remove(ComponentAccessor<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z) {
+    public void remove(@Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z) {
         super.remove(commandBuffer, sectionRef, blockRef, x, y, z);
     }
 

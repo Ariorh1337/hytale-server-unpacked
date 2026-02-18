@@ -82,7 +82,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ModelAsset>> {
         trail.fixedRotation = s;
     }, trail -> trail.fixedRotation)).build();
     public static final ArrayCodec<ModelTrail> MODEL_TRAIL_ARRAY_CODEC = new ArrayCodec<ModelTrail>(MODEL_TRAIL_CODEC, ModelTrail[]::new);
-    public static final AssetBuilderCodec<String, ModelAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(ModelAsset.class, ModelAsset::new, Codec.STRING, (modelAsset, s) -> {
+    public static final AssetBuilderCodec<String, ModelAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(ModelAsset.class, ModelAsset::new, Codec.STRING, (modelAsset, s) -> {
         modelAsset.id = s;
     }, modelAsset -> modelAsset.id, (modelAsset, data) -> {
         modelAsset.extraData = data;
@@ -142,6 +142,14 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ModelAsset>> {
         model.crouchOffset = d.floatValue();
     }, model -> model.crouchOffset, (model, parent) -> {
         model.crouchOffset = parent.crouchOffset;
+    }).add()).appendInherited(new KeyedCodec<Double>("SittingOffset", Codec.DOUBLE), (model, d) -> {
+        model.sittingOffset = d.floatValue();
+    }, model -> model.sittingOffset, (model, parent) -> {
+        model.sittingOffset = parent.sittingOffset;
+    }).add()).appendInherited(new KeyedCodec<Double>("SleepingOffset", Codec.DOUBLE), (model, d) -> {
+        model.sleepingOffset = d.floatValue();
+    }, model -> model.sleepingOffset, (model, parent) -> {
+        model.sleepingOffset = parent.sleepingOffset;
     }).metadata(new UIEditorSectionStart("Camera")).add()).appendInherited(new KeyedCodec<CameraSettings>("Camera", CameraSettings.CODEC), (model, o) -> {
         model.camera = o;
     }, model -> model.camera, (model, parent) -> {
@@ -208,6 +216,8 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ModelAsset>> {
     protected String gradientId;
     protected float eyeHeight;
     protected float crouchOffset;
+    protected float sittingOffset;
+    protected float sleepingOffset;
     protected Map<String, AnimationSet> animationSetMap = Collections.emptyMap();
     protected CameraSettings camera;
     protected Box boundingBox;
@@ -265,6 +275,14 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ModelAsset>> {
 
     public float getCrouchOffset() {
         return this.crouchOffset;
+    }
+
+    public float getSittingOffset() {
+        return this.sittingOffset;
+    }
+
+    public float getSleepingOffset() {
+        return this.sleepingOffset;
     }
 
     public Map<String, AnimationSet> getAnimationSetMap() {
@@ -370,7 +388,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ModelAsset>> {
     }
 
     public String toString() {
-        return "ModelAsset{id='" + this.id + "', model='" + this.model + "', texture='" + this.texture + "', gradientSet='" + this.gradientSet + "', gradientId='" + this.gradientId + "', eyeHeight=" + this.eyeHeight + ", crouchOffset=" + this.crouchOffset + ", animationSetMap=" + String.valueOf(this.animationSetMap) + ", camera=" + String.valueOf(this.camera) + ", boundingBox=" + String.valueOf(this.boundingBox) + ", light=" + String.valueOf(this.light) + ", particles=" + Arrays.toString(this.particles) + ", trails=" + Arrays.toString(this.trails) + ", physicsValues=" + String.valueOf(this.physicsValues) + ", defaultAttachments=" + Arrays.toString(this.defaultAttachments) + ", randomAttachmentSets=" + String.valueOf(this.randomAttachmentSets) + ", minScale=" + this.minScale + ", maxScale=" + this.maxScale + ", icon='" + this.icon + "', iconProperties=" + String.valueOf(this.iconProperties) + ", detailBoxes=" + String.valueOf(this.detailBoxes) + ", weightedRandomAttachmentSets=" + String.valueOf(this.weightedRandomAttachmentSets) + ", phobia=" + String.valueOf((Object)this.phobia) + ", phobiaModelAssetId='" + this.phobiaModelAssetId + "'}";
+        return "ModelAsset{id='" + this.id + "', model='" + this.model + "', texture='" + this.texture + "', gradientSet='" + this.gradientSet + "', gradientId='" + this.gradientId + "', eyeHeight=" + this.eyeHeight + ", crouchOffset=" + this.crouchOffset + ", sittingOffset=" + this.sittingOffset + ", sleepingOffset=" + this.sleepingOffset + ", animationSetMap=" + String.valueOf(this.animationSetMap) + ", camera=" + String.valueOf(this.camera) + ", boundingBox=" + String.valueOf(this.boundingBox) + ", light=" + String.valueOf(this.light) + ", particles=" + Arrays.toString(this.particles) + ", trails=" + Arrays.toString(this.trails) + ", physicsValues=" + String.valueOf(this.physicsValues) + ", defaultAttachments=" + Arrays.toString(this.defaultAttachments) + ", randomAttachmentSets=" + String.valueOf(this.randomAttachmentSets) + ", minScale=" + this.minScale + ", maxScale=" + this.maxScale + ", icon='" + this.icon + "', iconProperties=" + String.valueOf(this.iconProperties) + ", detailBoxes=" + String.valueOf(this.detailBoxes) + ", weightedRandomAttachmentSets=" + String.valueOf(this.weightedRandomAttachmentSets) + ", phobia=" + String.valueOf((Object)this.phobia) + ", phobiaModelAssetId='" + this.phobiaModelAssetId + "'}";
     }
 
     public static class AnimationSet {

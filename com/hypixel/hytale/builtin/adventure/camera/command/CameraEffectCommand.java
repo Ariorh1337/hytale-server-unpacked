@@ -69,7 +69,6 @@ extends AbstractCommandCollection {
 
     protected static class DebugCommand
     extends AbstractTargetPlayerCommand {
-        private static final String MESSAGE_SUCCESS = "server.commands.camshake.debug.success";
         @Nonnull
         protected final RequiredArg<CameraEffect> effectArg = this.withRequiredArg("effect", "server.commands.camshake.effect.desc", CAMERA_EFFECT_ARGUMENT_TYPE);
         @Nonnull
@@ -86,7 +85,7 @@ extends AbstractCommandCollection {
             PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
             playerRefComponent.getPacketHandler().writeNoCache(cameraEffect.createCameraShakePacket(intensity));
-            context.sendMessage(Message.translation(MESSAGE_SUCCESS).param("effect", cameraEffect.getId()).param("intensity", intensity));
+            context.sendMessage(Message.translation("server.commands.camshake.debug.success").param("effect", cameraEffect.getId()).param("intensity", intensity));
         }
     }
 }

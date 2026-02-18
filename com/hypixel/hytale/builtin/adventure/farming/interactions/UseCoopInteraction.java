@@ -13,6 +13,7 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
@@ -30,45 +31,48 @@ import javax.annotation.Nullable;
 
 public class UseCoopInteraction
 extends SimpleBlockInteraction {
+    @Nonnull
     public static final BuilderCodec<UseCoopInteraction> CODEC = BuilderCodec.builder(UseCoopInteraction.class, UseCoopInteraction::new, SimpleBlockInteraction.CODEC).build();
 
     @Override
     protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i targetBlock, @Nonnull CooldownHandler cooldownHandler) {
         int z;
         int x = targetBlock.getX();
-        Object worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(x, z = targetBlock.getZ()));
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z = targetBlock.getZ());
+        Object worldChunk = world.getChunk(chunkIndex);
         if (worldChunk == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
         Ref<ChunkStore> blockRef = ((WorldChunk)worldChunk).getBlockComponentEntity(x, targetBlock.getY(), z);
-        if (blockRef == null) {
+        if (blockRef == null || !blockRef.isValid()) {
             blockRef = BlockModule.ensureBlockEntity(worldChunk, targetBlock.x, targetBlock.y, targetBlock.z);
         }
-        if (blockRef == null) {
+        if (blockRef == null || !blockRef.isValid()) {
             context.getState().state = InteractionState.Failed;
             return;
         }
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-        CoopBlock coopBlockState = chunkStore.getComponent(blockRef, CoopBlock.getComponentType());
-        if (coopBlockState == null) {
+        CoopBlock coopBlockComponent = chunkStore.getComponent(blockRef, CoopBlock.getComponentType());
+        if (coopBlockComponent == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        Ref<EntityStore> playerRef = context.getEntity();
-        LivingEntity playerEntity = (LivingEntity)EntityUtils.getEntity(playerRef, commandBuffer);
-        if (playerEntity == null) {
+        Ref<EntityStore> ref = context.getEntity();
+        Entity entity = EntityUtils.getEntity(ref, commandBuffer);
+        if (!(entity instanceof LivingEntity)) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        CombinedItemContainer playerInventoryContainer = playerEntity.getInventory().getCombinedHotbarFirst();
-        if (playerInventoryContainer == null) {
+        LivingEntity livingEntity = (LivingEntity)entity;
+        CombinedItemContainer inventoryContainer = livingEntity.getInventory().getCombinedHotbarFirst();
+        if (inventoryContainer == null) {
             return;
         }
-        coopBlockState.gatherProduceFromInventory(playerInventoryContainer);
+        coopBlockComponent.gatherProduceFromContainer(inventoryContainer);
         BlockType currentBlockType = worldChunk.getBlockType(targetBlock);
         assert (currentBlockType != null);
-        worldChunk.setBlockInteractionState(targetBlock, currentBlockType, coopBlockState.hasProduce() ? "Produce_Ready" : "default");
+        worldChunk.setBlockInteractionState(targetBlock, currentBlockType, coopBlockComponent.hasProduce() ? "Produce_Ready" : "default");
     }
 
     @Override

@@ -56,7 +56,7 @@ public class CameraDemo {
         if (!this.isActive) {
             return;
         }
-        this.eventRegistry.shutdown();
+        this.eventRegistry.shutdownAndCleanup(false);
         Universe.get().getPlayers().forEach(p -> {
             CameraManager cameraManager = p.getComponent(CameraManager.getComponentType());
             if (cameraManager != null) {

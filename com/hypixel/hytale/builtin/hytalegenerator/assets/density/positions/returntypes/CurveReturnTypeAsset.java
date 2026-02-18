@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class CurveReturnTypeAsset
 extends ReturnTypeAsset {
+    @Nonnull
     public static final BuilderCodec<CurveReturnTypeAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CurveReturnTypeAsset.class, CurveReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.curveAsset = k;
     }, t -> t.curveAsset).add()).build();
@@ -25,7 +26,7 @@ extends ReturnTypeAsset {
 
     @Override
     @Nonnull
-    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
         Double2DoubleFunction curve = this.curveAsset.build();
         return new CurveReturnType(curve);
     }

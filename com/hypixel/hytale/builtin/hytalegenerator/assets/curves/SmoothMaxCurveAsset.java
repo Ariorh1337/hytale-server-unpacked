@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class SmoothMaxCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<SmoothMaxCurveAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SmoothMaxCurveAsset.class, SmoothMaxCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec("CurveA", CurveAsset.CODEC, true), (t, k) -> {
         t.curveAAsset = k;
     }, k -> k.curveAAsset).add()).append(new KeyedCodec("CurveB", CurveAsset.CODEC, true), (t, k) -> {

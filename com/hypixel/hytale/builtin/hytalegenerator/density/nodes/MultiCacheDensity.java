@@ -4,7 +4,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -12,21 +11,21 @@ import javax.annotation.Nullable;
 public class MultiCacheDensity
 extends Density {
     @Nonnull
-    private final WorkerIndexer.Data<Cache> threadData;
+    private final Cache cache;
     @Nonnull
     private Density input;
 
-    public MultiCacheDensity(@Nonnull Density input, int threadCount, int capacity) {
+    public MultiCacheDensity(@Nonnull Density input, int capacity) {
+        assert (capacity >= 0);
         this.input = input;
-        this.threadData = new WorkerIndexer.Data<Cache>(threadCount, () -> new Cache(capacity));
+        this.cache = new Cache(capacity);
     }
 
     @Override
     public double process(@Nonnull Density.Context context) {
-        Cache cache = this.threadData.get(context.workerId);
-        Entry matchingEntry = cache.find(context.position);
+        Entry matchingEntry = this.cache.find(context.position);
         if (matchingEntry == null) {
-            matchingEntry = cache.getNext();
+            matchingEntry = this.cache.getNext();
             if (matchingEntry.position == null) {
                 matchingEntry.position = new Vector3d();
             }
@@ -83,6 +82,7 @@ extends Density {
     }
 
     private static class Entry {
+        @Nullable
         Vector3d position = null;
         double value = 0.0;
 

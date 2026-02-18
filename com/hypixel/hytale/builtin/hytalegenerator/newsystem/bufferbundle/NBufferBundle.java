@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class NBufferBundle
 implements MemInstrument {
+    @Nonnull
     private final Map<NBufferType, Grid> grids = new HashMap<NBufferType, Grid>();
 
     @Nonnull
@@ -82,10 +83,14 @@ implements MemInstrument {
 
     public static class Grid
     implements MemInstrument {
+        @Nonnull
         private final NBufferType bufferType;
+        @Nonnull
         private final Map<Vector3i, TrackedBuffer> buffers;
+        @Nonnull
         private final Deque<Vector3i> oldestColumnEntryDeque_bufferGrid;
         private final int capacity;
+        @Nonnull
         private final List<Access> accessors;
 
         private Grid(@Nonnull NBufferType bufferType, int capacity) {
@@ -220,8 +225,11 @@ implements MemInstrument {
 
     public static class Access
     implements MemInstrument {
+        @Nonnull
         private final Grid grid;
+        @Nonnull
         private final Bounds3i bounds_bufferGrid;
+        @Nonnull
         private final Grid.TrackedBuffer[] buffers;
         private boolean isClosed;
 
@@ -302,7 +310,9 @@ implements MemInstrument {
         }
 
         public static class View {
+            @Nonnull
             private final Access access;
+            @Nonnull
             private final Bounds3i bounds_bufferGrid;
 
             private View(@Nonnull Access access, @Nonnull Bounds3i bounds_bufferGrid) {
@@ -326,6 +336,7 @@ implements MemInstrument {
     }
 
     public static class MemoryReport {
+        @Nonnull
         public final List<GridEntry> gridEntries = new ArrayList<GridEntry>();
 
         @Nonnull

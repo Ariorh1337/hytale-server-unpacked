@@ -5,8 +5,10 @@ package com.hypixel.hytale.protocol.packets.world;
 
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.Direction;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.Position;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
@@ -17,7 +19,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class SpawnParticleSystem
-implements Packet {
+implements Packet,
+ToClientPacket {
     public static final int PACKET_ID = 152;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -38,6 +41,11 @@ implements Packet {
     @Override
     public int getId() {
         return 152;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public SpawnParticleSystem() {

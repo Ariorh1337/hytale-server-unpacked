@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 
 public class FieldFunctionMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<FieldFunctionMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FieldFunctionMaterialProviderAsset.class, FieldFunctionMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("FieldFunction", DensityAsset.CODEC, true), (t, k) -> {
         t.densityAsset = k;
     }, t -> t.densityAsset).add()).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (t, k) -> {
@@ -60,6 +61,7 @@ extends MaterialProviderAsset {
     public static class DelimiterAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, DelimiterAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {
@@ -73,8 +75,8 @@ extends MaterialProviderAsset {
         }, t -> t.materialProviderAsset).add()).build();
         private String id;
         private AssetExtraInfo.Data data;
-        private double from = 0.0;
-        private double to = 0.0;
+        private double from;
+        private double to;
         private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
 
         @Override

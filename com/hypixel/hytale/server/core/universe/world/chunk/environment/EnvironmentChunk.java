@@ -18,9 +18,11 @@ import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import javax.annotation.Nonnull;
 
 public class EnvironmentChunk
@@ -180,6 +182,101 @@ implements Component<ChunkStore> {
 
     private static int idx(int x, int z) {
         return ChunkUtil.indexColumn(x, z);
+    }
+
+    public static class BulkWriter {
+        private final ColumnWriter[] columnWriters = new ColumnWriter[1024];
+
+        public BulkWriter() {
+            for (int i = 0; i < this.columnWriters.length; ++i) {
+                this.columnWriters[i] = new ColumnWriter();
+            }
+        }
+
+        @Nonnull
+        public ColumnWriter getColumnWriter(int x, int z) {
+            assert (x >= 0 && x < 32);
+            assert (z >= 0 && z < 32);
+            int idx = EnvironmentChunk.idx(x, z);
+            return this.columnWriters[idx];
+        }
+
+        public void write(@Nonnull EnvironmentChunk environmentChunk) {
+            environmentChunk.counts.clear();
+            for (int x = 0; x < 32; ++x) {
+                for (int z = 0; z < 32; ++z) {
+                    int idx = EnvironmentChunk.idx(x, z);
+                    assert (this.columnWriters[idx] != null);
+                    this.columnWriters[idx].write(environmentChunk.columns[idx]);
+                    BulkWriter.transferCounts(this.columnWriters[idx].columnCounts, environmentChunk.counts);
+                }
+            }
+        }
+
+        private static void transferCounts(@Nonnull Int2LongMap from, @Nonnull Int2LongMap into) {
+            for (Int2LongMap.Entry entry : from.int2LongEntrySet()) {
+                long currentCount = into.getOrDefault(entry.getIntKey(), 0L);
+                into.put(entry.getIntKey(), currentCount + entry.getLongValue());
+            }
+        }
+
+        public static class ColumnWriter {
+            private final IntArrayList maxYsReversed = new IntArrayList(2);
+            private final IntArrayList valuesReversed = new IntArrayList(2);
+            private final Int2LongMap columnCounts = new Int2LongOpenHashMap(2);
+
+            public void write(@Nonnull EnvironmentColumn environmentColumn) {
+                int[] maxYs = new int[this.maxYsReversed.size()];
+                int[] values = new int[this.valuesReversed.size()];
+                int index = 0;
+                int reversedIndex = maxYs.length - 1;
+                while (reversedIndex >= 0) {
+                    maxYs[index] = this.maxYsReversed.getInt(reversedIndex);
+                    --reversedIndex;
+                    ++index;
+                }
+                index = 0;
+                reversedIndex = values.length - 1;
+                while (reversedIndex >= 0) {
+                    values[index] = this.valuesReversed.getInt(reversedIndex);
+                    --reversedIndex;
+                    ++index;
+                }
+                environmentColumn.resetTo(maxYs, values);
+            }
+
+            public void count(int environmentId, int count) {
+                long currentCount = this.columnCounts.getOrDefault(environmentId, 0L);
+                count = (int)((long)count + currentCount);
+                this.columnCounts.put(environmentId, count);
+            }
+
+            public void intake(@Nonnull Int2IntFunction dataSource) {
+                int maxYInclusive = 319;
+                int previousEnvironment = 0;
+                int environmentId = 0;
+                int runCounter = 0;
+                for (int y = 319; y >= 0; --y) {
+                    environmentId = dataSource.applyAsInt(y);
+                    if (y == 319) {
+                        previousEnvironment = environmentId;
+                        this.valuesReversed.add(environmentId);
+                        ++runCounter;
+                        continue;
+                    }
+                    if (environmentId == previousEnvironment) {
+                        ++runCounter;
+                        continue;
+                    }
+                    this.maxYsReversed.add(y);
+                    this.valuesReversed.add(environmentId);
+                    previousEnvironment = environmentId;
+                    this.count(environmentId, runCounter);
+                    runCounter = 1;
+                }
+                this.count(environmentId, runCounter);
+            }
+        }
     }
 }
 

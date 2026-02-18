@@ -234,7 +234,7 @@ implements Component<EntityStore> {
             }
             highestChainId = Math.max(highestChainId, packet.chainId);
             boolean bl = isProxy = packet.data != null && !UUIDUtil.isEmptyOrNull(packet.data.proxyId);
-            if (chain == null && !finished || isProxy) {
+            if (chain == null && (!finished || isProxy)) {
                 if (this.syncStart(ref, packet)) {
                     changed = true;
                     it.remove();
@@ -400,7 +400,8 @@ implements Component<EntityStore> {
                 context.log("Client finished chain but server hasn't! %d, %s, %s", chain.getChainId(), chain, waitMillis);
             }
             if (waitMillis > (threshold = this.getOperationTimeoutThreshold())) {
-                LOGGER.at(Level.SEVERE).log("Client finished chain earlier than server! %d, %s", chain.getChainId(), (Object)chain);
+                LOGGER.at(Level.FINE).log("Client finished chain earlier than server! %d, %s", chain.getChainId(), (Object)chain);
+                this.cancelChains(chain);
             }
         }
         return false;
@@ -598,7 +599,6 @@ implements Component<EntityStore> {
                 chain.removeInteractionEntry(this, entry.getIndex());
             }
         } else if (entry.getClientState() != null && entry.getClientState().state != InteractionState.NotFinished && !this.waitingForClient(ref)) {
-            HytaleLogger.Api ctx;
             long threshold;
             if (entry.getWaitingForServerFinished() == 0L) {
                 entry.setWaitingForServerFinished(this.currentTime);
@@ -608,8 +608,12 @@ implements Component<EntityStore> {
             if (context.isEnabled()) {
                 context.log("Client finished interaction but server hasn't! %s, %d, %s, %s", (Object)entry.getClientState().state, entry.getIndex(), entry, waitMillis);
             }
-            if (waitMillis > (threshold = this.getOperationTimeoutThreshold()) && (ctx = LOGGER.at(Level.SEVERE)).isEnabled()) {
-                ctx.log("Client finished interaction earlier than server! %d, %s", entry.getIndex(), (Object)entry);
+            if (waitMillis > (threshold = this.getOperationTimeoutThreshold())) {
+                HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
+                if (ctx.isEnabled()) {
+                    ctx.log("Client finished interaction earlier than server! %d, %s", entry.getIndex(), (Object)entry);
+                }
+                this.cancelChains(chain);
             }
         }
     }

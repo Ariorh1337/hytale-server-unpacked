@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CreativeHubWorldConfig {
+    @Nonnull
     public static final String ID = "CreativeHub";
     @Nonnull
     public static final BuilderCodec<CreativeHubWorldConfig> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CreativeHubWorldConfig.class, CreativeHubWorldConfig::new).append(new KeyedCodec<String>("StartupInstance", Codec.STRING), (o, i) -> {

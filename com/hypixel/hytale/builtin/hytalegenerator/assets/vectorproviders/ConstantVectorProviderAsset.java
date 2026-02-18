@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class ConstantVectorProviderAsset
 extends VectorProviderAsset {
+    @Nonnull
     public static final BuilderCodec<ConstantVectorProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ConstantVectorProviderAsset.class, ConstantVectorProviderAsset::new, ABSTRACT_CODEC).append(new KeyedCodec<Vector3d>("Value", Vector3d.CODEC, true), (asset, value) -> {
         asset.value = value;
     }, asset -> asset.value).add()).build();
@@ -26,6 +27,7 @@ extends VectorProviderAsset {
     }
 
     @Override
+    @Nonnull
     public VectorProvider build(@Nonnull VectorProviderAsset.Argument argument) {
         if (this.isSkipped()) {
             return new ConstantVectorProvider(new Vector3d());

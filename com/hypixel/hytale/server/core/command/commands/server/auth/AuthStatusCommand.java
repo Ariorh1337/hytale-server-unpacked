@@ -75,7 +75,7 @@ extends CommandBase {
         }
         Message sessionTokenStatus = authManager.hasSessionToken() ? MESSAGE_STATUS_TOKEN_PRESENT : MESSAGE_STATUS_TOKEN_MISSING;
         Message identityTokenStatus = authManager.hasIdentityToken() ? MESSAGE_STATUS_TOKEN_PRESENT : MESSAGE_STATUS_TOKEN_MISSING;
-        String expiryStatus = "";
+        Message expiryStatus = Message.empty();
         Instant expiry = authManager.getTokenExpiry();
         if (expiry != null) {
             long secondsRemaining = expiry.getEpochSecond() - Instant.now().getEpochSecond();
@@ -83,13 +83,13 @@ extends CommandBase {
                 long hours = secondsRemaining / 3600L;
                 long minutes = secondsRemaining % 3600L / 60L;
                 long seconds = secondsRemaining % 60L;
-                expiryStatus = String.format("%02d:%02d:%02d remaining", hours, minutes, seconds);
+                expiryStatus = Message.translation("server.commands.auth.status.remaining").param("hours", String.format("%02d", hours)).param("minutes", String.format("%02d", minutes)).param("seconds", String.format("%02d", seconds));
             } else {
-                expiryStatus = "EXPIRED";
+                expiryStatus = Message.translation("server.commands.auth.status.expired");
             }
         }
-        Object certificateStatus = authManager.getServerCertificate() != null ? ((fingerprint = authManager.getServerCertificateFingerprint()) != null ? fingerprint.substring(0, 16) + "..." : "Unknown") : "Not loaded";
-        context.sendMessage(Message.translation("server.commands.auth.status.format").param("connectionMode", connectionModeMessage).param("tokenMode", modeMessage).param("profile", (String)profileInfo).param("sessionToken", sessionTokenStatus).param("identityToken", identityTokenStatus).param("expiry", expiryStatus).param("certificate", (String)certificateStatus));
+        Message certificateStatus = authManager.getServerCertificate() != null ? ((fingerprint = authManager.getServerCertificateFingerprint()) != null ? Message.raw(fingerprint.substring(0, 16) + "...") : Message.translation("server.commands.auth.status.certificate.unknown")) : Message.translation("server.commands.auth.status.certificate.notLoaded");
+        context.sendMessage(Message.translation("server.commands.auth.status.format").param("connectionMode", connectionModeMessage).param("tokenMode", modeMessage).param("profile", (String)profileInfo).param("sessionToken", sessionTokenStatus).param("identityToken", identityTokenStatus).param("expiry", expiryStatus).param("certificate", certificateStatus));
         if (mode == ServerAuthManager.AuthMode.NONE && !authManager.isSingleplayer()) {
             if (authManager.hasPendingProfiles()) {
                 context.sendMessage(MESSAGE_STATUS_PENDING);

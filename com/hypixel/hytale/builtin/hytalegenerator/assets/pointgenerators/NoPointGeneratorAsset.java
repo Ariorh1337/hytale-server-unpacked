@@ -17,23 +17,28 @@ import javax.annotation.Nonnull;
 
 public class NoPointGeneratorAsset
 extends PointGeneratorAsset {
+    @Nonnull
     public static final BuilderCodec<NoPointGeneratorAsset> CODEC = BuilderCodec.builder(NoPointGeneratorAsset.class, NoPointGeneratorAsset::new, PointGeneratorAsset.ABSTRACT_CODEC).build();
 
     @Override
+    @Nonnull
     public PointProvider build(@Nonnull SeedBox parentSeed) {
         return new PointProvider(this){
 
             @Override
+            @Nonnull
             public List<Vector3i> points3i(@Nonnull Vector3i min, @Nonnull Vector3i max) {
                 return List.of();
             }
 
             @Override
+            @Nonnull
             public List<Vector2i> points2i(@Nonnull Vector2i min, @Nonnull Vector2i max) {
                 return List.of();
             }
 
             @Override
+            @Nonnull
             public List<Integer> points1i(int min, int max) {
                 return List.of();
             }
@@ -51,16 +56,19 @@ extends PointGeneratorAsset {
             }
 
             @Override
+            @Nonnull
             public List<Vector3d> points3d(@Nonnull Vector3d min, @Nonnull Vector3d max) {
                 return List.of();
             }
 
             @Override
+            @Nonnull
             public List<Vector2d> points2d(@Nonnull Vector2d min, @Nonnull Vector2d max) {
                 return List.of();
             }
 
             @Override
+            @Nonnull
             public List<Double> points1d(double min, double max) {
                 return List.of();
             }

@@ -39,7 +39,9 @@ import javax.annotation.Nullable;
 
 public class ChangeFarmingStageInteraction
 extends SimpleBlockInteraction {
+    @Nonnull
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    @Nonnull
     public static final BuilderCodec<ChangeFarmingStageInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ChangeFarmingStageInteraction.class, ChangeFarmingStageInteraction::new, SimpleBlockInteraction.CODEC).documentation("Changes the farming stage of the target block.")).appendInherited(new KeyedCodec<Integer>("Stage", Codec.INTEGER), (interaction, stage) -> {
         interaction.targetStage = stage;
     }, interaction -> interaction.targetStage, (o, p) -> {
@@ -59,11 +61,11 @@ extends SimpleBlockInteraction {
     }).documentation("Optional. The stage set to switch to (e.g., 'Default', 'Harvested'). If not provided, uses current stage set.").add()).build();
     protected int targetStage = -1;
     @Nullable
-    protected Integer increaseBy = null;
+    protected Integer increaseBy;
     @Nullable
-    protected Integer decreaseBy = null;
+    protected Integer decreaseBy;
     @Nullable
-    protected String targetStageSet = null;
+    protected String targetStageSet;
 
     @Override
     @Nonnull
@@ -213,15 +215,15 @@ extends SimpleBlockInteraction {
         farmingBlock.setLastTickGameTime(now);
         ((HytaleLogger.Api)LOGGER.atInfo()).log("[ChangeFarmingStage] Updated FarmingBlock: stageSet=%s, growthProgress=%d, generation=%d", stageSetName, stageIndex, farmingBlock.getGeneration());
         Ref<ChunkStore> sectionRef = world.getChunkStore().getChunkSectionReference(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(y), ChunkUtil.chunkCoordinate(z));
-        if (sectionRef != null) {
-            BlockSection section = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
-            if (section != null) {
-                section.scheduleTick(ChunkUtil.indexBlock(x, y, z), now);
+        if (sectionRef != null && sectionRef.isValid()) {
+            BlockSection blockSectionComponent = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
+            if (blockSectionComponent != null) {
+                blockSectionComponent.scheduleTick(ChunkUtil.indexBlock(x, y, z), now);
             }
             stages[stageIndex].apply(chunkStore, sectionRef, blockRef, x, y, z, previousStage);
             ((HytaleLogger.Api)LOGGER.atInfo()).log("[ChangeFarmingStage] Applied stage %d via stages[%d].apply()", stageIndex, stageIndex);
         } else {
-            ((HytaleLogger.Api)LOGGER.atWarning()).log("[ChangeFarmingStage] sectionRef was null - could not apply stage!");
+            ((HytaleLogger.Api)LOGGER.atWarning()).log("[ChangeFarmingStage] sectionRef was null or invalid - could not apply stage!");
         }
         ((WorldChunk)worldChunk).setTicking(x, y, z, true);
         ((HytaleLogger.Api)LOGGER.atInfo()).log("[ChangeFarmingStage] SUCCESS: Changed stage from %d to %d at pos=(%d, %d, %d)", originalCurrentStage, stageIndex, x, y, z);

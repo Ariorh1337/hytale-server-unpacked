@@ -30,6 +30,7 @@ import javax.annotation.Nonnull;
 
 public class DeployableTrapConfig
 extends DeployableAoeConfig {
+    @Nonnull
     public static final BuilderCodec<DeployableTrapConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DeployableTrapConfig.class, DeployableTrapConfig::new, DeployableAoeConfig.CODEC).appendInherited(new KeyedCodec<Float>("FuzeDuration", Codec.FLOAT), (o, i) -> {
         o.fuzeDuration = i.floatValue();
     }, o -> Float.valueOf(o.fuzeDuration), (o, p) -> {
@@ -52,7 +53,11 @@ extends DeployableAoeConfig {
 
     @Override
     public void tick(@Nonnull DeployableComponent deployableComponent, float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        Vector3d pos = archetypeChunk.getComponent(index, TransformComponent.getComponentType()).getPosition();
+        TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+        if (transformComponent == null) {
+            return;
+        }
+        Vector3d pos = transformComponent.getPosition();
         World world = store.getExternalData().getWorld();
         Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
         if (!deployableComponent.getOwner().isValid()) {
@@ -92,7 +97,7 @@ extends DeployableAoeConfig {
     }
 
     @Override
-    protected void handleDetection(final Store<EntityStore> store, final CommandBuffer<EntityStore> commandBuffer, final Ref<EntityStore> deployableRef, final DeployableComponent deployableComponent, Vector3d position, float radius, final DamageCause damageCause) {
+    protected void handleDetection(final @Nonnull Store<EntityStore> store, final @Nonnull CommandBuffer<EntityStore> commandBuffer, final @Nonnull Ref<EntityStore> deployableRef, final @Nonnull DeployableComponent deployableComponent, @Nonnull Vector3d position, float radius, final @Nonnull DamageCause damageCause) {
         World world = store.getExternalData().getWorld();
         var consumer = new Consumer<Ref<EntityStore>>(){
             final /* synthetic */ DeployableTrapConfig this$0;
@@ -101,19 +106,19 @@ extends DeployableAoeConfig {
             }
 
             @Override
-            public void accept(Ref<EntityStore> entityStoreRef) {
-                if (entityStoreRef == deployableRef) {
+            public void accept(@Nonnull Ref<EntityStore> ref) {
+                if (ref == deployableRef) {
                     return;
                 }
-                if (store.getComponent(entityStoreRef, DeployableComponent.getComponentType()) != null) {
+                if (store.getComponent(ref, DeployableComponent.getComponentType()) != null) {
                     return;
                 }
-                this.this$0.attackTarget(entityStoreRef, deployableRef, damageCause, commandBuffer);
+                this.this$0.attackTarget(ref, deployableRef, damageCause, commandBuffer);
                 if (this.this$0.destroyOnTriggered && deployableComponent.getFlag(DeployableComponent.DeployableFlag.TRIGGERED) == 0) {
                     this.this$0.onTriggered(store, deployableRef);
                     deployableComponent.setFlag(DeployableComponent.DeployableFlag.TRIGGERED, 1);
                 }
-                this.this$0.applyEffectToTarget(store, entityStoreRef);
+                this.this$0.applyEffectToTarget(store, ref);
             }
         };
         switch (this.shape) {

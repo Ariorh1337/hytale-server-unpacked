@@ -28,14 +28,23 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class ColumnProp
 extends Prop {
+    @Nonnull
     private final int[] yPositions;
+    @Nonnull
     private final Material[] blocks0;
+    @Nonnull
     private final Material[] blocks90;
+    @Nonnull
     private final Material[] blocks180;
+    @Nonnull
     private final Material[] blocks270;
+    @Nonnull
     private final BlockMask blockMask;
+    @Nonnull
     private final Scanner scanner;
+    @Nonnull
     private final ContextDependency contextDependency;
+    @Nonnull
     private final Directionality directionality;
     @Nonnull
     private final Bounds3i readBounds_voxelGrid;
@@ -71,11 +80,12 @@ extends Prop {
     }
 
     @Override
+    @Nonnull
     public ScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
         Scanner.Context scannerContext = new Scanner.Context(position, this.directionality.getGeneralPattern(), materialSpace, id);
         List<Vector3i> validPositions = this.scanner.scan(scannerContext);
         Vector3i patternPosition = new Vector3i();
-        Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace, id);
+        Pattern.Context patternContext = new Pattern.Context(patternPosition, materialSpace);
         RotatedPositionsScanResult scanResult = new RotatedPositionsScanResult(new ArrayList<RotatedPosition>());
         for (Vector3i validPosition : validPositions) {
             patternPosition.assign(validPosition);
@@ -116,6 +126,7 @@ extends Prop {
     }
 
     @Override
+    @Nonnull
     public ContextDependency getContextDependency() {
         return this.contextDependency.clone();
     }

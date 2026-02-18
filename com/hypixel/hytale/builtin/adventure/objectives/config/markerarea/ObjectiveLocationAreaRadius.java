@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveLocationAreaRadius
 extends ObjectiveLocationMarkerArea {
+    @Nonnull
     public static final BuilderCodec<ObjectiveLocationAreaRadius> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ObjectiveLocationAreaRadius.class, ObjectiveLocationAreaRadius::new).append(new KeyedCodec<Integer>("EntryRadius", Codec.INTEGER), (objectiveLocationAreaRadius, integer) -> {
         objectiveLocationAreaRadius.entryArea = integer;
     }, objectiveLocationAreaRadius -> objectiveLocationAreaRadius.entryArea).addValidator(Validators.greaterThan(0)).add()).append(new KeyedCodec<Integer>("ExitRadius", Codec.INTEGER), (objectiveLocationAreaRadius, integer) -> {

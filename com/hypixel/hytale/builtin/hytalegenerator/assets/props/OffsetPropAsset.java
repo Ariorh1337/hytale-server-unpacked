@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class OffsetPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<OffsetPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(OffsetPropAsset.class, OffsetPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<Vector3i>("Offset", Vector3i.CODEC, true), (asset, value) -> {
         asset.offset_voxelGrid = value;
     }, asset -> asset.offset_voxelGrid).add()).append(new KeyedCodec("Prop", PropAsset.CODEC, true), (asset, value) -> {

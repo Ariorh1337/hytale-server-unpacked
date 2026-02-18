@@ -4,9 +4,8 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.scanners;
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.ValidatorUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.DecimalConstantsFrameworkAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.scanners.ScannerAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiDouble2DoubleFunction;
-import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.BaseHeightReference;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.ColumnRandomScanner;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
@@ -14,11 +13,11 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.logger.HytaleLogger;
 import javax.annotation.Nonnull;
 
 public class ColumnRandomScannerAsset
 extends ScannerAsset {
+    @Nonnull
     public static final BuilderCodec<ColumnRandomScannerAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ColumnRandomScannerAsset.class, ColumnRandomScannerAsset::new, ScannerAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("MinY", Codec.INTEGER, true), (t, k) -> {
         t.minY = k;
     }, k -> k.minY).add()).append(new KeyedCodec<Integer>("MaxY", Codec.INTEGER, true), (t, k) -> {
@@ -32,15 +31,15 @@ extends ScannerAsset {
     }, k -> k.strategyName).addValidator(ValidatorUtil.validEnumValue(ColumnRandomScanner.Strategy.values())).add()).append(new KeyedCodec<Boolean>("RelativeToPosition", Codec.BOOLEAN, false), (t, k) -> {
         t.isRelativeToPosition = k;
     }, k -> k.isRelativeToPosition).add()).append(new KeyedCodec<String>("BaseHeightName", Codec.STRING, false), (t, k) -> {
-        t.baseHeight = k;
-    }, k -> k.baseHeight).add()).build();
+        t.baseHeightName = k;
+    }, k -> k.baseHeightName).add()).build();
     private int minY = 0;
     private int maxY = 1;
     private int resultCap = 1;
     private String seed = "A";
     private String strategyName = "DART_THROW";
     private boolean isRelativeToPosition = false;
-    private String baseHeight = "";
+    private String baseHeightName = "";
 
     @Override
     @Nonnull
@@ -51,15 +50,13 @@ extends ScannerAsset {
         SeedBox childSeed = argument.parentSeed.child(this.seed);
         ColumnRandomScanner.Strategy strategy = ColumnRandomScanner.Strategy.valueOf(this.strategyName);
         if (this.isRelativeToPosition) {
-            return new ColumnRandomScanner(this.minY, this.maxY, this.resultCap, childSeed.createSupplier().get(), strategy, true, null);
+            return new ColumnRandomScanner(this.minY, this.maxY, this.resultCap, childSeed.createSupplier().get(), strategy, true, 0.0);
         }
-        BaseHeightReference heightDataLayer = argument.referenceBundle.getLayerWithName(this.baseHeight, BaseHeightReference.class);
-        if (heightDataLayer == null) {
-            ((HytaleLogger.Api)HytaleLogger.getLogger().atConfig()).log("Couldn't find height data layer with name \"" + this.baseHeight + "\", defaulting to not using a bed.");
-            return new ColumnRandomScanner(this.minY, this.maxY, this.resultCap, childSeed.createSupplier().get(), strategy, false, null);
+        Double baseHeight = DecimalConstantsFrameworkAsset.Entries.get(this.baseHeightName, argument.referenceBundle);
+        if (baseHeight == null) {
+            baseHeight = 0.0;
         }
-        BiDouble2DoubleFunction baseHeightFunction = heightDataLayer.getHeightFunction();
-        return new ColumnRandomScanner(this.minY, this.maxY, this.resultCap, childSeed.createSupplier().get(), strategy, false, baseHeightFunction);
+        return new ColumnRandomScanner(this.minY, this.maxY, this.resultCap, childSeed.createSupplier().get(), strategy, false, baseHeight);
     }
 }
 

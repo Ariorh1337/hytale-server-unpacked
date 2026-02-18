@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class NotConditionAsset
 extends ConditionAsset {
+    @Nonnull
     public static final BuilderCodec<NotConditionAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(NotConditionAsset.class, NotConditionAsset::new, ConditionAsset.ABSTRACT_CODEC).append(new KeyedCodec("Condition", ConditionAsset.CODEC, true), (t, k) -> {
         t.conditionAsset = k;
     }, k -> k.conditionAsset).add()).build();

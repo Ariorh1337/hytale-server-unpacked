@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class OrConditionAsset
 extends ConditionAsset {
+    @Nonnull
     public static final BuilderCodec<OrConditionAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(OrConditionAsset.class, OrConditionAsset::new, ConditionAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Conditions", new ArrayCodec(ConditionAsset.CODEC, ConditionAsset[]::new), true), (t, k) -> {
         t.conditionAssets = k;
     }, k -> k.conditionAssets).addValidator(Validators.nonNullArrayElements()).add()).build();

@@ -15,6 +15,7 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.Rotation;
@@ -45,7 +46,7 @@ import javax.annotation.Nullable;
 
 public class PlaceBlockInteraction
 extends SimpleInteraction {
-    public static final int MAX_ADVENTURE_PLACEMENT_RANGE_SQUARED = 36;
+    public static final int TEMP_MAX_ADVENTURE_PLACEMENT_RANGE_SQUARED = 49;
     @Nonnull
     public static final BuilderCodec<PlaceBlockInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PlaceBlockInteraction.class, PlaceBlockInteraction::new, SimpleInteraction.CODEC).documentation("Places the current or given block.")).append(new KeyedCodec<String>("BlockTypeToPlace", Codec.STRING), (placeBlockInteraction, blockTypeKey) -> {
         placeBlockInteraction.blockTypeKey = blockTypeKey;
@@ -91,19 +92,23 @@ extends SimpleInteraction {
             long chunkIndex = ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z);
             Ref<ChunkStore> chunkReference = chunkStore.getExternalData().getChunkReference(chunkIndex);
             if (chunkReference == null || !chunkReference.isValid()) {
+                context.getState().state = InteractionState.Failed;
                 return;
             }
             ItemStack heldItemStack = context.getHeldItem();
             if (heldItemStack == null) {
+                context.getState().state = InteractionState.Failed;
                 return;
             }
             ItemContainer heldItemContainer = context.getHeldItemContainer();
             if (heldItemContainer == null) {
+                context.getState().state = InteractionState.Failed;
                 return;
             }
             TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
             Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-            if (transformComponent != null && playerComponent != null && playerComponent.getGameMode() != GameMode.Creative && (position = transformComponent.getPosition()).distanceSquaredTo(blockCenter = new Vector3d((double)blockPosition.x + 0.5, (double)blockPosition.y + 0.5, (double)blockPosition.z + 0.5)) > 36.0) {
+            if (transformComponent != null && playerComponent != null && playerComponent.getGameMode() != GameMode.Creative && (position = transformComponent.getPosition()).distanceSquaredTo(blockCenter = new Vector3d((double)blockPosition.x + 0.5, (double)blockPosition.y + 0.5, (double)blockPosition.z + 0.5)) > 49.0) {
+                context.getState().state = InteractionState.Failed;
                 return;
             }
             Inventory inventory = null;
@@ -124,6 +129,7 @@ extends SimpleInteraction {
                 clientPlacedBlockTypeKey = null;
             }
             if (blockPosition.y < 0 || blockPosition.y >= 320) {
+                context.getState().state = InteractionState.Failed;
                 return;
             }
             BlockPlaceUtils.placeBlock(ref, heldItemStack, clientPlacedBlockTypeKey != null ? clientPlacedBlockTypeKey : this.blockTypeKey, heldItemContainer, BlockFace.fromProtocolFace(context.getClientState().blockFace).getDirection(), targetBlockPosition, blockRotation, inventory, context.getHeldItemSlot(), this.removeItemInHand, chunkReference, chunkStore, commandBuffer);
@@ -133,9 +139,9 @@ extends SimpleInteraction {
             }
             BlockChunk blockChunk = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
             BlockSection section = blockChunk.getSectionAtBlockY(blockPosition.y);
+            RotationTuple resultRotation = section.getRotation(blockPosition.x, blockPosition.y, blockPosition.z);
             context.getState().blockPosition = blockPosition;
             context.getState().placedBlockId = section.get(blockPosition.x, blockPosition.y, blockPosition.z);
-            RotationTuple resultRotation = section.getRotation(blockPosition.x, blockPosition.y, blockPosition.z);
             context.getState().blockRotation = new BlockRotation(resultRotation.yaw().toPacket(), resultRotation.pitch().toPacket(), resultRotation.roll().toPacket());
         }
         super.tick0(firstRun, time, type, context, cooldownHandler);

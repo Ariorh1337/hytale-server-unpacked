@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class AreaScannerAsset
 extends ScannerAsset {
+    @Nonnull
     public static final BuilderCodec<AreaScannerAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(AreaScannerAsset.class, AreaScannerAsset::new, ScannerAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("ResultCap", Codec.INTEGER, true), (t, k) -> {
         t.resultCap = k;
     }, k -> k.resultCap).addValidator(Validators.greaterThanOrEqual(0)).add()).append(new KeyedCodec<AreaScanner.ScanShape>("ScanShape", AreaScanner.ScanShape.CODEC, false), (t, k) -> {

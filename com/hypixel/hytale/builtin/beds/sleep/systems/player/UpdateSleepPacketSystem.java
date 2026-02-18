@@ -13,21 +13,24 @@ import com.hypixel.hytale.builtin.beds.sleep.systems.world.CanSleepInWorld;
 import com.hypixel.hytale.builtin.beds.sleep.systems.world.StartSlumberSystem;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.SleepClock;
 import com.hypixel.hytale.protocol.packets.world.SleepMultiplayer;
 import com.hypixel.hytale.protocol.packets.world.UpdateSleepState;
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.lang.runtime.SwitchBootstraps;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.UUID;
@@ -36,39 +39,62 @@ import javax.annotation.Nullable;
 
 public class UpdateSleepPacketSystem
 extends DelayedEntitySystem<EntityStore> {
-    public static final Query<EntityStore> QUERY = Query.and(PlayerRef.getComponentType(), PlayerSomnolence.getComponentType(), SleepTracker.getComponentType());
-    public static final Duration SPAN_BEFORE_BLACK_SCREEN = Duration.ofMillis(1200L);
-    public static final int MAX_SAMPLE_COUNT = 5;
+    private static final int MAX_SAMPLE_COUNT = 5;
+    private static final float SYSTEM_INTERVAL_S = 0.25f;
+    @Nonnull
+    private static final Duration SPAN_BEFORE_BLACK_SCREEN = Duration.ofMillis(1200L);
+    @Nonnull
     private static final UUID[] EMPTY_UUIDS = new UUID[0];
+    @Nonnull
     private static final UpdateSleepState PACKET_NO_SLEEP_UI = new UpdateSleepState(false, false, null, null);
+    @Nonnull
+    private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+    @Nonnull
+    private final ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType;
+    @Nonnull
+    private final ComponentType<EntityStore, SleepTracker> sleepTrackerComponentType;
+    @Nonnull
+    private final ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType;
+    @Nonnull
+    private final ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType;
+    @Nonnull
+    private final Query<EntityStore> query;
 
-    @Override
-    public Query<EntityStore> getQuery() {
-        return QUERY;
+    public UpdateSleepPacketSystem(@Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType, @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType, @Nonnull ComponentType<EntityStore, SleepTracker> sleepTrackerComponentType, @Nonnull ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType, @Nonnull ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType) {
+        super(0.25f);
+        this.playerRefComponentType = playerRefComponentType;
+        this.playerSomnolenceComponentType = playerSomnolenceComponentType;
+        this.sleepTrackerComponentType = sleepTrackerComponentType;
+        this.worldSomnolenceResourceType = worldSomnolenceResourceType;
+        this.worldTimeResourceType = worldTimeResourceType;
+        this.query = Query.and(playerRefComponentType, playerSomnolenceComponentType, sleepTrackerComponentType);
     }
 
-    public UpdateSleepPacketSystem() {
-        super(0.25f);
+    @Override
+    @Nonnull
+    public Query<EntityStore> getQuery() {
+        return this.query;
     }
 
     @Override
     public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         UpdateSleepState packet = this.createSleepPacket(store, index, archetypeChunk);
-        SleepTracker sleepTrackerComponent = archetypeChunk.getComponent(index, SleepTracker.getComponentType());
+        SleepTracker sleepTrackerComponent = archetypeChunk.getComponent(index, this.sleepTrackerComponentType);
         assert (sleepTrackerComponent != null);
         if ((packet = sleepTrackerComponent.generatePacketToSend(packet)) != null) {
-            PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
+            PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
             assert (playerRefComponent != null);
-            playerRefComponent.getPacketHandler().write((Packet)packet);
+            playerRefComponent.getPacketHandler().write((ToClientPacket)packet);
         }
     }
 
+    @Nonnull
     private UpdateSleepState createSleepPacket(@Nonnull Store<EntityStore> store, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk) {
         SleepClock sleepClock;
         World world = store.getExternalData().getWorld();
-        WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
-        WorldSleep worldSleepState = worldSomnolence.getState();
-        PlayerSomnolence playerSomnolenceComponent = archetypeChunk.getComponent(index, PlayerSomnolence.getComponentType());
+        WorldSomnolence worldSomnolenceResource = store.getResource(this.worldSomnolenceResourceType);
+        WorldSleep worldSleepState = worldSomnolenceResource.getState();
+        PlayerSomnolence playerSomnolenceComponent = archetypeChunk.getComponent(index, this.playerSomnolenceComponentType);
         assert (playerSomnolenceComponent != null);
         PlayerSleep playerSleepState = playerSomnolenceComponent.getSleepState();
         if (worldSleepState instanceof WorldSlumber) {
@@ -113,7 +139,7 @@ extends DelayedEntitySystem<EntityStore> {
     @Nullable
     private SleepMultiplayer createSleepMultiplayer(@Nonnull Store<EntityStore> store) {
         World world = store.getExternalData().getWorld();
-        ArrayList<PlayerRef> playerRefs = new ArrayList<PlayerRef>(world.getPlayerRefs());
+        ObjectArrayList<PlayerRef> playerRefs = new ObjectArrayList<PlayerRef>(world.getPlayerRefs());
         playerRefs.removeIf(playerRef -> playerRef.getReference() == null);
         if (playerRefs.size() <= 1) {
             return null;
@@ -121,9 +147,10 @@ extends DelayedEntitySystem<EntityStore> {
         playerRefs.sort(Comparator.comparingLong(ref -> ref.getUuid().hashCode() + world.hashCode()));
         int sleepersCount = 0;
         int awakeCount = 0;
-        ArrayList<UUID> awakeSampleList = new ArrayList<UUID>(playerRefs.size());
+        ObjectArrayList awakeSampleList = new ObjectArrayList(playerRefs.size());
         for (PlayerRef playerRef2 : playerRefs) {
             Ref<EntityStore> ref2 = playerRef2.getReference();
+            if (ref2 == null || !ref2.isValid()) continue;
             boolean readyToSleep = StartSlumberSystem.isReadyToSleep(store, ref2);
             if (readyToSleep) {
                 ++sleepersCount;

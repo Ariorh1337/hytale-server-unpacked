@@ -78,6 +78,7 @@ extends Scanner {
         CIRCLE,
         SQUARE;
 
+        @Nonnull
         public static final Codec<ScanShape> CODEC;
 
         static {

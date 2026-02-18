@@ -16,7 +16,9 @@ import javax.annotation.Nullable;
 
 public class InstanceEntityConfig
 implements Component<EntityStore> {
+    @Nonnull
     public static final String ID = "Instance";
+    @Nonnull
     public static final BuilderCodec<InstanceEntityConfig> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(InstanceEntityConfig.class, InstanceEntityConfig::new).appendInherited(new KeyedCodec<WorldReturnPoint>("ReturnPoint", WorldReturnPoint.CODEC), (o, i) -> {
         o.returnPoint = i;
     }, o -> o.returnPoint, (o, p) -> {
@@ -62,10 +64,10 @@ implements Component<EntityStore> {
 
     @Nonnull
     public InstanceEntityConfig clone() {
-        InstanceEntityConfig v = new InstanceEntityConfig();
-        v.returnPoint = v.returnPoint.clone();
-        v.returnPointOverride = v.returnPointOverride.clone();
-        return v;
+        InstanceEntityConfig config = new InstanceEntityConfig();
+        config.returnPoint = config.returnPoint.clone();
+        config.returnPointOverride = config.returnPointOverride.clone();
+        return config;
     }
 }
 

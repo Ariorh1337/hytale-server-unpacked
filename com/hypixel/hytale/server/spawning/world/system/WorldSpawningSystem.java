@@ -75,7 +75,7 @@ extends TickingSystem<ChunkStore> {
                 if (chunkRef == null) continue;
                 int environmentIndex = entry.getEnvironmentIndex();
                 ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRef, this.chunkSpawnDataComponentType);
-                assert (chunkSpawnDataComponent != null);
+                if (chunkSpawnDataComponent == null) continue;
                 ChunkEnvironmentSpawnData environmentSpawnData = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
                 int segmentCount = -environmentSpawnData.getSegmentCount();
                 worldSpawnDataResource.adjustSegmentCount(segmentCount);

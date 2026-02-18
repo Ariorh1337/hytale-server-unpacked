@@ -24,10 +24,12 @@ import javax.annotation.Nonnull;
 
 public class SetNameRespawnPointPage
 extends RespawnPointPage {
+    @Nonnull
     private final Vector3i respawnBlockPosition;
+    @Nonnull
     private final RespawnBlock respawnBlock;
 
-    public SetNameRespawnPointPage(@Nonnull PlayerRef playerRef, InteractionType interactionType, Vector3i respawnBlockPosition, RespawnBlock respawnBlock) {
+    public SetNameRespawnPointPage(@Nonnull PlayerRef playerRef, @Nonnull InteractionType interactionType, @Nonnull Vector3i respawnBlockPosition, @Nonnull RespawnBlock respawnBlock) {
         super(playerRef, interactionType);
         this.respawnBlockPosition = respawnBlockPosition;
         this.respawnBlock = respawnBlock;
@@ -37,9 +39,13 @@ extends RespawnPointPage {
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
         commandBuilder.append("Pages/NameRespawnPointPage.ui");
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-        assert (playerComponent != null);
+        if (playerComponent == null) {
+            return;
+        }
         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-        assert (playerRefComponent != null);
+        if (playerRefComponent == null) {
+            return;
+        }
         World world = store.getExternalData().getWorld();
         PlayerRespawnPointData[] respawnPoints = playerComponent.getPlayerConfigData().getPerWorldData(world.getName()).getRespawnPoints();
         String respawnPointName = null;
@@ -61,11 +67,11 @@ extends RespawnPointPage {
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPointPage.RespawnPointEventData data) {
+        Player playerComponent;
         String respawnPointName = data.getRespawnPointName();
         if (respawnPointName != null) {
             this.setRespawnPointForPlayer(ref, store, this.respawnBlockPosition, this.respawnBlock, respawnPointName, new PlayerRespawnPointData[0]);
-        } else if ("Cancel".equals(data.getAction())) {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        } else if ("Cancel".equals(data.getAction()) && (playerComponent = store.getComponent(ref, Player.getComponentType())) != null) {
             playerComponent.getPageManager().setPage(ref, store, Page.None);
         }
     }

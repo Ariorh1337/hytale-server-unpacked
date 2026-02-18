@@ -18,23 +18,27 @@ import javax.annotation.Nonnull;
 
 public class TargetMemoryCountCondition
 extends ScaledCurveCondition {
+    @Nonnull
     public static final EnumCodec<TargetType> TARGET_TYPE_CODEC = new EnumCodec<TargetType>(TargetType.class).documentKey(TargetType.All, "All known targets.").documentKey(TargetType.Friendly, "Known friendly targets.").documentKey(TargetType.Hostile, "Known hostile targets.");
+    @Nonnull
     public static final BuilderCodec<TargetMemoryCountCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TargetMemoryCountCondition.class, TargetMemoryCountCondition::new, ScaledCurveCondition.ABSTRACT_CODEC).documentation("A scaled curve condition that returns a utility value based on the number of known targets in the memory.")).appendInherited(new KeyedCodec<TargetType>("TargetType", TARGET_TYPE_CODEC), (condition, e) -> {
         condition.targetType = e;
     }, condition -> condition.targetType, (condition, parent) -> {
         condition.targetType = parent.targetType;
     }).documentation("The type of targets to count.").add()).build();
+    @Nonnull
     protected static final ComponentType<EntityStore, TargetMemory> TARGET_MEMORY_COMPONENT_TYPE = TargetMemory.getComponentType();
     protected TargetType targetType = TargetType.Hostile;
 
     @Override
     protected double getInput(int selfIndex, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, Ref<EntityStore> target, CommandBuffer<EntityStore> commandBuffer, EvaluationContext context) {
-        TargetMemory memory = archetypeChunk.getComponent(selfIndex, TARGET_MEMORY_COMPONENT_TYPE);
+        TargetMemory targetMemoryComponent = archetypeChunk.getComponent(selfIndex, TARGET_MEMORY_COMPONENT_TYPE);
+        assert (targetMemoryComponent != null);
         return switch (this.targetType.ordinal()) {
             default -> throw new MatchException(null, null);
-            case 2 -> memory.getKnownFriendlies().size() + memory.getKnownHostiles().size();
-            case 0 -> memory.getKnownHostiles().size();
-            case 1 -> memory.getKnownFriendlies().size();
+            case 2 -> targetMemoryComponent.getKnownFriendlies().size() + targetMemoryComponent.getKnownHostiles().size();
+            case 0 -> targetMemoryComponent.getKnownHostiles().size();
+            case 1 -> targetMemoryComponent.getKnownFriendlies().size();
         };
     }
 

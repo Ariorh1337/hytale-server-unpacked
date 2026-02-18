@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class BoxPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<BoxPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BoxPropAsset.class, BoxPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<Vector3i>("Range", Vector3i.CODEC, true), (asset, v) -> {
         asset.range = v;
     }, asset -> asset.range).add()).append(new KeyedCodec("Material", MaterialAsset.CODEC, true), (asset, value) -> {

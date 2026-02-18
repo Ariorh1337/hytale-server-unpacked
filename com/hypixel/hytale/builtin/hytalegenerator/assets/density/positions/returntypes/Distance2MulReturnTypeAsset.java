@@ -14,11 +14,12 @@ import javax.annotation.Nonnull;
 
 public class Distance2MulReturnTypeAsset
 extends ReturnTypeAsset {
+    @Nonnull
     public static final BuilderCodec<Distance2MulReturnTypeAsset> CODEC = BuilderCodec.builder(Distance2MulReturnTypeAsset.class, Distance2MulReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC).build();
 
     @Override
     @Nonnull
-    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
         return new Distance2MulReturnType();
     }
 }

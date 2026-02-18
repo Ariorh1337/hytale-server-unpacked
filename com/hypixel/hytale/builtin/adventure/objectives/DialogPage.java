@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 
 public class DialogPage
 extends InteractiveCustomUIPage<DialogPageEventData> {
+    @Nonnull
     public static final String LAYOUT = "Pages/DialogPage.ui";
     private final UseEntityObjectiveTaskAsset.DialogOptions dialogOptions;
 
@@ -40,10 +41,14 @@ extends InteractiveCustomUIPage<DialogPageEventData> {
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull DialogPageEventData data) {
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        if (playerComponent == null) {
+            return;
+        }
         playerComponent.getPageManager().setPage(ref, store, Page.None);
     }
 
     public static class DialogPageEventData {
+        @Nonnull
         public static final BuilderCodec<DialogPageEventData> CODEC = BuilderCodec.builder(DialogPageEventData.class, DialogPageEventData::new).build();
     }
 }

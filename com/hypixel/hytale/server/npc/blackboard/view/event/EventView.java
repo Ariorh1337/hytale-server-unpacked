@@ -55,7 +55,7 @@ implements IBlackboardView<ViewType> {
     public void onWorldRemoved() {
         this.shutdown = true;
         if (this.eventRegistry != null) {
-            this.eventRegistry.shutdown();
+            this.eventRegistry.shutdownAndCleanup(true);
             this.eventRegistry = null;
         }
     }

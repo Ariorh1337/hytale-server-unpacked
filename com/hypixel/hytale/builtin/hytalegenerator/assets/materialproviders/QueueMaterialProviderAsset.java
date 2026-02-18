@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class QueueMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<QueueMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(QueueMaterialProviderAsset.class, QueueMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Queue", new ArrayCodec(MaterialProviderAsset.CODEC, MaterialProviderAsset[]::new), true), (t, k) -> {
         t.queue = k;
     }, k -> k.queue).add()).build();

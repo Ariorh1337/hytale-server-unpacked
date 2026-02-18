@@ -18,15 +18,18 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class NoPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<NoPropAsset> CODEC = BuilderCodec.builder(NoPropAsset.class, NoPropAsset::new, PropAsset.ABSTRACT_CODEC).build();
 
     @Override
     @Nonnull
     public Prop build(@Nonnull PropAsset.Argument argument) {
         return new Prop(this){
+            @Nonnull
             final Bounds3i emptyBounds_voxelGrid = new Bounds3i();
 
             @Override
+            @Nonnull
             public ScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
                 return ScanResult.noScanResult();
             }
@@ -36,6 +39,7 @@ extends PropAsset {
             }
 
             @Override
+            @Nonnull
             public ContextDependency getContextDependency() {
                 return ContextDependency.EMPTY;
             }

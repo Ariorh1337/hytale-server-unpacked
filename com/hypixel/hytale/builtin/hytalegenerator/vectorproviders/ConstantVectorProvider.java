@@ -17,9 +17,8 @@ extends VectorProvider {
     }
 
     @Override
-    @Nonnull
-    public Vector3d process(@Nonnull VectorProvider.Context context) {
-        return this.value.clone();
+    public void process(@Nonnull VectorProvider.Context context, @Nonnull Vector3d vector_out) {
+        vector_out.assign(this.value);
     }
 }
 

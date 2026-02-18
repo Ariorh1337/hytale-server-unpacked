@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class ReachLocationMarkerAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, ReachLocationMarkerAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, ReachLocationMarkerAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(ReachLocationMarkerAsset.class, ReachLocationMarkerAsset::new, Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (asset, data) -> {
@@ -27,6 +28,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ReachLocationMarkerA
     }, reachLocationMarkerAsset -> Float.valueOf(reachLocationMarkerAsset.radius)).addValidator(Validators.greaterThan(Float.valueOf(0.0f))).add()).append(new KeyedCodec<String>("Name", Codec.STRING), (reachLocationMarkerAsset, s) -> {
         reachLocationMarkerAsset.name = s;
     }, reachLocationMarkerAsset -> reachLocationMarkerAsset.name).addValidator(Validators.nonNull()).addValidator(Validators.nonEmptyString()).add()).build();
+    @Nonnull
     public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache(new AssetKeyValidator(ReachLocationMarkerAsset::getAssetStore));
     private static AssetStore<String, ReachLocationMarkerAsset, DefaultAssetMap<String, ReachLocationMarkerAsset>> ASSET_STORE;
     protected AssetExtraInfo.Data data;

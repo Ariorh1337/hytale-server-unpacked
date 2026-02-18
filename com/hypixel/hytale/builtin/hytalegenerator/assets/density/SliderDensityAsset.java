@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class SliderDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SliderDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SliderDensityAsset.class, SliderDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("SlideX", Codec.DOUBLE, false), (t, k) -> {
         t.slideX = k;
     }, k -> k.slideX).add()).append(new KeyedCodec<Double>("SlideY", Codec.DOUBLE, false), (t, k) -> {

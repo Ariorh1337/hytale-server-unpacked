@@ -3,29 +3,32 @@
  */
 package com.hypixel.hytale.protocol.packets.buildertools;
 
+import com.hypixel.hytale.math.Quatf;
 import com.hypixel.hytale.protocol.BlockPosition;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.Vector3f;
-import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
-import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
-import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BuilderToolSelectionTransform
-implements Packet {
+implements Packet,
+ToServerPacket {
     public static final int PACKET_ID = 405;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-    public static final int FIXED_BLOCK_SIZE = 52;
-    public static final int VARIABLE_FIELD_COUNT = 1;
-    public static final int VARIABLE_BLOCK_START = 52;
-    public static final int MAX_SIZE = 16384057;
+    public static final int FIXED_BLOCK_SIZE = 80;
+    public static final int VARIABLE_FIELD_COUNT = 0;
+    public static final int VARIABLE_BLOCK_START = 80;
+    public static final int MAX_SIZE = 80;
     @Nullable
-    public float[] transformationMatrix;
+    public Quatf rotation;
+    @Nullable
+    public BlockPosition translationOffset;
     @Nullable
     public BlockPosition initialSelectionMin;
     @Nullable
@@ -43,11 +46,17 @@ implements Packet {
         return 405;
     }
 
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
+    }
+
     public BuilderToolSelectionTransform() {
     }
 
-    public BuilderToolSelectionTransform(@Nullable float[] transformationMatrix, @Nullable BlockPosition initialSelectionMin, @Nullable BlockPosition initialSelectionMax, @Nullable Vector3f initialRotationOrigin, boolean cutOriginal, boolean applyTransformationToSelectionMinMax, boolean isExitingTransformMode, @Nullable BlockPosition initialPastePointForClipboardPaste) {
-        this.transformationMatrix = transformationMatrix;
+    public BuilderToolSelectionTransform(@Nullable Quatf rotation, @Nullable BlockPosition translationOffset, @Nullable BlockPosition initialSelectionMin, @Nullable BlockPosition initialSelectionMax, @Nullable Vector3f initialRotationOrigin, boolean cutOriginal, boolean applyTransformationToSelectionMinMax, boolean isExitingTransformMode, @Nullable BlockPosition initialPastePointForClipboardPaste) {
+        this.rotation = rotation;
+        this.translationOffset = translationOffset;
         this.initialSelectionMin = initialSelectionMin;
         this.initialSelectionMax = initialSelectionMax;
         this.initialRotationOrigin = initialRotationOrigin;
@@ -58,7 +67,8 @@ implements Packet {
     }
 
     public BuilderToolSelectionTransform(@Nonnull BuilderToolSelectionTransform other) {
-        this.transformationMatrix = other.transformationMatrix;
+        this.rotation = other.rotation;
+        this.translationOffset = other.translationOffset;
         this.initialSelectionMin = other.initialSelectionMin;
         this.initialSelectionMax = other.initialSelectionMax;
         this.initialRotationOrigin = other.initialRotationOrigin;
@@ -73,72 +83,65 @@ implements Packet {
         BuilderToolSelectionTransform obj = new BuilderToolSelectionTransform();
         byte nullBits = buf.getByte(offset);
         if ((nullBits & 1) != 0) {
-            obj.initialSelectionMin = BlockPosition.deserialize(buf, offset + 1);
+            obj.rotation = Quatf.deserialize(buf, offset + 1);
         }
         if ((nullBits & 2) != 0) {
-            obj.initialSelectionMax = BlockPosition.deserialize(buf, offset + 13);
+            obj.translationOffset = BlockPosition.deserialize(buf, offset + 17);
         }
         if ((nullBits & 4) != 0) {
-            obj.initialRotationOrigin = Vector3f.deserialize(buf, offset + 25);
+            obj.initialSelectionMin = BlockPosition.deserialize(buf, offset + 29);
         }
-        obj.cutOriginal = buf.getByte(offset + 37) != 0;
-        obj.applyTransformationToSelectionMinMax = buf.getByte(offset + 38) != 0;
-        boolean bl = obj.isExitingTransformMode = buf.getByte(offset + 39) != 0;
         if ((nullBits & 8) != 0) {
-            obj.initialPastePointForClipboardPaste = BlockPosition.deserialize(buf, offset + 40);
+            obj.initialSelectionMax = BlockPosition.deserialize(buf, offset + 41);
         }
-        int pos = offset + 52;
         if ((nullBits & 0x10) != 0) {
-            int transformationMatrixCount = VarInt.peek(buf, pos);
-            if (transformationMatrixCount < 0) {
-                throw ProtocolException.negativeLength("TransformationMatrix", transformationMatrixCount);
-            }
-            if (transformationMatrixCount > 4096000) {
-                throw ProtocolException.arrayTooLong("TransformationMatrix", transformationMatrixCount, 4096000);
-            }
-            int transformationMatrixVarLen = VarInt.size(transformationMatrixCount);
-            if ((long)(pos + transformationMatrixVarLen) + (long)transformationMatrixCount * 4L > (long)buf.readableBytes()) {
-                throw ProtocolException.bufferTooSmall("TransformationMatrix", pos + transformationMatrixVarLen + transformationMatrixCount * 4, buf.readableBytes());
-            }
-            pos += transformationMatrixVarLen;
-            obj.transformationMatrix = new float[transformationMatrixCount];
-            for (int i = 0; i < transformationMatrixCount; ++i) {
-                obj.transformationMatrix[i] = buf.getFloatLE(pos + i * 4);
-            }
-            pos += transformationMatrixCount * 4;
+            obj.initialRotationOrigin = Vector3f.deserialize(buf, offset + 53);
+        }
+        obj.cutOriginal = buf.getByte(offset + 65) != 0;
+        obj.applyTransformationToSelectionMinMax = buf.getByte(offset + 66) != 0;
+        boolean bl = obj.isExitingTransformMode = buf.getByte(offset + 67) != 0;
+        if ((nullBits & 0x20) != 0) {
+            obj.initialPastePointForClipboardPaste = BlockPosition.deserialize(buf, offset + 68);
         }
         return obj;
     }
 
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-        byte nullBits = buf.getByte(offset);
-        int pos = offset + 52;
-        if ((nullBits & 0x10) != 0) {
-            int arrLen = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + arrLen * 4;
-        }
-        return pos - offset;
+        return 80;
     }
 
     @Override
     public void serialize(@Nonnull ByteBuf buf) {
         byte nullBits = 0;
-        if (this.initialSelectionMin != null) {
+        if (this.rotation != null) {
             nullBits = (byte)(nullBits | 1);
         }
-        if (this.initialSelectionMax != null) {
+        if (this.translationOffset != null) {
             nullBits = (byte)(nullBits | 2);
         }
-        if (this.initialRotationOrigin != null) {
+        if (this.initialSelectionMin != null) {
             nullBits = (byte)(nullBits | 4);
         }
-        if (this.initialPastePointForClipboardPaste != null) {
+        if (this.initialSelectionMax != null) {
             nullBits = (byte)(nullBits | 8);
         }
-        if (this.transformationMatrix != null) {
+        if (this.initialRotationOrigin != null) {
             nullBits = (byte)(nullBits | 0x10);
         }
+        if (this.initialPastePointForClipboardPaste != null) {
+            nullBits = (byte)(nullBits | 0x20);
+        }
         buf.writeByte(nullBits);
+        if (this.rotation != null) {
+            this.rotation.serialize(buf);
+        } else {
+            buf.writeZero(16);
+        }
+        if (this.translationOffset != null) {
+            this.translationOffset.serialize(buf);
+        } else {
+            buf.writeZero(12);
+        }
         if (this.initialSelectionMin != null) {
             this.initialSelectionMin.serialize(buf);
         } else {
@@ -162,51 +165,24 @@ implements Packet {
         } else {
             buf.writeZero(12);
         }
-        if (this.transformationMatrix != null) {
-            if (this.transformationMatrix.length > 4096000) {
-                throw ProtocolException.arrayTooLong("TransformationMatrix", this.transformationMatrix.length, 4096000);
-            }
-            VarInt.write(buf, this.transformationMatrix.length);
-            for (float item : this.transformationMatrix) {
-                buf.writeFloatLE(item);
-            }
-        }
     }
 
     @Override
     public int computeSize() {
-        int size = 52;
-        if (this.transformationMatrix != null) {
-            size += VarInt.size(this.transformationMatrix.length) + this.transformationMatrix.length * 4;
-        }
-        return size;
+        return 80;
     }
 
     public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-        if (buffer.readableBytes() - offset < 52) {
-            return ValidationResult.error("Buffer too small: expected at least 52 bytes");
-        }
-        byte nullBits = buffer.getByte(offset);
-        int pos = offset + 52;
-        if ((nullBits & 0x10) != 0) {
-            int transformationMatrixCount = VarInt.peek(buffer, pos);
-            if (transformationMatrixCount < 0) {
-                return ValidationResult.error("Invalid array count for TransformationMatrix");
-            }
-            if (transformationMatrixCount > 4096000) {
-                return ValidationResult.error("TransformationMatrix exceeds max length 4096000");
-            }
-            pos += VarInt.length(buffer, pos);
-            if ((pos += transformationMatrixCount * 4) > buffer.writerIndex()) {
-                return ValidationResult.error("Buffer overflow reading TransformationMatrix");
-            }
+        if (buffer.readableBytes() - offset < 80) {
+            return ValidationResult.error("Buffer too small: expected at least 80 bytes");
         }
         return ValidationResult.OK;
     }
 
     public BuilderToolSelectionTransform clone() {
         BuilderToolSelectionTransform copy = new BuilderToolSelectionTransform();
-        copy.transformationMatrix = this.transformationMatrix != null ? Arrays.copyOf(this.transformationMatrix, this.transformationMatrix.length) : null;
+        copy.rotation = this.rotation;
+        copy.translationOffset = this.translationOffset != null ? this.translationOffset.clone() : null;
         copy.initialSelectionMin = this.initialSelectionMin != null ? this.initialSelectionMin.clone() : null;
         copy.initialSelectionMax = this.initialSelectionMax != null ? this.initialSelectionMax.clone() : null;
         copy.initialRotationOrigin = this.initialRotationOrigin != null ? this.initialRotationOrigin.clone() : null;
@@ -225,20 +201,11 @@ implements Packet {
             return false;
         }
         BuilderToolSelectionTransform other = (BuilderToolSelectionTransform)obj;
-        return Arrays.equals(this.transformationMatrix, other.transformationMatrix) && Objects.equals(this.initialSelectionMin, other.initialSelectionMin) && Objects.equals(this.initialSelectionMax, other.initialSelectionMax) && Objects.equals(this.initialRotationOrigin, other.initialRotationOrigin) && this.cutOriginal == other.cutOriginal && this.applyTransformationToSelectionMinMax == other.applyTransformationToSelectionMinMax && this.isExitingTransformMode == other.isExitingTransformMode && Objects.equals(this.initialPastePointForClipboardPaste, other.initialPastePointForClipboardPaste);
+        return Objects.equals(this.rotation, other.rotation) && Objects.equals(this.translationOffset, other.translationOffset) && Objects.equals(this.initialSelectionMin, other.initialSelectionMin) && Objects.equals(this.initialSelectionMax, other.initialSelectionMax) && Objects.equals(this.initialRotationOrigin, other.initialRotationOrigin) && this.cutOriginal == other.cutOriginal && this.applyTransformationToSelectionMinMax == other.applyTransformationToSelectionMinMax && this.isExitingTransformMode == other.isExitingTransformMode && Objects.equals(this.initialPastePointForClipboardPaste, other.initialPastePointForClipboardPaste);
     }
 
     public int hashCode() {
-        int result = 1;
-        result = 31 * result + Arrays.hashCode(this.transformationMatrix);
-        result = 31 * result + Objects.hashCode(this.initialSelectionMin);
-        result = 31 * result + Objects.hashCode(this.initialSelectionMax);
-        result = 31 * result + Objects.hashCode(this.initialRotationOrigin);
-        result = 31 * result + Boolean.hashCode(this.cutOriginal);
-        result = 31 * result + Boolean.hashCode(this.applyTransformationToSelectionMinMax);
-        result = 31 * result + Boolean.hashCode(this.isExitingTransformMode);
-        result = 31 * result + Objects.hashCode(this.initialPastePointForClipboardPaste);
-        return result;
+        return Objects.hash(this.rotation, this.translationOffset, this.initialSelectionMin, this.initialSelectionMax, this.initialRotationOrigin, this.cutOriginal, this.applyTransformationToSelectionMinMax, this.isExitingTransformMode, this.initialPastePointForClipboardPaste);
     }
 }
 

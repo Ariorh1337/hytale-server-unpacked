@@ -1,0 +1,92 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hypixel.hytale.builtin.hytalegenerator.assets.framework;
+
+import com.hypixel.hytale.assetstore.AssetExtraInfo;
+import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.FrameworkAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import java.util.HashMap;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class DecimalConstantsFrameworkAsset
+extends FrameworkAsset {
+    @Nonnull
+    public static final String NAME = "DecimalConstants";
+    @Nonnull
+    public static final Class<Entries> CLASS = Entries.class;
+    @Nonnull
+    public static final BuilderCodec<DecimalConstantsFrameworkAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(DecimalConstantsFrameworkAsset.class, DecimalConstantsFrameworkAsset::new, FrameworkAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Entries", new ArrayCodec(EntryAsset.CODEC, EntryAsset[]::new), true), (asset, value) -> {
+        asset.entryAssets = value;
+    }, asset -> asset.entryAssets).add()).build();
+    private String id;
+    private AssetExtraInfo.Data data;
+    private EntryAsset[] entryAssets = new EntryAsset[0];
+
+    private DecimalConstantsFrameworkAsset() {
+    }
+
+    @Override
+    public String getId() {
+        return this.id;
+    }
+
+    @Override
+    public void build(@Nonnull WorldStructureAsset.Argument argument, @Nonnull ReferenceBundle referenceBundle) {
+        Entries entries = new Entries();
+        for (EntryAsset entryAsset : this.entryAssets) {
+            entries.put(entryAsset.name, entryAsset.value);
+        }
+        referenceBundle.put(NAME, entries, CLASS);
+    }
+
+    public static class EntryAsset
+    implements JsonAssetWithMap<String, DefaultAssetMap<String, EntryAsset>> {
+        @Nonnull
+        public static final AssetBuilderCodec<String, EntryAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(EntryAsset.class, EntryAsset::new, Codec.STRING, (asset, id) -> {
+            asset.id = id;
+        }, config -> config.id, (config, data) -> {
+            config.data = data;
+        }, config -> config.data).append(new KeyedCodec<String>("Name", Codec.STRING, true), (asset, value) -> {
+            asset.name = value;
+        }, asset -> asset.name).add()).append(new KeyedCodec<Double>("Value", Codec.DOUBLE, true), (asset, value) -> {
+            asset.value = value;
+        }, asset -> asset.value).add()).build();
+        private String id;
+        private AssetExtraInfo.Data data;
+        private String name = "";
+        private double value = 0.0;
+
+        @Override
+        public String getId() {
+            return this.id;
+        }
+    }
+
+    public static class Entries
+    extends HashMap<String, Double> {
+        @Nullable
+        public static Entries get(@Nonnull ReferenceBundle referenceBundle) {
+            return referenceBundle.get(DecimalConstantsFrameworkAsset.NAME, CLASS);
+        }
+
+        @Nullable
+        public static Double get(@Nonnull String name, @Nonnull ReferenceBundle referenceBundle) {
+            Entries entries = Entries.get(referenceBundle);
+            if (entries == null) {
+                return null;
+            }
+            return (Double)entries.get(name);
+        }
+    }
+}
+

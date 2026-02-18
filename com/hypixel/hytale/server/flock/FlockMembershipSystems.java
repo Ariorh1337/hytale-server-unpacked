@@ -7,6 +7,7 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
@@ -92,6 +93,30 @@ public class FlockMembershipSystems {
             return;
         }
         transformComponent.markChunkDirty(store);
+    }
+
+    private static void registerFlockDebugListener(@Nonnull Ref<EntityStore> ref, @Nonnull FlockMembership membership, @Nonnull Flock flock, @Nonnull ComponentAccessor<EntityStore> accessor) {
+        NPCEntity npcComponent = accessor.getComponent(ref, NPCEntity.getComponentType());
+        if (npcComponent == null) {
+            return;
+        }
+        Role role = npcComponent.getRole();
+        if (role == null) {
+            return;
+        }
+        membership.registerAsDebugListener(role.getDebugSupport(), flock);
+    }
+
+    private static void unregisterFlockDebugListener(@Nonnull Ref<EntityStore> ref, @Nonnull FlockMembership membership, @Nonnull Flock flock, @Nonnull ComponentAccessor<EntityStore> accessor) {
+        NPCEntity npcComponent = accessor.getComponent(ref, NPCEntity.getComponentType());
+        if (npcComponent == null) {
+            return;
+        }
+        Role role = npcComponent.getRole();
+        if (role == null) {
+            return;
+        }
+        membership.unregisterAsDebugListener(role.getDebugSupport(), flock);
     }
 
     public static class NPCAddedFromWorldGen
@@ -206,6 +231,47 @@ public class FlockMembershipSystems {
         }
     }
 
+    public static class FilterPlayerFlockDamageSystem
+    extends DamageEventSystem {
+        @Nonnull
+        private final Query<EntityStore> query = Query.and(Player.getComponentType(), FlockMembership.getComponentType());
+
+        @Override
+        @Nullable
+        public SystemGroup<EntityStore> getGroup() {
+            return DamageModule.get().getFilterDamageGroup();
+        }
+
+        @Override
+        @Nonnull
+        public Query<EntityStore> getQuery() {
+            return this.query;
+        }
+
+        @Override
+        public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
+            FlockMembership flockMembership = archetypeChunk.getComponent(index, FlockMembership.getComponentType());
+            assert (flockMembership != null);
+            Damage.Source source = damage.getSource();
+            if (!(source instanceof Damage.EntitySource)) {
+                return;
+            }
+            Damage.EntitySource entitySource = (Damage.EntitySource)source;
+            Ref<EntityStore> flockRef = flockMembership.getFlockRef();
+            if (flockRef == null || !flockRef.isValid()) {
+                return;
+            }
+            Ref<EntityStore> sourceRef = entitySource.getRef();
+            if (!sourceRef.isValid()) {
+                return;
+            }
+            EntityGroup group = store.getComponent(flockRef, EntityGroup.getComponentType());
+            if (group != null && group.isMember(sourceRef)) {
+                damage.setCancelled(true);
+            }
+        }
+    }
+
     public static class RefChange
     extends RefChangeSystem<EntityStore, FlockMembership> {
         @Nonnull
@@ -311,6 +377,7 @@ public class FlockMembershipSystems {
                 mustBecomeLeader = true;
             }
             entityGroupComponent.add(ref);
+            FlockMembershipSystems.registerFlockDebugListener(ref, membershipComponent, flockComponent, store);
             if (mustBecomeLeader) {
                 RefChange.setNewLeader(flockId, entityGroupComponent, flockComponent, ref, store, commandBuffer);
                 if (wasFirstJoiner && flockComponent.isTrace()) {
@@ -340,6 +407,7 @@ public class FlockMembershipSystems {
             UUIDComponent uuidComponent = commandBuffer.getComponent(flockReference, UUIDComponent.getComponentType());
             assert (uuidComponent != null);
             UUID flockId = uuidComponent.getUuid();
+            FlockMembershipSystems.unregisterFlockDebugListener(ref, membershipComponent, flockComponent, store);
             entityGroupComponent.remove(ref);
             if (flockComponent.isTrace()) {
                 FlockPlugin.get().getLogger().at(Level.INFO).log("Flock %s: Left flock, reference=%s, leader=%s, size=%s", flockId, ref, entityGroupComponent.getLeaderRef(), entityGroupComponent.size());
@@ -449,6 +517,7 @@ public class FlockMembershipSystems {
                 throw new IllegalStateException(String.format("Entity %s attempting to reload into group with ID %s despite already being a member", ref, flockId));
             }
             entityGroup.add(ref);
+            FlockMembershipSystems.registerFlockDebugListener(ref, flockMembershipComponent, flock, store);
             if (flockMembershipComponent.getMembershipType() == FlockMembership.Type.LEADER) {
                 PersistentFlockData persistentFlockData = store.getComponent(ref, PersistentFlockData.getComponentType());
                 if (persistentFlockData != null) {
@@ -498,6 +567,7 @@ public class FlockMembershipSystems {
             UUID flockId = uuidComponent.getUuid();
             if (reason == RemoveReason.REMOVE || store.getArchetype(ref).contains(Player.getComponentType())) {
                 Ref<EntityStore> leader;
+                FlockMembershipSystems.unregisterFlockDebugListener(ref, membership, flockComponent, store);
                 entityGroupComponent.remove(ref);
                 if (flockComponent.isTrace()) {
                     FlockPlugin.get().getLogger().at(Level.INFO).log("Flock %s: Left flock, reference=%s, leader=%s, size=%s", flockId, ref, entityGroupComponent.getLeaderRef(), entityGroupComponent.size());
@@ -538,6 +608,7 @@ public class FlockMembershipSystems {
                 }
             } else if (reason == RemoveReason.UNLOAD) {
                 Ref<EntityStore> interimLeader;
+                FlockMembershipSystems.unregisterFlockDebugListener(ref, membership, flockComponent, store);
                 entityGroupComponent.remove(ref);
                 if (!entityGroupComponent.isDissolved() && membership.getMembershipType().isActingAsLeader() && (interimLeader = entityGroupComponent.testMembers(member -> true, true)) != null) {
                     FlockMembership interimLeaderMembership = store.getComponent(interimLeader, this.flockMembershipComponentType);

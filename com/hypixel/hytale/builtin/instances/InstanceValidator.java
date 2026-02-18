@@ -12,7 +12,10 @@ import javax.annotation.Nonnull;
 
 public class InstanceValidator
 implements Validator<String> {
+    @Nonnull
     public static final InstanceValidator INSTANCE = new InstanceValidator();
+    @Nonnull
+    public static final String CUSTOM_ASSET_NAME = "Instance";
 
     @Override
     public void accept(@Nonnull String s, @Nonnull ValidationResults results) {
@@ -23,7 +26,7 @@ implements Validator<String> {
 
     @Override
     public void updateSchema(SchemaContext context, @Nonnull Schema target) {
-        target.setHytaleCustomAssetRef("Instance");
+        target.setHytaleCustomAssetRef(CUSTOM_ASSET_NAME);
     }
 }
 

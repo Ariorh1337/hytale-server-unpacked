@@ -18,8 +18,11 @@ import javax.annotation.Nonnull;
 public class WaitCommand
 extends AbstractAsyncCommand {
     private static final long MILLISECONDS_TO_SECONDS_MULTIPLIER = 1000L;
+    @Nonnull
     public static final Runnable EMPTY_RUNNABLE = () -> {};
+    @Nonnull
     private final RequiredArg<Float> timeArg = (RequiredArg)((RequiredArg)this.withRequiredArg("time", "server.commands.wait.arg.time", ArgTypes.FLOAT).addValidator(Validators.greaterThan(Float.valueOf(0.0f)))).addValidator(Validators.lessThan(Float.valueOf(1000.0f)));
+    @Nonnull
     private final FlagArg printArg = this.withFlagArg("print", "server.commands.wait.arg.print");
 
     public WaitCommand() {

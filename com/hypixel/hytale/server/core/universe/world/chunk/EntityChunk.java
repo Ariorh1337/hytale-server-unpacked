@@ -263,7 +263,7 @@ implements Component<ChunkStore> {
                     continue;
                 }
                 TransformComponent transformComponent = holder.getComponent(TransformComponent.getComponentType());
-                assert (transformComponent != null);
+                if (transformComponent == null) continue;
                 transformComponent.setChunkLocation(ref, worldChunkComponent);
             }
             Ref<EntityStore>[] refs = entityStore.addEntities(holders, 0, holderCount, AddReason.LOAD);

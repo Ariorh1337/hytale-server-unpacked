@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 
 public class WeightedPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<WeightedPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WeightedPropAsset.class, WeightedPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Entries", new ArrayCodec(EntryAsset.CODEC, EntryAsset[]::new), true), (asset, value) -> {
         asset.entryAssets = value;
     }, asset -> asset.entryAssets).add()).append(new KeyedCodec<String>("Seed", Codec.STRING, true), (asset, value) -> {
@@ -55,6 +56,7 @@ extends PropAsset {
     public static class EntryAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, EntryAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, EntryAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(EntryAsset.class, EntryAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

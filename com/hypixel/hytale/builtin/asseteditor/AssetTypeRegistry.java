@@ -7,7 +7,7 @@ import com.hypixel.hytale.builtin.asseteditor.EditorClient;
 import com.hypixel.hytale.builtin.asseteditor.assettypehandler.AssetTypeHandler;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetType;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotificationType;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorSetupAssetTypes;
@@ -81,7 +81,7 @@ public class AssetTypeRegistry {
     }
 
     public void sendPacket(@Nonnull EditorClient editorClient) {
-        editorClient.getPacketHandler().write((Packet)this.setupPacket);
+        editorClient.getPacketHandler().write((ToClientPacket)this.setupPacket);
     }
 
     public void setupPacket() {

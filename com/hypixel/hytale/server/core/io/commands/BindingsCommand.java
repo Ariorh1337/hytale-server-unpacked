@@ -21,7 +21,7 @@ extends CommandBase {
     private static final Message MESSAGE_IO_SERVER_MANAGER_BINDINGS = Message.translation("server.io.servermanager.bindings");
 
     public BindingsCommand() {
-        super("bindings", "server.io.servermanager.bindings");
+        super("bindings", "server.io.servermanager.bindings.description");
     }
 
     @Override

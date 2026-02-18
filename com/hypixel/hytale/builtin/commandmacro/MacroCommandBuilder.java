@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 
 public class MacroCommandBuilder
 implements JsonAssetWithMap<String, DefaultAssetMap<String, MacroCommandBuilder>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, MacroCommandBuilder> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(MacroCommandBuilder.class, MacroCommandBuilder::new, Codec.STRING, (builder, id) -> {
         builder.id = id;
     }, builder -> builder.id, (builder, data) -> {

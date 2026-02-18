@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveExistsValidator
 extends AssetValidator {
+    @Nonnull
     private static final ObjectiveExistsValidator DEFAULT_INSTANCE = new ObjectiveExistsValidator();
 
     private ObjectiveExistsValidator() {
@@ -42,6 +43,7 @@ extends AssetValidator {
         return ObjectiveAsset.class.getSimpleName();
     }
 
+    @Nonnull
     public static ObjectiveExistsValidator required() {
         return DEFAULT_INSTANCE;
     }

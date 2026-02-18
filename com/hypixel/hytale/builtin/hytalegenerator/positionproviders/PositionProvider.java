@@ -3,7 +3,6 @@
  */
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
@@ -23,28 +22,26 @@ public abstract class PositionProvider {
     }
 
     public static class Context {
+        @Nonnull
         public static final Consumer<Vector3d> EMPTY_CONSUMER = p -> {};
         public Vector3d minInclusive;
         public Vector3d maxExclusive;
         public Consumer<Vector3d> consumer;
         @Nullable
         public Vector3d anchor;
-        public WorkerIndexer.Id workerId;
 
         public Context() {
             this.minInclusive = Vector3d.ZERO;
             this.maxExclusive = Vector3d.ZERO;
             this.consumer = EMPTY_CONSUMER;
             this.anchor = null;
-            this.workerId = WorkerIndexer.Id.UNKNOWN;
         }
 
-        public Context(@Nonnull Vector3d minInclusive, @Nonnull Vector3d maxExclusive, @Nonnull Consumer<Vector3d> consumer, @Nullable Vector3d anchor, WorkerIndexer.Id workerId) {
+        public Context(@Nonnull Vector3d minInclusive, @Nonnull Vector3d maxExclusive, @Nonnull Consumer<Vector3d> consumer, @Nullable Vector3d anchor) {
             this.minInclusive = minInclusive;
             this.maxExclusive = maxExclusive;
             this.consumer = consumer;
             this.anchor = anchor;
-            this.workerId = workerId;
         }
 
         public Context(@Nonnull Context other) {
@@ -52,7 +49,13 @@ public abstract class PositionProvider {
             this.maxExclusive = other.maxExclusive;
             this.consumer = other.consumer;
             this.anchor = other.anchor;
-            this.workerId = other.workerId;
+        }
+
+        public void assign(@Nonnull Context other) {
+            this.minInclusive = other.minInclusive;
+            this.maxExclusive = other.maxExclusive;
+            this.consumer = other.consumer;
+            this.anchor = other.anchor;
         }
     }
 }

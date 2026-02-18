@@ -27,10 +27,17 @@ import javax.annotation.Nullable;
 public class CameraEffectSystem
 extends DamageEventSystem {
     @Nonnull
-    private static final ComponentType<EntityStore, PlayerRef> PLAYER_REF_COMPONENT_TYPE = PlayerRef.getComponentType();
-    private static final ComponentType<EntityStore, EntityStatMap> ENTITY_STAT_MAP_COMPONENT_TYPE = EntityStatMap.getComponentType();
+    private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
     @Nonnull
-    private static final Query<EntityStore> QUERY = Query.and(PLAYER_REF_COMPONENT_TYPE, ENTITY_STAT_MAP_COMPONENT_TYPE);
+    private final ComponentType<EntityStore, EntityStatMap> entityStatMapComponentType;
+    @Nonnull
+    private final Query<EntityStore> query;
+
+    public CameraEffectSystem(@Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType, @Nonnull ComponentType<EntityStore, EntityStatMap> entityStatMapComponentType) {
+        this.playerRefComponentType = playerRefComponentType;
+        this.entityStatMapComponentType = entityStatMapComponentType;
+        this.query = Query.and(playerRefComponentType, entityStatMapComponentType);
+    }
 
     @Override
     @Nullable
@@ -41,13 +48,13 @@ extends DamageEventSystem {
     @Override
     @Nonnull
     public Query<EntityStore> getQuery() {
-        return QUERY;
+        return this.query;
     }
 
     @Override
     public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
         int effectIndex;
-        EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, ENTITY_STAT_MAP_COMPONENT_TYPE);
+        EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, this.entityStatMapComponentType);
         assert (entityStatMapComponent != null);
         EntityStatValue healthStat = entityStatMapComponent.get(DefaultEntityStatTypes.getHealth());
         if (healthStat == null) {
@@ -57,7 +64,7 @@ extends DamageEventSystem {
         if (health <= 0.0f) {
             return;
         }
-        PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PLAYER_REF_COMPONENT_TYPE);
+        PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
         assert (playerRefComponent != null);
         World world = commandBuffer.getExternalData().getWorld();
         CameraEffectsConfig cameraEffectsConfig = world.getGameplayConfig().getCameraEffectsConfig();

@@ -13,7 +13,9 @@ import javax.annotation.Nonnull;
 
 public class PipelineDensityAsset
 extends DensityAsset {
+    @Nonnull
     private static final DensityAsset[] EMPTY_INPUTS = new DensityAsset[0];
+    @Nonnull
     public static final BuilderCodec<PipelineDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(PipelineDensityAsset.class, PipelineDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Pipeline", new ArrayCodec(DensityAsset.CODEC, DensityAsset[]::new)), (t, k) -> {
         t.pipeline = k;
     }, t -> t.pipeline).add()).build();

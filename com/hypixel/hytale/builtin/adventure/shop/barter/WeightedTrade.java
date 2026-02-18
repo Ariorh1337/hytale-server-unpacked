@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class WeightedTrade
 implements IWeightedElement {
+    @Nonnull
     public static final BuilderCodec<WeightedTrade> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WeightedTrade.class, WeightedTrade::new).append(new KeyedCodec<Double>("Weight", Codec.DOUBLE), (wt, w) -> {
         wt.weight = w;
     }, wt -> wt.weight).add()).append(new KeyedCodec<BarterItemStack>("Output", BarterItemStack.CODEC), (wt, stack) -> {
@@ -26,6 +27,7 @@ implements IWeightedElement {
     }, wt -> wt.input).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<int[]>("Stock", Codec.INT_ARRAY), (wt, arr) -> {
         wt.stockRange = arr;
     }, wt -> wt.stockRange).add()).build();
+    @Nonnull
     public static final WeightedTrade[] EMPTY_ARRAY = new WeightedTrade[0];
     protected double weight = 100.0;
     protected BarterItemStack output;

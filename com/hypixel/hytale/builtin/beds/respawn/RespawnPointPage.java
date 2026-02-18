@@ -37,9 +37,11 @@ import javax.annotation.Nullable;
 
 public abstract class RespawnPointPage
 extends InteractiveCustomUIPage<RespawnPointEventData> {
-    private final int RESPAWN_NAME_MAX_LENGTH = 32;
+    @Nonnull
+    private static final Message MESSAGE_SERVER_CUSTOM_UI_NEED_TO_SET_NAME = Message.translation("server.customUI.needToSetName");
+    private static final int RESPAWN_NAME_MAX_LENGTH = 32;
 
-    public RespawnPointPage(@Nonnull PlayerRef playerRef, InteractionType interactionType) {
+    public RespawnPointPage(@Nonnull PlayerRef playerRef, @Nonnull InteractionType interactionType) {
         super(playerRef, interactionType == InteractionType.Use ? CustomPageLifetime.CanDismissOrCloseThroughInteraction : CustomPageLifetime.CanDismiss, RespawnPointEventData.CODEC);
     }
 
@@ -48,7 +50,7 @@ extends InteractiveCustomUIPage<RespawnPointEventData> {
 
     protected void setRespawnPointForPlayer(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull Vector3i blockPosition, @Nonnull RespawnBlock respawnBlock, @Nonnull String respawnPointName, PlayerRespawnPointData ... respawnPointsToRemove) {
         if ((respawnPointName = respawnPointName.trim()).isEmpty()) {
-            this.displayError(Message.translation("server.customUI.needToSetName"));
+            this.displayError(MESSAGE_SERVER_CUSTOM_UI_NEED_TO_SET_NAME);
             return;
         }
         if (respawnPointName.length() > 32) {
@@ -58,21 +60,31 @@ extends InteractiveCustomUIPage<RespawnPointEventData> {
         respawnBlock.setOwnerUUID(this.playerRef.getUuid());
         World world = store.getExternalData().getWorld();
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-        assert (playerComponent != null);
-        WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
+        if (playerComponent == null) {
+            return;
+        }
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z);
+        WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
         if (chunk == null) {
             return;
         }
         chunk.markNeedsSaving();
         BlockType blockType = chunk.getBlockType(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+        if (blockType == null) {
+            return;
+        }
         int rotationIndex = chunk.getRotationIndex(blockPosition.x, blockPosition.y, blockPosition.z);
-        Box hitbox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex()).get(rotationIndex).getBoundingBox();
+        BlockBoundingBoxes blockBoundingBoxAsset = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+        if (blockBoundingBoxAsset == null) {
+            return;
+        }
+        Box hitbox = blockBoundingBoxAsset.get(rotationIndex).getBoundingBox();
         double blockCenterWidthOffset = hitbox.min.x + hitbox.width() / 2.0;
         double blockCenterDepthOffset = hitbox.min.z + hitbox.depth() / 2.0;
         Vector3d respawnPosition = new Vector3d((double)blockPosition.getX() + blockCenterWidthOffset, (double)blockPosition.getY() + hitbox.height(), (double)blockPosition.getZ() + blockCenterDepthOffset);
         PlayerRespawnPointData respawnPointData = new PlayerRespawnPointData(blockPosition, respawnPosition, respawnPointName);
         PlayerWorldData perWorldData = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());
-        PlayerRespawnPointData[] respawnPoints = this.handleRespawnPointsToRemove(perWorldData.getRespawnPoints(), respawnPointsToRemove, world);
+        PlayerRespawnPointData[] respawnPoints = RespawnPointPage.handleRespawnPointsToRemove(world, perWorldData.getRespawnPoints(), respawnPointsToRemove);
         if (respawnPoints != null) {
             if (ArrayUtil.contains(respawnPoints, respawnPointData)) {
                 return;
@@ -94,15 +106,16 @@ extends InteractiveCustomUIPage<RespawnPointEventData> {
     }
 
     @Nonnull
-    private PlayerRespawnPointData[] handleRespawnPointsToRemove(@Nonnull PlayerRespawnPointData[] respawnPoints, @Nullable PlayerRespawnPointData[] respawnPointsToRemove, @Nonnull World world) {
+    private static PlayerRespawnPointData[] handleRespawnPointsToRemove(@Nonnull World world, @Nonnull PlayerRespawnPointData[] respawnPoints, @Nullable PlayerRespawnPointData[] respawnPointsToRemove) {
         if (respawnPointsToRemove == null) {
             return respawnPoints;
         }
         ChunkStore chunkStore = world.getChunkStore();
         for (int i = 0; i < respawnPointsToRemove.length; ++i) {
             RespawnBlock respawnBlock;
-            BlockComponentChunk blockComponentChunk;
+            int blockIndex;
             Ref<ChunkStore> blockRef;
+            BlockComponentChunk blockComponentChunk;
             PlayerRespawnPointData respawnPointToRemove = respawnPointsToRemove[i];
             for (int j = 0; j < respawnPoints.length; ++j) {
                 PlayerRespawnPointData respawnPoint = respawnPoints[j];
@@ -111,8 +124,9 @@ extends InteractiveCustomUIPage<RespawnPointEventData> {
                 break;
             }
             Vector3i position = respawnPointToRemove.getBlockPosition();
-            Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(position.x, position.z));
-            if (chunkReference == null || (blockRef = (blockComponentChunk = chunkStore.getStore().getComponent(chunkReference, BlockComponentChunk.getComponentType())).getEntityReference(ChunkUtil.indexBlockInColumn(position.x, position.y, position.z))) == null || (respawnBlock = chunkStore.getStore().getComponent(blockRef, RespawnBlock.getComponentType())) == null) continue;
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x, position.z);
+            Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
+            if (chunkReference == null || !chunkReference.isValid() || (blockComponentChunk = chunkStore.getStore().getComponent(chunkReference, BlockComponentChunk.getComponentType())) == null || (blockRef = blockComponentChunk.getEntityReference(blockIndex = ChunkUtil.indexBlockInColumn(position.x, position.y, position.z))) == null || !blockRef.isValid() || (respawnBlock = chunkStore.getStore().getComponent(blockRef, RespawnBlock.getComponentType())) == null) continue;
             respawnBlock.setOwnerUUID(null);
             WorldChunk worldChunk = chunkStore.getStore().getComponent(chunkReference, WorldChunk.getComponentType());
             if (worldChunk == null) continue;
@@ -129,10 +143,15 @@ extends InteractiveCustomUIPage<RespawnPointEventData> {
     }
 
     public static class RespawnPointEventData {
+        @Nonnull
         static final String KEY_ACTION = "Action";
+        @Nonnull
         static final String ACTION_CANCEL = "Cancel";
+        @Nonnull
         static final String KEY_INDEX = "Index";
+        @Nonnull
         static final String KEY_RESPAWN_POINT_NAME = "@RespawnPointName";
+        @Nonnull
         public static final BuilderCodec<RespawnPointEventData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RespawnPointEventData.class, RespawnPointEventData::new).append(new KeyedCodec<String>("Action", Codec.STRING), (entry, s) -> {
             entry.action = s;
         }, entry -> entry.action).add()).append(new KeyedCodec<String>("Index", Codec.STRING), (entry, s) -> {

@@ -30,7 +30,8 @@ public enum ComponentUpdateType {
     Audio(21),
     Mounted(22),
     NewSpawn(23),
-    ActiveAnimations(24);
+    ActiveAnimations(24),
+    Prop(25);
 
     public static final ComponentUpdateType[] VALUES;
     private final int value;

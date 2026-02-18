@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 
 public class SimpleHorizontalPositionProvider
 extends PositionProvider {
+    @Nonnull
     private final RangeDouble rangeY;
     @Nonnull
     private final PositionProvider positionProvider;

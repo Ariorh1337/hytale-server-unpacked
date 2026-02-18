@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class SmoothMinDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SmoothMinDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(SmoothMinDensityAsset.class, SmoothMinDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Range", Codec.DOUBLE, true), (t, k) -> {
         t.range = k;
     }, k -> k.range).addValidator(Validators.greaterThanOrEqual(0.0)).add()).build();

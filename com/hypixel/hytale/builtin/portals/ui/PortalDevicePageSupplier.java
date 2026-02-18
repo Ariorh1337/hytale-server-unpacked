@@ -28,10 +28,12 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PortalDevicePageSupplier
 implements OpenCustomUIInteraction.CustomPageSupplier {
+    @Nonnull
     public static final BuilderCodec<PortalDevicePageSupplier> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(PortalDevicePageSupplier.class, PortalDevicePageSupplier::new).appendInherited(new KeyedCodec<PortalDeviceConfig>("Config", PortalDeviceConfig.CODEC), (supplier, o) -> {
         supplier.config = o;
     }, supplier -> supplier.config, (supplier, parent) -> {
@@ -40,24 +42,30 @@ implements OpenCustomUIInteraction.CustomPageSupplier {
     private PortalDeviceConfig config;
 
     @Override
-    public CustomUIPage tryCreate(Ref<EntityStore> ref, ComponentAccessor<EntityStore> store, PlayerRef playerRef, InteractionContext context) {
+    public CustomUIPage tryCreate(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull PlayerRef playerRef, @Nonnull InteractionContext context) {
         World destinationWorld;
         BlockPosition targetBlock = context.getTargetBlock();
         if (targetBlock == null) {
             return null;
         }
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-        assert (playerComponent != null);
+        if (playerComponent == null) {
+            return null;
+        }
         ItemStack inHand = playerComponent.getInventory().getItemInHand();
         World world = store.getExternalData().getWorld();
         BlockType blockType = world.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
+        if (blockType == null) {
+            playerRef.sendMessage(Message.translation("server.portals.device.blockTypeMisconfigured").param("x", targetBlock.x).param("y", targetBlock.y).param("z", targetBlock.z));
+            return null;
+        }
         for (String blockStateKey : this.config.getBlockStates()) {
             BlockType blockState = BlockTypeUtils.getBlockForState(blockType, blockStateKey);
             if (blockState != null) continue;
             playerRef.sendMessage(Message.translation("server.portals.device.blockStateMisconfigured").param("state", blockStateKey));
             return null;
         }
-        BlockType onBlock = BlockTypeUtils.getBlockForState(blockType, this.config.getOnState());
+        BlockType onBlockType = BlockTypeUtils.getBlockForState(blockType, this.config.getOnState());
         ChunkStore chunkStore = world.getChunkStore();
         Ref<ChunkStore> blockRef = BlockModule.getBlockEntity(world, targetBlock.x, targetBlock.y, targetBlock.z);
         if (blockRef == null) {
@@ -66,7 +74,7 @@ implements OpenCustomUIInteraction.CustomPageSupplier {
         }
         PortalDevice existingDevice = chunkStore.getStore().getComponent(blockRef, PortalDevice.getComponentType());
         World world2 = destinationWorld = existingDevice == null ? null : existingDevice.getDestinationWorld();
-        if (existingDevice != null && blockType == onBlock && !PortalDevicePageSupplier.isPortalWorldValid(destinationWorld)) {
+        if (existingDevice != null && blockType == onBlockType && !PortalDevicePageSupplier.isPortalWorldValid(destinationWorld)) {
             world.setBlockInteractionState(new Vector3i(targetBlock.x, targetBlock.y, targetBlock.z), blockType, this.config.getOffState());
             playerRef.sendMessage(Message.translation("server.portals.device.adjusted").color("#ff0000"));
             return null;

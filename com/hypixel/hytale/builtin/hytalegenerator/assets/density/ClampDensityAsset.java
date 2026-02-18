@@ -14,13 +14,14 @@ import javax.annotation.Nonnull;
 
 public class ClampDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<ClampDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ClampDensityAsset.class, ClampDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("WallA", Codec.DOUBLE, true), (t, k) -> {
         t.wallA = k;
     }, k -> k.wallA).add()).append(new KeyedCodec<Double>("WallB", Codec.DOUBLE, true), (t, k) -> {
         t.wallB = k;
     }, k -> k.wallB).add()).build();
-    private double wallA = 0.0;
-    private double wallB = 0.0;
+    private double wallA;
+    private double wallB;
 
     @Override
     @Nonnull

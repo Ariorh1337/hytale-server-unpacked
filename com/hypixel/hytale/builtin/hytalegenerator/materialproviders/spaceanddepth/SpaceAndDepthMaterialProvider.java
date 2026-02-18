@@ -79,6 +79,7 @@ extends MaterialProvider<V> {
         DEPTH_INTO_FLOOR,
         DEPTH_INTO_CEILING;
 
+        @Nonnull
         public static final Codec<LayerContextType> CODEC;
 
         static {

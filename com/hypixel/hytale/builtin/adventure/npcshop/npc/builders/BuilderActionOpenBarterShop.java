@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class BuilderActionOpenBarterShop
 extends BuilderActionBase {
+    @Nonnull
     protected final AssetHolder shopId = new AssetHolder();
 
     @Override

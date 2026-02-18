@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
 public class LoggerUtil {
+    @Nonnull
     public static final String HYTALE_GENERATOR_NAME = "HytaleGenerator";
 
     public static Logger getLogger() {
@@ -24,6 +25,13 @@ public class LoggerUtil {
         msg = (String)msg + " \n";
         msg = (String)msg + ExceptionUtil.toStringWithStack(e);
         logger.severe((String)msg);
+    }
+
+    @Nonnull
+    public static String nsToMsDecimal(long ns) {
+        long ms = ns / 1000000L;
+        long decimal = (ns - ms * 1000000L) / 1000L;
+        return ms + "." + decimal;
     }
 }
 

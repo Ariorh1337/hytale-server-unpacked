@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class SumCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<SumCurveAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(SumCurveAsset.class, SumCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Curves", new ArrayCodec(CurveAsset.CODEC, CurveAsset[]::new), true), (t, k) -> {
         t.curveAssets = k;
     }, k -> k.curveAssets).add()).build();

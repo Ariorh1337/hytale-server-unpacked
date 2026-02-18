@@ -33,7 +33,7 @@ extends ChoiceBasePage {
         }
         commandBuilder.append(this.getPageLayout());
         commandBuilder.clear("#ElementList");
-        commandBuilder.appendInline("#ElementList", "Label { Text: %customUI.itemRepairPage.noItems; Style: (Alignment: Center); }");
+        commandBuilder.appendInline("#ElementList", "Label { Text: %server.customUI.itemRepairPage.noItems; Style: (Alignment: Center); }");
     }
 
     @Nonnull

@@ -4,9 +4,11 @@
 package com.hypixel.hytale.protocol.io.netty;
 
 import com.hypixel.hytale.protocol.CachedPacket;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.PacketStatsRecorder;
+import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,6 +26,10 @@ extends MessageToByteEncoder<Packet> {
             packetClass = cached.getPacketType();
         } else {
             packetClass = packet.getClass();
+        }
+        NetworkChannel channelAttr = ctx.channel().attr(ProtocolUtil.STREAM_CHANNEL_KEY).get();
+        if (channelAttr != null && channelAttr != packet.getChannel()) {
+            throw new IllegalArgumentException("Packet channel " + String.valueOf((Object)packet.getChannel()) + " does not match stream channel " + String.valueOf((Object)channelAttr));
         }
         PacketStatsRecorder statsRecorder = ctx.channel().attr(PacketStatsRecorder.CHANNEL_KEY).get();
         if (statsRecorder == null) {

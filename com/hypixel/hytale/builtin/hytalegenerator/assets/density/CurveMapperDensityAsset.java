@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class CurveMapperDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<CurveMapperDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CurveMapperDensityAsset.class, CurveMapperDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.curveAsset = k;
     }, k -> k.curveAsset).add()).build();

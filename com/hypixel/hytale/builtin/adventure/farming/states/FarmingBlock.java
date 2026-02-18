@@ -11,11 +11,14 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.time.Instant;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class FarmingBlock
 implements Component<ChunkStore> {
+    @Nonnull
     public static final String DEFAULT_STAGE_SET = "Default";
+    @Nonnull
     public static final BuilderCodec<FarmingBlock> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FarmingBlock.class, FarmingBlock::new).append(new KeyedCodec<String>("CurrentStageSet", Codec.STRING), (farmingBlock, currentStageSet) -> {
         farmingBlock.currentStageSet = currentStageSet;
     }, farmingBlock -> DEFAULT_STAGE_SET.equals(farmingBlock.currentStageSet) ? null : DEFAULT_STAGE_SET).add()).append(new KeyedCodec<Float>("GrowthProgress", Codec.FLOAT), (farmingBlock, growthProgress) -> {
@@ -31,13 +34,14 @@ implements Component<ChunkStore> {
     }, farmingBlock -> farmingBlock.spreadRate == 1.0f ? null : Float.valueOf(farmingBlock.spreadRate)).add()).append(new KeyedCodec<Integer>("Executions", Codec.INTEGER), (farmingBlock, executions) -> {
         farmingBlock.executions = executions;
     }, farmingBlock -> farmingBlock.executions == 0 ? null : Integer.valueOf(farmingBlock.executions)).add()).build();
+    @Nonnull
     private String currentStageSet = "Default";
     private float growthProgress;
     private Instant lastTickGameTime;
     private int generation;
     private String previousBlockType;
     private float spreadRate = 1.0f;
-    private int executions = 0;
+    private int executions;
 
     public static ComponentType<ChunkStore, FarmingBlock> getComponentType() {
         return FarmingPlugin.get().getFarmingBlockComponentType();
@@ -46,7 +50,7 @@ implements Component<ChunkStore> {
     public FarmingBlock() {
     }
 
-    public FarmingBlock(String currentStageSet, float growthProgress, Instant lastTickGameTime, int generation, String previousBlockType, float spreadRate, int executions) {
+    public FarmingBlock(@Nonnull String currentStageSet, float growthProgress, Instant lastTickGameTime, int generation, String previousBlockType, float spreadRate, int executions) {
         this.currentStageSet = currentStageSet;
         this.growthProgress = growthProgress;
         this.lastTickGameTime = lastTickGameTime;
@@ -56,11 +60,12 @@ implements Component<ChunkStore> {
         this.executions = executions;
     }
 
+    @Nonnull
     public String getCurrentStageSet() {
         return this.currentStageSet;
     }
 
-    public void setCurrentStageSet(String currentStageSet) {
+    public void setCurrentStageSet(@Nullable String currentStageSet) {
         this.currentStageSet = currentStageSet != null ? currentStageSet : DEFAULT_STAGE_SET;
     }
 
@@ -118,6 +123,7 @@ implements Component<ChunkStore> {
         return new FarmingBlock(this.currentStageSet, this.growthProgress, this.lastTickGameTime, this.generation, this.previousBlockType, this.spreadRate, this.executions);
     }
 
+    @Nonnull
     public String toString() {
         return "FarmingBlock{currentStageSet='" + this.currentStageSet + "', growthProgress=" + this.growthProgress + ", lastTickGameTime=" + String.valueOf(this.lastTickGameTime) + ", generation=" + this.generation + ", previousBlockType='" + this.previousBlockType + "', spreadRate=" + this.spreadRate + ", executions=" + this.executions + "}";
     }

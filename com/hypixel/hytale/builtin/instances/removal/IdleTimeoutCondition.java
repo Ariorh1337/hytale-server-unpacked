@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class IdleTimeoutCondition
 implements RemovalCondition {
+    @Nonnull
     public static final BuilderCodec<IdleTimeoutCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(IdleTimeoutCondition.class, IdleTimeoutCondition::new).documentation("A condition that triggers after the world has be idle (without players) for a set time.")).append(new KeyedCodec<Double>("TimeoutSeconds", Codec.DOUBLE), (o, i) -> {
         o.timeoutSeconds = i;
     }, o -> o.timeoutSeconds).documentation("How long (in seconds) the world has to be idle (without players) for before triggering.").add()).build();

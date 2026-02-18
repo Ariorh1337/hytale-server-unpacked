@@ -14,9 +14,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class VoidEventConfig {
+    @Nonnull
     public static final BuilderCodec<VoidEventConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(VoidEventConfig.class, VoidEventConfig::new).append(new KeyedCodec<Integer>("DurationSeconds", Codec.INTEGER), (config, o) -> {
         config.durationSeconds = o;
     }, config -> config.durationSeconds).documentation("How long the void event lasts in seconds. The void event starts at the end of the instance. If your fragment is 10 minutes and this is 180 seconds, it will start 7 minutes in.").add()).append(new KeyedCodec<InvasionPortalConfig>("InvasionPortals", InvasionPortalConfig.CODEC), (config, o) -> {

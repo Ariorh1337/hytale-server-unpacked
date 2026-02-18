@@ -43,7 +43,7 @@ extends MemoryProvider<NPCMemory> {
                 if (!builder.isSpawnable() || builder.isDeprecated() || !builderInfo.isValid() || !NPCMemoryProvider.isMemory(builder) || (category = NPCMemoryProvider.getCategory(builder)) == null) continue;
                 String memoriesNameOverride = NPCMemoryProvider.getMemoriesNameOverride(builder);
                 String translationKey = NPCMemoryProvider.getNPCNameTranslationKey(builder);
-                NPCMemory memory = memoriesNameOverride != null && !memoriesNameOverride.isEmpty() ? new NPCMemory(memoriesNameOverride, translationKey, true) : new NPCMemory(builderInfo.getKeyName(), translationKey, false);
+                NPCMemory memory = memoriesNameOverride != null && !memoriesNameOverride.isEmpty() ? new NPCMemory(memoriesNameOverride, translationKey) : new NPCMemory(builderInfo.getKeyName(), translationKey);
                 allMemories.computeIfAbsent(category, s -> new HashSet()).add(memory);
             }
             catch (SkipSentryException e) {

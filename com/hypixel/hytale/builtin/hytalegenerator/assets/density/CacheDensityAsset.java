@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class CacheDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<CacheDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CacheDensityAsset.class, CacheDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("Capacity", Codec.INTEGER, true), (asset, value) -> {
         asset.capacity = value;
     }, asset -> asset.capacity).addValidator(Validators.greaterThanOrEqual(0)).add()).build();
@@ -28,9 +29,9 @@ extends DensityAsset {
             return this.build(argument);
         }
         if (this.capacity == 1) {
-            return new CacheDensity(this.buildFirstInput(argument), argument.workerIndexer.getWorkerCount());
+            return new CacheDensity(this.buildFirstInput(argument));
         }
-        return new MultiCacheDensity(this.buildFirstInput(argument), argument.workerIndexer.getWorkerCount(), this.capacity);
+        return new MultiCacheDensity(this.buildFirstInput(argument), this.capacity);
     }
 
     @Override

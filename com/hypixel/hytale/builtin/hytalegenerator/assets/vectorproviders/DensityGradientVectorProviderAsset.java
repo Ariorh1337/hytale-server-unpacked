@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class DensityGradientVectorProviderAsset
 extends VectorProviderAsset {
+    @Nonnull
     public static final BuilderCodec<DensityGradientVectorProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DensityGradientVectorProviderAsset.class, DensityGradientVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("Density", DensityAsset.CODEC, true), (asset, value) -> {
         asset.densityAsset = value;
     }, asset -> asset.densityAsset).add()).append(new KeyedCodec<Double>("SampleDistance", BuilderCodec.DOUBLE, true), (asset, value) -> {
@@ -27,6 +28,7 @@ extends VectorProviderAsset {
     private double sampleDistance = 1.0;
 
     @Override
+    @Nonnull
     public VectorProvider build(@Nonnull VectorProviderAsset.Argument argument) {
         if (this.isSkipped()) {
             return new ConstantVectorProvider(new Vector3d());

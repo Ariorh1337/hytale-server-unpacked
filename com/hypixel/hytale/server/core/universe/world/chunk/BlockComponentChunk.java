@@ -24,7 +24,7 @@ import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -262,7 +262,7 @@ implements Component<ChunkStore> {
         }
 
         @Override
-        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, @Nonnull Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<Packet> results) {
+        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, @Nonnull Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<ToClientPacket> results) {
             BlockComponentChunk component = archetypeChunk.getComponent(index, this.componentType);
             Collection references = component.entityReferences.values();
             Store<ChunkStore> componentStore = store.getExternalData().getWorld().getChunkStore().getStore();
@@ -284,7 +284,7 @@ implements Component<ChunkStore> {
         }
 
         @Override
-        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, @Nonnull Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<Packet> results) {
+        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, @Nonnull Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<ToClientPacket> results) {
             BlockComponentChunk component = archetypeChunk.getComponent(index, this.componentType);
             Collection references = component.entityReferences.values();
             Store<ChunkStore> componentStore = store.getExternalData().getWorld().getChunkStore().getStore();

@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 
 public class InstanceBlock
 implements Component<ChunkStore> {
+    @Nonnull
     public static final BuilderCodec<InstanceBlock> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(InstanceBlock.class, InstanceBlock::new).appendInherited(new KeyedCodec<UUID>("WorldName", Codec.UUID_BINARY), (o, i) -> {
         o.worldUUID = i;
     }, o -> o.worldUUID, (o, p) -> {
@@ -38,6 +39,7 @@ implements Component<ChunkStore> {
     protected CompletableFuture<World> worldFuture;
     protected boolean closeOnRemove = true;
 
+    @Nonnull
     public static ComponentType<ChunkStore, InstanceBlock> getComponentType() {
         return InstancesPlugin.get().getInstanceBlockComponentType();
     }

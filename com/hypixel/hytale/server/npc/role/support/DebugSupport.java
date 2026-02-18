@@ -3,12 +3,18 @@
  */
 package com.hypixel.hytale.server.npc.role.support;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
 import com.hypixel.hytale.server.npc.role.RoleDebugDisplay;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -27,6 +33,13 @@ public class DebugSupport {
     protected boolean traceFail;
     protected boolean traceSensorFails;
     protected Sensor lastFailingSensor;
+    protected List<DebugFlagsChangeListener> debugFlagsChangeListeners = new ArrayList<DebugFlagsChangeListener>();
+    protected boolean visSensorRanges;
+    protected int currentSensorColorIndex;
+    @Nullable
+    protected List<SensorVisData> sensorVisDataList;
+    @Nullable
+    protected Map<Ref<EntityStore>, List<EntityVisData>> entityVisDataMap;
 
     public DebugSupport(NPCEntity parent, @Nonnull BuilderRole builder) {
         this.parent = parent;
@@ -94,7 +107,8 @@ public class DebugSupport {
 
     public void setDebugFlags(EnumSet<RoleDebugFlags> debugFlags) {
         this.debugFlags = debugFlags;
-        this.activate();
+        this.onDebugFlagsChanged();
+        this.notifyDebugFlagsListeners(debugFlags);
     }
 
     public boolean isDebugFlagSet(RoleDebugFlags flag) {
@@ -109,13 +123,90 @@ public class DebugSupport {
         return false;
     }
 
-    public void activate() {
+    protected void onDebugFlagsChanged() {
         this.debugRoleSteering = this.isDebugFlagSet(RoleDebugFlags.SteeringRole);
         this.debugMotionSteering = this.isDebugFlagSet(RoleDebugFlags.MotionControllerSteer);
         this.traceFail = this.isDebugFlagSet(RoleDebugFlags.TraceFail);
         this.traceSuccess = this.isDebugFlagSet(RoleDebugFlags.TraceSuccess);
         this.traceSensorFails = this.isDebugFlagSet(RoleDebugFlags.TraceSensorFailures);
-        this.debugDisplay = RoleDebugDisplay.create(this.debugFlags);
+        this.visSensorRanges = this.isDebugFlagSet(RoleDebugFlags.VisSensorRanges);
+        this.debugDisplay = RoleDebugDisplay.create(this.debugFlags, this.debugDisplay);
+    }
+
+    public void registerDebugFlagsListener(DebugFlagsChangeListener listener) {
+        this.debugFlagsChangeListeners.add(listener);
+    }
+
+    public void removeDebugFlagsListener(DebugFlagsChangeListener listener) {
+        this.debugFlagsChangeListeners.remove(listener);
+    }
+
+    public void notifyDebugFlagsListeners(EnumSet<RoleDebugFlags> flags) {
+        for (DebugFlagsChangeListener listener : this.debugFlagsChangeListeners) {
+            listener.onDebugFlagsChanged(flags);
+        }
+    }
+
+    public boolean isVisSensorRanges() {
+        return this.visSensorRanges;
+    }
+
+    public void beginSensorVisualization() {
+        this.currentSensorColorIndex = 0;
+        if (this.sensorVisDataList != null) {
+            this.sensorVisDataList.clear();
+        }
+        if (this.entityVisDataMap != null) {
+            for (List<EntityVisData> list : this.entityVisDataMap.values()) {
+                list.clear();
+            }
+        }
+    }
+
+    public int recordSensorRange(double range, double minRange, double viewAngle) {
+        if (this.sensorVisDataList == null) {
+            this.sensorVisDataList = new ArrayList<SensorVisData>();
+        }
+        int colorIndex = this.currentSensorColorIndex++;
+        this.sensorVisDataList.add(new SensorVisData(range, minRange, colorIndex, viewAngle));
+        return colorIndex;
+    }
+
+    public void recordEntityCheck(@Nonnull Ref<EntityStore> entityRef, int sensorColorIndex, boolean matched) {
+        if (this.entityVisDataMap == null) {
+            this.entityVisDataMap = new HashMap<Ref<EntityStore>, List<EntityVisData>>();
+        }
+        this.entityVisDataMap.computeIfAbsent(entityRef, k -> new ArrayList()).add(new EntityVisData(sensorColorIndex, matched));
+    }
+
+    @Nullable
+    public List<SensorVisData> getSensorVisData() {
+        return this.sensorVisDataList;
+    }
+
+    @Nullable
+    public Map<Ref<EntityStore>, List<EntityVisData>> getEntityVisData() {
+        return this.entityVisDataMap;
+    }
+
+    public boolean hasSensorVisData() {
+        return this.sensorVisDataList != null && !this.sensorVisDataList.isEmpty();
+    }
+
+    public void clearSensorVisData() {
+        if (this.sensorVisDataList != null) {
+            this.sensorVisDataList.clear();
+        }
+    }
+
+    public static interface DebugFlagsChangeListener {
+        public void onDebugFlagsChanged(EnumSet<RoleDebugFlags> var1);
+    }
+
+    public record SensorVisData(double range, double minRange, int colorIndex, double viewAngle) {
+    }
+
+    public record EntityVisData(int sensorColorIndex, boolean matched) {
     }
 }
 

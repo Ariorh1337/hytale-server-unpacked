@@ -35,7 +35,7 @@ extends AbstractCommandCollection {
         @Nonnull
         private static final Message MESSAGE_COMMANDS_REPULSION_REMOVE_SUCCESS = Message.translation("server.commands.repulsion.remove.success");
         @Nonnull
-        private final EntityWrappedArg entityArg = this.withRequiredArg("entity", "server.commands.repulsion.remove.entity.desc", ArgTypes.ENTITY_ID);
+        private final EntityWrappedArg entityArg = this.withRequiredArg("entity", "server.commands.repulsion.remove.entityArg.desc", ArgTypes.ENTITY_ID);
 
         public RepulsionRemoveEntityCommand() {
             super("entity", "server.commands.repulsion.remove.entity.desc");

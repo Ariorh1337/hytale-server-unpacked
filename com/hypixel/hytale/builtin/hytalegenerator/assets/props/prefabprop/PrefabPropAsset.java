@@ -34,6 +34,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ExceptionUtil;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
@@ -45,6 +46,7 @@ import javax.annotation.Nullable;
 
 public class PrefabPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<PrefabPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PrefabPropAsset.class, PrefabPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("WeightedPrefabPaths", new ArrayCodec(WeightedPathAsset.CODEC, WeightedPathAsset[]::new), true), (asset, v) -> {
         asset.weightedPrefabPathAssets = v;
     }, asset -> asset.weightedPrefabPathAssets).add()).append(new KeyedCodec<Boolean>("LegacyPath", Codec.BOOLEAN, false), (asset, v) -> {
@@ -121,9 +123,13 @@ extends PropAsset {
     private List<PrefabBuffer> loadPrefabBuffersFrom(@Nonnull String path) {
         ArrayList<PrefabBuffer> pathPrefabs = new ArrayList<PrefabBuffer>();
         for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-            Path fullPath = pack.getRoot().resolve("Server");
-            fullPath = this.legacyPath ? fullPath.resolve("World").resolve("Default").resolve("Prefabs") : fullPath.resolve("Prefabs");
-            fullPath = fullPath.resolve(path);
+            Path prefabsDir = pack.getRoot().resolve("Server");
+            prefabsDir = this.legacyPath ? prefabsDir.resolve("World").resolve("Default").resolve("Prefabs") : prefabsDir.resolve("Prefabs");
+            Path fullPath = PathUtil.resolvePathWithinDir(prefabsDir, path);
+            if (fullPath == null) {
+                LoggerUtil.getLogger().severe("Invalid prefab path: " + path);
+                return null;
+            }
             try {
                 PrefabLoader.loadAllPrefabBuffersUnder(fullPath, pathPrefabs);
             }
@@ -144,6 +150,7 @@ extends PropAsset {
 
     public static class WeightedPathAsset
     implements JsonAssetWithMap<String, DefaultAssetMap<String, WeightedPathAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, WeightedPathAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(WeightedPathAsset.class, WeightedPathAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

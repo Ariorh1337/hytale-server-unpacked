@@ -15,6 +15,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.dependency.Dependency;
@@ -31,7 +32,6 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockMount;
-import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.MountController;
@@ -71,7 +71,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MountSystems {
-    private static void handleMountedRemoval(Ref<EntityStore> ref, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull MountedComponent component) {
+    private static void handleMountedRemoval(@Nonnull Ref<EntityStore> ref, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull MountedComponent component) {
         Store<ChunkStore> chunkStore;
         BlockMountComponent seatComponent;
         Ref<ChunkStore> mountedToBlock;
@@ -90,20 +90,31 @@ public class MountSystems {
 
     public static class MountedEntityDeath
     extends RefChangeSystem<EntityStore, DeathComponent> {
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, DeathComponent> deathComponentType;
+
+        public MountedEntityDeath(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, DeathComponent> deathComponentType) {
+            this.mountedComponentType = mountedComponentType;
+            this.deathComponentType = deathComponentType;
+        }
+
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return MountedComponent.getComponentType();
+            return this.mountedComponentType;
         }
 
         @Override
         @Nonnull
         public ComponentType<EntityStore, DeathComponent> componentType() {
-            return DeathComponent.getComponentType();
+            return this.deathComponentType;
         }
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            commandBuffer.removeComponent(ref, MountedComponent.getComponentType());
+            commandBuffer.removeComponent(ref, this.mountedComponentType);
         }
 
         @Override
@@ -117,22 +128,33 @@ public class MountSystems {
 
     public static class TeleportMountedEntity
     extends RefChangeSystem<EntityStore, Teleport> {
-        private static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(new SystemDependency(Order.BEFORE, TeleportSystems.MoveSystem.class, OrderPriority.CLOSEST), new SystemDependency(Order.BEFORE, TeleportSystems.PlayerMoveSystem.class, OrderPriority.CLOSEST));
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, Teleport> teleportComponentType;
+        @Nonnull
+        private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency(Order.BEFORE, TeleportSystems.MoveSystem.class, OrderPriority.CLOSEST), new SystemDependency(Order.BEFORE, TeleportSystems.PlayerMoveSystem.class, OrderPriority.CLOSEST));
+
+        public TeleportMountedEntity(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, Teleport> teleportComponentType) {
+            this.mountedComponentType = mountedComponentType;
+            this.teleportComponentType = teleportComponentType;
+        }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return MountedComponent.getComponentType();
+            return this.mountedComponentType;
         }
 
         @Override
         @Nonnull
         public ComponentType<EntityStore, Teleport> componentType() {
-            return Teleport.getComponentType();
+            return this.teleportComponentType;
         }
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull Teleport component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            commandBuffer.removeComponent(ref, MountedComponent.getComponentType());
+            commandBuffer.removeComponent(ref, this.mountedComponentType);
         }
 
         @Override
@@ -146,7 +168,7 @@ public class MountSystems {
         @Override
         @Nonnull
         public Set<Dependency<EntityStore>> getDependencies() {
-            return DEPENDENCIES;
+            return this.dependencies;
         }
     }
 
@@ -155,26 +177,43 @@ public class MountSystems {
         private static final Duration HIT_RESET_TIME = Duration.ofSeconds(10L);
         private static final int NUMBER_OF_HITS = 3;
         @Nonnull
-        private static final Query<EntityStore> QUERY = Archetype.of(MinecartComponent.getComponentType(), TransformComponent.getComponentType());
+        private final ComponentType<EntityStore, MinecartComponent> minecartComponentType;
         @Nonnull
-        private static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(new SystemGroupDependency<EntityStore>(Order.AFTER, DamageModule.get().getGatherDamageGroup()), new SystemGroupDependency<EntityStore>(Order.AFTER, DamageModule.get().getFilterDamageGroup()), new SystemGroupDependency<EntityStore>(Order.BEFORE, DamageModule.get().getInspectDamageGroup()));
+        private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, Player> playerComponentType;
+        @Nonnull
+        private final ResourceType<EntityStore, TimeResource> timeResourceType;
+        @Nonnull
+        private final Query<EntityStore> query;
+        @Nonnull
+        private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemGroupDependency<EntityStore>(Order.AFTER, DamageModule.get().getGatherDamageGroup()), new SystemGroupDependency<EntityStore>(Order.AFTER, DamageModule.get().getFilterDamageGroup()), new SystemGroupDependency<EntityStore>(Order.BEFORE, DamageModule.get().getInspectDamageGroup()));
+
+        public OnMinecartHit(@Nonnull ComponentType<EntityStore, MinecartComponent> minecartComponentType, @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType, @Nonnull ComponentType<EntityStore, Player> playerComponentType, @Nonnull ResourceType<EntityStore, TimeResource> timeResourceType) {
+            this.minecartComponentType = minecartComponentType;
+            this.transformComponentType = transformComponentType;
+            this.playerComponentType = playerComponentType;
+            this.timeResourceType = timeResourceType;
+            this.query = Archetype.of(minecartComponentType, transformComponentType);
+        }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return QUERY;
+            return this.query;
         }
 
         @Override
         @Nonnull
         public Set<Dependency<EntityStore>> getDependencies() {
-            return DEPENDENCIES;
+            return this.dependencies;
         }
 
         @Override
         public void handle(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Damage damage) {
-            MinecartComponent minecartComponent = archetypeChunk.getComponent(index, MinecartComponent.getComponentType());
+            MinecartComponent minecartComponent = archetypeChunk.getComponent(index, this.minecartComponentType);
             assert (minecartComponent != null);
-            Instant currentTime = commandBuffer.getResource(TimeResource.getResourceType()).getNow();
+            Instant currentTime = commandBuffer.getResource(this.timeResourceType).getNow();
             if (minecartComponent.getLastHit() != null && currentTime.isAfter(minecartComponent.getLastHit().plus(HIT_RESET_TIME))) {
                 minecartComponent.setLastHit(null);
                 minecartComponent.setNumberOfHits(0);
@@ -191,13 +230,13 @@ public class MountSystems {
                 if (source instanceof Damage.EntitySource) {
                     Player playerComponent;
                     Damage.EntitySource source2 = (Damage.EntitySource)source;
-                    Player player = playerComponent = source2.getRef().isValid() ? commandBuffer.getComponent(source2.getRef(), Player.getComponentType()) : null;
+                    Player player = playerComponent = source2.getRef().isValid() ? commandBuffer.getComponent(source2.getRef(), this.playerComponentType) : null;
                     if (playerComponent != null) {
                         boolean bl = shouldDropItem = playerComponent.getGameMode() != GameMode.Creative;
                     }
                 }
                 if (shouldDropItem && minecartComponent.getSourceItem() != null) {
-                    TransformComponent transform = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+                    TransformComponent transform = archetypeChunk.getComponent(index, this.transformComponentType);
                     assert (transform != null);
                     Holder<EntityStore> drop = ItemComponent.generateItemDrop(commandBuffer, new ItemStack(minecartComponent.getSourceItem()), transform.getPosition(), transform.getRotation(), 0.0f, 1.0f, 0.0f);
                     if (drop != null) {
@@ -210,11 +249,27 @@ public class MountSystems {
 
     public static class EnsureMinecartComponents
     extends HolderSystem<EntityStore> {
+        @Nonnull
+        private final ComponentType<EntityStore, MinecartComponent> minecartComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, Interactable> interactableComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType;
+
+        public EnsureMinecartComponents(@Nonnull ComponentType<EntityStore, MinecartComponent> minecartComponentType, @Nonnull ComponentType<EntityStore, Interactable> interactableComponentType, @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType, @Nonnull ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType) {
+            this.minecartComponentType = minecartComponentType;
+            this.interactableComponentType = interactableComponentType;
+            this.networkIdComponentType = networkIdComponentType;
+            this.prefabCopyableComponentType = prefabCopyableComponentType;
+        }
+
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            holder.ensureComponent(Interactable.getComponentType());
-            holder.putComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
-            holder.ensureComponent(PrefabCopyableComponent.getComponentType());
+            holder.ensureComponent(this.interactableComponentType);
+            holder.putComponent(this.networkIdComponentType, new NetworkId(store.getExternalData().takeNextNetworkId()));
+            holder.ensureComponent(this.prefabCopyableComponentType);
         }
 
         @Override
@@ -222,8 +277,9 @@ public class MountSystems {
         }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return MinecartComponent.getComponentType();
+            return this.minecartComponentType;
         }
 
         @Override
@@ -235,68 +291,89 @@ public class MountSystems {
 
     public static class HandleMountInput
     extends EntityTickingSystem<EntityStore> {
-        private final Query<EntityStore> query = Query.and(MountedComponent.getComponentType(), PlayerInput.getComponentType());
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, PlayerInput> playerInputComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, MovementStatesComponent> movementStatesComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
+        @Nonnull
         private final Set<Dependency<EntityStore>> deps = Set.of(new SystemDependency(Order.BEFORE, PlayerSystems.ProcessPlayerInput.class));
+
+        public HandleMountInput(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, PlayerInput> playerInputComponentType, @Nonnull ComponentType<EntityStore, MovementStatesComponent> movementStatesComponentType, @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType) {
+            this.mountedComponentType = mountedComponentType;
+            this.playerInputComponentType = playerInputComponentType;
+            this.movementStatesComponentType = movementStatesComponentType;
+            this.transformComponentType = transformComponentType;
+            this.query = Query.and(mountedComponentType, playerInputComponentType);
+        }
 
         @Override
         public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            MountedComponent mounted = archetypeChunk.getComponent(index, MountedComponent.getComponentType());
-            assert (mounted != null);
-            PlayerInput input = archetypeChunk.getComponent(index, PlayerInput.getComponentType());
-            assert (input != null);
-            MountController controller = mounted.getControllerType();
-            Ref<EntityStore> targetRef = controller == MountController.BlockMount ? archetypeChunk.getReferenceTo(index) : mounted.getMountedToEntity();
-            List<PlayerInput.InputUpdate> queue = input.getMovementUpdateQueue();
+            MountedComponent mountedComponent = archetypeChunk.getComponent(index, this.mountedComponentType);
+            assert (mountedComponent != null);
+            PlayerInput playerInputComponent = archetypeChunk.getComponent(index, this.playerInputComponentType);
+            assert (playerInputComponent != null);
+            MountController controller = mountedComponent.getControllerType();
+            Ref<EntityStore> targetRef = controller == MountController.BlockMount ? archetypeChunk.getReferenceTo(index) : mountedComponent.getMountedToEntity();
+            List<PlayerInput.InputUpdate> queue = playerInputComponent.getMovementUpdateQueue();
             for (int i = 0; i < queue.size(); ++i) {
                 TransformComponent transform;
                 MovementStatesComponent movementStatesComponent;
                 MovementStates states;
-                PlayerInput.InputUpdate q = queue.get(i);
-                if (controller == MountController.BlockMount && (q instanceof PlayerInput.RelativeMovement || q instanceof PlayerInput.AbsoluteMovement)) {
-                    if (mounted.getMountedDurationMs() < 600L) continue;
+                PlayerInput.InputUpdate inputUpdate = queue.get(i);
+                if (controller == MountController.BlockMount && (inputUpdate instanceof PlayerInput.RelativeMovement || inputUpdate instanceof PlayerInput.AbsoluteMovement)) {
+                    if (mountedComponent.getMountedDurationMs() < 600L) continue;
                     Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-                    commandBuffer.removeComponent(ref, MountedComponent.getComponentType());
+                    commandBuffer.tryRemoveComponent(ref, this.mountedComponentType);
                 }
-                if (q instanceof PlayerInput.SetRiderMovementStates) {
-                    PlayerInput.SetRiderMovementStates s = (PlayerInput.SetRiderMovementStates)q;
+                if (inputUpdate instanceof PlayerInput.SetRiderMovementStates) {
+                    PlayerInput.SetRiderMovementStates s = (PlayerInput.SetRiderMovementStates)inputUpdate;
                     states = s.movementStates();
-                    movementStatesComponent = archetypeChunk.getComponent(index, MovementStatesComponent.getComponentType());
+                    movementStatesComponent = archetypeChunk.getComponent(index, this.movementStatesComponentType);
                     if (movementStatesComponent == null) continue;
                     movementStatesComponent.setMovementStates(states);
                     continue;
                 }
-                if (q instanceof PlayerInput.WishMovement) continue;
-                if (q instanceof PlayerInput.RelativeMovement) {
-                    PlayerInput.RelativeMovement relative = (PlayerInput.RelativeMovement)q;
+                if (inputUpdate instanceof PlayerInput.WishMovement) continue;
+                if (inputUpdate instanceof PlayerInput.RelativeMovement) {
+                    PlayerInput.RelativeMovement relative = (PlayerInput.RelativeMovement)inputUpdate;
                     relative.apply(commandBuffer, archetypeChunk, index);
-                    transform = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
+                    transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                    if (transform == null) continue;
                     transform.getPosition().add(relative.getX(), relative.getY(), relative.getZ());
                     continue;
                 }
-                if (q instanceof PlayerInput.AbsoluteMovement) {
-                    PlayerInput.AbsoluteMovement absolute = (PlayerInput.AbsoluteMovement)q;
+                if (inputUpdate instanceof PlayerInput.AbsoluteMovement) {
+                    PlayerInput.AbsoluteMovement absolute = (PlayerInput.AbsoluteMovement)inputUpdate;
                     absolute.apply(commandBuffer, archetypeChunk, index);
-                    transform = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
+                    transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                    if (transform == null) continue;
                     transform.getPosition().assign(absolute.getX(), absolute.getY(), absolute.getZ());
                     continue;
                 }
-                if (q instanceof PlayerInput.SetMovementStates) {
-                    PlayerInput.SetMovementStates s = (PlayerInput.SetMovementStates)q;
+                if (inputUpdate instanceof PlayerInput.SetMovementStates) {
+                    PlayerInput.SetMovementStates s = (PlayerInput.SetMovementStates)inputUpdate;
                     states = s.movementStates();
-                    movementStatesComponent = commandBuffer.getComponent(targetRef, MovementStatesComponent.getComponentType());
+                    movementStatesComponent = commandBuffer.getComponent(targetRef, this.movementStatesComponentType);
                     if (movementStatesComponent == null) continue;
                     movementStatesComponent.setMovementStates(states);
                     continue;
                 }
-                if (q instanceof PlayerInput.SetBody) {
-                    PlayerInput.SetBody body = (PlayerInput.SetBody)q;
+                if (inputUpdate instanceof PlayerInput.SetBody) {
+                    PlayerInput.SetBody body = (PlayerInput.SetBody)inputUpdate;
                     body.apply(commandBuffer, archetypeChunk, index);
-                    transform = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
+                    transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                    if (transform == null) continue;
                     transform.getRotation().assign(body.direction().pitch, body.direction().yaw, body.direction().roll);
                     continue;
                 }
-                if (!(q instanceof PlayerInput.SetHead)) continue;
-                PlayerInput.SetHead head = (PlayerInput.SetHead)q;
+                if (!(inputUpdate instanceof PlayerInput.SetHead)) continue;
+                PlayerInput.SetHead head = (PlayerInput.SetHead)inputUpdate;
                 head.apply(commandBuffer, archetypeChunk, index);
             }
             queue.clear();
@@ -317,13 +394,23 @@ public class MountSystems {
 
     public static class RemoveBlockSeat
     extends RefSystem<ChunkStore> {
+        @Nonnull
+        private final ComponentType<ChunkStore, BlockMountComponent> blockMountComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+
+        public RemoveBlockSeat(@Nonnull ComponentType<ChunkStore, BlockMountComponent> blockMountComponentType, @Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType) {
+            this.blockMountComponentType = blockMountComponentType;
+            this.mountedComponentType = mountedComponentType;
+        }
+
         @Override
         public void onEntityAdded(@Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
         }
 
         @Override
         public void onEntityRemove(@Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
-            BlockMountComponent blockSeatComponent = commandBuffer.getComponent(ref, BlockMountComponent.getComponentType());
+            BlockMountComponent blockSeatComponent = commandBuffer.getComponent(ref, this.blockMountComponentType);
             assert (blockSeatComponent != null);
             ObjectArrayList<? extends Ref<EntityStore>> dismounting = new ObjectArrayList<Ref<EntityStore>>(blockSeatComponent.getSeatedEntities());
             World world = ref.getStore().getExternalData().getWorld();
@@ -333,45 +420,73 @@ public class MountSystems {
                     if (!seated.isValid()) {
                         return;
                     }
-                    seated.getStore().tryRemoveComponent(seated, MountedComponent.getComponentType());
+                    seated.getStore().tryRemoveComponent(seated, this.mountedComponentType);
                 });
             }
         }
 
         @Override
+        @Nonnull
         public Query<ChunkStore> getQuery() {
-            return BlockMountComponent.getComponentType();
+            return this.blockMountComponentType;
         }
     }
 
     public static class RemoveMountedBy
     extends RefSystem<EntityStore> {
+        @Nonnull
+        private final ComponentType<EntityStore, MountedByComponent> mountedByComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+
+        public RemoveMountedBy(@Nonnull ComponentType<EntityStore, MountedByComponent> mountedByComponentType, @Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType) {
+            this.mountedByComponentType = mountedByComponentType;
+            this.mountedComponentType = mountedComponentType;
+        }
+
         @Override
         public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         }
 
         @Override
         public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            MountedByComponent by = commandBuffer.getComponent(ref, MountedByComponent.getComponentType());
-            for (Ref<EntityStore> p : by.getPassengers()) {
-                Ref<EntityStore> target;
-                MountedComponent mounted;
-                if (!p.isValid() || (mounted = commandBuffer.getComponent(p, MountedComponent.getComponentType())) == null || (target = mounted.getMountedToEntity()).isValid() && !target.equals(ref)) continue;
-                commandBuffer.removeComponent(p, MountedComponent.getComponentType());
+            MountedByComponent mountedByComponent = commandBuffer.getComponent(ref, this.mountedByComponentType);
+            assert (mountedByComponent != null);
+            for (Ref<EntityStore> p : mountedByComponent.getPassengers()) {
+                Ref<EntityStore> targetRef;
+                MountedComponent mountedComponent;
+                if (!p.isValid() || (mountedComponent = commandBuffer.getComponent(p, this.mountedComponentType)) == null || (targetRef = mountedComponent.getMountedToEntity()) == null || targetRef.isValid() && !targetRef.equals(ref)) continue;
+                commandBuffer.removeComponent(p, this.mountedComponentType);
             }
         }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return MountedByComponent.getComponentType();
+            return this.mountedByComponentType;
         }
     }
 
     public static class PlayerMount
     extends RefChangeSystem<EntityStore, MountedComponent> {
-        private final Query<EntityStore> query = PlayerInput.getComponentType();
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, PlayerInput> playerInputComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
+
+        public PlayerMount(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, PlayerInput> playerInputComponentType, @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType) {
+            this.mountedComponentType = mountedComponentType;
+            this.playerInputComponentType = playerInputComponentType;
+            this.networkIdComponentType = networkIdComponentType;
+            this.query = playerInputComponentType;
+        }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
             return this.query;
         }
@@ -379,22 +494,26 @@ public class MountSystems {
         @Override
         @Nonnull
         public ComponentType<EntityStore, MountedComponent> componentType() {
-            return MountedComponent.getComponentType();
+            return this.mountedComponentType;
         }
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            MountedComponent mounted = commandBuffer.getComponent(ref, MountedComponent.getComponentType());
-            assert (mounted != null);
-            PlayerInput input = commandBuffer.getComponent(ref, PlayerInput.getComponentType());
-            assert (input != null);
-            Ref<EntityStore> mountRef = mounted.getMountedToEntity();
+            MountedComponent mountedComponent = commandBuffer.getComponent(ref, this.mountedComponentType);
+            assert (mountedComponent != null);
+            PlayerInput playerInputComponent = commandBuffer.getComponent(ref, this.playerInputComponentType);
+            assert (playerInputComponent != null);
+            Ref<EntityStore> mountRef = mountedComponent.getMountedToEntity();
             if (mountRef == null || !mountRef.isValid()) {
                 return;
             }
-            int mountNetworkId = commandBuffer.getComponent(mountRef, NetworkId.getComponentType()).getId();
-            input.setMountId(mountNetworkId);
-            input.getMovementUpdateQueue().clear();
+            NetworkId mountNetworkIdComponent = commandBuffer.getComponent(mountRef, this.networkIdComponentType);
+            if (mountNetworkIdComponent == null) {
+                return;
+            }
+            int mountNetworkId = mountNetworkIdComponent.getId();
+            playerInputComponent.setMountId(mountNetworkId);
+            playerInputComponent.getMovementUpdateQueue().clear();
         }
 
         @Override
@@ -403,42 +522,85 @@ public class MountSystems {
 
         @Override
         public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            PlayerInput input = commandBuffer.getComponent(ref, PlayerInput.getComponentType());
-            assert (input != null);
-            input.setMountId(0);
+            PlayerInput playerInputComponent = commandBuffer.getComponent(ref, this.playerInputComponentType);
+            assert (playerInputComponent != null);
+            playerInputComponent.setMountId(0);
+        }
+    }
+
+    public static class RemoveMountedHolder
+    extends HolderSystem<EntityStore> {
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+
+        public RemoveMountedHolder(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType) {
+            this.mountedComponentType = mountedComponentType;
+        }
+
+        @Override
+        @Nonnull
+        public Query<EntityStore> getQuery() {
+            return this.mountedComponentType;
+        }
+
+        @Override
+        public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
+        }
+
+        @Override
+        public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
+            holder.removeComponent(this.mountedComponentType);
         }
     }
 
     public static class RemoveMounted
     extends RefSystem<EntityStore> {
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+
+        public RemoveMounted(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType) {
+            this.mountedComponentType = mountedComponentType;
+        }
+
         @Override
         public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         }
 
         @Override
         public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            MountedComponent mounted = commandBuffer.getComponent(ref, MountedComponent.getComponentType());
-            commandBuffer.removeComponent(ref, MountedComponent.getComponentType());
+            MountedComponent mounted = commandBuffer.getComponent(ref, this.mountedComponentType);
             MountSystems.handleMountedRemoval(ref, commandBuffer, mounted);
         }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return MountedComponent.getComponentType();
+            return this.mountedComponentType;
         }
     }
 
     public static class TrackedMounted
     extends RefChangeSystem<EntityStore, MountedComponent> {
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, MountedByComponent> mountedByComponentType;
+
+        public TrackedMounted(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, MountedByComponent> mountedByComponentType) {
+            this.mountedComponentType = mountedComponentType;
+            this.mountedByComponentType = mountedByComponentType;
+        }
+
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return MountedComponent.getComponentType();
+            return this.mountedComponentType;
         }
 
         @Override
         @Nonnull
         public ComponentType<EntityStore, MountedComponent> componentType() {
-            return MountedComponent.getComponentType();
+            return this.mountedComponentType;
         }
 
         @Override
@@ -447,7 +609,7 @@ public class MountSystems {
             if (target == null || !target.isValid()) {
                 return;
             }
-            MountedByComponent mountedBy = commandBuffer.ensureAndGetComponent(target, MountedByComponent.getComponentType());
+            MountedByComponent mountedBy = commandBuffer.ensureAndGetComponent(target, this.mountedByComponentType);
             mountedBy.addPassenger(ref);
         }
 
@@ -463,15 +625,26 @@ public class MountSystems {
 
     public static class TrackerRemove
     extends RefChangeSystem<EntityStore, MountedComponent> {
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
+
+        public TrackerRemove(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType) {
+            this.mountedComponentType = mountedComponentType;
+            this.visibleComponentType = visibleComponentType;
+        }
+
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return EntityTrackerSystems.Visible.getComponentType();
+            return this.visibleComponentType;
         }
 
         @Override
         @Nonnull
         public ComponentType<EntityStore, MountedComponent> componentType() {
-            return MountedComponent.getComponentType();
+            return this.mountedComponentType;
         }
 
         @Override
@@ -487,7 +660,7 @@ public class MountSystems {
             if (component.getControllerType() == MountController.BlockMount) {
                 AnimationUtils.stopAnimation(ref, AnimationSlot.Movement, true, commandBuffer);
             }
-            EntityTrackerSystems.Visible visibleComponent = store.getComponent(ref, EntityTrackerSystems.Visible.getComponentType());
+            EntityTrackerSystems.Visible visibleComponent = store.getComponent(ref, this.visibleComponentType);
             assert (visibleComponent != null);
             for (EntityTrackerSystems.EntityViewer viewer : visibleComponent.visibleTo.values()) {
                 viewer.queueRemove(ref, ComponentUpdateType.Mounted);
@@ -497,9 +670,18 @@ public class MountSystems {
 
     public static class TrackerUpdate
     extends EntityTickingSystem<EntityStore> {
-        private final ComponentType<EntityStore, EntityTrackerSystems.Visible> componentType = EntityTrackerSystems.Visible.getComponentType();
         @Nonnull
-        private final Query<EntityStore> query = Query.and(this.componentType, MountedComponent.getComponentType());
+        private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
+
+        public TrackerUpdate(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType, @Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType) {
+            this.visibleComponentType = visibleComponentType;
+            this.mountedComponentType = mountedComponentType;
+            this.query = Query.and(visibleComponentType, mountedComponentType);
+        }
 
         @Override
         @Nullable
@@ -520,26 +702,30 @@ public class MountSystems {
 
         @Override
         public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            EntityTrackerSystems.Visible visible = archetypeChunk.getComponent(index, this.componentType);
-            MountedComponent mounted = archetypeChunk.getComponent(index, MountedComponent.getComponentType());
+            EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.visibleComponentType);
+            assert (visibleComponent != null);
+            MountedComponent mountedComponent = archetypeChunk.getComponent(index, this.mountedComponentType);
+            assert (mountedComponent != null);
             Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-            if (mounted.consumeNetworkOutdated()) {
-                TrackerUpdate.queueUpdatesFor(ref, visible.visibleTo, mounted);
-            } else if (!visible.newlyVisibleTo.isEmpty()) {
-                TrackerUpdate.queueUpdatesFor(ref, visible.newlyVisibleTo, mounted);
+            if (mountedComponent.consumeNetworkOutdated()) {
+                TrackerUpdate.queueUpdatesFor(ref, visibleComponent.visibleTo, mountedComponent);
+            } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
+                TrackerUpdate.queueUpdatesFor(ref, visibleComponent.newlyVisibleTo, mountedComponent);
             }
         }
 
         private static void queueUpdatesFor(@Nonnull Ref<EntityStore> ref, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo, @Nonnull MountedComponent component) {
             MountedUpdate mountedUpdate;
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.Mounted;
             Ref<EntityStore> mountedToEntity = component.getMountedToEntity();
             Ref<ChunkStore> mountedToBlock = component.getMountedToBlock();
             Vector3f offset = component.getAttachmentOffset();
             com.hypixel.hytale.protocol.Vector3f netOffset = new com.hypixel.hytale.protocol.Vector3f(offset.x, offset.y, offset.z);
             if (mountedToEntity != null) {
-                int mountedToNetworkId = ref.getStore().getComponent(mountedToEntity, NetworkId.getComponentType()).getId();
+                NetworkId mountedToNetworkIdComponent = ref.getStore().getComponent(mountedToEntity, NetworkId.getComponentType());
+                if (mountedToNetworkIdComponent == null) {
+                    return;
+                }
+                int mountedToNetworkId = mountedToNetworkIdComponent.getId();
                 mountedUpdate = new MountedUpdate(mountedToNetworkId, netOffset, component.getControllerType(), null);
             } else if (mountedToBlock != null) {
                 BlockMountComponent blockMountComponent = mountedToBlock.getStore().getComponent(mountedToBlock, BlockMountComponent.getComponentType());
@@ -558,9 +744,8 @@ public class MountSystems {
             } else {
                 throw new UnsupportedOperationException("Couldn't create MountedUpdate packet for MountedComponent");
             }
-            update.mounted = mountedUpdate;
             for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
-                viewer.queueUpdate(ref, update);
+                viewer.queueUpdate(ref, mountedUpdate);
             }
         }
     }

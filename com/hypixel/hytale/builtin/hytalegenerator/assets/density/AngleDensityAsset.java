@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class AngleDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<AngleDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(AngleDensityAsset.class, AngleDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("VectorProvider", VectorProviderAsset.CODEC, true), (asset, value) -> {
         asset.vectorProviderAsset = value;
     }, value -> value.vectorProviderAsset).add()).append(new KeyedCodec<Vector3d>("Vector", Vector3d.CODEC, true), (asset, value) -> {
@@ -27,7 +28,7 @@ extends DensityAsset {
     }, asset -> asset.isAxis).add()).build();
     private VectorProviderAsset vectorProviderAsset = new ConstantVectorProviderAsset();
     private Vector3d vector = new Vector3d();
-    private boolean isAxis = false;
+    private boolean isAxis;
 
     @Override
     @Nonnull

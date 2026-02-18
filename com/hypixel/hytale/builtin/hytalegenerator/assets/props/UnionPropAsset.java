@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class UnionPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<UnionPropAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(UnionPropAsset.class, UnionPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Props", new ArrayCodec(PropAsset.CODEC, PropAsset[]::new), true), (asset, v) -> {
         asset.propAssets = v;
     }, asset -> asset.propAssets).add()).build();

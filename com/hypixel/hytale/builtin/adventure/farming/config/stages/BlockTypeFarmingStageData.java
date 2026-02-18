@@ -8,18 +8,23 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.FarmingStageData;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockTypeFarmingStageData
 extends FarmingStageData {
     @Nonnull
-    public static BuilderCodec<BlockTypeFarmingStageData> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(BlockTypeFarmingStageData.class, BlockTypeFarmingStageData::new, FarmingStageData.BASE_CODEC).append(new KeyedCodec<String>("Block", Codec.STRING), (stage, block) -> {
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    @Nonnull
+    public static final BuilderCodec<BlockTypeFarmingStageData> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(BlockTypeFarmingStageData.class, BlockTypeFarmingStageData::new, FarmingStageData.BASE_CODEC).append(new KeyedCodec<String>("Block", Codec.STRING), (stage, block) -> {
         stage.block = block;
     }, stage -> stage.block).addValidatorLate(() -> BlockType.VALIDATOR_CACHE.getValidator().late()).add()).build();
     protected String block;
@@ -29,16 +34,31 @@ extends FarmingStageData {
     }
 
     @Override
-    public void apply(ComponentAccessor<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, @Nullable FarmingStageData previousStage) {
+    public void apply(@Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z, @Nullable FarmingStageData previousStage) {
         super.apply(commandBuffer, sectionRef, blockRef, x, y, z, previousStage);
-        ChunkSection section = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-        WorldChunk worldChunk = commandBuffer.getComponent(section.getChunkColumnReference(), WorldChunk.getComponentType());
+        ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+        if (chunkSectionComponent == null) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).atMostEvery(1, TimeUnit.MINUTES)).log("Missing chunk section component when applying state farming stage at (%d, %d, %d)", x, y, z);
+            return;
+        }
+        WorldChunk worldChunkComponent = commandBuffer.getComponent(chunkSectionComponent.getChunkColumnReference(), WorldChunk.getComponentType());
+        if (worldChunkComponent == null) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).atMostEvery(1, TimeUnit.MINUTES)).log("Missing world chunk component when applying state farming stage at (%d, %d, %d)", x, y, z);
+            return;
+        }
         int blockId = BlockType.getAssetMap().getIndex(this.block);
-        if (blockId == worldChunk.getBlock(x, y, z)) {
+        if (blockId == worldChunkComponent.getBlock(x, y, z)) {
             return;
         }
         BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
-        commandBuffer.getExternalData().getWorld().execute(() -> worldChunk.setBlock(x, y, z, blockId, blockType, worldChunk.getRotationIndex(x, y, z), 0, 2));
+        if (blockType == null) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).atMostEvery(1, TimeUnit.MINUTES)).log("Invalid block type '%s' when applying block type farming stage at (%d, %d, %d)", this.block, x, y, z);
+            return;
+        }
+        commandBuffer.getExternalData().getWorld().execute(() -> {
+            int rotationIndex = worldChunkComponent.getRotationIndex(x, y, z);
+            worldChunkComponent.setBlock(x, y, z, blockId, blockType, rotationIndex, 0, 2);
+        });
     }
 
     @Override

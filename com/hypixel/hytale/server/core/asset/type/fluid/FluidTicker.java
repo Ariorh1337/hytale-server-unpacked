@@ -70,7 +70,7 @@ public abstract class FluidTicker {
         int flowRateLimitTicks;
         long tick;
         int block = blockSection.get(worldX, worldY, worldZ);
-        if (FluidTicker.isFullySolid(BlockType.getAssetMap().getAsset(block))) {
+        if (!this.canOccupySolidBlocks() && FluidTicker.isFullySolid(BlockType.getAssetMap().getAsset(block))) {
             fluidSection.setFluid(worldX, worldY, worldZ, 0, (byte)0);
             FluidTicker.setTickingSurrounding(cachedAccessor, blockSection, worldX, worldY, worldZ);
             return BlockTickStrategy.SLEEP;
@@ -81,6 +81,10 @@ public abstract class FluidTicker {
             return BlockTickStrategy.CONTINUE;
         }
         return this.process(world, tick, cachedAccessor, fluidSection, blockSection, fluid, fluidId, worldX, worldY, worldZ);
+    }
+
+    public boolean canOccupySolidBlocks() {
+        return false;
     }
 
     public BlockTickStrategy process(World world, long tick, @Nonnull Accessor accessor, @Nonnull FluidSection fluidSection, @Nonnull BlockSection blockSection, @Nonnull Fluid fluid, int fluidId, int worldX, int worldY, int worldZ) {
@@ -148,11 +152,11 @@ public abstract class FluidTicker {
                 int sourceFiller2;
                 int sourceRotation2;
                 BlockType sourceBlock2 = blockMap.getAsset(otherBlockSection.get(blockX, blockY, blockZ));
-                if (sourceBlock2 == null || FluidTicker.blocksFluidFrom(sourceBlock2, sourceRotation2 = otherBlockSection.getRotationIndex(blockX, blockY, blockZ), x, z, sourceFiller2 = otherBlockSection.getFiller(blockX, blockY, blockZ)) || FluidTicker.blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) continue;
+                if (sourceBlock2 == null || this.blocksFluidFrom(sourceBlock2, sourceRotation2 = otherBlockSection.getRotationIndex(blockX, blockY, blockZ), x, z, sourceFiller2 = otherBlockSection.getFiller(blockX, blockY, blockZ)) || this.blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) continue;
                 return AliveStatus.ALIVE;
             }
             byte otherFluidLevel = otherFluidSection.getFluidLevel(blockX, blockY, blockZ);
-            if (otherFluid == 0 || otherFluid != fluidId || otherFluidLevel <= fluidLevel || (sourceBlock = blockMap.getAsset(otherBlockSection.get(blockX, blockY, blockZ))) == null || FluidTicker.blocksFluidFrom(sourceBlock, sourceRotation = otherBlockSection.getRotationIndex(blockX, blockY, blockZ), x, z, sourceFiller = otherBlockSection.getFiller(blockX, blockY, blockZ)) || FluidTicker.blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) continue;
+            if (otherFluid == 0 || otherFluid != fluidId || otherFluidLevel <= fluidLevel || (sourceBlock = blockMap.getAsset(otherBlockSection.get(blockX, blockY, blockZ))) == null || this.blocksFluidFrom(sourceBlock, sourceRotation = otherBlockSection.getRotationIndex(blockX, blockY, blockZ), x, z, sourceFiller = otherBlockSection.getFiller(blockX, blockY, blockZ)) || this.blocksFluidFrom(thisBlock, thisRotation, -x, -z, thisFiller)) continue;
             return AliveStatus.ALIVE;
         }
         if (chunkNotLoaded) {
@@ -255,11 +259,11 @@ public abstract class FluidTicker {
         return drawType == DrawType.Cube || drawType == DrawType.CubeWithModel;
     }
 
-    public static boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ) {
-        return FluidTicker.blocksFluidFrom(blockType, rotationIndex, offsetX, offsetZ, 0);
+    public boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ) {
+        return this.blocksFluidFrom(blockType, rotationIndex, offsetX, offsetZ, 0);
     }
 
-    public static boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ, int filler) {
+    public boolean blocksFluidFrom(@Nonnull BlockType blockType, int rotationIndex, int offsetX, int offsetZ, int filler) {
         boolean isPartialDepth;
         boolean isPartialWidth;
         boolean isTall;
@@ -404,7 +408,7 @@ public abstract class FluidTicker {
         public void setBlock(int var1, int var2, int var3, int var4);
     }
 
-    protected static enum AliveStatus {
+    public static enum AliveStatus {
         ALIVE,
         DEMOTE,
         WAIT_FOR_ADJACENT_CHUNK;

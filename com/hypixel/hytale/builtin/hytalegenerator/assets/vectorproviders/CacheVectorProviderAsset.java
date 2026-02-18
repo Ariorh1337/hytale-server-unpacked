@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class CacheVectorProviderAsset
 extends VectorProviderAsset {
+    @Nonnull
     public static final BuilderCodec<CacheVectorProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CacheVectorProviderAsset.class, CacheVectorProviderAsset::new, ABSTRACT_CODEC).append(new KeyedCodec("VectorProvider", VectorProviderAsset.CODEC, true), (asset, value) -> {
         asset.vectorProviderAsset = value;
     }, value -> value.vectorProviderAsset).add()).build();
@@ -28,12 +29,13 @@ extends VectorProviderAsset {
     }
 
     @Override
+    @Nonnull
     public VectorProvider build(@Nonnull VectorProviderAsset.Argument argument) {
         if (this.isSkipped()) {
             return new ConstantVectorProvider(new Vector3d());
         }
         VectorProvider vectorProvider = this.vectorProviderAsset.build(argument);
-        return new CacheVectorProvider(vectorProvider, argument.workerIndexer.getWorkerCount());
+        return new CacheVectorProvider(vectorProvider);
     }
 }
 

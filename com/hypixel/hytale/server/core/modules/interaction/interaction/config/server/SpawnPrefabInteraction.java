@@ -64,8 +64,11 @@ extends SimpleInstantInteraction {
     @Override
     protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
         Vector3i target;
-        Path prefabRoot = PrefabStore.get().getAssetPrefabsPath();
-        IPrefabBuffer prefab = PrefabBufferUtil.getCached(prefabRoot.resolve(this.prefabPath));
+        Path resolvedPath = PrefabStore.get().findAssetPrefabPath(this.prefabPath);
+        if (resolvedPath == null) {
+            return;
+        }
+        IPrefabBuffer prefab = PrefabBufferUtil.getCached(resolvedPath);
         if (prefab == null) {
             return;
         }

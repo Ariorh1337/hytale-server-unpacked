@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 
 public class CheckTagWorldHeightRadiusProvider
 extends WorldLocationProvider {
+    @Nonnull
     public static final BuilderCodec<CheckTagWorldHeightRadiusProvider> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CheckTagWorldHeightRadiusProvider.class, CheckTagWorldHeightRadiusProvider::new, BASE_CODEC).append(new KeyedCodec<T[]>("BlockTags", Codec.STRING_ARRAY), (lookBlocksBelowCondition, strings) -> {
         lookBlocksBelowCondition.blockTags = strings;
     }, lookBlocksBelowCondition -> lookBlocksBelowCondition.blockTags).addValidator(Validators.nonEmptyArray()).addValidator(Validators.uniqueInArray()).add()).append(new KeyedCodec<Integer>("Radius", Codec.INTEGER), (checkTagWorldHeightRadiusCondition, integer) -> {
@@ -58,12 +59,14 @@ extends WorldLocationProvider {
     public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
         SpiralIterator iterator = new SpiralIterator(position.x, position.z, this.radius);
         while (iterator.hasNext()) {
+            int blockZ;
             long pos = iterator.next();
             int blockX = MathUtil.unpackLeft(pos);
-            int blockZ = MathUtil.unpackRight(pos);
-            Object chunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(blockX, blockZ));
-            short blockY = ((WorldChunk)chunk).getHeight(blockX, blockZ);
-            int blockId = ((WorldChunk)chunk).getBlock(blockX, blockY, blockZ);
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ = MathUtil.unpackRight(pos));
+            Object worldChunkComponent = world.getNonTickingChunk(chunkIndex);
+            if (worldChunkComponent == null) continue;
+            short blockY = ((WorldChunk)worldChunkComponent).getHeight(blockX, blockZ);
+            int blockId = ((WorldChunk)worldChunkComponent).getBlock(blockX, blockY, blockZ);
             for (int i = 0; i < this.blockTagsIndexes.length; ++i) {
                 if (!BlockType.getAssetMap().getIndexesForTag(this.blockTagsIndexes[i]).contains(blockId)) continue;
                 return new Vector3i(blockX, blockY + 1, blockZ);

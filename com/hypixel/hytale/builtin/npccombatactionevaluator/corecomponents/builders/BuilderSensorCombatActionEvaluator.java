@@ -24,7 +24,9 @@ import javax.annotation.Nonnull;
 
 public class BuilderSensorCombatActionEvaluator
 extends BuilderSensorBase {
+    @Nonnull
     protected final BooleanHolder targetInRange = new BooleanHolder();
+    @Nonnull
     protected final DoubleHolder allowableDeviation = new DoubleHolder();
     protected ToIntFunction<BuilderSupport> minRangeStoreSlot;
     protected ToIntFunction<BuilderSupport> maxRangeStoreSlot;

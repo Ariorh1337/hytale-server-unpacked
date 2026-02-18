@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 
 public class Positions3DDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<Positions3DDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Positions3DDensityAsset.class, Positions3DDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> {
         asset.positionProviderAsset = v;
     }, asset -> asset.positionProviderAsset).add()).append(new KeyedCodec("DistanceCurve", CurveAsset.CODEC, true), (asset, v) -> {
@@ -40,7 +41,7 @@ extends DensityAsset {
         if (this.isSkipped()) {
             return new ConstantValueDensity(0.0);
         }
-        PositionProvider positionsField = this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer));
+        PositionProvider positionsField = this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId));
         Double2DoubleFunction curve = this.curveAsset.build();
         CurveReturnType returnType = new CurveReturnType(curve);
         return new PositionsDensity(positionsField, returnType, new EuclideanDistanceFunction(), this.maxDistance);

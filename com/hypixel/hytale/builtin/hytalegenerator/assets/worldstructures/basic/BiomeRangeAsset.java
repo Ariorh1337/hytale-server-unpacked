@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 public class BiomeRangeAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, BiomeRangeAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, BiomeRangeAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(BiomeRangeAsset.class, BiomeRangeAsset::new, Codec.STRING, (asset, id) -> {
         asset.id = id;
     }, config -> config.id, (config, data) -> {

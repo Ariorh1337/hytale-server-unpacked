@@ -31,7 +31,9 @@ import javax.annotation.Nonnull;
 
 public abstract class DeployableConfig
 implements NetworkSerializable<com.hypixel.hytale.protocol.DeployableConfig> {
+    @Nonnull
     public static final CodecMapCodec<DeployableConfig> CODEC = new CodecMapCodec("Type");
+    @Nonnull
     public static final BuilderCodec<DeployableConfig> BASE_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(DeployableConfig.class).appendInherited(new KeyedCodec<String>("Id", Codec.STRING), (o, i) -> {
         o.id = i;
     }, o -> o.id, (o, p) -> {
@@ -139,7 +141,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.DeployableConfig> {
     protected DeployableConfig() {
     }
 
-    private static void processConfig(DeployableConfig config) {
+    private static void processConfig(@Nonnull DeployableConfig config) {
         if (config.deploySoundEventId != null) {
             config.deploySoundEventIndex = SoundEvent.getAssetMap().getIndex(config.deploySoundEventId);
         }
@@ -164,18 +166,22 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.DeployableConfig> {
     }
 
     protected static void playAnimation(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull DeployableConfig config, @Nonnull String animationSetKey) {
-        EntityStore externalData = store.getExternalData();
         NetworkId networkIdComponent = store.getComponent(ref, NetworkId.getComponentType());
+        if (networkIdComponent == null) {
+            return;
+        }
         DeployablesUtils.playAnimation(store, networkIdComponent.getId(), ref, config, AnimationSlot.Action, null, animationSetKey);
     }
 
     protected static void stopAnimation(@Nonnull Store<EntityStore> store, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, int index) {
-        EntityStore externalData = store.getExternalData();
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-        if (ref == null || !ref.isValid()) {
+        if (!ref.isValid()) {
             return;
         }
         NetworkId networkIdComponent = archetypeChunk.getComponent(index, NetworkId.getComponentType());
+        if (networkIdComponent == null) {
+            return;
+        }
         DeployablesUtils.stopAnimation(store, networkIdComponent.getId(), ref, AnimationSlot.Action);
     }
 
@@ -273,6 +279,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.DeployableConfig> {
     }
 
     @Override
+    @Nonnull
     public com.hypixel.hytale.protocol.DeployableConfig toPacket() {
         com.hypixel.hytale.protocol.DeployableConfig config = new com.hypixel.hytale.protocol.DeployableConfig();
         config.model = this.getModel().toPacket();
@@ -288,6 +295,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.DeployableConfig> {
     }
 
     public static class StatConfig {
+        @Nonnull
         private static final BuilderCodec<StatConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(StatConfig.class, StatConfig::new).documentation("Initial and maximum values for a stat.")).append(new KeyedCodec<Float>("Max", Codec.FLOAT), (config, f) -> {
             config.max = f.floatValue();
         }, config -> Float.valueOf(config.max)).addValidator(Validators.nonNull()).addValidator(Validators.greaterThan(Float.valueOf(0.0f))).documentation("The maximum value for the stat.").add()).append(new KeyedCodec<Float>("Initial", Codec.FLOAT), (config, f) -> {

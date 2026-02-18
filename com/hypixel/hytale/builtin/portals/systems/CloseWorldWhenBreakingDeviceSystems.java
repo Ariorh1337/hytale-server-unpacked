@@ -55,6 +55,7 @@ public final class CloseWorldWhenBreakingDeviceSystems {
     public static class ComponentRemoved
     extends RefChangeSystem<ChunkStore, PortalDevice> {
         @Override
+        @Nonnull
         public ComponentType<ChunkStore, PortalDevice> componentType() {
             return PortalDevice.getComponentType();
         }

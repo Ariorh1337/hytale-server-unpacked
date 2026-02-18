@@ -29,7 +29,7 @@ import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interface_.KillFeedMessage;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.DeathConfig;
@@ -277,7 +277,7 @@ public class DeathSystems {
             }
             KillFeedMessage killFeedMessage = new KillFeedMessage(killerMessage != null ? killerMessage.getFormattedMessage() : null, decedentMessage != null ? decedentMessage.getFormattedMessage() : null, killFeedEvent.getIcon());
             for (PlayerRef targetPlayerRef : killFeedEvent.getBroadcastTargets()) {
-                targetPlayerRef.getPacketHandler().write((Packet)killFeedMessage);
+                targetPlayerRef.getPacketHandler().write((ToClientPacket)killFeedMessage);
             }
         }
     }
@@ -382,7 +382,7 @@ public class DeathSystems {
                     ItemStack updatedItemStack;
                     ItemStackSlotTransaction transaction;
                     ItemStack itemStack = combinedItemContainer.getItemStack(i);
-                    if (ItemStack.isEmpty(itemStack) || itemStack.isBroken() || !(transaction = combinedItemContainer.replaceItemStackInSlot(i, itemStack, updatedItemStack = itemStack.withIncreasedDurability(-(durabilityLoss = itemStack.getMaxDurability() * durabilityLossRatio)))).getSlotAfter().isBroken() || itemStack.getItem().getArmor() == null) continue;
+                    if (ItemStack.isEmpty(itemStack) || itemStack.isBroken() || !itemStack.getItem().getDurabilityLossOnDeath() || !(transaction = combinedItemContainer.replaceItemStackInSlot(i, itemStack, updatedItemStack = itemStack.withIncreasedDurability(-(durabilityLoss = itemStack.getMaxDurability() * durabilityLossRatio)))).getSlotAfter().isBroken() || itemStack.getItem().getArmor() == null) continue;
                     hasArmorBroken = true;
                 }
                 if (hasArmorBroken) {

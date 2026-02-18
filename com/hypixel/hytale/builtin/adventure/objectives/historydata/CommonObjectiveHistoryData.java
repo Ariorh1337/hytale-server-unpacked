@@ -11,7 +11,9 @@ import java.time.Instant;
 import javax.annotation.Nonnull;
 
 public abstract class CommonObjectiveHistoryData {
+    @Nonnull
     public static final CodecMapCodec<CommonObjectiveHistoryData> CODEC = new CodecMapCodec("Type");
+    @Nonnull
     public static final BuilderCodec<CommonObjectiveHistoryData> BASE_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(CommonObjectiveHistoryData.class).append(new KeyedCodec<String>("Id", Codec.STRING), (commonObjectiveHistoryData, s) -> {
         commonObjectiveHistoryData.id = s;
     }, commonObjectiveHistoryData -> commonObjectiveHistoryData.id).add()).append(new KeyedCodec<Integer>("TimesCompleted", Codec.INTEGER), (commonObjectiveHistoryData, integer) -> {

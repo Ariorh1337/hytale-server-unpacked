@@ -112,7 +112,7 @@ extends AbstractCommandCollection {
             holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
             Ref<EntityStore> spawnMarkerRef = store.addEntity(holder, AddReason.SPAWN);
             if (spawnMarkerRef == null || !spawnMarkerRef.isValid()) {
-                context.sendMessage(Message.translation("server.commands.markers.add.failed").param("markerId", marker.getId()));
+                context.sendMessage(Message.translation("server.commands.spawning.markers.add.failed").param("markerId", marker.getId()));
                 return;
             }
             context.sendMessage(Message.translation("server.commands.spawning.markers.add.added").param("markerId", marker.getId()));

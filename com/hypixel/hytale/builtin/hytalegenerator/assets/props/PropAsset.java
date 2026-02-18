@@ -26,14 +26,19 @@ import javax.annotation.Nonnull;
 public abstract class PropAsset
 implements Cleanable,
 JsonAssetWithMap<String, DefaultAssetMap<String, PropAsset>> {
+    @Nonnull
     public static final AssetCodecMapCodec<String, PropAsset> CODEC = new AssetCodecMapCodec<String, PropAsset>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.data = data;
     }, t -> t.data);
+    @Nonnull
     private static final Map<String, PropAsset> exportedNodes = new ConcurrentHashMap<String, PropAsset>();
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(PropAsset.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final BuilderCodec<PropAsset> ABSTRACT_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(PropAsset.class).append(new KeyedCodec<Boolean>("Skip", Codec.BOOLEAN, false), (t, k) -> {
         t.skip = k;
     }, t -> t.skip).add()).append(new KeyedCodec<String>("ExportAs", Codec.STRING, false), (t, k) -> {
@@ -78,19 +83,20 @@ JsonAssetWithMap<String, DefaultAssetMap<String, PropAsset>> {
         public SeedBox parentSeed;
         public MaterialCache materialCache;
         public ReferenceBundle referenceBundle;
-        public WorkerIndexer workerIndexer;
+        public WorkerIndexer.Id workerId;
 
-        public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+        public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
             this.parentSeed = parentSeed;
             this.materialCache = materialCache;
             this.referenceBundle = referenceBundle;
-            this.workerIndexer = workerIndexer;
+            this.workerId = workerId;
         }
 
         public Argument(@Nonnull Argument argument) {
             this.parentSeed = argument.parentSeed;
             this.materialCache = argument.materialCache;
             this.referenceBundle = argument.referenceBundle;
+            this.workerId = argument.workerId;
         }
     }
 }

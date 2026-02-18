@@ -8,7 +8,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.function.consumer.TriConsumer;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
@@ -63,21 +63,21 @@ public class PlayerUtil {
         }
     }
 
-    public static void broadcastPacketToPlayers(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Packet packet) {
+    public static void broadcastPacketToPlayers(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull ToClientPacket packet) {
         World world = componentAccessor.getExternalData().getWorld();
         for (PlayerRef targetPlayerRef : world.getPlayerRefs()) {
             targetPlayerRef.getPacketHandler().write(packet);
         }
     }
 
-    public static void broadcastPacketToPlayersNoCache(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Packet packet) {
+    public static void broadcastPacketToPlayersNoCache(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull ToClientPacket packet) {
         World world = componentAccessor.getExternalData().getWorld();
         for (PlayerRef targetPlayerRef : world.getPlayerRefs()) {
             targetPlayerRef.getPacketHandler().writeNoCache(packet);
         }
     }
 
-    public static void broadcastPacketToPlayers(@Nonnull ComponentAccessor<EntityStore> componentAccessor, Packet ... packets) {
+    public static void broadcastPacketToPlayers(@Nonnull ComponentAccessor<EntityStore> componentAccessor, ToClientPacket ... packets) {
         World world = componentAccessor.getExternalData().getWorld();
         for (PlayerRef targetPlayerRef : world.getPlayerRefs()) {
             targetPlayerRef.getPacketHandler().write(packets);

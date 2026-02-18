@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class SurfacePatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<SurfacePatternAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SurfacePatternAsset.class, SurfacePatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Surface", PatternAsset.CODEC, true), (t, k) -> {
         t.surface = k;
     }, k -> k.surface).add()).append(new KeyedCodec("Medium", PatternAsset.CODEC, true), (t, k) -> {
@@ -38,12 +39,12 @@ extends PatternAsset {
     }, k -> k.facings).add()).build();
     private PatternAsset surface = new ConstantPatternAsset();
     private PatternAsset origin = new ConstantPatternAsset();
-    private double surfaceRadius = 0.0;
-    private double originRadius = 0.0;
-    private int surfaceGap = 0;
-    private int originGap = 0;
+    private double surfaceRadius;
+    private double originRadius;
+    private int surfaceGap;
+    private int originGap;
     private SurfacePattern.Facing[] facings = new SurfacePattern.Facing[0];
-    private boolean requireAllFacings = false;
+    private boolean requireAllFacings;
 
     @Override
     @Nonnull

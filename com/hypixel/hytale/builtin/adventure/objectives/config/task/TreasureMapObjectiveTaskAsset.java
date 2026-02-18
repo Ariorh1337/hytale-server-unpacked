@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 
 public class TreasureMapObjectiveTaskAsset
 extends ObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<TreasureMapObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(TreasureMapObjectiveTaskAsset.class, TreasureMapObjectiveTaskAsset::new, BASE_CODEC).append(new KeyedCodec<T[]>("Chests", new ArrayCodec<ChestConfig>(ChestConfig.CODEC, ChestConfig[]::new)), (treasureMapObjectiveTaskAsset, chestConfigs) -> {
         treasureMapObjectiveTaskAsset.chestConfigs = chestConfigs;
     }, treasureMapObjectiveTaskAsset -> treasureMapObjectiveTaskAsset.chestConfigs).addValidator(Validators.nonEmptyArray()).add()).build();
@@ -60,6 +61,7 @@ extends ObjectiveTaskAsset {
     }
 
     public static class ChestConfig {
+        @Nonnull
         public static final BuilderCodec<ChestConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ChestConfig.class, ChestConfig::new).append(new KeyedCodec<Float>("MinRadius", Codec.FLOAT), (chestConfig, aFloat) -> {
             chestConfig.minRadius = aFloat.floatValue();
         }, chestConfig -> Float.valueOf(chestConfig.minRadius)).addValidator(Validators.greaterThan(Float.valueOf(0.0f))).add()).append(new KeyedCodec<Float>("MaxRadius", Codec.FLOAT), (chestConfig, aFloat) -> {

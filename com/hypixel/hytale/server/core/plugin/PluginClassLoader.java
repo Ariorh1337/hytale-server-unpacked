@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.server.core.plugin;
 
+import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -16,15 +17,14 @@ import javax.annotation.Nullable;
 
 public class PluginClassLoader
 extends URLClassLoader {
-    public static final String THIRD_PARTY_LOADER_NAME = "ThirdPartyPlugin";
     @Nonnull
     private final PluginManager pluginManager;
     private final boolean inServerClassPath;
     @Nullable
     private JavaPlugin plugin;
 
-    public PluginClassLoader(@Nonnull PluginManager pluginManager, boolean inServerClassPath, URL ... urls) {
-        super(inServerClassPath ? "BuiltinPlugin" : THIRD_PARTY_LOADER_NAME, urls, null);
+    public PluginClassLoader(@Nonnull PluginManager pluginManager, @Nullable PluginIdentifier identifier, boolean inServerClassPath, URL ... urls) {
+        super((inServerClassPath ? "BuiltinPlugin" : "ThirdParty") + (String)(identifier != null ? "(" + String.valueOf(identifier) + ")" : ""), urls, null);
         this.inServerClassPath = inServerClassPath;
         this.pluginManager = pluginManager;
     }
@@ -153,7 +153,7 @@ extends URLClassLoader {
     public static boolean isFromThirdPartyPlugin(@Nullable Throwable throwable) {
         while (throwable != null) {
             for (StackTraceElement element : throwable.getStackTrace()) {
-                if (!THIRD_PARTY_LOADER_NAME.equals(element.getClassLoaderName())) continue;
+                if (!"ThirdParty".equals(element.getClassLoaderName())) continue;
                 return true;
             }
             if (throwable.getCause() == throwable) break;

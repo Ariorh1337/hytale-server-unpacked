@@ -13,28 +13,34 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface SpatialQuery {
-    public Stream<Vector3d> createCandidates(World var1, Vector3d var2, @Nullable SpatialQueryDebug var3);
+    @Nonnull
+    public Stream<Vector3d> createCandidates(@Nonnull World var1, @Nonnull Vector3d var2, @Nullable SpatialQueryDebug var3);
 
-    default public SpatialQuery then(SpatialQuery expand) {
+    @Nonnull
+    default public SpatialQuery then(@Nonnull SpatialQuery expand) {
         return new FlatMapQuery(this, expand);
     }
 
-    default public SpatialQuery filter(PositionPredicate predicate) {
+    @Nonnull
+    default public SpatialQuery filter(@Nonnull PositionPredicate predicate) {
         return new FilterQuery(this, predicate);
     }
 
-    default public Optional<Vector3d> execute(World world, Vector3d origin) {
+    @Nonnull
+    default public Optional<Vector3d> execute(@Nonnull World world, @Nonnull Vector3d origin) {
         return this.createCandidates(world, origin, null).findFirst();
     }
 
-    default public Optional<Vector3d> debug(World world, Vector3d origin) {
+    @Nonnull
+    default public Optional<Vector3d> debug(@Nonnull World world, @Nonnull Vector3d origin) {
         try {
             SpatialQueryDebug debug = new SpatialQueryDebug();
             Optional<Vector3d> output = this.createCandidates(world, origin, debug).findFirst();
-            debug.appendLine("-> OUTPUT: " + output.map(debug::fmt).orElse("<null>"));
+            debug.appendLine("-> OUTPUT: " + output.map(SpatialQueryDebug::fmt).orElse("<null>"));
             HytaleLogger.getLogger().at(Level.INFO).log(debug.toString());
             return output;
         }

@@ -225,8 +225,6 @@ implements Component<EntityStore> {
         if (depthShot != 0.0) {
             PhysicsMath.vectorFromAngles(yaw, pitchAdjust ? pitch : 0.0f, offset);
             offset.setLength(depthShot);
-        } else {
-            offset.assign(0.0, 0.0, 0.0);
         }
         offset.add(horizontalCenterShot * (double)(-PhysicsMath.headingZ(yaw)), -verticalCenterShot, horizontalCenterShot * (double)PhysicsMath.headingX(yaw));
     }

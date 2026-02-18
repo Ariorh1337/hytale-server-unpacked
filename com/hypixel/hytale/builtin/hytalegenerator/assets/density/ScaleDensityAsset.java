@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class ScaleDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<ScaleDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ScaleDensityAsset.class, ScaleDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("ScaleX", Codec.DOUBLE, false), (t, k) -> {
         t.scaleX = k;
     }, k -> k.scaleX).add()).append(new KeyedCodec<Double>("ScaleY", Codec.DOUBLE, false), (t, k) -> {

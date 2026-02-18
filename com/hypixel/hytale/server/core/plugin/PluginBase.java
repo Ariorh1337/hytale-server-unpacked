@@ -81,6 +81,7 @@ implements CommandOwner {
     private final Map<Codec<?>, IRegistry> codecMapRegistries = new ConcurrentHashMap();
     @Nonnull
     private final String basePermission;
+    private Throwable failureCause;
 
     public PluginBase(@Nonnull PluginInit init) {
         PluginManifest pluginManifest = init.getPluginManifest();
@@ -223,7 +224,7 @@ implements CommandOwner {
     }
 
     public boolean isDisabled() {
-        return this.state == PluginState.NONE || this.state == PluginState.DISABLED || this.state == PluginState.SHUTDOWN;
+        return this.state == PluginState.NONE || this.state == PluginState.DISABLED || this.state == PluginState.SHUTDOWN || this.state == PluginState.FAILED;
     }
 
     public boolean isEnabled() {
@@ -240,7 +241,8 @@ implements CommandOwner {
         }
         catch (Throwable t) {
             ((HytaleLogger.Api)this.logger.at(Level.SEVERE).withCause(t)).log("Failed to setup plugin %s", this.identifier);
-            this.state = PluginState.DISABLED;
+            this.state = PluginState.FAILED;
+            this.failureCause = t;
         }
     }
 
@@ -258,7 +260,8 @@ implements CommandOwner {
         }
         catch (Throwable t) {
             ((HytaleLogger.Api)this.logger.at(Level.SEVERE).withCause(t)).log("Failed to start %s", this.identifier);
-            this.state = PluginState.DISABLED;
+            this.state = PluginState.FAILED;
+            this.failureCause = t;
         }
     }
 
@@ -266,13 +269,18 @@ implements CommandOwner {
     }
 
     protected void shutdown0(boolean shutdown) {
-        this.state = PluginState.SHUTDOWN;
-        try {
-            this.shutdown();
-            this.state = PluginState.DISABLED;
-        }
-        catch (Throwable t) {
-            ((HytaleLogger.Api)this.logger.at(Level.SEVERE).withCause(t)).log("Failed to shutdown %s", this.identifier);
+        block2: {
+            this.state = PluginState.SHUTDOWN;
+            try {
+                this.shutdown();
+                this.state = this.failureCause == null ? PluginState.DISABLED : PluginState.FAILED;
+            }
+            catch (Throwable t) {
+                ((HytaleLogger.Api)this.logger.at(Level.SEVERE).withCause(t)).log("Failed to shutdown %s", this.identifier);
+                this.state = PluginState.FAILED;
+                if (this.failureCause != null) break block2;
+                this.failureCause = t;
+            }
         }
         this.cleanup(shutdown);
     }
@@ -293,6 +301,14 @@ implements CommandOwner {
         for (int i = this.shutdownTasks.size() - 1; i >= 0; --i) {
             this.shutdownTasks.get(i).accept(shutdown);
         }
+    }
+
+    Throwable getFailureCause() {
+        return this.failureCause;
+    }
+
+    void setFailureCause(Throwable t) {
+        this.failureCause = t;
     }
 
     @Nonnull

@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 
 public class WeightedAssignmentsAsset
 extends AssignmentsAsset {
+    @Nonnull
     public static final BuilderCodec<WeightedAssignmentsAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WeightedAssignmentsAsset.class, WeightedAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("SkipChance", Codec.DOUBLE, true), (asset, v) -> {
         asset.skipChance = v;
     }, asset -> asset.skipChance).add()).append(new KeyedCodec<String>("Seed", Codec.STRING, true), (asset, v) -> {
@@ -57,6 +58,7 @@ extends AssignmentsAsset {
     public static class WeightedAssets
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, WeightedAssets>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, WeightedAssets> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(WeightedAssets.class, WeightedAssets::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

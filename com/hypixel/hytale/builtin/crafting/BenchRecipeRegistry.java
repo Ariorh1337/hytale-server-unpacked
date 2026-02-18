@@ -20,16 +20,22 @@ import javax.annotation.Nullable;
 
 public class BenchRecipeRegistry {
     private final String benchId;
+    @Nonnull
     private final Map<String, Set<String>> categoryMap = new Object2ObjectOpenHashMap<String, Set<String>>();
+    @Nonnull
     private final Map<String, Set<String>> itemToIncomingRecipe = new Object2ObjectOpenHashMap<String, Set<String>>();
+    @Nonnull
     private final Set<String> uncategorizedRecipes = new ObjectOpenHashSet<String>();
+    @Nonnull
     private final Set<String> allMaterialIds = new ObjectOpenHashSet<String>();
+    @Nonnull
     private final Set<String> allMaterialResourceType = new ObjectOpenHashSet<String>();
 
     public BenchRecipeRegistry(String benchId) {
         this.benchId = benchId;
     }
 
+    @Nonnull
     public Iterable<String> getIncomingRecipesForItem(@Nonnull String itemId) {
         Set<String> recipes = this.itemToIncomingRecipe.get(itemId);
         if (recipes == null) {
@@ -84,7 +90,7 @@ public class BenchRecipeRegistry {
         this.extractMaterialFromRecipes(this.uncategorizedRecipes);
     }
 
-    private void extractMaterialFromRecipes(Set<String> recipes) {
+    private void extractMaterialFromRecipes(@Nonnull Set<String> recipes) {
         for (String recipeId : recipes) {
             BenchRequirement[] benchRequirements;
             CraftingRecipe recipe = CraftingRecipe.getAssetMap().getAsset(recipeId);
@@ -123,7 +129,7 @@ public class BenchRecipeRegistry {
         return false;
     }
 
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (o == null || this.getClass() != o.getClass()) {
             return false;
         }
@@ -135,6 +141,7 @@ public class BenchRecipeRegistry {
         return Objects.hash(this.benchId, this.categoryMap, this.uncategorizedRecipes, this.allMaterialIds, this.allMaterialResourceType);
     }
 
+    @Nonnull
     public String toString() {
         return "BenchRecipeRegistry{benchId='" + this.benchId + "', categoryMap=" + String.valueOf(this.categoryMap) + ", uncategorizedRecipes=" + String.valueOf(this.uncategorizedRecipes) + ", allMaterialIds=" + String.valueOf(this.allMaterialIds) + ", allMaterialResourceType=" + String.valueOf(this.allMaterialResourceType) + "}";
     }

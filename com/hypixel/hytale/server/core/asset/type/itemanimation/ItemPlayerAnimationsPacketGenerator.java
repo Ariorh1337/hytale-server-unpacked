@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.itemanimation;
 
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateItemPlayerAnimations;
 import com.hypixel.hytale.server.core.asset.packet.DefaultAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class ItemPlayerAnimationsPacketGenerator
 extends DefaultAssetPacketGenerator<String, ItemPlayerAnimations> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(DefaultAssetMap<String, ItemPlayerAnimations> assetMap, @Nonnull Map<String, ItemPlayerAnimations> assets) {
+    public ToClientPacket generateInitPacket(DefaultAssetMap<String, ItemPlayerAnimations> assetMap, @Nonnull Map<String, ItemPlayerAnimations> assets) {
         UpdateItemPlayerAnimations packet = new UpdateItemPlayerAnimations();
         packet.type = UpdateType.Init;
         packet.itemPlayerAnimations = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.ItemPlayerAnimations>(assets.size());
@@ -30,7 +30,7 @@ extends DefaultAssetPacketGenerator<String, ItemPlayerAnimations> {
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull Map<String, ItemPlayerAnimations> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull Map<String, ItemPlayerAnimations> loadedAssets) {
         UpdateItemPlayerAnimations packet = new UpdateItemPlayerAnimations();
         packet.type = UpdateType.AddOrUpdate;
         packet.itemPlayerAnimations = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.ItemPlayerAnimations>(loadedAssets.size());
@@ -42,7 +42,7 @@ extends DefaultAssetPacketGenerator<String, ItemPlayerAnimations> {
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull Set<String> removed) {
         UpdateItemPlayerAnimations packet = new UpdateItemPlayerAnimations();
         packet.type = UpdateType.Remove;
         packet.itemPlayerAnimations = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.ItemPlayerAnimations>(removed.size());

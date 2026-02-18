@@ -21,7 +21,9 @@ import javax.annotation.Nonnull;
 
 public class PortalRemovalCondition
 implements RemovalCondition {
-    public static final BuilderCodec<PortalRemovalCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PortalRemovalCondition.class, PortalRemovalCondition::new).documentation("A condition for temporary portal worlds.")).append(new KeyedCodec<Double>("TimeoutSeconds", Codec.DOUBLE), (o, i) -> o.setTimeLimitSeconds((double)i), o -> o.getTimeLimitSeconds()).documentation("How long the portal world will stay open (in seconds) after being joined.").add()).build();
+    @Nonnull
+    public static final BuilderCodec<PortalRemovalCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PortalRemovalCondition.class, PortalRemovalCondition::new).documentation("A condition for temporary portal worlds.")).append(new KeyedCodec<Double>("TimeoutSeconds", Codec.DOUBLE), PortalRemovalCondition::setTimeLimitSeconds, o -> o.getTimeLimitSeconds()).documentation("How long the portal world will stay open (in seconds) after being joined.").add()).build();
+    @Nonnull
     private final WorldEmptyCondition worldEmptyCondition = new WorldEmptyCondition(90.0);
     private TimeoutCondition timeLimitCondition;
 
@@ -41,13 +43,13 @@ implements RemovalCondition {
         this.timeLimitCondition = new TimeoutCondition(timeLimitSeconds);
     }
 
-    public double getElapsedSeconds(World world) {
+    public double getElapsedSeconds(@Nonnull World world) {
         double timeLimitSeconds = this.timeLimitCondition.getTimeoutSeconds();
         double remainingSeconds = this.getRemainingSeconds(world);
         return Math.max(0.0, timeLimitSeconds - remainingSeconds);
     }
 
-    public double getRemainingSeconds(World world) {
+    public double getRemainingSeconds(@Nonnull World world) {
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
         Store<EntityStore> entityStore = world.getEntityStore().getStore();
         InstanceDataResource instanceData = chunkStore.getResource(InstanceDataResource.getResourceType());
@@ -60,7 +62,7 @@ implements RemovalCondition {
         return Math.max(0.0, remainingSeconds);
     }
 
-    public void setRemainingSeconds(World world, double seconds) {
+    public static void setRemainingSeconds(@Nonnull World world, double seconds) {
         seconds = Math.max(0.0, seconds);
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
         Store<EntityStore> entityStore = world.getEntityStore().getStore();

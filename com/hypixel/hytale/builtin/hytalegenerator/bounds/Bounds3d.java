@@ -9,7 +9,9 @@ import javax.annotation.Nonnull;
 
 public class Bounds3d
 implements MemInstrument {
+    @Nonnull
     public final Vector3d min;
+    @Nonnull
     public final Vector3d max;
 
     public Bounds3d() {
@@ -38,6 +40,7 @@ implements MemInstrument {
         return this.min.x >= this.max.x || this.min.y >= this.max.y || this.min.z >= this.max.z;
     }
 
+    @Nonnull
     public Vector3d getSize() {
         return this.max.clone().subtract(this.min);
     }

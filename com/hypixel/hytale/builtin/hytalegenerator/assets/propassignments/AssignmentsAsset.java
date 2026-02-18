@@ -26,14 +26,19 @@ import javax.annotation.Nonnull;
 public abstract class AssignmentsAsset
 implements Cleanable,
 JsonAssetWithMap<String, DefaultAssetMap<String, AssignmentsAsset>> {
+    @Nonnull
     public static final AssetCodecMapCodec<String, AssignmentsAsset> CODEC = new AssetCodecMapCodec<String, AssignmentsAsset>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.data = data;
     }, t -> t.data);
+    @Nonnull
     private static final Map<String, AssignmentsAsset> exportedNodes = new ConcurrentHashMap<String, AssignmentsAsset>();
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(AssignmentsAsset.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final BuilderCodec<AssignmentsAsset> ABSTRACT_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(AssignmentsAsset.class).append(new KeyedCodec<Boolean>("Skip", Codec.BOOLEAN, false), (t, k) -> {
         t.skip = k;
     }, t -> t.skip).add()).append(new KeyedCodec<String>("ExportAs", Codec.STRING, false), (t, k) -> {
@@ -49,7 +54,7 @@ JsonAssetWithMap<String, DefaultAssetMap<String, AssignmentsAsset>> {
     })).build();
     private String id;
     private AssetExtraInfo.Data data;
-    private boolean skip = false;
+    private boolean skip;
     private String exportName = "";
 
     protected AssignmentsAsset() {
@@ -79,14 +84,14 @@ JsonAssetWithMap<String, DefaultAssetMap<String, AssignmentsAsset>> {
         public MaterialCache materialCache;
         public ReferenceBundle referenceBundle;
         public int runtime;
-        public WorkerIndexer workerIndexer;
+        public WorkerIndexer.Id workerId;
 
-        public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, int runtime, @Nonnull WorkerIndexer workerIndexer) {
+        public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, int runtime, @Nonnull WorkerIndexer.Id workerId) {
             this.parentSeed = parentSeed;
             this.materialCache = materialCache;
             this.referenceBundle = referenceBundle;
             this.runtime = runtime;
-            this.workerIndexer = workerIndexer;
+            this.workerId = workerId;
         }
 
         public Argument(@Nonnull Argument argument) {
@@ -94,7 +99,7 @@ JsonAssetWithMap<String, DefaultAssetMap<String, AssignmentsAsset>> {
             this.materialCache = argument.materialCache;
             this.referenceBundle = argument.referenceBundle;
             this.runtime = argument.runtime;
-            this.workerIndexer = argument.workerIndexer;
+            this.workerId = argument.workerId;
         }
     }
 }

@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class RangeThicknessAsset
 extends LayerAsset {
+    @Nonnull
     public static final BuilderCodec<RangeThicknessAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RangeThicknessAsset.class, RangeThicknessAsset::new, LayerAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("RangeMin", Codec.INTEGER, true), (t, k) -> {
         t.rangeMin = k;
     }, k -> k.rangeMin).add()).append(new KeyedCodec<Integer>("RangeMax", Codec.INTEGER, true), (t, k) -> {
@@ -30,8 +31,8 @@ extends LayerAsset {
     })).build();
     private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
     private String seed = "";
-    private int rangeMin = 0;
-    private int rangeMax = 0;
+    private int rangeMin;
+    private int rangeMax;
 
     @Override
     @Nonnull

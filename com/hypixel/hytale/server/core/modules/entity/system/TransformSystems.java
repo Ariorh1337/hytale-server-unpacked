@@ -17,11 +17,10 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.Position;
+import com.hypixel.hytale.protocol.TransformUpdate;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
@@ -106,9 +105,7 @@ public class TransformSystems {
         }
 
         private static void queueUpdatesFor(@Nonnull Ref<EntityStore> ref, @Nonnull ModelTransform sentTransform, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo, boolean newlyVisible) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.Transform;
-            update.transform = sentTransform;
+            TransformUpdate update = new TransformUpdate(sentTransform);
             for (Map.Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : visibleTo.entrySet()) {
                 if (!newlyVisible && ref.equals(entry.getKey())) continue;
                 entry.getValue().queueUpdate(ref, update);

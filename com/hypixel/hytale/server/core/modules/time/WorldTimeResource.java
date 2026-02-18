@@ -11,7 +11,7 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.InstantData;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.UpdateTime;
 import com.hypixel.hytale.protocol.packets.world.UpdateTimeSettings;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig;
@@ -75,7 +75,7 @@ implements Resource<EntityStore> {
         if (!WorldTimeResource.updateTimeSettingsPacket(this.tempSettings, world).equals(this.currentSettings)) {
             boolean wasTimePausedChanged = this.currentSettings.timePaused != this.tempSettings.timePaused;
             WorldTimeResource.updateTimeSettingsPacket(this.currentSettings, world);
-            PlayerUtil.broadcastPacketToPlayers(store, (Packet)this.currentSettings);
+            PlayerUtil.broadcastPacketToPlayers(store, (ToClientPacket)this.currentSettings);
             if (wasTimePausedChanged) {
                 this.broadcastTimePacket(store);
             }
@@ -208,12 +208,12 @@ implements Resource<EntityStore> {
     }
 
     public void broadcastTimePacket(@Nonnull Store<EntityStore> store) {
-        PlayerUtil.broadcastPacketToPlayers(store, (Packet)this.currentTimePacket);
+        PlayerUtil.broadcastPacketToPlayers(store, (ToClientPacket)this.currentTimePacket);
     }
 
     public void sendTimePackets(@Nonnull PlayerRef playerRef) {
-        playerRef.getPacketHandler().write((Packet)this.currentSettings);
-        playerRef.getPacketHandler().write((Packet)this.currentTimePacket);
+        playerRef.getPacketHandler().write((ToClientPacket)this.currentSettings);
+        playerRef.getPacketHandler().write((ToClientPacket)this.currentTimePacket);
     }
 
     public boolean isDayTimeWithinRange(double minTime, double maxTime) {

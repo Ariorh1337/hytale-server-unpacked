@@ -3,7 +3,6 @@
  */
 package com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages;
 
-import com.hypixel.hytale.builtin.hytalegenerator.biome.BiomeType;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.framework.math.Calculator;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.GridUtils;
@@ -27,15 +26,23 @@ implements NStage {
     private static final double ORIGIN_REACH = 1.0;
     private static final double BUFFER_DIAGONAL_VOXEL_GRID = Math.sqrt(NPixelBuffer.SIZE.x * NPixelBuffer.SIZE.x + NPixelBuffer.SIZE.z * NPixelBuffer.SIZE.z);
     public static final double DEFAULT_DISTANCE_TO_BIOME_EDGE = Double.MAX_VALUE;
+    @Nonnull
     public static final Class<NCountedPixelBuffer> biomeBufferClass = NCountedPixelBuffer.class;
-    public static final Class<BiomeType> biomeTypeClass = BiomeType.class;
+    @Nonnull
+    public static final Class<Integer> biomeClass = Integer.class;
+    @Nonnull
     public static final Class<NSimplePixelBuffer> biomeDistanceBufferClass = NSimplePixelBuffer.class;
+    @Nonnull
     public static final Class<BiomeDistanceEntries> biomeDistanceClass = BiomeDistanceEntries.class;
+    @Nonnull
     private final NParametrizedBufferType biomeInputBufferType;
+    @Nonnull
     private final NParametrizedBufferType biomeDistanceOutputBufferType;
+    @Nonnull
     private final String stageName;
     private final double maxDistance_voxelGrid;
     private final int maxDistance_bufferGrid;
+    @Nonnull
     private final Bounds3i inputBounds_bufferGrid;
 
     public NBiomeDistanceStage(@Nonnull String stageName, @Nonnull NParametrizedBufferType biomeInputBufferType, @Nonnull NParametrizedBufferType biomeDistanceOutputBufferType, double maxDistance_voxelGrid) {
@@ -55,7 +62,7 @@ implements NStage {
     @Override
     public void run(@Nonnull NStage.Context context) {
         NBufferBundle.Access.View biomeAccess = context.bufferAccess.get(this.biomeInputBufferType);
-        NPixelBufferView<BiomeType> biomeSpace = new NPixelBufferView<BiomeType>(biomeAccess, biomeTypeClass);
+        NPixelBufferView<Integer> biomeSpace = new NPixelBufferView<Integer>(biomeAccess, biomeClass);
         NBufferBundle.Access.View biomeDistanceAccess = context.bufferAccess.get(this.biomeDistanceOutputBufferType);
         NPixelBufferView<BiomeDistanceEntries> biomeDistanceSpace = new NPixelBufferView<BiomeDistanceEntries>(biomeDistanceAccess, biomeDistanceClass);
         Vector3i position_voxelGrid = new Vector3i();
@@ -72,7 +79,7 @@ implements NStage {
     }
 
     @Nonnull
-    private BiomeDistanceEntries createDistanceTracker(@Nonnull NBufferBundle.Access.View biomeAccess, @Nonnull NPixelBufferView<BiomeType> biomeSpace, @Nonnull Vector3i targetPosition_voxelGrid) {
+    private BiomeDistanceEntries createDistanceTracker(@Nonnull NBufferBundle.Access.View biomeAccess, @Nonnull NPixelBufferView<Integer> biomeSpace, @Nonnull Vector3i targetPosition_voxelGrid) {
         BiomeDistanceCounter counter = new BiomeDistanceCounter();
         Vector3i position_bufferGrid = new Vector3i();
         Bounds3i scanBounds_voxelGrid = GridUtils.createBounds_fromRadius_originVoxelInclusive((int)Math.ceil(this.maxDistance_voxelGrid));
@@ -85,12 +92,12 @@ implements NStage {
                 double distanceToBuffer_voxelGrid = NBiomeDistanceStage.distanceToBuffer_voxelGrid(targetPosition_voxelGrid, position_bufferGrid);
                 if (!((distanceToBuffer_voxelGrid = Math.max(distanceToBuffer_voxelGrid - 1.0, 0.0)) > this.maxDistance_voxelGrid)) {
                     NCountedPixelBuffer biomeBuffer = (NCountedPixelBuffer)biomeAccess.getBuffer(position_bufferGrid).buffer();
-                    List<BiomeType> uniqueBiomeTypes = biomeBuffer.getUniqueEntries();
-                    assert (!uniqueBiomeTypes.isEmpty());
-                    if (!NBiomeDistanceStage.allBiomesAreCountedAndFarther(counter, uniqueBiomeTypes, distanceToBuffer_voxelGrid)) {
-                        if (uniqueBiomeTypes.size() == 1) {
+                    List<Integer> uniqueBiomeIds = biomeBuffer.getUniqueEntries();
+                    assert (!uniqueBiomeIds.isEmpty());
+                    if (!NBiomeDistanceStage.allBiomesAreCountedAndFarther(counter, uniqueBiomeIds, distanceToBuffer_voxelGrid)) {
+                        if (uniqueBiomeIds.size() == 1) {
                             if (!(distanceToBuffer_voxelGrid > this.maxDistance_voxelGrid)) {
-                                counter.accountFor(uniqueBiomeTypes.getFirst(), distanceToBuffer_voxelGrid);
+                                counter.accountFor(uniqueBiomeIds.getFirst(), distanceToBuffer_voxelGrid);
                             }
                         } else {
                             Bounds3i bufferBounds_voxelGrid = GridUtils.createColumnBounds_voxelGrid(position_bufferGrid, 0, 1);
@@ -101,9 +108,9 @@ implements NStage {
                                 while (columnPosition_voxelGrid.z < bufferBounds_voxelGrid.max.z) {
                                     double distanceToColumn_voxelGrid = Calculator.distance(columnPosition_voxelGrid.x, columnPosition_voxelGrid.z, targetPosition_voxelGrid.x, targetPosition_voxelGrid.z);
                                     if (!((distanceToColumn_voxelGrid = Math.max(distanceToColumn_voxelGrid - 1.0, 0.0)) > this.maxDistance_voxelGrid)) {
-                                        BiomeType biomeType = biomeSpace.getContent(columnPosition_voxelGrid);
-                                        assert (biomeType != null);
-                                        counter.accountFor(biomeType, distanceToColumn_voxelGrid);
+                                        Integer biomeId = biomeSpace.getContent(columnPosition_voxelGrid);
+                                        assert (biomeId != null);
+                                        counter.accountFor(biomeId, distanceToColumn_voxelGrid);
                                     }
                                     ++columnPosition_voxelGrid.z;
                                 }
@@ -171,25 +178,26 @@ implements NStage {
         return position_voxelGrid.distanceTo(corner11);
     }
 
-    private static boolean allBiomesAreCountedAndFarther(@Nonnull BiomeDistanceCounter counter, @Nonnull List<BiomeType> uniqueBiomes, double distanceToBuffer_voxelGrid) {
-        for (BiomeType biomeType : uniqueBiomes) {
-            if (!counter.isCloserThanCounted(biomeType, distanceToBuffer_voxelGrid)) continue;
+    private static boolean allBiomesAreCountedAndFarther(@Nonnull BiomeDistanceCounter counter, @Nonnull List<Integer> uniqueBiomes, double distanceToBuffer_voxelGrid) {
+        for (Integer biomeId : uniqueBiomes) {
+            if (!counter.isCloserThanCounted(biomeId, distanceToBuffer_voxelGrid)) continue;
             return false;
         }
         return true;
     }
 
     public static class BiomeDistanceEntries {
+        @Nonnull
         public final List<BiomeDistanceEntry> entries;
 
         public BiomeDistanceEntries(@Nonnull List<BiomeDistanceEntry> entries) {
             this.entries = entries;
         }
 
-        public double distanceToClosestOtherBiome(@Nonnull BiomeType thisBiome) {
+        public double distanceToClosestOtherBiome(int thisBiomeId) {
             double smallestDistance = Double.MAX_VALUE;
             for (BiomeDistanceEntry entry : this.entries) {
-                if (entry.biomeType == thisBiome) continue;
+                if (entry.biomeId == thisBiomeId) continue;
                 smallestDistance = Math.min(smallestDistance, entry.distance_voxelGrid);
             }
             return smallestDistance;
@@ -205,16 +213,16 @@ implements NStage {
         BiomeDistanceCounter() {
         }
 
-        boolean isCloserThanCounted(@Nonnull BiomeType biomeType, double distance_voxelGrid) {
+        boolean isCloserThanCounted(int biomeId, double distance_voxelGrid) {
             for (BiomeDistanceEntry entry : this.entries) {
-                if (entry.biomeType != biomeType) continue;
+                if (entry.biomeId != biomeId) continue;
                 return distance_voxelGrid < entry.distance_voxelGrid;
             }
             return true;
         }
 
-        void accountFor(@Nonnull BiomeType biomeType, double distance_voxelGrid) {
-            if (this.cachedEntry != null && this.cachedEntry.biomeType == biomeType) {
+        void accountFor(int biomeId, double distance_voxelGrid) {
+            if (this.cachedEntry != null && this.cachedEntry.biomeId == biomeId) {
                 if (this.cachedEntry.distance_voxelGrid <= distance_voxelGrid) {
                     return;
                 }
@@ -222,7 +230,7 @@ implements NStage {
                 return;
             }
             for (BiomeDistanceEntry entry : this.entries) {
-                if (entry.biomeType != biomeType) continue;
+                if (entry.biomeId != biomeId) continue;
                 this.cachedEntry = entry;
                 if (entry.distance_voxelGrid <= distance_voxelGrid) {
                     return;
@@ -231,7 +239,7 @@ implements NStage {
                 return;
             }
             BiomeDistanceEntry entry = new BiomeDistanceEntry();
-            entry.biomeType = biomeType;
+            entry.biomeId = biomeId;
             entry.distance_voxelGrid = distance_voxelGrid;
             this.entries.add(entry);
             this.cachedEntry = entry;
@@ -239,7 +247,7 @@ implements NStage {
     }
 
     public static class BiomeDistanceEntry {
-        public BiomeType biomeType;
+        public int biomeId;
         public double distance_voxelGrid;
     }
 }

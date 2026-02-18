@@ -24,9 +24,9 @@ import com.hypixel.hytale.metrics.MetricsRegistry;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MovementStates;
-import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SavedMovementStates;
 import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.player.SetBlockPlacementOverride;
 import com.hypixel.hytale.protocol.packets.player.SetGameMode;
 import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
@@ -56,6 +56,7 @@ import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
+import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
@@ -202,7 +203,7 @@ MetricProvider {
                     Store<EntityStore> store = ref.getStore();
                     ChunkTracker tracker = store.getComponent(ref, ChunkTracker.getComponentType());
                     if (tracker != null) {
-                        tracker.clear();
+                        tracker.unloadAll(this.playerRef);
                     }
                     this.playerRef.removeFromStore();
                 }
@@ -215,7 +216,7 @@ MetricProvider {
                     Store<EntityStore> store = ref.getStore();
                     ChunkTracker tracker = store.getComponent(ref, ChunkTracker.getComponentType());
                     if (tracker != null) {
-                        tracker.clear();
+                        tracker.unloadAll(this.playerRef);
                     }
                     this.playerRef.removeFromStore();
                 });
@@ -287,7 +288,7 @@ MetricProvider {
 
     public void sendInventory() {
         this.getInventory().consumeIsDirty();
-        this.playerRef.getPacketHandler().write((Packet)this.getInventory().toPacket());
+        this.playerRef.getPacketHandler().write((ToClientPacket)this.getInventory().toPacket());
     }
 
     @Nonnull
@@ -772,6 +773,15 @@ MetricProvider {
         }
         InteractionChain chain = interactionManagerComponent.initChain(InteractionType.EntityStatEffect, context, rootInteraction, true);
         interactionManagerComponent.queueExecuteChain(chain);
+    }
+
+    @Nonnull
+    public ItemStackTransaction giveItem(@Nonnull ItemStack stack, @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        PlayerSettings playerSettings = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+        if (playerSettings == null) {
+            playerSettings = PlayerSettings.defaults();
+        }
+        return this.getInventory().getContainerForItemPickup(stack.getItem(), playerSettings).addItemStack(stack);
     }
 
     @Override

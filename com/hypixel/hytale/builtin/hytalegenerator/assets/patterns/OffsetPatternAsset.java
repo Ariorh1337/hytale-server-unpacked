@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class OffsetPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<OffsetPatternAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(OffsetPatternAsset.class, OffsetPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Pattern", PatternAsset.CODEC, true), (t, k) -> {
         t.patternAsset = k;
     }, k -> k.patternAsset).add()).append(new KeyedCodec<Vector3i>("Offset", Vector3i.CODEC, true), (t, k) -> {

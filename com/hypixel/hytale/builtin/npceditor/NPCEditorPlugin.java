@@ -6,7 +6,7 @@ package com.hypixel.hytale.builtin.npceditor;
 import com.hypixel.hytale.builtin.asseteditor.AssetEditorPlugin;
 import com.hypixel.hytale.builtin.asseteditor.event.AssetEditorSelectAssetEvent;
 import com.hypixel.hytale.builtin.npceditor.NPCRoleAssetTypeHandler;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPreviewCameraSettings;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateModelPreview;
@@ -72,7 +72,7 @@ extends JavaPlugin {
                 return;
             }
             com.hypixel.hytale.protocol.Model modelPacket = model.toPacket();
-            event.getEditorClient().getPacketHandler().write((Packet)new AssetEditorUpdateModelPreview(event.getAssetFilePath().toPacket(), modelPacket, null, DEFAULT_PREVIEW_CAMERA_SETTINGS));
+            event.getEditorClient().getPacketHandler().write((ToClientPacket)new AssetEditorUpdateModelPreview(event.getAssetFilePath().toPacket(), modelPacket, null, DEFAULT_PREVIEW_CAMERA_SETTINGS));
         }
     }
 }

@@ -9,10 +9,10 @@ import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
+import com.hypixel.hytale.server.core.config.UpdateConfig;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -37,10 +37,13 @@ import javax.annotation.Nullable;
 
 public class UpdateModule
 extends JavaPlugin {
+    @Nonnull
     public static final PluginManifest MANIFEST = PluginManifest.corePlugin(UpdateModule.class).build();
+    @Nonnull
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final boolean KILL_SWITCH_ENABLED = SystemUtil.getEnvBoolean("HYTALE_DISABLE_UPDATES");
     private static UpdateModule instance;
+    @Nonnull
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "UpdateChecker");
         t.setDaemon(true);
@@ -89,7 +92,7 @@ extends JavaPlugin {
             this.startAutoApplyTaskIfNeeded();
         }
         if (this.shouldEnableUpdateChecker()) {
-            HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
+            UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
             int intervalSeconds = config.getCheckIntervalSeconds();
             LOGGER.at(Level.INFO).log("Update checker enabled (interval: %ds)", intervalSeconds);
             this.updateCheckTask = this.scheduler.scheduleAtFixedRate(this::performUpdateCheck, 60L, intervalSeconds, TimeUnit.SECONDS);
@@ -100,9 +103,9 @@ extends JavaPlugin {
         if (this.autoApplyTask != null) {
             return;
         }
-        HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
-        HytaleServerConfig.UpdateConfig.AutoApplyMode autoApplyMode = config.getAutoApplyMode();
-        if (autoApplyMode == HytaleServerConfig.UpdateConfig.AutoApplyMode.DISABLED) {
+        UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
+        UpdateConfig.AutoApplyMode autoApplyMode = config.getAutoApplyMode();
+        if (autoApplyMode == UpdateConfig.AutoApplyMode.DISABLED) {
             return;
         }
         LOGGER.at(Level.INFO).log("Starting auto-apply task (mode: %s, delay: %d min)", (Object)autoApplyMode, config.getAutoApplyDelayMinutes());
@@ -216,7 +219,7 @@ extends JavaPlugin {
             LOGGER.at(Level.INFO).log("Update checker disabled: singleplayer mode");
             return false;
         }
-        HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
+        UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
         if (!config.isEnabled()) {
             LOGGER.at(Level.INFO).log("Update checker disabled: disabled in config");
             return false;
@@ -264,11 +267,11 @@ extends JavaPlugin {
                 return;
             }
             this.logUpdateAvailable(currentVersion, manifest.version);
-            HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
+            UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
             if (config.isNotifyPlayersOnAvailable()) {
                 this.notifyPlayers(manifest.version);
             }
-            if (config.getAutoApplyMode() != HytaleServerConfig.UpdateConfig.AutoApplyMode.DISABLED) {
+            if (config.getAutoApplyMode() != UpdateConfig.AutoApplyMode.DISABLED) {
                 LOGGER.at(Level.INFO).log("Auto-downloading update %s...", manifest.version);
                 this.autoDownloadUpdate(updateService, (UpdateService.VersionManifest)manifest);
             }
@@ -311,8 +314,8 @@ extends JavaPlugin {
 
     private void logUpdateAvailable(@Nullable String currentVersion, @Nonnull String latestVersion) {
         LOGGER.at(Level.INFO).log("Update available: %s (current: %s)", (Object)latestVersion, (Object)currentVersion);
-        HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
-        if (config.getAutoApplyMode() == HytaleServerConfig.UpdateConfig.AutoApplyMode.DISABLED) {
+        UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
+        if (config.getAutoApplyMode() == UpdateConfig.AutoApplyMode.DISABLED) {
             LOGGER.at(Level.INFO).log("Run '/update download' to stage the update");
         }
     }
@@ -331,9 +334,9 @@ extends JavaPlugin {
     }
 
     private void checkAutoApply(@Nonnull String stagedVersion) {
-        HytaleServerConfig.UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
-        HytaleServerConfig.UpdateConfig.AutoApplyMode mode = config.getAutoApplyMode();
-        if (mode == HytaleServerConfig.UpdateConfig.AutoApplyMode.DISABLED) {
+        UpdateConfig config = HytaleServer.get().getConfig().getUpdateConfig();
+        UpdateConfig.AutoApplyMode mode = config.getAutoApplyMode();
+        if (mode == UpdateConfig.AutoApplyMode.DISABLED) {
             return;
         }
         Universe universe = Universe.get();
@@ -346,7 +349,7 @@ extends JavaPlugin {
             this.triggerAutoApply();
             return;
         }
-        if (mode == HytaleServerConfig.UpdateConfig.AutoApplyMode.WHEN_EMPTY) {
+        if (mode == UpdateConfig.AutoApplyMode.WHEN_EMPTY) {
             return;
         }
         int delayMinutes = config.getAutoApplyDelayMinutes();

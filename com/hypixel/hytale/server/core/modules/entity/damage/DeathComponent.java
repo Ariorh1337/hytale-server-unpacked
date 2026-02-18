@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathItemLoss;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
@@ -196,16 +197,18 @@ implements Component<EntityStore> {
             return deathComponent.respawnFuture;
         }
         World world = componentAccessor.getExternalData().getWorld();
+        PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
         RespawnController respawnController = world.getDeathConfig().getRespawnController();
         deathComponent.respawnFuture = respawnController.respawnPlayer(world, ref, componentAccessor).whenComplete((ignore, ex) -> {
+            Ref<EntityStore> currentRef;
             if (ex != null) {
                 ((HytaleLogger.Api)((HytaleLogger.Api)LOGGER.atSevere()).withCause((Throwable)ex)).log("Failed to respawn entity");
             }
-            Store<EntityStore> store = world.getEntityStore().getStore();
-            if (!ref.isValid()) {
+            if ((currentRef = playerRefComponent.getReference()) == null || !currentRef.isValid()) {
                 return;
             }
-            store.tryRemoveComponent(ref, DeathComponent.getComponentType());
+            Store<EntityStore> store = currentRef.getStore();
+            store.tryRemoveComponent(currentRef, DeathComponent.getComponentType());
         });
         return deathComponent.respawnFuture;
     }

@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
 public class EntityStatType
 implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, EntityStatType>>,
 NetworkSerializable<com.hypixel.hytale.protocol.EntityStatType> {
-    public static final AssetBuilderCodec<String, EntityStatType> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(EntityStatType.class, EntityStatType::new, Codec.STRING, (statType, s) -> {
+    public static final AssetBuilderCodec<String, EntityStatType> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(EntityStatType.class, EntityStatType::new, Codec.STRING, (statType, s) -> {
         statType.id = s;
     }, statType -> statType.id, (asset, data) -> {
         asset.data = data;
@@ -73,6 +73,10 @@ NetworkSerializable<com.hypixel.hytale.protocol.EntityStatType> {
         entityStatType.ignoreInvulnerability = value;
     }, entityStatType -> entityStatType.ignoreInvulnerability, (entityStatType, parent) -> {
         entityStatType.ignoreInvulnerability = parent.ignoreInvulnerability;
+    }).add()).appendInherited(new KeyedCodec<Boolean>("HideFromTooltip", Codec.BOOLEAN), (entityStatType, aBoolean) -> {
+        entityStatType.hideFromTooltip = aBoolean;
+    }, entityStatType -> entityStatType.hideFromTooltip, (entityStatType, parent) -> {
+        entityStatType.hideFromTooltip = parent.hideFromTooltip;
     }).add()).build();
     public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache(new AssetKeyValidator(EntityStatType::getAssetStore));
     private static AssetStore<String, EntityStatType, IndexedLookupTableAssetMap<String, EntityStatType>> ASSET_STORE;
@@ -88,6 +92,7 @@ NetworkSerializable<com.hypixel.hytale.protocol.EntityStatType> {
     @Nullable
     protected Regenerating[] regenerating;
     protected boolean ignoreInvulnerability;
+    protected boolean hideFromTooltip;
     protected EntityStatEffects minValueEffects;
     protected EntityStatEffects maxValueEffects;
     protected EntityStatResetBehavior resetBehavior = EntityStatResetBehavior.InitialValue;
@@ -185,13 +190,14 @@ NetworkSerializable<com.hypixel.hytale.protocol.EntityStatType> {
             packet.maxValueEffects = this.maxValueEffects.toPacket();
         }
         packet.resetBehavior = this.resetBehavior;
+        packet.hideFromTooltip = this.hideFromTooltip;
         this.cachedPacket = new SoftReference<com.hypixel.hytale.protocol.EntityStatType>(packet);
         return packet;
     }
 
     @Nonnull
     public String toString() {
-        return "EntityStatType{id='" + this.id + "', data=" + String.valueOf(this.data) + ", unknown=" + this.unknown + ", initialValue=" + this.initialValue + ", min=" + this.min + ", max=" + this.max + ", shared=" + this.shared + ", regenerating=" + Arrays.toString(this.regenerating) + ", minValueEffects=" + String.valueOf(this.minValueEffects) + ", maxValueEffects=" + String.valueOf(this.maxValueEffects) + ", resetBehavior=" + String.valueOf((Object)this.resetBehavior) + ", ignoreInvulnerability=" + this.ignoreInvulnerability + "}";
+        return "EntityStatType{id='" + this.id + "', data=" + String.valueOf(this.data) + ", unknown=" + this.unknown + ", initialValue=" + this.initialValue + ", min=" + this.min + ", max=" + this.max + ", shared=" + this.shared + ", regenerating=" + Arrays.toString(this.regenerating) + ", minValueEffects=" + String.valueOf(this.minValueEffects) + ", maxValueEffects=" + String.valueOf(this.maxValueEffects) + ", resetBehavior=" + String.valueOf((Object)this.resetBehavior) + ", ignoreInvulnerability=" + this.ignoreInvulnerability + ", hideFromTooltip=" + this.hideFromTooltip + "}";
     }
 
     @Nonnull

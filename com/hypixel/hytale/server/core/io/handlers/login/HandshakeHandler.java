@@ -5,7 +5,8 @@ package com.hypixel.hytale.server.core.io.handlers.login;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.HostAddress;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.auth.AuthGrant;
 import com.hypixel.hytale.protocol.packets.auth.AuthToken;
@@ -93,7 +94,7 @@ extends GenericConnectionPacketHandler {
     }
 
     @Override
-    public void accept(@Nonnull Packet packet) {
+    public void accept(@Nonnull ToServerPacket packet) {
         switch (packet.getId()) {
             case 1: {
                 this.handle((Disconnect)packet);
@@ -116,23 +117,23 @@ extends GenericConnectionPacketHandler {
         this.enterStage("auth", timeouts.getAuth());
         JWTValidator.IdentityTokenClaims identityClaims = HandshakeHandler.getJwtValidator().validateIdentityToken(this.identityToken);
         if (identityClaims == null) {
-            LOGGER.at(Level.WARNING).log("Identity token validation failed for %s from %s", (Object)this.username, (Object)NettyUtil.formatRemoteAddress(this.channel));
+            LOGGER.at(Level.WARNING).log("Identity token validation failed for %s from %s", (Object)this.username, (Object)NettyUtil.formatRemoteAddress(this.getChannel()));
             this.disconnect("Invalid or expired identity token");
             return;
         }
         UUID tokenUuid = identityClaims.getSubjectAsUUID();
         if (tokenUuid == null || !tokenUuid.equals(this.playerUuid)) {
-            LOGGER.at(Level.WARNING).log("Identity token UUID mismatch for %s from %s (expected: %s, got: %s)", this.username, NettyUtil.formatRemoteAddress(this.channel), this.playerUuid, tokenUuid);
+            LOGGER.at(Level.WARNING).log("Identity token UUID mismatch for %s from %s (expected: %s, got: %s)", this.username, NettyUtil.formatRemoteAddress(this.getChannel()), this.playerUuid, tokenUuid);
             this.disconnect("Invalid identity token: UUID mismatch");
             return;
         }
         String string = requiredScope = this.clientType == ClientType.Editor ? "hytale:editor" : "hytale:client";
         if (!identityClaims.hasScope(requiredScope)) {
-            LOGGER.at(Level.WARNING).log("Identity token missing required scope for %s from %s (clientType: %s, required: %s, actual: %s)", this.username, NettyUtil.formatRemoteAddress(this.channel), (Object)this.clientType, requiredScope, identityClaims.scope);
+            LOGGER.at(Level.WARNING).log("Identity token missing required scope for %s from %s (clientType: %s, required: %s, actual: %s)", this.username, NettyUtil.formatRemoteAddress(this.getChannel()), (Object)this.clientType, requiredScope, identityClaims.scope);
             this.disconnect("Invalid identity token: missing " + requiredScope + " scope");
             return;
         }
-        LOGGER.at(Level.INFO).log("Identity token validated for %s (UUID: %s, scope: %s) from %s, requesting auth grant", this.username, this.playerUuid, identityClaims.scope, NettyUtil.formatRemoteAddress(this.channel));
+        LOGGER.at(Level.INFO).log("Identity token validated for %s (UUID: %s, scope: %s) from %s, requesting auth grant", this.username, this.playerUuid, identityClaims.scope, NettyUtil.formatRemoteAddress(this.getChannel()));
         this.continueStage("auth:grant", timeouts.getAuthGrant(), () -> this.authState != AuthState.REQUESTING_AUTH_GRANT);
         this.requestAuthGrant();
     }
@@ -144,23 +145,24 @@ extends GenericConnectionPacketHandler {
             this.disconnect("Server authentication unavailable - please try again later");
             return;
         }
+        Channel channel = this.getChannel();
         ((CompletableFuture)HandshakeHandler.getSessionServiceClient().requestAuthorizationGrantAsync(this.identityToken, AuthConfig.getServerAudience(), serverSessionToken).thenAccept(authGrant -> {
-            if (!this.channel.isActive()) {
+            if (!channel.isActive()) {
                 return;
             }
             if (authGrant == null) {
-                this.channel.eventLoop().execute(() -> this.disconnect("Failed to obtain authorization grant from session service"));
+                channel.eventLoop().execute(() -> this.disconnect("Failed to obtain authorization grant from session service"));
                 return;
             }
             String serverIdentityToken = ServerAuthManager.getInstance().getIdentityToken();
             if (serverIdentityToken == null || serverIdentityToken.isEmpty()) {
                 LOGGER.at(Level.SEVERE).log("Server identity token not available - cannot complete mutual authentication");
-                this.channel.eventLoop().execute(() -> this.disconnect("Server authentication unavailable - please try again later"));
+                channel.eventLoop().execute(() -> this.disconnect("Server authentication unavailable - please try again later"));
                 return;
             }
             String finalServerIdentityToken = serverIdentityToken;
-            this.channel.eventLoop().execute(() -> {
-                if (!this.channel.isActive()) {
+            channel.eventLoop().execute(() -> {
+                if (!channel.isActive()) {
                     return;
                 }
                 if (this.authState != AuthState.REQUESTING_AUTH_GRANT) {
@@ -168,33 +170,34 @@ extends GenericConnectionPacketHandler {
                     return;
                 }
                 this.clearTimeout();
-                LOGGER.at(Level.INFO).log("Sending AuthGrant to %s (with server identity: %s)", (Object)NettyUtil.formatRemoteAddress(this.channel), !finalServerIdentityToken.isEmpty());
-                this.write((Packet)new AuthGrant((String)authGrant, finalServerIdentityToken));
+                LOGGER.at(Level.INFO).log("Sending AuthGrant to %s (with server identity: %s)", (Object)NettyUtil.formatRemoteAddress(channel), !finalServerIdentityToken.isEmpty());
+                this.write((ToClientPacket)new AuthGrant((String)authGrant, finalServerIdentityToken));
                 this.authState = AuthState.AWAITING_AUTH_TOKEN;
                 HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
                 this.continueStage("auth:token", timeouts.getAuthToken(), () -> this.authState != AuthState.AWAITING_AUTH_TOKEN);
             });
         })).exceptionally(ex -> {
             ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause((Throwable)ex)).log("Error requesting auth grant");
-            this.channel.eventLoop().execute(() -> this.disconnect("Authentication error: " + ex.getMessage()));
+            channel.eventLoop().execute(() -> this.disconnect("Authentication error: " + ex.getMessage()));
             return null;
         });
     }
 
     public void handle(@Nonnull Disconnect packet) {
         this.disconnectReason.setClientDisconnectType(packet.type);
-        LOGGER.at(Level.INFO).log("%s (%s) at %s left with reason: %s - %s", this.playerUuid, this.username, NettyUtil.formatRemoteAddress(this.channel), packet.type.name(), packet.reason);
-        ProtocolUtil.closeApplicationConnection(this.channel);
+        LOGGER.at(Level.INFO).log("%s (%s) at %s left with reason: %s - %s", this.playerUuid, this.username, NettyUtil.formatRemoteAddress(this.getChannel()), packet.type.name(), packet.reason);
+        ProtocolUtil.closeApplicationConnection(this.getChannel());
     }
 
     public void handle(@Nonnull AuthToken packet) {
+        Channel channel = this.getChannel();
         if (this.authState != AuthState.AWAITING_AUTH_TOKEN) {
-            LOGGER.at(Level.WARNING).log("Received unexpected AuthToken packet in state %s from %s", (Object)this.authState, (Object)NettyUtil.formatRemoteAddress(this.channel));
+            LOGGER.at(Level.WARNING).log("Received unexpected AuthToken packet in state %s from %s", (Object)this.authState, (Object)NettyUtil.formatRemoteAddress(channel));
             this.disconnect("Protocol error: unexpected AuthToken packet");
             return;
         }
         if (this.authTokenPacketReceived) {
-            LOGGER.at(Level.WARNING).log("Received duplicate AuthToken packet from %s", NettyUtil.formatRemoteAddress(this.channel));
+            LOGGER.at(Level.WARNING).log("Received duplicate AuthToken packet from %s", NettyUtil.formatRemoteAddress(channel));
             this.disconnect("Protocol error: duplicate AuthToken packet");
             return;
         }
@@ -203,33 +206,33 @@ extends GenericConnectionPacketHandler {
         this.clearTimeout();
         String accessToken = packet.accessToken;
         if (accessToken == null || accessToken.isEmpty()) {
-            LOGGER.at(Level.WARNING).log("Received AuthToken packet with empty access token from %s", NettyUtil.formatRemoteAddress(this.channel));
+            LOGGER.at(Level.WARNING).log("Received AuthToken packet with empty access token from %s", NettyUtil.formatRemoteAddress(channel));
             this.disconnect("Invalid access token");
             return;
         }
         String serverAuthGrant = packet.serverAuthorizationGrant;
-        X509Certificate clientCert = this.channel.attr(QUICTransport.CLIENT_CERTIFICATE_ATTR).get();
-        LOGGER.at(Level.INFO).log("Received AuthToken from %s, validating JWT (mTLS cert present: %s, server auth grant: %s)", NettyUtil.formatRemoteAddress(this.channel), clientCert != null, serverAuthGrant != null && !serverAuthGrant.isEmpty());
+        X509Certificate clientCert = channel.attr(QUICTransport.CLIENT_CERTIFICATE_ATTR).get();
+        LOGGER.at(Level.INFO).log("Received AuthToken from %s, validating JWT (mTLS cert present: %s, server auth grant: %s)", NettyUtil.formatRemoteAddress(channel), clientCert != null, serverAuthGrant != null && !serverAuthGrant.isEmpty());
         JWTValidator.JWTClaims claims = HandshakeHandler.getJwtValidator().validateToken(accessToken, clientCert);
         if (claims == null) {
-            LOGGER.at(Level.WARNING).log("JWT validation failed for %s", NettyUtil.formatRemoteAddress(this.channel));
+            LOGGER.at(Level.WARNING).log("JWT validation failed for %s", NettyUtil.formatRemoteAddress(channel));
             this.disconnect("Invalid access token");
             return;
         }
         UUID tokenUuid = claims.getSubjectAsUUID();
         String tokenUsername = claims.username;
         if (tokenUuid == null || !tokenUuid.equals(this.playerUuid)) {
-            LOGGER.at(Level.WARNING).log("JWT UUID mismatch for %s (expected: %s, got: %s)", NettyUtil.formatRemoteAddress(this.channel), this.playerUuid, tokenUuid);
+            LOGGER.at(Level.WARNING).log("JWT UUID mismatch for %s (expected: %s, got: %s)", NettyUtil.formatRemoteAddress(channel), this.playerUuid, tokenUuid);
             this.disconnect("Invalid token claims: UUID mismatch");
             return;
         }
         if (tokenUsername == null || tokenUsername.isEmpty()) {
-            LOGGER.at(Level.WARNING).log("JWT missing username for %s", NettyUtil.formatRemoteAddress(this.channel));
+            LOGGER.at(Level.WARNING).log("JWT missing username for %s", NettyUtil.formatRemoteAddress(channel));
             this.disconnect("Invalid token claims: missing username");
             return;
         }
         if (!tokenUsername.equals(this.username)) {
-            LOGGER.at(Level.WARNING).log("JWT username mismatch for %s (expected: %s, got: %s)", NettyUtil.formatRemoteAddress(this.channel), this.username, tokenUsername);
+            LOGGER.at(Level.WARNING).log("JWT username mismatch for %s (expected: %s, got: %s)", NettyUtil.formatRemoteAddress(channel), this.username, tokenUsername);
             this.disconnect("Invalid token claims: username mismatch");
             return;
         }
@@ -262,12 +265,13 @@ extends GenericConnectionPacketHandler {
             return;
         }
         LOGGER.at(Level.FINE).log("Using session token (first 20 chars): %s...", serverSessionToken.length() > 20 ? serverSessionToken.substring(0, 20) : serverSessionToken);
+        Channel channel = this.getChannel();
         ((CompletableFuture)HandshakeHandler.getSessionServiceClient().exchangeAuthGrantForTokenAsync(serverAuthGrant, serverCertFingerprint, serverSessionToken).thenAccept(serverAccessToken -> {
-            if (!this.channel.isActive()) {
+            if (!channel.isActive()) {
                 return;
             }
-            this.channel.eventLoop().execute(() -> {
-                if (!this.channel.isActive()) {
+            channel.eventLoop().execute(() -> {
+                if (!channel.isActive()) {
                     return;
                 }
                 if (this.authState != AuthState.EXCHANGING_SERVER_TOKEN) {
@@ -280,13 +284,13 @@ extends GenericConnectionPacketHandler {
                     return;
                 }
                 byte[] passwordChallenge = this.generatePasswordChallengeIfNeeded();
-                LOGGER.at(Level.INFO).log("Sending ServerAuthToken to %s (with password challenge: %s)", (Object)NettyUtil.formatRemoteAddress(this.channel), passwordChallenge != null);
-                this.write((Packet)new ServerAuthToken((String)serverAccessToken, passwordChallenge));
+                LOGGER.at(Level.INFO).log("Sending ServerAuthToken to %s (with password challenge: %s)", (Object)NettyUtil.formatRemoteAddress(channel), passwordChallenge != null);
+                this.write((ToClientPacket)new ServerAuthToken((String)serverAccessToken, passwordChallenge));
                 this.completeAuthentication(passwordChallenge);
             });
         })).exceptionally(ex -> {
             ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause((Throwable)ex)).log("Error exchanging server auth grant");
-            this.channel.eventLoop().execute(() -> {
+            channel.eventLoop().execute(() -> {
                 if (this.authState != AuthState.EXCHANGING_SERVER_TOKEN) {
                     return;
                 }
@@ -320,7 +324,7 @@ extends GenericConnectionPacketHandler {
         }
         this.authState = AuthState.AUTHENTICATED;
         this.clearTimeout();
-        LOGGER.at(Level.INFO).log("Mutual authentication complete for %s (%s) from %s", this.authenticatedUsername, this.playerUuid, NettyUtil.formatRemoteAddress(this.channel));
+        LOGGER.at(Level.INFO).log("Mutual authentication complete for %s (%s) from %s", this.authenticatedUsername, this.playerUuid, NettyUtil.formatRemoteAddress(this.getChannel()));
         this.onAuthenticated(passwordChallenge);
     }
 

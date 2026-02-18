@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class ConstantEnvironmentProviderAsset
 extends EnvironmentProviderAsset {
+    @Nonnull
     public static final BuilderCodec<ConstantEnvironmentProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ConstantEnvironmentProviderAsset.class, ConstantEnvironmentProviderAsset::new, EnvironmentProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Environment", Codec.STRING, true), (t, k) -> {
         t.environment = k;
     }, k -> k.environment).add()).build();

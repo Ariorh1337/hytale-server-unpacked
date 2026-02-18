@@ -17,13 +17,17 @@ import javax.annotation.Nonnull;
 
 public class TotalSustainedDamageCondition
 extends ScaledCurveCondition {
+    @Nonnull
     public static final BuilderCodec<TotalSustainedDamageCondition> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(TotalSustainedDamageCondition.class, TotalSustainedDamageCondition::new, ScaledCurveCondition.ABSTRACT_CODEC).documentation("A scaled curve condition that returns a utility value based on total damage taken during this bout of combat.")).build();
     protected static final ComponentType<EntityStore, DamageMemory> DAMAGE_MEMORY_COMPONENT_TYPE = DamageMemory.getComponentType();
 
     @Override
     protected double getInput(int selfIndex, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, Ref<EntityStore> target, CommandBuffer<EntityStore> commandBuffer, EvaluationContext context) {
-        DamageMemory memory = archetypeChunk.getComponent(selfIndex, DAMAGE_MEMORY_COMPONENT_TYPE);
-        return memory.getTotalCombatDamage();
+        DamageMemory damageMemoryComponent = archetypeChunk.getComponent(selfIndex, DAMAGE_MEMORY_COMPONENT_TYPE);
+        if (damageMemoryComponent == null) {
+            return Double.MAX_VALUE;
+        }
+        return damageMemoryComponent.getTotalCombatDamage();
     }
 
     @Override

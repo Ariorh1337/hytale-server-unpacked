@@ -34,6 +34,8 @@ extends AbstractWorldCommand {
     @Nonnull
     private static final Message MESSAGE_COMMANDS_ERRORS_PROVIDE_POSITION = Message.translation("server.commands.errors.providePosition");
     @Nonnull
+    private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
+    @Nonnull
     private static final SingleArgumentType<BlockSpawnerTable> BLOCK_SPAWNER_ASSET_TYPE = new AssetArgumentType("server.commands.parsing.argtype.asset.blockspawnertable.name", BlockSpawnerTable.class, "server.commands.parsing.argtype.asset.blockspawnertable.usage");
     @Nonnull
     private final RequiredArg<BlockSpawnerTable> blockSpawnerIdArg = this.withRequiredArg("blockSpawnerId", "server.commands.blockspawner.set.blockSpawnerId.desc", BLOCK_SPAWNER_ASSET_TYPE);
@@ -55,6 +57,9 @@ extends AbstractWorldCommand {
             position = relativePosition.getBlockPosition(context, store);
         } else if (context.isPlayer()) {
             Ref<EntityStore> ref = context.senderAsPlayerRef();
+            if (ref == null || !ref.isValid()) {
+                throw new GeneralCommandException(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
+            }
             Vector3i targetBlock = TargetUtil.getTargetBlock(ref, 10.0, store);
             if (targetBlock == null) {
                 throw new GeneralCommandException(MESSAGE_GENERAL_BLOCK_TARGET_NOT_IN_RANGE);
@@ -63,13 +68,18 @@ extends AbstractWorldCommand {
         } else {
             throw new GeneralCommandException(MESSAGE_COMMANDS_ERRORS_PROVIDE_POSITION);
         }
-        Object chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(position.x, position.z));
-        Ref<ChunkStore> blockRef = ((WorldChunk)chunk).getBlockComponentEntity(position.x, position.y, position.z);
-        if (blockRef == null) {
+        Object worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(position.x, position.z));
+        if (worldChunk == null) {
             context.sendMessage(Message.translation("server.general.containerNotFound").param("block", position.toString()));
             return;
         }
-        BlockSpawner spawnerState = world.getChunkStore().getStore().getComponent(blockRef, BlockSpawner.getComponentType());
+        Ref<ChunkStore> blockRef = ((WorldChunk)worldChunk).getBlockComponentEntity(position.x, position.y, position.z);
+        if (blockRef == null || !blockRef.isValid()) {
+            context.sendMessage(Message.translation("server.general.containerNotFound").param("block", position.toString()));
+            return;
+        }
+        Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+        BlockSpawner spawnerState = chunkStore.getComponent(blockRef, BlockSpawner.getComponentType());
         if (spawnerState == null) {
             context.sendMessage(Message.translation("server.general.containerNotFound").param("block", position.toString()));
             return;
@@ -85,7 +95,7 @@ extends AbstractWorldCommand {
             spawnerId = ((BlockSpawnerTable)this.blockSpawnerIdArg.get(context)).getId();
         }
         spawnerState.setBlockSpawnerId(spawnerId);
-        ((WorldChunk)chunk).markNeedsSaving();
+        ((WorldChunk)worldChunk).markNeedsSaving();
         context.sendMessage(Message.translation("server.commands.blockspawner.blockSpawnerSet").param("id", spawnerId));
     }
 }

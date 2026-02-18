@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class SpawnTreasureChestTransactionRecord
 extends TransactionRecord {
+    @Nonnull
     public static final BuilderCodec<SpawnTreasureChestTransactionRecord> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpawnTreasureChestTransactionRecord.class, SpawnTreasureChestTransactionRecord::new, BASE_CODEC).append(new KeyedCodec<UUID>("WorldUUID", Codec.UUID_BINARY), (spawnTreasureChestTransactionRecord, uuid) -> {
         spawnTreasureChestTransactionRecord.worldUUID = uuid;
     }, spawnTreasureChestTransactionRecord -> spawnTreasureChestTransactionRecord.worldUUID).add()).append(new KeyedCodec<Vector3i>("BlockPosition", Vector3i.CODEC), (spawnTreasureChestTransactionRecord, vector3d) -> {

@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class YValueDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<YValueDensityAsset> CODEC = BuilderCodec.builder(YValueDensityAsset.class, YValueDensityAsset::new, DensityAsset.ABSTRACT_CODEC).build();
 
     @Override

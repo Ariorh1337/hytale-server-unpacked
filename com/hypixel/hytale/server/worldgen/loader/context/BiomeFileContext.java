@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.server.worldgen.loader.context;
 
+import com.hypixel.hytale.procedurallib.file.AssetPath;
 import com.hypixel.hytale.server.worldgen.loader.context.FileContext;
 import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
 import java.nio.file.Path;
@@ -22,8 +23,8 @@ extends FileContext<ZoneFileContext> {
     }
 
     @Nonnull
-    public static Type getBiomeType(@Nonnull Path path) {
-        String name = path.getFileName().toString();
+    public static Type getBiomeType(@Nonnull AssetPath path) {
+        String name = path.getFileName();
         for (Type type : Type.values()) {
             if (!name.startsWith(type.prefix) || !name.endsWith(type.suffix)) continue;
             return type;

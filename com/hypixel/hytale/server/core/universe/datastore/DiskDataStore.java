@@ -6,6 +6,7 @@ package com.hypixel.hytale.server.core.universe.datastore;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.datastore.DataStore;
@@ -40,7 +41,12 @@ implements DataStore<T> {
 
     public DiskDataStore(@Nonnull String path, BuilderCodec<T> codec) {
         this.logger = HytaleLogger.get("DataStore|" + path);
-        this.path = Universe.get().getPath().resolve(path);
+        Path universePath = Universe.get().getPath();
+        Path resolved = PathUtil.resolvePathWithinDir(universePath, path);
+        if (resolved == null) {
+            throw new IllegalStateException("Data store path must be within universe directory: " + path);
+        }
+        this.path = resolved;
         this.codec = codec;
         if (Files.isDirectory(this.path, new LinkOption[0])) {
             try (DirectoryStream<Path> paths = Files.newDirectoryStream(this.path, "*.bson");){
@@ -129,11 +135,17 @@ implements DataStore<T> {
 
     @Nonnull
     protected static Path getPathFromId(@Nonnull Path path, String id) {
+        if (!PathUtil.isValidName(id)) {
+            throw new IllegalArgumentException("Invalid ID: " + id);
+        }
         return path.resolve(id + EXTENSION);
     }
 
     @Nonnull
     protected static Path getBackupPathFromId(@Nonnull Path path, String id) {
+        if (!PathUtil.isValidName(id)) {
+            throw new IllegalArgumentException("Invalid ID: " + id);
+        }
         return path.resolve(id + EXTENSION_BACKUP);
     }
 

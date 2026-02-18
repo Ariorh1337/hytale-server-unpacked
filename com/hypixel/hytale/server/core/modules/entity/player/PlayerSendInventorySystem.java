@@ -9,7 +9,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -49,7 +49,7 @@ extends EntityTickingSystem<EntityStore> {
         if (inventory.consumeIsDirty()) {
             PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.refComponentType);
             assert (playerRefComponent != null);
-            playerRefComponent.getPacketHandler().write((Packet)inventory.toPacket());
+            playerRefComponent.getPacketHandler().write((ToClientPacket)inventory.toPacket());
         }
         playerComponent.getWindowManager().updateWindows();
     }

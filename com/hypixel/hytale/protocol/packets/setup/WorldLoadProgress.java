@@ -3,27 +3,28 @@
  */
 package com.hypixel.hytale.protocol.packets.setup;
 
+import com.hypixel.hytale.protocol.FormattedMessage;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
-import com.hypixel.hytale.protocol.io.PacketIO;
-import com.hypixel.hytale.protocol.io.ProtocolException;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.ValidationResult;
-import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class WorldLoadProgress
-implements Packet {
+implements Packet,
+ToClientPacket {
     public static final int PACKET_ID = 21;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
     public static final int FIXED_BLOCK_SIZE = 9;
     public static final int VARIABLE_FIELD_COUNT = 1;
     public static final int VARIABLE_BLOCK_START = 9;
-    public static final int MAX_SIZE = 16384014;
+    public static final int MAX_SIZE = 0x64000000;
     @Nullable
-    public String status;
+    public FormattedMessage status;
     public int percentComplete;
     public int percentCompleteSubitem;
 
@@ -32,10 +33,15 @@ implements Packet {
         return 21;
     }
 
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
+    }
+
     public WorldLoadProgress() {
     }
 
-    public WorldLoadProgress(@Nullable String status, int percentComplete, int percentCompleteSubitem) {
+    public WorldLoadProgress(@Nullable FormattedMessage status, int percentComplete, int percentCompleteSubitem) {
         this.status = status;
         this.percentComplete = percentComplete;
         this.percentCompleteSubitem = percentCompleteSubitem;
@@ -55,16 +61,8 @@ implements Packet {
         obj.percentCompleteSubitem = buf.getIntLE(offset + 5);
         int pos = offset + 9;
         if ((nullBits & 1) != 0) {
-            int statusLen = VarInt.peek(buf, pos);
-            if (statusLen < 0) {
-                throw ProtocolException.negativeLength("Status", statusLen);
-            }
-            if (statusLen > 4096000) {
-                throw ProtocolException.stringTooLong("Status", statusLen, 4096000);
-            }
-            int statusVarLen = VarInt.length(buf, pos);
-            obj.status = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-            pos += statusVarLen + statusLen;
+            obj.status = FormattedMessage.deserialize(buf, pos);
+            pos += FormattedMessage.computeBytesConsumed(buf, pos);
         }
         return obj;
     }
@@ -73,8 +71,7 @@ implements Packet {
         byte nullBits = buf.getByte(offset);
         int pos = offset + 9;
         if ((nullBits & 1) != 0) {
-            int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += FormattedMessage.computeBytesConsumed(buf, pos);
         }
         return pos - offset;
     }
@@ -89,7 +86,7 @@ implements Packet {
         buf.writeIntLE(this.percentComplete);
         buf.writeIntLE(this.percentCompleteSubitem);
         if (this.status != null) {
-            PacketIO.writeVarString(buf, this.status, 4096000);
+            this.status.serialize(buf);
         }
     }
 
@@ -97,7 +94,7 @@ implements Packet {
     public int computeSize() {
         int size = 9;
         if (this.status != null) {
-            size += PacketIO.stringSize(this.status);
+            size += this.status.computeSize();
         }
         return size;
     }
@@ -109,24 +106,18 @@ implements Packet {
         byte nullBits = buffer.getByte(offset);
         int pos = offset + 9;
         if ((nullBits & 1) != 0) {
-            int statusLen = VarInt.peek(buffer, pos);
-            if (statusLen < 0) {
-                return ValidationResult.error("Invalid string length for Status");
+            ValidationResult statusResult = FormattedMessage.validateStructure(buffer, pos);
+            if (!statusResult.isValid()) {
+                return ValidationResult.error("Invalid Status: " + statusResult.error());
             }
-            if (statusLen > 4096000) {
-                return ValidationResult.error("Status exceeds max length 4096000");
-            }
-            pos += VarInt.length(buffer, pos);
-            if ((pos += statusLen) > buffer.writerIndex()) {
-                return ValidationResult.error("Buffer overflow reading Status");
-            }
+            pos += FormattedMessage.computeBytesConsumed(buffer, pos);
         }
         return ValidationResult.OK;
     }
 
     public WorldLoadProgress clone() {
         WorldLoadProgress copy = new WorldLoadProgress();
-        copy.status = this.status;
+        copy.status = this.status != null ? this.status.clone() : null;
         copy.percentComplete = this.percentComplete;
         copy.percentCompleteSubitem = this.percentCompleteSubitem;
         return copy;

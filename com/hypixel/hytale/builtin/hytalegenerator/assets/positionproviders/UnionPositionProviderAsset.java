@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class UnionPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<UnionPositionProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(UnionPositionProviderAsset.class, UnionPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Positions", new ArrayCodec(PositionProviderAsset.CODEC, PositionProviderAsset[]::new), true), (asset, v) -> {
         asset.positionProviderAssets = v;
     }, asset -> asset.positionProviderAssets).add()).build();

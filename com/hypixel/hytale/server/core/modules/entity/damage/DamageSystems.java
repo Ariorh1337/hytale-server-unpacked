@@ -31,12 +31,10 @@ import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.CombatTextUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MovementStates;
-import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.protocol.packets.player.DamageInfo;
 import com.hypixel.hytale.protocol.packets.player.ReticleEvent;
@@ -554,12 +552,7 @@ public class DamageSystems {
         }
 
         private static void queueUpdateFor(@Nonnull Ref<EntityStore> ref, float damageAmount, @Nullable Float hitAngleDeg, @Nonnull EntityTrackerSystems.EntityViewer viewer) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.CombatText;
-            CombatTextUpdate combatTextUpdate = new CombatTextUpdate();
-            combatTextUpdate.hitAngleDeg = hitAngleDeg == null ? 0.0f : hitAngleDeg.floatValue();
-            combatTextUpdate.text = Integer.toString((int)Math.floor(damageAmount));
-            update.combatTextUpdate = combatTextUpdate;
+            CombatTextUpdate update = new CombatTextUpdate(hitAngleDeg == null ? 0.0f : hitAngleDeg.floatValue(), Integer.toString((int)Math.floor(damageAmount)));
             viewer.queueUpdate(ref, update);
         }
     }
@@ -1347,7 +1340,7 @@ public class DamageSystems {
                     }
                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
                     if (playerRefComponent == null) continue;
-                    playerRefComponent.getPacketHandler().write((Packet)packet);
+                    playerRefComponent.getPacketHandler().write((ToClientPacket)packet);
                 }
             }
         }

@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class DeployableComponent
 implements Component<EntityStore> {
@@ -30,7 +31,8 @@ implements Component<EntityStore> {
     private UUID ownerUUID;
     private Instant spawnInstant;
     private float timeSinceLastAttack;
-    private Vector3f debugColor = null;
+    @Nullable
+    private Vector3f debugColor;
     private boolean firstTickRan;
     private String spawnFace;
 
@@ -102,6 +104,7 @@ implements Component<EntityStore> {
         this.flags.put(key, value);
     }
 
+    @Nonnull
     public Vector3f getDebugColor() {
         if (this.debugColor == null) {
             ThreadLocalRandom random = ThreadLocalRandom.current();

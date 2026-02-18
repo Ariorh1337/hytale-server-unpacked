@@ -31,7 +31,7 @@ extends HandshakeHandler {
     @Override
     @Nonnull
     public String getIdentifier() {
-        return "{Authenticating(" + NettyUtil.formatRemoteAddress(this.channel) + "), authHandlerSupplier=" + String.valueOf(this.authHandlerSupplier) + "}";
+        return "{Authenticating(" + NettyUtil.formatRemoteAddress(this.getChannel()) + "), authHandlerSupplier=" + String.valueOf(this.authHandlerSupplier) + "}";
     }
 
     @Override
@@ -46,8 +46,8 @@ extends HandshakeHandler {
 
     @Override
     protected void onAuthenticated(byte[] passwordChallenge) {
-        PacketHandler.logConnectionTimings(this.channel, "Authenticated", Level.FINE);
-        NettyUtil.setChannelHandler(this.channel, new PasswordPacketHandler(this.channel, this.protocolVersion, this.language, this.auth.getUuid(), this.auth.getUsername(), this.auth.getReferralData(), this.auth.getReferralSource(), passwordChallenge, (ch, pv, lang, a) -> this.authHandlerSupplier.create(ch, pv, lang, a)));
+        PacketHandler.logConnectionTimings(this.getChannel(), "Authenticated", Level.FINE);
+        NettyUtil.setChannelHandler(this.getChannel(), new PasswordPacketHandler(this.getChannel(), this.protocolVersion, this.language, this.auth.getUuid(), this.auth.getUsername(), this.auth.getReferralData(), this.auth.getReferralSource(), passwordChallenge, (ch, pv, lang, a) -> this.authHandlerSupplier.create(ch, pv, lang, a)));
     }
 
     @FunctionalInterface

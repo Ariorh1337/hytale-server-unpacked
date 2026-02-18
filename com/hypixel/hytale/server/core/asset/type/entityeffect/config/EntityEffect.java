@@ -48,7 +48,7 @@ public class EntityEffect
 implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, EntityEffect>>,
 NetworkSerializable<com.hypixel.hytale.protocol.EntityEffect> {
     @Nonnull
-    public static final AssetBuilderCodec<String, EntityEffect> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(EntityEffect.class, EntityEffect::new, Codec.STRING, (entityEffect, s) -> {
+    public static final AssetBuilderCodec<String, EntityEffect> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(EntityEffect.class, EntityEffect::new, Codec.STRING, (entityEffect, s) -> {
         entityEffect.id = s;
     }, entityEffect -> entityEffect.id, (asset, data) -> {
         asset.data = data;
@@ -122,7 +122,7 @@ NetworkSerializable<com.hypixel.hytale.protocol.EntityEffect> {
         entityEffect.locale = aString;
     }, entityEffect -> entityEffect.locale, (entityEffect, parent) -> {
         entityEffect.locale = parent.locale;
-    }).documentation("An optional translation key, used to display the damage cause upon death.").add()).appendInherited(new KeyedCodec<String>("StatusEffectIcon", Codec.STRING), (entityEffect, aString) -> {
+    }).documentation("[Deprecated - DeathMessageKey instead] Use An optional translation key, used to display the damage cause upon death.").add()).appendInherited(new KeyedCodec<String>("StatusEffectIcon", Codec.STRING), (entityEffect, aString) -> {
         entityEffect.statusEffectIcon = aString;
     }, entityEffect -> entityEffect.statusEffectIcon, (entityEffect, parent) -> {
         entityEffect.statusEffectIcon = parent.statusEffectIcon;
@@ -138,7 +138,11 @@ NetworkSerializable<com.hypixel.hytale.protocol.EntityEffect> {
         entityEffect.damageResistanceValuesRaw = map;
     }, entityEffect -> entityEffect.damageResistanceValuesRaw, (entityEffect, parent) -> {
         entityEffect.damageResistanceValuesRaw = parent.damageResistanceValuesRaw;
-    }).addValidator(DamageCause.VALIDATOR_CACHE.getMapKeyValidator()).add()).afterDecode(entityEffect -> {
+    }).addValidator(DamageCause.VALIDATOR_CACHE.getMapKeyValidator()).add()).appendInherited(new KeyedCodec<String>("DeathMessageKey", Codec.STRING), (entityEffect, s) -> {
+        entityEffect.deathMessageKey = s;
+    }, entityEffect -> entityEffect.deathMessageKey, (entityEffect, parent) -> {
+        entityEffect.deathMessageKey = parent.deathMessageKey;
+    }).documentation("Localization key used on the death screen when this EntityEffect kills a player.").add()).afterDecode(entityEffect -> {
         entityEffect.entityStats = EntityStatsModule.resolveEntityStats(entityEffect.unknownEntityStats);
         entityEffect.statModifiers = EntityStatsModule.resolveEntityStats(entityEffect.rawStatModifiers);
         if (entityEffect.damageResistanceValuesRaw != null && !entityEffect.damageResistanceValuesRaw.isEmpty()) {
@@ -196,6 +200,7 @@ NetworkSerializable<com.hypixel.hytale.protocol.EntityEffect> {
     @Nullable
     protected String locale;
     protected boolean invulnerable = false;
+    protected String deathMessageKey;
     @Nullable
     protected Map<String, StaticModifier[]> rawStatModifiers;
     @Nullable
@@ -325,6 +330,10 @@ NetworkSerializable<com.hypixel.hytale.protocol.EntityEffect> {
     @Nullable
     public Map<DamageCause, StaticModifier[]> getDamageResistanceValues() {
         return this.damageResistanceValues;
+    }
+
+    public String getDeathMessageKey() {
+        return this.deathMessageKey;
     }
 
     @Override

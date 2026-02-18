@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public final class ReputationObjectiveRewardHistoryData
 extends ObjectiveRewardHistoryData {
+    @Nonnull
     public static final BuilderCodec<ReputationObjectiveRewardHistoryData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ReputationObjectiveRewardHistoryData.class, ReputationObjectiveRewardHistoryData::new, ObjectiveRewardHistoryData.BASE_CODEC).append(new KeyedCodec<String>("ReputationGroupId", Codec.STRING), (reputationObjectiveRewardDetails, s) -> {
         reputationObjectiveRewardDetails.reputationGroupId = s;
     }, reputationObjectiveRewardDetails -> reputationObjectiveRewardDetails.reputationGroupId).addValidator(Validators.nonNull()).addValidator(ReputationGroup.VALIDATOR_CACHE.getValidator()).add()).append(new KeyedCodec<Integer>("Amount", Codec.INTEGER), (reputationObjectiveRewardHistoryData, integer) -> {

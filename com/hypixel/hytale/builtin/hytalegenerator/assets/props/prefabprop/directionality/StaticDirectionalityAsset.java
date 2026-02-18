@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class StaticDirectionalityAsset
 extends DirectionalityAsset {
+    @Nonnull
     public static final BuilderCodec<StaticDirectionalityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(StaticDirectionalityAsset.class, StaticDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("Rotation", Codec.INTEGER, false), (asset, v) -> {
         asset.rotation = v;
     }, asset -> asset.rotation).addValidator((v, r) -> {

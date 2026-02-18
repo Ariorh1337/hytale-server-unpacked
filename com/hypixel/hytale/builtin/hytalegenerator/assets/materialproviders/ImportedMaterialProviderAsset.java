@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class ImportedMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedMaterialProviderAsset.class, ImportedMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, true), (t, k) -> {
         t.name = k;
     }, k -> k.name).add()).build();

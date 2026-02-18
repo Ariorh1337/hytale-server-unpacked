@@ -5,14 +5,18 @@ package com.hypixel.hytale.server.core.universe.world;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ItemSoundEvent;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent3D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEventEntity;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
@@ -27,6 +31,22 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class SoundUtil {
+    public static void playItemSoundEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull Item item, @Nonnull ItemSoundEvent itemSoundEvent) {
+        ItemSoundSet soundSet = ItemSoundSet.getAssetMap().getAsset(item.getItemSoundSetIndex());
+        if (soundSet == null) {
+            return;
+        }
+        String soundEventId = soundSet.getSoundEventIds().get((Object)itemSoundEvent);
+        if (soundEventId == null) {
+            return;
+        }
+        int soundEventIndex = SoundEvent.getAssetMap().getIndex(soundEventId);
+        if (soundEventIndex == 0) {
+            return;
+        }
+        SoundUtil.playSoundEvent2d(ref, soundEventIndex, SoundCategory.UI, store);
+    }
+
     public static void playSoundEventEntity(int soundEventIndex, int networkId, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         SoundUtil.playSoundEventEntity(soundEventIndex, networkId, 1.0f, 1.0f, componentAccessor);
     }
@@ -35,7 +55,7 @@ public class SoundUtil {
         if (soundEventIndex == 0) {
             return;
         }
-        PlayerUtil.broadcastPacketToPlayers(componentAccessor, (Packet)new PlaySoundEventEntity(soundEventIndex, networkId, volumeModifier, pitchModifier));
+        PlayerUtil.broadcastPacketToPlayers(componentAccessor, (ToClientPacket)new PlaySoundEventEntity(soundEventIndex, networkId, volumeModifier, pitchModifier));
     }
 
     public static void playSoundEvent2dToPlayer(@Nonnull PlayerRef playerRefComponent, int soundEventIndex, @Nonnull SoundCategory soundCategory) {
@@ -46,7 +66,7 @@ public class SoundUtil {
         if (soundEventIndex == 0) {
             return;
         }
-        playerRefComponent.getPacketHandler().write((Packet)new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
+        playerRefComponent.getPacketHandler().write((ToClientPacket)new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
     }
 
     public static void playSoundEvent2d(int soundEventIndex, @Nonnull SoundCategory soundCategory, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -57,7 +77,7 @@ public class SoundUtil {
         if (soundEventIndex == 0) {
             return;
         }
-        PlayerUtil.broadcastPacketToPlayers(componentAccessor, (Packet)new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
+        PlayerUtil.broadcastPacketToPlayers(componentAccessor, (ToClientPacket)new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
     }
 
     public static void playSoundEvent2d(@Nonnull Ref<EntityStore> ref, int soundEventIndex, @Nonnull SoundCategory soundCategory, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -72,7 +92,7 @@ public class SoundUtil {
         if (playerRefComponent == null) {
             return;
         }
-        playerRefComponent.getPacketHandler().write((Packet)new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
+        playerRefComponent.getPacketHandler().write((ToClientPacket)new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
     }
 
     public static void playSoundEvent3d(int soundEventIndex, @Nonnull SoundCategory soundCategory, double x, double y, double z, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -96,7 +116,7 @@ public class SoundUtil {
             if (ref == null || !ref.isValid()) continue;
             PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
-            playerRefComponent.getPacketHandler().write((Packet)packet);
+            playerRefComponent.getPacketHandler().write((ToClientPacket)packet);
         }
     }
 
@@ -124,7 +144,7 @@ public class SoundUtil {
             if (ref == null || !ref.isValid() || !shouldHear.test(ref)) continue;
             PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
-            playerRefComponent.getPacketHandler().write((Packet)packet);
+            playerRefComponent.getPacketHandler().write((ToClientPacket)packet);
         }
     }
 
@@ -146,7 +166,7 @@ public class SoundUtil {
             if (sourceEntity == null) {
                 return true;
             }
-            if (ignoreSource && sourceRef.equals((Ref<EntityStore>)playerRef)) {
+            if (ignoreSource && sourceRef.equals(playerRef)) {
                 return false;
             }
             return !sourceEntity.isHiddenFromLivingEntity(sourceRef, (Ref<EntityStore>)playerRef, componentAccessor);
@@ -175,7 +195,7 @@ public class SoundUtil {
         if (transformComponent.getPosition().distanceSquaredTo(x, y, z) <= (double)(maxDistance * maxDistance)) {
             PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
-            playerRefComponent.getPacketHandler().write((Packet)new PlaySoundEvent3D(soundEventIndex, soundCategory, new Position(x, y, z), volumeModifier, pitchModifier));
+            playerRefComponent.getPacketHandler().write((ToClientPacket)new PlaySoundEvent3D(soundEventIndex, soundCategory, new Position(x, y, z), volumeModifier, pitchModifier));
         }
     }
 

@@ -15,6 +15,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.map.EnumMapCodec;
+import com.hypixel.hytale.codec.schema.metadata.ui.UIDefaultCollapsedState;
 import com.hypixel.hytale.codec.schema.metadata.ui.UIEditorSectionStart;
 import com.hypixel.hytale.codec.schema.metadata.ui.UIPropertyTitle;
 import com.hypixel.hytale.codec.schema.metadata.ui.UIRebuildCaches;
@@ -24,6 +25,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.BlockTextures;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.ColorLight;
+import com.hypixel.hytale.protocol.FluidDrawType;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.Opacity;
 import com.hypixel.hytale.protocol.ShaderType;
@@ -33,6 +35,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockTypeTextu
 import com.hypixel.hytale.server.core.asset.type.fluid.DefaultFluidTicker;
 import com.hypixel.hytale.server.core.asset.type.fluid.FluidTicker;
 import com.hypixel.hytale.server.core.asset.type.fluidfx.config.FluidFX;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionTypeUtils;
@@ -51,7 +54,7 @@ import javax.annotation.Nullable;
 public class Fluid
 implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, Fluid>>,
 NetworkSerializable<com.hypixel.hytale.protocol.Fluid> {
-    public static final AssetBuilderCodec<String, Fluid> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(Fluid.class, Fluid::new, Codec.STRING, (t, k) -> {
+    public static final AssetBuilderCodec<String, Fluid> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(Fluid.class, Fluid::new, Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (asset, data) -> {
         asset.data = data;
@@ -63,11 +66,15 @@ NetworkSerializable<com.hypixel.hytale.protocol.Fluid> {
         fluid.textures = o;
     }, fluid -> fluid.textures, (fluid, parent) -> {
         fluid.textures = parent.textures;
-    }).metadata(new UIPropertyTitle("Block Textures")).metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS, UIRebuildCaches.ClientCache.BLOCK_TEXTURES)).add()).appendInherited(new KeyedCodec<T[]>("Effect", new ArrayCodec<ShaderType>(new EnumCodec<ShaderType>(ShaderType.class), ShaderType[]::new)), (fluid, o) -> {
+    }).metadata(new UIPropertyTitle("Fluid Textures")).metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS, UIRebuildCaches.ClientCache.BLOCK_TEXTURES)).add()).appendInherited(new KeyedCodec<T[]>("Effect", new ArrayCodec<ShaderType>(new EnumCodec<ShaderType>(ShaderType.class), ShaderType[]::new)), (fluid, o) -> {
         fluid.effect = o;
     }, fluid -> fluid.effect, (fluid, parent) -> {
         fluid.effect = parent.effect;
-    }).metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS)).add()).appendInherited(new KeyedCodec<Opacity>("Opacity", new EnumCodec<Opacity>(Opacity.class)), (fluid, o) -> {
+    }).metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS)).add()).appendInherited(new KeyedCodec<FluidDrawType>("DrawType", new EnumCodec<FluidDrawType>(FluidDrawType.class)), (fluid, o) -> {
+        fluid.drawType = o;
+    }, fluid -> fluid.drawType, (fluid, parent) -> {
+        fluid.drawType = parent.drawType;
+    }).addValidator(Validators.nonNull()).metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS, UIRebuildCaches.ClientCache.BLOCK_TEXTURES, UIRebuildCaches.ClientCache.MODEL_TEXTURES)).metadata(new UIEditorSectionStart("Rendering")).add()).appendInherited(new KeyedCodec<Opacity>("Opacity", new EnumCodec<Opacity>(Opacity.class)), (fluid, o) -> {
         fluid.opacity = o;
     }, fluid -> fluid.opacity, (fluid, parent) -> {
         fluid.opacity = parent.opacity;
@@ -79,7 +86,11 @@ NetworkSerializable<com.hypixel.hytale.protocol.Fluid> {
         fluid.fluidFXId = o;
     }, fluid -> fluid.fluidFXId, (fluid, parent) -> {
         fluid.fluidFXId = parent.fluidFXId;
-    }).addValidator(FluidFX.VALIDATOR_CACHE.getValidator()).add()).appendInherited(new KeyedCodec<FluidTicker>("Ticker", FluidTicker.CODEC), (fluid, o) -> {
+    }).addValidator(FluidFX.VALIDATOR_CACHE.getValidator()).add()).appendInherited(new KeyedCodec<T[]>("Particles", ModelParticle.ARRAY_CODEC), (fluid, s) -> {
+        fluid.particles = s;
+    }, fluid -> fluid.particles, (fluid, parent) -> {
+        fluid.particles = parent.particles;
+    }).documentation("The particles defined here will be spawned on top of fluids of this type placed in the world.").metadata(new UIPropertyTitle("Fluid Particles")).metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS)).metadata(UIDefaultCollapsedState.UNCOLLAPSED).addValidator(Validators.nonNullArrayElements()).add()).appendInherited(new KeyedCodec<FluidTicker>("Ticker", FluidTicker.CODEC), (fluid, o) -> {
         fluid.ticker = o;
     }, fluid -> fluid.ticker, (fluid, parent) -> {
         fluid.ticker = parent.ticker;
@@ -141,6 +152,8 @@ NetworkSerializable<com.hypixel.hytale.protocol.Fluid> {
     private int maxFluidLevel = 8;
     private BlockTypeTextures[] textures;
     private ShaderType[] effect;
+    protected ModelParticle[] particles;
+    private FluidDrawType drawType = FluidDrawType.Liquid;
     @Nonnull
     private Opacity opacity = Opacity.Solid;
     private boolean requiresAlphaBlending = true;
@@ -184,6 +197,8 @@ NetworkSerializable<com.hypixel.hytale.protocol.Fluid> {
         this.opacity = other.opacity;
         this.requiresAlphaBlending = other.requiresAlphaBlending;
         this.fluidFXId = other.fluidFXId;
+        this.particles = other.particles;
+        this.drawType = other.drawType;
         this.damageToEntities = other.damageToEntities;
         this.light = other.light;
         this.particleColor = other.particleColor;
@@ -320,6 +335,13 @@ NetworkSerializable<com.hypixel.hytale.protocol.Fluid> {
         } else {
             packet.cubeTextures = UNKNOWN_BLOCK_TEXTURES;
         }
+        if (this.particles != null && this.particles.length > 0) {
+            packet.particles = new com.hypixel.hytale.protocol.ModelParticle[this.particles.length];
+            for (int i = 0; i < this.particles.length; ++i) {
+                packet.particles[i] = this.particles[i].toPacket();
+            }
+        }
+        packet.drawType = this.drawType;
         packet.requiresAlphaBlending = this.requiresAlphaBlending;
         packet.blockSoundSetIndex = this.blockSoundSetIndex;
         packet.blockParticleSetId = this.blockParticleSetId;

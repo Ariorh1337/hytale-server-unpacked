@@ -10,32 +10,50 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.SolidMaterial;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MaterialCache {
-    private final Map<Integer, SolidMaterial> hashToSolidMap = new HashMap<Integer, SolidMaterial>();
-    private final Map<Integer, FluidMaterial> hashToFluidMap = new HashMap<Integer, FluidMaterial>();
-    private final Map<Integer, Material> hashToMaterialMap = new HashMap<Integer, Material>();
+    @Nonnull
+    private final ConcurrentHashMap<Integer, SolidMaterial> hashToSolidMap = new ConcurrentHashMap();
+    @Nonnull
+    private final ConcurrentHashMap<Integer, FluidMaterial> hashToFluidMap = new ConcurrentHashMap();
+    @Nonnull
+    private final ConcurrentHashMap<Integer, Material> hashToMaterialMap = new ConcurrentHashMap();
+    @Nullable
     public final SolidMaterial EMPTY_AIR = this.getSolidMaterial("Empty_Air");
+    @Nullable
     public final SolidMaterial ROCK_STONE = this.getSolidMaterial("Rock_Stone");
+    @Nullable
     public final SolidMaterial SOIL_GRASS = this.getSolidMaterial("Soil_Grass");
+    @Nullable
     public final SolidMaterial SOIL_DIRT = this.getSolidMaterial("Soil_Dirt");
+    @Nullable
     public final SolidMaterial SOIL_MUD = this.getSolidMaterial("Soil_Mud");
+    @Nullable
     public final SolidMaterial SOIL_NEEDLES = this.getSolidMaterial("Soil_Needles");
+    @Nullable
     public final SolidMaterial SOIL_GRAVEL = this.getSolidMaterial("Soil_Gravel");
+    @Nullable
     public final SolidMaterial ROCK_QUARTZITE = this.getSolidMaterial("Rock_Quartzite");
+    @Nullable
     public final SolidMaterial ROCK_MARBLE = this.getSolidMaterial("Rock_Marble");
+    @Nullable
     public final SolidMaterial ROCK_SHALE = this.getSolidMaterial("Rock_Shale");
+    @Nullable
     public final SolidMaterial FLUID_WATER = this.getSolidMaterial("Fluid_Water");
+    @Nullable
     public final SolidMaterial BEDROCK = this.getSolidMaterial("Rock_Volcanic");
+    @Nullable
     public final FluidMaterial UNKNOWN_FLUID = this.getFluidMaterial(Fluid.UNKNOWN.getId());
+    @Nullable
     public final FluidMaterial EMPTY_FLUID = this.getFluidMaterial(Fluid.EMPTY.getId());
+    @Nonnull
     public final Material EMPTY = this.getMaterial(this.EMPTY_AIR, this.EMPTY_FLUID);
 
     @Nonnull
@@ -50,6 +68,7 @@ public class MaterialCache {
         return material;
     }
 
+    @Nullable
     public FluidMaterial getFluidMaterial(@Nonnull String fluidString) {
         int fluidId = 0;
         Fluid key = (Fluid)Fluid.getAssetMap().getAsset(fluidString);
@@ -62,6 +81,7 @@ public class MaterialCache {
         return this.getOrRegisterFluid(fluidId, level);
     }
 
+    @Nullable
     public FluidMaterial getFluidMaterial(int fluidId, byte level) {
         Fluid key = Fluid.getAssetMap().getAsset(fluidId);
         if (key == null) {
@@ -71,6 +91,7 @@ public class MaterialCache {
         return this.getOrRegisterFluid(fluidId, level);
     }
 
+    @Nonnull
     private FluidMaterial getOrRegisterFluid(int fluidId, byte level) {
         int hash = FluidMaterial.contentHash(fluidId, level);
         FluidMaterial fluidMaterial = this.hashToFluidMap.get(hash);
@@ -82,7 +103,8 @@ public class MaterialCache {
         return fluidMaterial;
     }
 
-    public SolidMaterial getSolidMaterial(@Nonnull String solidString) {
+    @Nullable
+    public SolidMaterial getSolidMaterial(@Nonnull String solidString, @Nonnull RotationTuple rotation) {
         int blockId = 0;
         BlockType key = BlockType.fromString(solidString);
         if (key != null) {
@@ -92,17 +114,23 @@ public class MaterialCache {
             System.out.println("Attempted to register an invalid block ID " + blockId + ": using Empty_Air instead.");
             return this.EMPTY_AIR;
         }
-        int hash = SolidMaterial.contentHash(blockId, 0, 0, 0, null);
+        int hash = SolidMaterial.contentHash(blockId, 0, rotation.index(), 0, null);
         SolidMaterial solidMaterial = this.hashToSolidMap.get(hash);
         if (solidMaterial != null) {
             return solidMaterial;
         }
-        solidMaterial = new SolidMaterial(this, blockId, 0, 0, 0, null);
+        solidMaterial = new SolidMaterial(this, blockId, 0, rotation.index(), 0, null);
         this.hashToSolidMap.put(blockId, solidMaterial);
         return solidMaterial;
     }
 
-    public SolidMaterial getSolidMaterialRotatedY(@Nonnull SolidMaterial solidMaterial, Rotation rotation) {
+    @Nullable
+    public SolidMaterial getSolidMaterial(@Nonnull String solidString) {
+        return this.getSolidMaterial(solidString, RotationTuple.NONE);
+    }
+
+    @Nonnull
+    public SolidMaterial getSolidMaterialRotatedY(@Nonnull SolidMaterial solidMaterial, @Nonnull Rotation rotation) {
         int rotatedFiller;
         PrefabRotation prefabRotation = PrefabRotation.fromRotation(rotation);
         int rotatedRotation = prefabRotation.getRotation(solidMaterial.rotation);
@@ -116,6 +144,7 @@ public class MaterialCache {
         return rotatedSolidMaterial;
     }
 
+    @Nullable
     public SolidMaterial getSolidMaterial(int blockId, int support, int rotation, int filler, @Nullable Holder<ChunkStore> holder) {
         if (BlockType.getAssetMap().getAsset(blockId) == null) {
             System.out.println("Attempted to register an invalid block ID " + blockId + ": using Empty_Air instead.");

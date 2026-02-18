@@ -25,14 +25,23 @@ import javax.annotation.Nonnull;
 
 public class SelectOverrideRespawnPointPage
 extends RespawnPointPage {
+    @Nonnull
+    private static final Message MESSAGE_SERVER_CUSTOM_UI_NEED_TO_SELECT_RESPAWN_POINT = Message.translation("server.customUI.needToSelectRespawnPoint");
+    @Nonnull
     private static final Value<String> DEFAULT_RESPAWN_BUTTON_STYLE = Value.ref("Pages/OverrideRespawnPointButton.ui", "DefaultRespawnButtonStyle");
+    @Nonnull
     private static final Value<String> SELECTED_RESPAWN_BUTTON_STYLE = Value.ref("Pages/OverrideRespawnPointButton.ui", "SelectedRespawnButtonStyle");
+    @Nonnull
+    private static final String PAGE_SELECT_OVERRIDE_RESPAWN_POINT_PAGE = "Pages/SelectOverrideRespawnPointPage.ui";
+    @Nonnull
     private final Vector3i respawnPointToAddPosition;
+    @Nonnull
     private final RespawnBlock respawnPointToAdd;
+    @Nonnull
     private final PlayerRespawnPointData[] respawnPoints;
     private int selectedRespawnPointIndex = -1;
 
-    public SelectOverrideRespawnPointPage(@Nonnull PlayerRef playerRef, InteractionType interactionType, Vector3i respawnPointToAddPosition, RespawnBlock respawnPointToAdd, PlayerRespawnPointData[] respawnPoints) {
+    public SelectOverrideRespawnPointPage(@Nonnull PlayerRef playerRef, @Nonnull InteractionType interactionType, @Nonnull Vector3i respawnPointToAddPosition, @Nonnull RespawnBlock respawnPointToAdd, @Nonnull PlayerRespawnPointData[] respawnPoints) {
         super(playerRef, interactionType);
         this.respawnPointToAddPosition = respawnPointToAddPosition;
         this.respawnPointToAdd = respawnPointToAdd;
@@ -41,12 +50,16 @@ extends RespawnPointPage {
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
-        commandBuilder.append("Pages/SelectOverrideRespawnPointPage.ui");
+        commandBuilder.append(PAGE_SELECT_OVERRIDE_RESPAWN_POINT_PAGE);
         commandBuilder.clear("#RespawnPointList");
         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-        assert (playerRefComponent != null);
+        if (playerRefComponent == null) {
+            return;
+        }
         HeadRotation rotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
-        assert (rotationComponent != null);
+        if (rotationComponent == null) {
+            return;
+        }
         float lookYaw = rotationComponent.getRotation().getYaw();
         double direction = Math.toDegrees(lookYaw);
         for (int i = 0; i < this.respawnPoints.length; ++i) {
@@ -68,17 +81,17 @@ extends RespawnPointPage {
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPointPage.RespawnPointEventData data) {
+        Player playerComponent;
         if (data.getIndex() != -1) {
             this.setSelectedRespawnPoint(data);
             this.sendUpdate();
         } else if (data.getRespawnPointName() != null) {
             if (this.selectedRespawnPointIndex == -1) {
-                this.displayError(Message.translation("server.customUI.needToSelectRespawnPoint"));
+                this.displayError(MESSAGE_SERVER_CUSTOM_UI_NEED_TO_SELECT_RESPAWN_POINT);
                 return;
             }
             this.setRespawnPointForPlayer(ref, store, this.respawnPointToAddPosition, this.respawnPointToAdd, data.getRespawnPointName(), this.respawnPoints[this.selectedRespawnPointIndex]);
-        } else if ("Cancel".equals(data.getAction())) {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        } else if ("Cancel".equals(data.getAction()) && (playerComponent = store.getComponent(ref, Player.getComponentType())) != null) {
             playerComponent.getPageManager().setPage(ref, store, Page.None);
         }
     }

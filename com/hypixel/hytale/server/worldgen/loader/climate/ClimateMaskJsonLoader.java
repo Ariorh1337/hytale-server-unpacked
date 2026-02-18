@@ -4,8 +4,8 @@
 package com.hypixel.hytale.server.worldgen.loader.climate;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.google.gson.JsonObject;
+import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.CoordinateRandomizerJsonLoader;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedResource;
@@ -19,9 +19,7 @@ import com.hypixel.hytale.server.worldgen.climate.UniqueClimateGenerator;
 import com.hypixel.hytale.server.worldgen.loader.climate.ClimateGraphJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.climate.ClimateNoiseJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.climate.UniqueClimateGeneratorJsonLoader;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -61,33 +59,13 @@ extends JsonLoader<K, ClimateMaskProvider> {
         return new UniqueClimateGeneratorJsonLoader(this.seed, this.dataFolder, this.mustGetArray("UniqueZones", Constants.DEFAULT_UNIQUE)).load();
     }
 
-    protected static JsonElement loadMaskFileJson(Path file) {
-        JsonElement jsonElement;
-        block8: {
-            BufferedReader reader = Files.newBufferedReader(file);
-            try {
-                jsonElement = JsonParser.parseReader(reader);
-                if (reader == null) break block8;
-            }
-            catch (Throwable throwable) {
-                try {
-                    if (reader != null) {
-                        try {
-                            reader.close();
-                        }
-                        catch (Throwable throwable2) {
-                            throwable.addSuppressed(throwable2);
-                        }
-                    }
-                    throw throwable;
-                }
-                catch (IOException e) {
-                    throw new Error("Failed to load Mask.json", e);
-                }
-            }
-            reader.close();
+    protected static JsonObject loadMaskFileJson(Path file) {
+        try {
+            return FileIO.load(file, JsonLoader.JSON_OBJ_LOADER);
         }
-        return jsonElement;
+        catch (IOException e) {
+            throw new Error("Failed to load Mask.json", e);
+        }
     }
 
     public static interface Constants {

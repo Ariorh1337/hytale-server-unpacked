@@ -26,7 +26,7 @@ import com.hypixel.hytale.component.system.tick.RunWhenPausedSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.CachedPacket;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.ServerSetBlock;
 import com.hypixel.hytale.protocol.packets.world.ServerSetBlocks;
 import com.hypixel.hytale.protocol.packets.world.SetBlockCmd;
@@ -89,7 +89,7 @@ public class ChunkSystems {
                         ChunkTracker tracker;
                         Ref<EntityStore> ref = player.getReference();
                         if (ref == null || (tracker = player.getChunkTracker()) == null || !tracker.isLoaded(chunkIndex)) continue;
-                        player.getPacketHandler().writeNoCache((Packet)s);
+                        player.getPacketHandler().writeNoCache((ToClientPacket)s);
                     }
                 })).exceptionally(throwable -> {
                     if (throwable != null) {

@@ -7,9 +7,8 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.InteractableUpdate;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.group.EntityGroup;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
@@ -54,6 +53,7 @@ public class StateSupport {
     protected Set<Ref<EntityStore>> interactablePlayers;
     protected Set<Ref<EntityStore>> interactedPlayers;
     protected Map<Ref<EntityStore>, String> contextualInteractions;
+    protected String lastHint;
     @Nullable
     protected Ref<EntityStore> interactionIterationTarget;
     @Nullable
@@ -294,21 +294,23 @@ public class StateSupport {
         } else {
             this.interactablePlayers.remove(playerReference);
         }
-        if (showPrompt) {
-            boolean hasComponent = store.getArchetype(entityRef).contains(Interactable.getComponentType());
-            if (interactable) {
-                boolean needsHint;
-                boolean bl = needsHint = !wasInteractable && hint != null;
-                if (!hasComponent) {
-                    store.ensureComponent(entityRef, Interactable.getComponentType());
-                    boolean bl2 = needsHint = hint != null;
-                }
-                if (needsHint) {
-                    this.sendInteractionHintToPlayer(entityRef, playerReference, hint, store);
-                }
-            } else if (hasComponent && this.interactablePlayers.isEmpty()) {
-                store.removeComponent(entityRef, Interactable.getComponentType());
+        boolean hasComponent = store.getArchetype(entityRef).contains(Interactable.getComponentType());
+        if (interactable) {
+            boolean needsHint;
+            if (!showPrompt) {
+                hint = "";
             }
+            boolean bl = needsHint = hint != null && !hint.equals(this.lastHint);
+            if (!hasComponent) {
+                store.ensureComponent(entityRef, Interactable.getComponentType());
+                boolean bl2 = needsHint = hint != null && !hint.isEmpty();
+            }
+            if (needsHint) {
+                this.sendInteractionHintToPlayer(entityRef, playerReference, hint, store);
+                this.lastHint = hint;
+            }
+        } else if (hasComponent && this.interactablePlayers.isEmpty()) {
+            store.removeComponent(entityRef, Interactable.getComponentType());
         }
     }
 
@@ -317,9 +319,7 @@ public class StateSupport {
         if (viewerComponent == null || !viewerComponent.visible.contains(entityRef)) {
             return;
         }
-        ComponentUpdate update = new ComponentUpdate();
-        update.type = ComponentUpdateType.Interactable;
-        update.interactionHint = hint;
+        InteractableUpdate update = new InteractableUpdate(hint);
         viewerComponent.queueUpdate(entityRef, update);
     }
 

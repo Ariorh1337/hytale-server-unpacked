@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class RandomDirectionalityAsset
 extends DirectionalityAsset {
+    @Nonnull
     public static final BuilderCodec<RandomDirectionalityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RandomDirectionalityAsset.class, RandomDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Seed", Codec.STRING, true), (asset, v) -> {
         asset.seed = v;
     }, asset -> asset.seed).add()).append(new KeyedCodec("Pattern", PatternAsset.CODEC, true), (asset, v) -> {

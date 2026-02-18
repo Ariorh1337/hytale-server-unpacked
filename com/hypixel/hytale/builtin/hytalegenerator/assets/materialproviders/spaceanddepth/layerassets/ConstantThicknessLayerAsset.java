@@ -17,12 +17,13 @@ import javax.annotation.Nonnull;
 
 public class ConstantThicknessLayerAsset
 extends LayerAsset {
+    @Nonnull
     public static final BuilderCodec<ConstantThicknessLayerAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ConstantThicknessLayerAsset.class, ConstantThicknessLayerAsset::new, LayerAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("Thickness", Codec.INTEGER, true), (t, k) -> {
         t.thickness = k;
     }, k -> k.thickness).addValidator(Validators.greaterThanOrEqual(0)).add()).append(new KeyedCodec("Material", MaterialProviderAsset.CODEC, true), (t, k) -> {
         t.materialProviderAsset = k;
     }, k -> k.materialProviderAsset).add()).build();
-    private int thickness = 0;
+    private int thickness;
     private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
 
     @Override

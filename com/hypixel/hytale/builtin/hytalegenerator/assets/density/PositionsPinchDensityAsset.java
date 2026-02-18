@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class PositionsPinchDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<PositionsPinchDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PositionsPinchDensityAsset.class, PositionsPinchDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> {
         asset.positionProviderAsset = v;
     }, asset -> asset.positionProviderAsset).add()).append(new KeyedCodec("PinchCurve", CurveAsset.CODEC, true), (asset, v) -> {
@@ -37,10 +38,10 @@ extends DensityAsset {
     }, asset -> asset.positionsMaxY).add()).build();
     private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
     private CurveAsset pinchCurveAsset = new ConstantCurveAsset();
-    private double maxDistance = 0.0;
-    private boolean normalizeDistance = false;
-    private boolean isHorizontal = false;
-    private double positionsMinY = 0.0;
+    private double maxDistance;
+    private boolean normalizeDistance;
+    private boolean isHorizontal;
+    private double positionsMinY;
     private double positionsMaxY = 1.0E-6;
 
     @Override
@@ -50,10 +51,10 @@ extends DensityAsset {
             return new ConstantValueDensity(0.0);
         }
         if (this.isHorizontal) {
-            PositionsHorizontalPinchDensity node = new PositionsHorizontalPinchDensity(this.buildFirstInput(argument), this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer)), this.pinchCurveAsset.build(), this.maxDistance, this.normalizeDistance, this.positionsMinY, this.positionsMaxY, argument.workerIndexer.getWorkerCount());
+            PositionsHorizontalPinchDensity node = new PositionsHorizontalPinchDensity(this.buildFirstInput(argument), this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId)), this.pinchCurveAsset.build(), this.maxDistance, this.normalizeDistance, this.positionsMinY, this.positionsMaxY);
             return node;
         }
-        return new PositionsPinchDensity(this.buildFirstInput(argument), this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer)), this.pinchCurveAsset.build(), this.maxDistance, this.normalizeDistance);
+        return new PositionsPinchDensity(this.buildFirstInput(argument), this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId)), this.pinchCurveAsset.build(), this.maxDistance, this.normalizeDistance);
     }
 
     @Override

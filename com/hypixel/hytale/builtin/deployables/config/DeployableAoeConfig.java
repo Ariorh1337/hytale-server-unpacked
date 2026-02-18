@@ -31,9 +31,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class DeployableAoeConfig
 extends DeployableConfig {
+    @Nonnull
     public static final BuilderCodec<DeployableAoeConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DeployableAoeConfig.class, DeployableAoeConfig::new, DeployableConfig.BASE_CODEC).append(new KeyedCodec<Shape>("Shape", new EnumCodec<Shape>(Shape.class)), (DeployableAoeConfig2, s) -> {
         DeployableAoeConfig2.shape = s;
     }, DeployableAoeConfig2 -> DeployableAoeConfig2.shape).documentation("The shape of the detection area").add()).append(new KeyedCodec<Float>("StartRadius", Codec.FLOAT), (DeployableAoeConfig2, s) -> {
@@ -77,6 +79,7 @@ extends DeployableConfig {
     protected boolean attackEnemies = true;
     protected Shape shape = Shape.Sphere;
     protected float height = 1.0f;
+    @Nullable
     protected DamageCause processedDamageCause;
 
     protected DeployableAoeConfig() {
@@ -84,7 +87,11 @@ extends DeployableConfig {
 
     @Override
     public void tick(@Nonnull DeployableComponent deployableComponent, float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        Vector3d position = archetypeChunk.getComponent(index, TransformComponent.getComponentType()).getPosition();
+        TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+        if (transformComponent == null) {
+            return;
+        }
+        Vector3d position = transformComponent.getPosition();
         World world = store.getExternalData().getWorld();
         Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
         float radius = this.getRadius(store, deployableComponent.getSpawnInstant());
@@ -113,7 +120,7 @@ extends DeployableConfig {
         super.tick(deployableComponent, dt, index, archetypeChunk, store, commandBuffer);
     }
 
-    protected void handleDetection(final Store<EntityStore> store, final CommandBuffer<EntityStore> commandBuffer, final Ref<EntityStore> deployableRef, DeployableComponent deployableComponent, Vector3d position, float radius, final DamageCause damageCause) {
+    protected void handleDetection(final @Nonnull Store<EntityStore> store, final @Nonnull CommandBuffer<EntityStore> commandBuffer, final @Nonnull Ref<EntityStore> deployableRef, @Nonnull DeployableComponent deployableComponent, @Nonnull Vector3d position, float radius, final @Nonnull DamageCause damageCause) {
         var attackConsumer = new Consumer<Ref<EntityStore>>(){
             final /* synthetic */ DeployableAoeConfig this$0;
             {
@@ -121,7 +128,7 @@ extends DeployableConfig {
             }
 
             @Override
-            public void accept(Ref<EntityStore> entityStoreRef) {
+            public void accept(@Nonnull Ref<EntityStore> entityStoreRef) {
                 if (entityStoreRef == deployableRef) {
                     return;
                 }
@@ -153,7 +160,7 @@ extends DeployableConfig {
         }
     }
 
-    protected void attackTarget(Ref<EntityStore> targetRef, Ref<EntityStore> ownerRef, DamageCause damageCause, CommandBuffer<EntityStore> commandBuffer) {
+    protected void attackTarget(@Nonnull Ref<EntityStore> targetRef, @Nonnull Ref<EntityStore> ownerRef, @Nonnull DamageCause damageCause, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         if (this.damageAmount <= 0.0f) {
             return;
         }
@@ -164,27 +171,27 @@ extends DeployableConfig {
         DamageSystems.executeDamage(targetRef, commandBuffer, damageEntry);
     }
 
-    protected void applyEffectToTarget(Store<EntityStore> store, Ref<EntityStore> targetRef) {
+    protected void applyEffectToTarget(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> targetRef) {
         if (this.effectsToApply == null) {
             return;
         }
-        EffectControllerComponent effectController = store.getComponent(targetRef, EffectControllerComponent.getComponentType());
-        if (effectController == null) {
+        EffectControllerComponent effectControllerComponent = store.getComponent(targetRef, EffectControllerComponent.getComponentType());
+        if (effectControllerComponent == null) {
             return;
         }
         for (String effect : this.effectsToApply) {
             EntityEffect effectAsset;
             if (effect == null || (effectAsset = (EntityEffect)EntityEffect.getAssetMap().getAsset(effect)) == null) continue;
-            effectController.addEffect(targetRef, effectAsset, store);
+            effectControllerComponent.addEffect(targetRef, effectAsset, store);
         }
     }
 
-    protected boolean canAttackEntity(Ref<EntityStore> target, DeployableComponent deployable) {
-        boolean isOwner = target.equals(deployable.getOwner());
+    protected boolean canAttackEntity(@Nonnull Ref<EntityStore> targetRef, @Nonnull DeployableComponent deployable) {
+        boolean isOwner = targetRef.equals(deployable.getOwner());
         return !isOwner || this.attackOwner;
     }
 
-    protected float getRadius(Store<EntityStore> store, Instant startInstant) {
+    protected float getRadius(@Nonnull Store<EntityStore> store, @Nonnull Instant startInstant) {
         if (this.radiusChangeTime <= 0.0f || this.endRadius < 0.0f) {
             return this.startRadius;
         }
@@ -199,6 +206,7 @@ extends DeployableConfig {
         return this.startRadius + nowIncrement;
     }
 
+    @Nullable
     protected DamageCause getDamageCause() {
         if (this.processedDamageCause == null) {
             this.processedDamageCause = (DamageCause)DamageCause.getAssetMap().getAsset(this.damageCause);

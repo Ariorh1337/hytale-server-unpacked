@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class SqrtDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SqrtDensityAsset> CODEC = BuilderCodec.builder(SqrtDensityAsset.class, SqrtDensityAsset::new, DensityAsset.ABSTRACT_CODEC).build();
 
     @Override

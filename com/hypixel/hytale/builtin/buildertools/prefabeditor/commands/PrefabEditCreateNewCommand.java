@@ -9,6 +9,7 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.commands.PrefabEditL
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.enums.PrefabRootDirectory;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.enums.WorldGenType;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -54,7 +55,7 @@ extends AbstractAsyncPlayerCommand {
         if (!((String)prefabName).endsWith(".prefab.json")) {
             prefabName = (String)prefabName + ".prefab.json";
         }
-        if ((prefabPath = prefabBaseDirectory.resolve((String)prefabName)).toString().endsWith("/")) {
+        if ((prefabPath = PathUtil.resolvePathWithinDir(prefabBaseDirectory, (String)prefabName)) == null || prefabPath.toString().endsWith("/")) {
             context.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_NEW_ERRORS_NOT_A_FILE);
             return CompletableFuture.completedFuture(null);
         }

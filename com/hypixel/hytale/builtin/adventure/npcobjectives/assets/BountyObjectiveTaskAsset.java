@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class BountyObjectiveTaskAsset
 extends ObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<BountyObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BountyObjectiveTaskAsset.class, BountyObjectiveTaskAsset::new, ObjectiveTaskAsset.BASE_CODEC).append(new KeyedCodec<String>("NpcId", Codec.STRING), (bountyObjectiveTaskAsset, s) -> {
         bountyObjectiveTaskAsset.npcId = s;
     }, bountyObjectiveTaskAsset -> bountyObjectiveTaskAsset.npcId).add()).append(new KeyedCodec<WorldLocationProvider>("WorldLocationCondition", WorldLocationProvider.CODEC), (bountyObjectiveTaskAsset, worldLocationCondition) -> {

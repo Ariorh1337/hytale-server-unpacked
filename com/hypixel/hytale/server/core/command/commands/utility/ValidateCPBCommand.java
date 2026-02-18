@@ -40,8 +40,12 @@ extends AbstractAsyncCommand {
     @Nonnull
     protected CompletableFuture<Void> executeAsync(@Nonnull CommandContext context) {
         if (this.pathArg.provided(context)) {
-            String path = (String)this.pathArg.get(context);
-            return CompletableFuture.runAsync(() -> ValidateCPBCommand.convertPrefabs(context, PathUtil.get(path)));
+            Path assetPath = Path.of((String)this.pathArg.get(context), new String[0]);
+            if (!PathUtil.isInTrustedRoot(assetPath)) {
+                context.sendMessage(Message.translation("server.commands.validatecpb.invalidPath"));
+                return CompletableFuture.completedFuture(null);
+            }
+            return CompletableFuture.runAsync(() -> ValidateCPBCommand.convertPrefabs(context, assetPath));
         }
         return CompletableFuture.runAsync(() -> {
             for (AssetPack pack : AssetModule.get().getAssetPacks()) {

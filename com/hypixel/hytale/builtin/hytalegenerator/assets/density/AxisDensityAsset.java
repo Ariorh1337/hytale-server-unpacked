@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class AxisDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<AxisDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(AxisDensityAsset.class, AxisDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.distanceCurveAsset = k;
     }, k -> k.distanceCurveAsset).add()).append(new KeyedCodec<Boolean>("IsAnchored", Codec.BOOLEAN, false), (t, k) -> {

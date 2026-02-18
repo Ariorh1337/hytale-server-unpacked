@@ -17,7 +17,7 @@ import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.ModelTransform;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.player.ClientTeleport;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.CollisionResultComponent;
@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
+import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public class TeleportSystems {
@@ -140,7 +141,21 @@ public class TeleportSystems {
                 TeleportRecord teleportRecord = s.ensureAndGetComponent(ref, TeleportRecord.getComponentType());
                 teleportRecord.setLastTeleport(new TeleportRecord.Entry(origin, destination, System.nanoTime()));
                 playerRefComponent.removeFromStore();
-                targetWorld.addPlayer(playerRefComponent, new Transform(teleport.getPosition(), teleport.getRotation()));
+                CompletableFuture<PlayerRef> fut = targetWorld.addPlayer(playerRefComponent, new Transform(teleport.getPosition(), teleport.getRotation()));
+                CompletableFuture<Void> future = teleport.getOnComplete();
+                if (future != null) {
+                    if (fut != null) {
+                        fut.whenComplete((playerRef, throwable) -> {
+                            if (throwable != null) {
+                                future.completeExceptionally((Throwable)throwable);
+                                return;
+                            }
+                            future.complete(null);
+                        });
+                    } else {
+                        future.completeExceptionally(new RuntimeException("Failed to teleport player to world " + targetWorld.getName()));
+                    }
+                }
             });
         }
 
@@ -169,7 +184,11 @@ public class TeleportSystems {
             playerComponent.getWindowManager().validateWindows(ref, commandBuffer);
             int id = pendingTeleportComponent.queueTeleport(teleport);
             ClientTeleport teleportPacket = new ClientTeleport((byte)id, new ModelTransform(PositionUtil.toPositionPacket(transformComponent.getPosition()), PositionUtil.toDirectionPacket(transformComponent.getRotation()), headRotationComponent != null ? PositionUtil.toDirectionPacket(headRotationComponent.getRotation()) : PositionUtil.toDirectionPacket(transformComponent.getRotation())), teleport.isResetVelocity());
-            playerRefComponent.getPacketHandler().write((Packet)teleportPacket);
+            playerRefComponent.getPacketHandler().write((ToClientPacket)teleportPacket);
+            CompletableFuture<Void> future = teleport.getOnComplete();
+            if (future != null) {
+                future.complete(null);
+            }
             commandBuffer.removeComponent(ref, this.teleportComponentType);
         }
     }
@@ -199,7 +218,6 @@ public class TeleportSystems {
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull Teleport teleport, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            World targetWorld;
             TransformComponent transformComponent = commandBuffer.getComponent(ref, this.transformComponentType);
             assert (transformComponent != null);
             transformComponent.teleportPosition(teleport.getPosition());
@@ -208,13 +226,22 @@ public class TeleportSystems {
             if (headRotationComponent != null) {
                 headRotationComponent.teleportRotation(teleport.getRotation());
             }
-            if ((targetWorld = teleport.getWorld()) != null && !targetWorld.equals(store.getExternalData().getWorld())) {
+            CompletableFuture<Void> future = teleport.getOnComplete();
+            commandBuffer.removeComponent(ref, this.teleportComponentType);
+            World targetWorld = teleport.getWorld();
+            if (targetWorld != null && !targetWorld.equals(store.getExternalData().getWorld())) {
                 commandBuffer.run(s -> {
                     Holder holder = s.removeEntity(ref, RemoveReason.UNLOAD);
-                    targetWorld.execute(() -> targetWorld.getEntityStore().getStore().addEntity(holder, AddReason.LOAD));
+                    targetWorld.execute(() -> {
+                        targetWorld.getEntityStore().getStore().addEntity(holder, AddReason.LOAD);
+                        if (future != null) {
+                            future.complete(null);
+                        }
+                    });
                 });
+            } else if (future != null) {
+                future.complete(null);
             }
-            commandBuffer.removeComponent(ref, this.teleportComponentType);
         }
 
         @Override

@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class BasicChanceBlockGrowthProcedure
 extends TickProcedure {
+    @Nonnull
     public static final BuilderCodec<BasicChanceBlockGrowthProcedure> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BasicChanceBlockGrowthProcedure.class, BasicChanceBlockGrowthProcedure::new, TickProcedure.BASE_CODEC).addField(new KeyedCodec<String>("NextId", Codec.STRING), (proc, v) -> {
         proc.to = v;
     }, proc -> proc.to)).addField(new KeyedCodec<Integer>("ChanceMin", Codec.INTEGER), (proc, v) -> {

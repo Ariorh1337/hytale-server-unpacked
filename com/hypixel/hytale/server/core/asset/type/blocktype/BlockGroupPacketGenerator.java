@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.blocktype;
 
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockGroups;
 import com.hypixel.hytale.server.core.asset.packet.DefaultAssetPacketGenerator;
@@ -20,7 +20,7 @@ public class BlockGroupPacketGenerator
 extends DefaultAssetPacketGenerator<String, BlockGroup> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull DefaultAssetMap<String, BlockGroup> assetMap, Map<String, BlockGroup> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull DefaultAssetMap<String, BlockGroup> assetMap, Map<String, BlockGroup> assets) {
         UpdateBlockGroups packet = new UpdateBlockGroups();
         packet.type = UpdateType.Init;
         packet.groups = assetMap.getAssetMap().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> ((BlockGroup)entry.getValue()).toPacket()));
@@ -29,7 +29,7 @@ extends DefaultAssetPacketGenerator<String, BlockGroup> {
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull Map<String, BlockGroup> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull Map<String, BlockGroup> loadedAssets) {
         UpdateBlockGroups packet = new UpdateBlockGroups();
         packet.type = UpdateType.AddOrUpdate;
         packet.groups = loadedAssets.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> ((BlockGroup)entry.getValue()).toPacket()));
@@ -38,7 +38,7 @@ extends DefaultAssetPacketGenerator<String, BlockGroup> {
 
     @Override
     @Nullable
-    public Packet generateRemovePacket(@Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull Set<String> removed) {
         UpdateBlockGroups packet = new UpdateBlockGroups();
         packet.type = UpdateType.Remove;
         packet.groups = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.BlockGroup>();

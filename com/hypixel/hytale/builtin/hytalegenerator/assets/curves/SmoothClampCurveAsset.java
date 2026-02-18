@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class SmoothClampCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<SmoothClampCurveAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SmoothClampCurveAsset.class, SmoothClampCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, false), (t, k) -> {
         t.curveAsset = k;
     }, k -> k.curveAsset).add()).append(new KeyedCodec<Double>("WallA", Codec.DOUBLE, false), (t, k) -> {

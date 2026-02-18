@@ -65,7 +65,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, GrowthModifierAsset>
         return this.modifier;
     }
 
-    public double getCurrentGrowthMultiplier(CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, boolean initialTick) {
+    public double getCurrentGrowthMultiplier(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z, boolean initialTick) {
         return this.modifier;
     }
 

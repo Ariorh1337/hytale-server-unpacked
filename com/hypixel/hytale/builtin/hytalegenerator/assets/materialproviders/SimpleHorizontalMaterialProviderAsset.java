@@ -3,21 +3,20 @@
  */
 package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.DecimalConstantsFrameworkAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.ConstantMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.MaterialProviderAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiDouble2DoubleFunction;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.HorizontalMaterialProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.BaseHeightReference;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.logger.HytaleLogger;
 import javax.annotation.Nonnull;
 
 public class SimpleHorizontalMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<SimpleHorizontalMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SimpleHorizontalMaterialProviderAsset.class, SimpleHorizontalMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("TopY", Codec.INTEGER, true), (t, k) -> {
         t.topY = k;
     }, k -> k.topY).add()).append(new KeyedCodec<Integer>("BottomY", Codec.INTEGER, true), (t, k) -> {
@@ -29,8 +28,8 @@ extends MaterialProviderAsset {
     }, t -> t.topBaseHeightName).add()).append(new KeyedCodec<String>("BottomBaseHeight", Codec.STRING, false), (t, k) -> {
         t.bottomBaseHeightName = k;
     }, t -> t.bottomBaseHeightName).add()).build();
-    private int topY = 0;
-    private int bottomY = 0;
+    private int topY;
+    private int bottomY;
     private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
     private String topBaseHeightName = "";
     private String bottomBaseHeightName = "";
@@ -38,31 +37,22 @@ extends MaterialProviderAsset {
     @Override
     @Nonnull
     public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
-        BiDouble2DoubleFunction baseHeight;
         if (super.skip()) {
             return MaterialProvider.noMaterialProvider();
         }
-        BiDouble2DoubleFunction topFunction = (x, z) -> this.topY;
-        BiDouble2DoubleFunction bottomFunction = (x, z) -> this.bottomY;
+        double topBaseHeight = 0.0;
+        double bottomBaseHeight = 0.0;
         if (!this.topBaseHeightName.isEmpty()) {
-            BaseHeightReference topHeightDataLayer = argument.referenceBundle.getLayerWithName(this.topBaseHeightName, BaseHeightReference.class);
-            if (topHeightDataLayer != null) {
-                baseHeight = topHeightDataLayer.getHeightFunction();
-                topFunction = (x, z) -> baseHeight.apply(x, z) + (double)this.topY;
-            } else {
-                ((HytaleLogger.Api)HytaleLogger.getLogger().atConfig()).log("Couldn't find height data layer with name \"" + this.topBaseHeightName + "\", using a zero-constant Density node.");
+            Double topValue = DecimalConstantsFrameworkAsset.Entries.get(this.topBaseHeightName, argument.referenceBundle);
+            if (topValue != null) {
+                topBaseHeight = topValue;
+            }
+            Double bottomValue = DecimalConstantsFrameworkAsset.Entries.get(this.bottomBaseHeightName, argument.referenceBundle);
+            if (topValue != null) {
+                bottomBaseHeight = bottomValue;
             }
         }
-        if (!this.bottomBaseHeightName.isEmpty()) {
-            BaseHeightReference bottomHeightDataLayer = argument.referenceBundle.getLayerWithName(this.bottomBaseHeightName, BaseHeightReference.class);
-            if (bottomHeightDataLayer != null) {
-                baseHeight = bottomHeightDataLayer.getHeightFunction();
-                bottomFunction = (x, z) -> baseHeight.apply(x, z) + (double)this.bottomY;
-            } else {
-                ((HytaleLogger.Api)HytaleLogger.getLogger().atConfig()).log("Couldn't find height data layer with name \"" + this.bottomBaseHeightName + "\", using a zero-constant Density node.");
-            }
-        }
-        return new HorizontalMaterialProvider<Material>(this.materialProviderAsset.build(argument), topFunction::apply, bottomFunction::apply);
+        return new HorizontalMaterialProvider<Material>(this.materialProviderAsset.build(argument), (double)this.topY + topBaseHeight, (double)this.bottomY + bottomBaseHeight);
     }
 
     @Override

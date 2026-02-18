@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class TimeoutCondition
 implements RemovalCondition {
+    @Nonnull
     public static final BuilderCodec<TimeoutCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TimeoutCondition.class, TimeoutCondition::new).documentation("A condition that triggers after a set time limit.")).append(new KeyedCodec<Double>("TimeoutSeconds", Codec.DOUBLE), (o, i) -> {
         o.timeoutSeconds = i;
     }, o -> o.timeoutSeconds).documentation("How long to wait (in seconds) before closing the world.").add()).build();

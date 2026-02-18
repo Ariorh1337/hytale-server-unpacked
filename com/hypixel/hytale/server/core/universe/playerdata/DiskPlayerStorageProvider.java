@@ -31,7 +31,7 @@ public class DiskPlayerStorageProvider
 implements PlayerStorageProvider {
     public static final String ID = "Disk";
     public static final BuilderCodec<DiskPlayerStorageProvider> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(DiskPlayerStorageProvider.class, DiskPlayerStorageProvider::new).append(new KeyedCodec<String>("Path", Codec.STRING), (o, s) -> {
-        o.path = PathUtil.get(s);
+        o.path = Path.of(s, new String[0]);
     }, o -> o.path.toString()).add()).build();
     @Nonnull
     private Path path = Constants.UNIVERSE_PATH.resolve("players");
@@ -44,6 +44,9 @@ implements PlayerStorageProvider {
     @Override
     @Nonnull
     public PlayerStorage getPlayerStorage() {
+        if (!PathUtil.isInTrustedRoot(this.path)) {
+            throw new IllegalStateException("Player storage path must be within a trusted directory: " + String.valueOf(this.path));
+        }
         return new DiskPlayerStorage(this.path);
     }
 

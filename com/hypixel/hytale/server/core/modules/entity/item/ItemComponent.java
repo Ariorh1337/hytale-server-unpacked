@@ -28,7 +28,6 @@ import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction
 import com.hypixel.hytale.server.core.modules.entity.BlockMigrationExtraInfo;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
-import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PickupItemComponent;
@@ -237,15 +236,23 @@ implements Component<EntityStore> {
         return holder;
     }
 
-    @Nonnull
+    @Nullable
     public static Holder<EntityStore> generatePickedUpItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> targetRef, @Nonnull Vector3d targetPosition) {
-        Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
+        if (!ref.isValid()) {
+            LOGGER.at(Level.WARNING).log("Attempted to generate picked up item from invalid entity reference %s", (Object)ref.getIndex());
+            return null;
+        }
         TransformComponent itemTransformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
-        assert (itemTransformComponent != null);
+        if (itemTransformComponent == null) {
+            LOGGER.at(Level.WARNING).log("Attempted to generate picked up item from entity %s without a TransformComponent", (Object)ref.getIndex());
+            return null;
+        }
         ItemComponent itemItemComponent = componentAccessor.getComponent(ref, ItemComponent.getComponentType());
-        assert (itemItemComponent != null);
-        HeadRotation itemHeadRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
-        assert (itemHeadRotationComponent != null);
+        if (itemItemComponent == null) {
+            LOGGER.at(Level.WARNING).log("Attempted to generate picked up item from entity %s without an ItemComponent", (Object)ref.getIndex());
+            return null;
+        }
+        Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
         PickupItemComponent pickupItemComponent = new PickupItemComponent(targetRef, targetPosition.clone());
         holder.addComponent(PickupItemComponent.getComponentType(), pickupItemComponent);
         holder.addComponent(ItemComponent.getComponentType(), itemItemComponent.clone());

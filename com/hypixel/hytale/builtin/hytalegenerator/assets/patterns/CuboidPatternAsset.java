@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class CuboidPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<CuboidPatternAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CuboidPatternAsset.class, CuboidPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("SubPattern", PatternAsset.CODEC, true), (t, k) -> {
         t.subPatternAsset = k;
     }, k -> k.subPatternAsset).add()).append(new KeyedCodec<Vector3i>("Min", Vector3i.CODEC, true), (t, k) -> {

@@ -15,6 +15,8 @@ extends MaterialProvider<V> {
     private final Density density;
     @Nonnull
     private final FieldDelimiter<V>[] fieldDelimiters;
+    @Nonnull
+    private final Density.Context rDensityContext;
 
     public FieldFunctionMaterialProvider(@Nonnull Density density, @Nonnull List<FieldDelimiter<V>> delimiters) {
         this.density = density;
@@ -26,13 +28,14 @@ extends MaterialProvider<V> {
         for (int i = 0; i < delimiters.size(); ++i) {
             this.fieldDelimiters[i] = delimiters.get(i);
         }
+        this.rDensityContext = new Density.Context();
     }
 
     @Override
     @Nullable
     public V getVoxelTypeAt(@Nonnull MaterialProvider.Context context) {
-        Density.Context childContext = new Density.Context(context);
-        double densityValue = this.density.process(childContext);
+        this.rDensityContext.assign(context);
+        double densityValue = this.density.process(this.rDensityContext);
         for (FieldDelimiter<V> delimiter : this.fieldDelimiters) {
             if (!delimiter.isInside(densityValue)) continue;
             return delimiter.materialProvider.getVoxelTypeAt(context);

@@ -22,12 +22,18 @@ extends Pattern {
     private final List<WallDirection> directions;
     private final boolean matchAll;
     private final SpaceSize readSpaceSize;
+    @Nonnull
+    private final Vector3i rWallPosition;
+    @Nonnull
+    private final Pattern.Context rWallContext;
 
     public WallPattern(@Nonnull Pattern wallPattern, @Nonnull Pattern originPattern, @Nonnull List<WallDirection> wallDirections, boolean matchAll) {
         this.wallPattern = wallPattern;
         this.originPattern = originPattern;
         this.directions = new ArrayList<WallDirection>(wallDirections);
         this.matchAll = matchAll;
+        this.rWallPosition = new Vector3i();
+        this.rWallContext = new Pattern.Context();
         SpaceSize originSpace = originPattern.readSpace();
         SpaceSize wallSpace = wallPattern.readSpace();
         SpaceSize totalSpace = originSpace;
@@ -58,27 +64,27 @@ extends Pattern {
     }
 
     private boolean matches(@Nonnull Pattern.Context context, @Nonnull WallDirection direction) {
-        Vector3i wallPosition = context.position.clone();
+        this.rWallPosition.assign(context.position);
         switch (direction.ordinal()) {
             case 2: {
-                ++wallPosition.x;
+                ++this.rWallPosition.x;
                 break;
             }
             case 3: {
-                --wallPosition.x;
+                --this.rWallPosition.x;
                 break;
             }
             case 0: {
-                --wallPosition.z;
+                --this.rWallPosition.z;
                 break;
             }
             case 1: {
-                ++wallPosition.z;
+                ++this.rWallPosition.z;
             }
         }
-        Pattern.Context wallContext = new Pattern.Context(context);
-        wallContext.position = wallPosition;
-        return this.originPattern.matches(context) && this.wallPattern.matches(wallContext);
+        this.rWallContext.assign(context);
+        this.rWallContext.position = this.rWallPosition;
+        return this.originPattern.matches(context) && this.wallPattern.matches(this.rWallContext);
     }
 
     @Override
@@ -93,6 +99,7 @@ extends Pattern {
         E,
         W;
 
+        @Nonnull
         public static final Codec<WallDirection> CODEC;
 
         static {

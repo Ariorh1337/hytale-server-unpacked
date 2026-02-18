@@ -105,11 +105,11 @@ implements SpawnEffect {
     protected double collisionForceFalloff;
     protected double collisionRadius;
     protected float collisionViewAngle;
-    protected double separationDistance;
-    protected double separationWeight;
-    protected double separationDistanceTarget;
-    protected double separationNearRadiusTarget;
-    protected double separationFarRadiusTarget;
+    protected final DoubleHolder separationDistance = new DoubleHolder();
+    protected final DoubleHolder separationWeight = new DoubleHolder();
+    protected final DoubleHolder separationDistanceTarget = new DoubleHolder();
+    protected final DoubleHolder separationNearRadiusTarget = new DoubleHolder();
+    protected final DoubleHolder separationFarRadiusTarget = new DoubleHolder();
     protected final BooleanHolder applySeparation = new BooleanHolder();
     protected boolean stayInEnvironment;
     protected String allowedEnvironments;
@@ -282,21 +282,11 @@ implements SpawnEffect {
         this.getFloat(data, "CollisionViewAngle", (float d) -> {
             this.collisionViewAngle = d;
         }, 320.0f, (DoubleValidator)DoubleRangeValidator.between(0.0, 360.0), BuilderDescriptorState.Experimental, "Collision detection view cone", null);
-        this.getDouble(data, "SeparationDistance", (double d) -> {
-            this.separationDistance = d;
-        }, 3.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "Desired separation distance", null);
-        this.getDouble(data, "SeparationWeight", (double d) -> {
-            this.separationWeight = d;
-        }, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Experimental, "Blend factor separation", null);
-        this.getDouble(data, "SeparationDistanceTarget", (double d) -> {
-            this.separationDistanceTarget = d;
-        }, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Experimental, "Desired separation distance when close to target", null);
-        this.getDouble(data, "SeparationNearRadiusTarget", (double d) -> {
-            this.separationNearRadiusTarget = d;
-        }, 1.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "Distance when using SeparationDistanceTarget", null);
-        this.getDouble(data, "SeparationFarRadiusTarget", (double d) -> {
-            this.separationFarRadiusTarget = d;
-        }, 5.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "Use normal separation distance from further than this distance", null);
+        this.getDouble(data, "SeparationDistance", this.separationDistance, 3.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "Desired separation distance", null);
+        this.getDouble(data, "SeparationWeight", this.separationWeight, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Experimental, "Blend factor separation", null);
+        this.getDouble(data, "SeparationDistanceTarget", this.separationDistanceTarget, 1.0, (DoubleValidator)DoubleSingleValidator.greaterEqual0(), BuilderDescriptorState.Experimental, "Desired separation distance when close to target", null);
+        this.getDouble(data, "SeparationNearRadiusTarget", this.separationNearRadiusTarget, 1.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "Distance when using SeparationDistanceTarget", null);
+        this.getDouble(data, "SeparationFarRadiusTarget", this.separationFarRadiusTarget, 5.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "Use normal separation distance from further than this distance", null);
         this.getBoolean(data, "ApplyAvoidance", (boolean b) -> {
             this.applyAvoidance = b;
         }, false, BuilderDescriptorState.Experimental, "Apply avoidance steering force", null);
@@ -568,24 +558,24 @@ implements SpawnEffect {
         return this.collisionRadius;
     }
 
-    public double getSeparationDistance() {
-        return this.separationDistance;
+    public double getSeparationDistance(BuilderSupport support) {
+        return this.separationDistance.get(support.getExecutionContext());
     }
 
-    public double getSeparationWeight() {
-        return this.separationWeight;
+    public double getSeparationWeight(BuilderSupport support) {
+        return this.separationWeight.get(support.getExecutionContext());
     }
 
-    public double getSeparationDistanceTarget() {
-        return this.separationDistanceTarget;
+    public double getSeparationDistanceTarget(BuilderSupport support) {
+        return this.separationDistanceTarget.get(support.getExecutionContext());
     }
 
-    public double getSeparationNearRadiusTarget() {
-        return this.separationNearRadiusTarget;
+    public double getSeparationNearRadiusTarget(BuilderSupport support) {
+        return this.separationNearRadiusTarget.get(support.getExecutionContext());
     }
 
-    public double getSeparationFarRadiusTarget() {
-        return this.separationFarRadiusTarget;
+    public double getSeparationFarRadiusTarget(BuilderSupport support) {
+        return this.separationFarRadiusTarget.get(support.getExecutionContext());
     }
 
     public boolean isApplySeparation(BuilderSupport support) {

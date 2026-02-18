@@ -12,8 +12,6 @@ import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
@@ -24,6 +22,7 @@ import javax.annotation.Nonnull;
 public abstract class KillObjectiveTask
 extends CountObjectiveTask
 implements KillTask {
+    @Nonnull
     public static final BuilderCodec<KillObjectiveTask> CODEC = BuilderCodec.abstractBuilder(KillObjectiveTask.class, CountObjectiveTask.CODEC).build();
 
     public KillObjectiveTask(@Nonnull KillObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
@@ -49,17 +48,20 @@ implements KillTask {
         if (!TagSetPlugin.get(NPCGroup.class).tagInSet(index, npc.getNPCTypeIndex())) {
             return;
         }
-        if (!(info.getSource() instanceof Damage.EntitySource)) {
+        Damage.Source source = info.getSource();
+        if (!(source instanceof Damage.EntitySource)) {
             return;
         }
-        Ref<EntityStore> attackerEntityRef = ((Damage.EntitySource)info.getSource()).getRef();
-        Entity attackerEntity = EntityUtils.getEntity(attackerEntityRef, attackerEntityRef.getStore());
-        if (!(attackerEntity instanceof Player)) {
+        Damage.EntitySource entitySource = (Damage.EntitySource)source;
+        Ref<EntityStore> sourceRef = entitySource.getRef();
+        if (!store.getArchetype(sourceRef).contains(Player.getComponentType())) {
             return;
         }
-        UUIDComponent attackerUuidComponent = store.getComponent(attackerEntityRef, UUIDComponent.getComponentType());
-        assert (attackerUuidComponent != null);
-        if (!objective.getActivePlayerUUIDs().contains(attackerUuidComponent.getUuid())) {
+        UUIDComponent sourceUuidComponent = store.getComponent(sourceRef, UUIDComponent.getComponentType());
+        if (sourceUuidComponent == null) {
+            return;
+        }
+        if (!objective.getActivePlayerUUIDs().contains(sourceUuidComponent.getUuid())) {
             return;
         }
         this.increaseTaskCompletion(store, npcRef, 1, objective);

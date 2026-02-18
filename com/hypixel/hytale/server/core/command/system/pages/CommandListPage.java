@@ -9,7 +9,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.OpenChatWithCommand;
@@ -52,7 +52,9 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
     @Nonnull
     private String searchQuery = "";
     private String selectedCommand;
+    @Nullable
     private String selectedSubcommand;
+    @Nullable
     private Integer selectedVariantIndex;
     private final List<String> subcommandBreadcrumb = new ObjectArrayList<String>();
     @Nullable
@@ -125,7 +127,7 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
         }
         String command = this.buildCurrentCommandString();
         playerComponent.getPageManager().setPage(ref, store, Page.None);
-        this.playerRef.getPacketHandler().write((Packet)new OpenChatWithCommand(command));
+        this.playerRef.getPacketHandler().write((ToClientPacket)new OpenChatWithCommand(command));
     }
 
     @Nonnull
@@ -203,8 +205,9 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
             throw new IllegalArgumentException("Unknown command: " + commandName);
         }
         commandBuilder.set("#CommandName.TextSpans", Message.raw(commandName));
+        String description = command.getDescription();
         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-        commandBuilder.set("#CommandDescription.TextSpans", Message.translation(command.getDescription()));
+        commandBuilder.set("#CommandDescription.TextSpans", description != null ? Message.translation(description) : Message.empty());
         this.selectedSubcommand = null;
         this.selectedVariantIndex = null;
         this.subcommandBreadcrumb.clear();
@@ -228,6 +231,9 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
             return;
         }
         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+        if (playerComponent == null) {
+            return;
+        }
         Map<String, AbstractCommand> subcommands = currentContext.getSubCommands();
         AbstractCommand subcommand = subcommands.get(subcommandName);
         if (subcommand == null) {
@@ -237,7 +243,8 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
         this.selectedSubcommand = subcommandName;
         this.selectedVariantIndex = null;
         this.updateTitleWithBreadcrumb(commandBuilder);
-        commandBuilder.set("#CommandDescription.TextSpans", Message.translation(subcommand.getDescription()));
+        String description = subcommand.getDescription();
+        commandBuilder.set("#CommandDescription.TextSpans", description != null ? Message.translation(description) : Message.empty());
         this.buildSubcommandTabs(subcommand, playerComponent, commandBuilder, eventBuilder);
         commandBuilder.set("#BackButton.Visible", true);
         this.displayCommandInfo(subcommand, playerComponent, commandBuilder, eventBuilder);
@@ -330,9 +337,10 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
                     commandBuilder.appendInline("#SubcommandCards", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
                 }
                 commandBuilder.append("#SubcommandCards[" + rowIndex + "]", "Pages/SubcommandCard.ui");
+                String subCommandDescription = subcommand.getDescription();
                 commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandName.TextSpans", Message.raw(entry.getKey()));
                 commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandUsage.TextSpans", this.getSimplifiedUsage(subcommand, playerComponent));
-                commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandDescription.TextSpans", Message.translation(subcommand.getDescription()));
+                commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandDescription.TextSpans", subCommandDescription != null ? Message.translation(subCommandDescription) : Message.empty());
                 eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "]", EventData.of("Subcommand", entry.getKey()));
                 ++cardIndex;
                 if (++cardsInCurrentRow < 3) continue;
@@ -462,7 +470,7 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
                     RequiredArg arg = (RequiredArg)requiredArgs.get(i);
                     commandBuilder.append("#RequiredArgumentsList", "Pages/ParameterItem.ui");
                     commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamName.TextSpans", Message.raw(arg.getName()));
-                    commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamTag.TextSpans", Message.raw("[Required]"));
+                    commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.required"));
                     commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamType.TextSpans", Message.translation("server.customUI.commandListPage.paramType").param("type", arg.getArgumentType().getName()));
                     commandBuilder.set("#RequiredArgumentsList[" + i + "] #ParamDescription.TextSpans", arg.getDescription() != null ? Message.translation(arg.getDescription()) : Message.translation("server.customUI.commandListPage.noDescription"));
                 }
@@ -489,7 +497,7 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
                     if (optArg.getPermission() != null && !playerComponent.hasPermission(optArg.getPermission())) continue;
                     commandBuilder.append("#OptionalArgumentsList", "Pages/ParameterItem.ui");
                     commandBuilder.set("#OptionalArgumentsList[" + optIndex + "] #ParamName.TextSpans", Message.raw("--" + optArg.getName() + " <" + optArg.getName() + ">"));
-                    commandBuilder.set("#OptionalArgumentsList[" + optIndex + "] #ParamTag.TextSpans", Message.raw("[Optional]"));
+                    commandBuilder.set("#OptionalArgumentsList[" + optIndex + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.optional"));
                     commandBuilder.set("#OptionalArgumentsList[" + optIndex + "] #ParamType.TextSpans", Message.translation("server.customUI.commandListPage.paramType").param("type", optArg.getArgumentType().getName()));
                     commandBuilder.set("#OptionalArgumentsList[" + optIndex + "] #ParamDescription.TextSpans", optArg.getDescription() != null ? Message.translation(optArg.getDescription()) : Message.translation("server.customUI.commandListPage.noDescription"));
                     ++optIndex;
@@ -500,8 +508,8 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
                     if (defArg.getPermission() != null && !playerComponent.hasPermission(defArg.getPermission())) continue;
                     commandBuilder.append("#DefaultArgumentsList", "Pages/ParameterItem.ui");
                     commandBuilder.set("#DefaultArgumentsList[" + defIndex + "] #ParamName.TextSpans", Message.raw("--" + defArg.getName() + " <" + defArg.getName() + ">"));
-                    commandBuilder.set("#DefaultArgumentsList[" + defIndex + "] #ParamTag.TextSpans", Message.raw("[Default]"));
-                    commandBuilder.set("#DefaultArgumentsList[" + defIndex + "] #ParamType.TextSpans", Message.translation("server.customUI.commandListPage.paramTypeDefault").param("type", defArg.getArgumentType().getName()).param("default", defArg.getDefaultValueDescription()));
+                    commandBuilder.set("#DefaultArgumentsList[" + defIndex + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.default"));
+                    commandBuilder.set("#DefaultArgumentsList[" + defIndex + "] #ParamType.TextSpans", Message.translation("server.customUI.commandListPage.paramTypeDefault").param("type", defArg.getArgumentType().getName()).param("default", Message.translation(defArg.getDefaultValueDescription())));
                     commandBuilder.set("#DefaultArgumentsList[" + defIndex + "] #ParamDescription.TextSpans", defArg.getDescription() != null ? Message.translation(defArg.getDescription()) : Message.translation("server.customUI.commandListPage.noDescription"));
                     ++defIndex;
                     continue;
@@ -509,7 +517,7 @@ extends InteractiveCustomUIPage<CommandListPageEventData> {
                 if (!(arg instanceof FlagArg) || (flagArg = (FlagArg)arg).getPermission() != null && !playerComponent.hasPermission(flagArg.getPermission())) continue;
                 commandBuilder.append("#FlagArgumentsList", "Pages/ParameterItem.ui");
                 commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamName.TextSpans", Message.raw("--" + flagArg.getName()));
-                commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamTag.TextSpans", Message.raw("[Flag]"));
+                commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.flag"));
                 commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamType.TextSpans", Message.translation("server.customUI.commandListPage.paramTypeFlag"));
                 commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamDescription.TextSpans", flagArg.getDescription() != null ? Message.translation(flagArg.getDescription()) : Message.translation("server.customUI.commandListPage.noDescription"));
                 ++flagIndex;

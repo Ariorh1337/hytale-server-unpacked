@@ -14,11 +14,13 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class TaskSet {
+    @Nonnull
     public static final BuilderCodec<TaskSet> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TaskSet.class, TaskSet::new).append(new KeyedCodec<String>("DescriptionId", Codec.STRING), (taskSet, s) -> {
         taskSet.descriptionId = s;
     }, taskSet -> taskSet.descriptionId).add()).append(new KeyedCodec<T[]>("Tasks", new ArrayCodec<ObjectiveTaskAsset>(ObjectiveTaskAsset.CODEC, ObjectiveTaskAsset[]::new)), (taskSet, objectiveTaskAssets) -> {
         taskSet.tasks = objectiveTaskAssets;
     }, taskSet -> taskSet.tasks).addValidator(Validators.nonEmptyArray()).add()).build();
+    @Nonnull
     public static final String TASKSET_DESCRIPTION_KEY = "server.objectives.{0}.taskSet.{1}";
     protected String descriptionId;
     protected ObjectiveTaskAsset[] tasks;

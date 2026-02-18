@@ -70,7 +70,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.ModelParticle> {
         this.detachedFromModel = other.detachedFromModel;
     }
 
-    protected ModelParticle() {
+    public ModelParticle() {
     }
 
     @Override
@@ -92,12 +92,20 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.ModelParticle> {
         return this.systemId;
     }
 
+    public void setSystemId(String systemId) {
+        this.systemId = systemId;
+    }
+
     public EntityPart getTargetEntityPart() {
         return this.targetEntityPart;
     }
 
     public String getTargetNodeName() {
         return this.targetNodeName;
+    }
+
+    public void setTargetNodeName(String targetNodeName) {
+        this.targetNodeName = targetNodeName;
     }
 
     public Color getColor() {
@@ -112,12 +120,20 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.ModelParticle> {
         return this.positionOffset;
     }
 
+    public void setPositionOffset(Vector3f positionOffset) {
+        this.positionOffset = positionOffset;
+    }
+
     public Direction getRotationOffset() {
         return this.rotationOffset;
     }
 
     public boolean isDetachedFromModel() {
         return this.detachedFromModel;
+    }
+
+    public void setDetachedFromModel(boolean detachedFromModel) {
+        this.detachedFromModel = detachedFromModel;
     }
 
     public ModelParticle scale(float scale) {

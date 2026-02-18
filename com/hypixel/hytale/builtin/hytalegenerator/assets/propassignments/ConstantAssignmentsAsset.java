@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class ConstantAssignmentsAsset
 extends AssignmentsAsset {
+    @Nonnull
     public static final BuilderCodec<ConstantAssignmentsAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ConstantAssignmentsAsset.class, ConstantAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC).append(new KeyedCodec("Prop", PropAsset.CODEC, true), (asset, v) -> {
         asset.propAsset = v;
     }, asset -> asset.propAsset).add()).build();
@@ -26,7 +27,7 @@ extends AssignmentsAsset {
         if (super.skip()) {
             return Assignments.noPropDistribution(argument.runtime);
         }
-        Prop prop = this.propAsset.build(new PropAsset.Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle, argument.workerIndexer));
+        Prop prop = this.propAsset.build(new PropAsset.Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle, argument.workerId));
         return new ConstantAssignments(prop, argument.runtime);
     }
 

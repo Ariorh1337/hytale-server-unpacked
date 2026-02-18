@@ -25,6 +25,13 @@ import javax.annotation.Nonnull;
 
 public class SetMemoriesCapacityInteraction
 extends SimpleInstantInteraction {
+    @Nonnull
+    private static final String NOTIFICATION_ICON_MEMORIES = "NotificationIcons/MemoriesIcon.png";
+    @Nonnull
+    private static final Message MESSAGE_SERVER_MEMORIES_GENERAL_FEATURE_UNLOCKED_NOTIFICATION = Message.translation("server.memories.general.featureUnlockedNotification");
+    @Nonnull
+    private static final Message MESSAGE_SERVER_MEMORIES_GENERAL_FEATURE_UNLOCKED_MESSAGE = Message.translation("server.memories.general.featureUnlockedMessage");
+    @Nonnull
     public static final BuilderCodec<SetMemoriesCapacityInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SetMemoriesCapacityInteraction.class, SetMemoriesCapacityInteraction::new, SimpleInstantInteraction.CODEC).documentation("Sets how many memories a player can store.")).appendInherited(new KeyedCodec<Integer>("Capacity", Codec.INTEGER), (i, s) -> {
         i.capacity = s;
     }, i -> i.capacity, (i, parent) -> {
@@ -34,6 +41,7 @@ extends SimpleInstantInteraction {
 
     @Override
     protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
+        PlayerRef playerRefComponent;
         Ref<EntityStore> ref = context.getEntity();
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
         assert (commandBuffer != null);
@@ -44,13 +52,11 @@ extends SimpleInstantInteraction {
         }
         int previousCapacity = memoriesComponent.getMemoriesCapacity();
         memoriesComponent.setMemoriesCapacity(this.capacity);
-        if (previousCapacity <= 0) {
-            PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-            assert (playerRefComponent != null);
+        if (previousCapacity <= 0 && (playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType())) != null) {
             PacketHandler playerConnection = playerRefComponent.getPacketHandler();
             playerConnection.writeNoCache(new UpdateMemoriesFeatureStatus(true));
-            NotificationUtil.sendNotification(playerConnection, Message.translation("server.memories.general.featureUnlockedNotification"), null, "NotificationIcons/MemoriesIcon.png");
-            playerRefComponent.sendMessage(Message.translation("server.memories.general.featureUnlockedMessage"));
+            NotificationUtil.sendNotification(playerConnection, MESSAGE_SERVER_MEMORIES_GENERAL_FEATURE_UNLOCKED_NOTIFICATION, null, NOTIFICATION_ICON_MEMORIES);
+            playerRefComponent.sendMessage(MESSAGE_SERVER_MEMORIES_GENERAL_FEATURE_UNLOCKED_MESSAGE);
         }
         context.getState().state = InteractionState.Finished;
     }

@@ -14,10 +14,11 @@ import javax.annotation.Nonnull;
 
 public class CeilingDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<CeilingDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CeilingDensityAsset.class, CeilingDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Limit", Codec.DOUBLE, true), (t, k) -> {
         t.limit = k;
     }, k -> k.limit).add()).build();
-    private double limit = 0.0;
+    private double limit;
 
     @Override
     @Nonnull

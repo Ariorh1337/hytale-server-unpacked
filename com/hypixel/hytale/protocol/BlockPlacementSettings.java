@@ -12,10 +12,10 @@ import javax.annotation.Nonnull;
 
 public class BlockPlacementSettings {
     public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-    public static final int FIXED_BLOCK_SIZE = 16;
+    public static final int FIXED_BLOCK_SIZE = 17;
     public static final int VARIABLE_FIELD_COUNT = 0;
-    public static final int VARIABLE_BLOCK_START = 16;
-    public static final int MAX_SIZE = 16;
+    public static final int VARIABLE_BLOCK_START = 17;
+    public static final int MAX_SIZE = 17;
     public boolean allowRotationKey;
     public boolean placeInEmptyBlocks;
     @Nonnull
@@ -25,11 +25,12 @@ public class BlockPlacementSettings {
     public int wallPlacementOverrideBlockId;
     public int floorPlacementOverrideBlockId;
     public int ceilingPlacementOverrideBlockId;
+    public boolean allowBreakReplace;
 
     public BlockPlacementSettings() {
     }
 
-    public BlockPlacementSettings(boolean allowRotationKey, boolean placeInEmptyBlocks, @Nonnull BlockPreviewVisibility previewVisibility, @Nonnull BlockPlacementRotationMode rotationMode, int wallPlacementOverrideBlockId, int floorPlacementOverrideBlockId, int ceilingPlacementOverrideBlockId) {
+    public BlockPlacementSettings(boolean allowRotationKey, boolean placeInEmptyBlocks, @Nonnull BlockPreviewVisibility previewVisibility, @Nonnull BlockPlacementRotationMode rotationMode, int wallPlacementOverrideBlockId, int floorPlacementOverrideBlockId, int ceilingPlacementOverrideBlockId, boolean allowBreakReplace) {
         this.allowRotationKey = allowRotationKey;
         this.placeInEmptyBlocks = placeInEmptyBlocks;
         this.previewVisibility = previewVisibility;
@@ -37,6 +38,7 @@ public class BlockPlacementSettings {
         this.wallPlacementOverrideBlockId = wallPlacementOverrideBlockId;
         this.floorPlacementOverrideBlockId = floorPlacementOverrideBlockId;
         this.ceilingPlacementOverrideBlockId = ceilingPlacementOverrideBlockId;
+        this.allowBreakReplace = allowBreakReplace;
     }
 
     public BlockPlacementSettings(@Nonnull BlockPlacementSettings other) {
@@ -47,6 +49,7 @@ public class BlockPlacementSettings {
         this.wallPlacementOverrideBlockId = other.wallPlacementOverrideBlockId;
         this.floorPlacementOverrideBlockId = other.floorPlacementOverrideBlockId;
         this.ceilingPlacementOverrideBlockId = other.ceilingPlacementOverrideBlockId;
+        this.allowBreakReplace = other.allowBreakReplace;
     }
 
     @Nonnull
@@ -59,11 +62,12 @@ public class BlockPlacementSettings {
         obj.wallPlacementOverrideBlockId = buf.getIntLE(offset + 4);
         obj.floorPlacementOverrideBlockId = buf.getIntLE(offset + 8);
         obj.ceilingPlacementOverrideBlockId = buf.getIntLE(offset + 12);
+        obj.allowBreakReplace = buf.getByte(offset + 16) != 0;
         return obj;
     }
 
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-        return 16;
+        return 17;
     }
 
     public void serialize(@Nonnull ByteBuf buf) {
@@ -74,15 +78,16 @@ public class BlockPlacementSettings {
         buf.writeIntLE(this.wallPlacementOverrideBlockId);
         buf.writeIntLE(this.floorPlacementOverrideBlockId);
         buf.writeIntLE(this.ceilingPlacementOverrideBlockId);
+        buf.writeByte(this.allowBreakReplace ? 1 : 0);
     }
 
     public int computeSize() {
-        return 16;
+        return 17;
     }
 
     public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-        if (buffer.readableBytes() - offset < 16) {
-            return ValidationResult.error("Buffer too small: expected at least 16 bytes");
+        if (buffer.readableBytes() - offset < 17) {
+            return ValidationResult.error("Buffer too small: expected at least 17 bytes");
         }
         return ValidationResult.OK;
     }
@@ -96,6 +101,7 @@ public class BlockPlacementSettings {
         copy.wallPlacementOverrideBlockId = this.wallPlacementOverrideBlockId;
         copy.floorPlacementOverrideBlockId = this.floorPlacementOverrideBlockId;
         copy.ceilingPlacementOverrideBlockId = this.ceilingPlacementOverrideBlockId;
+        copy.allowBreakReplace = this.allowBreakReplace;
         return copy;
     }
 
@@ -107,11 +113,11 @@ public class BlockPlacementSettings {
             return false;
         }
         BlockPlacementSettings other = (BlockPlacementSettings)obj;
-        return this.allowRotationKey == other.allowRotationKey && this.placeInEmptyBlocks == other.placeInEmptyBlocks && Objects.equals((Object)this.previewVisibility, (Object)other.previewVisibility) && Objects.equals((Object)this.rotationMode, (Object)other.rotationMode) && this.wallPlacementOverrideBlockId == other.wallPlacementOverrideBlockId && this.floorPlacementOverrideBlockId == other.floorPlacementOverrideBlockId && this.ceilingPlacementOverrideBlockId == other.ceilingPlacementOverrideBlockId;
+        return this.allowRotationKey == other.allowRotationKey && this.placeInEmptyBlocks == other.placeInEmptyBlocks && Objects.equals((Object)this.previewVisibility, (Object)other.previewVisibility) && Objects.equals((Object)this.rotationMode, (Object)other.rotationMode) && this.wallPlacementOverrideBlockId == other.wallPlacementOverrideBlockId && this.floorPlacementOverrideBlockId == other.floorPlacementOverrideBlockId && this.ceilingPlacementOverrideBlockId == other.ceilingPlacementOverrideBlockId && this.allowBreakReplace == other.allowBreakReplace;
     }
 
     public int hashCode() {
-        return Objects.hash(new Object[]{this.allowRotationKey, this.placeInEmptyBlocks, this.previewVisibility, this.rotationMode, this.wallPlacementOverrideBlockId, this.floorPlacementOverrideBlockId, this.ceilingPlacementOverrideBlockId});
+        return Objects.hash(new Object[]{this.allowRotationKey, this.placeInEmptyBlocks, this.previewVisibility, this.rotationMode, this.wallPlacementOverrideBlockId, this.floorPlacementOverrideBlockId, this.ceilingPlacementOverrideBlockId, this.allowBreakReplace});
     }
 }
 

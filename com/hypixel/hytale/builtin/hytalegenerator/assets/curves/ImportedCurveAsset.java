@@ -9,9 +9,11 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.logger.HytaleLogger;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
+import javax.annotation.Nonnull;
 
 public class ImportedCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedCurveAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedCurveAsset.class, ImportedCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, true), (t, k) -> {
         t.name = k;
     }, k -> k.name).add()).build();

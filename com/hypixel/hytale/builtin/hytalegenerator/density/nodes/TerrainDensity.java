@@ -13,7 +13,7 @@ extends Density {
         if (context.terrainDensityProvider == null) {
             return 0.0;
         }
-        return context.terrainDensityProvider.get(context.position.toVector3i(), context.workerId);
+        return context.terrainDensityProvider.get(context.position.toVector3i());
     }
 }
 

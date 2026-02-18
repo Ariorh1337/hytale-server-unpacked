@@ -58,6 +58,14 @@ extends CommandBase {
         Store<EntityStore> targetStore = targetRef.getStore();
         World targetWorld = targetStore.getExternalData().getWorld();
         sourceWorld.execute(() -> {
+            if (!sourceRef.isValid()) {
+                context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
+                return;
+            }
+            if (!targetRef.isValid()) {
+                context.sendMessage(MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD);
+                return;
+            }
             TransformComponent transformComponent = sourceStore.getComponent(sourceRef, TransformComponent.getComponentType());
             assert (transformComponent != null);
             HeadRotation headRotationComponent = sourceStore.getComponent(sourceRef, HeadRotation.getComponentType());
@@ -73,6 +81,14 @@ extends CommandBase {
                 Vector3f targetHeadRotation = targetHeadRotationComponent.getRotation().clone();
                 Transform targetTransform = new Transform(targetPosition, targetHeadRotation);
                 sourceWorld.execute(() -> {
+                    if (!sourceRef.isValid()) {
+                        context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
+                        return;
+                    }
+                    if (!targetRef.isValid()) {
+                        context.sendMessage(MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD);
+                        return;
+                    }
                     Teleport teleportComponent = Teleport.createForPlayer(targetWorld, targetTransform);
                     sourceStore.addComponent(sourceRef, Teleport.getComponentType(), teleportComponent);
                     PlayerRef sourcePlayerRefComponent = sourceStore.getComponent(sourceRef, PlayerRef.getComponentType());

@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class KillObjectiveTaskAsset
 extends CountObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<KillObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(KillObjectiveTaskAsset.class, KillObjectiveTaskAsset::new, CountObjectiveTaskAsset.CODEC).append(new KeyedCodec<String>("NPCGroupId", Codec.STRING), (objective, entityType) -> {
         objective.npcGroupId = entityType;
     }, objective -> objective.npcGroupId).addValidator(Validators.nonNull()).addValidator(NPCGroup.VALIDATOR_CACHE.getValidator()).add()).build();
@@ -47,7 +48,8 @@ extends CountObjectiveTaskAsset {
         if (!(task instanceof KillObjectiveTaskAsset)) {
             return false;
         }
-        return ((KillObjectiveTaskAsset)task).npcGroupId.equals(this.npcGroupId);
+        KillObjectiveTaskAsset killObjectiveTaskAsset = (KillObjectiveTaskAsset)task;
+        return killObjectiveTaskAsset.npcGroupId.equals(this.npcGroupId);
     }
 
     @Override

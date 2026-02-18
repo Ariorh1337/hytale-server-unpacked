@@ -22,9 +22,9 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.ISystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.EntityStatUpdate;
+import com.hypixel.hytale.protocol.EntityStatsUpdate;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
@@ -179,15 +179,11 @@ public class EntityStatsSystems {
                 EntityTrackerUpdate.queueUpdatesForNewlyVisible(ref, statMap, visible.newlyVisibleTo);
             }
             if (statMap.consumeSelfNetworkOutdated() && (selfEntityViewer = visible.visibleTo.get(ref)) != null && !visible.newlyVisibleTo.containsKey(ref)) {
-                ComponentUpdate update = new ComponentUpdate();
-                update.type = ComponentUpdateType.EntityStats;
-                update.entityStatUpdates = statMap.consumeSelfUpdates();
+                EntityStatsUpdate update = new EntityStatsUpdate(statMap.consumeSelfUpdates());
                 selfEntityViewer.queueUpdate(ref, update);
             }
             if (statMap.consumeNetworkOutdated()) {
-                ComponentUpdate update = new ComponentUpdate();
-                update.type = ComponentUpdateType.EntityStats;
-                update.entityStatUpdates = statMap.consumeOtherUpdates();
+                EntityStatsUpdate update = new EntityStatsUpdate(statMap.consumeOtherUpdates());
                 for (Map.Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : visible.visibleTo.entrySet()) {
                     Ref<EntityStore> viewerRef = entry.getKey();
                     if (visible.newlyVisibleTo.containsKey(viewerRef) || ref.equals(viewerRef)) continue;
@@ -197,9 +193,7 @@ public class EntityStatsSystems {
         }
 
         private static void queueUpdatesForNewlyVisible(@Nonnull Ref<EntityStore> ref, @Nonnull EntityStatMap statMap, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> newlyVisibleTo) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.EntityStats;
-            update.entityStatUpdates = statMap.createInitUpdate(false);
+            EntityStatsUpdate update = new EntityStatsUpdate(statMap.createInitUpdate(false));
             for (Map.Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : newlyVisibleTo.entrySet()) {
                 if (ref.equals(entry.getKey())) {
                     EntityTrackerUpdate.queueUpdateForNewlyVisibleSelf(ref, statMap, entry.getValue());
@@ -210,9 +204,7 @@ public class EntityStatsSystems {
         }
 
         private static void queueUpdateForNewlyVisibleSelf(Ref<EntityStore> ref, @Nonnull EntityStatMap statMap, @Nonnull EntityTrackerSystems.EntityViewer viewer) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.EntityStats;
-            update.entityStatUpdates = statMap.createInitUpdate(true);
+            EntityStatsUpdate update = new EntityStatsUpdate(statMap.createInitUpdate(true));
             viewer.queueUpdate(ref, update);
         }
     }

@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class BuilderActionStartObjective
 extends BuilderActionBase {
+    @Nonnull
     protected final AssetHolder objectiveId = new AssetHolder();
 
     @Override

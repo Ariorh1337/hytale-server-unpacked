@@ -224,7 +224,9 @@ public class ChunkSavingSystems {
                 chunk.setSaving(true);
                 Holder<ChunkStore> holder = store.copySerializableEntity(reference);
                 data.toSaveTotal.getAndIncrement();
-                data.chunkSavingFutures.add((CompletableFuture<Void>)((CompletableFuture)CompletableFuture.supplyAsync(() -> saver.saveHolder(chunk.getX(), chunk.getZ(), holder)).thenCompose(Function.identity())).whenCompleteAsync((aVoid, throwable) -> {
+                CompletionStage savingFuture = CompletableFuture.supplyAsync(() -> saver.saveHolder(chunk.getX(), chunk.getZ(), holder)).thenCompose(Function.identity());
+                data.chunkSavingFutures.add((CompletableFuture<Void>)savingFuture);
+                ((CompletableFuture)savingFuture).whenCompleteAsync((aVoid, throwable) -> {
                     if (throwable != null) {
                         ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause((Throwable)throwable)).log("Failed to save chunk (%d, %d):", chunk.getX(), chunk.getZ());
                     } else {
@@ -233,7 +235,7 @@ public class ChunkSavingSystems {
                     }
                     chunk.consumeNeedsSaving();
                     chunk.setSaving(false);
-                }, (Executor)world));
+                }, (Executor)world);
             }
         }
     }

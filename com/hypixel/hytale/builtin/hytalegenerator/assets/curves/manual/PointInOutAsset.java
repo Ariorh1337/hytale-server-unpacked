@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class PointInOutAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, PointInOutAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, PointInOutAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(PointInOutAsset.class, PointInOutAsset::new, Codec.STRING, (asset, id) -> {
         asset.id = id;
     }, config -> config.id, (config, data) -> {

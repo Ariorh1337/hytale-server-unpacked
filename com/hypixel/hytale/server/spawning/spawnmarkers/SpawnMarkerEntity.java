@@ -7,6 +7,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
@@ -87,7 +88,7 @@ implements Component<EntityStore> {
     @Nullable
     private Set<UUID> suppressedBy;
     private int failedSpawns;
-    @Nonnull
+    @Nullable
     private final SpawningContext context;
     private final Vector3d spawnPosition = new Vector3d();
     private InvalidatablePersistentRef[] npcReferences;
@@ -104,7 +105,11 @@ implements Component<EntityStore> {
     }
 
     public SpawnMarkerEntity() {
-        this.context = new SpawningContext();
+        this(new SpawningContext());
+    }
+
+    private SpawnMarkerEntity(@Nullable SpawningContext context) {
+        this.context = context;
         this.npcReferences = EMPTY_REFERENCES;
     }
 
@@ -226,7 +231,13 @@ implements Component<EntityStore> {
         NPCEntity npcComponent;
         boolean hasPlayersInRange;
         Builder<?> role;
-        SpawnMarker.SpawnConfiguration spawn = marker.getWeightedConfigurations().get(ThreadLocalRandom.current());
+        IWeightedMap<SpawnMarker.SpawnConfiguration> configs = marker.getWeightedConfigurations();
+        if (configs == null) {
+            SpawningPlugin.get().getLogger().at(Level.SEVERE).log("Marker %s has no spawn configurations to spawn", ref);
+            this.refreshTimeout();
+            return false;
+        }
+        SpawnMarker.SpawnConfiguration spawn = configs.get(ThreadLocalRandom.current());
         if (spawn == null) {
             SpawningPlugin.get().getLogger().at(Level.SEVERE).log("Marker %s has no spawn configuration to spawn", ref);
             this.refreshTimeout();
@@ -418,6 +429,21 @@ implements Component<EntityStore> {
         spawnMarker.timeToDeactivation = this.timeToDeactivation;
         spawnMarker.despawnStarted = this.despawnStarted;
         spawnMarker.spawnLostTimeoutCounter = this.spawnLostTimeoutCounter;
+        return spawnMarker;
+    }
+
+    @Override
+    @Nullable
+    public Component<EntityStore> cloneSerializable() {
+        SpawnMarkerEntity spawnMarker = new SpawnMarkerEntity(null);
+        spawnMarker.spawnMarkerId = this.spawnMarkerId;
+        spawnMarker.respawnCounter = this.respawnCounter;
+        spawnMarker.spawnCount = this.spawnCount;
+        spawnMarker.gameTimeRespawn = this.gameTimeRespawn;
+        spawnMarker.spawnAfter = this.spawnAfter;
+        spawnMarker.npcReferences = this.npcReferences;
+        spawnMarker.storedFlock = this.storedFlock != null ? this.storedFlock.cloneSerializable() : null;
+        spawnMarker.spawnPosition.assign(this.spawnPosition);
         return spawnMarker;
     }
 

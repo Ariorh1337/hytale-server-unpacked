@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class ActionOpenBarterShop
 extends ActionBase {
+    @Nonnull
     protected final String shopId;
 
     public ActionOpenBarterShop(@Nonnull BuilderActionOpenBarterShop builder, @Nonnull BuilderSupport support) {

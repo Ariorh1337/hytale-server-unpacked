@@ -18,6 +18,7 @@ import com.hypixel.hytale.protocol.packets.inventory.SetCreativeItem;
 import com.hypixel.hytale.protocol.packets.inventory.SmartGiveCreativeItem;
 import com.hypixel.hytale.protocol.packets.inventory.SmartMoveItemStack;
 import com.hypixel.hytale.protocol.packets.inventory.SwitchHotbarBlockSet;
+import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.BlockGroup;
 import com.hypixel.hytale.server.core.asset.type.item.config.BlockSelectorToolData;
@@ -41,6 +42,7 @@ import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.IPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -241,6 +243,9 @@ implements SubPacketHandler {
             }
             Inventory inventory = playerComponent.getInventory();
             ItemStack itemStack = ItemStack.fromPacket(packet.item);
+            if (itemStack == null) {
+                return;
+            }
             switch (packet.moveType) {
                 case EquipOrMergeStack: {
                     Item item = itemStack.getItem();
@@ -263,7 +268,7 @@ implements SubPacketHandler {
                     return;
                 }
                 case PutInHotbarOrWindow: {
-                    inventory.getCombinedHotbarFirst().addItemStack(itemStack);
+                    playerComponent.giveItem(itemStack, ref, store);
                 }
             }
         });
@@ -347,7 +352,11 @@ implements SubPacketHandler {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert (playerComponent != null);
             Inventory inventory = playerComponent.getInventory();
-            inventory.smartMoveItem(packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.moveType);
+            PlayerSettings settings = store.getComponent(ref, PlayerSettings.getComponentType());
+            if (settings == null) {
+                settings = PlayerSettings.defaults();
+            }
+            inventory.smartMoveItem(packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.moveType, settings);
         });
     }
 
@@ -409,15 +418,28 @@ implements SubPacketHandler {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert (playerComponent != null);
             Inventory inventory = playerComponent.getInventory();
+            PlayerSettings settings = store.getComponent(ref, PlayerSettings.getComponentType());
+            if (settings == null) {
+                settings = PlayerSettings.defaults();
+            }
             switch (packet.inventoryActionType) {
                 case TakeAll: {
                     if (packet.inventorySectionId == -9) {
-                        inventory.takeAll(packet.inventorySectionId);
+                        inventory.takeAll(packet.inventorySectionId, settings);
                         return;
                     }
                     Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
                     if (!(window instanceof ItemContainerWindow)) break;
-                    inventory.takeAll(packet.inventorySectionId);
+                    ItemContainerWindow itemContainerWindow = (ItemContainerWindow)((Object)window);
+                    if (window.getType() == WindowType.Processing) {
+                        CombinedItemContainer combinedItemContainer;
+                        ItemContainer itemContainer = itemContainerWindow.getItemContainer();
+                        if (!(itemContainer instanceof CombinedItemContainer) || (combinedItemContainer = (CombinedItemContainer)itemContainer).getContainersSize() < 3) break;
+                        ItemContainer outputContainer = combinedItemContainer.getContainer(2);
+                        inventory.takeAllWithPriority(outputContainer, settings);
+                        break;
+                    }
+                    inventory.takeAll(packet.inventorySectionId, settings);
                     break;
                 }
                 case PutAll: {

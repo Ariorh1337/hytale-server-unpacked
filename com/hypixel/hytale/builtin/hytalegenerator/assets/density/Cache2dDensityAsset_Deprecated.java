@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class Cache2dDensityAsset_Deprecated
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<Cache2dDensityAsset_Deprecated> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(Cache2dDensityAsset_Deprecated.class, Cache2dDensityAsset_Deprecated::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Y", Codec.DOUBLE, false), (t, k) -> {
         t.y = k;
     }, t -> t.y).add()).build();
@@ -32,7 +33,7 @@ extends DensityAsset {
         if (input == null) {
             return new ConstantValueDensity(0.0);
         }
-        MultiCacheDensity cacheDensity = new MultiCacheDensity(input, argument.workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+        MultiCacheDensity cacheDensity = new MultiCacheDensity(input, CacheDensityAsset.DEFAULT_CAPACITY);
         return new YOverrideDensity(cacheDensity, this.y);
     }
 

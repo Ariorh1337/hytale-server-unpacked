@@ -25,10 +25,16 @@ extends Pattern {
     private final List<Vector3i> surfacePositions;
     @Nonnull
     private final List<Vector3i> originPositions;
+    @Nonnull
+    private final Vector3i rChildPosition;
+    @Nonnull
+    private final Pattern.Context rChildContext;
 
     public SurfacePattern(@Nonnull Pattern surfacePattern, @Nonnull Pattern originPattern, double surfaceRadius, double originRadius, @Nonnull Facing facing, int surfaceGap, int originGap) {
         this.wallPattern = surfacePattern;
         this.originPattern = originPattern;
+        this.rChildPosition = new Vector3i();
+        this.rChildContext = new Pattern.Context();
         int surfaceY = -1 - surfaceGap;
         this.surfacePositions = new ArrayList<Vector3i>(1);
         for (int x = -((int)surfaceRadius) - 1; x <= (int)surfaceRadius + 1; ++x) {
@@ -64,6 +70,24 @@ extends Pattern {
         }
         originSpace = SpaceSize.stack(originSpace, originPattern.readSpace());
         this.readSpaceSize = SpaceSize.merge(floorSpace, originSpace);
+    }
+
+    @Override
+    public boolean matches(@Nonnull Pattern.Context context) {
+        this.rChildPosition.assign(context.position);
+        this.rChildContext.assign(context);
+        this.rChildContext.position = this.rChildPosition;
+        for (Vector3i pos : this.originPositions) {
+            this.rChildPosition.assign(pos).add(context.position);
+            if (this.originPattern.matches(this.rChildContext)) continue;
+            return false;
+        }
+        for (Vector3i pos : this.surfacePositions) {
+            this.rChildPosition.assign(pos).add(context.position);
+            if (this.wallPattern.matches(this.rChildContext)) continue;
+            return false;
+        }
+        return true;
     }
 
     private void applyFacing(@Nonnull Vector3i pos, @Nonnull Facing facing) {
@@ -114,24 +138,6 @@ extends Pattern {
     private void toE(@Nonnull Vector3i pos) {
         this.toW(pos);
         pos.x = -pos.x;
-    }
-
-    @Override
-    public boolean matches(@Nonnull Pattern.Context context) {
-        Vector3i childPosition = context.position.clone();
-        Pattern.Context childContext = new Pattern.Context(context);
-        childContext.position = childPosition;
-        for (Vector3i pos : this.originPositions) {
-            childPosition.assign(pos).add(context.position);
-            if (this.originPattern.matches(childContext)) continue;
-            return false;
-        }
-        for (Vector3i pos : this.surfacePositions) {
-            childPosition.assign(pos).add(context.position);
-            if (this.wallPattern.matches(childContext)) continue;
-            return false;
-        }
-        return true;
     }
 
     @Override

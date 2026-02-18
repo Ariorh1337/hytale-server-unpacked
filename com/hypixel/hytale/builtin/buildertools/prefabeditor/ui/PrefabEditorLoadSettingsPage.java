@@ -501,7 +501,7 @@ extends InteractiveCustomUIPage<PageData> {
 
     private void handleRegularNavigation(@Nonnull String fileName) {
         Path file = this.browserRoot.resolve(this.browserCurrent).resolve(fileName);
-        if (!file.normalize().startsWith(this.browserRoot.normalize())) {
+        if (!PathUtil.isChildOf(this.browserRoot, file)) {
             this.sendUpdate();
             return;
         }

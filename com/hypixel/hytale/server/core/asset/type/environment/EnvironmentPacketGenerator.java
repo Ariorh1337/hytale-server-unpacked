@@ -5,7 +5,7 @@ package com.hypixel.hytale.server.core.asset.type.environment;
 
 import com.hypixel.hytale.assetstore.AssetUpdateQuery;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.WorldEnvironment;
 import com.hypixel.hytale.protocol.packets.assets.UpdateEnvironments;
@@ -20,7 +20,7 @@ public class EnvironmentPacketGenerator
 extends AssetPacketGenerator<String, Environment, IndexedLookupTableAssetMap<String, Environment>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, Environment> assetMap, @Nonnull Map<String, Environment> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, Environment> assetMap, @Nonnull Map<String, Environment> assets) {
         Map assetsFromMap = assetMap.getAssetMap();
         if (assets.size() != assetsFromMap.size()) {
             throw new UnsupportedOperationException("Environments can not handle partial init packets!!!");
@@ -43,7 +43,7 @@ extends AssetPacketGenerator<String, Environment, IndexedLookupTableAssetMap<Str
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, Environment> assetMap, @Nonnull Map<String, Environment> loadedAssets, @Nonnull AssetUpdateQuery query) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, Environment> assetMap, @Nonnull Map<String, Environment> loadedAssets, @Nonnull AssetUpdateQuery query) {
         UpdateEnvironments packet = new UpdateEnvironments();
         packet.type = UpdateType.AddOrUpdate;
         packet.environments = new Int2ObjectOpenHashMap<WorldEnvironment>();
@@ -62,7 +62,7 @@ extends AssetPacketGenerator<String, Environment, IndexedLookupTableAssetMap<Str
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, Environment> assetMap, @Nonnull Set<String> removed, @Nonnull AssetUpdateQuery query) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, Environment> assetMap, @Nonnull Set<String> removed, @Nonnull AssetUpdateQuery query) {
         UpdateEnvironments packet = new UpdateEnvironments();
         packet.type = UpdateType.Remove;
         packet.environments = new Int2ObjectOpenHashMap<WorldEnvironment>();

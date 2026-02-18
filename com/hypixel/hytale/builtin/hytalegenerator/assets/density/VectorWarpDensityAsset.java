@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class VectorWarpDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<VectorWarpDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(VectorWarpDensityAsset.class, VectorWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("WarpFactor", Codec.DOUBLE, true), (t, k) -> {
         t.warpFactor = k;
     }, t -> t.warpFactor).add()).append(new KeyedCodec<Vector3d>("WarpVector", Vector3d.CODEC, true), (t, k) -> {

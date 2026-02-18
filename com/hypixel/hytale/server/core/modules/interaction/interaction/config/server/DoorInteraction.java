@@ -68,14 +68,12 @@ extends SimpleBlockInteraction {
         assert (transformComponent != null);
         Vector3d entityPosition = transformComponent.getPosition();
         DoorState newDoorState = doorState != DoorState.CLOSED ? DoorState.CLOSED : (!this.horizontal && DoorInteraction.isInFrontOfDoor(targetBlock, rotationTuple.yaw(), entityPosition) ? DoorState.OPENED_OUT : DoorState.OPENED_IN);
-        if (newDoorState != DoorState.CLOSED) {
-            DoorState checkResult = this.checkDoor(world, targetBlock, blockType, rotation, doorState, newDoorState);
-            if (checkResult == null) {
-                context.getState().state = InteractionState.Failed;
-                return;
-            }
-            newDoorState = checkResult;
+        DoorState checkResult = this.checkDoor(world, targetBlock, blockType, rotation, doorState, newDoorState);
+        if (checkResult == null) {
+            context.getState().state = InteractionState.Failed;
+            return;
         }
+        newDoorState = checkResult;
         DoorState stateDoubleDoor = DoorInteraction.getOppositeDoorState(doorState);
         BlockType interactionBlockState = DoorInteraction.activateDoor(world, blockType, targetBlock, doorState, newDoorState);
         boolean doubleDoor = this.checkForDoubleDoor(world, targetBlock, blockType, rotation, newDoorState, stateDoubleDoor);
@@ -153,7 +151,9 @@ extends SimpleBlockInteraction {
                 }
                 return newOppositeDoorState;
             }
-            chunkAccessor.setBlockInteractionState(blockPosition, blockType, DOOR_BLOCKED);
+            if (newDoorState != DoorState.CLOSED) {
+                chunkAccessor.setBlockInteractionState(blockPosition, blockType, DOOR_BLOCKED);
+            }
             return null;
         }
         return newDoorState;

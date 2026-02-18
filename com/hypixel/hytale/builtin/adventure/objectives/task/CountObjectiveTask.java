@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public abstract class CountObjectiveTask
 extends ObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<CountObjectiveTask> CODEC = ((BuilderCodec.Builder)BuilderCodec.abstractBuilder(CountObjectiveTask.class, ObjectiveTask.BASE_CODEC).append(new KeyedCodec<Integer>("Count", Codec.INTEGER), (countTask, integer) -> {
         countTask.count = integer;
     }, countTask -> countTask.count).add()).build();
@@ -34,12 +35,6 @@ extends ObjectiveTask {
     @Nonnull
     public CountObjectiveTaskAsset getAsset() {
         return (CountObjectiveTaskAsset)super.getAsset();
-    }
-
-    @Override
-    @Nonnull
-    public Message getInfoMessage(@Nonnull Objective objective) {
-        return super.getInfoMessage(objective).insert(" " + this.count + "/" + this.getAsset().getCount());
     }
 
     @Override
@@ -85,7 +80,7 @@ extends ObjectiveTask {
     @Nonnull
     public com.hypixel.hytale.protocol.ObjectiveTask toPacket(@Nonnull Objective objective) {
         com.hypixel.hytale.protocol.ObjectiveTask packet = new com.hypixel.hytale.protocol.ObjectiveTask();
-        packet.taskDescriptionKey = this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex);
+        packet.taskDescriptionKey = Message.translation(this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex)).getFormattedMessage();
         packet.currentCompletion = this.count;
         packet.completionNeeded = this.getAsset().getCount();
         return packet;

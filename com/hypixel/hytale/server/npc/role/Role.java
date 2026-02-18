@@ -210,11 +210,11 @@ implements IAnnotatedComponentCollection {
         this.collisionRadius = builder.getCollisionRadius();
         this.collisionViewAngle = builder.getCollisionViewAngle();
         this.collisionViewHalfAngleCosine = TrigMathUtil.cos(this.collisionViewAngle / 2.0f);
-        this.separationDistance = builder.getSeparationDistance();
-        this.separationWeight = builder.getSeparationWeight();
-        this.separationDistanceTarget = builder.getSeparationDistanceTarget();
-        this.separationNearRadiusTarget = builder.getSeparationNearRadiusTarget();
-        this.separationFarRadiusTarget = builder.getSeparationFarRadiusTarget();
+        this.separationDistance = builder.getSeparationDistance(builderSupport);
+        this.separationWeight = builder.getSeparationWeight(builderSupport);
+        this.separationDistanceTarget = builder.getSeparationDistanceTarget(builderSupport);
+        this.separationNearRadiusTarget = builder.getSeparationNearRadiusTarget(builderSupport);
+        this.separationFarRadiusTarget = builder.getSeparationFarRadiusTarget(builderSupport);
         this.applySeparation = builder.isApplySeparation(builderSupport);
         this.headPitchAngleRange = (float[])(builder.isOverridingHeadPitchAngle(builderSupport) ? builder.getHeadPitchAngleRange(builderSupport) : null);
         this.stayInEnvironment = builder.isStayingInEnvironment();
@@ -524,6 +524,9 @@ implements IAnnotatedComponentCollection {
 
     public void setMotionControllers(@Nonnull NPCEntity npcComponent, @Nonnull Map<String, MotionController> motionControllers, @Nullable String initialMotionController) {
         this.motionControllers = motionControllers;
+        for (Map.Entry<String, MotionController> entry : this.motionControllers.entrySet()) {
+            this.debugSupport.registerDebugFlagsListener(entry.getValue());
+        }
         this.updateMotionControllers(null, null, null, null);
         if (!this.motionControllers.isEmpty()) {
             if (initialMotionController != null && this.setActiveMotionController(null, npcComponent, initialMotionController, null)) {
@@ -569,8 +572,11 @@ implements IAnnotatedComponentCollection {
     }
 
     protected void computeActionsAndSteering(@Nonnull Ref<EntityStore> ref, double tickTime, @Nonnull Steering bodySteering, @Nonnull Steering headSteering, @Nonnull Store<EntityStore> store) {
-        boolean isDead = store.getArchetype(ref).contains(DeathComponent.getComponentType());
-        if (isDead) {
+        boolean isDead;
+        if (this.debugSupport.isVisSensorRanges()) {
+            this.debugSupport.beginSensorVisualization();
+        }
+        if (isDead = store.getArchetype(ref).contains(DeathComponent.getComponentType())) {
             if (this.deathInstruction != null) {
                 this.deathInstruction.execute(ref, this, tickTime, store);
             }

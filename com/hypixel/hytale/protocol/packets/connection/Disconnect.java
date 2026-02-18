@@ -3,7 +3,10 @@
  */
 package com.hypixel.hytale.protocol.packets.connection;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
@@ -15,7 +18,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class Disconnect
-implements Packet {
+implements Packet,
+ToServerPacket,
+ToClientPacket {
     public static final int PACKET_ID = 1;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -31,6 +36,11 @@ implements Packet {
     @Override
     public int getId() {
         return 1;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public Disconnect() {

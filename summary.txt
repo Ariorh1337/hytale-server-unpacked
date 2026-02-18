@@ -2,20 +2,46 @@ Summary for HytaleServer.jar
 Decompiled with CFR 0.152
 
 
-com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.BreakBlockInteraction
+com.hypixel.hytale.server.core.asset.type.weather.config.Weather
 ----------------------------
 
-interactWithBlock(com.hypixel.hytale.server.core.universe.world.World com.hypixel.hytale.component.CommandBuffer<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> com.hypixel.hytale.protocol.InteractionType com.hypixel.hytale.server.core.entity.InteractionContext com.hypixel.hytale.server.core.inventory.ItemStack com.hypixel.hytale.math.vector.Vector3i com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=12,441
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
 
 
-com.hypixel.hytale.server.core.entity.StatModifiersManager
+com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockPlacementSettings
 ----------------------------
 
-applyEffectModifiers(com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap it.unimi.dsi.fastutil.ints.Int2ObjectMap<it.unimi.dsi.fastutil.objects.Object2FloatMap<com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier$CalculationType>> )
-  Could not resolve type clashes
-applyStatModifiers(com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap it.unimi.dsi.fastutil.ints.Int2ObjectMap<it.unimi.dsi.fastutil.objects.Object2FloatMap<com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier$CalculationType>> )
-  Could not resolve type clashes
+toPacket()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=20,288
+
+
+com.hypixel.hytale.server.core.asset.type.fluidfx.config.FluidFX
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.core.asset.type.responsecurve.ScaledXResponseCurve
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.core.asset.type.responsecurve.ScaledXYResponseCurve
+----------------------------
+
+<clinit>()
+  Exception : java.lang.UnsupportedOperationException
+
+
+com.hypixel.hytale.server.core.plugin.PluginManager
+----------------------------
+
+loadManifest(java.nio.file.Path )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 3 blocks at once
 
 
 com.hypixel.hytale.server.core.universe.world.lighting.FloodLightCalculation
@@ -41,46 +67,18 @@ forEachTicking(T V int com.hypixel.hytale.function.predicate.ObjectPositionBlock
   Unable to fully structure code
 
 
-com.hypixel.hytale.server.core.asset.type.weather.config.Weather
+com.hypixel.hytale.server.core.universe.world.storage.provider.RocksDbChunkStorageProvider
 ----------------------------
 
-<clinit>()
-  Exception : java.lang.UnsupportedOperationException
-
-
-com.hypixel.hytale.server.core.asset.type.fluidfx.config.FluidFX
-----------------------------
-
-<clinit>()
-  Exception : java.lang.UnsupportedOperationException
-
-
-com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockPlacementSettings
-----------------------------
-
-toPacket()
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=18,277
-
-
-com.hypixel.hytale.server.core.asset.type.responsecurve.ScaledXResponseCurve
-----------------------------
-
-<clinit>()
-  Exception : java.lang.UnsupportedOperationException
-
-
-com.hypixel.hytale.server.core.asset.type.responsecurve.ScaledXYResponseCurve
-----------------------------
-
-<clinit>()
-  Exception : java.lang.UnsupportedOperationException
-
-
-com.hypixel.hytale.server.core.plugin.PluginManager
-----------------------------
-
-loadManifest(java.nio.file.Path )
+initialize(com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore> )
   Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 3 blocks at once
+
+
+com.hypixel.hytale.server.core.command.system.arguments.types.IntCoord
+----------------------------
+
+parse(java.lang.String )
+  Unable to fully structure code
 
 
 com.hypixel.hytale.server.core.command.system.arguments.types.Coord
@@ -90,11 +88,20 @@ parse(java.lang.String )
   Unable to fully structure code
 
 
-com.hypixel.hytale.server.core.command.system.arguments.types.IntCoord
+com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.BreakBlockInteraction
 ----------------------------
 
-parse(java.lang.String )
-  Unable to fully structure code
+interactWithBlock(com.hypixel.hytale.server.core.universe.world.World com.hypixel.hytale.component.CommandBuffer<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> com.hypixel.hytale.protocol.InteractionType com.hypixel.hytale.server.core.entity.InteractionContext com.hypixel.hytale.server.core.inventory.ItemStack com.hypixel.hytale.math.vector.Vector3i com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=12,441
+
+
+com.hypixel.hytale.server.core.entity.StatModifiersManager
+----------------------------
+
+applyEffectModifiers(com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap it.unimi.dsi.fastutil.ints.Int2ObjectMap<it.unimi.dsi.fastutil.objects.Object2FloatMap<com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier$CalculationType>> )
+  Could not resolve type clashes
+applyStatModifiers(com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap it.unimi.dsi.fastutil.ints.Int2ObjectMap<it.unimi.dsi.fastutil.objects.Object2FloatMap<com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier$CalculationType>> )
+  Could not resolve type clashes
 
 
 io.netty.handler.codec.quic.SockaddrIn
@@ -224,7 +231,7 @@ org.jline.reader.impl.LineReaderImpl
 ----------------------------
 
 readLine(java.lang.String java.lang.String org.jline.reader.MaskingCallback java.lang.String )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [1[TRYBLOCK], 3[TRYBLOCK]], but top level block is 13[CASE]
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [3[TRYBLOCK], 1[TRYBLOCK]], but top level block is 13[CASE]
 
 
 org.jline.terminal.impl.ExternalTerminal
@@ -356,4 +363,4 @@ com.hypixel.hytale.builtin.beds.sleep.systems.player.EnterBedSystem
 ----------------------------
 
 getMessage(com.hypixel.hytale.builtin.beds.sleep.systems.world.CanSleepInWorld$Result )
-  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,321
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,331

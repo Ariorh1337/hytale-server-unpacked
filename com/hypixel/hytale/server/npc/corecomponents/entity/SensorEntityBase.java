@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSenso
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.IEntityByPriorityFilter;
@@ -54,6 +55,8 @@ extends SensorWithEntityFilters {
     protected final ISensorEntityCollector collector;
     protected int ownRole;
     protected final EntityPositionProvider positionProvider = new EntityPositionProvider();
+    protected int currentVisSensorColorIndex = -1;
+    protected final float visViewAngle;
 
     public SensorEntityBase(@Nonnull BuilderSensorEntityBase builder, ISensorEntityPrioritiser prioritiser, @Nonnull BuilderSupport builderSupport) {
         super(builder, builder.getFilters(builderSupport, prioritiser, ComponentContext.SensorEntity));
@@ -67,6 +70,7 @@ extends SensorWithEntityFilters {
         this.ignoredTargetSlot = builder.getIgnoredTargetSlot(builderSupport);
         this.prioritiser = prioritiser;
         this.collector = builder.getCollector(builderSupport);
+        this.visViewAngle = this.findViewAngleFromFilters();
     }
 
     @Override
@@ -74,12 +78,15 @@ extends SensorWithEntityFilters {
         Ref<EntityStore> targetRef;
         if (!super.matches(ref, role, dt, store)) {
             this.positionProvider.clear();
+            this.currentVisSensorColorIndex = -1;
             return false;
         }
         TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
         assert (transformComponent != null);
         Vector3d position = transformComponent.getPosition();
         this.ownRole = role.getRoleIndex();
+        DebugSupport debugSupport = role.getDebugSupport();
+        this.currentVisSensorColorIndex = debugSupport.isVisSensorRanges() ? debugSupport.recordSensorRange(this.range, this.minRange, this.visViewAngle) : -1;
         if ((this.ignoredTargetSlot == Integer.MIN_VALUE || this.ignoredTargetSlot != this.lockedTargetSlot) && (targetRef = this.filterLockedEntity(ref, position, role, store)) != null) {
             this.collector.init(ref, role, store);
             if (!this.collector.terminateOnFirstMatch()) {
@@ -251,18 +258,28 @@ extends SensorWithEntityFilters {
         return this.filterPrioritisedEntity(ref, targetRef, role, store, this.npcPrioritiser);
     }
 
-    protected boolean filterPrioritisedEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store, @Nonnull IEntityByPriorityFilter playerPrioritiser) {
-        if (!this.filterEntity(ref, targetRef, role, store)) {
+    protected boolean filterPrioritisedEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store, @Nonnull IEntityByPriorityFilter entityPrioritiser) {
+        boolean filterMatch = this.filterEntity(ref, targetRef, role, store);
+        if (!filterMatch) {
             this.collector.collectNonMatching(targetRef, store);
+            this.recordEntityVisData(targetRef, role, false);
             return false;
         }
-        boolean match = playerPrioritiser.test(ref, targetRef, store);
+        boolean match = entityPrioritiser.test(ref, targetRef, store);
         if (match) {
             this.collector.collectMatching(ref, targetRef, store);
         } else {
             this.collector.collectNonMatching(targetRef, store);
         }
+        this.recordEntityVisData(targetRef, role, match);
         return this.collector.terminateOnFirstMatch() && match;
+    }
+
+    private void recordEntityVisData(@Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, boolean matched) {
+        if (this.currentVisSensorColorIndex < 0) {
+            return;
+        }
+        role.getDebugSupport().recordEntityCheck(targetRef, this.currentVisSensorColorIndex, matched);
     }
 
     @Nullable

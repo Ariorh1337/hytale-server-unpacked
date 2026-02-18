@@ -21,20 +21,21 @@ import javax.annotation.Nonnull;
 
 public class CellValueReturnTypeAsset
 extends ReturnTypeAsset {
+    @Nonnull
     public static final BuilderCodec<CellValueReturnTypeAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CellValueReturnTypeAsset.class, CellValueReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC).append(new KeyedCodec("Density", DensityAsset.CODEC, true), (t, k) -> {
         t.densityAsset = k;
     }, t -> t.densityAsset).add()).append(new KeyedCodec<Double>("DefaultValue", Codec.DOUBLE, false), (t, k) -> {
         t.defaultValue = k;
     }, t -> t.defaultValue).add()).build();
     private DensityAsset densityAsset = new ConstantDensityAsset();
-    private double defaultValue = 0.0;
+    private double defaultValue;
 
     @Override
     @Nonnull
-    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-        Density densityNode = this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer));
-        MultiCacheDensity cache = new MultiCacheDensity(densityNode, workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
-        return new CellValueReturnType(cache, this.defaultValue, workerIndexer.getWorkerCount());
+    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+        Density densityNode = this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerId));
+        MultiCacheDensity cache = new MultiCacheDensity(densityNode, CacheDensityAsset.DEFAULT_CAPACITY);
+        return new CellValueReturnType(cache, this.defaultValue);
     }
 
     @Override

@@ -8,9 +8,11 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PortalDeviceConfig {
+    @Nonnull
     public static final BuilderCodec<PortalDeviceConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PortalDeviceConfig.class, PortalDeviceConfig::new).appendInherited(new KeyedCodec<String>("SpawningState", Codec.STRING), (config, o) -> {
         config.spawningState = o;
     }, config -> config.spawningState, (config, parent) -> {
@@ -50,14 +52,15 @@ public class PortalDeviceConfig {
         return this.returnBlock;
     }
 
+    @Nonnull
     public String[] getBlockStates() {
         return new String[]{this.onState, this.spawningState, this.offState};
     }
 
-    public boolean areBlockStatesValid(BlockType baseBlockType) {
+    public boolean areBlockStatesValid(@Nonnull BlockType baseBlockType) {
         for (String stateKey : this.getBlockStates()) {
-            BlockType state = BlockTypeUtils.getBlockForState(baseBlockType, stateKey);
-            if (state != null) continue;
+            BlockType blockType = BlockTypeUtils.getBlockForState(baseBlockType, stateKey);
+            if (blockType != null) continue;
             return false;
         }
         return true;

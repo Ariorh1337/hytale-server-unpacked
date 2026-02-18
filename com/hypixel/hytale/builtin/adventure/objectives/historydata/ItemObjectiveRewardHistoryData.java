@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public final class ItemObjectiveRewardHistoryData
 extends ObjectiveRewardHistoryData {
+    @Nonnull
     public static final BuilderCodec<ItemObjectiveRewardHistoryData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ItemObjectiveRewardHistoryData.class, ItemObjectiveRewardHistoryData::new, BASE_CODEC).append(new KeyedCodec<String>("ItemId", Codec.STRING), (itemObjectiveRewardDetails, blockTypeKey) -> {
         itemObjectiveRewardDetails.itemId = blockTypeKey;
     }, itemObjectiveRewardDetails -> itemObjectiveRewardDetails.itemId).addValidator(Item.VALIDATOR_CACHE.getValidator()).add()).append(new KeyedCodec<Integer>("Quantity", Codec.INTEGER), (itemObjectiveRewardDetails, integer) -> {

@@ -8,7 +8,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList;
@@ -68,11 +68,11 @@ extends JavaPlugin {
             serverListPlayers[index++] = ServerPlayerListModule.createServerPlayerListPlayer(playerRef);
         }
         AddToServerPlayerList fullListPacket = new AddToServerPlayerList(serverListPlayers);
-        joiningPlayerRef.getPacketHandler().write((Packet)fullListPacket);
+        joiningPlayerRef.getPacketHandler().write((ToClientPacket)fullListPacket);
         AddToServerPlayerList newPlayerPacket = new AddToServerPlayerList(new ServerPlayerListPlayer[]{ServerPlayerListModule.createServerPlayerListPlayer(joiningPlayerRef)});
         for (PlayerRef playerRef : allPlayers) {
             if (playerRef.getUuid().equals(joiningPlayerUuid)) continue;
-            playerRef.getPacketHandler().write((Packet)newPlayerPacket);
+            playerRef.getPacketHandler().write((ToClientPacket)newPlayerPacket);
         }
     }
 
@@ -82,7 +82,7 @@ extends JavaPlugin {
         RemoveFromServerPlayerList removePacket = new RemoveFromServerPlayerList(new UUID[]{leavingPlayerUuid});
         for (PlayerRef playerRef : Universe.get().getPlayers()) {
             if (playerRef.getUuid().equals(leavingPlayerUuid)) continue;
-            playerRef.getPacketHandler().write((Packet)removePacket);
+            playerRef.getPacketHandler().write((ToClientPacket)removePacket);
         }
     }
 
@@ -96,7 +96,7 @@ extends JavaPlugin {
         UUID worldUuid = event.getWorld().getWorldConfig().getUuid();
         UpdateServerPlayerList updatePacket = new UpdateServerPlayerList(new ServerPlayerListUpdate[]{new ServerPlayerListUpdate(playerUuid, worldUuid)});
         for (PlayerRef otherPlayerRef : Universe.get().getPlayers()) {
-            otherPlayerRef.getPacketHandler().write((Packet)updatePacket);
+            otherPlayerRef.getPacketHandler().write((ToClientPacket)updatePacket);
         }
     }
 

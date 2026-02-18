@@ -39,6 +39,7 @@ extends AbstractAsyncPlayerCommand {
     private final FlagArg overwriteArg = this.withFlagArg("overwrite", "server.commands.editprefab.save.overwrite.desc");
     private final FlagArg emptyArg = this.withFlagArg("empty", "server.commands.editprefab.save.empty.desc");
     private final FlagArg noUpdateArg = this.withFlagArg("noUpdate", "server.commands.editprefab.saveAs.noUpdate.desc");
+    private final FlagArg clearSupportArg = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
 
     public PrefabEditSaveAsCommand() {
         super("saveas", "server.commands.editprefab.saveAs.desc");
@@ -62,6 +63,7 @@ extends AbstractAsyncPlayerCommand {
         prefabSaverSettings.setEntities(!this.noEntitiesArg.provided(context));
         prefabSaverSettings.setOverwriteExisting((Boolean)this.overwriteArg.get(context));
         prefabSaverSettings.setEmpty((Boolean)this.emptyArg.get(context));
+        prefabSaverSettings.setClearSupportValues((Boolean)this.clearSupportArg.get(context));
         Path prefabRootPath = ((PrefabRootDirectory)((Object)this.prefabPathArg.get(context))).getPrefabPath();
         if (!PathUtil.isChildOf(prefabRootPath, prefabRootPath.resolve((String)this.fileNameArg.get(context))) && !SingleplayerModule.isOwner(playerRef)) {
             context.sendMessage(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"));

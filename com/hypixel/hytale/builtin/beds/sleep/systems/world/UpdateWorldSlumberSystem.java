@@ -9,7 +9,9 @@ import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSleep;
 import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSlumber;
 import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSomnolence;
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.system.tick.TickingSystem;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
@@ -19,40 +21,57 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Iterator;
 import javax.annotation.Nonnull;
 
 public class UpdateWorldSlumberSystem
 extends TickingSystem<EntityStore> {
+    @Nonnull
+    private final ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType;
+    @Nonnull
+    private final ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType;
+    @Nonnull
+    private final ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType;
+
+    public UpdateWorldSlumberSystem(@Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType, @Nonnull ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType, @Nonnull ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType) {
+        this.playerSomnolenceComponentType = playerSomnolenceComponentType;
+        this.worldSomnolenceResourceType = worldSomnolenceResourceType;
+        this.worldTimeResourceType = worldTimeResourceType;
+    }
+
     @Override
     public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
         boolean sleepingIsOver;
         World world = store.getExternalData().getWorld();
-        WorldSomnolence worldSomnolence = store.getResource(WorldSomnolence.getResourceType());
-        WorldSleep worldSleep = worldSomnolence.getState();
+        WorldSomnolence worldSomnolenceResource = store.getResource(this.worldSomnolenceResourceType);
+        WorldSleep worldSleep = worldSomnolenceResource.getState();
         if (!(worldSleep instanceof WorldSlumber)) {
             return;
         }
         WorldSlumber slumber = (WorldSlumber)worldSleep;
-        slumber.incProgressSeconds(dt);
-        boolean bl = sleepingIsOver = slumber.getProgressSeconds() >= slumber.getIrlDurationSeconds() || UpdateWorldSlumberSystem.isSomeoneAwake(store);
+        slumber.incrementProgressSeconds(dt);
+        boolean itsMorningTimeToWAKEUP = slumber.getProgressSeconds() >= slumber.getIrlDurationSeconds();
+        boolean someoneIsAwake = UpdateWorldSlumberSystem.isSomeoneAwake(store, this.playerSomnolenceComponentType);
+        boolean bl = sleepingIsOver = itsMorningTimeToWAKEUP || someoneIsAwake;
         if (!sleepingIsOver) {
             return;
         }
-        worldSomnolence.setState(WorldSleep.Awake.INSTANCE);
-        WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
+        worldSomnolenceResource.setState(WorldSleep.Awake.INSTANCE);
+        WorldTimeResource timeResource = store.getResource(this.worldTimeResourceType);
+        Instant now = timeResource.getGameTime();
         Instant wakeUpTime = UpdateWorldSlumberSystem.computeWakeupTime(slumber);
         timeResource.setGameTime(wakeUpTime, world, store);
-        store.forEachEntityParallel(PlayerSomnolence.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
-            PlayerSomnolence somnolenceComponent = archetypeChunk.getComponent(index, PlayerSomnolence.getComponentType());
+        store.forEachEntityParallel(this.playerSomnolenceComponentType, (index, archetypeChunk, commandBuffer) -> {
+            PlayerSomnolence somnolenceComponent = archetypeChunk.getComponent(index, this.playerSomnolenceComponentType);
             assert (somnolenceComponent != null);
             if (somnolenceComponent.getSleepState() instanceof PlayerSleep.Slumber) {
                 Ref ref = archetypeChunk.getReferenceTo(index);
-                commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.MorningWakeUp.createComponent(timeResource));
+                PlayerSomnolence sleepComponent = PlayerSleep.MorningWakeUp.createComponent(itsMorningTimeToWAKEUP ? now : null);
+                commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, sleepComponent);
             }
         });
     }
 
+    @Nonnull
     private static Instant computeWakeupTime(@Nonnull WorldSlumber slumber) {
         float progress = slumber.getProgressSeconds() / slumber.getIrlDurationSeconds();
         long totalNanos = Duration.between(slumber.getStartInstant(), slumber.getTargetInstant()).toNanos();
@@ -60,16 +79,16 @@ extends TickingSystem<EntityStore> {
         return slumber.getStartInstant().plusNanos(progressNanos);
     }
 
-    private static boolean isSomeoneAwake(@Nonnull ComponentAccessor<EntityStore> store) {
+    private static boolean isSomeoneAwake(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType) {
         World world = store.getExternalData().getWorld();
         Collection<PlayerRef> playerRefs = world.getPlayerRefs();
         if (playerRefs.isEmpty()) {
             return false;
         }
-        Iterator<PlayerRef> iterator = playerRefs.iterator();
-        if (iterator.hasNext()) {
-            PlayerRef playerRef = iterator.next();
-            PlayerSomnolence somnolenceComponent = store.getComponent(playerRef.getReference(), PlayerSomnolence.getComponentType());
+        for (PlayerRef playerRef : playerRefs) {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) continue;
+            PlayerSomnolence somnolenceComponent = store.getComponent(ref, playerSomnolenceComponentType);
             if (somnolenceComponent == null) {
                 return true;
             }

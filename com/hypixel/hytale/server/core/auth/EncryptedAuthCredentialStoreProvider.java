@@ -6,6 +6,7 @@ package com.hypixel.hytale.server.core.auth;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.auth.AuthCredentialStoreProvider;
 import com.hypixel.hytale.server.core.auth.EncryptedAuthCredentialStore;
 import com.hypixel.hytale.server.core.auth.IAuthCredentialStore;
@@ -24,7 +25,11 @@ implements AuthCredentialStoreProvider {
     @Override
     @Nonnull
     public IAuthCredentialStore createStore() {
-        return new EncryptedAuthCredentialStore(Path.of(this.path, new String[0]));
+        Path resolved = Path.of(this.path, new String[0]);
+        if (!PathUtil.isInTrustedRoot(resolved)) {
+            throw new IllegalStateException("Auth credential store path must be within a trusted directory: " + this.path);
+        }
+        return new EncryptedAuthCredentialStore(resolved);
     }
 
     @Nonnull

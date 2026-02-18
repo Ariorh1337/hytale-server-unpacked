@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class ImportedScannerAsset
 extends ScannerAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedScannerAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedScannerAsset.class, ImportedScannerAsset::new, ScannerAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, false), (t, k) -> {
         t.name = k;
     }, k -> k.name).add()).build();

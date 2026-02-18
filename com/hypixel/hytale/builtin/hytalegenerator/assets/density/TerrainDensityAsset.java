@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class TerrainDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<TerrainDensityAsset> CODEC = BuilderCodec.builder(TerrainDensityAsset.class, TerrainDensityAsset::new, DensityAsset.ABSTRACT_CODEC).build();
 
     @Override

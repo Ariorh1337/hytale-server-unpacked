@@ -19,10 +19,10 @@ import javax.annotation.Nonnull;
 public class StopNetworkChunkSendingCommand
 extends AbstractPlayerCommand {
     @Nonnull
-    private final RequiredArg<Boolean> sendNetworkChunksArg = this.withRequiredArg("sendNetworkChunks", "Whether chunks should be sent over the network to yourself", ArgTypes.BOOLEAN);
+    private final RequiredArg<Boolean> sendNetworkChunksArg = this.withRequiredArg("sendNetworkChunks", "server.commands.networkChunkSending.sendNetworkChunks.desc", ArgTypes.BOOLEAN);
 
     public StopNetworkChunkSendingCommand() {
-        super("networkChunkSending", "Stop sending chunks over the network");
+        super("networkChunkSending", "server.commands.networkChunkSending.desc");
     }
 
     @Override

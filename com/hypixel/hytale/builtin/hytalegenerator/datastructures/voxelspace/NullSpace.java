@@ -12,12 +12,15 @@ import javax.annotation.Nullable;
 
 public class NullSpace<V>
 implements VoxelSpace<V> {
+    @Nonnull
     private static final NullSpace INSTANCE = new NullSpace();
 
+    @Nonnull
     public static <V> NullSpace<V> instance() {
         return INSTANCE;
     }
 
+    @Nonnull
     public static <V> NullSpace<V> instance(@Nonnull Class<V> clazz) {
         return INSTANCE;
     }

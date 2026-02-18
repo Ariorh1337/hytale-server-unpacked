@@ -30,7 +30,9 @@ extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
         AdventureMetadata adventureMeta;
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-        assert (playerComponent != null);
+        if (playerComponent == null) {
+            return;
+        }
         Inventory inventory = playerComponent.getInventory();
         if (inventory.usingToolsItem()) {
             return;

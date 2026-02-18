@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 
 public class CombatTargetCollector
 implements ISensorEntityCollector {
+    @Nonnull
     private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
     @Nullable
     private Role role;

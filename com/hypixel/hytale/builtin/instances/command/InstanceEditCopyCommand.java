@@ -4,6 +4,7 @@
 package com.hypixel.hytale.builtin.instances.command;
 
 import com.hypixel.hytale.builtin.instances.InstancesPlugin;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -22,7 +23,9 @@ import javax.annotation.Nonnull;
 
 public class InstanceEditCopyCommand
 extends AbstractAsyncCommand {
+    @Nonnull
     private final RequiredArg<String> originNameArg = this.withRequiredArg("instanceToCopy", "server.commands.instances.editcopy.origin.name", ArgTypes.STRING);
+    @Nonnull
     private final RequiredArg<String> destinationNameArg = this.withRequiredArg("newInstanceName", "server.commands.instances.editcopy.destination.name", ArgTypes.STRING);
 
     public InstanceEditCopyCommand() {
@@ -43,8 +46,11 @@ extends AbstractAsyncCommand {
             context.sendMessage(Message.translation("server.commands.instances.edit.copy.originNotFound").param("path", originPath.toAbsolutePath().toString()));
             return CompletableFuture.completedFuture(null);
         }
-        String destinationName = (String)this.destinationNameArg.get(context);
-        Path destinationPath = originPath.getParent().resolve(destinationName);
+        Path destinationPath = PathUtil.resolveName(originPath.getParent(), (String)this.destinationNameArg.get(context));
+        if (destinationPath == null) {
+            context.sendMessage(Message.translation("server.commands.instances.edit.copy.invalidPath"));
+            return CompletableFuture.completedFuture(null);
+        }
         if (Files.exists(destinationPath, new LinkOption[0])) {
             context.sendMessage(Message.translation("server.commands.instances.edit.copy.destinationExists").param("path", destinationPath.toAbsolutePath().toString()));
             return CompletableFuture.completedFuture(null);
@@ -68,7 +74,7 @@ extends AbstractAsyncCommand {
             InstancesPlugin.get().getLogger().at(Level.SEVERE).log("Error copying instance folder for copy", t);
             return CompletableFuture.completedFuture(null);
         }
-        return WorldConfig.save(destinationConfigFile, worldConfig).thenRun(() -> context.sendMessage(Message.translation("server.commands.instances.copiedInstanceAssetConfig").param("origin", instanceToCopy).param("destination", destinationName)));
+        return WorldConfig.save(destinationConfigFile, worldConfig).thenRun(() -> context.sendMessage(Message.translation("server.commands.instances.copiedInstanceAssetConfig").param("origin", instanceToCopy).param("destination", destinationPath.getFileName().toString())));
     }
 }
 

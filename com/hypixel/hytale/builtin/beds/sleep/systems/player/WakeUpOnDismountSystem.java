@@ -18,14 +18,26 @@ import javax.annotation.Nullable;
 
 public class WakeUpOnDismountSystem
 extends RefChangeSystem<EntityStore, MountedComponent> {
-    @Override
-    public ComponentType<EntityStore, MountedComponent> componentType() {
-        return MountedComponent.getComponentType();
+    @Nonnull
+    private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+    @Nonnull
+    private final ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType;
+
+    public WakeUpOnDismountSystem(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType) {
+        this.mountedComponentType = mountedComponentType;
+        this.playerSomnolenceComponentType = playerSomnolenceComponentType;
     }
 
     @Override
+    @Nonnull
+    public ComponentType<EntityStore, MountedComponent> componentType() {
+        return this.mountedComponentType;
+    }
+
+    @Override
+    @Nonnull
     public Query<EntityStore> getQuery() {
-        return MountedComponent.getComponentType();
+        return this.mountedComponentType;
     }
 
     @Override
@@ -39,7 +51,7 @@ extends RefChangeSystem<EntityStore, MountedComponent> {
     @Override
     public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         if (component.getBlockMountType() == BlockMountType.Bed) {
-            commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSomnolence.AWAKE);
+            commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, PlayerSomnolence.AWAKE);
         }
     }
 }

@@ -95,7 +95,7 @@ extends JavaPlugin {
         this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(PortalGameplayConfig.class, "Portal", PortalGameplayConfig.CODEC);
     }
 
-    private void turnOffPortalWhenWorldRemoved(RemoveWorldEvent event) {
+    private void turnOffPortalWhenWorldRemoved(@Nonnull RemoveWorldEvent event) {
         Collection<World> worlds = Universe.get().getWorlds().values();
         for (World world : worlds) {
             if (world == event.getWorld()) continue;

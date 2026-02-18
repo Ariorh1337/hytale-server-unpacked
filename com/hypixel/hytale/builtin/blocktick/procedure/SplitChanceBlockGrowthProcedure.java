@@ -20,6 +20,7 @@ import org.bson.BsonValue;
 
 public class SplitChanceBlockGrowthProcedure
 extends BasicChanceBlockGrowthProcedure {
+    @Nonnull
     public static final BuilderCodec<SplitChanceBlockGrowthProcedure> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SplitChanceBlockGrowthProcedure.class, SplitChanceBlockGrowthProcedure::new, TickProcedure.BASE_CODEC).append(new KeyedCodec<BsonDocument>("NextIds", Codec.BSON_DOCUMENT), (proc, v, extraInfo) -> {
         proc.data = new String[v.size()];
         proc.chances = new int[proc.data.length];

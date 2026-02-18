@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class AnchorDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<AnchorDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(AnchorDensityAsset.class, AnchorDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Boolean>("Reversed", Codec.BOOLEAN, false), (t, k) -> {
         t.isReversed = k;
     }, k -> k.isReversed).add()).build();

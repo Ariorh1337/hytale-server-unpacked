@@ -15,9 +15,9 @@ import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.InteractionChainData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.ItemArmorSlot;
-import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.PickupLocation;
 import com.hypixel.hytale.protocol.SmartMoveType;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.inventory.UpdatePlayerInventory;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -112,9 +112,11 @@ implements NetworkSerializable<UpdatePlayerInventory> {
     @Deprecated
     private ItemContainer tools = EmptyItemContainer.INSTANCE;
     private ItemContainer backpack = EmptyItemContainer.INSTANCE;
+    private CombinedItemContainer combinedHotbarStorageBackpack;
     private CombinedItemContainer combinedHotbarFirst;
     private CombinedItemContainer combinedStorageFirst;
     private CombinedItemContainer combinedBackpackStorageHotbar;
+    private CombinedItemContainer combinedBackpackHotbarStorage;
     private CombinedItemContainer combinedStorageHotbarBackpack;
     private CombinedItemContainer combinedArmorHotbarStorage;
     private CombinedItemContainer combinedArmorHotbarUtilityStorage;
@@ -324,7 +326,7 @@ implements NetworkSerializable<UpdatePlayerInventory> {
                 context.getMetaStore().putMetaObject(Interaction.TARGET_SLOT, interactionSlot);
                 context.getMetaStore().putMetaObject(ChangeActiveSlotInteraction.PLACE_MOVED_ITEM, () -> {
                     fromContainer.moveItemStackFromSlotToSlot((short)fromSlotId, quantity, toContainer, (short)toSlotId);
-                    playerRefComponent.getPacketHandler().write((Packet)this.toPacket());
+                    playerRefComponent.getPacketHandler().write((ToClientPacket)this.toPacket());
                 });
                 String interactions = context.getRootInteractionId(InteractionType.SwapFrom);
                 InteractionChainData data = new InteractionChainData(-1, UUIDUtil.EMPTY_UUID, null, null, null, -interactionSlot - 1, null);
@@ -336,14 +338,18 @@ implements NetworkSerializable<UpdatePlayerInventory> {
         fromContainer.moveItemStackFromSlotToSlot((short)fromSlotId, quantity, toContainer, (short)toSlotId);
     }
 
-    public void smartMoveItem(int fromSectionId, int fromSlotId, int quantity, @Nonnull SmartMoveType moveType) {
+    public void smartMoveItem(int fromSectionId, int fromSlotId, int quantity, @Nonnull SmartMoveType moveType, PlayerSettings settings) {
         ItemContainer targetContainer = this.getSectionById(fromSectionId);
         if (targetContainer == null) {
             return;
         }
+        ItemStack itemStack = targetContainer.getItemStack((short)fromSlotId);
+        if (ItemStack.isEmpty(itemStack)) {
+            return;
+        }
         block0 : switch (moveType) {
             case EquipOrMergeStack: {
-                if (this.tryEquipArmorPart(fromSectionId, (short)fromSlotId, quantity, targetContainer, true)) {
+                if (this.tryEquipArmorPart(itemStack, fromSectionId, (short)fromSlotId, quantity, targetContainer, true)) {
                     return;
                 }
                 if (this.entity instanceof Player) {
@@ -352,12 +358,12 @@ implements NetworkSerializable<UpdatePlayerInventory> {
                         ((ItemContainerWindow)((Object)window)).getItemContainer().combineItemStacksIntoSlot(targetContainer, (short)fromSlotId);
                     }
                 }
-                this.combinedHotbarFirst.combineItemStacksIntoSlot(targetContainer, (short)fromSlotId);
+                this.combinedEverything.combineItemStacksIntoSlot(targetContainer, (short)fromSlotId);
                 break;
             }
             case PutInHotbarOrWindow: {
                 if (fromSectionId >= 0) {
-                    targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, (ItemContainer)this.combinedHotbarFirst);
+                    this.moveItemFromCheckToInventory(itemStack, targetContainer, (short)fromSlotId, quantity, settings);
                     return;
                 }
                 if (this.entity instanceof Player) {
@@ -369,7 +375,7 @@ implements NetworkSerializable<UpdatePlayerInventory> {
                         return;
                     }
                 }
-                if (this.tryEquipArmorPart(fromSectionId, (short)fromSlotId, quantity, targetContainer, false)) {
+                if (this.tryEquipArmorPart(itemStack, fromSectionId, (short)fromSlotId, quantity, targetContainer, false)) {
                     return;
                 }
                 switch (fromSectionId) {
@@ -382,24 +388,20 @@ implements NetworkSerializable<UpdatePlayerInventory> {
                         break block0;
                     }
                 }
-                targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, (ItemContainer)this.combinedHotbarFirst);
+                this.moveItemFromCheckToInventory(itemStack, targetContainer, (short)fromSlotId, quantity, settings);
                 break;
             }
             case PutInHotbarOrBackpack: {
                 if (fromSectionId == -9) {
-                    targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, (ItemContainer)this.combinedHotbarFirst);
+                    this.moveItemFromCheckToInventory(itemStack, targetContainer, (short)fromSlotId, quantity, settings);
                     break;
                 }
-                targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, (ItemContainer)this.combinedBackpackStorageHotbar);
+                targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, this.getContainerForItemPickup(itemStack.getItem(), settings, PickupLocation.Backpack));
             }
         }
     }
 
-    private boolean tryEquipArmorPart(int fromSectionId, short fromSlotId, int quantity, ItemContainer targetContainer, boolean forceEquip) {
-        ItemStack itemStack = targetContainer.getItemStack(fromSlotId);
-        if (ItemStack.isEmpty(itemStack)) {
-            return false;
-        }
+    private boolean tryEquipArmorPart(@Nonnull ItemStack itemStack, int fromSectionId, short fromSlotId, int quantity, ItemContainer targetContainer, boolean forceEquip) {
         Item item = itemStack.getItem();
         ItemArmor itemArmor = item.getArmor();
         if (itemArmor != null && fromSectionId != -3 && (forceEquip || this.armor.getItemStack((short)itemArmor.getArmorSlot().ordinal()) == null)) {
@@ -409,13 +411,27 @@ implements NetworkSerializable<UpdatePlayerInventory> {
         return false;
     }
 
+    private MoveTransaction<ItemStackTransaction> moveItemFromCheckToInventory(@Nonnull ItemStack itemStack, @Nonnull ItemContainer targetContainer, short fromSlotId, int quantity, PlayerSettings settings) {
+        return targetContainer.moveItemStackFromSlot(fromSlotId, quantity, this.getContainerForItemPickup(itemStack.getItem(), settings));
+    }
+
     @Nullable
-    public ListTransaction<MoveTransaction<ItemStackTransaction>> takeAll(int inventorySectionId) {
-        ItemContainer sectionById = this.getSectionById(inventorySectionId);
-        if (sectionById != null) {
-            return sectionById.moveAllItemStacksTo(this.combinedHotbarFirst);
+    public ListTransaction<MoveTransaction<ItemStackTransaction>> takeAll(int inventorySectionId, PlayerSettings settings) {
+        ItemContainer container = this.getSectionById(inventorySectionId);
+        if (container == null) {
+            return null;
         }
-        return null;
+        return this.takeAllWithPriority(container, settings);
+    }
+
+    public ListTransaction<MoveTransaction<ItemStackTransaction>> takeAllWithPriority(ItemContainer fromContainer, PlayerSettings settings) {
+        ObjectArrayList transactions = new ObjectArrayList();
+        for (int slot = 0; slot < fromContainer.getCapacity(); ++slot) {
+            ItemStack stack = fromContainer.getItemStack((short)slot);
+            if (ItemStack.isEmpty(stack)) continue;
+            transactions.add(this.moveItemFromCheckToInventory(stack, fromContainer, (short)slot, stack.getQuantity(), settings));
+        }
+        return new ListTransaction<MoveTransaction<ItemStackTransaction>>(true, transactions);
     }
 
     @Nullable
@@ -500,8 +516,8 @@ implements NetworkSerializable<UpdatePlayerInventory> {
         return this.combinedBackpackStorageHotbar;
     }
 
-    public CombinedItemContainer getCombinedArmorHotbarStorage() {
-        return this.combinedArmorHotbarStorage;
+    public CombinedItemContainer getCombinedBackpackStorageHotbarFirst() {
+        return this.combinedHotbarStorageBackpack;
     }
 
     public CombinedItemContainer getCombinedArmorHotbarUtilityStorage() {
@@ -516,26 +532,43 @@ implements NetworkSerializable<UpdatePlayerInventory> {
         return this.combinedEverything;
     }
 
+    private ItemContainer getItemContainerForPickupLocation(@Nonnull PickupLocation pickupLocation) {
+        return switch (pickupLocation) {
+            case PickupLocation.Hotbar -> this.combinedHotbarStorageBackpack;
+            case PickupLocation.Storage -> this.combinedStorageHotbarBackpack;
+            case PickupLocation.Backpack -> this.combinedBackpackStorageHotbar;
+            default -> this.combinedHotbarStorageBackpack;
+        };
+    }
+
     @Nonnull
     public ItemContainer getContainerForItemPickup(@Nonnull Item item, PlayerSettings playerSettings) {
+        return this.getContainerForItemPickup(item, playerSettings, null);
+    }
+
+    @Nonnull
+    public ItemContainer getContainerForItemPickup(@Nonnull Item item, PlayerSettings playerSettings, @Nullable PickupLocation overridePickupLocation) {
         BlockType blockType;
+        if (overridePickupLocation != null) {
+            return this.getItemContainerForPickupLocation(overridePickupLocation);
+        }
         if (item.getArmor() != null) {
-            return playerSettings.armorItemsPreferredPickupLocation() == PickupLocation.Hotbar ? this.getCombinedHotbarFirst() : this.getCombinedStorageFirst();
+            return this.getItemContainerForPickupLocation(playerSettings.armorItemsPreferredPickupLocation());
         }
         if (item.getWeapon() != null || item.getTool() != null) {
-            return playerSettings.weaponAndToolItemsPreferredPickupLocation() == PickupLocation.Hotbar ? this.getCombinedHotbarFirst() : this.getCombinedStorageFirst();
+            return this.getItemContainerForPickupLocation(playerSettings.weaponAndToolItemsPreferredPickupLocation());
         }
         if (item.getUtility().isUsable()) {
-            return playerSettings.usableItemsItemsPreferredPickupLocation() == PickupLocation.Hotbar ? this.getCombinedHotbarFirst() : this.getCombinedStorageFirst();
+            return this.getItemContainerForPickupLocation(playerSettings.usableItemsItemsPreferredPickupLocation());
         }
         BlockType blockType2 = blockType = item.hasBlockType() ? (BlockType)BlockType.getAssetMap().getAsset(item.getBlockId()) : BlockType.EMPTY;
         if (blockType == null) {
             blockType = BlockType.EMPTY;
         }
         if (blockType.getMaterial() == BlockMaterial.Solid) {
-            return playerSettings.solidBlockItemsPreferredPickupLocation() == PickupLocation.Hotbar ? this.getCombinedHotbarFirst() : this.getCombinedStorageFirst();
+            return this.getItemContainerForPickupLocation(playerSettings.solidBlockItemsPreferredPickupLocation());
         }
-        return playerSettings.miscItemsPreferredPickupLocation() == PickupLocation.Hotbar ? this.getCombinedHotbarFirst() : this.getCombinedStorageFirst();
+        return this.getItemContainerForPickupLocation(playerSettings.miscItemsPreferredPickupLocation());
     }
 
     public void setActiveSlot(int inventorySectionId, byte slot) {
@@ -724,7 +757,9 @@ implements NetworkSerializable<UpdatePlayerInventory> {
         this.combinedHotbarFirst = new CombinedItemContainer(this.hotbar, this.storage);
         this.combinedStorageFirst = new CombinedItemContainer(this.storage, this.hotbar);
         this.combinedBackpackStorageHotbar = new CombinedItemContainer(this.backpack, this.storage, this.hotbar);
+        this.combinedBackpackHotbarStorage = new CombinedItemContainer(this.backpack, this.hotbar, this.storage);
         this.combinedStorageHotbarBackpack = new CombinedItemContainer(this.storage, this.hotbar, this.backpack);
+        this.combinedHotbarStorageBackpack = new CombinedItemContainer(this.hotbar, this.storage, this.backpack);
         this.combinedArmorHotbarStorage = new CombinedItemContainer(this.armor, this.hotbar, this.storage);
         this.combinedArmorHotbarUtilityStorage = new CombinedItemContainer(this.armor, this.hotbar, this.utility, this.storage);
         this.combinedHotbarUtilityConsumableStorage = new CombinedItemContainer(this.hotbar, this.utility, this.storage);

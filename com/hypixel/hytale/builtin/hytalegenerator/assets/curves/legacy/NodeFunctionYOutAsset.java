@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 public class NodeFunctionYOutAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, NodeFunctionYOutAsset>>,
 Cleanable {
+    @Nonnull
     public static final AssetBuilderCodec<String, NodeFunctionYOutAsset> CODEC = ((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(NodeFunctionYOutAsset.class, NodeFunctionYOutAsset::new, Codec.STRING, (asset, id) -> {
         asset.id = id;
     }, config -> config.id, (config, data) -> {

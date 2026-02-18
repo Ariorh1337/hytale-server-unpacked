@@ -176,6 +176,11 @@ BallisticData {
     }
 
     @Override
+    public double getHorizontalCenterShot() {
+        return this.spawnOffset.x;
+    }
+
+    @Override
     public double getDepthShot() {
         return this.spawnOffset.z;
     }

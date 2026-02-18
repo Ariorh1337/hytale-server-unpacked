@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class PoolTradeSlot
 extends TradeSlot {
+    @Nonnull
     public static final BuilderCodec<PoolTradeSlot> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PoolTradeSlot.class, PoolTradeSlot::new).append(new KeyedCodec<Integer>("SlotCount", Codec.INTEGER), (slot, count) -> {
         slot.slotCount = count;
     }, slot -> slot.slotCount).addValidator(Validators.greaterThanOrEqual(1)).add()).append(new KeyedCodec<T[]>("Trades", new ArrayCodec<WeightedTrade>(WeightedTrade.CODEC, WeightedTrade[]::new)), (slot, trades) -> {
@@ -56,7 +57,7 @@ extends TradeSlot {
         available.addAll((Collection<WeightedTrade>)Arrays.asList(this.trades));
         int toSelect = Math.min(this.slotCount, available.size());
         for (int i = 0; i < toSelect; ++i) {
-            int selectedIndex = this.selectWeightedIndex(available, random);
+            int selectedIndex = PoolTradeSlot.selectWeightedIndex(available, random);
             if (selectedIndex < 0) continue;
             WeightedTrade selected = available.remove(selectedIndex);
             result.add(selected.toBarterTrade(random));
@@ -69,7 +70,7 @@ extends TradeSlot {
         return this.slotCount;
     }
 
-    private int selectWeightedIndex(@Nonnull List<WeightedTrade> trades, @Nonnull Random random) {
+    private static int selectWeightedIndex(@Nonnull List<WeightedTrade> trades, @Nonnull Random random) {
         if (trades.isEmpty()) {
             return -1;
         }

@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class SolidityMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<SolidityMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SolidityMaterialProviderAsset.class, SolidityMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("Solid", MaterialProviderAsset.CODEC, true), (t, k) -> {
         t.solidMaterialProvider = k;
     }, k -> k.solidMaterialProvider).add()).append(new KeyedCodec("Empty", MaterialProviderAsset.CODEC, true), (t, k) -> {

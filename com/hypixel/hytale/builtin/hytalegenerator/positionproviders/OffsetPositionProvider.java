@@ -43,7 +43,6 @@ extends PositionProvider {
             offsetP.add(this.offset3d);
             context.consumer.accept(offsetP);
         };
-        childContext.workerId = context.workerId;
         this.positionProvider.positionsIn(childContext);
     }
 }

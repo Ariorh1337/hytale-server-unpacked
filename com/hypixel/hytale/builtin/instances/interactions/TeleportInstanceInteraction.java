@@ -52,6 +52,7 @@ import javax.annotation.Nullable;
 
 public class TeleportInstanceInteraction
 extends SimpleInstantInteraction {
+    @Nonnull
     public static final BuilderCodec<TeleportInstanceInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TeleportInstanceInteraction.class, TeleportInstanceInteraction::new, SimpleInstantInteraction.CODEC).documentation("Teleports the **Player** to the named instance, creating it if required.")).appendInherited(new KeyedCodec<String>("InstanceName", Codec.STRING), (o, i) -> {
         o.instanceName = i;
     }, o -> o.instanceName, (o, p) -> {

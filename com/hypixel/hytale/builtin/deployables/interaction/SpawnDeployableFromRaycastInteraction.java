@@ -36,6 +36,7 @@ import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class SpawnDeployableFromRaycastInteraction
 extends SimpleInstantInteraction {
@@ -50,6 +51,7 @@ extends SimpleInstantInteraction {
         i.maxPlacementDistance = o.maxPlacementDistance;
     }).documentation("The max distance at which the player can deploy the deployable.").add()).afterDecode(SpawnDeployableFromRaycastInteraction::processConfig)).build();
     protected Object2FloatMap<String> unknownEntityStats;
+    @Nullable
     protected Int2FloatMap entityStats;
     protected float maxPlacementDistance;
     private DeployableConfig config;

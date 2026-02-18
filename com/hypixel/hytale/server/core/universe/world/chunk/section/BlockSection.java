@@ -253,6 +253,9 @@ implements Component<ChunkStore> {
      */
     public boolean set(int blockIdx, int blockId, int rotation, int filler) {
         boolean changed;
+        if (rotation < 0 || rotation >= RotationTuple.VALUES.length) {
+            throw new IllegalArgumentException("Rotation index out of bounds. Got " + rotation + " but expected 0-" + (RotationTuple.VALUES.length - 1));
+        }
         long lock = this.chunkSectionLock.writeLock();
         try {
             ISectionPalette.SetResult repeatResult;

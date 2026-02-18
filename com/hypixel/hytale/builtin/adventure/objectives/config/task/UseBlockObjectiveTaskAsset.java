@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class UseBlockObjectiveTaskAsset
 extends CountObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<UseBlockObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(UseBlockObjectiveTaskAsset.class, UseBlockObjectiveTaskAsset::new, CountObjectiveTaskAsset.CODEC).append(new KeyedCodec<BlockTagOrItemIdField>("BlockTagOrItemId", BlockTagOrItemIdField.CODEC), (useBlockObjectiveTaskAsset, blockTypeOrSetTaskField) -> {
         useBlockObjectiveTaskAsset.blockTagOrItemIdField = blockTypeOrSetTaskField;
     }, useBlockObjectiveTaskAsset -> useBlockObjectiveTaskAsset.blockTagOrItemIdField).addValidator(Validators.nonNull()).add()).build();

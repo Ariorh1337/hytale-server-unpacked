@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 
 public class DensityPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<DensityPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DensityPropAsset.class, DensityPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<Vector3i>("Range", Vector3i.CODEC, true), (asset, v) -> {
         asset.range = v;
     }, asset -> asset.range).addValidator((v, r) -> {

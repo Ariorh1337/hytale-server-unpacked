@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 
 public class WeightedMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<WeightedMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WeightedMaterialProviderAsset.class, WeightedMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("WeightedMaterials", new ArrayCodec(WeightedMaterialAsset.CODEC, WeightedMaterialAsset[]::new), true), (t, k) -> {
         t.weighedMapEntries = k;
     }, k -> k.weighedMapEntries).add()).append(new KeyedCodec<Double>("SkipChance", Codec.DOUBLE, true), (t, k) -> {
@@ -30,7 +31,7 @@ extends MaterialProviderAsset {
         t.seed = k;
     }, k -> k.seed).add()).build();
     private WeightedMaterialAsset[] weighedMapEntries = new WeightedMaterialAsset[0];
-    private double skipChance = 0.0;
+    private double skipChance;
     private String seed = "";
 
     @Override
@@ -56,6 +57,7 @@ extends MaterialProviderAsset {
     public static class WeightedMaterialAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, WeightedMaterialAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, WeightedMaterialAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(WeightedMaterialAsset.class, WeightedMaterialAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

@@ -40,7 +40,7 @@ extends PositionProvider {
             if (VectorUtil.isInside(newPoint, context.minInclusive, context.maxExclusive)) {
                 context.consumer.accept(newPoint);
             }
-        }, context.anchor, context.workerId);
+        }, context.anchor);
         this.positionProvider.positionsIn(childContext);
     }
 }

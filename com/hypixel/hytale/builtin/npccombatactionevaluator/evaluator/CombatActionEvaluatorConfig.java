@@ -20,6 +20,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class CombatActionEvaluatorConfig {
+    @Nonnull
     public static final BuilderCodec<CombatActionEvaluatorConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CombatActionEvaluatorConfig.class, CombatActionEvaluatorConfig::new).appendInherited(new KeyedCodec("AvailableActions", new MapCodec<String, Object2ObjectOpenHashMap>(CombatActionOption.CHILD_ASSET_CODEC, Object2ObjectOpenHashMap::new)), (option, o) -> {
         option.availableActions = MapUtil.combineUnmodifiable(option.availableActions, o);
     }, option -> option.availableActions, (option, parent) -> {
@@ -43,6 +44,7 @@ public class CombatActionEvaluatorConfig {
     }, option -> option.predictabilityRange, (option, parent) -> {
         option.predictabilityRange = parent.predictabilityRange;
     }).addValidator(Validators.doubleArraySize(2)).addValidator(Validators.weaklyMonotonicSequentialDoubleArrayValidator()).documentation("A random range from which to pick the NPC's predictability factor.").add()).build();
+    @Nonnull
     private static final double[] DEFAULT_PREDICTABILITY_RANGE = new double[]{1.0, 1.0};
     protected Map<String, String> availableActions = Collections.emptyMap();
     protected Map<String, ActionSet> actionSets;
@@ -81,6 +83,7 @@ public class CombatActionEvaluatorConfig {
     }
 
     public static class ActionSet {
+        @Nonnull
         public static final BuilderCodec<ActionSet> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ActionSet.class, ActionSet::new).append(new KeyedCodec<BasicAttacks>("BasicAttacks", BasicAttacks.CODEC), (actionSet, o) -> {
             actionSet.basicAttacks = o;
         }, actionSet -> actionSet.basicAttacks).documentation("The basic attacks to be used in this combat substate.").add()).append(new KeyedCodec<T[]>("Actions", Codec.STRING_ARRAY), (actionSet, o) -> {
@@ -107,6 +110,7 @@ public class CombatActionEvaluatorConfig {
     }
 
     public static class BasicAttacks {
+        @Nonnull
         public static final BuilderCodec<BasicAttacks> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BasicAttacks.class, BasicAttacks::new).append(new KeyedCodec<String[]>("Attacks", RootInteraction.CHILD_ASSET_CODEC_ARRAY), (basicAttacks, o) -> {
             basicAttacks.attacks = o;
         }, basicAttacks -> basicAttacks.attacks).addValidator(Validators.nonNull()).addValidator(Validators.nonEmptyArray()).addValidator(RootInteraction.VALIDATOR_CACHE.getArrayValidator()).documentation("The sequence of basic attacks to be used.").add()).append(new KeyedCodec<Boolean>("Randomise", Codec.BOOLEAN), (basicAttacks, b) -> {

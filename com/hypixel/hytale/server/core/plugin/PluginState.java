@@ -9,7 +9,15 @@ public enum PluginState {
     START,
     ENABLED,
     SHUTDOWN,
-    DISABLED;
+    DISABLED,
+    FAILED;
 
+
+    public boolean isInactive() {
+        return switch (this.ordinal()) {
+            case 0, 5, 6 -> true;
+            default -> false;
+        };
+    }
 }
 

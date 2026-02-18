@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class BlockSetPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<BlockSetPatternAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(BlockSetPatternAsset.class, BlockSetPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("BlockSet", MaterialSetAsset.CODEC, true), (t, k) -> {
         t.materialSetAsset = k;
     }, k -> k.materialSetAsset).add()).build();

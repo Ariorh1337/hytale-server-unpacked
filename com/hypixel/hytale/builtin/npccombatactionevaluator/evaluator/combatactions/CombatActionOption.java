@@ -35,11 +35,13 @@ import javax.annotation.Nullable;
 public abstract class CombatActionOption
 extends Option
 implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, CombatActionOption>> {
+    @Nonnull
     public static final AssetCodecMapCodec<String, CombatActionOption> CODEC = new AssetCodecMapCodec<String, CombatActionOption>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.extraData = data;
     }, t -> t.extraData);
+    @Nonnull
     public static final BuilderCodec<CombatActionOption> BASE_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(CombatActionOption.class, Option.ABSTRACT_CODEC).appendInherited(new KeyedCodec<Target>("Target", Target.CODEC), (option, e) -> {
         option.actionTarget = e;
     }, option -> option.actionTarget, (option, parent) -> {
@@ -49,8 +51,11 @@ implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, CombatAct
     }, option -> option.postExecuteDistanceRange, (option, parent) -> {
         option.postExecuteDistanceRange = parent.postExecuteDistanceRange;
     }).addValidator(Validators.doubleArraySize(2)).addValidator(Validators.weaklyMonotonicSequentialDoubleArrayValidator()).documentation("An optional range the NPC will try to maintain from the target after executing the combat action.").add()).build();
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(CombatActionOption.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache(new AssetKeyValidator(CombatActionOption::getAssetStore));
     private static AssetStore<String, CombatActionOption, IndexedLookupTableAssetMap<String, CombatActionOption>> ASSET_STORE;
     protected AssetExtraInfo.Data extraData;
@@ -58,6 +63,7 @@ implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, CombatAct
     protected Target actionTarget;
     protected double[] postExecuteDistanceRange;
 
+    @Nonnull
     public static AssetStore<String, CombatActionOption, IndexedLookupTableAssetMap<String, CombatActionOption>> getAssetStore() {
         if (ASSET_STORE == null) {
             ASSET_STORE = AssetRegistry.getAssetStore(CombatActionOption.class);
@@ -116,6 +122,7 @@ implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, CombatAct
         Hostile,
         Friendly;
 
+        @Nonnull
         public static final EnumCodec<Target> CODEC;
 
         static {

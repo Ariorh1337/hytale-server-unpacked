@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 
 public class StripedMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<StripedMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(StripedMaterialProviderAsset.class, StripedMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Stripes", new ArrayCodec(StripeAsset.CODEC, StripeAsset[]::new), true), (t, k) -> {
         t.stripeAssets = k;
     }, k -> k.stripeAssets).add()).append(new KeyedCodec("Material", MaterialProviderAsset.CODEC, true), (t, k) -> {
@@ -56,6 +57,7 @@ extends MaterialProviderAsset {
 
     public static class StripeAsset
     implements JsonAssetWithMap<String, DefaultAssetMap<String, StripeAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, StripeAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(StripeAsset.class, StripeAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

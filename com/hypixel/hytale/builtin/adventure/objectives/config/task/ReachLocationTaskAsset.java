@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class ReachLocationTaskAsset
 extends ObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<ReachLocationTaskAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ReachLocationTaskAsset.class, ReachLocationTaskAsset::new, BASE_CODEC).append(new KeyedCodec<String>("TargetLocation", Codec.STRING), (reachLocationTaskAsset, vector3i) -> {
         reachLocationTaskAsset.targetLocationId = vector3i;
     }, reachLocationTaskAsset -> reachLocationTaskAsset.targetLocationId).addValidator(Validators.nonNull()).addValidator(ReachLocationMarkerAsset.VALIDATOR_CACHE.getValidator()).add()).build();

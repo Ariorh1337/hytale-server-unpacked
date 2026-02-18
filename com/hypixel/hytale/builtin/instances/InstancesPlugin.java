@@ -28,6 +28,7 @@ import com.hypixel.hytale.codec.schema.config.ObjectSchema;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.schema.config.StringSchema;
 import com.hypixel.hytale.common.util.FormatUtil;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
@@ -95,7 +96,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.stream.Stream;
@@ -167,9 +167,34 @@ extends JavaPlugin {
         if (worldKey == null) {
             worldKey = INSTANCE_PREFIX + InstancesPlugin.safeName(name) + "-" + String.valueOf(uuid);
         }
-        Path worldPath = path.resolve("worlds").resolve((String)worldKey);
-        Object finalWorldKey = worldKey;
-        return ((CompletableFuture)WorldConfig.load(assetPath.resolve(CONFIG_FILENAME)).thenApplyAsync(SneakyThrow.sneakyFunction(arg_0 -> this.lambda$spawnInstance$0(uuid, name, forWorld, returnPoint, (String)finalWorldKey, assetPath, worldPath, arg_0)))).thenCompose(arg_0 -> InstancesPlugin.lambda$spawnInstance$2(universe, (String)finalWorldKey, worldPath, arg_0));
+        Path worldPath = universe.validateWorldPath((String)worldKey);
+        String finalWorldKey = worldKey;
+        return ((CompletableFuture)WorldConfig.load(assetPath.resolve(CONFIG_FILENAME)).thenApplyAsync(SneakyThrow.sneakyFunction(config -> {
+            config.setUuid(uuid);
+            if (config.getDisplayName() == null) {
+                config.setDisplayName(WorldConfig.formatDisplayName(name));
+            }
+            InstanceWorldConfig instanceConfig = InstanceWorldConfig.ensureAndGet(config);
+            instanceConfig.setReturnPoint(new WorldReturnPoint(forWorld.getWorldConfig().getUuid(), returnPoint, instanceConfig.shouldPreventReconnection()));
+            config.markChanged();
+            long start = System.nanoTime();
+            this.getLogger().at(Level.INFO).log("Copying instance files for %s to world %s", (Object)name, (Object)finalWorldKey);
+            try (Stream<Path> files = Files.walk(assetPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_ARRAY);){
+                files.forEach(SneakyThrow.sneakyConsumer(filePath -> {
+                    Path rel = assetPath.relativize((Path)filePath);
+                    Path toPath = worldPath.resolve(rel.toString());
+                    if (Files.isDirectory(filePath, new LinkOption[0])) {
+                        Files.createDirectories(toPath, new FileAttribute[0]);
+                        return;
+                    }
+                    if (Files.isRegularFile(filePath, new LinkOption[0])) {
+                        Files.copy(filePath, toPath, new CopyOption[0]);
+                    }
+                }));
+            }
+            this.getLogger().at(Level.INFO).log("Completed instance files for %s to world %s in %s", name, finalWorldKey, FormatUtil.nanosToString(System.nanoTime() - start));
+            return config;
+        }))).thenCompose(config -> universe.makeWorld(finalWorldKey, worldPath, (WorldConfig)config));
     }
 
     public static void teleportPlayerToLoadingInstance(@Nonnull Ref<EntityStore> entityRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CompletableFuture<World> worldFuture, @Nullable Transform overrideReturn) {
@@ -238,7 +263,7 @@ extends JavaPlugin {
         componentAccessor.addComponent(playerRef, Teleport.getComponentType(), teleportComponent);
     }
 
-    public static void exitInstance(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+    public static CompletableFuture<Void> exitInstance(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         Universe universe;
         World targetWorld;
         WorldReturnPoint returnPoint;
@@ -257,7 +282,10 @@ extends JavaPlugin {
             throw new IllegalArgumentException("Missing return world");
         }
         Teleport teleportComponent = Teleport.createForPlayer(targetWorld, returnPoint.getReturnPoint());
+        CompletableFuture<Void> future = new CompletableFuture<Void>();
+        teleportComponent.setOnComplete(future);
         componentAccessor.addComponent(targetRef, Teleport.getComponentType(), teleportComponent);
+        return future;
     }
 
     public static void safeRemoveInstance(@Nonnull String worldName) {
@@ -285,11 +313,20 @@ extends JavaPlugin {
     @Nonnull
     public static Path getInstanceAssetPath(@Nonnull String name) {
         for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-            Path path = pack.getRoot().resolve("Server").resolve("Instances").resolve(name);
+            Path instancesDir = pack.getRoot().resolve("Server").resolve("Instances");
+            Path path = PathUtil.resolvePathWithinDir(instancesDir, name);
+            if (path == null) {
+                throw new IllegalArgumentException("Invalid instance name");
+            }
             if (!Files.exists(path, new LinkOption[0])) continue;
             return path;
         }
-        return AssetModule.get().getBaseAssetPack().getRoot().resolve("Server").resolve("Instances").resolve(name);
+        Path instancesDir = AssetModule.get().getBaseAssetPack().getRoot().resolve("Server").resolve("Instances");
+        Path path = PathUtil.resolvePathWithinDir(instancesDir, name);
+        if (path == null) {
+            throw new IllegalArgumentException("Invalid instance name");
+        }
+        return path;
     }
 
     public static boolean doesInstanceAssetExist(@Nonnull String name) {
@@ -492,7 +529,7 @@ extends JavaPlugin {
             Path instancePath = InstancesPlugin.getInstanceAssetPath(name);
             Universe universe = Universe.get();
             WorldConfig config = WorldConfig.load(instancePath.resolve(CONFIG_FILENAME)).join();
-            IChunkStorageProvider storage = config.getChunkStorageProvider();
+            IChunkStorageProvider<?> storage = config.getChunkStorageProvider();
             config.setChunkStorageProvider(new MigrationChunkStorageProvider(new IChunkStorageProvider[]{storage}, EmptyChunkStorageProvider.INSTANCE));
             config.setResourceStorageProvider(EmptyResourceStorageProvider.INSTANCE);
             config.setUuid(UUID.randomUUID());
@@ -553,35 +590,6 @@ extends JavaPlugin {
     @Nonnull
     public ComponentType<ChunkStore, ConfigurableInstanceBlock> getConfigurableInstanceBlockComponentType() {
         return this.configurableInstanceBlockComponentType;
-    }
-
-    private static /* synthetic */ CompletionStage lambda$spawnInstance$2(Universe universe, String finalWorldKey, Path worldPath, WorldConfig config) {
-        return universe.makeWorld(finalWorldKey, worldPath, config);
-    }
-
-    private /* synthetic */ WorldConfig lambda$spawnInstance$0(UUID uuid, String name, World forWorld, Transform returnPoint, String finalWorldKey, Path assetPath, Path worldPath, WorldConfig config) throws IOException {
-        config.setUuid(uuid);
-        config.setDisplayName(WorldConfig.formatDisplayName(name));
-        InstanceWorldConfig instanceConfig = InstanceWorldConfig.ensureAndGet(config);
-        instanceConfig.setReturnPoint(new WorldReturnPoint(forWorld.getWorldConfig().getUuid(), returnPoint, instanceConfig.shouldPreventReconnection()));
-        config.markChanged();
-        long start = System.nanoTime();
-        this.getLogger().at(Level.INFO).log("Copying instance files for %s to world %s", (Object)name, (Object)finalWorldKey);
-        try (Stream<Path> files = Files.walk(assetPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_ARRAY);){
-            files.forEach(SneakyThrow.sneakyConsumer(filePath -> {
-                Path rel = assetPath.relativize((Path)filePath);
-                Path toPath = worldPath.resolve(rel.toString());
-                if (Files.isDirectory(filePath, new LinkOption[0])) {
-                    Files.createDirectories(toPath, new FileAttribute[0]);
-                    return;
-                }
-                if (Files.isRegularFile(filePath, new LinkOption[0])) {
-                    Files.copy(filePath, toPath, new CopyOption[0]);
-                }
-            }));
-        }
-        this.getLogger().at(Level.INFO).log("Completed instance files for %s to world %s in %s", name, finalWorldKey, FormatUtil.nanosToString(System.nanoTime() - start));
-        return config;
     }
 }
 

@@ -4,10 +4,9 @@
 package com.hypixel.hytale.server.worldgen.loader.zone;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
+import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
@@ -15,7 +14,6 @@ import com.hypixel.hytale.server.worldgen.biome.TileBiome;
 import com.hypixel.hytale.server.worldgen.loader.biome.TileBiomeJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.context.BiomeFileContext;
 import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -44,28 +42,13 @@ extends JsonLoader<SeedStringResource, IWeightedMap<TileBiome>> {
 
     @Nonnull
     protected TileBiome loadBiome(@Nonnull BiomeFileContext biomeContext) {
-        TileBiome tileBiome;
-        JsonReader reader = new JsonReader(Files.newBufferedReader(biomeContext.getPath()));
         try {
-            JsonElement biomeJson = JsonParser.parseReader(reader);
-            tileBiome = new TileBiomeJsonLoader(this.seed, this.dataFolder, biomeJson, biomeContext).load();
+            JsonElement biomeJson = FileIO.load(biomeContext.getPath(), JsonLoader.JSON_OBJ_LOADER);
+            return new TileBiomeJsonLoader(this.seed, this.dataFolder, biomeJson, biomeContext).load();
         }
-        catch (Throwable throwable) {
-            try {
-                try {
-                    reader.close();
-                }
-                catch (Throwable throwable2) {
-                    throwable.addSuppressed(throwable2);
-                }
-                throw throwable;
-            }
-            catch (Throwable e) {
-                throw new Error(String.format("Error while loading tile biome \"%s\" from \"%s\"", biomeContext.getName(), biomeContext.getPath().toString()), e);
-            }
+        catch (Throwable e) {
+            throw new Error(String.format("Error while loading tile biome \"%s\" from \"%s\"", biomeContext.getName(), biomeContext.getPath().toString()), e);
         }
-        reader.close();
-        return tileBiome;
     }
 
     public static interface Constants {

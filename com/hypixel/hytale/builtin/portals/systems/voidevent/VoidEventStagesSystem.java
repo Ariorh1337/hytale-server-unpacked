@@ -43,25 +43,28 @@ extends DelayedEntitySystem<EntityStore> {
         }
         World world = store.getExternalData().getWorld();
         VoidEventConfig voidEventConfig = portalWorld.getVoidEventConfig();
+        if (voidEventConfig == null) {
+            return;
+        }
         double elapsedSecondsInPortal = portalWorld.getElapsedSeconds(world);
         int timeLimitSeconds = portalWorld.getTimeLimitSeconds();
         int shouldStartAfter = voidEventConfig.getShouldStartAfterSeconds(timeLimitSeconds);
         int elapsedSecondsInEvent = (int)Math.max(0.0, elapsedSecondsInPortal - (double)shouldStartAfter);
         VoidEventStage currentStage = voidEvent.getActiveStage();
-        if (currentStage == (desiredStage = this.computeAppropriateStage(voidEventConfig, elapsedSecondsInEvent))) {
+        if (currentStage == (desiredStage = VoidEventStagesSystem.computeAppropriateStage(voidEventConfig, elapsedSecondsInEvent))) {
             return;
         }
         if (currentStage != null) {
-            VoidEventStagesSystem.stopStage(currentStage, world, store, commandBuffer);
+            VoidEventStagesSystem.stopStage(currentStage, store, commandBuffer);
         }
         if (desiredStage != null) {
-            VoidEventStagesSystem.startStage(desiredStage, world, store, commandBuffer);
+            VoidEventStagesSystem.startStage(desiredStage, store, commandBuffer);
         }
         voidEvent.setActiveStage(desiredStage);
     }
 
     @Nullable
-    private VoidEventStage computeAppropriateStage(VoidEventConfig config, int elapsedSeconds) {
+    private static VoidEventStage computeAppropriateStage(@Nonnull VoidEventConfig config, int elapsedSeconds) {
         List<VoidEventStage> stages = config.getStagesSortedByStartTime();
         for (int i = stages.size() - 1; i >= 0; --i) {
             VoidEventStage stage = stages.get(i);
@@ -71,7 +74,7 @@ extends DelayedEntitySystem<EntityStore> {
         return null;
     }
 
-    public static void startStage(VoidEventStage stage, World world, Store<EntityStore> store, CommandBuffer<EntityStore> commandBuffer) {
+    public static void startStage(@Nonnull VoidEventStage stage, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         HytaleLogger.getLogger().at(Level.INFO).log("Starting stage SecondsInto=" + stage.getSecondsInto() + " in portal void event");
         String forcedWeatherId = stage.getForcedWeatherId();
         if (forcedWeatherId != null) {
@@ -80,7 +83,7 @@ extends DelayedEntitySystem<EntityStore> {
         }
     }
 
-    public static void stopStage(VoidEventStage stage, World world, Store<EntityStore> store, CommandBuffer<EntityStore> commandBuffer) {
+    public static void stopStage(@Nonnull VoidEventStage stage, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
         HytaleLogger.getLogger().at(Level.INFO).log("Stopping stage SecondsInto=" + stage.getSecondsInto() + " in portal void event");
         String forcedWeatherId = stage.getForcedWeatherId();
         if (forcedWeatherId != null) {

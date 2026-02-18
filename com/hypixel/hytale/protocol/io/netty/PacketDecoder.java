@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.protocol.io.netty;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.PacketRegistry;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.PacketStatsRecorder;
@@ -92,13 +93,19 @@ extends ByteToMessageDecoder {
             return;
         }
         int packetId = in.readIntLE();
-        PacketRegistry.PacketInfo packetInfo = PacketRegistry.getById(packetId);
+        PacketRegistry.PacketInfo packetInfo = PacketRegistry.getToServerPacketById(packetId);
         if (packetInfo == null) {
             in.skipBytes(in.readableBytes());
             ProtocolUtil.closeConnection(ctx.channel());
             return;
         }
         if (payloadLength > packetInfo.maxSize()) {
+            in.skipBytes(in.readableBytes());
+            ProtocolUtil.closeConnection(ctx.channel());
+            return;
+        }
+        NetworkChannel channelVal = ctx.channel().attr(ProtocolUtil.STREAM_CHANNEL_KEY).get();
+        if (channelVal != null && channelVal != packetInfo.channel()) {
             in.skipBytes(in.readableBytes());
             ProtocolUtil.closeConnection(ctx.channel());
             return;

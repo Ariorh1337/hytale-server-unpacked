@@ -414,11 +414,14 @@ Component<ChunkStore> {
                 int settingsWithoutFiller = settings | 8 | 0x10;
                 BlockType oldBlockType = blockTypeAssetMap.getAsset(oldBlock);
                 String oldBlockKey = oldBlockType.getId();
-                int baseX = worldX - FillerBlockUtil.unpackX(oldFiller);
-                int baseY = y - FillerBlockUtil.unpackY(oldFiller);
-                int baseZ = worldZ - FillerBlockUtil.unpackZ(oldFiller);
+                int fx = FillerBlockUtil.unpackX(oldFiller);
+                int fy = FillerBlockUtil.unpackY(oldFiller);
+                int fz = FillerBlockUtil.unpackZ(oldFiller);
+                int baseX = worldX - fx;
+                int baseY = y - fy;
+                int baseZ = worldZ - fz;
                 FillerBlockUtil.forEachFillerBlock(hitboxAssetMap.getAsset(oldBlockType.getHitboxTypeIndex()).get(oldRotation), (x1, y1, z1) -> {
-                    if (x1 == 0 && y1 == 0 && z1 == 0) {
+                    if (x1 == fx && y1 == fy && z1 == fz) {
                         return;
                     }
                     int blockX = baseX + x1;

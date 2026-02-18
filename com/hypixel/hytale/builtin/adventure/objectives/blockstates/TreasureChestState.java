@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 public class TreasureChestState
 extends ItemContainerState
 implements BreakValidatedBlockState {
+    @Nonnull
     public static final BuilderCodec<TreasureChestState> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TreasureChestState.class, TreasureChestState::new, BlockState.BASE_CODEC).append(new KeyedCodec<UUID>("ObjectiveUUID", Codec.UUID_BINARY), (treasureChestState, uuid) -> {
         treasureChestState.objectiveUUID = uuid;
     }, treasureChestState -> treasureChestState.objectiveUUID).add()).append(new KeyedCodec<UUID>("ChestUUID", Codec.UUID_BINARY), (treasureChestState, uuid) -> {

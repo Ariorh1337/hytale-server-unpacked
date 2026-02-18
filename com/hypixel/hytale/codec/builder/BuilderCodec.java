@@ -252,14 +252,15 @@ ValidatableCodec<T> {
 
     @Override
     public void decode(@Nonnull BsonValue bsonValue, T t, @Nonnull ExtraInfo extraInfo) {
-        this.decode0(bsonValue.asDocument(), t, extraInfo);
+        BsonDocument document = bsonValue.asDocument();
+        if (this.versioned) {
+            extraInfo = this.decodeVersion(document, extraInfo);
+        }
+        this.decode0(document, t, extraInfo);
         this.afterDecodeAndValidate(t, extraInfo);
     }
 
     protected void decode0(@Nonnull BsonDocument document, T t, ExtraInfo extraInfo) {
-        if (this.versioned) {
-            extraInfo = this.decodeVersion(document, extraInfo);
-        }
         for (Map.Entry<String, BsonValue> entry : document.entrySet()) {
             String key = entry.getKey();
             BuilderField<T, ?> field = BuilderCodec.findEntry(this, key, extraInfo);
@@ -290,15 +291,15 @@ ValidatableCodec<T> {
             throw new CodecException("This BuilderCodec is for an abstract or direct codec. To use this codec you must specify an existing object to decode into.");
         }
         T t = this.supplier.get();
+        if (this.versioned) {
+            extraInfo = this.decodeVersion(reader, extraInfo);
+        }
         this.decodeJson0(reader, t, extraInfo);
         this.afterDecodeAndValidate(t, extraInfo);
         return t;
     }
 
-    public void decodeJson0(@Nonnull RawJsonReader reader, T t, ExtraInfo extraInfo) throws IOException {
-        if (this.versioned) {
-            extraInfo = this.decodeVersion(reader, extraInfo);
-        }
+    private void decodeJson0(@Nonnull RawJsonReader reader, T t, ExtraInfo extraInfo) throws IOException {
         reader.expect('{');
         reader.consumeWhiteSpace();
         if (reader.tryConsume('}')) {
@@ -395,6 +396,9 @@ ValidatableCodec<T> {
     }
 
     public void decodeJson(@Nonnull RawJsonReader reader, T t, @Nonnull ExtraInfo extraInfo) throws IOException {
+        if (this.versioned) {
+            extraInfo = this.decodeVersion(reader, extraInfo);
+        }
         this.decodeJson0(reader, t, extraInfo);
         this.afterDecodeAndValidate(t, extraInfo);
     }

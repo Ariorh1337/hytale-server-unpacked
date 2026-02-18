@@ -47,7 +47,9 @@ implements Component<EntityStore> {
     protected int runInState;
     protected float predictability;
     protected double minActionUtility;
+    @Nonnull
     protected final Int2ObjectMap<List<Evaluator.OptionHolder>> optionsBySubState = new Int2ObjectOpenHashMap<List<Evaluator.OptionHolder>>();
+    @Nonnull
     protected final Int2ObjectMap<CombatActionEvaluatorConfig.BasicAttacks> basicAttacksBySubState = new Int2ObjectOpenHashMap<CombatActionEvaluatorConfig.BasicAttacks>();
     protected int currentBasicAttackSubState = Integer.MIN_VALUE;
     protected CombatActionEvaluatorConfig.BasicAttacks currentBasicAttackSet;
@@ -82,6 +84,7 @@ implements Component<EntityStore> {
     protected boolean positionFirst;
     protected double chargeDistance;
     protected float timeout;
+    @Nonnull
     protected final EvaluationContext evaluationContext = new EvaluationContext();
 
     public static ComponentType<EntityStore, CombatActionEvaluator> getComponentType() {
@@ -374,12 +377,12 @@ implements Component<EntityStore> {
         if (option == null) {
             return;
         }
-        Ref<EntityStore> target = option.getOptionTarget();
-        if (target != null) {
+        Ref<EntityStore> targetRef = option.getOptionTarget();
+        if (targetRef != null && targetRef.isValid()) {
             if (((CombatActionOption)option.getOption()).getActionTarget() == CombatActionOption.Target.Friendly) {
                 this.previousTarget = this.primaryTarget;
             }
-            this.primaryTarget = target;
+            this.primaryTarget = targetRef;
             role.getMarkedEntitySupport().setMarkedEntity(this.markedTargetSlot, this.primaryTarget);
         }
         this.currentAction = option;
@@ -392,7 +395,7 @@ implements Component<EntityStore> {
     public void completeCurrentAction(boolean forceClearAbility, boolean clearBasicAttack) {
         if (forceClearAbility || this.currentBasicAttack == null) {
             this.terminateCurrentAction();
-            this.setLastRunNanos(System.nanoTime());
+            this.lastRunNanos = System.nanoTime();
         }
         if (clearBasicAttack) {
             this.clearCurrentBasicAttack();
@@ -503,6 +506,7 @@ implements Component<EntityStore> {
     public class MultipleTargetCombatOptionHolder
     extends CombatOptionHolder {
         protected List<Ref<EntityStore>> targets;
+        @Nonnull
         protected final DoubleList targetUtilities = new DoubleArrayList();
         @Nullable
         protected Ref<EntityStore> pickedTarget;

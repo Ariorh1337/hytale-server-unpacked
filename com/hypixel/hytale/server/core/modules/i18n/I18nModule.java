@@ -9,7 +9,7 @@ import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateTranslations;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -390,11 +390,11 @@ extends JavaPlugin {
                 }
             }
             List<PlayerRef> players = Universe.get().getPlayers();
-            Object2ObjectOpenHashMap<String, Packet[]> object2ObjectOpenHashMap = new Object2ObjectOpenHashMap<String, Packet[]>();
+            Object2ObjectOpenHashMap<String, ToClientPacket[]> object2ObjectOpenHashMap = new Object2ObjectOpenHashMap<String, ToClientPacket[]>();
             for (PlayerRef playerRef : players) {
                 PacketHandler handler = playerRef.getPacketHandler();
                 String languageKey = playerRef.getLanguage();
-                Packet[] packets = (UpdateTranslations[])object2ObjectOpenHashMap.get(languageKey);
+                ToClientPacket[] packets = (UpdateTranslations[])object2ObjectOpenHashMap.get(languageKey);
                 if (packets == null) {
                     packets = I18nModule.this.getUpdatePacketsForChanges(languageKey, changed, removed);
                     object2ObjectOpenHashMap.put(languageKey, packets);

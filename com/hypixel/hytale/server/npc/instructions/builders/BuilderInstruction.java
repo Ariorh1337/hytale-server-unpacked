@@ -86,8 +86,8 @@ extends BuilderBase<Instruction> {
         this.getString(data, "Tag", (String v) -> {
             this.tag = v;
         }, null, (StringValidator)StringNullOrNotEmptyValidator.get(), BuilderDescriptorState.Experimental, "Internal identifier tag for debugging", null);
-        this.getBoolean(data, "Enabled", this.enabled, true, BuilderDescriptorState.Stable, "Whether this step should be enabled on the NPC", null);
-        this.getObject(data, "Sensor", this.sensorBuilderObjectReferenceHelper, BuilderDescriptorState.Stable, "Sensor for testing if step can be applied", "Sensor for testing if step can be applied. If not supplied, will always match", helper);
+        this.getBoolean(data, "Enabled", this.enabled, true, BuilderDescriptorState.Stable, "Whether this instruction should be enabled on the NPC", null);
+        this.getObject(data, "Sensor", this.sensorBuilderObjectReferenceHelper, BuilderDescriptorState.Stable, "Sensor for testing if instruction can be applied", "Sensor for testing if instruction can be applied. If not supplied, will always match", helper);
         features.lock();
         this.getObject(data, "BodyMotion", this.bodyMotionBuilderObjectReferenceHelper, BuilderDescriptorState.Stable, "Body motion to be executed", null, helper);
         this.getObject(data, "HeadMotion", this.headMotionBuilderObjectReferenceHelper, BuilderDescriptorState.Stable, "Head motion to be executed", null, helper);
@@ -101,16 +101,16 @@ extends BuilderBase<Instruction> {
         this.getArray(data, "Instructions", this.steps, null, BuilderDescriptorState.Stable, "Optional nested list of instructions", null, new BuilderValidationHelper(this.fileName, null, this.internalReferenceResolver, this.stateHelper, this.instructionContextHelper, this.extraInfo, this.evaluators, this.readErrors));
         this.getBoolean(data, "Continue", (boolean v) -> {
             this.continueAfter = v;
-        }, false, BuilderDescriptorState.WorkInProgress, "Continue after this step was executed", null);
-        this.getDouble(data, "Weight", this.chance, 1.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "Weighted chance of picking this step in a random instruction", null);
+        }, false, BuilderDescriptorState.WorkInProgress, "Continue after this instruction was executed", null);
+        this.getDouble(data, "Weight", this.chance, 1.0, (DoubleValidator)DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "Weighted chance of picking this instruction in a random instruction", null);
         this.getBoolean(data, "TreeMode", (boolean v) -> {
             this.treeMode = v;
-        }, false, BuilderDescriptorState.Stable, "Whether this step and its contents should be treated like a traditional behaviour tree.", "Whether this step and its contents should be treated like a traditional behaviour tree, i.e. will continue if all child steps fail");
-        this.getBoolean(data, "InvertTreeModeResult", this.invertTreeModeResult, false, BuilderDescriptorState.Stable, "Whether or not to invert the result of TreeMode evaluation when passing up to parent TreeMode steps", null);
+        }, false, BuilderDescriptorState.Stable, "Whether this instruction and its contents should be treated like a traditional behaviour tree.", "Whether this instruction and its contents should be treated like a traditional behaviour tree, i.e. will continue if all child instructions fail");
+        this.getBoolean(data, "InvertTreeModeResult", this.invertTreeModeResult, false, BuilderDescriptorState.Stable, "Whether or not to invert the result of TreeMode evaluation when passing up to parent TreeMode instructions", null);
         this.decreaseDepth();
-        this.validateOneOrNonePresent("BodyMotion", this.bodyMotionBuilderObjectReferenceHelper, "Steps", this.steps);
-        this.validateOneOrNonePresent("HeadMotion", this.headMotionBuilderObjectReferenceHelper, "Steps", this.steps);
-        this.validateOneOrNonePresent("Actions", this.actionsBuilderObjectReferenceHelper, "Steps", this.steps);
+        this.validateOneOrNonePresent("BodyMotion", this.bodyMotionBuilderObjectReferenceHelper, "Instructions", this.steps);
+        this.validateOneOrNonePresent("HeadMotion", this.headMotionBuilderObjectReferenceHelper, "Instructions", this.steps);
+        this.validateOneOrNonePresent("Actions", this.actionsBuilderObjectReferenceHelper, "Instructions", this.steps);
         this.validateBooleanImplicationAnyAntecedent(ANTECEDENT, new boolean[]{this.treeMode}, true, SUBSEQUENT, new boolean[]{this.continueAfter}, false);
         return this;
     }

@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 
 public class StateCombatAction
 extends CombatActionOption {
+    @Nonnull
     public static final BuilderCodec<StateCombatAction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(StateCombatAction.class, StateCombatAction::new, CombatActionOption.BASE_CODEC).documentation("A combat action which switches the NPCs state. Using substate only will switch between combat substates, whereas including the main state can be used to transition out of combat.")).append(new KeyedCodec<String>("State", Codec.STRING), (option, s) -> {
         option.state = s;
     }, option -> option.state).documentation("The main state name.").addValidator(Validators.nonNull()).addValidator(Validators.nonEmptyString()).add()).append(new KeyedCodec<String>("SubState", Codec.STRING), (option, s) -> {
@@ -38,7 +39,7 @@ extends CombatActionOption {
     }
 
     @Override
-    public void execute(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, CommandBuffer<EntityStore> commandBuffer, @Nonnull Role role, @Nonnull CombatActionEvaluator evaluator, ValueStore valueStore) {
+    public void execute(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Role role, @Nonnull CombatActionEvaluator evaluator, ValueStore valueStore) {
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
         role.getStateSupport().setState(ref, this.state, this.subState, commandBuffer);
         evaluator.completeCurrentAction(true, true);

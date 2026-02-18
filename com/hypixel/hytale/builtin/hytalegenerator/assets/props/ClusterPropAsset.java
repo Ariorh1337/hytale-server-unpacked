@@ -32,6 +32,7 @@ import javax.annotation.Nonnull;
 
 public class ClusterPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<ClusterPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ClusterPropAsset.class, ClusterPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("Range", Codec.INTEGER, false), (asset, v) -> {
         asset.range = v;
     }, asset -> asset.range).addValidator(Validators.greaterThanOrEqual(0)).add()).append(new KeyedCodec("DistanceCurve", CurveAsset.CODEC, true), (asset, v) -> {
@@ -92,6 +93,7 @@ extends PropAsset {
     public static class WeightedPropAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, WeightedPropAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, WeightedPropAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(WeightedPropAsset.class, WeightedPropAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

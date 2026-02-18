@@ -69,7 +69,7 @@ public class WorldConfig {
         o.worldGenProvider = i;
     }, o -> o.worldGenProvider).documentation("Sets the world generator that will be used by the world.").add()).append(new KeyedCodec<IWorldMapProvider>("WorldMap", IWorldMapProvider.CODEC), (o, i) -> {
         o.worldMapProvider = i;
-    }, o -> o.worldMapProvider).add()).append(new KeyedCodec<IChunkStorageProvider>("ChunkStorage", IChunkStorageProvider.CODEC), (o, i) -> {
+    }, o -> o.worldMapProvider).add()).append(new KeyedCodec("ChunkStorage", IChunkStorageProvider.CODEC), (o, i) -> {
         o.chunkStorageProvider = i;
     }, o -> o.chunkStorageProvider).documentation("Sets the storage system that will be used by the world to store chunks.").add()).append(new KeyedCodec<ChunkConfig>("ChunkConfig", ChunkConfig.CODEC), (o, i) -> {
         o.chunkConfig = i;
@@ -145,7 +145,7 @@ public class WorldConfig {
     private ISpawnProvider spawnProvider = null;
     private IWorldGenProvider worldGenProvider = IWorldGenProvider.CODEC.getDefault();
     private IWorldMapProvider worldMapProvider = IWorldMapProvider.CODEC.getDefault();
-    private IChunkStorageProvider chunkStorageProvider = IChunkStorageProvider.CODEC.getDefault();
+    private IChunkStorageProvider<?> chunkStorageProvider = IChunkStorageProvider.CODEC.getDefault();
     @Nonnull
     private ChunkConfig chunkConfig = new ChunkConfig();
     private boolean isTicking = true;
@@ -275,11 +275,11 @@ public class WorldConfig {
         this.worldMapProvider = worldMapProvider;
     }
 
-    public IChunkStorageProvider getChunkStorageProvider() {
+    public IChunkStorageProvider<?> getChunkStorageProvider() {
         return this.chunkStorageProvider;
     }
 
-    public void setChunkStorageProvider(IChunkStorageProvider chunkStorageProvider) {
+    public void setChunkStorageProvider(IChunkStorageProvider<?> chunkStorageProvider) {
         this.chunkStorageProvider = chunkStorageProvider;
     }
 

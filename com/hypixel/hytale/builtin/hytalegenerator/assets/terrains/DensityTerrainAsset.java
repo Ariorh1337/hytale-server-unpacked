@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class DensityTerrainAsset
 extends TerrainAsset {
+    @Nonnull
     public static final BuilderCodec<DensityTerrainAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(DensityTerrainAsset.class, DensityTerrainAsset::new, TerrainAsset.ABSTRACT_CODEC).append(new KeyedCodec("Density", DensityAsset.CODEC, true), (t, k) -> {
         t.densityAsset = k;
     }, t -> t.densityAsset).add()).build();
@@ -24,8 +25,8 @@ extends TerrainAsset {
 
     @Override
     @Nonnull
-    public Density buildDensity(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-        return this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer));
+    public Density buildDensity(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+        return this.densityAsset.build(new DensityAsset.Argument(parentSeed, referenceBundle, workerId));
     }
 
     @Override

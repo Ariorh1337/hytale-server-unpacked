@@ -29,7 +29,7 @@ extends AbstractPlayerCommand {
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
         assert (playerComponent != null);
         PlayerWorldData perWorldData = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());
-        perWorldData.setWorldMapMarkers(null);
+        perWorldData.setUserMapMarkers(null);
         context.sendMessage(MESSAGE_COMMANDS_WORLD_MAP_MARKERS_CLEARED);
     }
 }

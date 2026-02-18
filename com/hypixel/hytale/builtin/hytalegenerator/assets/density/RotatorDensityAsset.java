@@ -15,13 +15,14 @@ import javax.annotation.Nonnull;
 
 public class RotatorDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<RotatorDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RotatorDensityAsset.class, RotatorDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Vector3d>("NewYAxis", Vector3d.CODEC, true), (t, k) -> {
         t.newYAxis = k;
     }, t -> t.newYAxis).add()).append(new KeyedCodec<Double>("SpinAngle", Codec.DOUBLE, true), (t, k) -> {
         t.spinAngle = k;
     }, t -> t.spinAngle).add()).build();
     private Vector3d newYAxis = new Vector3d();
-    private double spinAngle = 0.0;
+    private double spinAngle;
 
     @Override
     @Nonnull

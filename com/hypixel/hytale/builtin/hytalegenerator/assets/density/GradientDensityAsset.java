@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class GradientDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<GradientDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(GradientDensityAsset.class, GradientDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Vector3d>("Axis", Vector3d.CODEC, false), (t, k) -> {
         t.axis = k;
     }, k -> k.axis).addValidator((v, r) -> {

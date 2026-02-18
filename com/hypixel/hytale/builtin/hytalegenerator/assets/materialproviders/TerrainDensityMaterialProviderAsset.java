@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 
 public class TerrainDensityMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<TerrainDensityMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(TerrainDensityMaterialProviderAsset.class, TerrainDensityMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (t, k) -> {
         t.delimiterAssets = k;
     }, k -> k.delimiterAssets).add()).build();
@@ -52,6 +53,7 @@ extends MaterialProviderAsset {
     public static class DelimiterAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, DelimiterAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {
@@ -65,8 +67,8 @@ extends MaterialProviderAsset {
         }, t -> t.materialProviderAsset).add()).build();
         private String id;
         private AssetExtraInfo.Data data;
-        private double from = 0.0;
-        private double to = 0.0;
+        private double from;
+        private double to;
         private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
 
         @Override

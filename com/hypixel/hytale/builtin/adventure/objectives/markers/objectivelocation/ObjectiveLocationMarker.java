@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 
 public class ObjectiveLocationMarker
 implements Component<EntityStore> {
+    @Nonnull
     public static final BuilderCodec<ObjectiveLocationMarker> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ObjectiveLocationMarker.class, ObjectiveLocationMarker::new).append(new KeyedCodec<String>("ObjectiveLocationMarkerId", Codec.STRING), (objectiveLocationMarkerEntity, s) -> {
         objectiveLocationMarkerEntity.objectiveLocationMarkerId = s;
     }, objectiveLocationMarkerEntity -> objectiveLocationMarkerEntity.objectiveLocationMarkerId).addValidator(Validators.nonNull()).addValidator(ObjectiveLocationMarkerAsset.VALIDATOR_CACHE.getValidator()).add()).append(new KeyedCodec<UUID>("ActiveObjectiveUUID", Codec.UUID_BINARY), (objectiveLocationMarkerEntity, uuid) -> {
@@ -61,7 +62,7 @@ implements Component<EntityStore> {
         return this.activeObjective;
     }
 
-    public void setActiveObjective(Objective activeObjective) {
+    public void setActiveObjective(@Nonnull Objective activeObjective) {
         this.activeObjective = activeObjective;
     }
 

@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class ImportedVectorProviderAsset
 extends VectorProviderAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedVectorProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedVectorProviderAsset.class, ImportedVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, true), (t, k) -> {
         t.importedNodeName = k;
     }, k -> k.importedNodeName).add()).build();
@@ -30,11 +31,13 @@ extends VectorProviderAsset {
             LoggerUtil.getLogger().warning("Couldn't find VectorProvider asset exported with name: '" + this.importedNodeName + "'. Using empty Node instead.");
             return new ConstantVectorProvider(new Vector3d());
         }
-        if (exported.singleInstance) {
-            if (exported.builtInstance == null) {
-                exported.builtInstance = exported.asset.build(argument);
+        if (exported.isSingleInstance) {
+            VectorProvider builtInstance = exported.threadInstances.get(argument.workerId);
+            if (builtInstance == null) {
+                builtInstance = exported.asset.build(argument);
+                exported.threadInstances.put(argument.workerId, builtInstance);
             }
-            return exported.builtInstance;
+            return builtInstance;
         }
         return exported.asset.build(argument);
     }
@@ -45,7 +48,7 @@ extends VectorProviderAsset {
         if (exported == null) {
             return;
         }
-        exported.builtInstance = null;
+        exported.threadInstances.clear();
     }
 }
 

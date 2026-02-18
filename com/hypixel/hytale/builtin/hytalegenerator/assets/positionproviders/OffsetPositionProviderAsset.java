@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class OffsetPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<OffsetPositionProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(OffsetPositionProviderAsset.class, OffsetPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("OffsetX", Codec.INTEGER, true), (asset, v) -> {
         asset.offsetX = v;
     }, asset -> asset.offsetX).add()).append(new KeyedCodec<Integer>("OffsetY", Codec.INTEGER, true), (asset, v) -> {
@@ -24,9 +25,9 @@ extends PositionProviderAsset {
     }, asset -> asset.offsetZ).add()).append(new KeyedCodec("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> {
         asset.positionProviderAsset = v;
     }, asset -> asset.positionProviderAsset).add()).build();
-    private int offsetX = 0;
-    private int offsetY = 0;
-    private int offsetZ = 0;
+    private int offsetX;
+    private int offsetY;
+    private int offsetZ;
     private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
 
     @Override

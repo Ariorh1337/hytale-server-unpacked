@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveHistoryComponent
 implements Component<EntityStore> {
+    @Nonnull
     public static final BuilderCodec<ObjectiveHistoryComponent> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ObjectiveHistoryComponent.class, ObjectiveHistoryComponent::new).append(new KeyedCodec("ObjectiveHistory", new MapCodec<ObjectiveHistoryData, Object2ObjectOpenHashMap>(ObjectiveHistoryData.CODEC, Object2ObjectOpenHashMap::new, false)), (objectiveHistoryComponent, stringObjectiveHistoryDataMap) -> {
         objectiveHistoryComponent.objectiveHistoryMap = stringObjectiveHistoryDataMap;
     }, objectiveHistoryComponent -> objectiveHistoryComponent.objectiveHistoryMap).add()).append(new KeyedCodec("ObjectiveLineHistory", new MapCodec<ObjectiveLineHistoryData, Object2ObjectOpenHashMap>(ObjectiveLineHistoryData.CODEC, Object2ObjectOpenHashMap::new, false)), (objectiveHistoryComponent, stringObjectiveLineHistoryDataMap) -> {

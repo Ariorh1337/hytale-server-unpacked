@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
+import com.hypixel.hytale.server.npc.corecomponents.entity.filters.EntityFilterViewSector;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.role.Role;
@@ -104,6 +105,15 @@ implements IAnnotatedComponentCollection {
             return false;
         }
         return true;
+    }
+
+    protected float findViewAngleFromFilters() {
+        for (IEntityFilter filter : this.filters) {
+            if (!(filter instanceof EntityFilterViewSector)) continue;
+            EntityFilterViewSector viewSector = (EntityFilterViewSector)filter;
+            return viewSector.getViewAngle();
+        }
+        return 0.0f;
     }
 }
 

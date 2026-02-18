@@ -28,7 +28,6 @@ import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
@@ -37,7 +36,6 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PickupItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PreventPickup;
-import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.entity.system.PlayerSpatialSystem;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
@@ -138,21 +136,17 @@ extends EntityTickingSystem<EntityStore> {
         ObjectList targetPlayerRefs = SpatialResource.getThreadLocalReferenceList();
         spatialStructure.ordered(itemEntityPosition, pickupRadius, targetPlayerRefs);
         for (Ref ref : targetPlayerRefs) {
-            ItemContainer itemContainer;
-            ItemStackTransaction transaction;
-            ItemStack remainder;
             if (store.getArchetype(ref).contains(DeathComponent.getComponentType())) continue;
             Player playerComponent = store.getComponent(ref, this.playerComponentType);
             assert (playerComponent != null);
-            PlayerSettings playerSettings = commandBuffer.getComponent(ref, PlayerSettings.getComponentType());
-            if (playerSettings == null) {
-                playerSettings = PlayerSettings.defaults();
-            }
-            if (ItemStack.isEmpty(remainder = (transaction = (itemContainer = playerComponent.getInventory().getContainerForItemPickup(item, playerSettings)).addItemStack(itemStack)).getRemainder())) {
+            ItemStackTransaction transaction = playerComponent.giveItem(itemStack, ref, commandBuffer);
+            ItemStack remainder = transaction.getRemainder();
+            if (ItemStack.isEmpty(remainder)) {
                 itemComponent.setRemovedByPlayerPickup(true);
                 commandBuffer.removeEntity(itemRef, RemoveReason.REMOVE);
                 playerComponent.notifyPickupItem(ref, itemStack, itemEntityPosition, commandBuffer);
                 Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(itemRef, commandBuffer, ref, itemEntityPosition);
+                if (pickupItemHolder == null) break;
                 commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
                 break;
             }
@@ -163,7 +157,9 @@ extends EntityTickingSystem<EntityStore> {
             float newLifetime = itemComponent.computeLifetimeSeconds(commandBuffer);
             DespawnComponent.trySetDespawn(commandBuffer, timeResource, itemRef, despawnComponent, Float.valueOf(newLifetime));
             Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(itemRef, commandBuffer, ref, itemEntityPosition);
-            commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
+            if (pickupItemHolder != null) {
+                commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
+            }
             if (quantity <= 0) continue;
             playerComponent.notifyPickupItem(ref, itemStack.withQuantity(quantity), itemEntityPosition, commandBuffer);
         }

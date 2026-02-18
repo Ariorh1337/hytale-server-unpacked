@@ -13,6 +13,7 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class BarterTrade {
+    @Nonnull
     public static final BuilderCodec<BarterTrade> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BarterTrade.class, BarterTrade::new).append(new KeyedCodec<BarterItemStack>("Output", BarterItemStack.CODEC), (trade, stack) -> {
         trade.output = stack;
     }, trade -> trade.output).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<T[]>("Input", new ArrayCodec<BarterItemStack>(BarterItemStack.CODEC, BarterItemStack[]::new)), (trade, stacks) -> {

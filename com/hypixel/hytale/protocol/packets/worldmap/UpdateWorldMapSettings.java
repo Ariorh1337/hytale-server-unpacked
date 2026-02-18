@@ -3,7 +3,9 @@
  */
 package com.hypixel.hytale.protocol.packets.worldmap;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
@@ -16,19 +18,24 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class UpdateWorldMapSettings
-implements Packet {
+implements Packet,
+ToClientPacket {
     public static final int PACKET_ID = 240;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-    public static final int FIXED_BLOCK_SIZE = 16;
+    public static final int FIXED_BLOCK_SIZE = 20;
     public static final int VARIABLE_FIELD_COUNT = 1;
-    public static final int VARIABLE_BLOCK_START = 16;
+    public static final int VARIABLE_BLOCK_START = 20;
     public static final int MAX_SIZE = 0x64000000;
     public boolean enabled = true;
     @Nullable
     public Map<Short, BiomeData> biomeDataMap;
     public boolean allowTeleportToCoordinates;
     public boolean allowTeleportToMarkers;
+    public boolean allowShowOnMapToggle;
+    public boolean allowCompassTrackingToggle;
+    public boolean allowCreatingMapMarkers;
+    public boolean allowRemovingOtherPlayersMarkers;
     public float defaultScale = 32.0f;
     public float minScale = 2.0f;
     public float maxScale = 256.0f;
@@ -38,14 +45,23 @@ implements Packet {
         return 240;
     }
 
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
+    }
+
     public UpdateWorldMapSettings() {
     }
 
-    public UpdateWorldMapSettings(boolean enabled, @Nullable Map<Short, BiomeData> biomeDataMap, boolean allowTeleportToCoordinates, boolean allowTeleportToMarkers, float defaultScale, float minScale, float maxScale) {
+    public UpdateWorldMapSettings(boolean enabled, @Nullable Map<Short, BiomeData> biomeDataMap, boolean allowTeleportToCoordinates, boolean allowTeleportToMarkers, boolean allowShowOnMapToggle, boolean allowCompassTrackingToggle, boolean allowCreatingMapMarkers, boolean allowRemovingOtherPlayersMarkers, float defaultScale, float minScale, float maxScale) {
         this.enabled = enabled;
         this.biomeDataMap = biomeDataMap;
         this.allowTeleportToCoordinates = allowTeleportToCoordinates;
         this.allowTeleportToMarkers = allowTeleportToMarkers;
+        this.allowShowOnMapToggle = allowShowOnMapToggle;
+        this.allowCompassTrackingToggle = allowCompassTrackingToggle;
+        this.allowCreatingMapMarkers = allowCreatingMapMarkers;
+        this.allowRemovingOtherPlayersMarkers = allowRemovingOtherPlayersMarkers;
         this.defaultScale = defaultScale;
         this.minScale = minScale;
         this.maxScale = maxScale;
@@ -56,6 +72,10 @@ implements Packet {
         this.biomeDataMap = other.biomeDataMap;
         this.allowTeleportToCoordinates = other.allowTeleportToCoordinates;
         this.allowTeleportToMarkers = other.allowTeleportToMarkers;
+        this.allowShowOnMapToggle = other.allowShowOnMapToggle;
+        this.allowCompassTrackingToggle = other.allowCompassTrackingToggle;
+        this.allowCreatingMapMarkers = other.allowCreatingMapMarkers;
+        this.allowRemovingOtherPlayersMarkers = other.allowRemovingOtherPlayersMarkers;
         this.defaultScale = other.defaultScale;
         this.minScale = other.minScale;
         this.maxScale = other.maxScale;
@@ -68,10 +88,14 @@ implements Packet {
         obj.enabled = buf.getByte(offset + 1) != 0;
         obj.allowTeleportToCoordinates = buf.getByte(offset + 2) != 0;
         obj.allowTeleportToMarkers = buf.getByte(offset + 3) != 0;
-        obj.defaultScale = buf.getFloatLE(offset + 4);
-        obj.minScale = buf.getFloatLE(offset + 8);
-        obj.maxScale = buf.getFloatLE(offset + 12);
-        int pos = offset + 16;
+        obj.allowShowOnMapToggle = buf.getByte(offset + 4) != 0;
+        obj.allowCompassTrackingToggle = buf.getByte(offset + 5) != 0;
+        obj.allowCreatingMapMarkers = buf.getByte(offset + 6) != 0;
+        obj.allowRemovingOtherPlayersMarkers = buf.getByte(offset + 7) != 0;
+        obj.defaultScale = buf.getFloatLE(offset + 8);
+        obj.minScale = buf.getFloatLE(offset + 12);
+        obj.maxScale = buf.getFloatLE(offset + 16);
+        int pos = offset + 20;
         if ((nullBits & 1) != 0) {
             int biomeDataMapCount = VarInt.peek(buf, pos);
             if (biomeDataMapCount < 0) {
@@ -95,7 +119,7 @@ implements Packet {
 
     public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
         byte nullBits = buf.getByte(offset);
-        int pos = offset + 16;
+        int pos = offset + 20;
         if ((nullBits & 1) != 0) {
             int dictLen = VarInt.peek(buf, pos);
             pos += VarInt.length(buf, pos);
@@ -117,6 +141,10 @@ implements Packet {
         buf.writeByte(this.enabled ? 1 : 0);
         buf.writeByte(this.allowTeleportToCoordinates ? 1 : 0);
         buf.writeByte(this.allowTeleportToMarkers ? 1 : 0);
+        buf.writeByte(this.allowShowOnMapToggle ? 1 : 0);
+        buf.writeByte(this.allowCompassTrackingToggle ? 1 : 0);
+        buf.writeByte(this.allowCreatingMapMarkers ? 1 : 0);
+        buf.writeByte(this.allowRemovingOtherPlayersMarkers ? 1 : 0);
         buf.writeFloatLE(this.defaultScale);
         buf.writeFloatLE(this.minScale);
         buf.writeFloatLE(this.maxScale);
@@ -134,7 +162,7 @@ implements Packet {
 
     @Override
     public int computeSize() {
-        int size = 16;
+        int size = 20;
         if (this.biomeDataMap != null) {
             int biomeDataMapSize = 0;
             for (Map.Entry<Short, BiomeData> kvp : this.biomeDataMap.entrySet()) {
@@ -146,11 +174,11 @@ implements Packet {
     }
 
     public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-        if (buffer.readableBytes() - offset < 16) {
-            return ValidationResult.error("Buffer too small: expected at least 16 bytes");
+        if (buffer.readableBytes() - offset < 20) {
+            return ValidationResult.error("Buffer too small: expected at least 20 bytes");
         }
         byte nullBits = buffer.getByte(offset);
-        int pos = offset + 16;
+        int pos = offset + 20;
         if ((nullBits & 1) != 0) {
             int biomeDataMapCount = VarInt.peek(buffer, pos);
             if (biomeDataMapCount < 0) {
@@ -182,6 +210,10 @@ implements Packet {
         }
         copy.allowTeleportToCoordinates = this.allowTeleportToCoordinates;
         copy.allowTeleportToMarkers = this.allowTeleportToMarkers;
+        copy.allowShowOnMapToggle = this.allowShowOnMapToggle;
+        copy.allowCompassTrackingToggle = this.allowCompassTrackingToggle;
+        copy.allowCreatingMapMarkers = this.allowCreatingMapMarkers;
+        copy.allowRemovingOtherPlayersMarkers = this.allowRemovingOtherPlayersMarkers;
         copy.defaultScale = this.defaultScale;
         copy.minScale = this.minScale;
         copy.maxScale = this.maxScale;
@@ -196,11 +228,11 @@ implements Packet {
             return false;
         }
         UpdateWorldMapSettings other = (UpdateWorldMapSettings)obj;
-        return this.enabled == other.enabled && Objects.equals(this.biomeDataMap, other.biomeDataMap) && this.allowTeleportToCoordinates == other.allowTeleportToCoordinates && this.allowTeleportToMarkers == other.allowTeleportToMarkers && this.defaultScale == other.defaultScale && this.minScale == other.minScale && this.maxScale == other.maxScale;
+        return this.enabled == other.enabled && Objects.equals(this.biomeDataMap, other.biomeDataMap) && this.allowTeleportToCoordinates == other.allowTeleportToCoordinates && this.allowTeleportToMarkers == other.allowTeleportToMarkers && this.allowShowOnMapToggle == other.allowShowOnMapToggle && this.allowCompassTrackingToggle == other.allowCompassTrackingToggle && this.allowCreatingMapMarkers == other.allowCreatingMapMarkers && this.allowRemovingOtherPlayersMarkers == other.allowRemovingOtherPlayersMarkers && this.defaultScale == other.defaultScale && this.minScale == other.minScale && this.maxScale == other.maxScale;
     }
 
     public int hashCode() {
-        return Objects.hash(this.enabled, this.biomeDataMap, this.allowTeleportToCoordinates, this.allowTeleportToMarkers, Float.valueOf(this.defaultScale), Float.valueOf(this.minScale), Float.valueOf(this.maxScale));
+        return Objects.hash(this.enabled, this.biomeDataMap, this.allowTeleportToCoordinates, this.allowTeleportToMarkers, this.allowShowOnMapToggle, this.allowCompassTrackingToggle, this.allowCreatingMapMarkers, this.allowRemovingOtherPlayersMarkers, Float.valueOf(this.defaultScale), Float.valueOf(this.minScale), Float.valueOf(this.maxScale));
     }
 }
 

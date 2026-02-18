@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 
 public class RotatorDensity
 extends Density {
+    @Nonnull
     private static final Vector3d Y_AXIS = new Vector3d(0.0, 1.0, 0.0);
     @Nullable
     private Density input;
@@ -20,6 +21,10 @@ extends Density {
     private final double spinAngle;
     @Nonnull
     private final SpecialCase axisSpecialCase;
+    @Nonnull
+    private final Vector3d rChildPosition;
+    @Nonnull
+    private final Density.Context rChildContext;
 
     public RotatorDensity(@Nonnull Density input, @Nonnull Vector3d newYAxis, double spinAngle) {
         this.input = input;
@@ -39,6 +44,8 @@ extends Density {
         }
         this.tiltAxis = yAxis.cross(newYAxis);
         this.tiltAngle = Math.acos(newYAxis.dot(yAxis) / (newYAxis.length() * yAxis.length()));
+        this.rChildPosition = new Vector3d();
+        this.rChildContext = new Density.Context();
     }
 
     @Override
@@ -46,22 +53,22 @@ extends Density {
         if (this.input == null) {
             return 0.0;
         }
-        Vector3d childPosition = context.position.clone();
+        this.rChildPosition.assign(context.position);
         switch (this.axisSpecialCase.ordinal()) {
             case 1: {
                 break;
             }
             case 2: {
-                childPosition.scale(-1.0);
+                this.rChildPosition.scale(-1.0);
             }
             case 0: {
-                VectorUtil.rotateAroundAxis(childPosition, this.tiltAxis, this.tiltAngle);
+                VectorUtil.rotateAroundAxis(this.rChildPosition, this.tiltAxis, this.tiltAngle);
             }
         }
-        VectorUtil.rotateAroundAxis(childPosition, Y_AXIS, this.spinAngle);
-        Density.Context childContext = new Density.Context(context);
-        childContext.position = childPosition;
-        return this.input.process(childContext);
+        VectorUtil.rotateAroundAxis(this.rChildPosition, Y_AXIS, this.spinAngle);
+        this.rChildContext.assign(context);
+        this.rChildContext.position = this.rChildPosition;
+        return this.input.process(this.rChildContext);
     }
 
     @Override

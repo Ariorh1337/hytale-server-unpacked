@@ -5,7 +5,9 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 
 import com.hypixel.hytale.protocol.BlockType;
 import com.hypixel.hytale.protocol.Model;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPreviewCameraSettings;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetPath;
@@ -15,7 +17,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class AssetEditorUpdateModelPreview
-implements Packet {
+implements Packet,
+ToClientPacket {
     public static final int PACKET_ID = 355;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -35,6 +38,11 @@ implements Packet {
     @Override
     public int getId() {
         return 355;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public AssetEditorUpdateModelPreview() {

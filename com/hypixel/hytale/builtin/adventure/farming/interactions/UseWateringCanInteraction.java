@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 
 public class UseWateringCanInteraction
 extends SimpleBlockInteraction {
+    @Nonnull
     public static final BuilderCodec<UseWateringCanInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(UseWateringCanInteraction.class, UseWateringCanInteraction::new, SimpleBlockInteraction.CODEC).documentation("Waters the target farmable block.")).addField(new KeyedCodec<Long>("Duration", Codec.LONG), (interaction, duration) -> {
         interaction.duration = duration;
     }, interaction -> interaction.duration)).addField(new KeyedCodec<T[]>("RefreshModifiers", Codec.STRING_ARRAY), (interaction, refreshModifiers) -> {
@@ -51,43 +52,48 @@ extends SimpleBlockInteraction {
     protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i targetBlock, @Nonnull CooldownHandler cooldownHandler) {
         int z;
         int x = targetBlock.getX();
-        Object worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(x, z = targetBlock.getZ()));
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z = targetBlock.getZ());
+        Object worldChunk = world.getChunk(chunkIndex);
+        if (worldChunk == null) {
+            context.getState().state = InteractionState.Failed;
+            return;
+        }
         Ref<ChunkStore> blockRef = ((WorldChunk)worldChunk).getBlockComponentEntity(x, targetBlock.getY(), z);
         if (blockRef == null) {
             blockRef = BlockModule.ensureBlockEntity(worldChunk, targetBlock.x, targetBlock.y, targetBlock.z);
         }
-        if (blockRef == null) {
+        if (blockRef == null || !blockRef.isValid()) {
             context.getState().state = InteractionState.Failed;
             return;
         }
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
         WorldTimeResource worldTimeResource = commandBuffer.getResource(WorldTimeResource.getResourceType());
-        TilledSoilBlock soil = chunkStore.getComponent(blockRef, TilledSoilBlock.getComponentType());
-        if (soil != null) {
+        TilledSoilBlock tilledSoilBlockComponent = chunkStore.getComponent(blockRef, TilledSoilBlock.getComponentType());
+        if (tilledSoilBlockComponent != null) {
             Instant wateredUntil = worldTimeResource.getGameTime().plus(this.duration, ChronoUnit.SECONDS);
-            soil.setWateredUntil(wateredUntil);
+            tilledSoilBlockComponent.setWateredUntil(wateredUntil);
             ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY(), z, true);
             ((WorldChunk)worldChunk).getBlockChunk().getSectionAtBlockY(targetBlock.y).scheduleTick(ChunkUtil.indexBlock(x, targetBlock.y, z), wateredUntil);
             ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY() + 1, z, true);
             return;
         }
-        FarmingBlock farmingState = chunkStore.getComponent(blockRef, FarmingBlock.getComponentType());
-        if (farmingState == null) {
+        FarmingBlock farmingBlockComponent = chunkStore.getComponent(blockRef, FarmingBlock.getComponentType());
+        if (farmingBlockComponent == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        Ref<ChunkStore> soilRef = ((WorldChunk)worldChunk).getBlockComponentEntity(x, targetBlock.getY() - 1, z);
-        if (soilRef == null) {
+        Ref<ChunkStore> soilBlockRef = ((WorldChunk)worldChunk).getBlockComponentEntity(x, targetBlock.getY() - 1, z);
+        if (soilBlockRef == null || !soilBlockRef.isValid()) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        soil = chunkStore.getComponent(soilRef, TilledSoilBlock.getComponentType());
-        if (soil == null) {
+        tilledSoilBlockComponent = chunkStore.getComponent(soilBlockRef, TilledSoilBlock.getComponentType());
+        if (tilledSoilBlockComponent == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
         Instant wateredUntil = worldTimeResource.getGameTime().plus(this.duration, ChronoUnit.SECONDS);
-        soil.setWateredUntil(wateredUntil);
+        tilledSoilBlockComponent.setWateredUntil(wateredUntil);
         ((WorldChunk)worldChunk).getBlockChunk().getSectionAtBlockY(targetBlock.y - 1).scheduleTick(ChunkUtil.indexBlock(x, targetBlock.y - 1, z), wateredUntil);
         ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY() - 1, z, true);
         ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY(), z, true);

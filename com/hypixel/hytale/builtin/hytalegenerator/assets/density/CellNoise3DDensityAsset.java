@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class CellNoise3DDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<CellNoise3DDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CellNoise3DDensityAsset.class, CellNoise3DDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("ScaleX", Codec.DOUBLE, true), (asset, scale) -> {
         asset.scaleX = scale;
     }, asset -> asset.scaleX).addValidator(Validators.greaterThan(0.0)).add()).append(new KeyedCodec<Double>("ScaleY", Codec.DOUBLE, true), (asset, scale) -> {
@@ -39,6 +40,7 @@ extends DensityAsset {
     private double jitter = 0.5;
     private int octaves = 1;
     private String seedKey = "A";
+    @Nonnull
     private FastNoiseLite.CellularReturnType cellType = FastNoiseLite.CellularReturnType.CellValue;
 
     @Override

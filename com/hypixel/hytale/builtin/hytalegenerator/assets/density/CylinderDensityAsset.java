@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class CylinderDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<CylinderDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CylinderDensityAsset.class, CylinderDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("RadialCurve", CurveAsset.CODEC, true), (t, k) -> {
         t.radialCurveAsset = k;
     }, k -> k.radialCurveAsset).add()).append(new KeyedCodec("AxialCurve", CurveAsset.CODEC, true), (t, k) -> {
@@ -33,7 +34,7 @@ extends DensityAsset {
     private CurveAsset axialCurveAsset = new ConstantCurveAsset();
     @Nonnull
     private Vector3d newYAxis = new Vector3d(0.0, 1.0, 0.0);
-    private double spinAngle = 0.0;
+    private double spinAngle;
 
     @Override
     @Nonnull

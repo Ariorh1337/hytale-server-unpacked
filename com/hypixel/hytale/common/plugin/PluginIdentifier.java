@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PluginIdentifier {
+    public static final String THIRD_PARTY_LOADER_NAME = "ThirdParty";
     @Nonnull
     private final String group;
     @Nonnull
@@ -21,6 +22,23 @@ public class PluginIdentifier {
 
     public PluginIdentifier(@Nonnull PluginManifest manifest) {
         this(manifest.getGroup(), manifest.getName());
+    }
+
+    @Nullable
+    public static PluginIdentifier identifyThirdPartyPlugin(Throwable t) {
+        String prefix = "ThirdParty(";
+        PluginIdentifier possibleFailureCause = null;
+        block0: for (Throwable current = t; current != null; current = current.getCause()) {
+            StackTraceElement[] stack;
+            for (StackTraceElement entry : stack = current.getStackTrace()) {
+                int end;
+                String loader = entry.getClassLoaderName();
+                if (loader == null || !loader.startsWith(prefix) || (end = loader.lastIndexOf(41)) == -1) continue;
+                possibleFailureCause = PluginIdentifier.fromString(loader.substring(prefix.length(), end));
+                break block0;
+            }
+        }
+        return possibleFailureCause;
     }
 
     @Nonnull

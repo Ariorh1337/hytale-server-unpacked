@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class FastGradientWarpDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<FastGradientWarpDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FastGradientWarpDensityAsset.class, FastGradientWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Float>("WarpScale", Codec.FLOAT, false), (t, k) -> {
         t.warpScale = k.floatValue();
     }, t -> Float.valueOf(t.warpScale)).addValidator(Validators.greaterThan(Float.valueOf(0.0f))).add()).append(new KeyedCodec<Integer>("WarpOctaves", Codec.INTEGER, false), (t, k) -> {

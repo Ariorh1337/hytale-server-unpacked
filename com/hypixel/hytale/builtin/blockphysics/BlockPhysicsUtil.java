@@ -40,7 +40,7 @@ public class BlockPhysicsUtil {
      * Enabled aggressive block sorting
      */
     @Nonnull
-    public static Result applyBlockPhysics(@Nullable ComponentAccessor<EntityStore> commandBuffer, @Nonnull Ref<ChunkStore> chunkReference, @Nonnull BlockPhysicsSystems.CachedAccessor chunkAccessor, BlockSection blockSection, @Nonnull BlockPhysics blockPhysics, @Nonnull FluidSection fluidSection, int blockX, int blockY, int blockZ, @Nonnull BlockType blockType, int rotation, int filler) {
+    public static Result applyBlockPhysics(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<ChunkStore> chunkReference, @Nonnull BlockPhysicsSystems.CachedAccessor chunkAccessor, BlockSection blockSection, @Nonnull BlockPhysics blockPhysics, @Nonnull FluidSection fluidSection, int blockX, int blockY, int blockZ, @Nonnull BlockType blockType, int rotation, int filler) {
         int supportDistance;
         block34: {
             int blockDepth;
@@ -58,7 +58,7 @@ public class BlockPhysicsUtil {
                         supportDistance = -1;
                         if (blockType.getHitboxTypeIndex() == 0) break block31;
                         BlockBoundingBoxes boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
-                        if (!boundingBoxes.protrudesUnitBox()) break block32;
+                        if (boundingBoxes == null || !boundingBoxes.protrudesUnitBox()) break block32;
                         BlockBoundingBoxes.RotatedVariantBoxes rotatedBox = boundingBoxes.get(rotation);
                         Box boundingBox = rotatedBox.getBoundingBox();
                         minX = (int)boundingBox.min.x;
@@ -163,15 +163,15 @@ public class BlockPhysicsUtil {
             }
         }
         if (supportDistance == 0) {
-            World world = commandBuffer.getExternalData().getWorld();
+            World world = componentAccessor.getExternalData().getWorld();
             Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
             switch (blockType.getSupportDropType()) {
                 case BREAK: {
-                    BlockHarvestUtils.naturallyRemoveBlockByPhysics(new Vector3i(blockX, blockY, blockZ), blockType, filler, 256, chunkReference, commandBuffer, chunkStore);
+                    BlockHarvestUtils.naturallyRemoveBlockByPhysics(new Vector3i(blockX, blockY, blockZ), blockType, filler, 256, chunkReference, componentAccessor, chunkStore);
                     return Result.INVALID;
                 }
                 case DESTROY: {
-                    BlockHarvestUtils.naturallyRemoveBlockByPhysics(new Vector3i(blockX, blockY, blockZ), blockType, filler, 2304, chunkReference, commandBuffer, chunkStore);
+                    BlockHarvestUtils.naturallyRemoveBlockByPhysics(new Vector3i(blockX, blockY, blockZ), blockType, filler, 2304, chunkReference, componentAccessor, chunkStore);
                     return Result.INVALID;
                 }
             }
@@ -258,7 +258,7 @@ public class BlockPhysicsUtil {
                 boolean failedSatisfySupport = false;
                 block7: for (RequiredBlockFaceSupport requiredBlockFaceSupport : requiredBlockFaceSupports) {
                     if (!requiredBlockFaceSupport.isAppliedToFiller(blockFillerOffset)) continue;
-                    boolean doesSatisfyRequirements = BlockPhysicsUtil.doesSatisfyRequirements(blockType, fluid, blockFillerOffset, neighbourFillerOffset, blockFace, neighbourBlockFace, neighbourBlockId, neighbourBlockType, neighbourRotation, neighbourFluidId, neighbourFluid, requiredBlockFaceSupport);
+                    boolean doesSatisfyRequirements = BlockPhysicsUtil.doesSatisfyRequirements(blockType, blockFillerOffset, neighbourFillerOffset, blockFace, neighbourBlockFace, neighbourBlockId, neighbourBlockType, neighbourRotation, neighbourFluidId, neighbourFluid, requiredBlockFaceSupport);
                     if (doesSatisfyRequirements && requiredSupportDistance > 0 && requiredBlockFaceSupport.allowsSupportPropagation()) {
                         int supportDistance2;
                         int n = supportDistance2 = neighbourBlockPhysics != null ? neighbourBlockPhysics.get(neighbourX, neighbourY, neighbourZ) : 0;
@@ -304,7 +304,7 @@ public class BlockPhysicsUtil {
         return 0;
     }
 
-    public static boolean doesSatisfyRequirements(@Nonnull BlockType blockType, Fluid fluid, Vector3i blockFillerOffset, Vector3i neighbourFillerOffset, BlockFace blockFace, BlockFace neighbourBlockFace, int neighbourBlockId, @Nonnull BlockType neighbourBlockType, int neighbourRotation, int neighbourFluidId, @Nonnull Fluid neighbourFluid, @Nonnull RequiredBlockFaceSupport requiredBlockFaceSupport) {
+    public static boolean doesSatisfyRequirements(@Nonnull BlockType blockType, Vector3i blockFillerOffset, Vector3i neighbourFillerOffset, BlockFace blockFace, BlockFace neighbourBlockFace, int neighbourBlockId, @Nonnull BlockType neighbourBlockType, int neighbourRotation, int neighbourFluidId, @Nonnull Fluid neighbourFluid, @Nonnull RequiredBlockFaceSupport requiredBlockFaceSupport) {
         int tagIndex;
         String neighbourBlockTypeKey = neighbourBlockType.getId();
         boolean hasSupport = true;

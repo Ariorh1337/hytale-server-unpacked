@@ -15,12 +15,13 @@ import javax.annotation.Nonnull;
 
 public class UpwardSpaceMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<UpwardSpaceMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(UpwardSpaceMaterialProviderAsset.class, UpwardSpaceMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("Space", Codec.INTEGER, true), (t, k) -> {
         t.space = k;
     }, k -> k.space).add()).append(new KeyedCodec("Material", MaterialProviderAsset.CODEC, true), (t, k) -> {
         t.materialProviderAsset = k;
     }, k -> k.materialProviderAsset).add()).build();
-    private int space = 0;
+    private int space;
     private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
 
     @Override

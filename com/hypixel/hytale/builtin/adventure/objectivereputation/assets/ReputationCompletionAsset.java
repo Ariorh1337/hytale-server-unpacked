@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class ReputationCompletionAsset
 extends ObjectiveCompletionAsset {
+    @Nonnull
     public static final BuilderCodec<ReputationCompletionAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ReputationCompletionAsset.class, ReputationCompletionAsset::new, ObjectiveCompletionAsset.BASE_CODEC).append(new KeyedCodec<String>("ReputationGroupId", Codec.STRING), (reputationCompletionAsset, s) -> {
         reputationCompletionAsset.reputationGroupId = s;
     }, reputationCompletionAsset -> reputationCompletionAsset.reputationGroupId).addValidator(Validators.nonNull()).addValidator(ReputationGroup.VALIDATOR_CACHE.getValidator()).add()).append(new KeyedCodec<Integer>("Amount", Codec.INTEGER), (reputationCompletionAsset, integer) -> {

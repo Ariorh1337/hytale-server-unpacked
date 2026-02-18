@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class OrPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<OrPatternAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(OrPatternAsset.class, OrPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Patterns", new ArrayCodec(PatternAsset.CODEC, PatternAsset[]::new), true), (t, k) -> {
         t.patternAssets = k;
     }, k -> k.patternAssets).add()).build();

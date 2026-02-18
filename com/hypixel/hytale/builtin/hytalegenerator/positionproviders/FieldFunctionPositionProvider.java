@@ -39,11 +39,11 @@ extends PositionProvider {
             Density.Context densityContext = new Density.Context();
             densityContext.position = p;
             densityContext.positionsAnchor = context.anchor;
-            densityContext.workerId = context.workerId;
             double value = this.field.process(densityContext);
             for (Delimiter d : this.delimiters) {
                 if (!d.isInside(value)) continue;
                 context.consumer.accept((Vector3d)p);
+                return;
             }
         };
         this.positionProvider.positionsIn(childContext);

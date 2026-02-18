@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class NoiseThicknessAsset
 extends LayerAsset {
+    @Nonnull
     public static final BuilderCodec<NoiseThicknessAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(NoiseThicknessAsset.class, NoiseThicknessAsset::new, LayerAsset.ABSTRACT_CODEC).append(new KeyedCodec("ThicknessFunctionXZ", DensityAsset.CODEC, true), (asset, k) -> {
         asset.densityAsset = k;
     }, asset -> asset.densityAsset).add()).append(new KeyedCodec("Material", MaterialProviderAsset.CODEC, true), (t, k) -> {

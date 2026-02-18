@@ -20,10 +20,12 @@ import javax.annotation.Nullable;
 
 public class ReachLocationMarker
 implements Component<EntityStore> {
+    @Nonnull
     public static final BuilderCodec<ReachLocationMarker> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ReachLocationMarker.class, ReachLocationMarker::new).append(new KeyedCodec<String>("MarkerId", Codec.STRING), (reachLocationMarkerEntity, uuid) -> {
         reachLocationMarkerEntity.markerId = uuid;
     }, reachLocationMarkerEntity -> reachLocationMarkerEntity.markerId).addValidator(Validators.nonNull()).add()).build();
     private String markerId;
+    @Nonnull
     private final Set<UUID> players = new HashSet<UUID>();
 
     public static ComponentType<EntityStore, ReachLocationMarker> getComponentType() {

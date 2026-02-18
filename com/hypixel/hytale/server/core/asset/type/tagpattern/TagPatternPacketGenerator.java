@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.tagpattern;
 
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateTagPatterns;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class TagPatternPacketGenerator
 extends SimpleAssetPacketGenerator<String, TagPattern, IndexedLookupTableAssetMap<String, TagPattern>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, TagPattern> assetMap, @Nonnull Map<String, TagPattern> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, TagPattern> assetMap, @Nonnull Map<String, TagPattern> assets) {
         UpdateTagPatterns packet = new UpdateTagPatterns();
         packet.type = UpdateType.Init;
         packet.patterns = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.TagPattern>(assets.size());
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, TagPattern, IndexedLookupTableAssetMa
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, TagPattern> assetMap, @Nonnull Map<String, TagPattern> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, TagPattern> assetMap, @Nonnull Map<String, TagPattern> loadedAssets) {
         UpdateTagPatterns packet = new UpdateTagPatterns();
         packet.type = UpdateType.AddOrUpdate;
         packet.patterns = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.TagPattern>(loadedAssets.size());
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, TagPattern, IndexedLookupTableAssetMa
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, TagPattern> assetMap, @Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, TagPattern> assetMap, @Nonnull Set<String> removed) {
         UpdateTagPatterns packet = new UpdateTagPatterns();
         packet.type = UpdateType.Remove;
         packet.patterns = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.TagPattern>(removed.size());

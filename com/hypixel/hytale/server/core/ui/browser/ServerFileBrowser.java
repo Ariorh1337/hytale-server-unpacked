@@ -172,6 +172,7 @@ public class ServerFileBrowser {
             return true;
         }
         if (data.getFile() != null) {
+            Path currentPath;
             Path targetPath;
             String fileName = data.getFile();
             if ("..".equals(fileName)) {
@@ -181,7 +182,7 @@ public class ServerFileBrowser {
             if (this.config.assetPackMode()) {
                 return this.handleAssetPackNavigation(fileName);
             }
-            if (this.config.enableDirectoryNav() && Files.isDirectory(targetPath = this.root.resolve(this.currentDir.toString()).resolve(fileName), new LinkOption[0])) {
+            if (this.config.enableDirectoryNav() && (targetPath = PathUtil.resolvePathWithinDir(currentPath = this.root.resolve(this.currentDir.toString()), fileName)) != null && Files.isDirectory(targetPath, new LinkOption[0]) && PathUtil.isChildOf(this.root, targetPath)) {
                 this.currentDir = PathUtil.relativize(this.root, targetPath);
                 return true;
             }
@@ -290,8 +291,8 @@ public class ServerFileBrowser {
             AssetPack pack = this.findAssetPackByDisplayName(packName);
             if (pack != null && (packSubPath = this.getAssetPackSubPath(pack)) != null) {
                 Path targetDir;
-                Path path = targetDir = subDir.isEmpty() ? packSubPath : packSubPath.resolve(subDir);
-                if (Files.isDirectory(targetDir, new LinkOption[0])) {
+                Path path = targetDir = subDir.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subDir);
+                if (targetDir != null && Files.isDirectory(targetDir, new LinkOption[0])) {
                     try (DirectoryStream<Path> stream = Files.newDirectoryStream(targetDir);){
                         for (Path file : stream) {
                             boolean isDirectory;
@@ -340,8 +341,8 @@ public class ServerFileBrowser {
             AssetPack pack = this.findAssetPackByDisplayName(packName);
             if (pack != null && (packSubPath = this.getAssetPackSubPath(pack)) != null) {
                 Path searchRoot;
-                Path path = searchRoot = subDir.isEmpty() ? packSubPath : packSubPath.resolve(subDir);
-                if (Files.isDirectory(searchRoot, new LinkOption[0])) {
+                Path path = searchRoot = subDir.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subDir);
+                if (searchRoot != null && Files.isDirectory(searchRoot, new LinkOption[0])) {
                     this.searchInAssetPackDirectory(searchRoot, packName, subDir, allResults);
                 }
             }
@@ -400,6 +401,7 @@ public class ServerFileBrowser {
     }
 
     private boolean handleAssetPackNavigation(@Nonnull String fileName) {
+        Path targetDir;
         String currentDirStr = this.currentDir.toString().replace('\\', '/');
         if (currentDirStr.isEmpty()) {
             Path subPath;
@@ -421,8 +423,14 @@ public class ServerFileBrowser {
         if (packSubPath == null) {
             return false;
         }
-        Path targetDir = subDir.isEmpty() ? packSubPath : packSubPath.resolve(subDir);
-        Path targetPath = targetDir.resolve(fileName);
+        Path path = targetDir = subDir.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subDir);
+        if (targetDir == null) {
+            return false;
+        }
+        Path targetPath = PathUtil.resolvePathWithinDir(targetDir, fileName);
+        if (targetPath == null) {
+            return false;
+        }
         if (Files.isDirectory(targetPath, new LinkOption[0])) {
             if (this.isTerminalDirectory(targetPath)) {
                 return false;
@@ -481,7 +489,7 @@ public class ServerFileBrowser {
         if (packSubPath == null) {
             return null;
         }
-        return subPath.isEmpty() ? packSubPath : packSubPath.resolve(subPath);
+        return subPath.isEmpty() ? packSubPath : PathUtil.resolvePathWithinDir(packSubPath, subPath);
     }
 
     @Nonnull
@@ -512,6 +520,10 @@ public class ServerFileBrowser {
     }
 
     public void setCurrentDir(@Nonnull Path currentDir) {
+        Path resolved = this.root.resolve(currentDir.toString());
+        if (!PathUtil.isChildOf(this.root, resolved)) {
+            throw new IllegalArgumentException("Invalid path");
+        }
         this.currentDir = currentDir;
     }
 
@@ -533,7 +545,7 @@ public class ServerFileBrowser {
 
     public void navigateTo(@Nonnull Path relativePath) {
         Path targetPath = this.root.resolve(this.currentDir.toString()).resolve(relativePath.toString());
-        if (!targetPath.normalize().startsWith(this.root.normalize())) {
+        if (!PathUtil.isChildOf(this.root, targetPath)) {
             return;
         }
         if (Files.isDirectory(targetPath, new LinkOption[0])) {
@@ -562,24 +574,6 @@ public class ServerFileBrowser {
     @Nonnull
     public FileBrowserConfig getConfig() {
         return this.config;
-    }
-
-    @Nullable
-    public Path resolveSecure(@Nonnull String relativePath) {
-        Path resolved = this.root.resolve(relativePath);
-        if (!resolved.normalize().startsWith(this.root.normalize())) {
-            return null;
-        }
-        return resolved;
-    }
-
-    @Nullable
-    public Path resolveFromCurrent(@Nonnull String fileName) {
-        Path resolved = this.root.resolve(this.currentDir.toString()).resolve(fileName);
-        if (!resolved.normalize().startsWith(this.root.normalize())) {
-            return null;
-        }
-        return resolved;
     }
 
     @Nullable

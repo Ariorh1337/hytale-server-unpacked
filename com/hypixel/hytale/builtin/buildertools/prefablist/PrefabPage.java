@@ -6,6 +6,7 @@ package com.hypixel.hytale.builtin.buildertools.prefablist;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.prefablist.AssetPrefabFileProvider;
 import com.hypixel.hytale.builtin.buildertools.utils.PasteToolUtil;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -153,7 +154,8 @@ extends InteractiveCustomUIPage<FileBrowserEventData> {
             this.sendUpdate(commandBuilder, eventBuilder, false);
             return;
         }
-        Path file = isSearchResult ? this.browser.resolveSecure(selectedPath) : this.browser.resolveFromCurrent(selectedPath);
+        Path baseDir = isSearchResult ? this.browser.getRoot() : this.browser.getRoot().resolve(this.browser.getCurrentDir().toString());
+        Path file = PathUtil.resolvePathWithinDir(baseDir, selectedPath);
         if (file == null || Files.isDirectory(file, new LinkOption[0])) {
             this.sendUpdate();
             return;

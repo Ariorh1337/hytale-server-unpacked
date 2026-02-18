@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class ShopPageSupplier
 implements OpenCustomUIInteraction.CustomPageSupplier {
+    @Nonnull
     public static final BuilderCodec<ShopPageSupplier> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ShopPageSupplier.class, ShopPageSupplier::new).appendInherited(new KeyedCodec<String>("ShopId", Codec.STRING), (data, o) -> {
         data.shopId = o;
     }, data -> data.shopId, (data, parent) -> {
@@ -27,7 +28,7 @@ implements OpenCustomUIInteraction.CustomPageSupplier {
 
     @Override
     @Nonnull
-    public CustomUIPage tryCreate(Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor, @Nonnull PlayerRef playerRef, InteractionContext context) {
+    public CustomUIPage tryCreate(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull PlayerRef playerRef, @Nonnull InteractionContext context) {
         return new ShopPage(playerRef, this.shopId);
     }
 }

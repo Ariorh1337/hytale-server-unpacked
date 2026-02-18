@@ -40,9 +40,9 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, CraftingRecipe>> {
         craftingRecipe.primaryOutputQuantity = quantity;
     }, craftingRecipe -> craftingRecipe.primaryOutputQuantity).add()).append(new KeyedCodec<T[]>("BenchRequirement", new ArrayCodec(((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BenchRequirement.class, BenchRequirement::new).append(new KeyedCodec<BenchType>("Type", new EnumCodec<BenchType>(BenchType.class)), (benchRequirement, benchType) -> {
         benchRequirement.type = benchType;
-    }, benchRequirement -> benchRequirement.type).add()).append(new KeyedCodec<String>("Id", Codec.STRING), (benchRequirement, s) -> {
+    }, benchRequirement -> benchRequirement.type).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<String>("Id", Codec.STRING), (benchRequirement, s) -> {
         benchRequirement.id = s;
-    }, benchRequirement -> benchRequirement.id).add()).append(new KeyedCodec<T[]>("Categories", Codec.STRING_ARRAY), (benchRequirement, s) -> {
+    }, benchRequirement -> benchRequirement.id).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<T[]>("Categories", Codec.STRING_ARRAY), (benchRequirement, s) -> {
         benchRequirement.categories = s;
     }, benchRequirement -> benchRequirement.categories).add()).appendInherited(new KeyedCodec<Integer>("RequiredTierLevel", Codec.INTEGER), (benchRequirement, s) -> {
         benchRequirement.requiredTierLevel = s;

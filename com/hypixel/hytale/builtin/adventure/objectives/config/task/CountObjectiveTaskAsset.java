@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public abstract class CountObjectiveTaskAsset
 extends ObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<CountObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.abstractBuilder(CountObjectiveTaskAsset.class, BASE_CODEC).append(new KeyedCodec<Integer>("Count", Codec.INTEGER), (taskAsset, count) -> {
         taskAsset.count = count;
     }, taskAsset -> taskAsset.count).addValidator(Validators.greaterThan(0)).add()).build();

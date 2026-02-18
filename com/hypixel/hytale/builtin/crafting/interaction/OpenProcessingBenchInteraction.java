@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 
 public class OpenProcessingBenchInteraction
 extends SimpleBlockInteraction {
+    @Nonnull
     public static final BuilderCodec<OpenProcessingBenchInteraction> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(OpenProcessingBenchInteraction.class, OpenProcessingBenchInteraction::new, SimpleBlockInteraction.CODEC).documentation("Opens the processing bench page.")).build();
 
     @Override
@@ -63,7 +64,9 @@ extends SimpleBlockInteraction {
             return;
         }
         UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-        assert (uuidComponent != null);
+        if (uuidComponent == null) {
+            return;
+        }
         UUID uuid = uuidComponent.getUuid();
         ProcessingBenchWindow window = new ProcessingBenchWindow(benchState);
         Map<UUID, BenchWindow> windows = benchState.getWindows();
@@ -74,9 +77,12 @@ extends SimpleBlockInteraction {
                     int soundEventIndex;
                     windows.remove(uuid, window);
                     BlockType currentBlockType = world.getBlockType(pos);
+                    if (currentBlockType == null) {
+                        return;
+                    }
                     String interactionState = BlockAccessor.getCurrentInteractionState(currentBlockType);
                     if (windows.isEmpty() && !"Processing".equals(interactionState) && !"ProcessCompleted".equals(interactionState)) {
-                        world.setBlockInteractionState(pos, currentBlockType, "default");
+                        world.setBlockInteractionState(pos, benchState.getBaseBlockType(), benchState.getTierStateName());
                     }
                     if ((soundEventIndex = blockType.getBench().getLocalCloseSoundEventIndex()) == 0) {
                         return;

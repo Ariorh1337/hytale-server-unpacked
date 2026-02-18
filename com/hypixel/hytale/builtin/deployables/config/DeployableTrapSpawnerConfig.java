@@ -30,6 +30,7 @@ import javax.annotation.Nonnull;
 
 public class DeployableTrapSpawnerConfig
 extends DeployableTrapConfig {
+    @Nonnull
     public static final BuilderCodec<DeployableTrapSpawnerConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DeployableTrapSpawnerConfig.class, DeployableTrapSpawnerConfig::new, DeployableTrapConfig.CODEC).appendInherited(new KeyedCodec<T[]>("DeployableConfig", new ArrayCodec<String>(Codec.STRING, String[]::new)), (o, i) -> {
         o.deployableSpawnerIds = i;
     }, o -> o.deployableSpawnerIds, (o, p) -> {
@@ -82,7 +83,7 @@ extends DeployableTrapConfig {
         DeployableTrapSpawnerConfig.playAnimation(store, entityRef, this, "Deploy");
     }
 
-    private void tickDeployAnimationState(Store<EntityStore> store, DeployableComponent component, Ref<EntityStore> entityRef) {
+    private void tickDeployAnimationState(@Nonnull Store<EntityStore> store, @Nonnull DeployableComponent component, @Nonnull Ref<EntityStore> entityRef) {
         component.setFlag(DeployableComponent.DeployableFlag.STATE, 2);
         DeployableTrapSpawnerConfig.playAnimation(store, entityRef, this, "Deploy");
     }
@@ -95,8 +96,12 @@ extends DeployableTrapConfig {
         }
     }
 
-    private void tickLiveState(@Nonnull Store<EntityStore> store, @Nonnull DeployableComponent component, @Nonnull Ref<EntityStore> entityRef, CommandBuffer<EntityStore> commandBuffer, float dt) {
-        Vector3d position = store.getComponent(entityRef, TransformComponent.getComponentType()).getPosition();
+    private void tickLiveState(@Nonnull Store<EntityStore> store, @Nonnull DeployableComponent component, @Nonnull Ref<EntityStore> entityRef, @Nonnull CommandBuffer<EntityStore> commandBuffer, float dt) {
+        TransformComponent transformComponent = store.getComponent(entityRef, TransformComponent.getComponentType());
+        if (transformComponent == null) {
+            return;
+        }
+        Vector3d position = transformComponent.getPosition();
         float radius = this.getRadius(store, component.getSpawnInstant());
         component.setTimeSinceLastAttack(component.getTimeSinceLastAttack() + dt);
         if (component.getTimeSinceLastAttack() > this.damageInterval && this.isLive(store, component)) {
@@ -105,10 +110,14 @@ extends DeployableTrapConfig {
         }
     }
 
-    private void tickTriggeredState(CommandBuffer<EntityStore> commandBuffer, @Nonnull Store<EntityStore> store, @Nonnull DeployableComponent component, @Nonnull Ref<EntityStore> entityRef) {
+    private void tickTriggeredState(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Store<EntityStore> store, @Nonnull DeployableComponent component, @Nonnull Ref<EntityStore> entityRef) {
+        TransformComponent transformComponent = store.getComponent(entityRef, TransformComponent.getComponentType());
+        if (transformComponent == null) {
+            return;
+        }
         component.setFlag(DeployableComponent.DeployableFlag.STATE, 5);
-        Vector3d parentPosition = store.getComponent(entityRef, TransformComponent.getComponentType()).getPosition();
-        Ref<EntityStore> parentOwner = store.getComponent(entityRef, DeployableComponent.getComponentType()).getOwner();
+        Vector3d parentPosition = transformComponent.getPosition();
+        Ref<EntityStore> parentOwner = component.getOwner();
         World world = store.getExternalData().getWorld();
         if (this.deployableSpawners != null) {
             for (DeployableSpawner spawner : this.deployableSpawners) {
@@ -130,7 +139,11 @@ extends DeployableTrapConfig {
 
     @Override
     protected void onTriggered(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
-        store.getComponent(ref, DeployableComponent.getComponentType()).setFlag(DeployableComponent.DeployableFlag.STATE, 4);
+        DeployableComponent deployableComponent = store.getComponent(ref, DeployableComponent.getComponentType());
+        if (deployableComponent == null) {
+            return;
+        }
+        deployableComponent.setFlag(DeployableComponent.DeployableFlag.STATE, 4);
     }
 }
 

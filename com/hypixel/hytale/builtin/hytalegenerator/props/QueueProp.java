@@ -62,7 +62,9 @@ extends Prop {
         if (conditionalScanResult.isNegative()) {
             return;
         }
-        conditionalScanResult.prop.place(context);
+        Prop.Context childContext = new Prop.Context(context);
+        childContext.scanResult = conditionalScanResult.propScanResult;
+        conditionalScanResult.prop.place(childContext);
     }
 
     @Override

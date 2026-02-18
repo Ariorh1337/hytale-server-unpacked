@@ -17,7 +17,7 @@ import javax.annotation.Nullable;
 public class FarmingBlockState
 implements Component<ChunkStore> {
     @Nonnull
-    public static BuilderCodec<FarmingBlockState> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FarmingBlockState.class, FarmingBlockState::new).append(new KeyedCodec<String>("BaseCrop", Codec.STRING), (state, crop) -> {
+    public static final BuilderCodec<FarmingBlockState> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FarmingBlockState.class, FarmingBlockState::new).append(new KeyedCodec<String>("BaseCrop", Codec.STRING), (state, crop) -> {
         state.baseCrop = crop;
     }, state -> state.baseCrop).add()).append(new KeyedCodec("StageStart", Codec.INSTANT), (state, start) -> {
         state.stageStart = start;

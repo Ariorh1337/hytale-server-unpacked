@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 
 public class NeighbourBlockTagsLocationCondition
 extends WorldLocationCondition {
+    @Nonnull
     public static final BuilderCodec<NeighbourBlockTagsLocationCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(NeighbourBlockTagsLocationCondition.class, NeighbourBlockTagsLocationCondition::new, WorldLocationCondition.BASE_CODEC).append(new KeyedCodec<String>("TagPattern", Codec.STRING), (neighbourBlockTagsLocationCondition, s) -> {
         neighbourBlockTagsLocationCondition.tagPatternId = s;
     }, neighbourBlockTagsLocationCondition -> neighbourBlockTagsLocationCondition.tagPatternId).documentation("A TagPattern can be used if the block at the chosen location needs to fulfill specific conditions.").addValidator(Validators.nonNull()).add()).append(new KeyedCodec<NeighbourDirection>("NeighbourBlock", new EnumCodec<NeighbourDirection>(NeighbourDirection.class)), (neighbourBlockTagsLocationCondition, neighbourDirection) -> {
@@ -37,11 +38,12 @@ extends WorldLocationCondition {
     protected IntRange support = new IntRange(1, 4);
 
     @Override
-    public boolean test(World world, int worldX, int worldY, int worldZ) {
+    public boolean test(@Nonnull World world, int worldX, int worldY, int worldZ) {
         if (worldY <= 0) {
             return false;
         }
-        Object worldChunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
+        Object worldChunk = world.getNonTickingChunk(chunkIndex);
         if (worldChunk == null) {
             return false;
         }
@@ -75,11 +77,18 @@ extends WorldLocationCondition {
         return this.checkBlockHasTag(worldX, yPos, worldZ, (BlockAccessor)worldChunk);
     }
 
-    private boolean checkBlockHasTag(int x, int y, int z, @Nonnull BlockAccessor worldChunk) {
+    private boolean checkBlockHasTag(int x, int y, int z, @Nullable BlockAccessor worldChunk) {
+        if (worldChunk == null) {
+            return false;
+        }
         int blockIndex = worldChunk.getBlock(x, y, z);
         TagPattern tagPattern = (TagPattern)TagPattern.getAssetMap().getAsset(this.tagPatternId);
         if (tagPattern != null) {
-            AssetExtraInfo.Data data = BlockType.getAssetMap().getAsset(blockIndex).getData();
+            BlockType blockType = BlockType.getAssetMap().getAsset(blockIndex);
+            if (blockType == null) {
+                return false;
+            }
+            AssetExtraInfo.Data data = blockType.getData();
             if (data == null) {
                 return false;
             }
@@ -121,7 +130,7 @@ extends WorldLocationCondition {
         return "NeighbourBlockTagsLocationCondition{tagPatternId='" + this.tagPatternId + "', neighbourDirection=" + String.valueOf((Object)this.neighbourDirection) + ", support=" + String.valueOf(this.support) + "} " + super.toString();
     }
 
-    private static enum NeighbourDirection {
+    protected static enum NeighbourDirection {
         ABOVE,
         BELOW,
         SIDEWAYS;

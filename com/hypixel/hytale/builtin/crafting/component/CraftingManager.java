@@ -52,6 +52,7 @@ import com.hypixel.hytale.server.core.inventory.container.filter.FilterType;
 import com.hypixel.hytale.server.core.inventory.transaction.ListTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.MaterialSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.MaterialTransaction;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -352,7 +353,14 @@ implements Component<EntityStore> {
         }
         List<ItemStack> itemStacks = CraftingManager.getOutputItemStacks(craftingRecipe, quantity);
         Inventory inventory = playerComponent.getInventory();
-        SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, inventory.getCombinedArmorHotbarStorage(), itemStacks);
+        PlayerSettings playerSettings = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+        if (playerSettings == null) {
+            playerSettings = PlayerSettings.defaults();
+        }
+        for (ItemStack itemStack : itemStacks) {
+            if (ItemStack.isEmpty(itemStack)) continue;
+            SimpleItemContainer.addOrDropItemStack(componentAccessor, ref, inventory.getContainerForItemPickup(itemStack.getItem(), playerSettings), itemStack);
+        }
     }
 
     private static boolean removeInputFromInventory(@Nonnull CraftingJob job, int currentItemId) {
@@ -723,6 +731,7 @@ implements Component<EntityStore> {
             this.timeSeconds = timeSeconds;
         }
 
+        @Nonnull
         public String toString() {
             return "BenchUpgradingJob{window=" + String.valueOf(this.window) + ", timeSeconds=" + this.timeSeconds + "}";
         }

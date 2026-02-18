@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class GradientWarpDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<GradientWarpDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(GradientWarpDensityAsset.class, GradientWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("SampleRange", Codec.DOUBLE, false), (t, k) -> {
         t.sampleRange = k;
     }, t -> t.sampleRange).addValidator(Validators.greaterThan(0.0)).add()).append(new KeyedCodec<Double>("WarpFactor", Codec.DOUBLE, false), (t, k) -> {
@@ -26,8 +27,8 @@ extends DensityAsset {
     }, t -> t.y2d).add()).build();
     private double sampleRange = 1.0;
     private double warpFactor = 1.0;
-    private boolean is2d = false;
-    private double y2d = 0.0;
+    private boolean is2d;
+    private double y2d;
 
     @Override
     @Nonnull

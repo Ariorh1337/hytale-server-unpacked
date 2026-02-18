@@ -41,13 +41,17 @@ import javax.annotation.Nullable;
 public class EnterPortalInteraction
 extends SimpleBlockInteraction {
     @Nonnull
+    private static final Message MESSAGE_PORTALS_DEVICE_REF_INVALID = Message.translation("server.portals.device.refInvalid");
+    @Nonnull
+    private static final Message MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD = Message.translation("server.portals.device.worldIsDead");
+    @Nonnull
+    private static final Message MESSAGE_PORTALS_DEVICE_NO_SPAWN = Message.translation("server.portals.device.worldNoSpawn");
+    @Nonnull
+    private static final Message MESSAGE_PORTALS_DEVICE_BLOCK_ENTITY_REF_INVALID = Message.translation("server.portals.device.blockEntityRefInvalid");
+    @Nonnull
     public static final Duration MINIMUM_TIME_IN_WORLD = Duration.ofMillis(3000L);
     @Nonnull
     public static final BuilderCodec<EnterPortalInteraction> CODEC = BuilderCodec.builder(EnterPortalInteraction.class, EnterPortalInteraction::new, SimpleBlockInteraction.CODEC).build();
-    private static final Message MESSAGE_PORTALS_DEVICE_REF_INVALID = Message.translation("server.portals.device.refInvalid");
-    private static final Message MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD = Message.translation("server.portals.device.worldIsDead");
-    private static final Message MESSAGE_PORTALS_DEVICE_NO_SPAWN = Message.translation("server.portals.device.worldNoSpawn");
-    private static final Message MESSAGE_PORTALS_DEVICE_BLOCK_ENTITY_REF_INVALID = Message.translation("server.portals.device.blockEntityRefInvalid");
 
     @Override
     @Nonnull
@@ -67,12 +71,13 @@ extends SimpleBlockInteraction {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        PortalDevice portalDevice = BlockModule.get().getComponent(PortalDevice.getComponentType(), world, targetBlock.x, targetBlock.y, targetBlock.z);
+        PortalDevice portalDevice = BlockModule.getComponent(PortalDevice.getComponentType(), world, targetBlock.x, targetBlock.y, targetBlock.z);
         if (portalDevice == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+        WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
         if (chunk == null) {
             context.getState().state = InteractionState.Failed;
             return;
@@ -92,7 +97,10 @@ extends SimpleBlockInteraction {
             return;
         }
         UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-        assert (uuidComponent != null);
+        if (uuidComponent == null) {
+            context.getState().state = InteractionState.Failed;
+            return;
+        }
         UUID playerUuid = uuidComponent.getUuid();
         EnterPortalInteraction.fetchTargetWorldState(targetWorld, playerUuid).thenAcceptAsync(state -> {
             if (!ref.isValid()) {
@@ -113,7 +121,10 @@ extends SimpleBlockInteraction {
                 }
                 case 2: {
                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-                    assert (playerRefComponent != null);
+                    if (playerRefComponent == null) {
+                        context.getState().state = InteractionState.Failed;
+                        return;
+                    }
                     Ref<ChunkStore> blockEntityRef = BlockModule.getBlockEntity(world, targetBlock.x, targetBlock.y, targetBlock.z);
                     if (blockEntityRef == null || !blockEntityRef.isValid()) {
                         playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_BLOCK_ENTITY_REF_INVALID);

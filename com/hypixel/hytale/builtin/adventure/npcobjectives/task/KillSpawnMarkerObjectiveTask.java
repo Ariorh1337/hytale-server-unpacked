@@ -29,8 +29,10 @@ import javax.annotation.Nonnull;
 
 public class KillSpawnMarkerObjectiveTask
 extends KillObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<KillSpawnMarkerObjectiveTask> CODEC = BuilderCodec.builder(KillSpawnMarkerObjectiveTask.class, KillSpawnMarkerObjectiveTask::new, KillObjectiveTask.CODEC).build();
     private static final ComponentType<EntityStore, SpawnMarkerEntity> SPAWN_MARKER_COMPONENT_TYPE = SpawnMarkerEntity.getComponentType();
+    @Nonnull
     private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
 
     public KillSpawnMarkerObjectiveTask(@Nonnull KillSpawnMarkerObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
@@ -58,12 +60,13 @@ extends KillObjectiveTask {
             String[] spawnMarkerIds = asset.getSpawnMarkerIds();
             HytaleLogger logger = ObjectivePlugin.get().getLogger();
             for (Ref ref : results) {
+                String spawnMarkerId;
                 SpawnMarkerEntity entitySpawnMarkerComponent = store.getComponent(ref, SPAWN_MARKER_COMPONENT_TYPE);
-                assert (entitySpawnMarkerComponent != null);
-                String spawnMarkerId = entitySpawnMarkerComponent.getSpawnMarkerId();
-                if (!ArrayUtil.contains(spawnMarkerIds, spawnMarkerId)) continue;
-                world.execute(() -> entitySpawnMarkerComponent.trigger(entityReference, store));
-                logger.at(Level.INFO).log("Triggered SpawnMarker '" + spawnMarkerId + "' at position: " + String.valueOf(store.getComponent(ref, TRANSFORM_COMPONENT_TYPE).getPosition()));
+                if (entitySpawnMarkerComponent == null || !ArrayUtil.contains(spawnMarkerIds, spawnMarkerId = entitySpawnMarkerComponent.getSpawnMarkerId())) continue;
+                world.execute(() -> entitySpawnMarkerComponent.trigger(ref, store));
+                TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
+                if (transformComponent == null) continue;
+                logger.at(Level.INFO).log("Triggered SpawnMarker '" + spawnMarkerId + "' at position: " + String.valueOf(transformComponent.getPosition()));
             }
         }
         KillTaskTransaction transaction = new KillTaskTransaction(this, objective, store);

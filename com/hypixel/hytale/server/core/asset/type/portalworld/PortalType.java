@@ -16,14 +16,13 @@ import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.portalworld.PortalDescription;
-import com.hypixel.hytale.server.core.asset.type.portalworld.PortalSpawn;
 import java.util.Collections;
 import java.util.Set;
 import javax.annotation.Nullable;
 
 public class PortalType
 implements JsonAssetWithMap<String, DefaultAssetMap<String, PortalType>> {
-    public static final AssetBuilderCodec<String, PortalType> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(PortalType.class, PortalType::new, Codec.STRING, (portalType, s) -> {
+    public static final AssetBuilderCodec<String, PortalType> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(PortalType.class, PortalType::new, Codec.STRING, (portalType, s) -> {
         portalType.id = s;
     }, portalType -> portalType.id, (asset, data) -> {
         asset.data = data;
@@ -31,9 +30,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, PortalType>> {
         portalType.instanceId = o;
     }, portalType -> portalType.instanceId).documentation("The instance id (folder name in Assets/Server/Instances) that this instance loads.").add()).append(new KeyedCodec<PortalDescription>("Description", PortalDescription.CODEC), (portalType, o) -> {
         portalType.description = o;
-    }, portalType -> portalType.description).documentation("The qualitative description of the portal.").add()).append(new KeyedCodec<PortalSpawn>("PlayerSpawn", PortalSpawn.CODEC), (portalType, o) -> {
-        portalType.portalSpawn = o;
-    }, portalType -> portalType.portalSpawn).documentation("If set, overrides the Instance's SpawnProvider with the portal's spawning system.").add()).append(new KeyedCodec<T[]>("CursedItems", Codec.STRING_ARRAY), (portalType, o) -> {
+    }, portalType -> portalType.description).documentation("The qualitative description of the portal.").add()).append(new KeyedCodec<T[]>("CursedItems", Codec.STRING_ARRAY), (portalType, o) -> {
         portalType.cursedItems = o == null ? Collections.emptySet() : Set.of(o);
     }, portalType -> (String[])portalType.cursedItems.toArray(String[]::new)).documentation("Which item drops are cursed when spawned in this portal.").add()).append(new KeyedCodec<Boolean>("VoidInvasionEnabled", Codec.BOOLEAN), (portalType, o) -> {
         portalType.voidInvasionEnabled = o;
@@ -48,7 +45,6 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, PortalType>> {
     private PortalDescription description;
     private String gameplayConfig = "Portal";
     private boolean voidInvasionEnabled = false;
-    private PortalSpawn portalSpawn;
     private Set<String> cursedItems = Collections.emptySet();
 
     public static AssetStore<String, PortalType, DefaultAssetMap<String, PortalType>> getAssetStore() {
@@ -77,11 +73,6 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, PortalType>> {
 
     public PortalDescription getDescription() {
         return this.description;
-    }
-
-    @Nullable
-    public PortalSpawn getPortalSpawn() {
-        return this.portalSpawn;
     }
 
     public Set<String> getCursedItems() {

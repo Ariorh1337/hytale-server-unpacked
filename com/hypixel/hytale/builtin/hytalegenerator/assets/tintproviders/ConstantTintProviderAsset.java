@@ -15,7 +15,9 @@ import javax.annotation.Nonnull;
 
 public class ConstantTintProviderAsset
 extends TintProviderAsset {
+    @Nonnull
     public static final Color DEFAULT_COLOR = ColorParseUtil.hexStringToColor("#FF0000");
+    @Nonnull
     public static final BuilderCodec<ConstantTintProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ConstantTintProviderAsset.class, ConstantTintProviderAsset::new, TintProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<Color>("Color", ProtocolCodecs.COLOR, true), (t, k) -> {
         t.color = k;
     }, k -> k.color).add()).build();

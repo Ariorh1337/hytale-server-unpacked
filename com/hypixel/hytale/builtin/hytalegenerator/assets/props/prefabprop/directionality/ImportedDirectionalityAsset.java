@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class ImportedDirectionalityAsset
 extends DirectionalityAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedDirectionalityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedDirectionalityAsset.class, ImportedDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, true), (asset, v) -> {
         asset.name = v;
     }, asset -> asset.name).add()).build();

@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 
 public class SoloInventoryCondition
 extends TaskConditionAsset {
+    @Nonnull
     public static final BuilderCodec<SoloInventoryCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SoloInventoryCondition.class, SoloInventoryCondition::new).append(new KeyedCodec<BlockTagOrItemIdField>("BlockTagOrItemId", BlockTagOrItemIdField.CODEC), (soloInventoryCondition, blockTagOrItemIdField) -> {
         soloInventoryCondition.blockTypeOrTagTask = blockTagOrItemIdField;
     }, soloInventoryCondition -> soloInventoryCondition.blockTypeOrTagTask).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<Integer>("Quantity", Codec.INTEGER), (soloInventoryCondition, integer) -> {
@@ -61,6 +62,9 @@ extends TaskConditionAsset {
         Inventory inventory = playerComponent.getInventory();
         if (this.holdInHand) {
             ItemStack itemInHand = inventory.getItemInHand();
+            if (itemInHand == null) {
+                return false;
+            }
             if (!this.blockTypeOrTagTask.isBlockTypeIncluded(itemInHand.getItemId())) {
                 return false;
             }

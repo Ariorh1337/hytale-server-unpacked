@@ -32,7 +32,7 @@ import it.unimi.dsi.fastutil.objects.ObjectList;
 import javax.annotation.Nonnull;
 
 public class DeployablesSystem {
-    private static void spawnParticleEffect(Ref<EntityStore> sourceRef, CommandBuffer<EntityStore> commandBuffer, Vector3d position, ModelParticle particle) {
+    private static void spawnParticleEffect(@Nonnull Ref<EntityStore> sourceRef, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Vector3d position, @Nonnull ModelParticle particle) {
         Vector3f particlePositionOffset = particle.getPositionOffset();
         Direction particleRotationOffset = particle.getRotationOffset();
         Vector3d particlePosition = new Vector3d(position.x, position.y, position.z);
@@ -57,8 +57,9 @@ public class DeployablesSystem {
         }
 
         @Override
-        public void tick(float dt, int index, ArchetypeChunk<EntityStore> archetypeChunk, Store<EntityStore> store, CommandBuffer<EntityStore> commandBuffer) {
+        public void tick(float dt, int index, ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
             DeployableOwnerComponent deployableOwnerComponent = archetypeChunk.getComponent(index, DeployableOwnerComponent.getComponentType());
+            assert (deployableOwnerComponent != null);
             deployableOwnerComponent.tick(commandBuffer);
         }
     }
@@ -66,9 +67,9 @@ public class DeployablesSystem {
     public static class DeployableRegisterer
     extends RefSystem<EntityStore> {
         private static void deregisterOwner(@Nonnull Ref<EntityStore> ref, @Nonnull DeployableComponent deployableComponent, @Nonnull DeployableConfig deployableConfig) {
+            DeployableOwnerComponent deployableOwnerComponent;
             Ref<EntityStore> ownerRef = deployableComponent.getOwner();
-            if (ownerRef != null && ownerRef.isValid()) {
-                DeployableOwnerComponent deployableOwnerComponent = ownerRef.getStore().getComponent(ownerRef, DeployableOwnerComponent.getComponentType());
+            if (ownerRef != null && ownerRef.isValid() && (deployableOwnerComponent = ownerRef.getStore().getComponent(ownerRef, DeployableOwnerComponent.getComponentType())) != null) {
                 deployableOwnerComponent.deRegisterDeployable(deployableConfig.getId(), ref);
             }
         }
@@ -81,8 +82,13 @@ public class DeployablesSystem {
         @Override
         public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
             DeployableComponent deployableComponent = store.getComponent(ref, DeployableComponent.getComponentType());
+            assert (deployableComponent != null);
+            TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transformComponent == null) {
+                return;
+            }
             DeployableConfig deployableConfig = deployableComponent.getConfig();
-            Vector3d position = store.getComponent(ref, TransformComponent.getComponentType()).getPosition();
+            Vector3d position = transformComponent.getPosition();
             Ref<EntityStore> ownerRef = deployableComponent.getOwner();
             int soundIndex = deployableConfig.getDeploySoundEventIndex();
             SoundUtil.playSoundEvent3d(null, soundIndex, position, commandBuffer);
@@ -103,8 +109,11 @@ public class DeployablesSystem {
         @Override
         public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
             DeployableComponent deployableComponent = store.getComponent(ref, DeployableComponent.getComponentType());
+            assert (deployableComponent != null);
+            TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+            assert (transformComponent != null);
             DeployableConfig deployableConfig = deployableComponent.getConfig();
-            Vector3d position = store.getComponent(ref, TransformComponent.getComponentType()).getPosition();
+            Vector3d position = transformComponent.getPosition();
             int despawnSoundIndex = deployableConfig.getDespawnSoundEventIndex();
             int dieSoundIndex = deployableConfig.getDieSoundEventIndex();
             if (dieSoundIndex != 0) {
@@ -135,9 +144,10 @@ public class DeployablesSystem {
         }
 
         @Override
-        public void tick(float dt, int index, ArchetypeChunk<EntityStore> archetypeChunk, Store<EntityStore> store, CommandBuffer<EntityStore> commandBuffer) {
-            DeployableComponent comp = archetypeChunk.getComponent(index, DeployableComponent.getComponentType());
-            comp.tick(dt, index, archetypeChunk, store, commandBuffer);
+        public void tick(float dt, int index, ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+            DeployableComponent deployableComponent = archetypeChunk.getComponent(index, DeployableComponent.getComponentType());
+            assert (deployableComponent != null);
+            deployableComponent.tick(dt, index, archetypeChunk, store, commandBuffer);
         }
     }
 }

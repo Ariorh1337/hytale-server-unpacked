@@ -31,9 +31,15 @@ import javax.annotation.Nullable;
 
 public class MacroCommandBase
 extends AbstractAsyncCommand {
+    @Nonnull
     public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    @Nonnull
     private static final Pattern regexBracketPattern = Pattern.compile("\\{(.*?)}");
+    @Nonnull
+    private static final Pattern PATTERN = Pattern.compile("\\\\\\{");
+    @Nonnull
     private final Map<String, Argument<?, ?>> arguments = new Object2ObjectOpenHashMap();
+    @Nonnull
     private final List<Pair<String, List<MacroCommandReplacement>>> commandReplacements = new ObjectArrayList<Pair<String, List<MacroCommandReplacement>>>();
     private final Map<String, String> defaultValueStrings = new Object2ObjectOpenHashMap<String, String>();
 
@@ -78,7 +84,7 @@ extends AbstractAsyncCommand {
                 }
                 replacements.add(replacement);
             }
-            commands[i] = command = command.replaceAll("\\\\\\{", "{");
+            commands[i] = command = PATTERN.matcher(command).replaceAll("{");
             this.commandReplacements.add(Pair.of(command, replacements));
         }
     }

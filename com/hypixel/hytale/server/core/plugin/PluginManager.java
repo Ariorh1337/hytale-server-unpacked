@@ -10,19 +10,23 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
-import com.hypixel.hytale.common.semver.Semver;
 import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.metrics.MetricsRegistry;
+import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
+import com.hypixel.hytale.server.core.config.ModConfig;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.MissingPluginDependencyException;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
@@ -33,10 +37,12 @@ import com.hypixel.hytale.server.core.plugin.commands.PluginCommand;
 import com.hypixel.hytale.server.core.plugin.event.PluginSetupEvent;
 import com.hypixel.hytale.server.core.plugin.pending.PendingLoadJavaPlugin;
 import com.hypixel.hytale.server.core.plugin.pending.PendingLoadPlugin;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.awt.Color;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,11 +55,15 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileAttribute;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -78,13 +88,14 @@ public class PluginManager {
     public static final MetricsRegistry<PluginManager> METRICS_REGISTRY = new MetricsRegistry<PluginManager>().register("Plugins", pluginManager -> (PluginBase[])pluginManager.getPlugins().toArray(PluginBase[]::new), new ArrayCodec<PluginBase>(PluginBase.METRICS_REGISTRY, PluginBase[]::new));
     private static PluginManager instance;
     @Nonnull
-    private final PluginClassLoader corePluginClassLoader = new PluginClassLoader(this, true, new URL[0]);
+    private final PluginClassLoader corePluginClassLoader = new PluginClassLoader(this, null, true, new URL[0]);
     @Nonnull
     private final List<PendingLoadPlugin> corePlugins = new ObjectArrayList<PendingLoadPlugin>();
     private final PluginBridgeClassLoader bridgeClassLoader = new PluginBridgeClassLoader(this, PluginManager.class.getClassLoader());
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private final Map<PluginIdentifier, PluginBase> plugins = new Object2ObjectLinkedOpenHashMap<PluginIdentifier, PluginBase>();
     private final Map<Path, PluginClassLoader> classLoaders = new ConcurrentHashMap<Path, PluginClassLoader>();
+    private boolean hasOutdatedPlugins = false;
     private final boolean loadExternalPlugins = true;
     @Nonnull
     private PluginState state = PluginState.NONE;
@@ -110,10 +121,17 @@ public class PluginManager {
         this.corePlugins.add(new PendingLoadJavaPlugin(null, builder, this.corePluginClassLoader));
     }
 
-    private boolean canLoadOnBoot(@Nonnull PluginManifest manifest) {
-        PluginIdentifier identifier = new PluginIdentifier(manifest);
-        HytaleServerConfig.ModConfig modConfig = HytaleServer.get().getConfig().getModConfig().get(identifier);
-        boolean enabled = modConfig == null || modConfig.getEnabled() == null ? !manifest.isDisabledByDefault() : modConfig.getEnabled();
+    private boolean canLoadOnBoot(@Nonnull PendingLoadPlugin plugin) {
+        boolean enabled;
+        PluginIdentifier identifier = plugin.getIdentifier();
+        PluginManifest manifest = plugin.getManifest();
+        ModConfig modConfig = HytaleServer.get().getConfig().getModConfig().get(identifier);
+        if (modConfig == null || modConfig.getEnabled() == null) {
+            HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+            enabled = !manifest.isDisabledByDefault() && (plugin.isInServerClassPath() || serverConfig.getDefaultModsEnabled());
+        } else {
+            enabled = modConfig.getEnabled();
+        }
         if (enabled) {
             return true;
         }
@@ -125,7 +143,6 @@ public class PluginManager {
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     public void setup() {
-        PluginBase plugin;
         Path self;
         if (this.state != PluginState.NONE) {
             throw new IllegalStateException("Expected PluginState.NONE but found " + String.valueOf((Object)this.state));
@@ -137,13 +154,13 @@ public class PluginManager {
         this.availablePlugins.clear();
         LOGGER.at(Level.INFO).log("Loading pending core plugins!");
         for (int i = 0; i < this.corePlugins.size(); ++i) {
-            PendingLoadPlugin plugin2 = this.corePlugins.get(i);
-            LOGGER.at(Level.INFO).log("- %s", plugin2.getIdentifier());
-            if (this.canLoadOnBoot(plugin2.getManifest())) {
-                PluginManager.loadPendingPlugin(pending, plugin2);
+            PendingLoadPlugin plugin = this.corePlugins.get(i);
+            LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
+            if (this.canLoadOnBoot(plugin)) {
+                PluginManager.loadPendingPlugin(pending, plugin);
                 continue;
             }
-            this.availablePlugins.put(plugin2.getIdentifier(), plugin2.getManifest());
+            this.availablePlugins.put(plugin.getIdentifier(), plugin.getManifest());
         }
         try {
             self = Paths.get(PluginManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
@@ -178,33 +195,85 @@ public class PluginManager {
         finally {
             this.lock.readLock().unlock();
         }
+        if (this.hasOutdatedPlugins && System.getProperty("hytale.allow_outdated_mods") == null) {
+            LOGGER.at(Level.SEVERE).log("One or more plugins are targeting a different server version. It is recommended to update these plugins to ensure compatibility.");
+            try {
+                if (!Constants.SINGLEPLAYER) {
+                    Thread.sleep(Duration.ofSeconds(2L));
+                }
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            HytaleServer.get().getEventBus().registerGlobal(AddPlayerToWorldEvent.class, event -> {
+                PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
+                Player player = event.getHolder().getComponent(Player.getComponentType());
+                if (playerRef == null || player == null) {
+                    return;
+                }
+                if (!player.hasPermission("hytale.mods.outdated.notify")) {
+                    return;
+                }
+                playerRef.sendMessage(Message.translation("server.pluginManager.outOfDatePlugins").color(Color.RED));
+            });
+        }
         this.loadOrder = PendingLoadPlugin.calculateLoadOrder(pending);
         this.loading = new Object2ObjectOpenHashMap<PluginIdentifier, PluginBase>();
         pending.forEach((identifier, pendingLoad) -> this.availablePlugins.put((PluginIdentifier)identifier, pendingLoad.getManifest()));
         ObjectArrayList<CompletableFuture<Void>> preLoadFutures = new ObjectArrayList<CompletableFuture<Void>>();
+        ObjectArrayList<PluginIdentifier> failedBootPlugins = new ObjectArrayList<PluginIdentifier>();
         this.lock.writeLock().lock();
         try {
             LOGGER.at(Level.FINE).log("Loading plugins!");
             for (PendingLoadPlugin pendingLoadPlugin : this.loadOrder) {
                 LOGGER.at(Level.FINE).log("- %s", pendingLoadPlugin.getIdentifier());
-                plugin = pendingLoadPlugin.load();
-                if (plugin == null) continue;
-                this.plugins.put(plugin.getIdentifier(), plugin);
-                this.loading.put(plugin.getIdentifier(), plugin);
-                CompletableFuture<Void> future = plugin.preLoad();
-                if (future == null) continue;
-                preLoadFutures.add(future);
+                try {
+                    PluginBase plugin = pendingLoadPlugin.load();
+                    this.plugins.put(plugin.getIdentifier(), plugin);
+                    this.loading.put(plugin.getIdentifier(), plugin);
+                    CompletableFuture<Void> future = plugin.preLoad();
+                    if (future == null) continue;
+                    preLoadFutures.add(future);
+                }
+                catch (ClassNotFoundException e) {
+                    ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load plugin %s. Failed to find main class!", pendingLoadPlugin.getPath());
+                    failedBootPlugins.add(pendingLoadPlugin.getIdentifier());
+                }
+                catch (NoSuchMethodException e) {
+                    ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load plugin %s. Requires default constructor!", pendingLoadPlugin.getPath());
+                    failedBootPlugins.add(pendingLoadPlugin.getIdentifier());
+                }
+                catch (Throwable e) {
+                    ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load plugin %s", pendingLoadPlugin.getPath());
+                    failedBootPlugins.add(pendingLoadPlugin.getIdentifier());
+                }
             }
         }
         finally {
             this.lock.writeLock().unlock();
         }
-        CompletableFuture.allOf((CompletableFuture[])preLoadFutures.toArray(CompletableFuture[]::new)).join();
-        for (PendingLoadPlugin pendingPlugin : this.loadOrder) {
-            plugin = this.loading.get(pendingPlugin.getIdentifier());
-            if (plugin == null || this.setup(plugin)) continue;
-            this.loading.remove(pendingPlugin.getIdentifier());
+        if (!failedBootPlugins.isEmpty() && !Constants.shouldSkipModValidation()) {
+            StringBuilder sb = new StringBuilder("Failed to boot the following plugins:\n");
+            for (PluginIdentifier failed : failedBootPlugins) {
+                sb.append(" - ").append(failed).append('\n');
+            }
+            HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(sb.toString().trim()));
+            return;
         }
+        CompletableFuture.allOf((CompletableFuture[])preLoadFutures.toArray(CompletableFuture[]::new)).join();
+        boolean hasFailed = false;
+        for (PendingLoadPlugin pendingPlugin : this.loadOrder) {
+            PluginBase plugin = this.loading.get(pendingPlugin.getIdentifier());
+            if (plugin == null || this.setup(plugin)) continue;
+            hasFailed = true;
+        }
+        if (Constants.shouldSkipModValidation() || !hasFailed) {
+            this.loading.values().removeIf(v -> v.getState().isInactive());
+            return;
+        }
+        StringBuilder stringBuilder = new StringBuilder("Failed to setup the following plugins:\n");
+        this.collectFailedPlugins(stringBuilder);
+        HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(stringBuilder.toString().trim()));
     }
 
     public void start() {
@@ -212,26 +281,45 @@ public class PluginManager {
             throw new IllegalStateException("Expected PluginState.SETUP but found " + String.valueOf((Object)this.state));
         }
         this.state = PluginState.START;
+        boolean hasFailed = false;
         for (PendingLoadPlugin pendingLoadPlugin : this.loadOrder) {
             PluginBase pluginBase = this.loading.get(pendingLoadPlugin.getIdentifier());
             if (pluginBase == null || this.start(pluginBase)) continue;
-            this.loading.remove(pendingLoadPlugin.getIdentifier());
+            hasFailed = true;
         }
-        this.loadOrder = null;
-        this.loading = null;
         StringBuilder sb = new StringBuilder();
-        for (Map.Entry<PluginIdentifier, HytaleServerConfig.ModConfig> entry : HytaleServer.get().getConfig().getModConfig().entrySet()) {
+        for (Map.Entry<PluginIdentifier, ModConfig> entry : HytaleServer.get().getConfig().getModConfig().entrySet()) {
             PluginIdentifier identifier = entry.getKey();
-            HytaleServerConfig.ModConfig modConfig = entry.getValue();
+            ModConfig modConfig = entry.getValue();
             SemverRange requiredVersion = modConfig.getRequiredVersion();
             if (requiredVersion == null || this.hasPlugin(identifier, requiredVersion)) continue;
             sb.append(String.format("%s, Version: %s\n", identifier, modConfig));
-            return;
         }
         if (!sb.isEmpty()) {
             String string = "Failed to start server! Missing Mods:\n" + String.valueOf(sb);
             LOGGER.at(Level.SEVERE).log(string);
             HytaleServer.get().shutdownServer(ShutdownReason.MISSING_REQUIRED_PLUGIN.withMessage(string));
+            return;
+        }
+        if (!hasFailed || Constants.shouldSkipModValidation()) {
+            this.loadOrder = null;
+            this.loading = null;
+            return;
+        }
+        sb = new StringBuilder("Failed to start the following plugins:\n");
+        this.collectFailedPlugins(sb);
+        HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(sb.toString().trim()));
+    }
+
+    private void collectFailedPlugins(StringBuilder sb) {
+        if (this.loading == null) {
+            return;
+        }
+        for (Map.Entry<PluginIdentifier, PluginBase> failed : this.loading.entrySet()) {
+            if (failed.getValue().getState() != PluginState.FAILED) continue;
+            Throwable reasonThrowable = failed.getValue().getFailureCause();
+            String reason = reasonThrowable != null ? reasonThrowable.toString() : "Unknown";
+            sb.append(" - ").append(failed.getKey()).append(": ").append(reason).append('\n');
         }
     }
 
@@ -270,10 +358,15 @@ public class PluginManager {
     }
 
     private void validatePluginDeps(@Nonnull PendingLoadPlugin pendingLoadPlugin, @Nullable Map<PluginIdentifier, PendingLoadPlugin> pending) {
-        Semver serverVersion = ManifestUtil.getVersion();
-        SemverRange serverVersionRange = pendingLoadPlugin.getManifest().getServerVersion();
-        if (serverVersionRange != null && serverVersion != null && !serverVersionRange.satisfies(serverVersion)) {
-            throw new MissingPluginDependencyException(String.format("Failed to load '%s' because version of server does not satisfy '%s'! ", pendingLoadPlugin.getIdentifier(), serverVersion));
+        String targetServerVersion;
+        String serverVersion = ManifestUtil.getVersion();
+        if (!pendingLoadPlugin.getManifest().getGroup().equals("Hytale") && ((targetServerVersion = pendingLoadPlugin.getManifest().getServerVersion()) == null || serverVersion != null && !targetServerVersion.equals(serverVersion))) {
+            if (targetServerVersion == null || "*".equals(targetServerVersion)) {
+                LOGGER.at(Level.WARNING).log("Plugin '%s' does not specify a target server version. You may encounter issues, please check for plugin updates. This will be a hard error in the future", pendingLoadPlugin.getIdentifier());
+            } else {
+                LOGGER.at(Level.WARNING).log("Plugin '%s' targets a different server version %s. You may encounter issues, please check for plugin updates.", (Object)pendingLoadPlugin.getIdentifier(), (Object)serverVersion);
+            }
+            this.hasOutdatedPlugins = true;
         }
         for (Map.Entry<PluginIdentifier, SemverRange> entry : pendingLoadPlugin.getManifest().getDependencies().entrySet()) {
             PluginBase loadedBase;
@@ -314,7 +407,7 @@ public class PluginManager {
                 if (!Files.isRegularFile(file, new LinkOption[0]) || !file.getFileName().toString().toLowerCase().endsWith(".jar") || (plugin = this.loadPendingJavaPlugin(file)) == null) continue;
                 assert (plugin.getPath() != null);
                 LOGGER.at(Level.INFO).log("- %s from path %s", (Object)plugin.getIdentifier(), (Object)path.relativize(plugin.getPath()));
-                if (this.canLoadOnBoot(plugin.getManifest())) {
+                if (this.canLoadOnBoot(plugin)) {
                     PluginManager.loadPendingPlugin(pending, plugin);
                     continue;
                 }
@@ -327,33 +420,41 @@ public class PluginManager {
     }
 
     /*
+     * Enabled aggressive block sorting
+     * Enabled unnecessary exception pruning
      * Enabled aggressive exception aggregation
      */
     @Nullable
     private PendingLoadJavaPlugin loadPendingJavaPlugin(@Nonnull Path file) {
-        try {
-            URL url = file.toUri().toURL();
-            PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(file, path -> new PluginClassLoader(this, false, url));
-            URL resource = pluginClassLoader.findResource("manifest.json");
-            if (resource == null) {
+        try (FileSystem fs = FileSystems.newFileSystem(file);){
+            PluginManifest manifest;
+            Path resource = fs.getPath("manifest.json", new String[0]);
+            if (!Files.exists(resource, new LinkOption[0])) {
                 LOGGER.at(Level.SEVERE).log("Failed to load pending plugin from '%s'. Failed to load manifest file!", file.toString());
-                return null;
-            }
-            try (InputStream stream = resource.openStream();){
-                PendingLoadJavaPlugin pendingLoadJavaPlugin;
-                try (InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);){
-                    char[] buffer = RawJsonReader.READ_BUFFER.get();
-                    RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
-                    ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
-                    PluginManifest manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
-                    extraInfo.getValidationResults().logOrThrowValidatorExceptions(LOGGER);
-                    pendingLoadJavaPlugin = new PendingLoadJavaPlugin(file, manifest, pluginClassLoader);
-                }
+                PendingLoadJavaPlugin pendingLoadJavaPlugin = null;
                 return pendingLoadJavaPlugin;
             }
+            try (InputStream stream = Files.newInputStream(resource, new OpenOption[0]);
+                 InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);){
+                char[] buffer = RawJsonReader.READ_BUFFER.get();
+                RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
+                ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
+                manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+                if (manifest == null) {
+                    LOGGER.at(Level.SEVERE).log("Failed to load pending plugin from '%s'. Failed to decode manifest file!", file.toString());
+                    PendingLoadJavaPlugin pendingLoadJavaPlugin = null;
+                    return pendingLoadJavaPlugin;
+                }
+                extraInfo.getValidationResults().logOrThrowValidatorExceptions(LOGGER);
+            }
+            URL url = file.toUri().toURL();
+            PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(file, path -> new PluginClassLoader(this, new PluginIdentifier(manifest), false, url));
+            PendingLoadJavaPlugin pendingLoadJavaPlugin = new PendingLoadJavaPlugin(file, manifest, pluginClassLoader);
+            return pendingLoadJavaPlugin;
         }
         catch (MalformedURLException e) {
             ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load pending plugin from '%s'. Failed to create URLClassLoader!", file.toString());
+            return null;
         }
         catch (IOException e) {
             ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load pending plugin %s. Failed to load manifest file!", file.toString());
@@ -362,7 +463,7 @@ public class PluginManager {
     }
 
     private void loadPluginsInClasspath(@Nonnull Map<PluginIdentifier, PendingLoadPlugin> pending, @Nonnull Map<PluginIdentifier, PluginManifest> rejectedBootList) {
-        block31: {
+        block34: {
             LOGGER.at(Level.INFO).log("Loading pending classpath plugins!");
             try {
                 URI uri = PluginManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
@@ -379,21 +480,25 @@ public class PluginManager {
                             ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
                             PluginManifest manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
                             extraInfo.getValidationResults().logOrThrowValidatorExceptions(LOGGER);
+                            if (manifest == null) {
+                                LOGGER.at(Level.SEVERE).log("Failed to load pending plugin from '%s'. Failed to decode manifest file!", manifestUrl);
+                                return;
+                            }
                             if (connection instanceof JarURLConnection) {
                                 JarURLConnection jarURLConnection = (JarURLConnection)connection;
                                 URL classpathUrl = jarURLConnection.getJarFileURL();
                                 path = Path.of(classpathUrl.toURI());
-                                PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(path, f -> new PluginClassLoader(this, true, classpathUrl));
+                                PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(path, f -> new PluginClassLoader(this, new PluginIdentifier(manifest), true, classpathUrl));
                                 plugin = new PendingLoadJavaPlugin(path, manifest, pluginClassLoader);
                             } else {
                                 URI pluginUri = manifestUrl.toURI().resolve(".");
                                 path = Paths.get(pluginUri);
                                 URL classpathUrl = pluginUri.toURL();
-                                PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(path, f -> new PluginClassLoader(this, true, classpathUrl));
+                                PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(path, f -> new PluginClassLoader(this, new PluginIdentifier(manifest), true, classpathUrl));
                                 plugin = new PendingLoadJavaPlugin(path, manifest, pluginClassLoader);
                             }
                             LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
-                            if (this.canLoadOnBoot(plugin.getManifest())) {
+                            if (this.canLoadOnBoot(plugin)) {
                                 PluginManager.loadPendingPlugin(pending, plugin);
                                 continue;
                             }
@@ -405,7 +510,7 @@ public class PluginManager {
                         }
                     }
                     URL manifestsUrl = classLoader.getResource("manifests.json");
-                    if (manifestsUrl == null) break block31;
+                    if (manifestsUrl == null) break block34;
                     try (InputStream stream = manifestsUrl.openStream();
                          InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);){
                         char[] buffer = RawJsonReader.READ_BUFFER.get();
@@ -415,11 +520,11 @@ public class PluginManager {
                         extraInfo.getValidationResults().logOrThrowValidatorExceptions(LOGGER);
                         URL url = uri.toURL();
                         Path path = Paths.get(uri);
-                        PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(path, f -> new PluginClassLoader(this, true, url));
+                        PluginClassLoader pluginClassLoader = this.classLoaders.computeIfAbsent(path, f -> new PluginClassLoader(this, null, true, url));
                         for (PluginManifest manifest : manifests) {
                             PendingLoadJavaPlugin plugin = new PendingLoadJavaPlugin(path, manifest, pluginClassLoader);
                             LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
-                            if (this.canLoadOnBoot(plugin.getManifest())) {
+                            if (this.canLoadOnBoot(plugin)) {
                                 PluginManager.loadPendingPlugin(pending, plugin);
                                 continue;
                             }
@@ -578,7 +683,7 @@ public class PluginManager {
                             reader.close();
                             continue;
                         }
-                        PluginClassLoader pluginClassLoader = new PluginClassLoader(this, true, uri.toURL());
+                        PluginClassLoader pluginClassLoader = new PluginClassLoader(this, identifier, true, uri.toURL());
                         PendingLoadJavaPlugin plugin = new PendingLoadJavaPlugin(Paths.get(uri), manifest, pluginClassLoader);
                         boolean bl = this.load(plugin);
                         reader.close();
@@ -600,7 +705,7 @@ public class PluginManager {
                         extraInfo.getValidationResults().logOrThrowValidatorExceptions(LOGGER);
                         for (PluginManifest manifest : manifests) {
                             if (!new PluginIdentifier(manifest).equals(identifier)) continue;
-                            PluginClassLoader pluginClassLoader = new PluginClassLoader(this, true, uri.toURL());
+                            PluginClassLoader pluginClassLoader = new PluginClassLoader(this, identifier, true, uri.toURL());
                             PendingLoadJavaPlugin plugin = new PendingLoadJavaPlugin(Paths.get(uri), manifest, pluginClassLoader);
                             boolean bl = this.load(plugin);
                             return bl;
@@ -713,9 +818,9 @@ public class PluginManager {
         if (pendingLoadPlugin == null) {
             return false;
         }
-        this.validatePluginDeps(pendingLoadPlugin, null);
-        PluginBase plugin = pendingLoadPlugin.load();
-        if (plugin != null) {
+        try {
+            this.validatePluginDeps(pendingLoadPlugin, null);
+            PluginBase plugin = pendingLoadPlugin.load();
             this.lock.writeLock().lock();
             try {
                 this.plugins.put(plugin.getIdentifier(), plugin);
@@ -730,28 +835,49 @@ public class PluginManager {
                 return result;
             }
             preload.thenAccept(v -> {
-                this.setup(plugin);
-                this.start(plugin);
+                if (!this.setup(plugin)) {
+                    this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
+                    return;
+                }
+                if (!this.start(plugin)) {
+                    this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
+                    return;
+                }
                 this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
             });
+            this.pluginListPageManager.notifyPluginChange(this.plugins, pendingLoadPlugin.getIdentifier());
         }
-        this.pluginListPageManager.notifyPluginChange(this.plugins, pendingLoadPlugin.getIdentifier());
+        catch (ClassNotFoundException e) {
+            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load plugin %s. Failed to find main class!", pendingLoadPlugin.getPath());
+        }
+        catch (NoSuchMethodException e) {
+            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load plugin %s. Requires default constructor!", pendingLoadPlugin.getPath());
+        }
+        catch (Throwable e) {
+            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to load plugin %s", pendingLoadPlugin.getPath());
+        }
         return false;
     }
 
     /*
      * Enabled aggressive block sorting
+     * Enabled unnecessary exception pruning
+     * Enabled aggressive exception aggregation
      */
     private boolean setup(@Nonnull PluginBase plugin) {
         if (plugin.getState() == PluginState.NONE && this.dependenciesMatchState(plugin, PluginState.SETUP, PluginState.SETUP)) {
             LOGGER.at(Level.FINE).log("Setting up plugin %s", plugin.getIdentifier());
             boolean prev = AssetStore.DISABLE_DYNAMIC_DEPENDENCIES;
             AssetStore.DISABLE_DYNAMIC_DEPENDENCIES = false;
-            plugin.setup0();
-            AssetStore.DISABLE_DYNAMIC_DEPENDENCIES = prev;
+            try {
+                plugin.setup0();
+            }
+            finally {
+                AssetStore.DISABLE_DYNAMIC_DEPENDENCIES = prev;
+            }
             AssetModule.get().initPendingStores();
             HytaleServer.get().doneSetup(plugin);
-            if (plugin.getState() == PluginState.DISABLED) {
+            if (plugin.getState().isInactive()) {
                 plugin.shutdown0(false);
                 this.plugins.remove(plugin.getIdentifier());
                 return false;
@@ -774,7 +900,7 @@ public class PluginManager {
             LOGGER.at(Level.FINE).log("Starting plugin %s", plugin.getIdentifier());
             plugin.start0();
             HytaleServer.get().doneStart(plugin);
-            if (plugin.getState() == PluginState.DISABLED) {
+            if (plugin.getState().isInactive()) {
                 plugin.shutdown0(false);
                 this.plugins.remove(plugin.getIdentifier());
                 return false;
@@ -794,6 +920,7 @@ public class PluginManager {
             if (dependency != null && dependency.getState() == requiredState) continue;
             LOGGER.at(Level.SEVERE).log(plugin.getName() + " is lacking dependency " + dependencyOnManifest.getName() + " at stage " + String.valueOf((Object)stage));
             LOGGER.at(Level.SEVERE).log(plugin.getName() + " DISABLED!");
+            plugin.setFailureCause(new Exception("Missing dependency " + dependencyOnManifest.getName()));
             return false;
         }
         return true;
@@ -801,7 +928,7 @@ public class PluginManager {
 
     private static void loadPendingPlugin(@Nonnull Map<PluginIdentifier, PendingLoadPlugin> pending, @Nonnull PendingLoadPlugin plugin) {
         if (pending.putIfAbsent(plugin.getIdentifier(), plugin) != null) {
-            throw new IllegalArgumentException("Tried to load duplicate plugin");
+            throw new IllegalArgumentException("Tried to load duplicate plugin: " + String.valueOf(plugin.getIdentifier()));
         }
         for (PendingLoadPlugin subPlugin : plugin.createSubPendingLoadPlugins()) {
             PluginManager.loadPendingPlugin(pending, subPlugin);

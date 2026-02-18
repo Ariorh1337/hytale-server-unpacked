@@ -6,6 +6,7 @@ package com.hypixel.hytale.builtin.adventure.objectives.task;
 import com.hypixel.hytale.builtin.adventure.objectives.Objective;
 import com.hypixel.hytale.builtin.adventure.objectives.config.task.ObjectiveTaskAsset;
 import com.hypixel.hytale.builtin.adventure.objectives.config.task.ReachLocationTaskAsset;
+import com.hypixel.hytale.builtin.adventure.objectives.markers.ObjectiveTaskMarker;
 import com.hypixel.hytale.builtin.adventure.objectives.markers.reachlocation.ReachLocationMarker;
 import com.hypixel.hytale.builtin.adventure.objectives.task.ObjectiveTask;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.TransactionRecord;
@@ -18,18 +19,18 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ReachLocationTask
 extends ObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<ReachLocationTask> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ReachLocationTask.class, ReachLocationTask::new, BASE_CODEC).append(new KeyedCodec<Boolean>("Completed", Codec.BOOLEAN), (reachLocationTask, aBoolean) -> {
         reachLocationTask.completed = aBoolean;
     }, reachLocationTask -> reachLocationTask.completed).add()).append(new KeyedCodec<Boolean>("MarkerLoaded", Codec.BOOLEAN), (reachLocationTask, transactionRecord) -> {
@@ -37,7 +38,9 @@ extends ObjectiveTask {
     }, reachLocationTask -> reachLocationTask.markerLoaded).add()).build();
     @Nonnull
     public static String MARKER_ICON = "Home.png";
+    @Nonnull
     private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
+    @Nonnull
     private static final ComponentType<EntityStore, ReachLocationMarker> REACH_LOCATION_MARKER_COMPONENT_TYPE = ReachLocationMarker.getComponentType();
     private boolean completed;
     private boolean markerLoaded;
@@ -105,7 +108,8 @@ extends ObjectiveTask {
                 closestLocationName = locationName;
             }
             if (closestLocationName != null) {
-                this.addMarker(new MapMarker(this.getMarkerId(objective), closestLocationName, MARKER_ICON, PositionUtil.toTransformPacket(new Transform(closestPosition)), null));
+                ObjectiveTaskMarker marker = new ObjectiveTaskMarker(this.getMarkerId(objective), new Transform(closestPosition), MARKER_ICON, Message.raw(closestLocationName));
+                this.addMarker(marker);
                 this.markerLoaded = true;
                 return null;
             }
@@ -125,7 +129,8 @@ extends ObjectiveTask {
         if (locationName == null) {
             return;
         }
-        this.addMarker(new MapMarker(this.getMarkerId(objective), locationName, MARKER_ICON, PositionUtil.toTransformPacket(new Transform(position)), null));
+        ObjectiveTaskMarker marker = new ObjectiveTaskMarker(this.getMarkerId(objective), new Transform(position), MARKER_ICON, Message.raw(locationName));
+        this.addMarker(marker);
         this.markerLoaded = true;
     }
 
@@ -133,7 +138,7 @@ extends ObjectiveTask {
     @Nonnull
     public com.hypixel.hytale.protocol.ObjectiveTask toPacket(@Nonnull Objective objective) {
         com.hypixel.hytale.protocol.ObjectiveTask packet = new com.hypixel.hytale.protocol.ObjectiveTask();
-        packet.taskDescriptionKey = this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex);
+        packet.taskDescriptionKey = Message.translation(this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex)).getFormattedMessage();
         packet.currentCompletion = this.completed ? 1 : 0;
         packet.completionNeeded = 1;
         return packet;

@@ -9,8 +9,10 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
+import javax.annotation.Nonnull;
 
 public class MacroCommandParameter {
+    @Nonnull
     public static final BuilderCodec<MacroCommandParameter> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(MacroCommandParameter.class, MacroCommandParameter::new).append(new KeyedCodec<String>("Name", Codec.STRING, true), (macroParameter, name) -> {
         macroParameter.name = name;
     }, macroParameter -> macroParameter.name).add()).append(new KeyedCodec<String>("Description", Codec.STRING, true), (macroParameter, description) -> {

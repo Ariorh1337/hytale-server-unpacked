@@ -45,6 +45,7 @@ import javax.annotation.Nullable;
 
 public class BlockSpawnerPlugin
 extends JavaPlugin {
+    @Nonnull
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     private ComponentType<ChunkStore, BlockSpawner> blockSpawnerComponentType;
     private static BlockSpawnerPlugin INSTANCE;
@@ -68,26 +69,26 @@ extends JavaPlugin {
         this.getEventRegistry().registerGlobal(PrefabBufferValidator.ValidateBlockEvent.class, BlockSpawnerPlugin::validatePrefabBlock);
     }
 
-    private static void validatePrefabBlock(PrefabBufferValidator.ValidateBlockEvent validateBlockEvent) {
+    private static void validatePrefabBlock(@Nonnull PrefabBufferValidator.ValidateBlockEvent validateBlockEvent) {
         Holder<ChunkStore> holder = validateBlockEvent.holder();
         if (holder == null) {
             return;
         }
-        BlockSpawner spawner = holder.getComponent(BlockSpawner.getComponentType());
-        if (spawner == null) {
+        BlockSpawner blockSpawnerComponent = holder.getComponent(BlockSpawner.getComponentType());
+        if (blockSpawnerComponent == null) {
             return;
         }
         BlockType blockType = BlockType.getAssetMap().getAsset(validateBlockEvent.blockId());
         if (blockType == null) {
             return;
         }
-        if (spawner.getBlockSpawnerId() == null) {
+        if (blockSpawnerComponent.getBlockSpawnerId() == null) {
             validateBlockEvent.reason().append("\t Block ").append(blockType.getId()).append(" at ").append(validateBlockEvent.x()).append(", ").append(validateBlockEvent.y()).append(", ").append(validateBlockEvent.z()).append(" has no defined block spawner id").append('\n');
             return;
         }
-        BlockSpawnerTable blockSpawner = BlockSpawnerTable.getAssetMap().getAsset(spawner.getBlockSpawnerId());
+        BlockSpawnerTable blockSpawner = BlockSpawnerTable.getAssetMap().getAsset(blockSpawnerComponent.getBlockSpawnerId());
         if (blockSpawner == null) {
-            validateBlockEvent.reason().append("\t Block ").append(blockType.getId()).append(" at ").append(validateBlockEvent.x()).append(", ").append(validateBlockEvent.y()).append(", ").append(validateBlockEvent.z()).append(" has an invalid spawner id ").append(spawner.getBlockSpawnerId()).append('\n');
+            validateBlockEvent.reason().append("\t Block ").append(blockType.getId()).append(" at ").append(validateBlockEvent.x()).append(", ").append(validateBlockEvent.y()).append(", ").append(validateBlockEvent.z()).append(" has an invalid spawner id ").append(blockSpawnerComponent.getBlockSpawnerId()).append('\n');
         }
     }
 
@@ -97,8 +98,11 @@ extends JavaPlugin {
 
     private static class BlockSpawnerSystem
     extends RefSystem<ChunkStore> {
+        @Nonnull
         private static final ComponentType<ChunkStore, BlockSpawner> COMPONENT_TYPE = BlockSpawner.getComponentType();
+        @Nonnull
         private static final ComponentType<ChunkStore, BlockModule.BlockStateInfo> BLOCK_INFO_COMPONENT_TYPE = BlockModule.BlockStateInfo.getComponentType();
+        @Nonnull
         private static final Query<ChunkStore> QUERY = Query.and(COMPONENT_TYPE, BLOCK_INFO_COMPONENT_TYPE);
 
         @Override
@@ -112,11 +116,11 @@ extends JavaPlugin {
             if (worldConfig.getGameMode() == GameMode.Creative) {
                 return;
             }
-            BlockSpawner state = commandBuffer.getComponent(ref, COMPONENT_TYPE);
-            assert (state != null);
-            BlockModule.BlockStateInfo info = commandBuffer.getComponent(ref, BLOCK_INFO_COMPONENT_TYPE);
-            assert (info != null);
-            String blockSpawnerId = state.getBlockSpawnerId();
+            BlockSpawner blockSpawnerComponent = commandBuffer.getComponent(ref, COMPONENT_TYPE);
+            assert (blockSpawnerComponent != null);
+            BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BLOCK_INFO_COMPONENT_TYPE);
+            assert (blockStateInfoComponent != null);
+            String blockSpawnerId = blockSpawnerComponent.getBlockSpawnerId();
             if (blockSpawnerId == null) {
                 return;
             }
@@ -125,14 +129,17 @@ extends JavaPlugin {
                 LOGGER.at(Level.WARNING).log("Failed to find BlockSpawner Asset by name: %s", blockSpawnerId);
                 return;
             }
-            Ref<ChunkStore> chunk = info.getChunkRef();
-            if (chunk == null) {
+            Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
+            if (!chunkRef.isValid()) {
                 return;
             }
-            WorldChunk wc = commandBuffer.getComponent(chunk, WorldChunk.getComponentType());
-            int x = ChunkUtil.worldCoordFromLocalCoord(wc.getX(), ChunkUtil.xFromBlockInColumn(info.getIndex()));
-            int y = ChunkUtil.yFromBlockInColumn(info.getIndex());
-            int z = ChunkUtil.worldCoordFromLocalCoord(wc.getZ(), ChunkUtil.zFromBlockInColumn(info.getIndex()));
+            WorldChunk worldChunkComponent = commandBuffer.getComponent(chunkRef, WorldChunk.getComponentType());
+            if (worldChunkComponent == null) {
+                return;
+            }
+            int x = ChunkUtil.worldCoordFromLocalCoord(worldChunkComponent.getX(), ChunkUtil.xFromBlockInColumn(blockStateInfoComponent.getIndex()));
+            int y = ChunkUtil.yFromBlockInColumn(blockStateInfoComponent.getIndex());
+            int z = ChunkUtil.worldCoordFromLocalCoord(worldChunkComponent.getZ(), ChunkUtil.zFromBlockInColumn(blockStateInfoComponent.getIndex()));
             long seed = worldConfig.getSeed();
             double randomRnd = HashUtil.random(x, y, z, seed + -1699164769L);
             BlockSpawnerEntry entry = table.getEntries().get(randomRnd);
@@ -159,7 +166,7 @@ extends JavaPlugin {
                     if (variantRotation == VariantRotation.None) {
                         yield RotationTuple.NONE;
                     }
-                    RotationTuple spawnerRotation = RotationTuple.get(wc.getRotationIndex(x, y, z));
+                    RotationTuple spawnerRotation = RotationTuple.get(worldChunkComponent.getRotationIndex(x, y, z));
                     Rotation spawnerYaw = spawnerRotation.yaw();
                     yield BlockRotationUtil.getRotated(RotationTuple.NONE, Axis.Y, spawnerYaw, variantRotation);
                 }
@@ -173,9 +180,9 @@ extends JavaPlugin {
                 }
                 int blockId = BlockType.getAssetMap().getIndex(blockKey);
                 BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
-                wc.setBlock(x, y, z, blockId, blockType, rotation.index(), 0, flags);
+                worldChunkComponent.setBlock(x, y, z, blockId, blockType, rotation.index(), 0, flags);
                 if (holder != null) {
-                    wc.setState(x, y, z, (Holder<ChunkStore>)holder.clone());
+                    worldChunkComponent.setState(x, y, z, (Holder<ChunkStore>)holder.clone());
                 }
             });
         }

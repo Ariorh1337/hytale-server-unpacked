@@ -12,30 +12,41 @@ import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.provider.IChunkStorageProvider;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSets;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class EmptyChunkStorageProvider
-implements IChunkStorageProvider {
+implements IChunkStorageProvider<Void> {
     public static final String ID = "Empty";
     @Nonnull
     public static final EmptyChunkStorageProvider INSTANCE = new EmptyChunkStorageProvider();
     @Nonnull
     public static final BuilderCodec<EmptyChunkStorageProvider> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(EmptyChunkStorageProvider.class, () -> INSTANCE).documentation("A chunk storage provider that discards any chunks to save and will always fail to find chunks.")).build();
     @Nonnull
-    public static final EmptyChunkLoader EMPTY_CHUNK_LOADER = new EmptyChunkLoader();
+    private static final EmptyChunkLoader EMPTY_CHUNK_LOADER = new EmptyChunkLoader();
     @Nonnull
-    public static final EmptyChunkSaver EMPTY_CHUNK_SAVER = new EmptyChunkSaver();
+    private static final EmptyChunkSaver EMPTY_CHUNK_SAVER = new EmptyChunkSaver();
+
+    @Override
+    public Void initialize(@NonNullDecl Store<ChunkStore> store) throws IOException {
+        return null;
+    }
+
+    @Override
+    public void close(@NonNullDecl Void o, @NonNullDecl Store<ChunkStore> store) throws IOException {
+    }
 
     @Override
     @Nonnull
-    public IChunkLoader getLoader(@Nonnull Store<ChunkStore> store) {
+    public IChunkLoader getLoader(@Nonnull Void object, @Nonnull Store<ChunkStore> store) {
         return EMPTY_CHUNK_LOADER;
     }
 
     @Override
     @Nonnull
-    public IChunkSaver getSaver(@Nonnull Store<ChunkStore> store) {
+    public IChunkSaver getSaver(@Nonnull Void object, @Nonnull Store<ChunkStore> store) {
         return EMPTY_CHUNK_SAVER;
     }
 

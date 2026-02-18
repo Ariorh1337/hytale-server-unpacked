@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class GiveItemsCompletionAsset
 extends ObjectiveCompletionAsset {
+    @Nonnull
     public static final BuilderCodec<GiveItemsCompletionAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(GiveItemsCompletionAsset.class, GiveItemsCompletionAsset::new, BASE_CODEC).append(new KeyedCodec("DropList", new ContainedAssetCodec(ItemDropList.class, ItemDropList.CODEC)), (objective, dropListId) -> {
         objective.dropListId = dropListId;
     }, objective -> objective.dropListId).addValidator(Validators.nonNull()).addValidator(ItemDropList.VALIDATOR_CACHE.getValidator()).add()).build();

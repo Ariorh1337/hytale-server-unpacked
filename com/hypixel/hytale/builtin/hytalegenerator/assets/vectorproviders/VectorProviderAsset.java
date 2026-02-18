@@ -27,31 +27,36 @@ import javax.annotation.Nonnull;
 public abstract class VectorProviderAsset
 implements Cleanable,
 JsonAssetWithMap<String, DefaultAssetMap<String, VectorProviderAsset>> {
+    @Nonnull
     public static final AssetCodecMapCodec<String, VectorProviderAsset> CODEC = new AssetCodecMapCodec<String, VectorProviderAsset>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.data = data;
     }, t -> t.data);
+    @Nonnull
     private static final Map<String, Exported> exportedNodes = new ConcurrentHashMap<String, Exported>();
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(VectorProviderAsset.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final BuilderCodec<VectorProviderAsset> ABSTRACT_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(VectorProviderAsset.class).append(new KeyedCodec<Boolean>("Skip", Codec.BOOLEAN, false), (t, k) -> {
         t.skip = k;
     }, t -> t.skip).add()).append(new KeyedCodec<String>("ExportAs", Codec.STRING, false), (t, k) -> {
         t.exportName = k;
     }, t -> t.exportName).add()).afterDecode(asset -> {
         if (asset.exportName != null && !asset.exportName.isEmpty()) {
+            boolean isSingleInstance;
             if (exportedNodes.containsKey(asset.exportName)) {
                 LoggerUtil.getLogger().warning("Duplicate export name for asset: " + asset.exportName);
             }
-            Exported exported = new Exported();
-            exported.asset = asset;
             if (asset instanceof ExportedVectorProviderAsset) {
                 ExportedVectorProviderAsset exportedAsset = (ExportedVectorProviderAsset)asset;
-                exported.singleInstance = exportedAsset.isSingleInstance();
+                isSingleInstance = exportedAsset.isSingleInstance();
             } else {
-                exported.singleInstance = false;
+                isSingleInstance = false;
             }
+            Exported exported = new Exported(isSingleInstance, (VectorProviderAsset)asset);
             exportedNodes.put(asset.exportName, exported);
             LoggerUtil.getLogger().fine("Registered imported node asset with name '" + asset.exportName + "' with asset id '" + asset.id);
         }
@@ -84,32 +89,40 @@ JsonAssetWithMap<String, DefaultAssetMap<String, VectorProviderAsset>> {
     }
 
     public static class Exported {
-        public boolean singleInstance;
+        public boolean isSingleInstance;
+        @Nonnull
         public VectorProviderAsset asset;
-        public VectorProvider builtInstance;
+        @Nonnull
+        public Map<WorkerIndexer.Id, VectorProvider> threadInstances;
+
+        public Exported(boolean isSingleInstance, @Nonnull VectorProviderAsset asset) {
+            this.isSingleInstance = isSingleInstance;
+            this.asset = asset;
+            this.threadInstances = new ConcurrentHashMap<WorkerIndexer.Id, VectorProvider>();
+        }
     }
 
     public static class Argument {
         public SeedBox parentSeed;
         public ReferenceBundle referenceBundle;
-        public WorkerIndexer workerIndexer;
+        public WorkerIndexer.Id workerId;
 
-        public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+        public Argument(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
             this.parentSeed = parentSeed;
             this.referenceBundle = referenceBundle;
-            this.workerIndexer = workerIndexer;
+            this.workerId = workerId;
         }
 
         public Argument(@Nonnull Argument argument) {
             this.parentSeed = argument.parentSeed;
             this.referenceBundle = argument.referenceBundle;
-            this.workerIndexer = argument.workerIndexer;
+            this.workerId = argument.workerId;
         }
 
         public Argument(@Nonnull DensityAsset.Argument argument) {
             this.parentSeed = argument.parentSeed;
             this.referenceBundle = argument.referenceBundle;
-            this.workerIndexer = argument.workerIndexer;
+            this.workerId = argument.workerId;
         }
     }
 }

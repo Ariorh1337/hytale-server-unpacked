@@ -11,8 +11,6 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.schema.metadata.HytaleType;
 import com.hypixel.hytale.codec.schema.metadata.ui.UIDisplayMode;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.AccumulationMode;
 import com.hypixel.hytale.protocol.ChangeStatBehaviour;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
@@ -36,14 +34,12 @@ import com.hypixel.hytale.protocol.Size;
 import com.hypixel.hytale.protocol.UVMotion;
 import com.hypixel.hytale.protocol.UVMotionCurveType;
 import com.hypixel.hytale.protocol.Vector2f;
-import com.hypixel.hytale.protocol.packets.worldmap.ContextMenuItem;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.common.BlockyAnimationCache;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.codec.protocol.ColorAlphaCodec;
 import com.hypixel.hytale.server.core.codec.protocol.ColorCodec;
-import com.hypixel.hytale.server.core.util.PositionUtil;
 
 public final class ProtocolCodecs {
     public static final BuilderCodec<Direction> DIRECTION = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Direction.class, Direction::new).metadata(UIDisplayMode.COMPACT)).appendInherited(new KeyedCodec<Float>("Yaw", Codec.FLOAT), (o, i) -> {
@@ -68,7 +64,7 @@ public final class ProtocolCodecs {
     }, o -> Float.valueOf(o.y), (o, p) -> {
         o.y = p.y;
     }).add()).build();
-    public static final BuilderCodec<com.hypixel.hytale.protocol.Vector3f> VECTOR3F = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(com.hypixel.hytale.protocol.Vector3f.class, com.hypixel.hytale.protocol.Vector3f::new).metadata(UIDisplayMode.COMPACT)).appendInherited(new KeyedCodec<Float>("X", Codec.FLOAT), (o, i) -> {
+    public static final BuilderCodec<Vector3f> VECTOR3F = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Vector3f.class, Vector3f::new).metadata(UIDisplayMode.COMPACT)).appendInherited(new KeyedCodec<Float>("X", Codec.FLOAT), (o, i) -> {
         o.x = i.floatValue();
     }, o -> Float.valueOf(o.x), (o, p) -> {
         o.x = p.x;
@@ -157,24 +153,6 @@ public final class ProtocolCodecs {
     public static final BuilderCodec<SavedMovementStates> SAVED_MOVEMENT_STATES = ((BuilderCodec.Builder)BuilderCodec.builder(SavedMovementStates.class, SavedMovementStates::new).addField(new KeyedCodec<Boolean>("Flying", Codec.BOOLEAN), (movementStates, flying) -> {
         movementStates.flying = flying;
     }, movementStates -> movementStates.flying)).build();
-    public static final BuilderCodec<ContextMenuItem> CONTEXT_MENU_ITEM = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ContextMenuItem.class, ContextMenuItem::new).addField(new KeyedCodec<String>("Name", Codec.STRING), (item, s) -> {
-        item.name = s;
-    }, item -> item.name)).addField(new KeyedCodec<String>("Command", Codec.STRING), (item, s) -> {
-        item.command = s;
-    }, item -> item.command)).build();
-    public static final ArrayCodec<ContextMenuItem> CONTEXT_MENU_ITEM_ARRAY = new ArrayCodec<ContextMenuItem>(CONTEXT_MENU_ITEM, ContextMenuItem[]::new);
-    public static final BuilderCodec<MapMarker> MARKER = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(MapMarker.class, MapMarker::new).addField(new KeyedCodec<String>("Id", Codec.STRING), (marker, s) -> {
-        marker.id = s;
-    }, marker -> marker.id)).addField(new KeyedCodec<String>("Name", Codec.STRING), (marker, s) -> {
-        marker.name = s;
-    }, marker -> marker.name)).addField(new KeyedCodec<String>("Image", Codec.STRING), (marker, s) -> {
-        marker.markerImage = s;
-    }, marker -> marker.markerImage)).append(new KeyedCodec<Transform>("Transform", Transform.CODEC), (marker, s) -> {
-        marker.transform = PositionUtil.toTransformPacket(s);
-    }, marker -> PositionUtil.toTransform(marker.transform)).addValidator(Validators.nonNull()).add()).addField(new KeyedCodec<T[]>("ContextMenuItems", CONTEXT_MENU_ITEM_ARRAY), (marker, items) -> {
-        marker.contextMenuItems = items;
-    }, marker -> marker.contextMenuItems)).build();
-    public static final ArrayCodec<MapMarker> MARKER_ARRAY = new ArrayCodec<MapMarker>(MARKER, MapMarker[]::new);
     public static final BuilderCodec<ItemAnimation> ITEM_ANIMATION_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ItemAnimation.class, ItemAnimation::new).append(new KeyedCodec<String>("ThirdPerson", Codec.STRING), (itemAnimation, s) -> {
         itemAnimation.thirdPerson = s;
     }, itemAnimation -> itemAnimation.thirdPerson).addValidator(CommonAssetValidator.ANIMATION_ITEM_CHARACTER).add()).append(new KeyedCodec<String>("ThirdPersonMoving", Codec.STRING), (itemAnimation, s) -> {
@@ -207,17 +185,17 @@ public final class ProtocolCodecs {
     public static final EnumCodec<AccumulationMode> ACCUMULATION_MODE_CODEC = new EnumCodec<AccumulationMode>(AccumulationMode.class).documentKey(AccumulationMode.Set, "Set the current value to the new one").documentKey(AccumulationMode.Sum, "Add the new value to the current one").documentKey(AccumulationMode.Average, "Average the new value with current one");
     public static final EnumCodec<EasingType> EASING_TYPE_CODEC = new EnumCodec<EasingType>(EasingType.class);
     public static final EnumCodec<ChangeVelocityType> CHANGE_VELOCITY_TYPE_CODEC = new EnumCodec<ChangeVelocityType>(ChangeVelocityType.class).documentKey(ChangeVelocityType.Add, "Adds the velocity to any existing velocity").documentKey(ChangeVelocityType.Set, "Changes the velocity to the given value. Overriding existing values.");
-    public static final BuilderCodec<RailPoint> RAIL_POINT_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RailPoint.class, RailPoint::new).appendInherited(new KeyedCodec<com.hypixel.hytale.protocol.Vector3f>("Point", VECTOR3F), (o, v) -> {
+    public static final BuilderCodec<RailPoint> RAIL_POINT_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RailPoint.class, RailPoint::new).appendInherited(new KeyedCodec<Vector3f>("Point", VECTOR3F), (o, v) -> {
         o.point = v;
     }, o -> o.point, (o, p) -> {
         o.point = p.point;
-    }).addValidator(Validators.nonNull()).add()).appendInherited(new KeyedCodec<com.hypixel.hytale.protocol.Vector3f>("Normal", VECTOR3F), (o, v) -> {
+    }).addValidator(Validators.nonNull()).add()).appendInherited(new KeyedCodec<Vector3f>("Normal", VECTOR3F), (o, v) -> {
         o.normal = v;
     }, o -> o.normal, (o, p) -> {
         o.normal = p.normal;
     }).addValidator(Validators.nonNull()).add()).afterDecode(o -> {
         if (o.normal != null) {
-            Vector3f v = new Vector3f(o.normal.x, o.normal.y, o.normal.z);
+            com.hypixel.hytale.math.vector.Vector3f v = new com.hypixel.hytale.math.vector.Vector3f(o.normal.x, o.normal.y, o.normal.z);
             v = v.normalize();
             o.normal.x = v.x;
             o.normal.y = v.y;

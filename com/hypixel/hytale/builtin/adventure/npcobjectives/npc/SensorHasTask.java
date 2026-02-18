@@ -35,21 +35,27 @@ extends SensorBase {
         if (!super.matches(ref, role, dt, store)) {
             return false;
         }
-        Ref<EntityStore> target = role.getStateSupport().getInteractionIterationTarget();
-        if (target == null) {
+        if (this.tasksById == null || this.tasksById.length == 0) {
             return false;
         }
-        Archetype<EntityStore> targetArchetype = store.getArchetype(target);
+        Ref<EntityStore> targetRef = role.getStateSupport().getInteractionIterationTarget();
+        if (targetRef == null || !targetRef.isValid()) {
+            return false;
+        }
+        Archetype<EntityStore> targetArchetype = store.getArchetype(targetRef);
         if (targetArchetype.contains(DeathComponent.getComponentType())) {
             return false;
         }
-        UUIDComponent targetUuidComponent = store.getComponent(target, UUIDComponent.getComponentType());
-        assert (targetUuidComponent != null);
+        UUIDComponent targetUuidComponent = store.getComponent(targetRef, UUIDComponent.getComponentType());
+        if (targetUuidComponent == null) {
+            return false;
+        }
         UUID targetUuid = targetUuidComponent.getUuid();
         UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-        assert (uuidComponent != null);
+        if (uuidComponent == null) {
+            return false;
+        }
         UUID uuid = uuidComponent.getUuid();
-        NPCObjectivesPlugin objectiveSystem = NPCObjectivesPlugin.get();
         EntitySupport entitySupport = role.getEntitySupport();
         boolean match = false;
         for (String taskById : this.tasksById) {

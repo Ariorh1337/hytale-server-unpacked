@@ -21,12 +21,15 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveLocationAreaBox
 extends ObjectiveLocationMarkerArea {
+    @Nonnull
     public static final BuilderCodec<ObjectiveLocationAreaBox> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ObjectiveLocationAreaBox.class, ObjectiveLocationAreaBox::new).append(new KeyedCodec<Box>("EntryBox", Box.CODEC), (objectiveLocationAreaBox, box) -> {
         objectiveLocationAreaBox.entryArea = box;
     }, objectiveLocationAreaBox -> objectiveLocationAreaBox.entryArea).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<Box>("ExitBox", Box.CODEC), (objectiveLocationAreaBox, box) -> {
         objectiveLocationAreaBox.exitArea = box;
     }, objectiveLocationAreaBox -> objectiveLocationAreaBox.exitArea).addValidator(Validators.nonNull()).add()).afterDecode(ObjectiveLocationAreaBox::computeAreaBoxes)).build();
+    @Nonnull
     private static final Box DEFAULT_ENTRY_BOX = new Box(-5.0, -5.0, -5.0, 5.0, 5.0, 5.0);
+    @Nonnull
     private static final Box DEFAULT_EXIT_BOX = new Box(-10.0, -10.0, -10.0, 10.0, 10.0, 10.0);
     private Box entryArea;
     private Box exitArea;
@@ -93,7 +96,7 @@ extends ObjectiveLocationMarkerArea {
         this.exitAreaBox = this.exitArea;
     }
 
-    private static void getPlayersInArea(@Nonnull SpatialResource<Ref<EntityStore>, EntityStore> spatialComponent, List<Ref<EntityStore>> results, @Nonnull Vector3d markerPosition, @Nonnull Box box) {
+    private static void getPlayersInArea(@Nonnull SpatialResource<Ref<EntityStore>, EntityStore> spatialComponent, @Nonnull List<Ref<EntityStore>> results, @Nonnull Vector3d markerPosition, @Nonnull Box box) {
         spatialComponent.getSpatialStructure().collect(markerPosition, box.getMaximumExtent(), results);
     }
 

@@ -6,6 +6,12 @@ package com.hypixel.hytale.server.npc.interactions;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.common.map.IWeightedElement;
+import com.hypixel.hytale.common.map.IWeightedMap;
+import com.hypixel.hytale.common.map.WeightedMap;
+import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -35,14 +41,26 @@ import javax.annotation.Nullable;
 public class SpawnNPCInteraction
 extends SimpleBlockInteraction {
     @Nonnull
-    public static final BuilderCodec<SpawnNPCInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpawnNPCInteraction.class, SpawnNPCInteraction::new, SimpleBlockInteraction.CODEC).documentation("Spawns an NPC on the block that is being interacted with.")).append(new KeyedCodec<String>("EntityId", Codec.STRING), (spawnNPCInteraction, s) -> {
+    public static final BuilderCodec<SpawnNPCInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpawnNPCInteraction.class, SpawnNPCInteraction::new, SimpleBlockInteraction.CODEC).documentation("Spawns an NPC on the block that is being interacted with.")).append(new KeyedCodec<String>("EntityId", Codec.STRING), (spawnNPCInteraction, s) -> {
         spawnNPCInteraction.entityId = s;
-    }, spawnNPCInteraction -> spawnNPCInteraction.entityId).documentation("The ID of the entity asset to spawn.").addValidator(NPCRoleValidator.INSTANCE).add()).append(new KeyedCodec<Vector3d>("SpawnOffset", Vector3d.CODEC), (spawnNPCInteraction, s) -> spawnNPCInteraction.spawnOffset.assign((Vector3d)s), spawnNPCInteraction -> spawnNPCInteraction.spawnOffset).documentation("The offset to apply to the spawn position of the NPC, relative to the block's rotation and center.").add()).append(new KeyedCodec<Float>("SpawnYawOffset", Codec.FLOAT), (spawnNPCInteraction, f) -> {
+    }, spawnNPCInteraction -> spawnNPCInteraction.entityId).documentation("The ID of the entity asset to spawn.").addValidator(NPCRoleValidator.INSTANCE).add()).append(new KeyedCodec<T[]>("WeightedEntityIds", new ArrayCodec<WeightedNPCSpawn>(WeightedNPCSpawn.CODEC, WeightedNPCSpawn[]::new)), (spawnNPCInteraction, o) -> {
+        spawnNPCInteraction.weightedSpawns = o;
+    }, spawnNPCInteraction -> spawnNPCInteraction.weightedSpawns).documentation("A weighted list of entity IDs from which an entity will be selected for spawning. Supersedes any provided EntityId.").add()).append(new KeyedCodec<Vector3d>("SpawnOffset", Vector3d.CODEC), (spawnNPCInteraction, s) -> spawnNPCInteraction.spawnOffset.assign((Vector3d)s), spawnNPCInteraction -> spawnNPCInteraction.spawnOffset).documentation("The offset to apply to the spawn position of the NPC, relative to the block's rotation and center.").add()).append(new KeyedCodec<Float>("SpawnYawOffset", Codec.FLOAT), (spawnNPCInteraction, f) -> {
         spawnNPCInteraction.spawnYawOffset = f.floatValue();
     }, spawnNPCInteraction -> Float.valueOf(spawnNPCInteraction.spawnYawOffset)).documentation("The yaw rotation offset in radians to apply to the NPC rotation, relative to the block's yaw.").add()).append(new KeyedCodec<Float>("SpawnChance", Codec.FLOAT), (spawnNPCInteraction, f) -> {
         spawnNPCInteraction.spawnChance = f.floatValue();
-    }, spawnNPCInteraction -> Float.valueOf(spawnNPCInteraction.spawnChance)).documentation("The chance of the NPC spawning when the interaction is triggered.").add()).build();
+    }, spawnNPCInteraction -> Float.valueOf(spawnNPCInteraction.spawnChance)).documentation("The chance of the NPC spawning when the interaction is triggered.").add()).afterDecode(interaction -> {
+        if (interaction.weightedSpawns != null && interaction.weightedSpawns.length > 0) {
+            WeightedMap.Builder<String> mapBuilder = WeightedMap.builder(ArrayUtil.EMPTY_STRING_ARRAY);
+            for (WeightedNPCSpawn entry : interaction.weightedSpawns) {
+                mapBuilder.put(entry.id, entry.weight);
+            }
+            interaction.weightedSpawnMap = mapBuilder.build();
+        }
+    })).build();
     protected String entityId;
+    protected WeightedNPCSpawn[] weightedSpawns;
+    protected IWeightedMap<String> weightedSpawnMap;
     @Nonnull
     protected Vector3d spawnOffset = new Vector3d();
     protected float spawnYawOffset;
@@ -51,7 +69,14 @@ extends SimpleBlockInteraction {
     private void spawnNPC(@Nonnull Store<EntityStore> store, @Nonnull Vector3i targetBlock) {
         World world = store.getExternalData().getWorld();
         SpawnData spawnData = this.computeSpawnData(world, targetBlock);
-        NPCPlugin.get().spawnNPC(store, this.entityId, null, spawnData.position(), spawnData.rotation());
+        String entityToSpawn = this.entityId;
+        if (this.weightedSpawnMap != null) {
+            entityToSpawn = this.weightedSpawnMap.get(ThreadLocalRandom.current());
+        }
+        if (entityToSpawn == null) {
+            return;
+        }
+        NPCPlugin.get().spawnNPC(store, entityToSpawn, null, spawnData.position(), spawnData.rotation());
     }
 
     @Nonnull
@@ -102,6 +127,25 @@ extends SimpleBlockInteraction {
     }
 
     private record SpawnData(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+    }
+
+    protected static class WeightedNPCSpawn
+    implements IWeightedElement {
+        private static final BuilderCodec<WeightedNPCSpawn> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WeightedNPCSpawn.class, WeightedNPCSpawn::new).append(new KeyedCodec<String>("Id", Codec.STRING), (spawn, s) -> {
+            spawn.id = s;
+        }, spawn -> spawn.id).documentation("The Role ID of the NPC to spawn.").addValidator(Validators.nonNull()).addValidator(NPCRoleValidator.INSTANCE).add()).append(new KeyedCodec<Double>("Weight", Codec.DOUBLE, true), (spawn, d) -> {
+            spawn.weight = d;
+        }, spawn -> spawn.weight).documentation("The relative weight of this NPC (chance of being spawned is this value relative to the sum of all weights).").addValidator(Validators.nonNull()).addValidator(Validators.greaterThan(0.0)).add()).build();
+        private String id;
+        private double weight;
+
+        private WeightedNPCSpawn() {
+        }
+
+        @Override
+        public double getWeight() {
+            return this.weight;
+        }
     }
 }
 

@@ -13,10 +13,11 @@ import javax.annotation.Nonnull;
 
 public class ConstantDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<ConstantDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ConstantDensityAsset.class, ConstantDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Value", Codec.DOUBLE, true), (t, k) -> {
         t.value = k;
     }, k -> k.value).add()).build();
-    private double value = 0.0;
+    private double value;
 
     @Override
     @Nonnull

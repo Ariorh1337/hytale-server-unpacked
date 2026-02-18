@@ -4,15 +4,15 @@
 package com.hypixel.hytale.server.worldgen.loader.cave;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
+import com.hypixel.hytale.common.util.PathUtil;
+import com.hypixel.hytale.procedurallib.file.FileIO;
+import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.cave.CaveNodeType;
 import com.hypixel.hytale.server.worldgen.loader.cave.CaveNodeTypeJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,29 +60,18 @@ public class CaveNodeTypeStorage {
 
     @Nonnull
     public CaveNodeType loadCaveNodeType(@Nonnull String name) {
-        CaveNodeType caveNodeType;
-        Path file = this.caveFolder.resolve(String.format("%s.node.json", name.replace(".", File.separator)));
-        JsonReader reader = new JsonReader(Files.newBufferedReader(file));
+        String relativePath = String.format("%s.node.json", name.replace(".", File.separator));
+        Path file = PathUtil.resolvePathWithinDir(this.caveFolder, relativePath);
+        if (file == null) {
+            throw new Error(String.format("Invalid cave node type name: %s", name));
+        }
         try {
-            JsonObject caveNodeJson = JsonParser.parseReader(reader).getAsJsonObject();
-            caveNodeType = this.loadCaveNodeType(name, caveNodeJson);
+            JsonObject caveNodeJson = FileIO.load(file, JsonLoader.JSON_OBJ_LOADER);
+            return this.loadCaveNodeType(name, caveNodeJson);
         }
-        catch (Throwable throwable) {
-            try {
-                try {
-                    reader.close();
-                }
-                catch (Throwable throwable2) {
-                    throwable.addSuppressed(throwable2);
-                }
-                throw throwable;
-            }
-            catch (Throwable e) {
-                throw new Error(String.format("Error while loading CaveNodeType %s for world generator from %s", name, file.toString()), e);
-            }
+        catch (Throwable e) {
+            throw new Error(String.format("Error while loading CaveNodeType %s for world generator from %s", name, file.toString()), e);
         }
-        reader.close();
-        return caveNodeType;
     }
 
     @Nonnull

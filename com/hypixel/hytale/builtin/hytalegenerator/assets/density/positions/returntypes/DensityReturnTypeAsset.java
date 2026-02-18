@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 
 public class DensityReturnTypeAsset
 extends ReturnTypeAsset {
+    @Nonnull
     public static final BuilderCodec<DensityReturnTypeAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DensityReturnTypeAsset.class, DensityReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC).append(new KeyedCodec("ChoiceDensity", DensityAsset.CODEC, true), (t, k) -> {
         t.choiceDensityAsset = k;
     }, t -> t.choiceDensityAsset).add()).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (t, k) -> {
@@ -42,19 +43,20 @@ extends ReturnTypeAsset {
 
     @Override
     @Nonnull
-    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-        DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle, workerIndexer);
+    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+        DensityAsset.Argument densityArgument = new DensityAsset.Argument(parentSeed, referenceBundle, workerId);
         Density choiceDensity = this.choiceDensityAsset.build(densityArgument);
         HashMap<Range, Density> delimiterMap = new HashMap<Range, Density>(this.delimiterAssets.length);
         for (DelimiterAsset delimiter : this.delimiterAssets) {
             delimiterMap.put(new Range((float)delimiter.from, (float)delimiter.to), delimiter.densityAsset.build(densityArgument));
         }
-        MultiCacheDensity cache = new MultiCacheDensity(choiceDensity, workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
-        return new DensityReturnType(cache, delimiterMap, true, this.defaultValue, workerIndexer.getWorkerCount());
+        MultiCacheDensity cache = new MultiCacheDensity(choiceDensity, CacheDensityAsset.DEFAULT_CAPACITY);
+        return new DensityReturnType(cache, delimiterMap, true, this.defaultValue);
     }
 
     public static class DelimiterAsset
     implements JsonAssetWithMap<String, DefaultAssetMap<String, FieldFunctionMaterialProviderAsset.DelimiterAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

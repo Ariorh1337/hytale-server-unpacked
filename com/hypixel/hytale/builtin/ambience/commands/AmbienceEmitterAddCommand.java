@@ -34,6 +34,8 @@ extends AbstractPlayerCommand {
     @Nonnull
     private static final AssetArgumentType<SoundEvent, ?> SOUND_EVENT_ASSET_TYPE = new AssetArgumentType("server.commands.ambience.emitter.add.arg.soundEvent.name", SoundEvent.class, "server.commands.ambience.emitter.add.arg.soundEvent.usage");
     @Nonnull
+    private static final Message MESSAGE_SERVER_COMMANDS_ERRORS_PLAYER_ONLY = Message.translation("server.commands.errors.playerOnly");
+    @Nonnull
     private final RequiredArg<SoundEvent> soundEventArg = this.withRequiredArg("soundEvent", "server.commands.ambience.emitter.add.arg.soundEvent.desc", SOUND_EVENT_ASSET_TYPE);
 
     public AmbienceEmitterAddCommand() {
@@ -43,10 +45,12 @@ extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
         if (!context.isPlayer()) {
-            throw new GeneralCommandException(Message.translation("server.commands.errors.playerOnly"));
+            throw new GeneralCommandException(MESSAGE_SERVER_COMMANDS_ERRORS_PLAYER_ONLY);
         }
         TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
-        assert (transformComponent != null);
+        if (transformComponent == null) {
+            return;
+        }
         Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
         SoundEvent soundEvent = (SoundEvent)this.soundEventArg.get(context);
         boolean looping = false;

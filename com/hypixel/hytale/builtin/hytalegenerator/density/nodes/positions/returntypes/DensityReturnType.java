@@ -25,8 +25,12 @@ extends ReturnType {
     @Nonnull
     private final Density[] sampleDensities;
     private final boolean calculateDistanceFromWall;
+    @Nonnull
+    private final Vector3d rScaledSamplePointClone;
+    @Nonnull
+    private final Density.Context rChildContext;
 
-    public DensityReturnType(@Nonnull Density choiceDensity, @Nonnull Map<Range, Density> densityDelimiters, boolean calculateDistanceFromWall, double defaultValue, int threadCount) {
+    public DensityReturnType(@Nonnull Density choiceDensity, @Nonnull Map<Range, Density> densityDelimiters, boolean calculateDistanceFromWall, double defaultValue) {
         this.choiceDensity = choiceDensity;
         this.defaultValue = defaultValue;
         this.calculateDistanceFromWall = calculateDistanceFromWall;
@@ -39,24 +43,25 @@ extends ReturnType {
             this.sampleDensities[i] = entry.getValue();
             ++i;
         }
+        this.rScaledSamplePointClone = new Vector3d();
+        this.rChildContext = new Density.Context();
     }
 
     @Override
     public double get(double distance0, double distance1, @Nonnull Vector3d samplePoint, @Nullable Vector3d closestPoint0, @Nullable Vector3d closestPoint1, @Nullable Density.Context context) {
         double distanceFromWall = Double.MAX_VALUE;
         if (closestPoint0 != null && this.calculateDistanceFromWall) {
-            distance0 = samplePoint.clone().addScaled(closestPoint0, -1.0).length();
+            distance0 = this.rScaledSamplePointClone.assign(samplePoint).subtract(closestPoint0).length();
             double fromMaxDistance = Math.abs(this.maxDistance - distance0);
             if (closestPoint1 == null) {
                 distanceFromWall = fromMaxDistance;
             } else {
                 double fromOtherCell;
-                distance1 = samplePoint.clone().addScaled(closestPoint1, -1.0).length();
+                distance1 = this.rScaledSamplePointClone.assign(samplePoint).subtract(closestPoint1).length();
                 double l = distance1 / this.maxDistance;
                 distanceFromWall = fromOtherCell = Math.abs(distance1 - distance0) / 2.0;
             }
         }
-        Density.Context childContext = null;
         double choiceValue = this.defaultValue;
         if (closestPoint0 == null) {
             return this.defaultValue;
@@ -65,10 +70,10 @@ extends ReturnType {
         int i = 0;
         for (double[] delimiter : this.delimiters) {
             if (choiceValue >= delimiter[0] && choiceValue < delimiter[1]) {
-                childContext = new Density.Context(context);
-                childContext.densityAnchor = closestPoint0.clone();
-                childContext.distanceFromCellWall = distanceFromWall;
-                return this.sampleDensities[i].process(childContext);
+                this.rChildContext.assign(context);
+                this.rChildContext.densityAnchor = closestPoint0;
+                this.rChildContext.distanceFromCellWall = distanceFromWall;
+                return this.sampleDensities[i].process(this.rChildContext);
             }
             ++i;
         }

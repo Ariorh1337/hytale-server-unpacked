@@ -14,7 +14,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interface_.UpdatePortal;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -50,7 +50,7 @@ public final class PortalTrackerSystems {
             }
             PlayerRef playerRef = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
             UpdatePortal packet = portalWorld.getSeesUi().add(playerRef.getUuid()) ? portalWorld.createFullPacket(world) : portalWorld.createUpdatePacket(world);
-            playerRef.getPacketHandler().write((Packet)packet);
+            playerRef.getPacketHandler().write((ToClientPacket)packet);
         }
 
         @Override
@@ -72,7 +72,7 @@ public final class PortalTrackerSystems {
             PlayerRef playerRef = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
             if (portalWorld.getSeesUi().add(playerRef.getUuid())) {
                 UpdatePortal packet = portalWorld.createFullPacket(world);
-                playerRef.getPacketHandler().write((Packet)packet);
+                playerRef.getPacketHandler().write((ToClientPacket)packet);
             }
         }
 
@@ -83,7 +83,7 @@ public final class PortalTrackerSystems {
                 return;
             }
             PlayerRef playerRef = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-            playerRef.getPacketHandler().write((Packet)new UpdatePortal(null, null));
+            playerRef.getPacketHandler().write((ToClientPacket)new UpdatePortal(null, null));
             portalWorld.getSeesUi().remove(playerRef.getUuid());
         }
 

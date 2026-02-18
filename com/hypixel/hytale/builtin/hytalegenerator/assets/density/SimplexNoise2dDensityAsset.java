@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class SimplexNoise2dDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SimplexNoise2dDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SimplexNoise2dDensityAsset.class, SimplexNoise2dDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Lacunarity", Codec.DOUBLE, true), (asset, lacunarity) -> {
         asset.lacunarity = lacunarity;
     }, asset -> asset.lacunarity).addValidator(Validators.greaterThan(0.0)).add()).append(new KeyedCodec<Double>("Persistence", Codec.DOUBLE, true), (asset, persistence) -> {
@@ -46,7 +47,7 @@ extends DensityAsset {
         SeedBox childSeed = argument.parentSeed.child(this.seedKey);
         SimplexNoiseField noise = SimplexNoiseField.builder().withAmplitudeMultiplier(this.persistence).withFrequencyMultiplier(this.lacunarity).withScale(this.scale).withSeed(childSeed.createSupplier().get().intValue()).withNumberOfOctaves(this.octaves).build();
         Noise2dDensity noiseDensity = new Noise2dDensity(noise);
-        MultiCacheDensity cacheDensity = new MultiCacheDensity(noiseDensity, argument.workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+        MultiCacheDensity cacheDensity = new MultiCacheDensity(noiseDensity, CacheDensityAsset.DEFAULT_CAPACITY);
         return new YOverrideDensity(cacheDensity, 0.0);
     }
 

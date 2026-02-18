@@ -17,20 +17,29 @@ import com.hypixel.hytale.builtin.mounts.interactions.SpawnMinecartInteraction;
 import com.hypixel.hytale.builtin.mounts.minecart.MinecartComponent;
 import com.hypixel.hytale.builtin.mounts.npc.builders.BuilderActionMount;
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interaction.DismountNPC;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
-import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.io.ServerManager;
+import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerInput;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -73,32 +82,46 @@ extends JavaPlugin {
 
     @Override
     protected void setup() {
+        ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
         instance = this;
         this.blockMountComponentType = this.getChunkStoreRegistry().registerComponent(BlockMountComponent.class, BlockMountComponent::new);
         NPCPlugin.get().registerCoreComponentType("Mount", BuilderActionMount::new);
-        this.mountComponentType = this.getEntityStoreRegistry().registerComponent(NPCMountComponent.class, "Mount", NPCMountComponent.CODEC);
-        this.mountedComponentType = this.getEntityStoreRegistry().registerComponent(MountedComponent.class, () -> {
+        this.mountComponentType = entityStoreRegistry.registerComponent(NPCMountComponent.class, "Mount", NPCMountComponent.CODEC);
+        this.mountedComponentType = entityStoreRegistry.registerComponent(MountedComponent.class, () -> {
             throw new UnsupportedOperationException("Mounted component cannot be default constructed");
         });
-        this.mountedByComponentType = this.getEntityStoreRegistry().registerComponent(MountedByComponent.class, MountedByComponent::new);
-        this.minecartComponentType = this.getEntityStoreRegistry().registerComponent(MinecartComponent.class, "Minecart", MinecartComponent.CODEC);
-        this.getEntityStoreRegistry().registerSystem(new NPCMountSystems.OnAdd(this.mountComponentType));
-        this.getEntityStoreRegistry().registerSystem(new NPCMountSystems.DismountOnPlayerDeath());
-        this.getEntityStoreRegistry().registerSystem(new NPCMountSystems.DismountOnMountDeath());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.TrackerUpdate());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.TrackerRemove());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.RemoveMountedBy());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.RemoveMounted());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.TeleportMountedEntity());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.MountedEntityDeath());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.PlayerMount());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.HandleMountInput());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.TrackedMounted());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.EnsureMinecartComponents());
-        this.getEntityStoreRegistry().registerSystem(new MountSystems.OnMinecartHit());
-        this.getChunkStoreRegistry().registerSystem(new MountSystems.RemoveBlockSeat());
+        this.mountedByComponentType = entityStoreRegistry.registerComponent(MountedByComponent.class, MountedByComponent::new);
+        this.minecartComponentType = entityStoreRegistry.registerComponent(MinecartComponent.class, "Minecart", MinecartComponent.CODEC);
+        ComponentType<EntityStore, NPCEntity> npcEntityComponentType = NPCEntity.getComponentType();
+        ComponentType<EntityStore, NetworkId> networkIdComponentType = NetworkId.getComponentType();
+        ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType = EntityTrackerSystems.Visible.getComponentType();
+        ComponentType<EntityStore, PlayerInput> playerInputComponentType = PlayerInput.getComponentType();
+        ComponentType<EntityStore, MovementStatesComponent> movementStatesComponentType = MovementStatesComponent.getComponentType();
+        ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
+        ComponentType<EntityStore, Teleport> teleportComponentType = Teleport.getComponentType();
+        ComponentType<EntityStore, DeathComponent> deathComponentType = DeathComponent.getComponentType();
+        ComponentType<EntityStore, Interactable> interactableComponentType = Interactable.getComponentType();
+        ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType = PrefabCopyableComponent.getComponentType();
+        ResourceType<EntityStore, TimeResource> timeResourceType = TimeResource.getResourceType();
+        entityStoreRegistry.registerSystem(new NPCMountSystems.OnAdd(this.mountComponentType, npcEntityComponentType, networkIdComponentType));
+        entityStoreRegistry.registerSystem(new NPCMountSystems.DismountOnPlayerDeath(playerComponentType));
+        entityStoreRegistry.registerSystem(new NPCMountSystems.DismountOnMountDeath(this.mountComponentType));
+        entityStoreRegistry.registerSystem(new NPCMountSystems.OnPlayerRemove(playerComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.TrackerUpdate(visibleComponentType, this.mountedComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.TrackerRemove(this.mountedComponentType, visibleComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.RemoveMountedBy(this.mountedByComponentType, this.mountedComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.RemoveMounted(this.mountedComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.RemoveMountedHolder(this.mountedComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.TeleportMountedEntity(this.mountedComponentType, teleportComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.MountedEntityDeath(this.mountedComponentType, deathComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.PlayerMount(this.mountedComponentType, playerInputComponentType, networkIdComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.HandleMountInput(this.mountedComponentType, playerInputComponentType, movementStatesComponentType, transformComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.TrackedMounted(this.mountedComponentType, this.mountedByComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.EnsureMinecartComponents(this.minecartComponentType, interactableComponentType, networkIdComponentType, prefabCopyableComponentType));
+        entityStoreRegistry.registerSystem(new MountSystems.OnMinecartHit(this.minecartComponentType, transformComponentType, playerComponentType, timeResourceType));
+        this.getChunkStoreRegistry().registerSystem(new MountSystems.RemoveBlockSeat(this.blockMountComponentType, this.mountedComponentType));
         ServerManager.get().registerSubPacketHandlers(MountGamePacketHandler::new);
-        this.getEventRegistry().register(PlayerDisconnectEvent.class, MountPlugin::onPlayerDisconnect);
         this.getCommandRegistry().registerCommand(new MountCommand());
         Interaction.CODEC.register("SpawnMinecart", SpawnMinecartInteraction.class, SpawnMinecartInteraction.CODEC);
         Interaction.CODEC.register("Mount", MountInteraction.class, MountInteraction.CODEC);
@@ -109,35 +132,16 @@ extends JavaPlugin {
         return this.blockMountComponentType;
     }
 
-    private static void onPlayerDisconnect(@Nonnull PlayerDisconnectEvent event) {
-        PlayerRef playerRef = event.getPlayerRef();
-        Ref<EntityStore> ref = playerRef.getReference();
-        if (ref == null) {
-            return;
-        }
-        Store<EntityStore> store = ref.getStore();
-        World world = store.getExternalData().getWorld();
-        world.execute(() -> {
-            if (!ref.isValid()) {
-                return;
-            }
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            if (playerComponent == null) {
-                return;
-            }
-            MountPlugin.checkDismountNpc(store, playerComponent);
-        });
-    }
-
-    public static void checkDismountNpc(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Player playerComponent) {
+    public static void checkDismountNpc(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull Player playerComponent) {
         int mountEntityId = playerComponent.getMountEntityId();
         if (mountEntityId == 0) {
             return;
         }
-        MountPlugin.dismountNpc(store, mountEntityId);
+        playerComponent.setMountEntityId(0);
+        MountPlugin.dismountNpc(store, ref, mountEntityId);
     }
 
-    public static void dismountNpc(@Nonnull ComponentAccessor<EntityStore> store, int mountEntityId) {
+    private static void dismountNpc(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> playerRef, int mountEntityId) {
         Ref<EntityStore> entityReference = store.getExternalData().getRefFromNetworkId(mountEntityId);
         if (entityReference == null || !entityReference.isValid()) {
             return;
@@ -145,10 +149,7 @@ extends JavaPlugin {
         NPCMountComponent mountComponent = store.getComponent(entityReference, NPCMountComponent.getComponentType());
         assert (mountComponent != null);
         MountPlugin.resetOriginalMountRole(entityReference, store, mountComponent);
-        PlayerRef ownerPlayerRef = mountComponent.getOwnerPlayerRef();
-        if (ownerPlayerRef != null) {
-            MountPlugin.resetOriginalPlayerMovementSettings(ownerPlayerRef, store);
-        }
+        MountPlugin.resetOriginalPlayerMovementSettings(playerRef, store);
     }
 
     private static void resetOriginalMountRole(@Nonnull Ref<EntityStore> entityReference, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull NPCMountComponent mountComponent) {
@@ -158,15 +159,15 @@ extends JavaPlugin {
         store.removeComponent(entityReference, NPCMountComponent.getComponentType());
     }
 
-    public static void resetOriginalPlayerMovementSettings(@Nonnull PlayerRef playerRef, @Nonnull ComponentAccessor<EntityStore> store) {
-        Ref<EntityStore> reference = playerRef.getReference();
-        if (reference == null) {
+    public static void resetOriginalPlayerMovementSettings(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store) {
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        if (playerRef == null) {
             return;
         }
-        playerRef.getPacketHandler().write((Packet)new DismountNPC());
-        MovementManager movementManagerComponent = store.getComponent(reference, MovementManager.getComponentType());
+        playerRef.getPacketHandler().write((ToClientPacket)new DismountNPC());
+        MovementManager movementManagerComponent = store.getComponent(ref, MovementManager.getComponentType());
         assert (movementManagerComponent != null);
-        movementManagerComponent.resetDefaultsAndUpdate(reference, store);
+        movementManagerComponent.resetDefaultsAndUpdate(ref, store);
     }
 }
 

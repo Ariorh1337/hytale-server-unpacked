@@ -37,6 +37,7 @@ import com.hypixel.hytale.server.core.event.events.ShutdownEvent;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginClassLoader;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
@@ -115,7 +116,9 @@ public class HytaleServer {
         LOGGER.at(Level.INFO).log("Authentication mode: %s", (Object)optionSet.valueOf(Options.AUTH_MODE));
         ServerAuthManager.getInstance().initialize();
         if (EarlyPluginLoader.hasTransformers()) {
-            HytaleLogger.getLogger().at(Level.INFO).log("Early plugins loaded!! Disabling Sentry!!");
+            LOGGER.at(Level.INFO).log("Early plugins loaded!! Disabling Sentry!!");
+        } else if (!ManifestUtil.isJar() || ManifestUtil.getVersion() == null) {
+            LOGGER.at(Level.INFO).log("Sentry disabled: development build (no version)");
         } else if (!optionSet.has(Options.DISABLE_SENTRY)) {
             LOGGER.at(Level.INFO).log("Enabling Sentry");
             SentryOptions options = new SentryOptions();
@@ -125,6 +128,10 @@ public class HytaleServer {
             options.setEnvironment("release");
             options.setTag("patchline", ManifestUtil.getPatchline());
             options.setServerName(NetworkUtil.getHostName());
+            UUID distinctId = HardwareUtil.getUUID();
+            if (distinctId != null) {
+                options.setDistinctId(distinctId.toString());
+            }
             options.setBeforeSend((event, hint) -> {
                 Throwable throwable = event.getThrowable();
                 if (PluginClassLoader.isFromThirdPartyPlugin(throwable)) {
@@ -148,15 +155,20 @@ public class HytaleServer {
                     contexts.put("universe", universeContext);
                 }
                 HashMap pluginsContext = new HashMap();
+                boolean hasExternalPlugins = false;
                 for (PluginBase plugin : this.pluginManager.getPlugins()) {
+                    JavaPlugin jp;
                     PluginManifest manifest = plugin.getManifest();
                     HashMap<String, String> pluginInfo = new HashMap<String, String>();
                     pluginInfo.put("version", manifest.getVersion().toString());
                     pluginInfo.put("state", plugin.getState().name());
                     pluginsContext.put(plugin.getIdentifier().toString(), pluginInfo);
+                    if (!(plugin instanceof JavaPlugin) || (jp = (JavaPlugin)plugin).getClassLoader().isInServerClassPath()) continue;
+                    hasExternalPlugins = true;
                 }
                 contexts.put("plugins", pluginsContext);
                 AssetModule assetModule = AssetModule.get();
+                boolean hasUserPacks = false;
                 if (assetModule != null) {
                     HashMap packsContext = new HashMap();
                     for (AssetPack pack : assetModule.getAssetPacks()) {
@@ -167,9 +179,13 @@ public class HytaleServer {
                         }
                         packInfo.put("immutable", pack.isImmutable());
                         packsContext.put(pack.getName(), packInfo);
+                        if (pack.isImmutable()) continue;
+                        hasUserPacks = true;
                     }
                     contexts.put("packs", packsContext);
                 }
+                event.setTag("has-plugins", String.valueOf(hasExternalPlugins));
+                event.setTag("has-packs", String.valueOf(hasUserPacks));
                 User user = new User();
                 HashMap<String, Object> unknown = new HashMap<String, Object>();
                 user.setUnknown(unknown);
@@ -189,6 +205,7 @@ public class HytaleServer {
                 return event;
             });
             Sentry.init(options);
+            Sentry.startSession();
             Sentry.configureScope(scope -> {
                 UUID hardwareUUID = HardwareUtil.getUUID();
                 if (hardwareUUID != null) {
@@ -279,8 +296,8 @@ public class HytaleServer {
             }
             if (loadAssetEvent.isShouldShutdown()) {
                 List<String> reasons = loadAssetEvent.getReasons();
-                String join = String.join((CharSequence)", ", reasons);
-                LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s): %s", reasons.size(), (Object)join);
+                String join = String.join((CharSequence)"\n", reasons);
+                LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s):\n%s", reasons.size(), (Object)join);
                 this.shutdownServer(ShutdownReason.VALIDATE_ERROR.withMessage(join));
                 return;
             }
@@ -366,7 +383,7 @@ public class HytaleServer {
             return;
         }
         if (reason.getMessage() != null) {
-            this.sendSingleplayerSignal("-=|Shutdown|" + reason.getMessage());
+            this.sendSingleplayerSignal("-=|Shutdown|" + reason.getMessage().replace("\n", "\\n"));
         }
         Thread shutdownThread = new Thread(() -> this.shutdown0(reason), "ShutdownThread");
         shutdownThread.setDaemon(false);
@@ -393,6 +410,7 @@ public class HytaleServer {
         }
         this.aliveLock.release();
         HytaleLogManager.resetFinally();
+        Sentry.endSession();
         SCHEDULED_EXECUTOR.schedule(() -> {
             LOGGER.at(Level.SEVERE).log("Forcing shutdown!");
             Runtime.getRuntime().halt(reason.getExitCode());
@@ -467,6 +485,12 @@ public class HytaleServer {
     public void reportSingleplayerStatus(String message) {
         if (Constants.SINGLEPLAYER) {
             HytaleLoggerBackend.rawLog("-=|" + message + "|0");
+        }
+    }
+
+    public void reportSingleplayerStatus(String message, double progress) {
+        if (Constants.SINGLEPLAYER) {
+            HytaleLoggerBackend.rawLog("-=|" + message + "|" + progress);
         }
     }
 

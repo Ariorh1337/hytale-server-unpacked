@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 
 public class FarmingCoopAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, FarmingCoopAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, FarmingCoopAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(FarmingCoopAsset.class, FarmingCoopAsset::new, Codec.STRING, (o, v) -> {
         o.id = v;
     }, FarmingCoopAsset::getId, (o, data) -> {
@@ -59,6 +60,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, FarmingCoopAsset>> {
     protected int maxResidents;
     protected Map<String, String> produceDrops = Collections.emptyMap();
     protected IntRange residentRoamTime;
+    @Nonnull
     protected Vector3d residentSpawnOffset = new Vector3d();
     protected String[] acceptedNpcGroupIds;
     protected int[] acceptedNpcGroupIndexes;
@@ -100,6 +102,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, FarmingCoopAsset>> {
         return this.residentRoamTime;
     }
 
+    @Nonnull
     public Vector3d getResidentSpawnOffset() {
         return this.residentSpawnOffset;
     }

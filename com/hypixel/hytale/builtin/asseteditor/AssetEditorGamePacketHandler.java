@@ -10,7 +10,7 @@ import com.hypixel.hytale.builtin.asseteditor.Messages;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAuthorization;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorInitialize;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateJsonAsset;
@@ -56,10 +56,10 @@ implements SubPacketHandler {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             assert (playerComponent != null);
             if (this.lacksPermission(playerComponent, false)) {
-                this.packetHandler.getPlayerRef().getPacketHandler().write((Packet)new AssetEditorAuthorization(false));
+                this.packetHandler.getPlayerRef().getPacketHandler().write((ToClientPacket)new AssetEditorAuthorization(false));
                 return;
             }
-            this.packetHandler.getPlayerRef().getPacketHandler().write((Packet)new AssetEditorAuthorization(true));
+            this.packetHandler.getPlayerRef().getPacketHandler().write((ToClientPacket)new AssetEditorAuthorization(true));
             AssetEditorPlugin.get().handleInitializeEditor(ref, store);
         });
     }
@@ -89,7 +89,7 @@ implements SubPacketHandler {
     private boolean lacksPermission(@Nonnull Player player, boolean shouldShowDenialMessage) {
         if (!player.hasPermission("hytale.editor.asset")) {
             if (shouldShowDenialMessage) {
-                player.sendMessage(Messages.USAGE_DENIED_MESSAGE);
+                player.sendMessage(Messages.USAGE_DENIED);
             }
             return true;
         }

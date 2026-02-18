@@ -5,6 +5,7 @@ package com.hypixel.hytale.server.core.command.commands.utility.net;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -13,12 +14,16 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTargetPlayerCommand;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackSystems;
+import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.netty.LatencySimulationHandler;
 import com.hypixel.hytale.server.core.modules.entity.player.KnockbackPredictionSystems;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamPriority;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -29,6 +34,7 @@ extends AbstractCommandCollection {
         super("network", "server.commands.network.desc");
         this.addAliases("net");
         this.addSubCommand(new LatencySimulationCommand());
+        this.addSubCommand(new StreamPriorityCommand());
         this.addSubCommand(new ServerKnockbackCommand());
         this.addSubCommand(new DebugKnockbackCommand());
     }
@@ -75,6 +81,111 @@ extends AbstractCommandCollection {
                 Channel channel = playerRef.getPacketHandler().getChannel();
                 LatencySimulationHandler.setLatency(channel, 0L, TimeUnit.MILLISECONDS);
                 context.sendMessage(MESSAGE_COMMANDS_LATENCY_SIMULATION_RESET_SUCCESS);
+            }
+        }
+    }
+
+    public static class StreamPriorityCommand
+    extends AbstractCommandCollection {
+        private static final Map<String, Map<NetworkChannel, QuicStreamPriority>> PRESETS = Map.of("default", PacketHandler.DEFAULT_STREAM_PRIORITIES, "equal", StreamPriorityCommand.priority(0, 0, 0), "tiered", StreamPriorityCommand.priority(0, 1, 2), "maplow", StreamPriorityCommand.priority(0, 0, 1), "datalow", StreamPriorityCommand.priority(0, 1, 1), "chunkshi", StreamPriorityCommand.priority(1, 0, 2), "maphi", StreamPriorityCommand.priority(1, 2, 0));
+
+        public StreamPriorityCommand() {
+            super("streampriority", "server.commands.network.streamPriority.desc");
+            this.addAliases("sp");
+            this.addSubCommand(new Set());
+            this.addSubCommand(new Preset());
+            this.addSubCommand(new Reset());
+        }
+
+        private static void applyPriorities(@Nonnull PlayerRef playerRef, @Nonnull Map<NetworkChannel, QuicStreamPriority> priorities) {
+            PacketHandler handler = playerRef.getPacketHandler();
+            for (Map.Entry<NetworkChannel, QuicStreamPriority> entry : priorities.entrySet()) {
+                Channel channel = handler.getChannel(entry.getKey());
+                if (!(channel instanceof QuicStreamChannel)) continue;
+                QuicStreamChannel quicStreamChannel = (QuicStreamChannel)channel;
+                quicStreamChannel.updatePriority(entry.getValue());
+            }
+        }
+
+        private static String formatPriorities(@Nonnull Map<NetworkChannel, QuicStreamPriority> priorities) {
+            StringBuilder sb = new StringBuilder();
+            for (NetworkChannel channel : NetworkChannel.VALUES) {
+                QuicStreamPriority priority = priorities.get((Object)channel);
+                if (priority == null) continue;
+                if (!sb.isEmpty()) {
+                    sb.append(", ");
+                }
+                sb.append(channel.name()).append('=').append(priority.urgency());
+            }
+            return sb.toString();
+        }
+
+        private static Map<NetworkChannel, QuicStreamPriority> priority(int defaultUrgency, int chunksUrgency, int worldMapUrgency) {
+            return Map.of(NetworkChannel.Default, new QuicStreamPriority(defaultUrgency, true), NetworkChannel.Chunks, new QuicStreamPriority(chunksUrgency, true), NetworkChannel.WorldMap, new QuicStreamPriority(worldMapUrgency, true));
+        }
+
+        static class Set
+        extends AbstractTargetPlayerCommand {
+            @Nonnull
+            private final RequiredArg<NetworkChannel> channelArg = this.withRequiredArg("channel", "server.commands.network.streamPriority.set.channel.desc", ArgTypes.forEnum("server.commands.network.streamPriority.channel", NetworkChannel.class));
+            @Nonnull
+            private final RequiredArg<Integer> priorityArg = this.withRequiredArg("priority", "server.commands.network.streamPriority.set.priority.desc", ArgTypes.INTEGER);
+
+            Set() {
+                super("set", "server.commands.network.streamPriority.set.desc");
+            }
+
+            @Override
+            protected void execute(@Nonnull CommandContext context, @Nullable Ref<EntityStore> sourceRef, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+                NetworkChannel networkChannel = (NetworkChannel)((Object)this.channelArg.get(context));
+                int priority = (Integer)this.priorityArg.get(context);
+                if (priority < 0 || priority > 255) {
+                    context.sendMessage(Message.translation("server.commands.network.streamPriority.set.invalidPriority"));
+                    return;
+                }
+                Channel channel = playerRef.getPacketHandler().getChannel(networkChannel);
+                if (!(channel instanceof QuicStreamChannel)) {
+                    context.sendMessage(Message.translation("server.commands.network.streamPriority.set.notQuic").param("channel", networkChannel.name()));
+                    return;
+                }
+                QuicStreamChannel quicStreamChannel = (QuicStreamChannel)channel;
+                quicStreamChannel.updatePriority(new QuicStreamPriority(priority, true));
+                context.sendMessage(Message.translation("server.commands.network.streamPriority.set.success").param("channel", networkChannel.name()).param("priority", priority));
+            }
+        }
+
+        static class Preset
+        extends AbstractTargetPlayerCommand {
+            @Nonnull
+            private final RequiredArg<String> presetArg = this.withRequiredArg("preset", "server.commands.network.streamPriority.preset.name.desc", ArgTypes.STRING);
+
+            Preset() {
+                super("preset", "server.commands.network.streamPriority.preset.desc");
+            }
+
+            @Override
+            protected void execute(@Nonnull CommandContext context, @Nullable Ref<EntityStore> sourceRef, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+                String name = ((String)this.presetArg.get(context)).toLowerCase();
+                Map<NetworkChannel, QuicStreamPriority> priorities = PRESETS.get(name);
+                if (priorities == null) {
+                    context.sendMessage(Message.translation("server.commands.network.streamPriority.preset.unknown").param("name", name).param("presets", String.join((CharSequence)", ", PRESETS.keySet())));
+                    return;
+                }
+                StreamPriorityCommand.applyPriorities(playerRef, priorities);
+                context.sendMessage(Message.translation("server.commands.network.streamPriority.preset.success").param("name", name).param("priorities", StreamPriorityCommand.formatPriorities(priorities)));
+            }
+        }
+
+        static class Reset
+        extends AbstractTargetPlayerCommand {
+            Reset() {
+                super("reset", "server.commands.network.streamPriority.reset.desc");
+            }
+
+            @Override
+            protected void execute(@Nonnull CommandContext context, @Nullable Ref<EntityStore> sourceRef, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+                StreamPriorityCommand.applyPriorities(playerRef, PacketHandler.DEFAULT_STREAM_PRIORITIES);
+                context.sendMessage(Message.translation("server.commands.network.streamPriority.reset.success").param("priorities", StreamPriorityCommand.formatPriorities(PacketHandler.DEFAULT_STREAM_PRIORITIES)));
             }
         }
     }

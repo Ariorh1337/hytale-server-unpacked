@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class MeshPointGeneratorAsset
 extends PointGeneratorAsset {
+    @Nonnull
     public static final BuilderCodec<MeshPointGeneratorAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(MeshPointGeneratorAsset.class, MeshPointGeneratorAsset::new, PointGeneratorAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Jitter", Codec.DOUBLE, true), (asset, v) -> {
         asset.jitter = v;
     }, asset -> asset.jitter).addValidator(Validators.range(0.0, 0.5)).add()).append(new KeyedCodec<Double>("ScaleX", Codec.DOUBLE, true), (asset, v) -> {
@@ -28,9 +29,9 @@ extends PointGeneratorAsset {
         asset.seedKey = seed;
     }, asset -> asset.seedKey).add()).build();
     private double jitter = 0.35;
-    private double scaleX = 1.0;
-    private double scaleY = 1.0;
-    private double scaleZ = 1.0;
+    private double scaleX = 40.0;
+    private double scaleY = 40.0;
+    private double scaleZ = 40.0;
     private String seedKey = "A";
 
     @Override

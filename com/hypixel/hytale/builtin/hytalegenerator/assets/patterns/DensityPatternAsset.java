@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 
 public class DensityPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<DensityPatternAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DensityPatternAsset.class, DensityPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (t, k) -> {
         t.delimiterAssets = k;
     }, k -> k.delimiterAssets).add()).append(new KeyedCodec("FieldFunction", DensityAsset.CODEC, true), (t, k) -> {
@@ -50,6 +51,7 @@ extends PatternAsset {
 
     public static class DelimiterAsset
     implements JsonAssetWithMap<String, DefaultAssetMap<String, DelimiterAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

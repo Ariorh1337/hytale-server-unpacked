@@ -54,9 +54,10 @@ extends AbstractCommandCollection {
 
         @Override
         protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
-            Ref<EntityStore> playerReference = playerRef.getReference();
-            TransformComponent playerTransformComponent = store.getComponent(playerReference, TransformComponent.getComponentType());
-            assert (playerTransformComponent != null);
+            TransformComponent playerTransformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+            if (playerTransformComponent == null) {
+                return;
+            }
             String objectiveLocationMarkerId = (String)this.locationMarkerArg.get(context);
             if (ObjectiveLocationMarkerAsset.getAssetMap().getAsset(objectiveLocationMarkerId) == null) {
                 context.sendMessage(Message.translation("server.commands.objective.locationMarker.notFound").param("id", objectiveLocationMarkerId));

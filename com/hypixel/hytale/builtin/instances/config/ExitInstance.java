@@ -31,8 +31,7 @@ implements RespawnController {
     @Override
     public CompletableFuture<Void> respawnPlayer(@Nonnull World world, @Nonnull Ref<EntityStore> playerReference, @Nonnull ComponentAccessor<EntityStore> commandBuffer) {
         try {
-            InstancesPlugin.exitInstance(playerReference, commandBuffer);
-            return CompletableFuture.completedFuture(null);
+            return InstancesPlugin.exitInstance(playerReference, commandBuffer);
         }
         catch (Exception e) {
             PlayerRef playerRefComponent = commandBuffer.getComponent(playerReference, PlayerRef.getComponentType());

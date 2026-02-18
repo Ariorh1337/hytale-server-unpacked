@@ -5,6 +5,7 @@ package com.hypixel.hytale.server.core.prefab;
 
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.prefab.PrefabLoadException;
 import com.hypixel.hytale.server.core.prefab.PrefabSaveException;
@@ -41,8 +42,17 @@ public class PrefabStore {
     }
 
     @Nonnull
+    private static Path resolvePrefabKey(@Nonnull Path basePath, @Nonnull String key) {
+        Path resolved = PathUtil.resolvePathWithinDir(basePath, key);
+        if (resolved == null) {
+            throw new PrefabLoadException(PrefabLoadException.Type.NOT_FOUND);
+        }
+        return resolved;
+    }
+
+    @Nonnull
     public BlockSelection getServerPrefab(@Nonnull String key) {
-        return this.getPrefab(this.getServerPrefabsPath().resolve(key));
+        return this.getPrefab(PrefabStore.resolvePrefabKey(this.getServerPrefabsPath(), key));
     }
 
     @Nonnull
@@ -61,7 +71,7 @@ public class PrefabStore {
 
     @Nonnull
     public Map<Path, BlockSelection> getServerPrefabDir(@Nonnull String key) {
-        return this.getPrefabDir(this.getServerPrefabsPath().resolve(key));
+        return this.getPrefabDir(PrefabStore.resolvePrefabKey(this.getServerPrefabsPath(), key));
     }
 
     @Nonnull
@@ -101,7 +111,7 @@ public class PrefabStore {
     }
 
     public void saveWorldGenPrefab(@Nonnull String key, @Nonnull BlockSelection prefab, boolean overwrite) {
-        this.savePrefab(this.getWorldGenPrefabsPath().resolve(key), prefab, overwrite);
+        this.savePrefab(PrefabStore.resolvePrefabKey(this.getWorldGenPrefabsPath(), key), prefab, overwrite);
     }
 
     public void savePrefab(@Nonnull Path path, @Nonnull BlockSelection prefab, boolean overwrite) {
@@ -132,11 +142,16 @@ public class PrefabStore {
     @Nonnull
     public Path getWorldGenPrefabsPath(@Nullable String name) {
         name = name == null ? DEFAULT_WORLDGEN_NAME : name;
-        return Universe.getWorldGenPath().resolve(name).resolve("Prefabs");
+        Path worldGenPath = Universe.getWorldGenPath();
+        Path resolved = PathUtil.resolvePathWithinDir(worldGenPath, name);
+        if (resolved == null) {
+            throw new IllegalArgumentException("Invalid world gen name: " + name);
+        }
+        return resolved.resolve("Prefabs");
     }
 
     public void saveServerPrefab(@Nonnull String key, @Nonnull BlockSelection prefab, boolean overwrite) {
-        this.savePrefab(this.getServerPrefabsPath().resolve(key), prefab, overwrite);
+        this.savePrefab(PrefabStore.resolvePrefabKey(this.getServerPrefabsPath(), key), prefab, overwrite);
     }
 
     @Nonnull
@@ -164,8 +179,8 @@ public class PrefabStore {
     public BlockSelection getAssetPrefabFromAnyPack(@Nonnull String key) {
         for (AssetPack pack : AssetModule.get().getAssetPacks()) {
             Path prefabsPath = this.getAssetPrefabsPathForPack(pack);
-            Path prefabPath = prefabsPath.resolve(key);
-            if (!Files.exists(prefabPath, new LinkOption[0])) continue;
+            Path prefabPath = PathUtil.resolvePathWithinDir(prefabsPath, key);
+            if (prefabPath == null || !Files.exists(prefabPath, new LinkOption[0])) continue;
             return this.getPrefab(prefabPath);
         }
         return null;
@@ -175,8 +190,8 @@ public class PrefabStore {
     public Path findAssetPrefabPath(@Nonnull String key) {
         for (AssetPack pack : AssetModule.get().getAssetPacks()) {
             Path prefabsPath = this.getAssetPrefabsPathForPack(pack);
-            Path prefabPath = prefabsPath.resolve(key);
-            if (!Files.exists(prefabPath, new LinkOption[0])) continue;
+            Path prefabPath = PathUtil.resolvePathWithinDir(prefabsPath, key);
+            if (prefabPath == null || !Files.exists(prefabPath, new LinkOption[0])) continue;
             return prefabPath;
         }
         return null;
@@ -195,12 +210,12 @@ public class PrefabStore {
 
     @Nonnull
     public BlockSelection getAssetPrefab(@Nonnull String key) {
-        return this.getPrefab(this.getAssetPrefabsPath().resolve(key));
+        return this.getPrefab(PrefabStore.resolvePrefabKey(this.getAssetPrefabsPath(), key));
     }
 
     @Nonnull
     public Map<Path, BlockSelection> getAssetPrefabDir(@Nonnull String key) {
-        return this.getPrefabDir(this.getAssetPrefabsPath().resolve(key));
+        return this.getPrefabDir(PrefabStore.resolvePrefabKey(this.getAssetPrefabsPath(), key));
     }
 
     public void saveAssetPrefab(@Nonnull String key, @Nonnull BlockSelection prefab) {
@@ -208,7 +223,7 @@ public class PrefabStore {
     }
 
     public void saveAssetPrefab(@Nonnull String key, @Nonnull BlockSelection prefab, boolean overwrite) {
-        this.savePrefab(this.getAssetPrefabsPath().resolve(key), prefab, overwrite);
+        this.savePrefab(PrefabStore.resolvePrefabKey(this.getAssetPrefabsPath(), key), prefab, overwrite);
     }
 
     @Nonnull
@@ -218,12 +233,12 @@ public class PrefabStore {
 
     @Nonnull
     public BlockSelection getWorldGenPrefab(@Nonnull Path prefabsPath, @Nonnull String key) {
-        return this.getPrefab(prefabsPath.resolve(key));
+        return this.getPrefab(PrefabStore.resolvePrefabKey(prefabsPath, key));
     }
 
     @Nonnull
     public Map<Path, BlockSelection> getWorldGenPrefabDir(@Nonnull String key) {
-        return this.getPrefabDir(this.getWorldGenPrefabsPath().resolve(key));
+        return this.getPrefabDir(PrefabStore.resolvePrefabKey(this.getWorldGenPrefabsPath(), key));
     }
 
     public void saveWorldGenPrefab(@Nonnull String key, @Nonnull BlockSelection prefab) {

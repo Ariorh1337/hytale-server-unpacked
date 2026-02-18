@@ -92,6 +92,7 @@ extends JavaPlugin {
         });
         entityStoreRegistry.registerSystem(new FlockSystems.EntityRemoved(this.flockComponentType));
         entityStoreRegistry.registerSystem(new FlockSystems.Ticking(this.flockComponentType));
+        entityStoreRegistry.registerSystem(new FlockSystems.FlockDebugSystem(this.flockComponentType));
         entityStoreRegistry.registerSystem(new FlockSystems.PlayerChangeGameModeEventSystem());
         this.flockMembershipComponentType = entityStoreRegistry.registerComponent(FlockMembership.class, "FlockMembership", FlockMembership.CODEC);
         this.persistentFlockDataComponentType = entityStoreRegistry.registerComponent(PersistentFlockData.class, "FlockData", PersistentFlockData.CODEC);
@@ -100,6 +101,7 @@ extends JavaPlugin {
         entityStoreRegistry.registerSystem(new PositionCacheSystems.OnFlockJoinSystem(NPCEntity.getComponentType(), this.flockMembershipComponentType));
         entityStoreRegistry.registerSystem(new FlockDeathSystems.EntityDeath());
         entityStoreRegistry.registerSystem(new FlockDeathSystems.PlayerDeath());
+        entityStoreRegistry.registerSystem(new FlockMembershipSystems.FilterPlayerFlockDamageSystem());
         entityStoreRegistry.registerSystem(new FlockMembershipSystems.OnDamageReceived());
         entityStoreRegistry.registerSystem(new FlockMembershipSystems.OnDamageDealt());
         entityStoreRegistry.registerSystem(new FlockMembershipSystems.NPCAddedFromWorldGen());
@@ -142,7 +144,7 @@ extends JavaPlugin {
     }
 
     @Nullable
-    public static Ref<EntityStore> trySpawnFlock(@Nonnull Ref<EntityStore> npcRef, @Nonnull NPCEntity npc, int roleIndex, @Nonnull Vector3d position, Vector3f rotation, int flockSize, FlockAsset flockDefinition, TriConsumer<NPCEntity, Holder<EntityStore>, Store<EntityStore>> preAddToWorld, TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn, @Nonnull Store<EntityStore> store) {
+    public static Ref<EntityStore> trySpawnFlock(@Nonnull Ref<EntityStore> npcRef, @Nonnull NPCEntity npc, int roleIndex, @Nonnull Vector3d position, Vector3f rotation, int flockSize, FlockAsset flockDefinition, TriConsumer<NPCEntity, Holder<EntityStore>, Store<EntityStore>> preAddToWorld, @Nullable TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn, @Nonnull Store<EntityStore> store) {
         Ref<EntityStore> flockReference;
         if (flockSize <= 1 || !npcRef.isValid()) {
             return null;

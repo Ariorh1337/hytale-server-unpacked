@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class WallPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<WallPatternAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WallPatternAsset.class, WallPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Wall", PatternAsset.CODEC, true), (t, k) -> {
         t.wall = k;
     }, k -> k.wall).add()).append(new KeyedCodec("Origin", PatternAsset.CODEC, true), (t, k) -> {

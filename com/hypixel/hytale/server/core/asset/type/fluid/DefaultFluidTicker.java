@@ -110,7 +110,7 @@ extends FluidTicker {
                 int z = offset.y;
                 int blockX = worldX + x;
                 int blockZ = worldZ + z;
-                if (DefaultFluidTicker.blocksFluidFrom(sourceBlock, sourceRotationIndex, -x, -z, sourceFiller)) continue;
+                if (this.blocksFluidFrom(sourceBlock, sourceRotationIndex, -x, -z, sourceFiller)) continue;
                 boolean isDifferentSection = !ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, blockX, worldY, blockZ);
                 FluidSection otherFluidSection = isDifferentSection ? accessor.getFluidSectionByBlock(blockX, worldY, blockZ) : fluidSection;
                 BlockSection blockSection3 = otherBlockSection = isDifferentSection ? accessor.getBlockSectionByBlock(blockX, worldY, blockZ) : blockSection;
@@ -118,7 +118,7 @@ extends FluidTicker {
                     return BlockTickStrategy.WAIT_FOR_ADJACENT_CHUNK_LOAD;
                 }
                 BlockType block = blockMap.getAsset(otherBlockSection.get(blockX, worldY, blockZ));
-                if (DefaultFluidTicker.blocksFluidFrom(block, rotationIndex = otherBlockSection.getRotationIndex(blockX, worldY, blockZ), x, z, destFiller = otherBlockSection.getFiller(blockX, worldY, blockZ)) || (otherFluidId = otherFluidSection.getFluidId(blockX, worldY, blockZ)) != 0 && otherFluidId != spreadFluidId && ((config = (FluidCollisionConfig)this.getCollisionMap().get(otherFluidId)) == null || DefaultFluidTicker.executeCollision(world, accessor, otherFluidSection, otherBlockSection, config, blockX, worldY, blockZ))) continue;
+                if (this.blocksFluidFrom(block, rotationIndex = otherBlockSection.getRotationIndex(blockX, worldY, blockZ), x, z, destFiller = otherBlockSection.getFiller(blockX, worldY, blockZ)) || (otherFluidId = otherFluidSection.getFluidId(blockX, worldY, blockZ)) != 0 && otherFluidId != spreadFluidId && ((config = (FluidCollisionConfig)this.getCollisionMap().get(otherFluidId)) == null || DefaultFluidTicker.executeCollision(world, accessor, otherFluidSection, otherBlockSection, config, blockX, worldY, blockZ))) continue;
                 byte fillLevel = otherFluidSection.getFluidLevel(blockX, worldY, blockZ);
                 if (otherFluidId == spreadFluidId && fillLevel >= childFillLevel) continue;
                 if (childFillLevel == 0) {

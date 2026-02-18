@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.blockparticle;
 
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockParticleSets;
 import com.hypixel.hytale.server.core.asset.packet.DefaultAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class BlockParticleSetPacketGenerator
 extends DefaultAssetPacketGenerator<String, BlockParticleSet> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(DefaultAssetMap<String, BlockParticleSet> assetMap, @Nonnull Map<String, BlockParticleSet> assets) {
+    public ToClientPacket generateInitPacket(DefaultAssetMap<String, BlockParticleSet> assetMap, @Nonnull Map<String, BlockParticleSet> assets) {
         UpdateBlockParticleSets packet = new UpdateBlockParticleSets();
         packet.type = UpdateType.Init;
         packet.blockParticleSets = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.BlockParticleSet>();
@@ -30,7 +30,7 @@ extends DefaultAssetPacketGenerator<String, BlockParticleSet> {
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull Map<String, BlockParticleSet> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull Map<String, BlockParticleSet> loadedAssets) {
         UpdateBlockParticleSets packet = new UpdateBlockParticleSets();
         packet.type = UpdateType.AddOrUpdate;
         packet.blockParticleSets = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.BlockParticleSet>();
@@ -42,7 +42,7 @@ extends DefaultAssetPacketGenerator<String, BlockParticleSet> {
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull Set<String> removed) {
         UpdateBlockParticleSets packet = new UpdateBlockParticleSets();
         packet.type = UpdateType.Remove;
         packet.blockParticleSets = new Object2ObjectOpenHashMap<String, com.hypixel.hytale.protocol.BlockParticleSet>();

@@ -35,7 +35,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.assets.TrackOrUpdateObjective;
 import com.hypixel.hytale.protocol.packets.assets.UntrackObjective;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -68,11 +68,11 @@ public class ObjectiveLocationMarkerSystems {
         @Nonnull
         private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
         @Nonnull
-        private final ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
+        private final ComponentType<EntityStore, TransformComponent> transformComponentType;
         @Nonnull
-        private final ComponentType<EntityStore, WeatherTracker> weatherTrackerComponentType = WeatherTracker.getComponentType();
+        private final ComponentType<EntityStore, WeatherTracker> weatherTrackerComponentType;
         @Nonnull
-        private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
+        private final ComponentType<EntityStore, UUIDComponent> uuidComponentType;
         @Nonnull
         private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent;
         @Nonnull
@@ -80,11 +80,14 @@ public class ObjectiveLocationMarkerSystems {
         @Nonnull
         private final Set<Dependency<EntityStore>> dependencies;
 
-        public TickingSystem(@Nonnull ComponentType<EntityStore, ObjectiveLocationMarker> objectiveLocationMarkerComponentType, @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType, @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent) {
+        public TickingSystem(@Nonnull ComponentType<EntityStore, ObjectiveLocationMarker> objectiveLocationMarkerComponentType, @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType, @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent, @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType, @Nonnull ComponentType<EntityStore, WeatherTracker> weatherTrackerComponentType, @Nonnull ComponentType<EntityStore, UUIDComponent> uuidComponentType) {
             this.objectiveLocationMarkerComponentType = objectiveLocationMarkerComponentType;
             this.playerRefComponentType = playerRefComponentType;
+            this.transformComponentType = transformComponentType;
+            this.weatherTrackerComponentType = weatherTrackerComponentType;
+            this.uuidComponentType = uuidComponentType;
             this.playerSpatialComponent = playerSpatialComponent;
-            this.query = Archetype.of(objectiveLocationMarkerComponentType, this.transformComponentType, this.uuidComponentType);
+            this.query = Archetype.of(objectiveLocationMarkerComponentType, transformComponentType, uuidComponentType);
             this.dependencies = Set.of(new SystemDependency(Order.AFTER, PlayerSpatialSystem.class, OrderPriority.CLOSEST));
         }
 
@@ -130,21 +133,17 @@ public class ObjectiveLocationMarkerSystems {
                 this.setupMarker(store, objectiveLocationMarkerComponent, entityReference, position, uuid, commandBuffer);
             } else if (!activeObjective.isCompleted()) {
                 SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
-                ObjectList<Ref<EntityStore>> playerReferences = SpatialResource.getThreadLocalReferenceList();
-                objectiveLocationMarkerComponent.area.getPlayersInExitArea(spatialResource, playerReferences, position);
-                HashSet<UUID> playersInExitArea = new HashSet<UUID>(playerReferences.size());
-                PlayerRef[] playersInEntryArea = new PlayerRef[playerReferences.size()];
+                ObjectList<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
+                objectiveLocationMarkerComponent.area.getPlayersInExitArea(spatialResource, playerRefs, position);
+                HashSet<UUID> playersInExitArea = new HashSet<UUID>(playerRefs.size());
+                PlayerRef[] playersInEntryArea = new PlayerRef[playerRefs.size()];
                 int playersInEntryAreaSize = 0;
-                for (Ref ref : playerReferences) {
+                for (Ref ref : playerRefs) {
+                    WeatherTracker playerWeatherTrackerComponent;
+                    TransformComponent playerTransformComponent;
+                    UUIDComponent playerUuidComponent;
                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, this.playerRefComponentType);
-                    assert (playerRefComponent != null);
-                    UUIDComponent playerUuidComponent = commandBuffer.getComponent(ref, this.uuidComponentType);
-                    assert (playerUuidComponent != null);
-                    TransformComponent playerTransformComponent = commandBuffer.getComponent(ref, this.transformComponentType);
-                    assert (playerTransformComponent != null);
-                    WeatherTracker playerWeatherTrackerComponent = commandBuffer.getComponent(ref, this.weatherTrackerComponentType);
-                    assert (playerWeatherTrackerComponent != null);
-                    if (!TickingSystem.isPlayerInSpecificEnvironment(objectiveLocationMarkerComponent, playerWeatherTrackerComponent, playerTransformComponent, commandBuffer)) continue;
+                    if (playerRefComponent == null || (playerUuidComponent = commandBuffer.getComponent(ref, this.uuidComponentType)) == null || (playerTransformComponent = commandBuffer.getComponent(ref, this.transformComponentType)) == null || (playerWeatherTrackerComponent = commandBuffer.getComponent(ref, this.weatherTrackerComponentType)) == null || !TickingSystem.isPlayerInSpecificEnvironment(objectiveLocationMarkerComponent, playerWeatherTrackerComponent, playerTransformComponent, commandBuffer)) continue;
                     playersInExitArea.add(playerUuidComponent.getUuid());
                     if (!objectiveLocationMarkerComponent.area.isPlayerInEntryArea(playerTransformComponent.getPosition(), position)) continue;
                     playersInEntryArea[playersInEntryAreaSize++] = playerRefComponent;
@@ -228,15 +227,15 @@ public class ObjectiveLocationMarkerSystems {
                 PlayerRef playerRef = universe.getPlayer(uuid);
                 logger.at(Level.FINE).log("Player '%s' left the objective area for marker '%s', current objective '%s' with UUID '%s'", playerRef == null ? uuid : playerRef.getUsername(), entity.objectiveLocationMarkerId, objectiveId, entity.activeObjectiveUUID);
                 if (playerRef == null) continue;
-                playerRef.getPacketHandler().write((Packet)entity.getUntrackPacket());
+                playerRef.getPacketHandler().write((ToClientPacket)entity.getUntrackPacket());
             }
         }
 
-        private static boolean isPlayerInSpecificEnvironment(@Nonnull ObjectiveLocationMarker entity, @Nonnull WeatherTracker weatherTracker, @Nonnull TransformComponent transform, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        private static boolean isPlayerInSpecificEnvironment(@Nonnull ObjectiveLocationMarker entity, @Nonnull WeatherTracker weatherTracker, @Nonnull TransformComponent transformComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
             if (entity.environmentIndexes == null) {
                 return true;
             }
-            weatherTracker.updateEnvironment(transform, componentAccessor);
+            weatherTracker.updateEnvironment(transformComponent, componentAccessor);
             int environmentIndex = weatherTracker.getEnvironmentId();
             return Arrays.binarySearch(entity.environmentIndexes, environmentIndex) >= 0;
         }
@@ -245,7 +244,8 @@ public class ObjectiveLocationMarkerSystems {
             ObjectiveDataStore objectiveDataStore = ObjectivePlugin.get().getObjectiveDataStore();
             for (ObjectiveTask task : entity.getActiveObjective().getCurrentTasks()) {
                 if (!(task instanceof UseEntityObjectiveTask)) continue;
-                String taskId = ((UseEntityObjectiveTask)task).getAsset().getTaskId();
+                UseEntityObjectiveTask useEntityObjectiveTask = (UseEntityObjectiveTask)task;
+                String taskId = useEntityObjectiveTask.getAsset().getTaskId();
                 objectiveDataStore.removeEntityTaskForPlayer(entity.activeObjectiveUUID, taskId, playerUUID);
             }
         }
@@ -254,11 +254,18 @@ public class ObjectiveLocationMarkerSystems {
     public static class EnsureNetworkSendableSystem
     extends HolderSystem<EntityStore> {
         @Nonnull
-        private final Query<EntityStore> query = Query.and(ObjectiveLocationMarker.getComponentType(), Query.not(NetworkId.getComponentType()));
+        private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
+
+        public EnsureNetworkSendableSystem(@Nonnull ComponentType<EntityStore, ObjectiveLocationMarker> objectiveLocationMarkerComponentType, @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType) {
+            this.networkIdComponentType = networkIdComponentType;
+            this.query = Query.and(objectiveLocationMarkerComponentType, Query.not(networkIdComponentType));
+        }
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
+            holder.addComponent(this.networkIdComponentType, new NetworkId(store.getExternalData().takeNextNetworkId()));
         }
 
         @Override
@@ -281,13 +288,16 @@ public class ObjectiveLocationMarkerSystems {
         @Nonnull
         private final ComponentType<EntityStore, TransformComponent> transformComponentType;
         @Nonnull
+        private final ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType;
+        @Nonnull
         private final Query<EntityStore> query;
 
-        public InitSystem(@Nonnull ComponentType<EntityStore, ObjectiveLocationMarker> objectiveLocationMarkerComponent) {
+        public InitSystem(@Nonnull ComponentType<EntityStore, ObjectiveLocationMarker> objectiveLocationMarkerComponent, @Nonnull ComponentType<EntityStore, ModelComponent> modelComponentType, @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType, @Nonnull ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType) {
             this.objectiveLocationMarkerComponent = objectiveLocationMarkerComponent;
-            this.modelComponentType = ModelComponent.getComponentType();
-            this.transformComponentType = TransformComponent.getComponentType();
-            this.query = Query.and(objectiveLocationMarkerComponent, this.modelComponentType, this.transformComponentType);
+            this.modelComponentType = modelComponentType;
+            this.transformComponentType = transformComponentType;
+            this.prefabCopyableComponentType = prefabCopyableComponentType;
+            this.query = Query.and(objectiveLocationMarkerComponent, modelComponentType, transformComponentType);
         }
 
         @Override
@@ -323,8 +333,8 @@ public class ObjectiveLocationMarkerSystems {
             ModelComponent modelComponent = store.getComponent(ref, this.modelComponentType);
             assert (modelComponent != null);
             Model model = modelComponent.getModel();
-            commandBuffer.putComponent(ref, this.modelComponentType, new ModelComponent(new Model(model.getModelAssetId(), model.getScale(), model.getRandomAttachmentIds(), model.getAttachments(), objectiveLocationMarkerComponent.getArea().getBoxForEntryArea(), model.getModel(), model.getTexture(), model.getGradientSet(), model.getGradientId(), model.getEyeHeight(), model.getCrouchOffset(), model.getAnimationSetMap(), model.getCamera(), model.getLight(), model.getParticles(), model.getTrails(), model.getPhysicsValues(), model.getDetailBoxes(), model.getPhobia(), model.getPhobiaModelAssetId())));
-            commandBuffer.ensureComponent(ref, PrefabCopyableComponent.getComponentType());
+            commandBuffer.putComponent(ref, this.modelComponentType, new ModelComponent(new Model(model.getModelAssetId(), model.getScale(), model.getRandomAttachmentIds(), model.getAttachments(), objectiveLocationMarkerComponent.getArea().getBoxForEntryArea(), model.getModel(), model.getTexture(), model.getGradientSet(), model.getGradientId(), model.getEyeHeight(), model.getCrouchOffset(), model.getSittingOffset(), model.getSleepingOffset(), model.getAnimationSetMap(), model.getCamera(), model.getLight(), model.getParticles(), model.getTrails(), model.getPhysicsValues(), model.getDetailBoxes(), model.getPhobia(), model.getPhobiaModelAssetId())));
+            commandBuffer.ensureComponent(ref, this.prefabCopyableComponentType);
         }
 
         @Override

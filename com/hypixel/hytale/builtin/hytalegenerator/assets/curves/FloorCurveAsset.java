@@ -13,13 +13,14 @@ import javax.annotation.Nonnull;
 
 public class FloorCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<FloorCurveAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FloorCurveAsset.class, FloorCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.curveAsset = k;
     }, k -> k.curveAsset).add()).append(new KeyedCodec<Double>("Floor", Codec.DOUBLE, true), (t, k) -> {
         t.limit = k;
     }, k -> k.limit).add()).build();
     private CurveAsset curveAsset = new ConstantCurveAsset();
-    private double limit = 0.0;
+    private double limit;
 
     @Override
     @Nonnull

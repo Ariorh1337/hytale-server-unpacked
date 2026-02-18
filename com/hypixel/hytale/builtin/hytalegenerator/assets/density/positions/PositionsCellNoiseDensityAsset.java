@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 
 public class PositionsCellNoiseDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<PositionsCellNoiseDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PositionsCellNoiseDensityAsset.class, PositionsCellNoiseDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> {
         asset.positionProviderAsset = v;
     }, asset -> asset.positionProviderAsset).add()).append(new KeyedCodec("ReturnType", ReturnTypeAsset.CODEC, true), (asset, v) -> {
@@ -44,8 +45,8 @@ extends DensityAsset {
         if (this.isSkipped()) {
             return new ConstantValueDensity(0.0);
         }
-        PositionProvider positionsField = this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerIndexer));
-        ReturnType returnType = this.returnTypeAsset.build(argument.parentSeed, argument.referenceBundle, argument.workerIndexer);
+        PositionProvider positionsField = this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId));
+        ReturnType returnType = this.returnTypeAsset.build(argument.parentSeed, argument.referenceBundle, argument.workerId);
         returnType.setMaxDistance(this.maxDistance);
         DistanceFunction distanceFunction = this.distanceFunctionAsset.build(argument.parentSeed, this.maxDistance);
         return new PositionsDensity(positionsField, returnType, distanceFunction, this.maxDistance);

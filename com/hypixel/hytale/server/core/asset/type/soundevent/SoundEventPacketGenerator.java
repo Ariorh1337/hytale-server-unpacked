@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.soundevent;
 
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateSoundEvents;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class SoundEventPacketGenerator
 extends SimpleAssetPacketGenerator<String, SoundEvent, IndexedLookupTableAssetMap<String, SoundEvent>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, SoundEvent> assetMap, @Nonnull Map<String, SoundEvent> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, SoundEvent> assetMap, @Nonnull Map<String, SoundEvent> assets) {
         UpdateSoundEvents packet = new UpdateSoundEvents();
         packet.type = UpdateType.Init;
         packet.soundEvents = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.SoundEvent>(assets.size());
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, SoundEvent, IndexedLookupTableAssetMa
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, SoundEvent> assetMap, @Nonnull Map<String, SoundEvent> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, SoundEvent> assetMap, @Nonnull Map<String, SoundEvent> loadedAssets) {
         UpdateSoundEvents packet = new UpdateSoundEvents();
         packet.type = UpdateType.AddOrUpdate;
         packet.soundEvents = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.SoundEvent>(loadedAssets.size());
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, SoundEvent, IndexedLookupTableAssetMa
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, SoundEvent> assetMap, @Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, SoundEvent> assetMap, @Nonnull Set<String> removed) {
         UpdateSoundEvents packet = new UpdateSoundEvents();
         packet.type = UpdateType.Remove;
         packet.soundEvents = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.SoundEvent>(removed.size());

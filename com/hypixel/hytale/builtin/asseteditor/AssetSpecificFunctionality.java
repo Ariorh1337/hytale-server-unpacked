@@ -25,7 +25,7 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.ItemArmorSlot;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotificationType;
@@ -122,7 +122,7 @@ public class AssetSpecificFunctionality {
                 if (!modelAsset.getId().equals(id)) continue;
                 com.hypixel.hytale.protocol.Model modelPacket = Model.createUnitScaleModel(modelAsset).toPacket();
                 AssetEditorUpdateModelPreview packet = new AssetEditorUpdateModelPreview(editor.getValue().toPacket(), modelPacket, null, DEFAULT_PREVIEW_CAMERA_SETTINGS);
-                editor.getKey().getPacketHandler().write((Packet)packet);
+                editor.getKey().getPacketHandler().write((ToClientPacket)packet);
             }
         }
     }
@@ -147,7 +147,7 @@ public class AssetSpecificFunctionality {
                 if (path.toString().isEmpty() || !((assetType = AssetEditorPlugin.get().getAssetTypeRegistry().getAssetTypeHandlerForPath(path)) instanceof AssetStoreTypeHandler) || !((AssetStoreTypeHandler)assetType).getAssetStore().getAssetClass().equals(Item.class)) continue;
                 String id = Item.getAssetStore().decodeFilePathKey(path);
                 if (!item.getId().equals(id) || (packet = AssetSpecificFunctionality.getModelPreviewPacketForItem(editor.getValue(), item)) == null) continue;
-                editor.getKey().getPacketHandler().write((Packet)packet);
+                editor.getKey().getPacketHandler().write((ToClientPacket)packet);
             }
         }
     }
@@ -294,8 +294,8 @@ public class AssetSpecificFunctionality {
         Set<EditorClient> editorClients = plugin.getEditorClients(uuid);
         if (editorClients == null || editorClients.size() == 1) {
             if (player != null) {
-                player.getPacketHandler().write((Packet)CLEAR_EDITOR_TIME_OVERRIDE_PACKET);
-                player.getPacketHandler().write((Packet)CLEAR_WEATHER_OVERRIDE_PACKET);
+                player.getPacketHandler().write((ToClientPacket)CLEAR_EDITOR_TIME_OVERRIDE_PACKET);
+                player.getPacketHandler().write((ToClientPacket)CLEAR_WEATHER_OVERRIDE_PACKET);
             }
             activeWeatherPreviewMapping.remove(uuid);
             return;
@@ -310,7 +310,7 @@ public class AssetSpecificFunctionality {
         }
         activeWeatherPreviewMapping.remove(uuid);
         if (player != null) {
-            player.getPacketHandler().write((Packet)new UpdateEditorWeatherOverride(0));
+            player.getPacketHandler().write((ToClientPacket)new UpdateEditorWeatherOverride(0));
         }
     }
 
@@ -326,11 +326,11 @@ public class AssetSpecificFunctionality {
         WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
         PacketHandler packetHandler = editorClient.getPacketHandler();
         AssetEditorUpdateSecondsPerGameDay settingsPacket = new AssetEditorUpdateSecondsPerGameDay(world.getDaytimeDurationSeconds(), world.getNighttimeDurationSeconds());
-        packetHandler.write((Packet)settingsPacket);
+        packetHandler.write((ToClientPacket)settingsPacket);
         Instant gameTime = worldTimeResource.getGameTime();
         UpdateEditorTimeOverride packet = new UpdateEditorTimeOverride(new InstantData(gameTime.getEpochSecond(), gameTime.getNano()), world.getWorldConfig().isGameTimePaused());
-        packetHandler.write((Packet)packet);
-        playerRef.getPacketHandler().write((Packet)CLEAR_EDITOR_TIME_OVERRIDE_PACKET);
+        packetHandler.write((ToClientPacket)packet);
+        playerRef.getPacketHandler().write((ToClientPacket)CLEAR_EDITOR_TIME_OVERRIDE_PACKET);
     }
 
     static void handleWeatherOrEnvironmentUnselected(@Nonnull EditorClient editorClient, @Nonnull Path assetPath, boolean wasWeather) {
@@ -348,7 +348,7 @@ public class AssetSpecificFunctionality {
                 return;
             }
             currentPreviewSettings.weatherAssetPath = null;
-            player.getPacketHandler().write((Packet)CLEAR_WEATHER_OVERRIDE_PACKET);
+            player.getPacketHandler().write((ToClientPacket)CLEAR_WEATHER_OVERRIDE_PACKET);
         }
     }
 
@@ -366,7 +366,7 @@ public class AssetSpecificFunctionality {
             String key = assetStore.decodeFilePathKey(assetPath);
             int weatherIndex = assetStore.getAssetMap().getIndex(key);
             currentPreviewSettings.weatherAssetPath = assetPath;
-            player.getPacketHandler().write((Packet)new UpdateEditorWeatherOverride(weatherIndex));
+            player.getPacketHandler().write((ToClientPacket)new UpdateEditorWeatherOverride(weatherIndex));
         }
     }
 
@@ -380,7 +380,7 @@ public class AssetSpecificFunctionality {
             ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(key);
             if (modelAsset != null) {
                 com.hypixel.hytale.protocol.Model modelPacket = Model.createUnitScaleModel(modelAsset).toPacket();
-                event.getEditorClient().getPacketHandler().write((Packet)new AssetEditorUpdateModelPreview(event.getAssetFilePath().toPacket(), modelPacket, null, DEFAULT_PREVIEW_CAMERA_SETTINGS));
+                event.getEditorClient().getPacketHandler().write((ToClientPacket)new AssetEditorUpdateModelPreview(event.getAssetFilePath().toPacket(), modelPacket, null, DEFAULT_PREVIEW_CAMERA_SETTINGS));
             }
         }
         if (ITEM_ASSET_ID.equals(assetType)) {
@@ -389,7 +389,7 @@ public class AssetSpecificFunctionality {
             String key = Item.getAssetStore().decodeFilePathKey(assetPath.path());
             Item item = Item.getAssetMap().getAsset(key);
             if (item != null && (packet = AssetSpecificFunctionality.getModelPreviewPacketForItem(assetPath, item)) != null) {
-                event.getEditorClient().getPacketHandler().write((Packet)packet);
+                event.getEditorClient().getPacketHandler().write((ToClientPacket)packet);
             }
         }
         if ((wasWeather = WEATHER_ASSET_ID.equals(previousAssetType = event.getPreviousAssetType())) || ENVIRONMENT_ASSET_ID.equals(previousAssetType)) {

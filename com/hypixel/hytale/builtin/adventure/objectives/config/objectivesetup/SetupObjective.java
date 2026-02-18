@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 
 public class SetupObjective
 extends ObjectiveTypeSetup {
+    @Nonnull
     public static final BuilderCodec<SetupObjective> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(SetupObjective.class, SetupObjective::new).append(new KeyedCodec<String>("ObjectiveId", Codec.STRING), (setupObjective, s) -> {
         setupObjective.objectiveId = s;
     }, setupObjective -> setupObjective.objectiveId).addValidator(Validators.nonNull()).addValidatorLate(() -> ObjectiveAsset.VALIDATOR_CACHE.getValidator().late()).add()).build();

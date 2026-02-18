@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class NotPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<NotPatternAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(NotPatternAsset.class, NotPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Pattern", PatternAsset.CODEC, true), (t, k) -> {
         t.patternAsset = k;
     }, k -> k.patternAsset).add()).build();

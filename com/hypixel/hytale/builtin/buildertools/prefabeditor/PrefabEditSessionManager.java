@@ -116,7 +116,9 @@ public class PrefabEditSessionManager {
 
     private void onPlayerReady(@Nonnull PlayerReadyEvent event) {
         Ref<EntityStore> playerRef = event.getPlayer().getReference();
-        assert (playerRef != null && !playerRef.isValid());
+        if (playerRef == null || !playerRef.isValid()) {
+            return;
+        }
         Store<EntityStore> store = playerRef.getStore();
         World world = store.getExternalData().getWorld();
         world.execute(() -> {

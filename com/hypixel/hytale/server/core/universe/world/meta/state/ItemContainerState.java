@@ -29,9 +29,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.DestroyableBlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerBlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.state.MarkerBlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,17 +42,14 @@ import javax.annotation.Nullable;
 public class ItemContainerState
 extends BlockState
 implements ItemContainerBlockState,
-DestroyableBlockState,
-MarkerBlockState {
-    public static final Codec<ItemContainerState> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ItemContainerState.class, ItemContainerState::new, BlockState.BASE_CODEC).addField(new KeyedCodec<Boolean>("Custom", Codec.BOOLEAN), (state, o) -> {
+DestroyableBlockState {
+    public static final Codec<ItemContainerState> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ItemContainerState.class, ItemContainerState::new, BlockState.BASE_CODEC).addField(new KeyedCodec<Boolean>("Custom", Codec.BOOLEAN), (state, o) -> {
         state.custom = o;
     }, state -> state.custom)).addField(new KeyedCodec<Boolean>("AllowViewing", Codec.BOOLEAN), (state, o) -> {
         state.allowViewing = o;
     }, state -> state.allowViewing)).addField(new KeyedCodec<String>("Droplist", Codec.STRING), (state, o) -> {
         state.droplist = o;
-    }, state -> state.droplist)).addField(new KeyedCodec<WorldMapManager.MarkerReference>("Marker", WorldMapManager.MarkerReference.CODEC), (state, o) -> {
-        state.marker = o;
-    }, state -> state.marker)).addField(new KeyedCodec<SimpleItemContainer>("ItemContainer", SimpleItemContainer.CODEC), (state, o) -> {
+    }, state -> state.droplist)).addField(new KeyedCodec<SimpleItemContainer>("ItemContainer", SimpleItemContainer.CODEC), (state, o) -> {
         state.itemContainer = o;
     }, state -> state.itemContainer)).build();
     private final Map<UUID, ContainerBlockWindow> windows = new ConcurrentHashMap<UUID, ContainerBlockWindow>();
@@ -63,7 +58,6 @@ MarkerBlockState {
     @Nullable
     protected String droplist;
     protected SimpleItemContainer itemContainer;
-    protected WorldMapManager.MarkerReference marker;
 
     @Override
     public boolean initialize(@Nonnull BlockType blockType) {
@@ -113,9 +107,6 @@ MarkerBlockState {
         if (itemEntityHolders.length > 0) {
             world.execute(() -> store.addEntities(itemEntityHolders, AddReason.SPAWN));
         }
-        if (this.marker != null) {
-            this.marker.remove();
-        }
     }
 
     public void setCustom(boolean custom) {
@@ -144,12 +135,6 @@ MarkerBlockState {
 
     public void setDroplist(@Nullable String droplist) {
         this.droplist = droplist;
-        this.markNeedsSave();
-    }
-
-    @Override
-    public void setMarker(WorldMapManager.MarkerReference marker) {
-        this.marker = marker;
         this.markNeedsSave();
     }
 

@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class FloorDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<FloorDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(FloorDensityAsset.class, FloorDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Limit", Codec.DOUBLE, true), (t, k) -> {
         t.limit = k;
     }, k -> k.limit).add()).build();

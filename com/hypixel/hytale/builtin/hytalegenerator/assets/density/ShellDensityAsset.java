@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class ShellDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<ShellDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ShellDensityAsset.class, ShellDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Vector3d>("Axis", Vector3d.CODEC, true), (t, k) -> {
         t.axis = k;
     }, k -> k.axis).add()).append(new KeyedCodec<Boolean>("Mirror", Codec.BOOLEAN, false), (t, k) -> {
@@ -27,7 +28,7 @@ extends DensityAsset {
         t.distanceCurveAsset = k;
     }, k -> k.distanceCurveAsset).add()).build();
     private Vector3d axis = new Vector3d(0.0, 0.0, 0.0);
-    private boolean isMirrored = false;
+    private boolean isMirrored;
     private CurveAsset angleCurveAsset = new ConstantCurveAsset();
     private CurveAsset distanceCurveAsset = new ConstantCurveAsset();
 

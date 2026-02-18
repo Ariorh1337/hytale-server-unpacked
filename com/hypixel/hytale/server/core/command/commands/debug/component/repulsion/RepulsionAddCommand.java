@@ -40,7 +40,7 @@ extends AbstractCommandCollection {
         @Nonnull
         private final RequiredArg<RepulsionConfig> repulsionConfigArg = this.withRequiredArg("repulsionConfig", "server.commands.repulsion.add.repulsionConfig.desc", ArgTypes.REPULSION_CONFIG);
         @Nonnull
-        private final EntityWrappedArg entityArg = this.withRequiredArg("entity", "server.commands.repulsion.add.entity.desc", ArgTypes.ENTITY_ID);
+        private final EntityWrappedArg entityArg = this.withRequiredArg("entity", "server.commands.repulsion.add.entityArg.desc", ArgTypes.ENTITY_ID);
 
         public RepulsionAddEntityCommand() {
             super("entity", "server.commands.repulsion.add.entity.desc");

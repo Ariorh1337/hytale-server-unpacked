@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class SmoothClampDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SmoothClampDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SmoothClampDensityAsset.class, SmoothClampDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("WallA", Codec.DOUBLE, true), (t, k) -> {
         t.wallA = k;
     }, k -> k.wallA).add()).append(new KeyedCodec<Double>("WallB", Codec.DOUBLE, true), (t, k) -> {

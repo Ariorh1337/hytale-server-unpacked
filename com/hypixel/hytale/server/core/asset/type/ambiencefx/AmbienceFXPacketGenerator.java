@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.ambiencefx;
 
 import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateAmbienceFX;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class AmbienceFXPacketGenerator
 extends SimpleAssetPacketGenerator<String, AmbienceFX, IndexedAssetMap<String, AmbienceFX>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedAssetMap<String, AmbienceFX> assetMap, @Nonnull Map<String, AmbienceFX> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedAssetMap<String, AmbienceFX> assetMap, @Nonnull Map<String, AmbienceFX> assets) {
         UpdateAmbienceFX packet = new UpdateAmbienceFX();
         packet.type = UpdateType.Init;
         packet.ambienceFX = new Object2ObjectOpenHashMap<Integer, com.hypixel.hytale.protocol.AmbienceFX>();
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, AmbienceFX, IndexedAssetMap<String, A
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedAssetMap<String, AmbienceFX> assetMap, @Nonnull Map<String, AmbienceFX> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedAssetMap<String, AmbienceFX> assetMap, @Nonnull Map<String, AmbienceFX> loadedAssets) {
         UpdateAmbienceFX packet = new UpdateAmbienceFX();
         packet.type = UpdateType.AddOrUpdate;
         packet.ambienceFX = new Object2ObjectOpenHashMap<Integer, com.hypixel.hytale.protocol.AmbienceFX>();
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, AmbienceFX, IndexedAssetMap<String, A
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedAssetMap<String, AmbienceFX> assetMap, @Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedAssetMap<String, AmbienceFX> assetMap, @Nonnull Set<String> removed) {
         UpdateAmbienceFX packet = new UpdateAmbienceFX();
         packet.type = UpdateType.Remove;
         packet.ambienceFX = new Object2ObjectOpenHashMap<Integer, com.hypixel.hytale.protocol.AmbienceFX>();

@@ -8,7 +8,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.Message;
@@ -68,7 +68,7 @@ extends ToolOperation {
         laserPacket.endZ = (float)endLocation.z;
         laserPacket.color = laserColor;
         laserPacket.durationMs = duration;
-        PlayerUtil.broadcastPacketToPlayers(componentAccessor, (Packet)laserPacket);
+        PlayerUtil.broadcastPacketToPlayers(componentAccessor, (ToClientPacket)laserPacket);
     }
 
     @Override

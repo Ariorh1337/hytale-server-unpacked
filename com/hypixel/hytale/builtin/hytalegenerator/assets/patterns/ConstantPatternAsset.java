@@ -13,12 +13,14 @@ import javax.annotation.Nonnull;
 
 public class ConstantPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<ConstantPatternAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ConstantPatternAsset.class, ConstantPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec<Boolean>("Value", Codec.BOOLEAN, true), (asset, value) -> {
         asset.value = value;
     }, value -> value.value).add()).build();
-    private boolean value = false;
+    private boolean value;
 
     @Override
+    @Nonnull
     public Pattern build(@Nonnull PatternAsset.Argument argument) {
         if (super.isSkipped()) {
             return Pattern.noPattern();
@@ -31,6 +33,7 @@ extends PatternAsset {
             }
 
             @Override
+            @Nonnull
             public SpaceSize readSpace() {
                 return SpaceSize.empty();
             }

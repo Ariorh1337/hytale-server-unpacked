@@ -14,17 +14,22 @@ import com.hypixel.hytale.builtin.adventure.camera.asset.viewbobbing.ViewBobbing
 import com.hypixel.hytale.builtin.adventure.camera.command.CameraEffectCommand;
 import com.hypixel.hytale.builtin.adventure.camera.interaction.CameraShakeInteraction;
 import com.hypixel.hytale.builtin.adventure.camera.system.CameraEffectSystem;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.protocol.MovementType;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
 import com.hypixel.hytale.server.core.asset.type.camera.CameraEffect;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.registry.AssetRegistry;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class CameraPlugin
 extends JavaPlugin {
+    @Nonnull
     private static final String CODEC_CAMERA_SHAKE = "CameraShake";
 
     public CameraPlugin(@Nonnull JavaPluginInit init) {
@@ -39,7 +44,9 @@ extends JavaPlugin {
         assetRegistry.register(((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(String.class, CameraShake.class, new IndexedAssetMap()).loadsBefore(CameraEffect.class)).setCodec((AssetCodec)CameraShake.CODEC)).setPath("Camera/CameraShake")).setKeyFunction(CameraShake::getId)).setReplaceOnRemove(CameraShake::new)).setPacketGenerator(new CameraShakePacketGenerator()).build());
         assetRegistry.register(((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(MovementType.class, ViewBobbing.class, new DefaultAssetMap()).setCodec((AssetCodec)ViewBobbing.CODEC)).setPath("Camera/ViewBobbing")).setKeyFunction(ViewBobbing::getId)).setPacketGenerator(new ViewBobbingPacketGenerator()).build());
         this.getCommandRegistry().registerCommand(new CameraEffectCommand());
-        this.getEntityStoreRegistry().registerSystem(new CameraEffectSystem());
+        ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
+        ComponentType<EntityStore, EntityStatMap> entityStatMapComponentType = EntityStatMap.getComponentType();
+        this.getEntityStoreRegistry().registerSystem(new CameraEffectSystem(playerRefComponentType, entityStatMapComponentType));
     }
 }
 

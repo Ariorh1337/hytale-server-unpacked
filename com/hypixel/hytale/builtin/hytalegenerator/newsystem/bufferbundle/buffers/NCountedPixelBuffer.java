@@ -17,7 +17,9 @@ import javax.annotation.Nullable;
 public class NCountedPixelBuffer<T>
 extends NPixelBuffer<T> {
     public static final int BUFFER_SIZE_BITS = 3;
+    @Nonnull
     public static final Vector3i SIZE_VOXEL_GRID = new Vector3i(8, 1, 8);
+    @Nonnull
     public static final Bounds3i BOUNDS_VOXEL_GRID = new Bounds3i(Vector3i.ZERO, SIZE_VOXEL_GRID);
     @Nonnull
     private final Class<T> pixelType;
@@ -141,7 +143,9 @@ extends NPixelBuffer<T> {
 
     public static class CountedArrayContents<T>
     implements MemInstrument {
+        @Nonnull
         private final T[] array;
+        @Nonnull
         private final List<T> allBiomes;
 
         public CountedArrayContents() {

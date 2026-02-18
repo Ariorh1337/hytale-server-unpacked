@@ -11,6 +11,7 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Instant;
+import javax.annotation.Nullable;
 
 public class MinecartComponent
 implements Component<EntityStore> {
@@ -18,6 +19,7 @@ implements Component<EntityStore> {
         o.sourceItem = v;
     }, o -> o.sourceItem).add()).build();
     private int numberOfHits = 0;
+    @Nullable
     private Instant lastHit;
     private String sourceItem = "Rail_Kart";
 
@@ -40,11 +42,12 @@ implements Component<EntityStore> {
         this.numberOfHits = numberOfHits;
     }
 
+    @Nullable
     public Instant getLastHit() {
         return this.lastHit;
     }
 
-    public void setLastHit(Instant lastHit) {
+    public void setLastHit(@Nullable Instant lastHit) {
         this.lastHit = lastHit;
     }
 

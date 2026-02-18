@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class DistanceExponentialCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<DistanceExponentialCurveAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DistanceExponentialCurveAsset.class, DistanceExponentialCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Exponent", Codec.DOUBLE, true), (t, k) -> {
         t.exponent = k;
     }, k -> k.exponent).addValidator(Validators.greaterThanOrEqual(0.0)).add()).append(new KeyedCodec<Double>("Range", Codec.DOUBLE, true), (t, k) -> {

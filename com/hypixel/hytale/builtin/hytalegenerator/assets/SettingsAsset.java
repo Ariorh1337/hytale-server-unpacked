@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class SettingsAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, SettingsAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, SettingsAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(SettingsAsset.class, SettingsAsset::new, Codec.STRING, (asset, id) -> {
         asset.id = id;
     }, config -> config.id, (config, data) -> {

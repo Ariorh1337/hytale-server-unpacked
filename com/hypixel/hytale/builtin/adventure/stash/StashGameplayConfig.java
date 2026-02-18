@@ -11,7 +11,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class StashGameplayConfig {
+    @Nonnull
     public static final String ID = "Stash";
+    @Nonnull
     public static final BuilderCodec<StashGameplayConfig> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(StashGameplayConfig.class, StashGameplayConfig::new).appendInherited(new KeyedCodec<Boolean>("ClearContainerDropList", Codec.BOOLEAN), (gameplayConfig, clearContainerDropList) -> {
         gameplayConfig.clearContainerDropList = clearContainerDropList;
     }, gameplayConfig -> gameplayConfig.clearContainerDropList, (gameplayConfig, parent) -> {

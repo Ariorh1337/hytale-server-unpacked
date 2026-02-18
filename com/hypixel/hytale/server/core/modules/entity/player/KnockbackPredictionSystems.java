@@ -24,7 +24,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.protocol.MovementStates;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.entities.ApplyKnockback;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
@@ -177,7 +177,7 @@ public class KnockbackPredictionSystems {
                     }
                     PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
                     assert (playerRefComponent != null);
-                    playerRefComponent.getPacketHandler().write((Packet)new ApplyKnockback(PositionUtil.toPositionPacket(transformComponent.getPosition()), (float)requestedVelocity.x, (float)requestedVelocity.y, (float)requestedVelocity.z, knockbackSimulationComponent.getRequestedVelocityChangeType()));
+                    playerRefComponent.getPacketHandler().write((ToClientPacket)new ApplyKnockback(PositionUtil.toPositionPacket(transformComponent.getPosition()), (float)requestedVelocity.x, (float)requestedVelocity.y, (float)requestedVelocity.z, knockbackSimulationComponent.getRequestedVelocityChangeType()));
                 }
                 requestedVelocity.assign(0.0);
                 knockbackSimulationComponent.setRequestedVelocityChangeType(null);

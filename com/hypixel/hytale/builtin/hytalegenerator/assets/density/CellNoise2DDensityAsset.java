@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 public class CellNoise2DDensityAsset
 extends DensityAsset {
     private static Set<String> validCellTypes = new HashSet<String>();
+    @Nonnull
     public static final BuilderCodec<CellNoise2DDensityAsset> CODEC;
     private double scaleX = 1.0;
     private double scaleZ = 1.0;
@@ -41,7 +42,7 @@ extends DensityAsset {
         SeedBox childSeed = argument.parentSeed.child(this.seedKey);
         CellNoiseField noise = new CellNoiseField(childSeed.createSupplier().get(), this.scaleX, 1.0, this.scaleZ, this.jitter, this.octaves, this.cellType);
         Noise2dDensity noiseDensity = new Noise2dDensity(noise);
-        MultiCacheDensity cacheDensity = new MultiCacheDensity(noiseDensity, argument.workerIndexer.getWorkerCount(), CacheDensityAsset.DEFAULT_CAPACITY);
+        MultiCacheDensity cacheDensity = new MultiCacheDensity(noiseDensity, CacheDensityAsset.DEFAULT_CAPACITY);
         return new YOverrideDensity(cacheDensity, 0.0);
     }
 

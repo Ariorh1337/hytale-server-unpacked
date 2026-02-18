@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class ShopElement
 extends ChoiceElement {
+    @Nonnull
     public static final BuilderCodec<ShopElement> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ShopElement.class, ShopElement::new, ChoiceElement.BASE_CODEC).append(new KeyedCodec<Integer>("Cost", Codec.INTEGER), (shopElement, integer) -> {
         shopElement.cost = integer;
     }, shopElement -> shopElement.cost).addValidator(Validators.greaterThanOrEqual(0)).add()).append(new KeyedCodec<String>("Icon", Codec.STRING), (shopElement, s) -> {

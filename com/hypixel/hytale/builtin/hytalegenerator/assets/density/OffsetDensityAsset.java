@@ -14,9 +14,11 @@ import javax.annotation.Nonnull;
 
 public class OffsetDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<OffsetDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(OffsetDensityAsset.class, OffsetDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("FunctionForY", NodeFunctionYOutAsset.CODEC, true), (t, k) -> {
         t.nodeFunctionYOutAsset = k;
     }, k -> k.nodeFunctionYOutAsset).add()).build();
+    @Nonnull
     private NodeFunctionYOutAsset nodeFunctionYOutAsset = new NodeFunctionYOutAsset();
 
     @Override

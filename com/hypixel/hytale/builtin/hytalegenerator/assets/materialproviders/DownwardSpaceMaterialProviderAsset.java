@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class DownwardSpaceMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<DownwardSpaceMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DownwardSpaceMaterialProviderAsset.class, DownwardSpaceMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<Integer>("Space", Codec.INTEGER, true), (t, k) -> {
         t.space = k;
     }, k -> k.space).add()).append(new KeyedCodec("Material", MaterialProviderAsset.CODEC, true), (t, k) -> {

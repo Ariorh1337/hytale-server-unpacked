@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 
 public class GatherObjectiveTask
 extends CountObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<GatherObjectiveTask> CODEC = BuilderCodec.builder(GatherObjectiveTask.class, GatherObjectiveTask::new, CountObjectiveTask.CODEC).build();
 
     public GatherObjectiveTask(@Nonnull GatherObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {

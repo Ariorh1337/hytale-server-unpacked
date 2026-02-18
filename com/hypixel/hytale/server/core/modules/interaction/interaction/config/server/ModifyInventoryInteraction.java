@@ -100,7 +100,7 @@ extends SimpleInstantInteraction {
         if (!hasRequiredGameMode) {
             return;
         }
-        CombinedItemContainer combinedHotbarFirst = playerComponent.getInventory().getCombinedHotbarFirst();
+        CombinedItemContainer combinedHotbarFirst = playerComponent.getInventory().getCombinedBackpackStorageHotbarFirst();
         if (this.itemToRemove != null && !(removeItemStack = combinedHotbarFirst.removeItemStack(this.itemToRemove, true, true)).succeeded()) {
             context.getState().state = InteractionState.Failed;
             return;

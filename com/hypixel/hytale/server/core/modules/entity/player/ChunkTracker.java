@@ -18,7 +18,8 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.metrics.MetricsRegistry;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.UnloadChunk;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -133,7 +134,7 @@ implements Component<EntityStore> {
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     public void tick(@Nonnull Player playerComponent, @Nonnull PlayerRef playerRefComponent, @Nonnull TransformComponent transformComponent, float dt, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        if (!this.readyForChunks) {
+        if (!this.readyForChunks || !playerRefComponent.getPacketHandler().getChannel(NetworkChannel.Chunks).isWritable()) {
             return;
         }
         this.transformComponent = transformComponent;
@@ -491,7 +492,7 @@ implements Component<EntityStore> {
             ObjectArrayList packets = new ObjectArrayList();
             chunkStore.fetch(Collections.singletonList(chunkRef), ChunkStore.UNLOAD_PACKETS_DATA_QUERY_SYSTEM_TYPE, playerRef, packets);
             for (int i = 0; i < packets.size(); ++i) {
-                packetHandler.write((Packet)packets.get(i));
+                packetHandler.write((ToClientPacket)packets.get(i));
             }
         }
         packetHandler.writeNoCache(new UnloadChunk(x, z));
@@ -563,7 +564,7 @@ implements Component<EntityStore> {
         chunkComponentStore.getStore().fetch(Collections.singletonList(chunkRef), ChunkStore.LOAD_FUTURE_PACKETS_DATA_QUERY_SYSTEM_TYPE, playerRefComponent, futurePackets);
         return CompletableFuture.allOf((CompletableFuture[])futurePackets.toArray(CompletableFuture[]::new)).thenAcceptAsync(o -> {
             for (CompletableFuture futurePacket : futurePackets) {
-                Packet packet = (Packet)futurePacket.join();
+                ToClientPacket packet = (ToClientPacket)futurePacket.join();
                 if (packet == null) continue;
                 packets.add(packet);
             }
@@ -571,7 +572,7 @@ implements Component<EntityStore> {
             try {
                 if (this.loading.remove(chunkIndex)) {
                     for (int i = 0; i < packets.size(); ++i) {
-                        playerRefComponent.getPacketHandler().write((Packet)packets.get(i));
+                        playerRefComponent.getPacketHandler().write((ToClientPacket)packets.get(i));
                     }
                     this.loaded.add(chunkIndex);
                 }

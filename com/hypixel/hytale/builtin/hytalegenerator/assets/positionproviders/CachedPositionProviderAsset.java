@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class CachedPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<CachedPositionProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CachedPositionProviderAsset.class, CachedPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> {
         asset.childAsset = v;
     }, asset -> asset.childAsset).add()).append(new KeyedCodec<Integer>("SectionSize", Codec.INTEGER, true), (asset, v) -> {
@@ -33,7 +34,7 @@ extends PositionProviderAsset {
             return PositionProvider.noPositionProvider();
         }
         PositionProvider childPositions = this.childAsset.build(argument);
-        CachedPositionProvider instance = new CachedPositionProvider(childPositions, this.sectionSize, this.cacheSize, false, argument.workerIndexer.getWorkerCount());
+        CachedPositionProvider instance = new CachedPositionProvider(childPositions, this.sectionSize, this.cacheSize, false);
         return instance;
     }
 

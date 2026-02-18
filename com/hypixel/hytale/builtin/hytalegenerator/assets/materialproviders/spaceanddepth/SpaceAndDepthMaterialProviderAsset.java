@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class SpaceAndDepthMaterialProviderAsset
 extends MaterialProviderAsset {
+    @Nonnull
     public static final BuilderCodec<SpaceAndDepthMaterialProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpaceAndDepthMaterialProviderAsset.class, SpaceAndDepthMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<SpaceAndDepthMaterialProvider.LayerContextType>("LayerContext", SpaceAndDepthMaterialProvider.LayerContextType.CODEC, true), (t, k) -> {
         t.layerContext = k;
     }, k -> k.layerContext).add()).append(new KeyedCodec<Integer>("MaxExpectedDepth", Codec.INTEGER, true), (t, k) -> {

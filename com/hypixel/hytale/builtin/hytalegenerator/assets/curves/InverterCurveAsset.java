@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class InverterCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<InverterCurveAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(InverterCurveAsset.class, InverterCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.curveAsset = k;
     }, k -> k.curveAsset).add()).build();

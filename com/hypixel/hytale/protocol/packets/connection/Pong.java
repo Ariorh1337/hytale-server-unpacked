@@ -4,7 +4,9 @@
 package com.hypixel.hytale.protocol.packets.connection;
 
 import com.hypixel.hytale.protocol.InstantData;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
 import io.netty.buffer.ByteBuf;
@@ -13,7 +15,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class Pong
-implements Packet {
+implements Packet,
+ToServerPacket {
     public static final int PACKET_ID = 3;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -31,6 +34,11 @@ implements Packet {
     @Override
     public int getId() {
         return 3;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public Pong() {

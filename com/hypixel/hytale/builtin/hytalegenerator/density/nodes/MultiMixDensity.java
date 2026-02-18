@@ -118,6 +118,7 @@ extends Density {
 
         public static class GaugeSegmentComparator
         implements BiFunction<Double, Segment, Integer> {
+            @Nonnull
             public static final GaugeSegmentComparator INSTANCE = new GaugeSegmentComparator();
 
             @Override

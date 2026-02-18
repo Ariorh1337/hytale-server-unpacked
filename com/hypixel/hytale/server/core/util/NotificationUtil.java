@@ -116,7 +116,7 @@ public class NotificationUtil {
         NotificationUtil.sendNotification(handler, Message.raw(message), Message.raw(secondaryMessage), null, null, NotificationStyle.Default);
     }
 
-    public static void sendNotification(@Nonnull PacketHandler handler, Message message, Message secondaryMessage, String icon) {
+    public static void sendNotification(@Nonnull PacketHandler handler, @Nonnull Message message, @Nullable Message secondaryMessage, @Nullable String icon) {
         NotificationUtil.sendNotification(handler, message, secondaryMessage, icon, null, NotificationStyle.Default);
     }
 

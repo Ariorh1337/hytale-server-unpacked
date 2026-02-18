@@ -59,14 +59,17 @@ public final class Material {
         return Objects.hash(solid.blockId, fluid.fluidId);
     }
 
+    @Nonnull
     public SolidMaterial solid() {
         return this.solid;
     }
 
+    @Nonnull
     public FluidMaterial fluid() {
         return this.fluid;
     }
 
+    @Nonnull
     public String toString() {
         return "Material[solid=" + String.valueOf(this.solid) + ", fluid=" + String.valueOf(this.fluid) + "]";
     }

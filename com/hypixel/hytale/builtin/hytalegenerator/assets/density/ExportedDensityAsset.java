@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class ExportedDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<ExportedDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ExportedDensityAsset.class, ExportedDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Boolean>("SingleInstance", Codec.BOOLEAN, false), (asset, value) -> {
         asset.singleInstance = value;
     }, asset -> asset.singleInstance).add()).build();
@@ -30,11 +31,13 @@ extends DensityAsset {
             LoggerUtil.getLogger().severe("Couldn't find Density asset exported with name: '" + this.exportName + "'. This could indicate a defect in the HytaleGenerator assets.");
             return this.firstInput().build(argument);
         }
-        if (exported.singleInstance) {
-            if (exported.builtInstance == null) {
-                exported.builtInstance = this.firstInput().build(argument);
+        if (exported.isSingleInstance) {
+            Density builtInstance = exported.threadInstances.get(argument.workerId);
+            if (builtInstance == null) {
+                builtInstance = this.firstInput().build(argument);
+                exported.threadInstances.put(argument.workerId, builtInstance);
             }
-            return exported.builtInstance;
+            return builtInstance;
         }
         return this.firstInput().build(argument);
     }
@@ -46,7 +49,7 @@ extends DensityAsset {
         if (exported == null) {
             return;
         }
-        exported.builtInstance = null;
+        exported.threadInstances.clear();
         for (DensityAsset input : this.inputs()) {
             input.cleanUp();
         }

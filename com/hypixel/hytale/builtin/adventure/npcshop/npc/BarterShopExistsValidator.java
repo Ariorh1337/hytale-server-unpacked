@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 
 public class BarterShopExistsValidator
 extends AssetValidator {
+    @Nonnull
     private static final BarterShopExistsValidator DEFAULT_INSTANCE = new BarterShopExistsValidator();
 
     private BarterShopExistsValidator() {

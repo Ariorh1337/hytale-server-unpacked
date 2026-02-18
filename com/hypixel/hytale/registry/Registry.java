@@ -9,10 +9,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public abstract class Registry<T extends Registration> {
     @Nonnull
     private final BooleanSupplier precondition;
+    @Nullable
     private final String preconditionMessage;
     private final RegistrationWrapFunction<T> wrappingFunction;
     @Nonnull
@@ -21,7 +23,7 @@ public abstract class Registry<T extends Registration> {
     private final List<BooleanConsumer> unmodifiableRegistrations;
     private boolean enabled = true;
 
-    protected Registry(@Nonnull List<BooleanConsumer> registrations, @Nonnull BooleanSupplier precondition, String preconditionMessage, @Nonnull RegistrationWrapFunction<T> wrappingFunction) {
+    protected Registry(@Nonnull List<BooleanConsumer> registrations, @Nonnull BooleanSupplier precondition, @Nullable String preconditionMessage, @Nonnull RegistrationWrapFunction<T> wrappingFunction) {
         this.registrations = registrations;
         this.unmodifiableRegistrations = Collections.unmodifiableList(registrations);
         this.precondition = precondition;
@@ -45,6 +47,14 @@ public abstract class Registry<T extends Registration> {
 
     public void shutdown() {
         this.enabled = false;
+    }
+
+    public void shutdownAndCleanup(boolean shutdown) {
+        this.enabled = false;
+        for (int i = this.registrations.size() - 1; i >= 0; --i) {
+            this.registrations.get(i).accept(shutdown);
+        }
+        this.registrations.clear();
     }
 
     public T register(@Nonnull T registration) {

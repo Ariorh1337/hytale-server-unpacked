@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 
 public class LookBlocksBelowProvider
 extends WorldLocationProvider {
+    @Nonnull
     public static final BuilderCodec<LookBlocksBelowProvider> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(LookBlocksBelowProvider.class, LookBlocksBelowProvider::new, BASE_CODEC).append(new KeyedCodec<T[]>("BlockTags", Codec.STRING_ARRAY), (lookBlocksBelowCondition, strings) -> {
         lookBlocksBelowCondition.blockTags = strings;
     }, lookBlocksBelowCondition -> lookBlocksBelowCondition.blockTags).addValidator(Validators.nonEmptyArray()).addValidator(Validators.uniqueInArray()).add()).append(new KeyedCodec<Integer>("Count", Codec.INTEGER), (lookBlocksBelowCondition, integer) -> {
@@ -64,15 +65,25 @@ extends WorldLocationProvider {
     @Override
     @Nullable
     public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
-        int y;
         Vector3i newPosition = position.clone();
-        Object worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z));
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z);
+        Object worldChunkComponent = world.getChunk(chunkIndex);
+        if (worldChunkComponent == null) {
+            return null;
+        }
         int baseY = newPosition.y;
         int x = newPosition.x;
+        int y = newPosition.y;
         int z = newPosition.z;
         int currentCount = 0;
-        for (y = newPosition.y; y >= this.minRange && baseY - y <= this.maxRange; --y) {
-            String blockStateKey = worldChunk.getBlockType(x, y, z).getId();
+        while (y >= this.minRange && baseY - y <= this.maxRange) {
+            BlockType blockType = worldChunkComponent.getBlockType(x, y, z);
+            if (blockType == null) {
+                --y;
+                currentCount = 0;
+                continue;
+            }
+            String blockStateKey = blockType.getId();
             boolean found = false;
             for (int i = 0; i < this.blockTagsIndexes.length; ++i) {
                 int blockTagId = this.blockTagsIndexes[i];
@@ -82,6 +93,7 @@ extends WorldLocationProvider {
                 break;
             }
             if (currentCount == this.count) break;
+            --y;
             if (found) continue;
             currentCount = 0;
         }

@@ -206,12 +206,13 @@ extends DeployableConfig {
     }
 
     private void tickAttackState(@Nonnull Ref<EntityStore> ref, @Nonnull DeployableComponent component, float dt, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+        Vector3d spawnOffset;
         component.setTimeSinceLastAttack(component.getTimeSinceLastAttack() + dt);
         World world = commandBuffer.getExternalData().getWorld();
         DeployableProjectileShooterComponent shooterComponent = store.getComponent(ref, DeployableProjectileShooterComponent.getComponentType());
         Vector3d spawnPos = Vector3d.ZERO.clone();
-        if (this.projectileSpawnOffsets != null) {
-            spawnPos.add(this.projectileSpawnOffsets.get(component.getSpawnFace()));
+        if (this.projectileSpawnOffsets != null && (spawnOffset = this.projectileSpawnOffsets.get(component.getSpawnFace())) != null) {
+            spawnPos.add(spawnOffset);
         }
         if (shooterComponent == null) {
             world.execute(() -> {
@@ -287,17 +288,21 @@ extends DeployableConfig {
             Vector3d rootPos = transformComponent.getPosition();
             Vector3d projectileSpawnPos = Vector3d.ZERO.clone();
             if (this.projectileSpawnOffsets != null) {
-                projectileSpawnPos = this.projectileSpawnOffsets.get(component.getSpawnFace()).clone();
+                projectileSpawnPos = this.projectileSpawnOffsets.getOrDefault(component.getSpawnFace(), Vector3d.ZERO).clone();
             }
             projectileSpawnPos.add(fwdDirection.clone().normalize());
             projectileSpawnPos.add(rootPos);
-            UUID uuid = store.getComponent(ref, UUIDComponent.getComponentType()).getUuid();
-            shooterComponent.spawnProjectile(ref, commandBuffer, this.projectileConfig, uuid, projectileSpawnPos, fwdDirection.clone());
+            UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+            if (uuidComponent != null) {
+                UUID uuid = uuidComponent.getUuid();
+                shooterComponent.spawnProjectile(ref, commandBuffer, this.projectileConfig, uuid, projectileSpawnPos, fwdDirection.clone());
+            }
             DeployableTurretConfig.playAnimation(store, ref, this, "Shoot");
             component.setTimeSinceLastAttack(0.0f);
         }
     }
 
+    @Nonnull
     private Vector3d calculatedTargetPosition(@Nonnull Vector3d original) {
         return Vector3d.add(original.clone(), this.targetOffset);
     }
@@ -337,8 +342,11 @@ extends DeployableConfig {
                 return false;
             }
             BlockType blockType = BlockType.getAssetMap().getAsset(id);
+            if (blockType == null) {
+                return false;
+            }
             BlockMaterial material = blockType.getMaterial();
-            if (material == BlockMaterial.Empty) {
+            if (material == null || material == BlockMaterial.Empty) {
                 return false;
             }
             return blockType.getOpacity() != Opacity.Transparent;
@@ -366,22 +374,28 @@ extends DeployableConfig {
     }
 
     private void updateProjectile(@Nonnull Ref<EntityStore> projectileRef, @Nonnull DeployableProjectileShooterComponent shooterComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        StandardPhysicsProvider physics;
+        StandardPhysicsProvider physicsComponent;
         if (!projectileRef.isValid()) {
             shooterComponent.getProjectilesForRemoval().add(projectileRef);
             return;
         }
         TransformComponent projTransformComponent = store.getComponent(projectileRef, TransformComponent.getComponentType());
-        assert (projTransformComponent != null);
+        if (projTransformComponent == null) {
+            shooterComponent.getProjectilesForRemoval().add(projectileRef);
+            return;
+        }
         Vector3d projPos = projTransformComponent.getPosition();
         AtomicReference<Boolean> hit = new AtomicReference<Boolean>(Boolean.FALSE);
-        DeployableProjectileComponent dProjComponent = store.getComponent(projectileRef, DeployableProjectileComponent.getComponentType());
-        assert (dProjComponent != null);
-        Vector3d prevPos = dProjComponent.getPreviousTickPosition();
+        DeployableProjectileComponent deployableProjectileComponent = store.getComponent(projectileRef, DeployableProjectileComponent.getComponentType());
+        if (deployableProjectileComponent == null) {
+            shooterComponent.getProjectilesForRemoval().add(projectileRef);
+            return;
+        }
+        Vector3d prevPos = deployableProjectileComponent.getPreviousTickPosition();
         Vector3d increment = new Vector3d((projPos.x - prevPos.x) * (double)0.1f, (projPos.y - prevPos.y) * (double)0.1f, (projPos.z - prevPos.z) * (double)0.1f);
         for (int j = 0; j < 10; ++j) {
             if (hit.get().booleanValue()) continue;
-            Vector3d scanPos = dProjComponent.getPreviousTickPosition().clone();
+            Vector3d scanPos = deployableProjectileComponent.getPreviousTickPosition().clone();
             scanPos.x += increment.x * (double)j;
             scanPos.y += increment.y * (double)j;
             scanPos.z += increment.z * (double)j;
@@ -397,8 +411,8 @@ extends DeployableConfig {
                 hit.set(Boolean.TRUE);
             }
         }
-        dProjComponent.setPreviousTickPosition(projPos);
-        if (!hit.get().booleanValue() && (physics = store.getComponent(projectileRef, StandardPhysicsProvider.getComponentType())) != null && physics.getState() != StandardPhysicsProvider.STATE.ACTIVE) {
+        deployableProjectileComponent.setPreviousTickPosition(projPos);
+        if (!hit.get().booleanValue() && (physicsComponent = store.getComponent(projectileRef, StandardPhysicsProvider.getComponentType())) != null && physicsComponent.getState() != StandardPhysicsProvider.STATE.ACTIVE) {
             shooterComponent.getProjectilesForRemoval().add(projectileRef);
         }
     }
@@ -432,6 +446,7 @@ extends DeployableConfig {
     }
 
     @Override
+    @Nonnull
     public String toString() {
         return "DeployableTurretConfig{}" + super.toString();
     }

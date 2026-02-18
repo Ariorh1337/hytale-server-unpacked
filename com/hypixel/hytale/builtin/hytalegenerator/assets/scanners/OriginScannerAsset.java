@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 
 public class OriginScannerAsset
 extends ScannerAsset {
+    @Nonnull
     public static final BuilderCodec<OriginScannerAsset> CODEC = BuilderCodec.builder(OriginScannerAsset.class, OriginScannerAsset::new, ScannerAsset.ABSTRACT_CODEC).build();
 
     @Override

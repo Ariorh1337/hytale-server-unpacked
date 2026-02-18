@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class KillNPCObjectiveTask
 extends KillObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<KillNPCObjectiveTask> CODEC = BuilderCodec.builder(KillNPCObjectiveTask.class, KillNPCObjectiveTask::new, KillObjectiveTask.CODEC).build();
 
     public KillNPCObjectiveTask(@Nonnull KillObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {

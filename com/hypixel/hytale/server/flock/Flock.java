@@ -25,6 +25,7 @@ implements Component<EntityStore> {
     private DamageData nextLeaderDamageData = new DamageData();
     private DamageData currentLeaderDamageData = new DamageData();
     private FlockRemovedStatus removedStatus = FlockRemovedStatus.NOT_REMOVED;
+    private int visFlockMemberCount;
 
     public static ComponentType<EntityStore, Flock> getComponentType() {
         return FlockPlugin.get().getFlockComponentType();
@@ -75,6 +76,20 @@ implements Component<EntityStore> {
 
     public void setRemovedStatus(FlockRemovedStatus status) {
         this.removedStatus = status;
+    }
+
+    public boolean hasVisFlockMember() {
+        return this.visFlockMemberCount > 0;
+    }
+
+    public void incrementVisFlockMemberCount() {
+        ++this.visFlockMemberCount;
+    }
+
+    public void decrementVisFlockMemberCount() {
+        if (this.visFlockMemberCount > 0) {
+            --this.visFlockMemberCount;
+        }
     }
 
     public void onTargetKilled(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> targetEntityReference) {

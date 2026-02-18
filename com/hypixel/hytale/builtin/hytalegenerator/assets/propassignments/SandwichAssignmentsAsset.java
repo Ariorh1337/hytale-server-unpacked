@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 
 public class SandwichAssignmentsAsset
 extends AssignmentsAsset {
+    @Nonnull
     public static final BuilderCodec<SandwichAssignmentsAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(SandwichAssignmentsAsset.class, SandwichAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (asset, v) -> {
         asset.delimiterAssets = v;
     }, asset -> asset.delimiterAssets).add()).build();
@@ -51,6 +52,7 @@ extends AssignmentsAsset {
     public static class DelimiterAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, DelimiterAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

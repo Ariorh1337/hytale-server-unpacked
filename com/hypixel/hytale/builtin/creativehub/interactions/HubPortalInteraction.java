@@ -43,7 +43,9 @@ import javax.annotation.Nullable;
 
 public class HubPortalInteraction
 extends SimpleInstantInteraction {
+    @Nonnull
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    @Nonnull
     public static final BuilderCodec<HubPortalInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HubPortalInteraction.class, HubPortalInteraction::new, SimpleInstantInteraction.CODEC).documentation("Teleports the **Player** to a permanent world, creating it if required.")).appendInherited(new KeyedCodec<String>("WorldName", Codec.STRING), (o, i) -> {
         o.worldName = i;
     }, o -> o.worldName, (o, p) -> {
@@ -70,9 +72,10 @@ extends SimpleInstantInteraction {
 
     @Override
     protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-        Ref<EntityStore> ref;
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-        Player playerComponent = commandBuffer.getComponent(ref = context.getEntity(), Player.getComponentType());
+        assert (commandBuffer != null);
+        Ref<EntityStore> ref = context.getEntity();
+        Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
         if (playerComponent == null || playerComponent.isWaitingForClientReady()) {
             return;
         }
@@ -84,7 +87,7 @@ extends SimpleInstantInteraction {
         Universe universe = Universe.get();
         World targetWorld = universe.getWorld(this.worldName);
         if (targetWorld != null) {
-            this.teleportToLoadedWorld(ref, commandBuffer, targetWorld, playerComponent);
+            HubPortalInteraction.teleportToLoadedWorld(ref, commandBuffer, targetWorld, playerComponent);
         } else {
             CompletableFuture<World> worldFuture;
             if (this.instanceTemplate != null) {
@@ -99,11 +102,11 @@ extends SimpleInstantInteraction {
                     }
                 });
             }
-            this.teleportToLoadingWorld(ref, commandBuffer, worldFuture, currentWorld, playerComponent);
+            HubPortalInteraction.teleportToLoadingWorld(ref, commandBuffer, worldFuture, currentWorld, playerComponent);
         }
     }
 
-    private void teleportToLoadedWorld(@Nonnull Ref<EntityStore> playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull World targetWorld, @Nonnull Player playerComponent) {
+    private static void teleportToLoadedWorld(@Nonnull Ref<EntityStore> playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull World targetWorld, @Nonnull Player playerComponent) {
         Transform spawnPoint;
         Map<String, PlayerWorldData> perWorldData = playerComponent.getPlayerConfigData().getPerWorldData();
         PlayerWorldData worldData = perWorldData.get(targetWorld.getName());
@@ -119,19 +122,27 @@ extends SimpleInstantInteraction {
         componentAccessor.addComponent(playerRef, Teleport.getComponentType(), teleportComponent);
     }
 
-    private void teleportToLoadingWorld(@Nonnull Ref<EntityStore> playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CompletableFuture<World> worldFuture, @Nonnull World originalWorld, @Nonnull Player playerComponent) {
+    private static void teleportToLoadingWorld(@Nonnull Ref<EntityStore> playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CompletableFuture<World> worldFuture, @Nonnull World originalWorld, @Nonnull Player playerComponent) {
         TransformComponent transformComponent = componentAccessor.getComponent(playerRef, TransformComponent.getComponentType());
-        assert (transformComponent != null);
+        if (transformComponent == null) {
+            LOGGER.at(Level.SEVERE).log("Cannot teleport player %s to permanent world - missing TransformComponent", playerRef);
+            return;
+        }
         Transform originalPosition = transformComponent.getTransform().clone();
         PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
-        assert (playerRefComponent != null);
+        if (playerRefComponent == null) {
+            LOGGER.at(Level.SEVERE).log("Cannot teleport player %s to permanent world - missing PlayerRef component", playerRef);
+            return;
+        }
         Map<String, PlayerWorldData> perWorldData = playerComponent.getPlayerConfigData().getPerWorldData();
         UUIDComponent uuidComponent = componentAccessor.getComponent(playerRef, UUIDComponent.getComponentType());
-        assert (uuidComponent != null);
+        if (uuidComponent == null) {
+            LOGGER.at(Level.SEVERE).log("Cannot teleport player %s to permanent world - missing UUIDComponent", playerRef);
+            return;
+        }
         UUID playerUUID = uuidComponent.getUuid();
         CreativeHubEntityConfig hubEntityConfig = componentAccessor.getComponent(playerRef, CreativeHubEntityConfig.getComponentType());
-        originalWorld.execute(playerRefComponent::removeFromStore);
-        ((CompletableFuture)worldFuture.orTimeout(1L, TimeUnit.MINUTES).thenCompose(world -> {
+        ((CompletableFuture)((CompletableFuture)CompletableFuture.runAsync(playerRefComponent::removeFromStore, originalWorld).thenCombine(worldFuture.orTimeout(1L, TimeUnit.MINUTES), (v, world) -> world)).thenCompose(world -> {
             PlayerWorldData worldData = (PlayerWorldData)perWorldData.get(world.getName());
             if (worldData != null && worldData.getLastPosition() != null) {
                 return world.addPlayer(playerRefComponent, worldData.getLastPosition(), Boolean.TRUE, Boolean.FALSE);

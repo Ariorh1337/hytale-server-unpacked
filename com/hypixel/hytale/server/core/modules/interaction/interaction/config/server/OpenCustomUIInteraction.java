@@ -135,22 +135,23 @@ extends SimpleInstantInteraction {
     public static void registerBlockEntityCustomPage(@Nonnull PluginBase plugin, Class<?> tClass, String id, @Nonnull BlockEntityCustomPageSupplier blockSupplier, Supplier<Holder<ChunkStore>> creator) {
         CustomPageSupplier supplier = (ref, componentAccessor, playerRef, context) -> {
             int index;
+            long chunkIndex;
             BlockPosition targetBlock = context.getTargetBlock();
             if (targetBlock == null) {
                 return null;
             }
             Store store = ref.getStore();
             World world = ((EntityStore)store.getExternalData()).getWorld();
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-            if (chunk == null) {
+            WorldChunk worldChunkComponent = world.getChunkIfInMemory(chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+            if (worldChunkComponent == null) {
                 return null;
             }
             BlockPosition targetBaseBlock = world.getBaseBlock(targetBlock);
-            BlockComponentChunk blockComponentChunk = chunk.getBlockComponentChunk();
+            BlockComponentChunk blockComponentChunk = worldChunkComponent.getBlockComponentChunk();
             Ref<ChunkStore> blockEntityRef = blockComponentChunk.getEntityReference(index = ChunkUtil.indexBlockInColumn(targetBaseBlock.x, targetBaseBlock.y, targetBaseBlock.z));
-            if (blockEntityRef == null) {
+            if (blockEntityRef == null || !blockEntityRef.isValid()) {
                 Holder holder = (Holder)creator.get();
-                holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, chunk.getReference()));
+                holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, worldChunkComponent.getReference()));
                 blockEntityRef = world.getChunkStore().getStore().addEntity(holder, AddReason.SPAWN);
             }
             return blockSupplier.tryCreate(playerRef, blockEntityRef);
@@ -161,17 +162,17 @@ extends SimpleInstantInteraction {
     @FunctionalInterface
     public static interface CustomPageSupplier {
         @Nullable
-        public CustomUIPage tryCreate(Ref<EntityStore> var1, ComponentAccessor<EntityStore> var2, PlayerRef var3, InteractionContext var4);
+        public CustomUIPage tryCreate(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2, @Nonnull PlayerRef var3, @Nonnull InteractionContext var4);
     }
 
     @FunctionalInterface
     public static interface BlockCustomPageSupplier<T extends BlockState> {
-        public CustomUIPage tryCreate(PlayerRef var1, T var2);
+        public CustomUIPage tryCreate(@Nonnull PlayerRef var1, @Nonnull T var2);
     }
 
     @FunctionalInterface
     public static interface BlockEntityCustomPageSupplier {
-        public CustomUIPage tryCreate(PlayerRef var1, Ref<ChunkStore> var2);
+        public CustomUIPage tryCreate(@Nonnull PlayerRef var1, @Nonnull Ref<ChunkStore> var2);
     }
 }
 

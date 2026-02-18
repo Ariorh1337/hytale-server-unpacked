@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class SimplexNoise3DDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SimplexNoise3DDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SimplexNoise3DDensityAsset.class, SimplexNoise3DDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Lacunarity", Codec.DOUBLE, true), (asset, lacunarity) -> {
         asset.lacunarity = lacunarity;
     }, asset -> asset.lacunarity).addValidator(Validators.greaterThan(0.0)).add()).append(new KeyedCodec<Double>("Persistence", Codec.DOUBLE, true), (asset, persistence) -> {

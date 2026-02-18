@@ -17,13 +17,17 @@ import javax.annotation.Nonnull;
 
 public abstract class DistanceFunctionAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, DistanceFunctionAsset>> {
+    @Nonnull
     public static final AssetCodecMapCodec<String, DistanceFunctionAsset> CODEC = new AssetCodecMapCodec<String, DistanceFunctionAsset>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.data = data;
     }, t -> t.data);
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(DistanceFunctionAsset.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final BuilderCodec<DistanceFunctionAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(DistanceFunctionAsset.class).build();
     private String id;
     private AssetExtraInfo.Data data;

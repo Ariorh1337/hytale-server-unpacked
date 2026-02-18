@@ -126,7 +126,7 @@ extends AbstractCommandCollection {
                 Box2D newValue = new Box2D(new Vector2d((Double)context.get(this.minXArg), (double)((Double)context.get(this.minZArg))), new Vector2d((Double)context.get(this.maxXArg), (double)((Double)context.get(this.maxZArg))));
                 WorldSettingsBox2DCommand.this.setter.accept(world, newValue);
                 world.getWorldConfig().markChanged();
-                context.sendMessage(Message.translation("server.commands.world.settings.displaySet").param("display", WorldSettingsBox2DCommand.this.display).param("worldName", world.getName()).param("isDefault", "").param("newValue", Objects.toString(newValue)).param("oldValue", Objects.toString(currentValue)));
+                context.sendMessage(Message.translation("server.commands.world.settings.displaySet").param("display", WorldSettingsBox2DCommand.this.display).param("worldName", world.getName()).param("newValue", Objects.toString(newValue)).param("oldValue", Objects.toString(currentValue)));
             }
         }
 
@@ -142,7 +142,7 @@ extends AbstractCommandCollection {
                 Box2D newValue = WorldSettingsBox2DCommand.this.defaultGetter.apply(WorldSettingsBox2DCommand.this.defaultWorldConfig);
                 WorldSettingsBox2DCommand.this.setter.accept(world, newValue);
                 world.getWorldConfig().markChanged();
-                context.sendMessage(Message.translation("server.commands.world.settings.displaySet").param("display", WorldSettingsBox2DCommand.this.display).param("worldName", world.getName()).param("isDefault", " default value ").param("newValue", Objects.toString(newValue)).param("oldValue", Objects.toString(currentValue)));
+                context.sendMessage(Message.translation("server.commands.world.settings.displaySetDefault").param("display", WorldSettingsBox2DCommand.this.display).param("worldName", world.getName()).param("newValue", Objects.toString(newValue)).param("oldValue", Objects.toString(currentValue)));
             }
         }
     }
@@ -195,7 +195,7 @@ extends AbstractCommandCollection {
                 Object newValue = context.get(this.valueArg);
                 WorldSettingsSubCommand.this.setter.accept(world, (World)newValue);
                 world.getWorldConfig().markChanged();
-                context.sendMessage(Message.translation("server.commands.world.settings.displaySet").param("display", WorldSettingsSubCommand.this.display).param("worldName", world.getName()).param("isDefault", "").param("newValue", newValue.toString()).param("oldValue", currentValue.toString()));
+                context.sendMessage(Message.translation("server.commands.world.settings.displaySet").param("display", WorldSettingsSubCommand.this.display).param("worldName", world.getName()).param("newValue", newValue.toString()).param("oldValue", currentValue.toString()));
             }
         }
 
@@ -211,7 +211,7 @@ extends AbstractCommandCollection {
                 Object newValue = WorldSettingsSubCommand.this.defaultGetter.apply(WorldSettingsSubCommand.this.defaultWorldConfig);
                 WorldSettingsSubCommand.this.setter.accept(world, (World)newValue);
                 world.getWorldConfig().markChanged();
-                context.sendMessage(Message.translation("server.commands.world.settings.displaySet").param("display", WorldSettingsSubCommand.this.display).param("worldName", world.getName()).param("isDefault", " default value ").param("newValue", newValue.toString()).param("oldValue", currentValue.toString()));
+                context.sendMessage(Message.translation("server.commands.world.settings.displaySetDefault").param("display", WorldSettingsSubCommand.this.display).param("worldName", world.getName()).param("newValue", newValue.toString()).param("oldValue", currentValue.toString()));
             }
         }
     }

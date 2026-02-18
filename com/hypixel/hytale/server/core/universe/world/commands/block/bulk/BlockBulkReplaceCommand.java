@@ -37,14 +37,14 @@ import javax.annotation.Nonnull;
 public class BlockBulkReplaceCommand
 extends AbstractPlayerCommand {
     @Nonnull
-    private final RequiredArg<String> findArg = this.withRequiredArg("find", "", ArgTypes.BLOCK_TYPE_KEY);
+    private final RequiredArg<String> findArg = this.withRequiredArg("find", "server.commands.block.bulk.replace.find.desc", ArgTypes.BLOCK_TYPE_KEY);
     @Nonnull
-    private final RequiredArg<String> replaceArg = this.withRequiredArg("replaceWith", "", ArgTypes.BLOCK_TYPE_KEY);
+    private final RequiredArg<String> replaceArg = this.withRequiredArg("replaceWith", "server.commands.block.bulk.replace.replaceWith.desc", ArgTypes.BLOCK_TYPE_KEY);
     @Nonnull
-    private final RequiredArg<Integer> radiusArg = this.withRequiredArg("radius", "", ArgTypes.INTEGER);
+    private final RequiredArg<Integer> radiusArg = this.withRequiredArg("radius", "server.commands.block.bulk.replace.radius.desc", ArgTypes.INTEGER);
 
     public BlockBulkReplaceCommand() {
-        super("replace", "");
+        super("replace", "server.commands.block.bulk.replace.desc");
     }
 
     @Override
@@ -90,7 +90,7 @@ extends AbstractPlayerCommand {
                 }
             }
             long diff = System.nanoTime() - start;
-            playerRef.sendMessage(Message.translation("Found and replaced " + replaced.get() + " blocks in " + TimeUnit.NANOSECONDS.toSeconds(diff) + " seconds!"));
+            playerRef.sendMessage(Message.translation("server.commands.block.bulk.replace.result").param("count", replaced.get()).param("time", TimeUnit.NANOSECONDS.toSeconds(diff)));
         });
     }
 

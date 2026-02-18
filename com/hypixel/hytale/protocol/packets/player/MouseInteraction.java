@@ -5,7 +5,9 @@ package com.hypixel.hytale.protocol.packets.player;
 
 import com.hypixel.hytale.protocol.MouseButtonEvent;
 import com.hypixel.hytale.protocol.MouseMotionEvent;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.protocol.WorldInteraction;
 import com.hypixel.hytale.protocol.io.PacketIO;
@@ -18,7 +20,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MouseInteraction
-implements Packet {
+implements Packet,
+ToServerPacket {
     public static final int PACKET_ID = 111;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -42,6 +45,11 @@ implements Packet {
     @Override
     public int getId() {
         return 111;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public MouseInteraction() {

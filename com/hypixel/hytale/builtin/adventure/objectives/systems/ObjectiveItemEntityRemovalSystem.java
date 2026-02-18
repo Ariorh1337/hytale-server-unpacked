@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveItemEntityRemovalSystem
 extends HolderSystem<EntityStore> {
+    @Nonnull
     private static final ComponentType<EntityStore, ItemComponent> COMPONENT_TYPE = ItemComponent.getComponentType();
 
     @Override

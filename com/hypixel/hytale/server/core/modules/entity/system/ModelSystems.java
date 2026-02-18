@@ -22,9 +22,9 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
+import com.hypixel.hytale.protocol.ActiveAnimationsUpdate;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -52,11 +52,16 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ModelSystems {
+    @Nonnull
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     public static class AnimationEntityTrackerUpdate
     extends EntityTickingSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType = EntityTrackerSystems.Visible.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, ActiveAnimationComponent> activeAnimationComponentType = ActiveAnimationComponent.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.visibleComponentType, this.activeAnimationComponentType);
 
         @Override
@@ -91,9 +96,7 @@ public class ModelSystems {
         }
 
         private static void queueUpdatesFor(@Nonnull Ref<EntityStore> ref, @Nonnull ActiveAnimationComponent animationComponent, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.ActiveAnimations;
-            update.activeAnimations = animationComponent.getActiveAnimations();
+            ActiveAnimationsUpdate update = new ActiveAnimationsUpdate(animationComponent.getActiveAnimations());
             for (Map.Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : visibleTo.entrySet()) {
                 entry.getValue().queueUpdate(ref, update);
             }
@@ -102,9 +105,13 @@ public class ModelSystems {
 
     public static class PlayerUpdateMovementManager
     extends RefChangeSystem<EntityStore, ModelComponent> {
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.playerComponentType, MovementManager.getComponentType());
+        @Nonnull
         private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency(Order.AFTER, UpdateBoundingBox.class));
 
         @Override
@@ -127,32 +134,37 @@ public class ModelSystems {
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull ModelComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            this.updateMovementController(ref, commandBuffer);
+            PlayerUpdateMovementManager.updateMovementController(ref, commandBuffer);
         }
 
         @Override
         public void onComponentSet(@Nonnull Ref<EntityStore> ref, ModelComponent oldComponent, @Nonnull ModelComponent newComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            this.updateMovementController(ref, commandBuffer);
+            PlayerUpdateMovementManager.updateMovementController(ref, commandBuffer);
         }
 
         @Override
         public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull ModelComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            this.updateMovementController(ref, commandBuffer);
+            PlayerUpdateMovementManager.updateMovementController(ref, commandBuffer);
         }
 
-        private void updateMovementController(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+        private static void updateMovementController(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
             MovementManager movementManagerComponent = componentAccessor.getComponent(ref, MovementManager.getComponentType());
             assert (movementManagerComponent != null);
             movementManagerComponent.resetDefaultsAndUpdate(ref, componentAccessor);
         }
     }
 
-    public static class UpdateCrouchingBoundingBox
+    public static class UpdateMovementStateBoundingBox
     extends EntityTickingSystem<EntityStore> {
+        @Nonnull
         public static final Set<Dependency<EntityStore>> DEPENDENCIES = Collections.singleton(new SystemDependency(Order.BEFORE, MovementStatesSystems.TickingSystem.class));
+        @Nonnull
         private final ComponentType<EntityStore, MovementStatesComponent> movementStatesComponentType = MovementStatesComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, BoundingBox> boundingBoxComponentType = BoundingBox.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.movementStatesComponentType, this.boundingBoxComponentType, this.modelComponentType);
 
         @Override
@@ -174,22 +186,34 @@ public class ModelSystems {
 
         @Override
         public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            MovementStatesComponent movementStates = archetypeChunk.getComponent(index, this.movementStatesComponentType);
-            MovementStates newMovementStates = movementStates.getMovementStates();
-            MovementStates sentMovementStates = movementStates.getSentMovementStates();
-            if (newMovementStates.crouching == sentMovementStates.crouching && newMovementStates.forcedCrouching == sentMovementStates.forcedCrouching) {
+            boolean sleepingChanged;
+            MovementStatesComponent movementStatesComponent = archetypeChunk.getComponent(index, this.movementStatesComponentType);
+            assert (movementStatesComponent != null);
+            MovementStates newMovementStates = movementStatesComponent.getMovementStates();
+            MovementStates sentMovementStates = movementStatesComponent.getSentMovementStates();
+            boolean crouchingChanged = newMovementStates.crouching != sentMovementStates.crouching || newMovementStates.forcedCrouching != sentMovementStates.forcedCrouching;
+            boolean slidingChanged = newMovementStates.sliding != sentMovementStates.sliding;
+            boolean sittingChanged = newMovementStates.sitting != sentMovementStates.sitting;
+            boolean bl = sleepingChanged = newMovementStates.sleeping != sentMovementStates.sleeping;
+            if (!(crouchingChanged || slidingChanged || sittingChanged || sleepingChanged)) {
                 return;
             }
-            Model model = archetypeChunk.getComponent(index, this.modelComponentType).getModel();
-            BoundingBox boundingBox = archetypeChunk.getComponent(index, this.boundingBoxComponentType);
-            UpdateBoundingBox.updateBoundingBox(model, boundingBox, newMovementStates);
+            ModelComponent modelComponent = archetypeChunk.getComponent(index, this.modelComponentType);
+            assert (modelComponent != null);
+            Model model = modelComponent.getModel();
+            BoundingBox boundingBoxComponent = archetypeChunk.getComponent(index, this.boundingBoxComponentType);
+            assert (boundingBoxComponent != null);
+            UpdateBoundingBox.updateBoundingBox(model, boundingBoxComponent, newMovementStates);
         }
     }
 
     public static class UpdateBoundingBox
     extends RefChangeSystem<EntityStore, ModelComponent> {
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, BoundingBox> boundingBoxComponentType = BoundingBox.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, MovementStatesComponent> movementStatesComponentType = MovementStatesComponent.getComponentType();
 
         @Override
@@ -205,21 +229,27 @@ public class ModelSystems {
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull ModelComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            BoundingBox boundingBox = commandBuffer.getComponent(ref, this.boundingBoxComponentType);
-            MovementStatesComponent movementStates = commandBuffer.getComponent(ref, this.movementStatesComponentType);
-            UpdateBoundingBox.updateBoundingBox(component.getModel(), boundingBox, movementStates);
+            BoundingBox boundingBoxComponent = commandBuffer.getComponent(ref, this.boundingBoxComponentType);
+            assert (boundingBoxComponent != null);
+            MovementStatesComponent movementStatesComponent = commandBuffer.getComponent(ref, this.movementStatesComponentType);
+            assert (movementStatesComponent != null);
+            UpdateBoundingBox.updateBoundingBox(component.getModel(), boundingBoxComponent, movementStatesComponent);
         }
 
         @Override
         public void onComponentSet(@Nonnull Ref<EntityStore> ref, ModelComponent oldComponent, @Nonnull ModelComponent newComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            BoundingBox boundingBox = commandBuffer.getComponent(ref, this.boundingBoxComponentType);
-            MovementStatesComponent movementStates = commandBuffer.getComponent(ref, this.movementStatesComponentType);
-            UpdateBoundingBox.updateBoundingBox(newComponent.getModel(), boundingBox, movementStates);
+            BoundingBox boundingBoxComponent = commandBuffer.getComponent(ref, this.boundingBoxComponentType);
+            assert (boundingBoxComponent != null);
+            MovementStatesComponent movementStatesComponent = commandBuffer.getComponent(ref, this.movementStatesComponentType);
+            assert (movementStatesComponent != null);
+            UpdateBoundingBox.updateBoundingBox(newComponent.getModel(), boundingBoxComponent, movementStatesComponent);
         }
 
         @Override
         public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull ModelComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            commandBuffer.getComponent(ref, this.boundingBoxComponentType).setBoundingBox(new Box());
+            BoundingBox boundingBoxComponent = commandBuffer.getComponent(ref, this.boundingBoxComponentType);
+            assert (boundingBoxComponent != null);
+            boundingBoxComponent.setBoundingBox(new Box());
         }
 
         protected static void updateBoundingBox(@Nonnull Model model, @Nonnull BoundingBox boundingBox, @Nullable MovementStatesComponent movementStatesComponent) {
@@ -237,17 +267,22 @@ public class ModelSystems {
 
     public static class PlayerConnect
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.playerComponentType, Query.not(this.modelComponentType));
+        @Nonnull
         private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency(Order.BEFORE, ModelSpawned.class));
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
             ModelAsset modelAsset;
-            Player player = holder.getComponent(this.playerComponentType);
+            Player playerComponent = holder.getComponent(this.playerComponentType);
+            assert (playerComponent != null);
             DefaultAssetMap<String, ModelAsset> assetMap = ModelAsset.getAssetMap();
-            String preset = player.getPlayerConfigData().getPreset();
+            String preset = playerComponent.getPlayerConfigData().getPreset();
             ModelAsset modelAsset2 = modelAsset = preset != null ? assetMap.getAsset(preset) : null;
             if (modelAsset != null) {
                 Model model = Model.createUnitScaleModel(modelAsset);
@@ -280,8 +315,11 @@ public class ModelSystems {
 
     public static class ApplyRandomSkin
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, ApplyRandomSkinPersistedComponent> randomSkinComponent = ApplyRandomSkinPersistedComponent.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.randomSkinComponent, this.modelComponentType);
 
         @Override
@@ -303,6 +341,7 @@ public class ModelSystems {
 
     public static class EnsurePropsPrefabCopyable
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, PropComponent> propComponentType = PropComponent.getComponentType();
 
         @Override
@@ -323,8 +362,11 @@ public class ModelSystems {
 
     public static class AssignNetworkIdToProps
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, PropComponent> propComponentType = PropComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, NetworkId> networkIdComponentType = NetworkId.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.propComponentType, Query.not(this.networkIdComponentType));
 
         @Override
@@ -345,14 +387,24 @@ public class ModelSystems {
 
     public static class SetRenderedModel
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, PersistentModel> persistentModelComponentType = PersistentModel.getComponentType();
+        @Nonnull
         private final Query<EntityStore> query = Query.and(this.persistentModelComponentType, Query.not(this.modelComponentType));
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            PersistentModel persistentModel = holder.getComponent(this.persistentModelComponentType);
-            holder.putComponent(this.modelComponentType, new ModelComponent(persistentModel.getModelReference().toModel()));
+            PersistentModel persistentModelComponent = holder.getComponent(this.persistentModelComponentType);
+            assert (persistentModelComponent != null);
+            Model model = persistentModelComponent.getModelReference().toModel();
+            if (model != null) {
+                ModelComponent modelComponent = new ModelComponent(model);
+                holder.putComponent(this.modelComponentType, modelComponent);
+            } else {
+                ((HytaleLogger.Api)LOGGER.atWarning()).log("Failed to load model for entity with PersistentModel: {}", persistentModelComponent.getModelReference());
+            }
         }
 
         @Override
@@ -368,15 +420,25 @@ public class ModelSystems {
 
     public static class ModelSpawned
     extends HolderSystem<EntityStore> {
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, BoundingBox> boundingBoxComponentType = BoundingBox.getComponentType();
+        @Nonnull
         private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency(Order.AFTER, SetRenderedModel.class));
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            Model model = holder.getComponent(this.modelComponentType).getModel();
+            ModelComponent modelComponent = holder.getComponent(this.modelComponentType);
+            assert (modelComponent != null);
+            Model model = modelComponent.getModel();
+            if (model == null) {
+                ((HytaleLogger.Api)LOGGER.atWarning()).log("Failed to set bounding box for entity as model is null");
+                return;
+            }
             Box modelBoundingBox = model.getBoundingBox();
             if (modelBoundingBox == null) {
+                ((HytaleLogger.Api)LOGGER.atWarning()).log("Failed to set bounding box for entity as model bounding box is null: %s", model.getModel());
                 return;
             }
             BoundingBox boundingBox = holder.getComponent(this.boundingBoxComponentType);
@@ -406,7 +468,9 @@ public class ModelSystems {
 
     public static class ModelChange
     extends RefChangeSystem<EntityStore, ModelComponent> {
+        @Nonnull
         private final ComponentType<EntityStore, ModelComponent> modelComponentType = ModelComponent.getComponentType();
+        @Nonnull
         private final ComponentType<EntityStore, PersistentModel> persistentModelComponentType = PersistentModel.getComponentType();
 
         @Override
@@ -426,8 +490,9 @@ public class ModelSystems {
 
         @Override
         public void onComponentSet(@Nonnull Ref<EntityStore> ref, ModelComponent oldComponent, @Nonnull ModelComponent newComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            PersistentModel persistentModel = store.getComponent(ref, this.persistentModelComponentType);
-            persistentModel.setModelReference(newComponent.getModel().toReference());
+            PersistentModel persistentModelComponent = store.getComponent(ref, this.persistentModelComponentType);
+            assert (persistentModelComponent != null);
+            persistentModelComponent.setModelReference(newComponent.getModel().toReference());
         }
 
         @Override

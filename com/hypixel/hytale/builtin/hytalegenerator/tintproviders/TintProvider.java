@@ -36,6 +36,7 @@ public abstract class TintProvider {
     }
 
     public static class Result {
+        @Nonnull
         public static final Result WITHOUT_VALUE = new Result();
         public final int tint;
         public final boolean hasValue;

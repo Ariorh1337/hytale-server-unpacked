@@ -93,7 +93,7 @@ extends AbstractCommandCollection {
             if (identifier != null) {
                 boolean onlyBootList = (Boolean)this.bootFlag.get(context);
                 HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-                HytaleServerConfig.ModConfig.setBoot(serverConfig, identifier, true);
+                HytaleServerConfig.setBoot(serverConfig, identifier, true);
                 if (serverConfig.consumeHasChanged()) {
                     HytaleServerConfig.save(serverConfig).join();
                 }
@@ -156,7 +156,7 @@ extends AbstractCommandCollection {
             if (identifier != null) {
                 boolean onlyBootList = (Boolean)this.bootFlag.get(context);
                 HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-                HytaleServerConfig.ModConfig.setBoot(serverConfig, identifier, false);
+                HytaleServerConfig.setBoot(serverConfig, identifier, false);
                 if (serverConfig.consumeHasChanged()) {
                     HytaleServerConfig.save(serverConfig).join();
                 }

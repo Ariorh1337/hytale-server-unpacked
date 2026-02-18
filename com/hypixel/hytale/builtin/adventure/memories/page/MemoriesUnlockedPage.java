@@ -49,7 +49,9 @@ extends InteractiveCustomUIPage<PageEventData> {
     }
 
     public static class PageEventData {
+        @Nonnull
         public static final String KEY_ACTION = "Action";
+        @Nonnull
         public static final BuilderCodec<PageEventData> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(PageEventData.class, PageEventData::new).append(new KeyedCodec<PageAction>("Action", PageAction.CODEC), (pageEventData, pageAction) -> {
             pageEventData.action = pageAction;
         }, pageEventData -> pageEventData.action).add()).build();
@@ -59,6 +61,7 @@ extends InteractiveCustomUIPage<PageEventData> {
     public static enum PageAction {
         DiscoverMemories;
 
+        @Nonnull
         public static final Codec<PageAction> CODEC;
 
         static {

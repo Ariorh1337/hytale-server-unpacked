@@ -13,7 +13,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.UpdateWeather;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -61,7 +61,7 @@ implements Component<EntityStore> {
         if (this.updateWeather.weatherIndex != weatherIndex) {
             this.updateWeather.weatherIndex = weatherIndex;
             this.updateWeather.transitionSeconds = transitionSeconds;
-            playerRef.getPacketHandler().write((Packet)this.updateWeather);
+            playerRef.getPacketHandler().write((ToClientPacket)this.updateWeather);
         }
     }
 
@@ -110,7 +110,7 @@ implements Component<EntityStore> {
 
     public void setWeatherIndex(@Nonnull PlayerRef playerRef, int weatherIndex) {
         this.updateWeather.weatherIndex = weatherIndex;
-        playerRef.getPacketHandler().write((Packet)this.updateWeather);
+        playerRef.getPacketHandler().write((ToClientPacket)this.updateWeather);
     }
 
     @Override

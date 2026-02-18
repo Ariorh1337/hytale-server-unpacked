@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 public class MacroCommandPlugin
 extends JavaPlugin {
     private static MacroCommandPlugin instance;
+    @Nonnull
     private final Map<String, CommandRegistration> macroCommandRegistrations = new Object2ObjectOpenHashMap<String, CommandRegistration>();
 
     public static MacroCommandPlugin get() {

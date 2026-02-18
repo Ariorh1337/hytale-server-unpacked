@@ -22,10 +22,13 @@ import javax.annotation.Nonnull;
 
 public class SwitchDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SwitchDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(SwitchDensityAsset.class, SwitchDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("SwitchCases", new ArrayCodec(SwitchCaseAsset.CODEC, SwitchCaseAsset[]::new), false), (t, k) -> {
         t.switchCaseAssets = k;
     }, t -> t.switchCaseAssets).add()).build();
+    @Nonnull
     public static final String DEFAULT_STATE = "Default";
+    @Nonnull
     public static final int DEFAULT_STATE_HASH = 0;
     private SwitchCaseAsset[] switchCaseAssets = new SwitchCaseAsset[0];
 
@@ -66,6 +69,7 @@ extends DensityAsset {
     public static class SwitchCaseAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, SwitchCaseAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, SwitchCaseAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(SwitchCaseAsset.class, SwitchCaseAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockTagOrItemIdField {
+    @Nonnull
     public static final BuilderCodec<BlockTagOrItemIdField> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BlockTagOrItemIdField.class, BlockTagOrItemIdField::new).append(new KeyedCodec<String>("BlockTag", Codec.STRING), (blockTagOrItemIdField, s) -> {
         blockTagOrItemIdField.blockTag = s;
     }, blockTagOrItemIdField -> blockTagOrItemIdField.blockTag).add()).append(new KeyedCodec<String>("ItemId", Codec.STRING), (blockTagOrItemIdField, blockTypeKey) -> {

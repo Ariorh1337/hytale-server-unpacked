@@ -15,11 +15,17 @@ extends Density {
     private final boolean isInvalid;
     @Nullable
     private Density input;
+    @Nonnull
+    private final Vector3d rChildPosition;
+    @Nonnull
+    private final Density.Context rChildContext;
 
     public ScaleDensity(double scaleX, double scaleY, double scaleZ, Density input) {
         this.scale = new Vector3d(1.0 / scaleX, 1.0 / scaleY, 1.0 / scaleZ);
         this.isInvalid = scaleX == 0.0 || scaleY == 0.0 || scaleZ == 0.0;
         this.input = input;
+        this.rChildPosition = new Vector3d();
+        this.rChildContext = new Density.Context();
     }
 
     @Override
@@ -30,11 +36,11 @@ extends Density {
         if (this.isInvalid) {
             return 0.0;
         }
-        Vector3d scaledPosition = context.position.clone();
-        scaledPosition.scale(this.scale);
-        Density.Context childContext = new Density.Context(context);
-        childContext.position = scaledPosition;
-        return this.input.process(childContext);
+        this.rChildPosition.assign(context.position);
+        this.rChildPosition.scale(this.scale);
+        this.rChildContext.assign(context);
+        this.rChildContext.position = this.rChildPosition;
+        return this.input.process(this.rChildContext);
     }
 
     @Override

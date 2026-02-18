@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin;
 import com.hypixel.hytale.builtin.adventure.objectives.blockstates.TreasureChestState;
 import com.hypixel.hytale.builtin.adventure.objectives.config.task.TreasureMapObjectiveTaskAsset;
 import com.hypixel.hytale.builtin.adventure.objectives.events.TreasureChestOpeningEvent;
+import com.hypixel.hytale.builtin.adventure.objectives.markers.ObjectiveTaskMarker;
 import com.hypixel.hytale.builtin.adventure.objectives.task.ObjectiveTask;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.RegistrationTransactionRecord;
 import com.hypixel.hytale.builtin.adventure.objectives.transaction.SpawnTreasureChestTransactionRecord;
@@ -25,7 +26,7 @@ import com.hypixel.hytale.math.util.TrigMathUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -34,7 +35,6 @@ import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
 import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +45,7 @@ import javax.annotation.Nullable;
 
 public class TreasureMapObjectiveTask
 extends ObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<TreasureMapObjectiveTask> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TreasureMapObjectiveTask.class, TreasureMapObjectiveTask::new, BASE_CODEC).append(new KeyedCodec<Integer>("CurrentCompletion", Codec.INTEGER), (treasureMapObjectiveTask, integer) -> {
         treasureMapObjectiveTask.currentCompletion = integer;
     }, treasureMapObjectiveTask -> treasureMapObjectiveTask.currentCompletion).add()).append(new KeyedCodec<Integer>("ChestCount", Codec.INTEGER), (treasureMapObjectiveTask, integer) -> {
@@ -56,6 +57,7 @@ extends ObjectiveTask {
     public static final int CHEST_SPAWN_TRY = 500;
     private int currentCompletion;
     private int chestCount;
+    @Nonnull
     private final List<UUID> chestUUIDs = new ObjectArrayList<UUID>();
 
     public TreasureMapObjectiveTask(@Nonnull TreasureMapObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
@@ -134,13 +136,18 @@ extends ObjectiveTask {
         this.chestUUIDs.add(chestUUID);
         treasureChestState.getChunk().setState(conditionPosition.getX(), conditionPosition.getY(), conditionPosition.getZ(), treasureChestState);
         ObjectivePlugin.get().getLogger().at(Level.INFO).log("Spawned chest at: " + String.valueOf(conditionPosition));
-        this.addMarker(new MapMarker(this.getChestMarkerIDFromUUID(chestUUID), "Chest", "Home.png", PositionUtil.toTransformPacket(new Transform(conditionPosition)), null));
+        ObjectiveTaskMarker marker = new ObjectiveTaskMarker(this.getChestMarkerIDFromUUID(chestUUID), new Transform(conditionPosition), "Home.png", Message.translation("server.objectives.treasure.marker"));
+        this.addMarker(marker);
         return transactionRecord;
     }
 
     @Nullable
     private TreasureChestState spawnChestBlock(@Nonnull World world, @Nonnull Vector3i conditionPosition, String chestBlockTypeKey, @Nonnull SpawnTreasureChestTransactionRecord transactionRecord) {
-        Object worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(conditionPosition.x, conditionPosition.z));
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(conditionPosition.x, conditionPosition.z);
+        Object worldChunk = world.getChunk(chunkIndex);
+        if (worldChunk == null) {
+            return null;
+        }
         worldChunk.setBlock(conditionPosition.x, conditionPosition.y, conditionPosition.z, chestBlockTypeKey);
         BlockState blockState = ((WorldChunk)worldChunk).getState(conditionPosition.x, conditionPosition.y, conditionPosition.z);
         if (!(blockState instanceof ItemContainerState)) {
@@ -174,7 +181,7 @@ extends ObjectiveTask {
     @Nonnull
     public com.hypixel.hytale.protocol.ObjectiveTask toPacket(@Nonnull Objective objective) {
         com.hypixel.hytale.protocol.ObjectiveTask packet = new com.hypixel.hytale.protocol.ObjectiveTask();
-        packet.taskDescriptionKey = this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex);
+        packet.taskDescriptionKey = Message.translation(this.asset.getDescriptionKey(objective.getObjectiveId(), this.taskSetIndex, this.taskIndex)).getFormattedMessage();
         packet.currentCompletion = this.currentCompletion;
         packet.completionNeeded = this.chestCount;
         return packet;

@@ -75,11 +75,12 @@ extends InteractiveCustomUIPage<PageData> {
         commandBuilder.set("#MainPage #Entities #CheckBox.Value", true);
         commandBuilder.set("#MainPage #Empty #CheckBox.Value", false);
         commandBuilder.set("#MainPage #Overwrite #CheckBox.Value", true);
+        commandBuilder.set("#MainPage #ClearSupport #CheckBox.Value", false);
         commandBuilder.set("#SavingPage.Visible", false);
         commandBuilder.set("#SavingPage #ProgressBar.Value", 0.0f);
         commandBuilder.set("#SavingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.save.saving"));
         commandBuilder.set("#SavingPage #ErrorText.Visible", false);
-        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MainPage #SaveButton", new EventData().append("Action", Action.Save.name()).append("@PrefabsToSave", "#MainPage #PrefabsToSave #Input.Value").append("@Entities", "#MainPage #Entities #CheckBox.Value").append("@Empty", "#MainPage #Empty #CheckBox.Value").append("@Overwrite", "#MainPage #Overwrite #CheckBox.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MainPage #SaveButton", new EventData().append("Action", Action.Save.name()).append("@PrefabsToSave", "#MainPage #PrefabsToSave #Input.Value").append("@Entities", "#MainPage #Entities #CheckBox.Value").append("@Empty", "#MainPage #Empty #CheckBox.Value").append("@Overwrite", "#MainPage #Overwrite #CheckBox.Value").append("@ClearSupport", "#MainPage #ClearSupport #CheckBox.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MainPage #CancelButton", new EventData().append("Action", Action.Cancel.name()));
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MainPage #PrefabsToSave #BrowseButton", new EventData().append("Action", Action.OpenBrowser.name()));
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#MainPage #PrefabsToSave #SelectAllButton", new EventData().append("Action", Action.SelectAll.name()));
@@ -121,6 +122,7 @@ extends InteractiveCustomUIPage<PageData> {
                 prefabSaverSettings.setEntities(data.entities);
                 prefabSaverSettings.setEmpty(data.empty);
                 prefabSaverSettings.setOverwriteExisting(data.overwrite);
+                prefabSaverSettings.setClearSupportValues(data.clearSupport);
                 String[] prefabPaths = prefabsToSaveStr.split(",");
                 ObjectArrayList prefabsToSave = new ObjectArrayList();
                 block15: for (String pathStr : prefabPaths) {
@@ -363,9 +365,10 @@ extends InteractiveCustomUIPage<PageData> {
         public static final String ENTITIES = "@Entities";
         public static final String EMPTY = "@Empty";
         public static final String OVERWRITE = "@Overwrite";
+        public static final String CLEAR_SUPPORT = "@ClearSupport";
         public static final String BROWSER_SEARCH = "@BrowserSearch";
         public static final String PREFAB_UUID = "PrefabUuid";
-        public static final BuilderCodec<PageData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PageData.class, PageData::new).append(new KeyedCodec<Action>("Action", new EnumCodec<Action>(Action.class, EnumCodec.EnumStyle.LEGACY)), (o, action) -> {
+        public static final BuilderCodec<PageData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PageData.class, PageData::new).append(new KeyedCodec<Action>("Action", new EnumCodec<Action>(Action.class, EnumCodec.EnumStyle.LEGACY)), (o, action) -> {
             o.action = action;
         }, o -> o.action).add()).append(new KeyedCodec<String>("@PrefabsToSave", Codec.STRING), (o, prefabsToSave) -> {
             o.prefabsToSave = prefabsToSave;
@@ -375,7 +378,9 @@ extends InteractiveCustomUIPage<PageData> {
             o.empty = empty;
         }, o -> o.empty).add()).append(new KeyedCodec<Boolean>("@Overwrite", Codec.BOOLEAN), (o, overwrite) -> {
             o.overwrite = overwrite;
-        }, o -> o.overwrite).add()).append(new KeyedCodec<String>("@BrowserSearch", Codec.STRING), (o, browserSearchStr) -> {
+        }, o -> o.overwrite).add()).append(new KeyedCodec<Boolean>("@ClearSupport", Codec.BOOLEAN), (o, clearSupport) -> {
+            o.clearSupport = clearSupport;
+        }, o -> o.clearSupport).add()).append(new KeyedCodec<String>("@BrowserSearch", Codec.STRING), (o, browserSearchStr) -> {
             o.browserSearchStr = browserSearchStr;
         }, o -> o.browserSearchStr).add()).append(new KeyedCodec<String>("PrefabUuid", Codec.STRING), (o, prefabUuid) -> {
             o.prefabUuid = prefabUuid;
@@ -385,6 +390,7 @@ extends InteractiveCustomUIPage<PageData> {
         public boolean entities = true;
         public boolean empty = false;
         public boolean overwrite = true;
+        public boolean clearSupport = false;
         public String browserSearchStr;
         public String prefabUuid;
     }

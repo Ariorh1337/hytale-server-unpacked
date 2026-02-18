@@ -24,6 +24,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NStage;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.views.NEntityBufferView;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.views.NPixelBufferView;
 import com.hypixel.hytale.builtin.hytalegenerator.newsystem.views.NVoxelBufferView;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -31,6 +32,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
+import com.hypixel.hytale.server.core.universe.world.chunk.environment.EnvironmentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedBlockChunk;
@@ -43,19 +45,21 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class NStagedChunkGenerator
 implements ChunkGenerator {
     public static final int WORLD_MIN_Y_BUFFER_GRID = 0;
     public static final int WORLD_MAX_Y_BUFFER_GRID = 40;
     public static final int WORLD_HEIGHT_BUFFER_GRID = 40;
+    @Nonnull
     public static final Bounds3i CHUNK_BOUNDS_BUFFER_GRID = new Bounds3i(Vector3i.ZERO, new Vector3i(4, 40, 4));
+    @Nonnull
     public static final Bounds3i SINGLE_BUFFER_TILE_BOUNDS_BUFFER_GRID = new Bounds3i(new Vector3i(0, 0, 0), new Vector3i(NVoxelBuffer.SIZE.x, 320, NVoxelBuffer.SIZE.x));
     private NBufferType materialOutput_bufferType;
     private NBufferType tintOutput_bufferType;
@@ -67,6 +71,7 @@ implements ChunkGenerator {
     private ExecutorService concurrentExecutor;
     private MaterialCache materialCache;
     private WorkerIndexer workerIndexer;
+    private PositionProvider spawnPositions;
     private TimeInstrument timeInstrument;
     private Set<Integer> statsCheckpoints;
     private int generatedChunkCount;
@@ -80,6 +85,7 @@ implements ChunkGenerator {
      * Could not resolve type clashes
      */
     @Override
+    @NonNullDecl
     public GeneratedChunk generate(@Nonnull ChunkRequest.Arguments arguments) {
         if (arguments.stillNeeded() != null && !arguments.stillNeeded().test(arguments.index())) {
             return null;
@@ -188,6 +194,12 @@ implements ChunkGenerator {
         return outputChunk;
     }
 
+    @Override
+    @NonNullDecl
+    public PositionProvider getSpawnPositions() {
+        return this.spawnPositions;
+    }
+
     @Nonnull
     private Map<NBufferType, NBufferBundle.Access> createAccesses(@Nonnull Bounds3i localChunkBounds_bufferGrid) {
         HashMap<NBufferType, NBufferBundle.Access> accessMap = new HashMap<NBufferType, NBufferBundle.Access>();
@@ -291,21 +303,18 @@ implements ChunkGenerator {
                 section_timeProbe.start();
                 Holder section = sections[sectionIndexFinal];
                 FluidSection fluidSection = fluidSections[sectionIndexFinal];
+                Vector3i world_voxelGrid = new Vector3i();
                 for (int x_voxelGrid = 0; x_voxelGrid < 32; ++x_voxelGrid) {
                     for (int z_voxelGrid = 0; z_voxelGrid < 32; ++z_voxelGrid) {
                         int minY_voxelGrid = sectionIndexFinal * 32;
                         int maxY_voxelGrid = minY_voxelGrid + 32;
                         for (int y_voxelGrid = minY_voxelGrid; y_voxelGrid < maxY_voxelGrid; ++y_voxelGrid) {
                             int sectionY = y_voxelGrid - minY_voxelGrid;
-                            int worldX_voxelGrid = x_voxelGrid + chunkBounds_voxelGrid.min.x;
-                            int worldY_voxelGrid = y_voxelGrid + chunkBounds_voxelGrid.min.y;
-                            int worldZ_voxelGrid = z_voxelGrid + chunkBounds_voxelGrid.min.z;
-                            Material material = (Material)materialVoxelSpace.getContent(worldX_voxelGrid, worldY_voxelGrid, worldZ_voxelGrid);
-                            if (material == null) {
-                                blockChunk.setBlock(x_voxelGrid, y_voxelGrid, z_voxelGrid, 0, 0, 0);
-                                fluidSection.setFluid(x_voxelGrid, sectionY, z_voxelGrid, this.materialCache.EMPTY_FLUID.fluidId, this.materialCache.EMPTY_FLUID.fluidLevel);
-                                continue;
-                            }
+                            world_voxelGrid.x = x_voxelGrid + chunkBounds_voxelGrid.min.x;
+                            world_voxelGrid.y = y_voxelGrid + chunkBounds_voxelGrid.min.y;
+                            world_voxelGrid.z = z_voxelGrid + chunkBounds_voxelGrid.min.z;
+                            Material material = (Material)materialVoxelSpace.getContent(world_voxelGrid);
+                            if (material == null || material.equals(this.materialCache.EMPTY)) continue;
                             blockChunk.setBlock(x_voxelGrid, y_voxelGrid, z_voxelGrid, material.solid().blockId, material.solid().rotation, material.solid().filler);
                             NStagedChunkGenerator.setSupport(generatedChunk, x_voxelGrid, y_voxelGrid, z_voxelGrid, material.solid().blockId, material.solid().support);
                             fluidSection.setFluid(x_voxelGrid, sectionY, z_voxelGrid, material.fluid().fluidId, material.fluid().fluidLevel);
@@ -332,15 +341,16 @@ implements ChunkGenerator {
         NBufferBundle.Access tintBufferAccess = this.bufferBundle.createBufferAccess(this.tintOutput_bufferType, chunkBounds_bufferGrid);
         NPixelBufferView<Integer> tintVoxelSpace = new NPixelBufferView<Integer>(tintBufferAccess.createView(), Integer.class);
         GeneratedBlockChunk blockChunk = generatedChunk.getBlockChunk();
-        boolean worldY_voxelGrid = false;
         TimeInstrument.Probe tintsTransfer_timeProbe = transfer_timeProbe.createProbe("Tints");
         return CompletableFuture.runAsync(() -> {
             tintsTransfer_timeProbe.start();
+            Vector3i worldPosition_voxelGrid = new Vector3i();
+            worldPosition_voxelGrid.y = 0;
             for (int x_voxelGrid = 0; x_voxelGrid < 32; ++x_voxelGrid) {
                 for (int z_voxelGrid = 0; z_voxelGrid < 32; ++z_voxelGrid) {
-                    int worldX_voxelGrid = x_voxelGrid + chunkBounds_voxelGrid.min.x;
-                    int worldZ_voxelGrid = z_voxelGrid + chunkBounds_voxelGrid.min.z;
-                    Integer tint = (Integer)tintVoxelSpace.getContent(worldX_voxelGrid, 0, worldZ_voxelGrid);
+                    worldPosition_voxelGrid.x = x_voxelGrid + chunkBounds_voxelGrid.min.x;
+                    worldPosition_voxelGrid.z = z_voxelGrid + chunkBounds_voxelGrid.min.z;
+                    Integer tint = (Integer)tintVoxelSpace.getContent(worldPosition_voxelGrid);
                     if (tint == null) {
                         blockChunk.setTint(x_voxelGrid, z_voxelGrid, 0);
                         continue;
@@ -364,25 +374,49 @@ implements ChunkGenerator {
         Bounds3i chunkBounds_bufferGrid = GridUtils.createChunkBounds_bufferGrid(arguments.x(), arguments.z());
         NBufferBundle.Access environmentBufferAccess = this.bufferBundle.createBufferAccess(this.environmentOutput_bufferType, chunkBounds_bufferGrid);
         NVoxelBufferView<Integer> environmentVoxelSpace = new NVoxelBufferView<Integer>(environmentBufferAccess.createView(), Integer.class);
-        GeneratedBlockChunk blockChunk = generatedChunk.getBlockChunk();
-        TimeInstrument.Probe timeProbe = transfer_timeProbe.createProbe("Environment");
-        return CompletableFuture.runAsync(() -> {
-            timeProbe.start();
-            for (int x_voxelGrid = 0; x_voxelGrid < 32; ++x_voxelGrid) {
-                for (int z_voxelGrid = 0; z_voxelGrid < 32; ++z_voxelGrid) {
-                    boolean minY_voxelGrid = false;
-                    int maxY_voxelGrid = 320;
-                    for (int y_voxelGrid = 0; y_voxelGrid < 320; ++y_voxelGrid) {
-                        int worldX_voxelGrid = x_voxelGrid + chunkBounds_voxelGrid.min.x;
-                        int worldY_voxelGrid = y_voxelGrid + chunkBounds_voxelGrid.min.y;
-                        int worldZ_voxelGrid = z_voxelGrid + chunkBounds_voxelGrid.min.z;
-                        Integer environment = (Integer)environmentVoxelSpace.getContent(worldX_voxelGrid, worldY_voxelGrid, worldZ_voxelGrid);
-                        blockChunk.setEnvironment(x_voxelGrid, y_voxelGrid, z_voxelGrid, Objects.requireNonNullElse(environment, 0));
+        EnvironmentChunk.BulkWriter bulkWriter = new EnvironmentChunk.BulkWriter();
+        int sectionCounter = 0;
+        Vector3i taskSize = new Vector3i(8, 0, 8);
+        Vector3i taskCount = new Vector3i(32 / taskSize.x, 0, 32 / taskSize.z);
+        ArrayList futures = new ArrayList();
+        for (int taskX = 0; taskX < taskCount.x; ++taskX) {
+            for (int taskZ = 0; taskZ < taskCount.z; ++taskZ) {
+                TimeInstrument.Probe timeProbe = transfer_timeProbe.createProbe("Environment Section " + sectionCounter++);
+                int minX_voxelGrid = taskX * taskSize.x;
+                int minZ_voxelGrid = taskZ * taskSize.z;
+                int maxX_voxelGrid = minX_voxelGrid + taskSize.x;
+                int maxZ_voxelGrid = minZ_voxelGrid + taskSize.z;
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    timeProbe.start();
+                    Vector3i world_voxelGrid = new Vector3i();
+                    for (int x_voxelGrid = minX_voxelGrid; x_voxelGrid < maxX_voxelGrid; ++x_voxelGrid) {
+                        int z_voxelGrid = minZ_voxelGrid;
+                        while (z_voxelGrid < maxZ_voxelGrid) {
+                            EnvironmentChunk.BulkWriter.ColumnWriter columnWriter = bulkWriter.getColumnWriter(x_voxelGrid, z_voxelGrid);
+                            int x_voxelGrid_final = x_voxelGrid;
+                            int z_voxelGrid_final = z_voxelGrid++;
+                            columnWriter.intake(y_voxelGrid -> {
+                                world_voxelGrid.x = x_voxelGrid_final + chunkBounds_voxelGrid.min.x;
+                                world_voxelGrid.y = y_voxelGrid + chunkBounds_voxelGrid.min.y;
+                                world_voxelGrid.z = z_voxelGrid_final + chunkBounds_voxelGrid.min.z;
+                                world_voxelGrid.dropHash();
+                                Integer environment = (Integer)environmentVoxelSpace.getContent(world_voxelGrid);
+                                assert (environment != null);
+                                return environment;
+                            });
+                        }
                     }
-                }
+                    timeProbe.stop();
+                }, this.concurrentExecutor);
+                futures.add(future);
             }
-            timeProbe.stop();
-        }, this.concurrentExecutor).handle((r, e) -> {
+        }
+        TimeInstrument.Probe timeProbe = transfer_timeProbe.createProbe("Environment Write");
+        return ((CompletableFuture)FutureUtils.allOf(futures).thenRun(() -> {
+            timeProbe.start();
+            bulkWriter.write(generatedChunk.getBlockChunk().getEnvironmentChunk());
+            timeProbe.start();
+        })).handle((r, e) -> {
             if (e == null) {
                 return r;
             }
@@ -475,9 +509,13 @@ implements ChunkGenerator {
     }
 
     public static class Builder {
+        @Nonnull
         public final NParametrizedBufferType MATERIAL_OUTPUT_BUFFER_TYPE = new NParametrizedBufferType("MaterialResult", -1, NVoxelBuffer.class, Material.class, () -> new NVoxelBuffer<Material>(Material.class));
+        @Nonnull
         public final NParametrizedBufferType TINT_OUTPUT_BUFFER_TYPE = new NParametrizedBufferType("TintResult", -3, NSimplePixelBuffer.class, Integer.class, () -> new NSimplePixelBuffer<Integer>(Integer.class));
+        @Nonnull
         public final NParametrizedBufferType ENVIRONMENT_OUTPUT_BUFFER_TYPE = new NParametrizedBufferType("EnvironmentResult", -4, NVoxelBuffer.class, Integer.class, () -> new NVoxelBuffer<Integer>(Integer.class));
+        @Nonnull
         public final NBufferType ENTITY_OUTPUT_BUFFER_TYPE = new NBufferType("EntityResult", -5, NEntityBuffer.class, NEntityBuffer::new);
         private List<NStage> stages = new ArrayList<NStage>();
         private ExecutorService concurrentExecutor;
@@ -485,6 +523,7 @@ implements ChunkGenerator {
         private WorkerIndexer workerIndexer;
         private String statsHeader;
         private Set<Integer> statsCheckpoints;
+        private PositionProvider spawnPositions;
         private double bufferCapacityFactor;
         private double targetViewDistance;
         private double targetPlayerCount;
@@ -496,6 +535,7 @@ implements ChunkGenerator {
             assert (this.workerIndexer != null);
             assert (this.statsHeader != null);
             assert (this.statsCheckpoints != null);
+            assert (this.spawnPositions != null);
             NStagedChunkGenerator instance = new NStagedChunkGenerator();
             instance.materialOutput_bufferType = this.MATERIAL_OUTPUT_BUFFER_TYPE;
             instance.tintOutput_bufferType = this.TINT_OUTPUT_BUFFER_TYPE;
@@ -521,6 +561,7 @@ implements ChunkGenerator {
             instance.timeInstrument = new TimeInstrument(this.statsHeader);
             instance.statsCheckpoints = new HashSet<Integer>(this.statsCheckpoints);
             instance.generatedChunkCount = 0;
+            instance.spawnPositions = this.spawnPositions;
             return instance;
         }
 
@@ -528,6 +569,12 @@ implements ChunkGenerator {
         public Builder withStats(@Nonnull String statsHeader, @Nonnull Set<Integer> statsCheckpoints) {
             this.statsHeader = statsHeader;
             this.statsCheckpoints = new HashSet<Integer>(statsCheckpoints);
+            return this;
+        }
+
+        @Nonnull
+        public Builder withSpawnPositions(@Nonnull PositionProvider spawnPositions) {
+            this.spawnPositions = spawnPositions;
             return this;
         }
 
@@ -672,6 +719,7 @@ implements ChunkGenerator {
             return allBufferTypes;
         }
 
+        @Nonnull
         private static Bounds3i getEncompassingBounds(@Nonnull Collection<Bounds3i> set) {
             Bounds3i out = new Bounds3i();
             for (Bounds3i bounds : set) {

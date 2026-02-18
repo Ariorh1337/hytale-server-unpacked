@@ -14,10 +14,11 @@ import javax.annotation.Nonnull;
 
 public class ZOverrideDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<ZOverrideDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ZOverrideDensityAsset.class, ZOverrideDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Value", Codec.DOUBLE, true), (t, k) -> {
         t.value = k;
     }, t -> t.value).add()).build();
-    private double value = 0.0;
+    private double value;
 
     @Override
     @Nonnull

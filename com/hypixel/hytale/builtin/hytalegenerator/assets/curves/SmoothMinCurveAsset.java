@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class SmoothMinCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<SmoothMinCurveAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SmoothMinCurveAsset.class, SmoothMinCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec("CurveA", CurveAsset.CODEC, true), (t, k) -> {
         t.curveAAsset = k;
     }, k -> k.curveAAsset).add()).append(new KeyedCodec("CurveB", CurveAsset.CODEC, true), (t, k) -> {
@@ -24,7 +25,7 @@ extends CurveAsset {
     }, k -> k.range).addValidator(Validators.greaterThanOrEqual(0.0)).add()).build();
     private CurveAsset curveAAsset = new ConstantCurveAsset();
     private CurveAsset curveBAsset = new ConstantCurveAsset();
-    private double range = 0.0;
+    private double range;
 
     @Override
     @Nonnull

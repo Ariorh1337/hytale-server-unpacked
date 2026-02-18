@@ -318,6 +318,8 @@ extends AbstractCommandCollection {
         private final FlagArg emptyFlag = this.withFlagArg("empty", "server.commands.prefab.save.empty.desc");
         @Nonnull
         private final FlagArg playerAnchorFlag = this.withFlagArg("playerAnchor", "server.commands.prefab.save.playerAnchor.desc");
+        @Nonnull
+        private final FlagArg clearSupportFlag = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
 
         public PrefabSaveDirectCommand() {
             super("server.commands.prefab.save.desc");
@@ -331,8 +333,9 @@ extends AbstractCommandCollection {
             boolean overwrite = (Boolean)this.overwriteFlag.get(context);
             boolean entities = (Boolean)this.entitiesFlag.get(context);
             boolean empty = (Boolean)this.emptyFlag.get(context);
+            boolean clearSupport = (Boolean)this.clearSupportFlag.get(context);
             Vector3i playerAnchor = this.getPlayerAnchor(ref, store, (Boolean)this.playerAnchorFlag.get(context));
-            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.saveFromSelection((Ref<EntityStore>)r, name, true, overwrite, entities, empty, playerAnchor, (ComponentAccessor<EntityStore>)componentAccessor));
+            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.saveFromSelection((Ref<EntityStore>)r, name, true, overwrite, entities, empty, playerAnchor, clearSupport, (ComponentAccessor<EntityStore>)componentAccessor));
         }
 
         @Nullable

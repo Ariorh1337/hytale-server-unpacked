@@ -16,7 +16,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class TransactionRecord {
+    @Nonnull
     public static final CodecMapCodec<TransactionRecord> CODEC = new CodecMapCodec("Type");
+    @Nonnull
     public static final BuilderCodec<TransactionRecord> BASE_CODEC = ((BuilderCodec.Builder)BuilderCodec.abstractBuilder(TransactionRecord.class).append(new KeyedCodec<TransactionStatus>("Status", new EnumCodec<TransactionStatus>(TransactionStatus.class, EnumCodec.EnumStyle.LEGACY)), (spawnEntityTransactionRecord, status) -> {
         spawnEntityTransactionRecord.status = status;
     }, spawnEntityTransactionRecord -> spawnEntityTransactionRecord.status).add()).build();
@@ -56,7 +58,7 @@ public abstract class TransactionRecord {
     }
 
     @Nonnull
-    public static <T extends TransactionRecord> TransactionRecord[] appendFailedTransaction(TransactionRecord[] transactions, @Nonnull T transaction, String reason) {
+    public static <T extends TransactionRecord> TransactionRecord[] appendFailedTransaction(@Nullable TransactionRecord[] transactions, @Nonnull T transaction, String reason) {
         return TransactionRecord.appendTransaction(transactions, transaction.fail(reason));
     }
 

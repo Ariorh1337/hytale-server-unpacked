@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 
 public class FertilizeSoilInteraction
 extends SimpleBlockInteraction {
+    @Nonnull
     public static final BuilderCodec<FertilizeSoilInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FertilizeSoilInteraction.class, FertilizeSoilInteraction::new, SimpleBlockInteraction.CODEC).documentation("If the target block is farmable then set it to fertilized.")).addField(new KeyedCodec<T[]>("RefreshModifiers", Codec.STRING_ARRAY), (interaction, refreshModifiers) -> {
         interaction.refreshModifiers = refreshModifiers;
     }, interaction -> interaction.refreshModifiers)).build();
@@ -45,41 +46,46 @@ extends SimpleBlockInteraction {
     protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i targetBlock, @Nonnull CooldownHandler cooldownHandler) {
         int z;
         int x = targetBlock.getX();
-        Object worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(x, z = targetBlock.getZ()));
-        Ref<ChunkStore> blockRef = ((WorldChunk)worldChunk).getBlockComponentEntity(x, targetBlock.getY(), z);
-        if (blockRef == null) {
-            blockRef = BlockModule.ensureBlockEntity(worldChunk, targetBlock.x, targetBlock.y, targetBlock.z);
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z = targetBlock.getZ());
+        Object worldChunkComponent = world.getChunk(chunkIndex);
+        if (worldChunkComponent == null) {
+            context.getState().state = InteractionState.Failed;
+            return;
         }
-        if (blockRef == null) {
+        Ref<ChunkStore> blockRef = ((WorldChunk)worldChunkComponent).getBlockComponentEntity(x, targetBlock.getY(), z);
+        if (blockRef == null || !blockRef.isValid()) {
+            blockRef = BlockModule.ensureBlockEntity(worldChunkComponent, targetBlock.x, targetBlock.y, targetBlock.z);
+        }
+        if (blockRef == null || !blockRef.isValid()) {
             context.getState().state = InteractionState.Failed;
             return;
         }
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-        TilledSoilBlock soil = chunkStore.getComponent(blockRef, TilledSoilBlock.getComponentType());
-        if (soil != null && !soil.isFertilized()) {
-            soil.setFertilized(true);
-            ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY(), z, true);
-            ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY() + 1, z, true);
+        TilledSoilBlock tilledSoilComponent = chunkStore.getComponent(blockRef, TilledSoilBlock.getComponentType());
+        if (tilledSoilComponent != null && !tilledSoilComponent.isFertilized()) {
+            tilledSoilComponent.setFertilized(true);
+            ((WorldChunk)worldChunkComponent).setTicking(x, targetBlock.getY(), z, true);
+            ((WorldChunk)worldChunkComponent).setTicking(x, targetBlock.getY() + 1, z, true);
             return;
         }
-        FarmingBlock farmingState = chunkStore.getComponent(blockRef, FarmingBlock.getComponentType());
-        if (farmingState == null) {
+        FarmingBlock farmingBlockComponent = chunkStore.getComponent(blockRef, FarmingBlock.getComponentType());
+        if (farmingBlockComponent == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        Ref<ChunkStore> soilRef = ((WorldChunk)worldChunk).getBlockComponentEntity(x, targetBlock.getY() - 1, z);
-        if (soilRef == null) {
+        Ref<ChunkStore> soilBlockRef = ((WorldChunk)worldChunkComponent).getBlockComponentEntity(x, targetBlock.getY() - 1, z);
+        if (soilBlockRef == null || !soilBlockRef.isValid()) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        soil = chunkStore.getComponent(soilRef, TilledSoilBlock.getComponentType());
-        if (soil == null || soil.isFertilized()) {
+        tilledSoilComponent = chunkStore.getComponent(soilBlockRef, TilledSoilBlock.getComponentType());
+        if (tilledSoilComponent == null || tilledSoilComponent.isFertilized()) {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        soil.setFertilized(true);
-        ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY() - 1, z, true);
-        ((WorldChunk)worldChunk).setTicking(x, targetBlock.getY(), z, true);
+        tilledSoilComponent.setFertilized(true);
+        ((WorldChunk)worldChunkComponent).setTicking(x, targetBlock.getY() - 1, z, true);
+        ((WorldChunk)worldChunkComponent).setTicking(x, targetBlock.getY(), z, true);
     }
 
     @Override

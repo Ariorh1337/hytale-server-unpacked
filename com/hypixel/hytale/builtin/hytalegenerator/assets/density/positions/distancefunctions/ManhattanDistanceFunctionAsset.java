@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class ManhattanDistanceFunctionAsset
 extends DistanceFunctionAsset {
+    @Nonnull
     public static final BuilderCodec<ManhattanDistanceFunctionAsset> CODEC = BuilderCodec.builder(ManhattanDistanceFunctionAsset.class, ManhattanDistanceFunctionAsset::new, DistanceFunctionAsset.ABSTRACT_CODEC).build();
 
     @Override

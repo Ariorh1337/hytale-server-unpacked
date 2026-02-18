@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 public class PropRuntimeAsset
 implements Cleanable,
 JsonAssetWithMap<String, DefaultAssetMap<String, PropRuntimeAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, PropRuntimeAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(PropRuntimeAsset.class, PropRuntimeAsset::new, Codec.STRING, (asset, id) -> {
         asset.id = id;
     }, config -> config.id, (config, data) -> {
@@ -58,12 +59,12 @@ JsonAssetWithMap<String, DefaultAssetMap<String, PropRuntimeAsset>> {
         this.assignmentsAsset.cleanUp();
     }
 
-    public PositionProvider buildPositionProvider(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-        return this.positionProviderAsset.build(new PositionProviderAsset.Argument(parentSeed, referenceBundle, workerIndexer));
+    public PositionProvider buildPositionProvider(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+        return this.positionProviderAsset.build(new PositionProviderAsset.Argument(parentSeed, referenceBundle, workerId));
     }
 
-    public Assignments buildPropDistribution(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, int runtime, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-        return this.assignmentsAsset.build(new AssignmentsAsset.Argument(parentSeed, materialCache, referenceBundle, runtime, workerIndexer));
+    public Assignments buildPropDistribution(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, int runtime, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+        return this.assignmentsAsset.build(new AssignmentsAsset.Argument(parentSeed, materialCache, referenceBundle, runtime, workerId));
     }
 
     public int getRuntime() {

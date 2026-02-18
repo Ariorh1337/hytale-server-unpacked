@@ -13,9 +13,10 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interaction.MountNPC;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
@@ -27,37 +28,80 @@ import javax.annotation.Nonnull;
 
 public class NPCMountSystems {
 
+    public static class OnPlayerRemove
+    extends RefSystem<EntityStore> {
+        @Nonnull
+        private final ComponentType<EntityStore, Player> playerComponentType;
+
+        public OnPlayerRemove(@Nonnull ComponentType<EntityStore, Player> playerComponentType) {
+            this.playerComponentType = playerComponentType;
+        }
+
+        @Override
+        public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+        }
+
+        @Override
+        public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
+            Player player = commandBuffer.getComponent(ref, this.playerComponentType);
+            assert (player != null);
+            MountPlugin.checkDismountNpc(commandBuffer, ref, player);
+        }
+
+        @Override
+        @Nonnull
+        public Query<EntityStore> getQuery() {
+            return this.playerComponentType;
+        }
+    }
+
     public static class DismountOnMountDeath
     extends DeathSystems.OnDeathSystem {
+        @Nonnull
+        private final ComponentType<EntityStore, NPCMountComponent> npcMountComponentType;
+
+        public DismountOnMountDeath(@Nonnull ComponentType<EntityStore, NPCMountComponent> npcMountComponentType) {
+            this.npcMountComponentType = npcMountComponentType;
+        }
+
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return NPCMountComponent.getComponentType();
+            return this.npcMountComponentType;
         }
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            NPCMountComponent mountComponent = store.getComponent(ref, NPCMountComponent.getComponentType());
+            Ref<EntityStore> playerEntityRef;
+            NPCMountComponent mountComponent = store.getComponent(ref, this.npcMountComponentType);
             assert (mountComponent != null);
             PlayerRef playerRef = mountComponent.getOwnerPlayerRef();
-            if (playerRef != null) {
-                MountPlugin.resetOriginalPlayerMovementSettings(playerRef, store);
+            if (playerRef != null && (playerEntityRef = playerRef.getReference()) != null && playerEntityRef.isValid()) {
+                MountPlugin.resetOriginalPlayerMovementSettings(playerEntityRef, store);
             }
         }
     }
 
     public static class DismountOnPlayerDeath
     extends DeathSystems.OnDeathSystem {
+        @Nonnull
+        private final ComponentType<EntityStore, Player> playerComponentType;
+
+        public DismountOnPlayerDeath(@Nonnull ComponentType<EntityStore, Player> playerComponentType) {
+            this.playerComponentType = playerComponentType;
+        }
+
         @Override
         @Nonnull
         public Query<EntityStore> getQuery() {
-            return Player.getComponentType();
+            return this.playerComponentType;
         }
 
         @Override
         public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            Player playerComponent = store.getComponent(ref, this.playerComponentType);
             assert (playerComponent != null);
-            MountPlugin.checkDismountNpc(commandBuffer, playerComponent);
+            MountPlugin.checkDismountNpc(commandBuffer, ref, playerComponent);
         }
     }
 
@@ -65,14 +109,24 @@ public class NPCMountSystems {
     extends RefSystem<EntityStore> {
         @Nonnull
         private final ComponentType<EntityStore, NPCMountComponent> mountComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, NPCEntity> npcEntityComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
 
-        public OnAdd(@Nonnull ComponentType<EntityStore, NPCMountComponent> mountRoleChangeComponentType) {
-            this.mountComponentType = mountRoleChangeComponentType;
+        public OnAdd(@Nonnull ComponentType<EntityStore, NPCMountComponent> mountComponentType, @Nonnull ComponentType<EntityStore, NPCEntity> npcEntityComponentType, @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType) {
+            this.mountComponentType = mountComponentType;
+            this.npcEntityComponentType = npcEntityComponentType;
+            this.networkIdComponentType = networkIdComponentType;
+            this.query = Query.and(mountComponentType, npcEntityComponentType, networkIdComponentType);
         }
 
         @Override
+        @Nonnull
         public Query<EntityStore> getQuery() {
-            return this.mountComponentType;
+            return this.query;
         }
 
         @Override
@@ -81,26 +135,30 @@ public class NPCMountSystems {
             assert (mountComponent != null);
             PlayerRef playerRef = mountComponent.getOwnerPlayerRef();
             if (playerRef == null) {
-                OnAdd.resetOriginalRoleMount(ref, store, commandBuffer, mountComponent);
+                this.resetOriginalRoleMount(ref, store, commandBuffer, mountComponent);
                 return;
             }
-            NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
+            NPCEntity npcComponent = store.getComponent(ref, this.npcEntityComponentType);
             assert (npcComponent != null);
-            NetworkId networkIdComponent = store.getComponent(ref, NetworkId.getComponentType());
+            NetworkId networkIdComponent = store.getComponent(ref, this.networkIdComponentType);
             assert (networkIdComponent != null);
             int networkId = networkIdComponent.getId();
             MountNPC packet = new MountNPC(mountComponent.getAnchorX(), mountComponent.getAnchorY(), mountComponent.getAnchorZ(), networkId);
             Player playerComponent = playerRef.getComponent(Player.getComponentType());
-            assert (playerComponent != null);
+            if (playerComponent == null) {
+                return;
+            }
             playerComponent.setMountEntityId(networkId);
-            playerRef.getPacketHandler().write((Packet)packet);
+            playerRef.getPacketHandler().write((ToClientPacket)packet);
+            commandBuffer.removeComponent(ref, Interactable.getComponentType());
         }
 
-        private static void resetOriginalRoleMount(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull NPCMountComponent mountComponent) {
-            NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
+        private void resetOriginalRoleMount(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull NPCMountComponent mountComponent) {
+            NPCEntity npcComponent = store.getComponent(ref, this.npcEntityComponentType);
             assert (npcComponent != null);
             RoleChangeSystem.requestRoleChange(ref, npcComponent.getRole(), mountComponent.getOriginalRoleIndex(), false, "Idle", null, store);
-            commandBuffer.removeComponent(ref, NPCMountComponent.getComponentType());
+            commandBuffer.removeComponent(ref, this.mountComponentType);
+            commandBuffer.ensureComponent(ref, Interactable.getComponentType());
         }
 
         @Override

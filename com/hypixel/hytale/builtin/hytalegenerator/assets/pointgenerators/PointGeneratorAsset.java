@@ -21,15 +21,21 @@ import javax.annotation.Nonnull;
 
 public abstract class PointGeneratorAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, PointGeneratorAsset>> {
+    @Nonnull
     private static final PointGeneratorAsset[] EMPTY_INPUTS = new PointGeneratorAsset[0];
+    @Nonnull
     public static final AssetCodecMapCodec<String, PointGeneratorAsset> CODEC = new AssetCodecMapCodec<String, PointGeneratorAsset>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.data = data;
     }, t -> t.data);
+    @Nonnull
     private static final Map<String, PointGeneratorAsset> exportedNodes = new HashMap<String, PointGeneratorAsset>();
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(PointGeneratorAsset.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final BuilderCodec<PointGeneratorAsset> ABSTRACT_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(PointGeneratorAsset.class).append(new KeyedCodec<Boolean>("Skip", Codec.BOOLEAN, false), (t, k) -> {
         t.skip = k;
     }, t -> t.skip).add()).append(new KeyedCodec<String>("ExportAs", Codec.STRING, false), (t, k) -> {
@@ -42,8 +48,9 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, PointGeneratorAsset>
     })).build();
     private String id;
     private AssetExtraInfo.Data data;
+    @Nonnull
     private PointGeneratorAsset[] inputs = EMPTY_INPUTS;
-    private boolean skip = false;
+    private boolean skip;
     private String exportName = "";
 
     protected PointGeneratorAsset() {
@@ -51,6 +58,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, PointGeneratorAsset>
 
     public abstract PointProvider build(@Nonnull SeedBox var1);
 
+    @Nonnull
     public PointGeneratorAsset[] inputs() {
         return this.inputs;
     }

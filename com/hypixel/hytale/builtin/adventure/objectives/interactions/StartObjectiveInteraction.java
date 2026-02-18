@@ -29,11 +29,13 @@ import org.bson.BsonDocument;
 
 public class StartObjectiveInteraction
 extends SimpleInstantInteraction {
+    @Nonnull
     public static final BuilderCodec<StartObjectiveInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(StartObjectiveInteraction.class, StartObjectiveInteraction::new, SimpleInstantInteraction.CODEC).documentation("Starts the given objective or adds the player to an existing one.")).appendInherited(new KeyedCodec<ObjectiveTypeSetup>("Setup", ObjectiveTypeSetup.CODEC), (startObjectiveInteraction, objectiveTypeSetup) -> {
         startObjectiveInteraction.objectiveTypeSetup = objectiveTypeSetup;
     }, startObjectiveInteraction -> startObjectiveInteraction.objectiveTypeSetup, (startObjectiveInteraction, parent) -> {
         startObjectiveInteraction.objectiveTypeSetup = parent.objectiveTypeSetup;
     }).addValidator(Validators.nonNull()).add()).build();
+    @Nonnull
     public static final KeyedCodec<UUID> OBJECTIVE_UUID = new KeyedCodec<UUID>("ObjectiveUUID", Codec.UUID_BINARY);
     protected ObjectiveTypeSetup objectiveTypeSetup;
 

@@ -3,7 +3,6 @@
  */
 package com.hypixel.hytale.server.core.util;
 
-import com.hypixel.fastutil.longs.Long2ObjectConcurrentHashMap;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.StringUtil;
@@ -13,7 +12,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.metric.ArchetypeChunkData;
 import com.hypixel.hytale.component.system.ISystem;
 import com.hypixel.hytale.logger.backend.HytaleFileHandler;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.metrics.InitStackThread;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -36,13 +34,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.universe.world.storage.provider.IndexedStorageChunkStorageProvider;
 import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenTimingsCollector;
 import com.hypixel.hytale.server.core.util.BsonUtil;
-import com.hypixel.hytale.storage.IndexedStorageFile;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
@@ -307,10 +302,10 @@ public class DumpUtil {
                 for (int i = 0; i < periods.length; ++i) {
                     long period = periods[i];
                     String string = FormatUtil.timeUnitToString(period, TimeUnit.NANOSECONDS, true);
-                    double d = bufferedDeltaMetricSet.getAverage(i);
+                    double average = bufferedDeltaMetricSet.getAverage(i);
                     long l = bufferedDeltaMetricSet.calculateMin(i);
                     long max = bufferedDeltaMetricSet.calculateMax(i);
-                    writer.println("\tTick (" + string + "): Min: " + FormatUtil.simpleTimeUnitFormat(l, TimeUnit.NANOSECONDS, 3) + ", Avg: " + FormatUtil.simpleTimeUnitFormat(Math.round(d), TimeUnit.NANOSECONDS, 3) + "ns, Max: " + FormatUtil.simpleTimeUnitFormat(max, TimeUnit.NANOSECONDS, 3));
+                    writer.println("\tTick (" + string + "): Min: " + FormatUtil.simpleTimeUnitFormat(l, TimeUnit.NANOSECONDS, 3) + ", Avg: " + FormatUtil.simpleTimeUnitFormat(Math.round(average), TimeUnit.NANOSECONDS, 3) + "ns, Max: " + FormatUtil.simpleTimeUnitFormat(max, TimeUnit.NANOSECONDS, 3));
                     long[] historyTimestamps = bufferedDeltaMetricSet.getTimestamps(i);
                     long[] historyValues = bufferedDeltaMetricSet.getValues(i);
                     StringBuilder sb = new StringBuilder();
@@ -360,7 +355,7 @@ public class DumpUtil {
                     writer.println();
                     PacketStatsRecorder packetStatsRecorder = player.getPlayerConnection().getPacketStatsRecorder();
                     if (packetStatsRecorder == null) continue;
-                    int n = 30;
+                    int recentSeconds = 30;
                     long totalSentCount = 0L;
                     long totalSentUncompressed = 0L;
                     long totalSentWire = 0L;
@@ -381,12 +376,12 @@ public class DumpUtil {
                         recentSentCount += recent.count();
                         recentSentUncompressed += recent.uncompressedTotal();
                         recentSentWire += recent.compressedTotal() > 0L ? recent.compressedTotal() : recent.uncompressedTotal();
-                        DumpUtil.printPacketStats(writer, "\t\t\t\t", "Recent", recent.count(), recent.uncompressedTotal(), recent.compressedTotal(), recent.uncompressedMin(), recent.uncompressedMax(), recent.compressedMin(), recent.compressedMax(), (double)recent.uncompressedTotal() / (double)recent.count(), recent.compressedTotal() > 0L ? (double)recent.compressedTotal() / (double)recent.count() : 0.0, n);
+                        DumpUtil.printPacketStats(writer, "\t\t\t\t", "Recent", recent.count(), recent.uncompressedTotal(), recent.compressedTotal(), recent.uncompressedMin(), recent.uncompressedMax(), recent.compressedMin(), recent.compressedMax(), (double)recent.uncompressedTotal() / (double)recent.count(), recent.compressedTotal() > 0L ? (double)recent.compressedTotal() / (double)recent.count() : 0.0, recentSeconds);
                     }
                     writer.println("\t\t\t--- Summary ---");
                     writer.println("\t\t\t\tTotal: " + totalSentCount + " packets, " + FormatUtil.bytesToString(totalSentUncompressed) + " serialized, " + FormatUtil.bytesToString(totalSentWire) + " wire");
                     if (recentSentCount > 0) {
-                        writer.println(String.format("\t\t\t\tRecent: %d packets (%.1f/sec), %s serialized, %s wire", recentSentCount, (double)recentSentCount / (double)n, FormatUtil.bytesToString(recentSentUncompressed), FormatUtil.bytesToString(recentSentWire)));
+                        writer.println(String.format("\t\t\t\tRecent: %d packets (%.1f/sec), %s serialized, %s wire", recentSentCount, (double)recentSentCount / (double)recentSeconds, FormatUtil.bytesToString(recentSentUncompressed), FormatUtil.bytesToString(recentSentWire)));
                     }
                     writer.println();
                     long totalRecvCount = 0L;
@@ -409,12 +404,12 @@ public class DumpUtil {
                         recentRecvCount += recent.count();
                         recentRecvUncompressed += recent.uncompressedTotal();
                         recentRecvWire += recent.compressedTotal() > 0L ? recent.compressedTotal() : recent.uncompressedTotal();
-                        DumpUtil.printPacketStats(writer, "\t\t\t\t", "Recent", recent.count(), recent.uncompressedTotal(), recent.compressedTotal(), recent.uncompressedMin(), recent.uncompressedMax(), recent.compressedMin(), recent.compressedMax(), (double)recent.uncompressedTotal() / (double)recent.count(), recent.compressedTotal() > 0L ? (double)recent.compressedTotal() / (double)recent.count() : 0.0, n);
+                        DumpUtil.printPacketStats(writer, "\t\t\t\t", "Recent", recent.count(), recent.uncompressedTotal(), recent.compressedTotal(), recent.uncompressedMin(), recent.uncompressedMax(), recent.compressedMin(), recent.compressedMax(), (double)recent.uncompressedTotal() / (double)recent.count(), recent.compressedTotal() > 0L ? (double)recent.compressedTotal() / (double)recent.count() : 0.0, recentSeconds);
                     }
                     writer.println("\t\t\t--- Summary ---");
                     writer.println("\t\t\t\tTotal: " + totalRecvCount + " packets, " + FormatUtil.bytesToString(totalRecvUncompressed) + " serialized, " + FormatUtil.bytesToString(totalRecvWire) + " wire");
                     if (recentRecvCount > 0) {
-                        writer.println(String.format("\t\t\t\tRecent: %d packets (%.1f/sec), %s serialized, %s wire", recentRecvCount, (double)recentRecvCount / (double)n, FormatUtil.bytesToString(recentRecvUncompressed), FormatUtil.bytesToString(recentRecvWire)));
+                        writer.println(String.format("\t\t\t\tRecent: %d packets (%.1f/sec), %s serialized, %s wire", recentRecvCount, (double)recentRecvCount / (double)recentSeconds, FormatUtil.bytesToString(recentRecvUncompressed), FormatUtil.bytesToString(recentRecvWire)));
                     }
                     writer.println();
                 }
@@ -448,30 +443,6 @@ public class DumpUtil {
                     writer.println("\t\tGenerating Count: " + timings.getGeneratingCount());
                 } else {
                     writer.println("\t\tNo Timings Data Collected!");
-                }
-                IndexedStorageChunkStorageProvider.IndexedStorageCache storageCache = world.getChunkStore().getStore().getResource(IndexedStorageChunkStorageProvider.IndexedStorageCache.getResourceType());
-                if (storageCache != null) {
-                    Long2ObjectConcurrentHashMap<IndexedStorageFile> cache = storageCache.getCache();
-                    writer.println();
-                    writer.println("\tIndexed Storage Cache:");
-                    for (Long2ObjectMap.Entry entry : cache.long2ObjectEntrySet()) {
-                        long key = entry.getLongKey();
-                        writer.println("\t\t" + ChunkUtil.xOfChunkIndex(key) + ", " + ChunkUtil.zOfChunkIndex(key));
-                        IndexedStorageFile storageFile = (IndexedStorageFile)entry.getValue();
-                        try {
-                            writer.println("\t\t- Size: " + FormatUtil.bytesToString(storageFile.size()));
-                        }
-                        catch (IOException e) {
-                            writer.println("\t\t- Size: ERROR: " + e.getMessage());
-                        }
-                        writer.println("\t\t- Blob Count: " + storageFile.keys().size());
-                        int segmentSize = storageFile.segmentSize();
-                        int segmentCount = storageFile.segmentCount();
-                        writer.println("\t\t- Segment Size: " + segmentSize);
-                        writer.println("\t\t- Segment Count: " + segmentCount);
-                        writer.println("\t\t- Segment Used %: " + (double)(segmentCount * 100) / (double)segmentSize + "%");
-                        writer.println("\t\t- " + String.valueOf(storageFile));
-                    }
                 }
             });
             List<PlayerRef> playersNotInWorld = Universe.get().getPlayers().stream().filter(ref -> ref.getReference() == null).toList();

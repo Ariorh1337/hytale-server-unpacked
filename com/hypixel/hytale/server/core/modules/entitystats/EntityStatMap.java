@@ -32,6 +32,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -471,11 +472,24 @@ implements Component<EntityStore> {
         map.unknown = this.unknown;
         map.update();
         for (int i = 0; i < this.values.length; ++i) {
-            map.values[i].set(this.values[i].get());
+            if (this.values[i] == null) continue;
+            EntityStatValue entityStatValue = this.values[i];
+            map.values[i].set(entityStatValue.get());
+            Map<String, Modifier> modifiers = entityStatValue.getModifiers();
+            if (modifiers == null) continue;
+            for (Map.Entry<String, Modifier> entry : modifiers.entrySet()) {
+                map.values[i].putModifier(entry.getKey(), entry.getValue());
+            }
         }
-        map.selfUpdates.putAll(this.selfUpdates);
-        map.selfStatValues.putAll(this.selfStatValues);
-        map.otherUpdates.putAll(this.otherUpdates);
+        for (Int2ObjectMap.Entry entry : this.selfUpdates.int2ObjectEntrySet()) {
+            map.selfUpdates.put(entry.getIntKey(), (List<EntityStatUpdate>)new ObjectArrayList((Collection)entry.getValue()));
+        }
+        for (Int2ObjectMap.Entry entry : this.selfStatValues.int2ObjectEntrySet()) {
+            map.selfStatValues.put(entry.getIntKey(), (FloatList)new FloatArrayList((FloatList)entry.getValue()));
+        }
+        for (Int2ObjectMap.Entry entry : this.otherUpdates.int2ObjectEntrySet()) {
+            map.otherUpdates.put(entry.getIntKey(), (List<EntityStatUpdate>)new ObjectArrayList((Collection)entry.getValue()));
+        }
         return map;
     }
 

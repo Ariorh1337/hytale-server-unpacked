@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public class ShopAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, ShopAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, ShopAsset> CODEC = ((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(ShopAsset.class, ShopAsset::new, Codec.STRING, (shopAsset, s) -> {
         shopAsset.id = s;
     }, shopAsset -> shopAsset.id, (shopAsset, data) -> {
@@ -27,12 +28,14 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ShopAsset>> {
     }, shopAsset -> shopAsset.extraData).addField(new KeyedCodec<T[]>("Content", new ArrayCodec<ChoiceElement>(ChoiceElement.CODEC, ChoiceElement[]::new)), (shopAsset, choiceElements) -> {
         shopAsset.elements = choiceElements;
     }, shopAsset -> shopAsset.elements)).build();
+    @Nonnull
     public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache(new AssetKeyValidator(ShopAsset::getAssetStore));
     private static AssetStore<String, ShopAsset, DefaultAssetMap<String, ShopAsset>> ASSET_STORE;
     protected AssetExtraInfo.Data extraData;
     protected String id;
     protected ChoiceElement[] elements;
 
+    @Nonnull
     public static AssetStore<String, ShopAsset, DefaultAssetMap<String, ShopAsset>> getAssetStore() {
         if (ASSET_STORE == null) {
             ASSET_STORE = AssetRegistry.getAssetStore(ShopAsset.class);

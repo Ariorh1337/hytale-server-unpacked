@@ -43,8 +43,11 @@ import javax.annotation.Nonnull;
 
 public class AbilityCombatAction
 extends CombatActionOption {
+    @Nonnull
     public static final EnumCodec<AbilityType> MODE_CODEC = new EnumCodec<AbilityType>(AbilityType.class).documentKey(AbilityType.Primary, "Use primary attack.").documentKey(AbilityType.Secondary, "Use secondary attack.");
+    @Nonnull
     public static final EnumCodec<Positioning> POSITIONING_CODEC = new EnumCodec<Positioning>(Positioning.class).documentKey(Positioning.Any, "Don't care about positioning.").documentKey(Positioning.Front, "Try to be in front of the target.").documentKey(Positioning.Behind, "Try to be behind the target.").documentKey(Positioning.Flank, "Try to be on the target's flank.");
+    @Nonnull
     public static final BuilderCodec<AbilityCombatAction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(AbilityCombatAction.class, AbilityCombatAction::new, CombatActionOption.BASE_CODEC).documentation("A combat action which executes an attack or ability by triggering an Interaction.")).appendInherited(new KeyedCodec("Ability", RootInteraction.CHILD_ASSET_CODEC), (option, s) -> {
         option.ability = s;
     }, option -> option.ability, (option, parent) -> {
@@ -103,6 +106,7 @@ extends CombatActionOption {
     }, option -> option.chargeDistance, (option, parent) -> {
         option.chargeDistance = parent.chargeDistance;
     }).documentation("If this is a charge attack, the distance the charge will cover.").addValidator(Validators.greaterThanOrEqual(0.0)).add()).build();
+    @Nonnull
     protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
     protected String ability;
     protected AbilityType abilityType = AbilityType.Primary;

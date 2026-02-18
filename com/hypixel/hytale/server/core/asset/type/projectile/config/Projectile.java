@@ -267,6 +267,7 @@ BallisticData {
         return this.verticalCenterShot;
     }
 
+    @Override
     public double getHorizontalCenterShot() {
         return this.horizontalCenterShot;
     }

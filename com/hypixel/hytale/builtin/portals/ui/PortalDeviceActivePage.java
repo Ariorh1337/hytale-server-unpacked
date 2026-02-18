@@ -90,7 +90,8 @@ extends InteractiveCustomUIPage<Data> {
         commandBuilder.set("#RemainingDuration.TextSpans", Message.translation("server.customUI.portalDevice.remainingDuration").param("remaining", remainingTimeMsg.color("#ea4fa46b")));
     }
 
-    private static Message createPlayerCountMsg(World world) {
+    @Nonnull
+    private static Message createPlayerCountMsg(@Nonnull World world) {
         int playerCount = world.getPlayerCount();
         String pinkEnoughColor = "#ea4fa46b";
         if (playerCount == 0) {
@@ -107,7 +108,8 @@ extends InteractiveCustomUIPage<Data> {
         return Message.translation("server.customUI.portalDevice.playersInside").param("count", Message.raw(playerCount + "!").color(pinkEnoughColor));
     }
 
-    private State computeState(Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+    @Nonnull
+    private State computeState(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
         if (!this.blockRef.isValid()) {
             return Error.INVALID_BLOCK;
         }
@@ -126,13 +128,16 @@ extends InteractiveCustomUIPage<Data> {
             return Error.DESTINATION_NOT_FRAGMENT;
         }
         UUIDComponent uuidComponent = componentAccessor.getComponent(ref, UUIDComponent.getComponentType());
-        assert (uuidComponent != null);
+        if (uuidComponent == null) {
+            return Error.INACTIVE_PORTAL;
+        }
         UUID playerUUID = uuidComponent.getUuid();
         boolean diedInside = portalWorld.getDiedInWorld().contains(playerUUID);
         return new PortalIsOpen(destinationWorld, portalWorld, diedInside);
     }
 
     protected static class Data {
+        @Nonnull
         public static final BuilderCodec<Data> CODEC = BuilderCodec.builder(Data.class, Data::new).build();
 
         protected Data() {

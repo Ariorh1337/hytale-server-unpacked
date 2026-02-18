@@ -53,7 +53,7 @@ extends RefSystem<EntityStore> {
             ambienceResource.setForcedMusicAmbience(null);
         }
         if ((activeStage = (voidEvent = commandBuffer.getComponent(ref, VoidEvent.getComponentType())).getActiveStage()) != null) {
-            VoidEventStagesSystem.stopStage(activeStage, world, store, commandBuffer);
+            VoidEventStagesSystem.stopStage(activeStage, store, commandBuffer);
             voidEvent.setActiveStage(null);
         }
     }

@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 
 public class Teleporter
 implements Component<ChunkStore> {
+    @Nonnull
     public static final BuilderCodec<Teleporter> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Teleporter.class, Teleporter::new).append(new KeyedCodec<UUID>("World", Codec.UUID_BINARY), (teleporter, uuid) -> {
         teleporter.worldUuid = uuid;
     }, teleporter -> teleporter.worldUuid).add()).append(new KeyedCodec<Transform>("Transform", Transform.CODEC), (teleporter, transform) -> {
@@ -41,6 +42,8 @@ implements Component<ChunkStore> {
     }, teleporter -> teleporter.isCustomName).add()).append(new KeyedCodec<String>("WarpNameWordList", Codec.STRING), (teleporter, s) -> {
         teleporter.warpNameWordListKey = s;
     }, teleporter -> teleporter.warpNameWordListKey).documentation("The ID of the Word list to select default warp names from").add()).build();
+    public static final String ACTIVATE_STATE = "Active";
+    public static final String INACTIVE_STATE = "default";
     @Nullable
     private UUID worldUuid;
     @Nullable
@@ -49,6 +52,7 @@ implements Component<ChunkStore> {
     @Nullable
     private String warp;
     @Deprecated
+    @Nullable
     private String ownedWarp;
     private boolean isCustomName;
     private String warpNameWordListKey;
@@ -92,11 +96,12 @@ implements Component<ChunkStore> {
         this.warp = warp == null || warp.isEmpty() ? null : warp;
     }
 
+    @Nullable
     public String getOwnedWarp() {
         return this.ownedWarp;
     }
 
-    public void setOwnedWarp(String ownedWarp) {
+    public void setOwnedWarp(@Nullable String ownedWarp) {
         this.ownedWarp = ownedWarp;
     }
 

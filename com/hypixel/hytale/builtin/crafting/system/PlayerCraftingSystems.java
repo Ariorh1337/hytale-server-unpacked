@@ -54,18 +54,19 @@ public class PlayerCraftingSystems {
     public static class CraftingRefSystem
     extends RefSystem<EntityStore> {
         @Nonnull
-        private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
-        @Nonnull
         private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
 
-        public CraftingRefSystem(@Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
+        public CraftingRefSystem(@Nonnull ComponentType<EntityStore, Player> playerComponentType, @Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
             this.craftingManagerComponentType = craftingManagerComponentType;
+            this.query = Query.and(playerComponentType, craftingManagerComponentType);
         }
 
         @Override
         @Nonnull
         public Query<EntityStore> getQuery() {
-            return Query.and(this.playerComponentType, this.craftingManagerComponentType);
+            return this.query;
         }
 
         @Override
@@ -74,7 +75,7 @@ public class PlayerCraftingSystems {
 
         @Override
         public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            CraftingManager craftingManagerComponent = commandBuffer.getComponent(ref, CraftingManager.getComponentType());
+            CraftingManager craftingManagerComponent = commandBuffer.getComponent(ref, this.craftingManagerComponentType);
             assert (craftingManagerComponent != null);
             craftingManagerComponent.cancelAllCrafting(ref, store);
         }
@@ -83,11 +84,12 @@ public class PlayerCraftingSystems {
     public static class CraftingHolderSystem
     extends HolderSystem<EntityStore> {
         @Nonnull
-        private final ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        private final ComponentType<EntityStore, Player> playerComponentType;
         @Nonnull
         private final ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
 
-        public CraftingHolderSystem(@Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
+        public CraftingHolderSystem(@Nonnull ComponentType<EntityStore, Player> playerComponentType, @Nonnull ComponentType<EntityStore, CraftingManager> craftingManagerComponentType) {
+            this.playerComponentType = playerComponentType;
             this.craftingManagerComponentType = craftingManagerComponentType;
         }
 

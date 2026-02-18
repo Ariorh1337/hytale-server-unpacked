@@ -20,12 +20,13 @@ import javax.annotation.Nonnull;
 
 public class StartObjectiveInteraction
 extends ChoiceInteraction {
+    @Nonnull
     public static final BuilderCodec<StartObjectiveInteraction> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(StartObjectiveInteraction.class, StartObjectiveInteraction::new, ChoiceInteraction.BASE_CODEC).append(new KeyedCodec<String>("ObjectiveId", Codec.STRING), (startObjectiveInteraction, s) -> {
         startObjectiveInteraction.objectiveId = s;
     }, startObjectiveInteraction -> startObjectiveInteraction.objectiveId).addValidator(ObjectiveAsset.VALIDATOR_CACHE.getValidator()).add()).build();
     protected String objectiveId;
 
-    public StartObjectiveInteraction(String objectiveId) {
+    public StartObjectiveInteraction(@Nonnull String objectiveId) {
         this.objectiveId = objectiveId;
     }
 

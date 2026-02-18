@@ -34,7 +34,9 @@ extends ObjectiveCompletion {
             Player playerComponent = componentAccessor.getComponent((Ref<EntityStore>)participantReference, Player.getComponentType());
             if (playerComponent != null) {
                 UUIDComponent uuidComponent = componentAccessor.getComponent((Ref<EntityStore>)participantReference, UUIDComponent.getComponentType());
-                assert (uuidComponent != null);
+                if (uuidComponent == null) {
+                    return;
+                }
                 String reputationGroupId = asset.getReputationGroupId();
                 int amount = asset.getAmount();
                 reputationModule.changeReputation(playerComponent, reputationGroupId, amount, componentAccessor);

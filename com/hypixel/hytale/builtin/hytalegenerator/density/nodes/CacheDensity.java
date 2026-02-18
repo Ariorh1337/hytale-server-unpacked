@@ -4,33 +4,32 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class CacheDensity
 extends Density {
-    private final WorkerIndexer.Data<Cache> threadData;
+    @Nonnull
+    private final Cache cache;
     @Nonnull
     private Density input;
 
-    public CacheDensity(@Nonnull Density input, int threadCount) {
+    public CacheDensity(@Nonnull Density input) {
         this.input = input;
-        this.threadData = new WorkerIndexer.Data<Cache>(threadCount, Cache::new);
+        this.cache = new Cache();
     }
 
     @Override
     public double process(@Nonnull Density.Context context) {
-        Cache cache = this.threadData.get(context.workerId);
-        if (cache.position != null && cache.position.x == context.position.x && cache.position.y == context.position.y && cache.position.z == context.position.z) {
-            return cache.value;
+        if (this.cache.position != null && this.cache.position.x == context.position.x && this.cache.position.y == context.position.y && this.cache.position.z == context.position.z) {
+            return this.cache.value;
         }
-        if (cache.position == null) {
-            cache.position = new Vector3d();
+        if (this.cache.position == null) {
+            this.cache.position = new Vector3d();
         }
-        cache.position.assign(context.position);
-        cache.value = this.input.process(context);
-        return cache.value;
+        this.cache.position.assign(context.position);
+        this.cache.value = this.input.process(context);
+        return this.cache.value;
     }
 
     @Override

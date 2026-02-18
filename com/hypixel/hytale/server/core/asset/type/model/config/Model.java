@@ -47,12 +47,18 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
     private final Box boundingBox;
     @Nullable
     private final Box crouchBoundingBox;
+    @Nullable
+    private final Box sittingBoundingBox;
+    @Nullable
+    private final Box sleepingBoundingBox;
     private final String model;
     private final String texture;
     private final String gradientSet;
     private final String gradientId;
     private final float eyeHeight;
     private final float crouchOffset;
+    private final float sittingOffset;
+    private final float sleepingOffset;
     private final Map<String, ModelAsset.AnimationSet> animationSetMap;
     private final CameraSettings camera;
     private final ColorLight light;
@@ -64,7 +70,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
     private final String phobiaModelAssetId;
     private transient SoftReference<com.hypixel.hytale.protocol.Model> cachedPacket;
 
-    public Model(String modelAssetId, float scale, Map<String, String> randomAttachmentIds, ModelAttachment[] attachments, @Nullable Box boundingBox, String model, String texture, String gradientSet, String gradientId, float eyeHeight, float crouchOffset, Map<String, ModelAsset.AnimationSet> animationSetMap, CameraSettings camera, ColorLight light, ModelParticle[] particles, ModelTrail[] trails, PhysicsValues physicsValues, Map<String, DetailBox[]> detailBoxes, Phobia phobia, String phobiaModelAssetId) {
+    public Model(String modelAssetId, float scale, Map<String, String> randomAttachmentIds, ModelAttachment[] attachments, @Nullable Box boundingBox, String model, String texture, String gradientSet, String gradientId, float eyeHeight, float crouchOffset, float sittingOffset, float sleepingOffset, Map<String, ModelAsset.AnimationSet> animationSetMap, CameraSettings camera, ColorLight light, ModelParticle[] particles, ModelTrail[] trails, PhysicsValues physicsValues, Map<String, DetailBox[]> detailBoxes, Phobia phobia, String phobiaModelAssetId) {
         this.modelAssetId = modelAssetId;
         this.scale = scale;
         this.randomAttachmentIds = randomAttachmentIds;
@@ -76,6 +82,8 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         this.gradientId = gradientId;
         this.eyeHeight = eyeHeight;
         this.crouchOffset = crouchOffset;
+        this.sittingOffset = sittingOffset;
+        this.sleepingOffset = sleepingOffset;
         this.animationSetMap = animationSetMap;
         this.camera = camera;
         this.light = light;
@@ -84,6 +92,8 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         this.physicsValues = physicsValues;
         this.detailBoxes = detailBoxes;
         this.crouchBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, crouchOffset, 0.0));
+        this.sittingBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, sittingOffset, 0.0));
+        this.sleepingBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, sleepingOffset, 0.0));
         this.phobia = phobia;
         this.phobiaModelAssetId = phobiaModelAssetId;
     }
@@ -100,6 +110,8 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         this.gradientId = other.gradientId;
         this.eyeHeight = other.eyeHeight;
         this.crouchOffset = other.crouchOffset;
+        this.sittingOffset = other.sittingOffset;
+        this.sleepingOffset = other.sleepingOffset;
         this.animationSetMap = other.animationSetMap;
         this.camera = other.camera;
         this.light = other.light;
@@ -107,6 +119,8 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         this.trails = other.trails;
         this.physicsValues = other.physicsValues;
         this.crouchBoundingBox = other.crouchBoundingBox;
+        this.sittingBoundingBox = other.sittingBoundingBox;
+        this.sleepingBoundingBox = other.sleepingBoundingBox;
         this.detailBoxes = other.detailBoxes;
         this.phobia = other.phobia;
         this.phobiaModelAssetId = other.phobiaModelAssetId;
@@ -140,6 +154,12 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         }
         if (this.crouchOffset != 0.0f) {
             packet.crouchOffset = this.crouchOffset;
+        }
+        if (this.sittingOffset != 0.0f) {
+            packet.sittingOffset = this.sittingOffset;
+        }
+        if (this.sleepingOffset != 0.0f) {
+            packet.sleepingOffset = this.sleepingOffset;
         }
         if (this.animationSetMap != null) {
             map = new Object2ObjectOpenHashMap<String, AnimationSet>(this.animationSetMap.size());
@@ -205,7 +225,16 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         if (movementStates == null) {
             return this.boundingBox;
         }
-        return movementStates.crouching || movementStates.forcedCrouching ? this.crouchBoundingBox : this.boundingBox;
+        if (movementStates.crouching || movementStates.forcedCrouching || movementStates.sliding) {
+            return this.crouchBoundingBox;
+        }
+        if (movementStates.sitting) {
+            return this.sittingBoundingBox;
+        }
+        if (movementStates.sleeping) {
+            return this.sleepingBoundingBox;
+        }
+        return this.boundingBox;
     }
 
     @Nullable
@@ -216,6 +245,16 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
     @Nullable
     public Box getCrouchBoundingBox() {
         return this.crouchBoundingBox;
+    }
+
+    @Nullable
+    public Box getSittingBoundingBox() {
+        return this.sittingBoundingBox;
+    }
+
+    @Nullable
+    public Box getSleepingBoundingBox() {
+        return this.sleepingBoundingBox;
     }
 
     public String getModel() {
@@ -240,6 +279,14 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
 
     public float getCrouchOffset() {
         return this.crouchOffset;
+    }
+
+    public float getSittingOffset() {
+        return this.sittingOffset;
+    }
+
+    public float getSleepingOffset() {
+        return this.sleepingOffset;
     }
 
     public Map<String, ModelAsset.AnimationSet> getAnimationSetMap() {
@@ -315,7 +362,16 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
             return this.getEyeHeight();
         }
         MovementStates movementStates = movementStatesComponent.getMovementStates();
-        return movementStates.crouching ? this.getEyeHeight() + this.getCrouchOffset() : this.getEyeHeight();
+        if (movementStates.crouching || movementStates.sliding) {
+            return this.getEyeHeight() + this.getCrouchOffset();
+        }
+        if (movementStates.sitting) {
+            return this.getEyeHeight() + this.getSittingOffset();
+        }
+        if (movementStates.sleeping) {
+            return this.getEyeHeight() + this.getSleepingOffset();
+        }
+        return this.getEyeHeight();
     }
 
     public boolean equals(@Nullable Object o) {
@@ -333,6 +389,12 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
             return false;
         }
         if (Float.compare(model1.crouchOffset, this.crouchOffset) != 0) {
+            return false;
+        }
+        if (Float.compare(model1.sittingOffset, this.sittingOffset) != 0) {
+            return false;
+        }
+        if (Float.compare(model1.sleepingOffset, this.sleepingOffset) != 0) {
             return false;
         }
         if (!Objects.equals(this.modelAssetId, model1.modelAssetId)) {
@@ -389,6 +451,8 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         result = 31 * result + (this.gradientId != null ? this.gradientId.hashCode() : 0);
         result = 31 * result + (this.eyeHeight != 0.0f ? Float.floatToIntBits(this.eyeHeight) : 0);
         result = 31 * result + (this.crouchOffset != 0.0f ? Float.floatToIntBits(this.crouchOffset) : 0);
+        result = 31 * result + (this.sittingOffset != 0.0f ? Float.floatToIntBits(this.sittingOffset) : 0);
+        result = 31 * result + (this.sleepingOffset != 0.0f ? Float.floatToIntBits(this.sleepingOffset) : 0);
         result = 31 * result + (this.animationSetMap != null ? this.animationSetMap.hashCode() : 0);
         result = 31 * result + (this.camera != null ? this.camera.hashCode() : 0);
         result = 31 * result + (this.light != null ? this.light.hashCode() : 0);
@@ -399,7 +463,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
     }
 
     public String toString() {
-        return "Model{modelAssetId='" + this.modelAssetId + "', scale=" + this.scale + ", randomAttachmentIds=" + String.valueOf(this.randomAttachmentIds) + ", attachments=" + Arrays.toString(this.attachments) + ", boundingBox=" + String.valueOf(this.boundingBox) + ", crouchBoundingBox=" + String.valueOf(this.crouchBoundingBox) + ", model='" + this.model + "', texture='" + this.texture + "', gradientSet='" + this.gradientSet + "', gradientId='" + this.gradientId + "', eyeHeight=" + this.eyeHeight + ", crouchOffset=" + this.crouchOffset + ", animationSetMap=" + String.valueOf(this.animationSetMap) + ", camera=" + String.valueOf(this.camera) + ", light=" + String.valueOf(this.light) + ", particles=" + Arrays.toString(this.particles) + ", trails=" + Arrays.toString(this.trails) + ", physicsValues=" + String.valueOf(this.physicsValues) + ", detailBoxes=" + String.valueOf(this.detailBoxes) + ", phobia=" + String.valueOf((Object)this.phobia) + ", phobiaModelAssetId='" + this.phobiaModelAssetId + "'}";
+        return "Model{modelAssetId='" + this.modelAssetId + "', scale=" + this.scale + ", randomAttachmentIds=" + String.valueOf(this.randomAttachmentIds) + ", attachments=" + Arrays.toString(this.attachments) + ", boundingBox=" + String.valueOf(this.boundingBox) + ", crouchBoundingBox=" + String.valueOf(this.crouchBoundingBox) + ", sittingBoundingBox=" + String.valueOf(this.sittingBoundingBox) + ", sleepingBoundingBox=" + String.valueOf(this.sleepingBoundingBox) + ", model='" + this.model + "', texture='" + this.texture + "', gradientSet='" + this.gradientSet + "', gradientId='" + this.gradientId + "', eyeHeight=" + this.eyeHeight + ", crouchOffset=" + this.crouchOffset + ", sittingOffset=" + this.sittingOffset + ", sleepingOffset=" + this.sleepingOffset + ", animationSetMap=" + String.valueOf(this.animationSetMap) + ", camera=" + String.valueOf(this.camera) + ", light=" + String.valueOf(this.light) + ", particles=" + Arrays.toString(this.particles) + ", trails=" + Arrays.toString(this.trails) + ", physicsValues=" + String.valueOf(this.physicsValues) + ", detailBoxes=" + String.valueOf(this.detailBoxes) + ", phobia=" + String.valueOf((Object)this.phobia) + ", phobiaModelAssetId='" + this.phobiaModelAssetId + "'}";
     }
 
     @Nonnull
@@ -447,6 +511,8 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         Map<String, DetailBox[]> detailBoxes = modelAsset.getDetailBoxes();
         float eyeHeight = modelAsset.getEyeHeight();
         float crouchOffset = modelAsset.getCrouchOffset();
+        float sittingOffset = modelAsset.getSittingOffset();
+        float sleepingOffset = modelAsset.getSleepingOffset();
         CameraSettings camera = modelAsset.getCamera();
         PhysicsValues physicsValues = modelAsset.getPhysicsValues();
         ModelParticle[] particles = modelAsset.getParticles();
@@ -462,6 +528,8 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
             }
             eyeHeight *= scale;
             crouchOffset *= scale;
+            sittingOffset *= scale;
+            sleepingOffset *= scale;
             if (camera != null) {
                 camera = camera.clone().scale(scale);
             }
@@ -494,7 +562,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
         }
         ModelAttachment[] attachments = modelAsset.getAttachments(randomAttachmentIds);
         Map<String, ModelAsset.AnimationSet> animationSetMap = staticModel ? null : modelAsset.getAnimationSetMap();
-        return new Model(modelAsset.getId(), scale, randomAttachmentIds, attachments, boundingBox, modelAsset.getModel(), modelAsset.getTexture(), modelAsset.getGradientSet(), modelAsset.getGradientId(), eyeHeight, crouchOffset, animationSetMap, camera, modelAsset.getLight(), particles, trails, physicsValues, detailBoxes, modelAsset.getPhobia(), modelAsset.getPhobiaModelAssetId());
+        return new Model(modelAsset.getId(), scale, randomAttachmentIds, attachments, boundingBox, modelAsset.getModel(), modelAsset.getTexture(), modelAsset.getGradientSet(), modelAsset.getGradientId(), eyeHeight, crouchOffset, sittingOffset, sleepingOffset, animationSetMap, camera, modelAsset.getLight(), particles, trails, physicsValues, detailBoxes, modelAsset.getPhobia(), modelAsset.getPhobiaModelAssetId());
     }
 
     public static class ModelReference {

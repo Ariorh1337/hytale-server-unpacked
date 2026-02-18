@@ -22,7 +22,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig;
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent;
@@ -250,7 +250,7 @@ extends JavaPlugin {
         }
 
         @Override
-        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<Packet> results) {
+        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<ToClientPacket> results) {
             BlockHealthChunk blockHealthChunkComponent = archetypeChunk.getComponent(index, this.blockHealthCunkComponentType);
             assert (blockHealthChunkComponent != null);
             blockHealthChunkComponent.createBlockDamagePackets(results);

@@ -17,17 +17,24 @@ extends Density {
     @Nonnull
     private final Vector3d vector;
     private final boolean toAxis;
+    @Nonnull
+    private final Vector3d rOtherVector;
+    @Nonnull
+    private final VectorProvider.Context rVectorProviderContext;
 
     public AngleDensity(@Nonnull VectorProvider vectorProvider, @Nonnull Vector3d vector, boolean toAxis) {
         this.vector = vector.clone();
         this.vectorProvider = vectorProvider;
         this.toAxis = toAxis;
+        this.rOtherVector = new Vector3d();
+        this.rVectorProviderContext = new VectorProvider.Context(new Vector3d(), null);
     }
 
     @Override
     public double process(@Nonnull Density.Context context) {
-        Vector3d otherVector = this.vectorProvider.process(new VectorProvider.Context(context));
-        double slopeAngle = VectorUtil.angle(this.vector, otherVector);
+        this.rVectorProviderContext.assign(context);
+        this.vectorProvider.process(this.rVectorProviderContext, this.rOtherVector);
+        double slopeAngle = VectorUtil.angle(this.vector, this.rOtherVector);
         if (this.toAxis && slopeAngle > 1.5707963267948966) {
             slopeAngle = Math.PI - slopeAngle;
         }

@@ -41,7 +41,7 @@ extends AbstractCommandCollection {
         @Nonnull
         private final RequiredArg<HitboxCollisionConfig> hitboxCollisionConfigArg = this.withRequiredArg("hitboxCollisionConfig", "server.commands.hitboxcollision.add.hitboxCollisionConfig.desc", ArgTypes.HITBOX_COLLISION_CONFIG);
         @Nonnull
-        private final EntityWrappedArg entityArg = this.withOptionalArg("entity", "server.commands.hitboxcollision.add.entity.desc", ArgTypes.ENTITY_ID);
+        private final EntityWrappedArg entityArg = this.withOptionalArg("entity", "server.commands.hitboxcollision.add.entityArg.desc", ArgTypes.ENTITY_ID);
 
         public HitboxCollisionAddEntityCommand() {
             super("entity", "server.commands.hitboxcollision.add.entity.desc");

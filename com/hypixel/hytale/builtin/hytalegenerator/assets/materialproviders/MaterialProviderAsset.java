@@ -29,15 +29,21 @@ import javax.annotation.Nonnull;
 public abstract class MaterialProviderAsset
 implements Cleanable,
 JsonAssetWithMap<String, DefaultAssetMap<String, MaterialProviderAsset>> {
+    @Nonnull
     private static final MaterialProviderAsset[] EMPTY_INPUTS = new MaterialProviderAsset[0];
+    @Nonnull
     public static final AssetCodecMapCodec<String, MaterialProviderAsset> CODEC = new AssetCodecMapCodec<String, MaterialProviderAsset>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.data = data;
     }, t -> t.data);
+    @Nonnull
     private static final Map<String, MaterialProviderAsset> exportedNodes = new ConcurrentHashMap<String, MaterialProviderAsset>();
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(MaterialProviderAsset.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final BuilderCodec<MaterialProviderAsset> ABSTRACT_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(MaterialProviderAsset.class).append(new KeyedCodec<Boolean>("Skip", Codec.BOOLEAN, false), (t, k) -> {
         t.skip = k;
     }, t -> t.skip).add()).append(new KeyedCodec<String>("ExportAs", Codec.STRING, false), (t, k) -> {
@@ -53,7 +59,7 @@ JsonAssetWithMap<String, DefaultAssetMap<String, MaterialProviderAsset>> {
     })).build();
     private String id;
     private AssetExtraInfo.Data data;
-    private boolean skip = false;
+    private boolean skip;
     private String exportName = "";
 
     protected MaterialProviderAsset() {
@@ -74,12 +80,14 @@ JsonAssetWithMap<String, DefaultAssetMap<String, MaterialProviderAsset>> {
         return this.id;
     }
 
+    @Nonnull
     public static Argument argumentFrom(@Nonnull DensityAsset.Argument argument, @Nonnull MaterialCache materialCache) {
-        return new Argument(argument.parentSeed, materialCache, argument.referenceBundle, argument.workerIndexer);
+        return new Argument(argument.parentSeed, materialCache, argument.referenceBundle, argument.workerId);
     }
 
+    @Nonnull
     public static Argument argumentFrom(@Nonnull PropAsset.Argument argument) {
-        return new Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle, argument.workerIndexer);
+        return new Argument(argument.parentSeed, argument.materialCache, argument.referenceBundle, argument.workerId);
     }
 
     @Override
@@ -90,20 +98,19 @@ JsonAssetWithMap<String, DefaultAssetMap<String, MaterialProviderAsset>> {
         public SeedBox parentSeed;
         public MaterialCache materialCache;
         public ReferenceBundle referenceBundle;
-        public WorkerIndexer workerIndexer;
+        public WorkerIndexer.Id workerId;
 
-        public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+        public Argument(@Nonnull SeedBox parentSeed, @Nonnull MaterialCache materialCache, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
             this.parentSeed = parentSeed;
             this.materialCache = materialCache;
             this.referenceBundle = referenceBundle;
-            this.workerIndexer = workerIndexer;
+            this.workerId = workerId;
         }
 
         public Argument(@Nonnull Argument argument) {
             this.parentSeed = argument.parentSeed;
             this.materialCache = argument.materialCache;
-            this.referenceBundle = argument.referenceBundle;
-            this.workerIndexer = argument.workerIndexer;
+            this.workerId = argument.workerId;
         }
     }
 }

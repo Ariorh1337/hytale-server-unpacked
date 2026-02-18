@@ -11,6 +11,7 @@ import com.hypixel.hytale.builtin.asseteditor.data.ModifiedAsset;
 import com.hypixel.hytale.builtin.asseteditor.datasource.DataSource;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Options;
@@ -90,7 +91,9 @@ implements DataSource {
 
     @Override
     public void shutdown() {
-        this.saveSchedule.cancel(false);
+        if (this.saveSchedule != null) {
+            this.saveSchedule.cancel(false);
+        }
         this.saveRecentModifications();
     }
 
@@ -133,7 +136,11 @@ implements DataSource {
     }
 
     public Path resolveAbsolutePath(Path path) {
-        return this.rootPath.resolve(path.toString()).toAbsolutePath();
+        Path resolved = this.rootPath.resolve(path.toString()).toAbsolutePath();
+        if (!PathUtil.isChildOf(this.rootPath, resolved)) {
+            throw new IllegalArgumentException("Invalid path: " + String.valueOf(path));
+        }
+        return resolved;
     }
 
     @Override

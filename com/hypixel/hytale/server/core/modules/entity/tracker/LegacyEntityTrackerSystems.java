@@ -16,10 +16,11 @@ import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
-import com.hypixel.hytale.protocol.Equipment;
+import com.hypixel.hytale.protocol.EquipmentUpdate;
 import com.hypixel.hytale.protocol.ItemArmorSlot;
+import com.hypixel.hytale.protocol.ModelUpdate;
+import com.hypixel.hytale.protocol.PlayerSkinUpdate;
+import com.hypixel.hytale.protocol.PropUpdate;
 import com.hypixel.hytale.server.core.asset.type.gameplay.PlayerConfig;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
@@ -33,6 +34,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent;
@@ -108,37 +110,35 @@ public class LegacyEntityTrackerSystems {
         }
 
         private static void queueUpdatesFor(@Nonnull Ref<EntityStore> ref, @Nonnull LivingEntity entity, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.Equipment;
-            update.equipment = new Equipment();
+            ItemStack itemInHand;
+            EquipmentUpdate update = new EquipmentUpdate();
             Inventory inventory = entity.getInventory();
             ItemContainer armor = inventory.getArmor();
-            update.equipment.armorIds = new String[armor.getCapacity()];
-            Arrays.fill(update.equipment.armorIds, "");
+            update.armorIds = new String[armor.getCapacity()];
+            Arrays.fill(update.armorIds, "");
             armor.forEachWithMeta((slot, itemStack, armorIds) -> {
                 armorIds[slot] = itemStack.getItemId();
-            }, update.equipment.armorIds);
+            }, update.armorIds);
             Store<EntityStore> store = ref.getStore();
             PlayerSettings playerSettings = store.getComponent(ref, PlayerSettings.getComponentType());
             if (playerSettings != null) {
                 PlayerConfig.ArmorVisibilityOption armorVisibilityOption = store.getExternalData().getWorld().getGameplayConfig().getPlayerConfig().getArmorVisibilityOption();
                 if (armorVisibilityOption.canHideHelmet() && playerSettings.hideHelmet()) {
-                    update.equipment.armorIds[ItemArmorSlot.Head.ordinal()] = "";
+                    update.armorIds[ItemArmorSlot.Head.ordinal()] = "";
                 }
                 if (armorVisibilityOption.canHideCuirass() && playerSettings.hideCuirass()) {
-                    update.equipment.armorIds[ItemArmorSlot.Chest.ordinal()] = "";
+                    update.armorIds[ItemArmorSlot.Chest.ordinal()] = "";
                 }
                 if (armorVisibilityOption.canHideGauntlets() && playerSettings.hideGauntlets()) {
-                    update.equipment.armorIds[ItemArmorSlot.Hands.ordinal()] = "";
+                    update.armorIds[ItemArmorSlot.Hands.ordinal()] = "";
                 }
                 if (armorVisibilityOption.canHidePants() && playerSettings.hidePants()) {
-                    update.equipment.armorIds[ItemArmorSlot.Legs.ordinal()] = "";
+                    update.armorIds[ItemArmorSlot.Legs.ordinal()] = "";
                 }
             }
-            ItemStack itemInHand = inventory.getItemInHand();
-            update.equipment.rightHandItemId = itemInHand != null ? itemInHand.getItemId() : "Empty";
+            update.rightHandItemId = (itemInHand = inventory.getItemInHand()) != null ? itemInHand.getItemId() : "Empty";
             ItemStack utilityItem = inventory.getUtilityItem();
-            update.equipment.leftHandItemId = utilityItem != null ? utilityItem.getItemId() : "Empty";
+            update.leftHandItemId = utilityItem != null ? utilityItem.getItemId() : "Empty";
             for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
                 viewer.queueUpdate(ref, update);
             }
@@ -189,8 +189,7 @@ public class LegacyEntityTrackerSystems {
         }
 
         private static void queueUpdatesFor(Ref<EntityStore> ref, @Nonnull PlayerSkinComponent component, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.PlayerSkin;
+            PlayerSkinUpdate update = new PlayerSkinUpdate();
             update.skin = component.getPlayerSkin();
             for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
                 viewer.queueUpdate(ref, update);
@@ -230,7 +229,7 @@ public class LegacyEntityTrackerSystems {
 
         @Override
         public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            boolean modelOutdated;
+            boolean isProp;
             EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.componentType);
             assert (visibleComponent != null);
             ModelComponent modelComponent = archetypeChunk.getComponent(index, this.modelComponentType);
@@ -242,20 +241,26 @@ public class LegacyEntityTrackerSystems {
                 entityScale = entityScaleComponent.getScale();
                 scaleOutdated = entityScaleComponent.consumeNetworkOutdated();
             }
-            if ((modelOutdated = modelComponent.consumeNetworkOutdated()) || scaleOutdated) {
-                LegacyEntityModel.queueUpdatesFor(archetypeChunk.getReferenceTo(index), modelComponent, entityScale, visibleComponent.visibleTo);
+            boolean modelOutdated = modelComponent.consumeNetworkOutdated();
+            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+            boolean bl = isProp = store.getComponent(ref, PropComponent.getComponentType()) != null;
+            if (modelOutdated || scaleOutdated) {
+                LegacyEntityModel.queueUpdatesFor(ref, modelComponent, entityScale, isProp, visibleComponent.visibleTo);
             } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
-                LegacyEntityModel.queueUpdatesFor(archetypeChunk.getReferenceTo(index), modelComponent, entityScale, visibleComponent.newlyVisibleTo);
+                LegacyEntityModel.queueUpdatesFor(ref, modelComponent, entityScale, isProp, visibleComponent.newlyVisibleTo);
             }
         }
 
-        private static void queueUpdatesFor(Ref<EntityStore> ref, @Nullable ModelComponent model, float entityScale, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.Model;
-            update.model = model != null ? model.getModel().toPacket() : null;
-            update.entityScale = entityScale;
+        private static void queueUpdatesFor(Ref<EntityStore> ref, @Nullable ModelComponent model, float entityScale, boolean isProp, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo) {
+            ModelUpdate update = new ModelUpdate(model != null ? model.getModel().toPacket() : null, entityScale);
             for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
                 viewer.queueUpdate(ref, update);
+            }
+            if (isProp) {
+                PropUpdate propUpdate = new PropUpdate();
+                for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
+                    viewer.queueUpdate(ref, propUpdate);
+                }
             }
         }
     }

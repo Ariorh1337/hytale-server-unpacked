@@ -22,7 +22,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.CachedPacket;
 import com.hypixel.hytale.protocol.Opacity;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.SetChunkEnvironments;
 import com.hypixel.hytale.protocol.packets.world.SetChunkHeightmap;
 import com.hypixel.hytale.protocol.packets.world.SetChunkTintmap;
@@ -570,21 +570,21 @@ implements Component<ChunkStore> {
         }
 
         @Override
-        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<CompletableFuture<Packet>> results) {
+        public void fetch(int index, @Nonnull ArchetypeChunk<ChunkStore> archetypeChunk, Store<ChunkStore> store, CommandBuffer<ChunkStore> commandBuffer, PlayerRef player, @Nonnull List<CompletableFuture<ToClientPacket>> results) {
             BlockChunk component = archetypeChunk.getComponent(index, this.componentType);
-            results.add((CompletableFuture<Packet>)((CompletableFuture)component.getCachedHeightmapPacket().exceptionally(throwable -> {
+            results.add((CompletableFuture<ToClientPacket>)((CompletableFuture)component.getCachedHeightmapPacket().exceptionally(throwable -> {
                 if (throwable != null) {
                     ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause((Throwable)throwable)).log("Exception when compressing chunk heightmap:");
                 }
                 return null;
             })).thenApply(Function.identity()));
-            results.add((CompletableFuture<Packet>)((CompletableFuture)component.getCachedTintsPacket().exceptionally(throwable -> {
+            results.add((CompletableFuture<ToClientPacket>)((CompletableFuture)component.getCachedTintsPacket().exceptionally(throwable -> {
                 if (throwable != null) {
                     ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause((Throwable)throwable)).log("Exception when compressing chunk tints:");
                 }
                 return null;
             })).thenApply(Function.identity()));
-            results.add((CompletableFuture<Packet>)((CompletableFuture)component.getCachedEnvironmentsPacket().exceptionally(throwable -> {
+            results.add((CompletableFuture<ToClientPacket>)((CompletableFuture)component.getCachedEnvironmentsPacket().exceptionally(throwable -> {
                 if (throwable != null) {
                     ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause((Throwable)throwable)).log("Exception when compressing chunk environments:");
                 }
@@ -592,7 +592,7 @@ implements Component<ChunkStore> {
             })).thenApply(Function.identity()));
             for (int y = 0; y < component.chunkSections.length; ++y) {
                 BlockSection section = component.chunkSections[y];
-                results.add((CompletableFuture<Packet>)((CompletableFuture)section.getCachedChunkPacket(component.getX(), y, component.getZ()).exceptionally(throwable -> {
+                results.add((CompletableFuture<ToClientPacket>)((CompletableFuture)section.getCachedChunkPacket(component.getX(), y, component.getZ()).exceptionally(throwable -> {
                     if (throwable != null) {
                         ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause((Throwable)throwable)).log("Exception while compressing set chunk (%d, %d):", component.x, component.z);
                     }

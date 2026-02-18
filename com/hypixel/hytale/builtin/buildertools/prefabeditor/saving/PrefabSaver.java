@@ -136,7 +136,8 @@ public class PrefabSaver {
                         if ((holder = worldChunkComponent.getBlockComponentHolder(x, y, z)) != null && (blockState = BlockState.getBlockState((Holder<ChunkStore>)(holder = ((Holder)holder).clone()))) != null) {
                             blockState.clearPositionForSerialization();
                         }
-                        selection.addBlockAtWorldPos(x, y, z, block, sectionComponent.getRotationIndex(x, y, z), filler, blockPhysicsComponent != null ? blockPhysicsComponent.get(x, y, z) : 0, (Holder<ChunkStore>)holder);
+                        int supportValue = settings.isClearSupportValues() ? 0 : (blockPhysicsComponent != null ? blockPhysicsComponent.get(x, y, z) : 0);
+                        selection.addBlockAtWorldPos(x, y, z, block, sectionComponent.getRotationIndex(x, y, z), filler, supportValue, (Holder<ChunkStore>)holder);
                         ++blockCount;
                     }
                     FluidSection fluidSectionComponent = chunkStore.getStore().getComponent(sectionRef, FluidSection.getComponentType());

@@ -54,6 +54,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CombatActionEvaluatorSystems {
+    @Nonnull
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     public static class CombatConstructionData
@@ -134,6 +135,7 @@ public class CombatActionEvaluatorSystems {
         @Nonnull
         private final ComponentType<EntityStore, Player> playerComponentType;
         private final ComponentType<EntityStore, ValueStore> valueStoreComponentType;
+        @Nonnull
         private final ComponentType<EntityStore, TransformComponent> transformComponentType;
         private final Query<EntityStore> query;
         @Nonnull
@@ -327,7 +329,7 @@ public class CombatActionEvaluatorSystems {
     public static class OnAdded
     extends HolderSystem<EntityStore> {
         @Nullable
-        private final ComponentType<EntityStore, NPCEntity> componentType = NPCEntity.getComponentType();
+        private final ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
         private final ComponentType<EntityStore, CombatConstructionData> combatConstructionDataComponentType;
         @Nonnull
         private final Set<Dependency<EntityStore>> dependencies;
@@ -342,8 +344,10 @@ public class CombatActionEvaluatorSystems {
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            Role role = holder.getComponent(this.componentType).getRole();
-            if (role.getBalanceAsset() == null) {
+            NPCEntity npcComponent = holder.getComponent(this.npcComponentType);
+            assert (npcComponent != null);
+            Role role = npcComponent.getRole();
+            if (role == null || role.getBalanceAsset() == null) {
                 return;
             }
             BalanceAsset balancingAsset = BalanceAsset.getAssetMap().getAsset(role.getBalanceAsset());

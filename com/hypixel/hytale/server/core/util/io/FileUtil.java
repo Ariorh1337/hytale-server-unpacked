@@ -7,9 +7,11 @@ import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.CopyOption;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -108,6 +110,29 @@ public class FileUtil {
                 zis.closeEntry();
             }
         }
+    }
+
+    public static void writeStringAtomic(@Nonnull Path file, @Nonnull String content, boolean backup) throws IOException {
+        Path tmpPath = file.resolveSibling(String.valueOf(file.getFileName()) + ".tmp");
+        Path bakPath = file.resolveSibling(String.valueOf(file.getFileName()) + ".bak");
+        Files.writeString(tmpPath, (CharSequence)content, new OpenOption[0]);
+        if (backup && Files.isRegularFile(file, new LinkOption[0])) {
+            FileUtil.atomicMove(file, bakPath);
+        }
+        FileUtil.atomicMove(tmpPath, file);
+    }
+
+    public static void atomicMove(@Nonnull Path source, @Nonnull Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        }
+        catch (AtomicMoveNotSupportedException e) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    public static void writeStringAtomic(@Nonnull Path file, @Nonnull String content) throws IOException {
+        FileUtil.writeStringAtomic(file, content, true);
     }
 }
 

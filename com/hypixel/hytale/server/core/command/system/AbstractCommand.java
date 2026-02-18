@@ -71,6 +71,7 @@ public abstract class AbstractCommand {
     private final String name;
     @Nonnull
     private final Set<String> aliases = new HashSet<String>();
+    @Nullable
     private final String description;
     @Nonnull
     private final List<RequiredArg<?>> requiredArguments = new ObjectArrayList();
@@ -615,7 +616,7 @@ public abstract class AbstractCommand {
         for (ArgumentType argumentType : allArgumentTypes) {
             argTypesMessage.insert("\n    ").insert(argumentType.getName()).insert(": ").insert(argumentType.getArgumentUsage()).insert("\n        Examples: ").insert("'").insert(String.join((CharSequence)"', '", argumentType.getExamples())).insert("'.");
         }
-        return Message.translation("server.commands.parsing.usage.header").param("fullyQualifiedName", this.getFullyQualifiedName()).param("description", Message.translation(this.description)).param("listOfRequiredArgs", requiredArgsMessage).param("requiresConfirmation", requiresConfirmationMessage).param("requiredArgs", requiredArgs).param("optionalArgs", optionalArgs).param("defaultArgs", defaultArgs).param("flagArgs", flagArgs).param("argTypes", argTypesMessage).param("variants", variantsMessage).param("subcommands", subcommandsMessage);
+        return Message.translation("server.commands.parsing.usage.header").param("fullyQualifiedName", this.getFullyQualifiedName()).param("description", this.description != null ? Message.translation(this.description) : Message.empty()).param("listOfRequiredArgs", requiredArgsMessage).param("requiresConfirmation", requiresConfirmationMessage).param("requiredArgs", requiredArgs).param("optionalArgs", optionalArgs).param("defaultArgs", defaultArgs).param("flagArgs", flagArgs).param("argTypes", argTypesMessage).param("variants", variantsMessage).param("subcommands", subcommandsMessage);
     }
 
     @Nonnull
@@ -738,6 +739,7 @@ public abstract class AbstractCommand {
         return this.aliases;
     }
 
+    @Nullable
     public String getDescription() {
         return this.description;
     }

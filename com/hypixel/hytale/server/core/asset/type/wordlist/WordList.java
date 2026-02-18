@@ -35,12 +35,14 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, WordList>> {
         wordList.translationKeys = parent.translationKeys;
     }).documentation("The list of word message keys. Need to be added in Assets/Server/Languages/wordlists.lang. For example if the WordList asset file is 'animals' and you write 'cow' here, it will refer to 'animals.cow' (full path is 'wordlists.animals.cow')").add()).afterDecode(WordList::processConfig)).build();
     private static AssetStore<String, WordList, DefaultAssetMap<String, WordList>> ASSET_STORE;
+    @Nonnull
     public static final ValidatorCache<String> VALIDATOR_CACHE;
     private static final WordList EMPTY;
     protected AssetExtraInfo.Data data;
     protected String id;
     protected String[] translationKeys;
 
+    @Nonnull
     public static AssetStore<String, WordList, DefaultAssetMap<String, WordList>> getAssetStore() {
         if (ASSET_STORE == null) {
             ASSET_STORE = AssetRegistry.getAssetStore(WordList.class);

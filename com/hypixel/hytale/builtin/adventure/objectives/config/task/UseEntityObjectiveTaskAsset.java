@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 public class UseEntityObjectiveTaskAsset
 extends CountObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<UseEntityObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(UseEntityObjectiveTaskAsset.class, UseEntityObjectiveTaskAsset::new, CountObjectiveTaskAsset.CODEC).append(new KeyedCodec<String>("TaskId", Codec.STRING), (useEntityObjectiveTaskAsset, s) -> {
         useEntityObjectiveTaskAsset.taskId = s;
     }, useEntityObjectiveTaskAsset -> useEntityObjectiveTaskAsset.taskId).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<String>("AnimationIdToPlay", Codec.STRING), (useEntityObjectiveTaskAsset, s) -> {

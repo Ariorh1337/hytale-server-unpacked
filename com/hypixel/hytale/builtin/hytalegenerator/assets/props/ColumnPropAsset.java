@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 
 public class ColumnPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<ColumnPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ColumnPropAsset.class, ColumnPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("ColumnBlocks", new ArrayCodec(ColumnBlock.CODEC, ColumnBlock[]::new), true), (asset, v) -> {
         asset.columnBlocks = v;
     }, asset -> asset.columnBlocks).add()).append(new KeyedCodec("BlockMask", BlockMaskAsset.CODEC, false), (asset, v) -> {
@@ -58,8 +59,7 @@ extends PropAsset {
             blockPositions.add(this.columnBlocks[i].y);
             blockTypes.add(this.columnBlocks[i].materialAsset.build(argument.materialCache));
         }
-        BlockMask blockMask = null;
-        blockMask = this.blockMaskAsset != null ? this.blockMaskAsset.build(argument.materialCache) : new BlockMask();
+        BlockMask blockMask = this.blockMaskAsset != null ? this.blockMaskAsset.build(argument.materialCache) : new BlockMask();
         Directionality directionality = this.directionalityAsset.build(DirectionalityAsset.argumentFrom(argument));
         Scanner scanner = this.scannerAsset.build(ScannerAsset.argumentFrom(argument));
         return new ColumnProp(blockPositions, blockTypes, blockMask, scanner, directionality, argument.materialCache);
@@ -74,6 +74,7 @@ extends PropAsset {
 
     public static class ColumnBlock
     implements JsonAssetWithMap<String, DefaultAssetMap<String, ColumnBlock>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, ColumnBlock> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(ColumnBlock.class, ColumnBlock::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {
@@ -86,7 +87,7 @@ extends PropAsset {
         private String id;
         private AssetExtraInfo.Data data;
         private int y = 1;
-        private MaterialAsset materialAsset = new MaterialAsset("Empty", "Empty");
+        private MaterialAsset materialAsset = new MaterialAsset("Empty", "Empty", false);
 
         @Override
         public String getId() {

@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class PatternDirectionalityAsset
 extends DirectionalityAsset {
+    @Nonnull
     public static final BuilderCodec<PatternDirectionalityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PatternDirectionalityAsset.class, PatternDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC).append(new KeyedCodec<OrthogonalDirection>("InitialDirection", OrthogonalDirection.CODEC, true), (asset, v) -> {
         asset.prefabDirection = v;
     }, asset -> asset.prefabDirection).add()).append(new KeyedCodec<String>("Seed", Codec.STRING, true), (asset, v) -> {

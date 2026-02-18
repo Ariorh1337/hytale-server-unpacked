@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class AnchorPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<AnchorPositionProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(AnchorPositionProviderAsset.class, AnchorPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<Boolean>("Reversed", Codec.BOOLEAN, false), (t, k) -> {
         t.isReversed = k;
     }, k -> k.isReversed).add()).append(new KeyedCodec("Positions", PositionProviderAsset.CODEC, true), (t, k) -> {

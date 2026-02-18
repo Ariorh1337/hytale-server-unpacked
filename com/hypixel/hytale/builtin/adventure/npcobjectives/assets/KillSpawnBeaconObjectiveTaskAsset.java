@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 
 public class KillSpawnBeaconObjectiveTaskAsset
 extends KillObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<KillSpawnBeaconObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(KillSpawnBeaconObjectiveTaskAsset.class, KillSpawnBeaconObjectiveTaskAsset::new, KillObjectiveTaskAsset.CODEC).append(new KeyedCodec<T[]>("SpawnBeacons", new ArrayCodec<ObjectiveSpawnBeacon>(ObjectiveSpawnBeacon.CODEC, ObjectiveSpawnBeacon[]::new)), (killSpawnBeaconObjectiveTaskAsset, objectiveSpawnBeacons) -> {
         killSpawnBeaconObjectiveTaskAsset.spawnBeacons = objectiveSpawnBeacons;
     }, killSpawnBeaconObjectiveTaskAsset -> killSpawnBeaconObjectiveTaskAsset.spawnBeacons).addValidator(Validators.nonEmptyArray()).add()).build();
@@ -46,7 +47,8 @@ extends KillObjectiveTaskAsset {
         if (!(task instanceof KillSpawnBeaconObjectiveTaskAsset)) {
             return false;
         }
-        return Arrays.equals(((KillSpawnBeaconObjectiveTaskAsset)task).spawnBeacons, this.spawnBeacons);
+        KillSpawnBeaconObjectiveTaskAsset killSpawnBeaconObjectiveTaskAsset = (KillSpawnBeaconObjectiveTaskAsset)task;
+        return Arrays.equals(killSpawnBeaconObjectiveTaskAsset.spawnBeacons, this.spawnBeacons);
     }
 
     @Override
@@ -56,6 +58,7 @@ extends KillObjectiveTaskAsset {
     }
 
     public static class ObjectiveSpawnBeacon {
+        @Nonnull
         public static final BuilderCodec<ObjectiveSpawnBeacon> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ObjectiveSpawnBeacon.class, ObjectiveSpawnBeacon::new).append(new KeyedCodec<String>("SpawnBeaconId", Codec.STRING), (objectiveSpawnBeacon, s) -> {
             objectiveSpawnBeacon.spawnBeaconId = s;
         }, objectiveSpawnBeacon -> objectiveSpawnBeacon.spawnBeaconId).addValidator(Validators.nonNull()).addValidator(BeaconNPCSpawn.VALIDATOR_CACHE.getValidator()).add()).append(new KeyedCodec<Vector3d>("Offset", Vector3d.CODEC), (objectiveSpawnBeacon, vector3d) -> {

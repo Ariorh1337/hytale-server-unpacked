@@ -89,7 +89,7 @@ import javax.annotation.Nullable;
 public class Item
 implements JsonAssetWithMap<String, DefaultAssetMap<String, Item>>,
 NetworkSerializable<ItemBase> {
-    private static final AssetBuilderCodec.Builder<String, Item> CODEC_BUILDER = (AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(Item.class, Item::new, Codec.STRING, (item, blockTypeKey) -> {
+    private static final AssetBuilderCodec.Builder<String, Item> CODEC_BUILDER = (AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(Item.class, Item::new, Codec.STRING, (item, blockTypeKey) -> {
         item.id = blockTypeKey;
     }, item -> item.id, (asset, data) -> {
         asset.data = data;
@@ -249,7 +249,11 @@ NetworkSerializable<ItemBase> {
         item.durabilityLossOnHit = s;
     }, item -> item.durabilityLossOnHit, (item, parent) -> {
         item.durabilityLossOnHit = parent.durabilityLossOnHit;
-    }).add()).appendInherited(new KeyedCodec("BlockType", new ContainedAssetCodec(BlockType.class, BlockType.CODEC, ContainedAssetCodec.Mode.INHERIT_ID_AND_PARENT)), (item, s) -> {
+    }).add()).appendInherited(new KeyedCodec<Boolean>("DurabilityLossOnDeath", Codec.BOOLEAN), (item, s) -> {
+        item.durabilityLossOnDeath = s;
+    }, item -> item.durabilityLossOnDeath, (item, parent) -> {
+        item.durabilityLossOnDeath = parent.durabilityLossOnDeath;
+    }).documentation("Whether this item should loose durability on death, if so configured in DeathConfig.").add()).appendInherited(new KeyedCodec("BlockType", new ContainedAssetCodec(BlockType.class, BlockType.CODEC, ContainedAssetCodec.Mode.INHERIT_ID_AND_PARENT)), (item, s) -> {
         item.hasBlockType = true;
     }, item -> item.blockId, (item, parent) -> {
         item.blockId = parent.blockId;
@@ -355,6 +359,7 @@ NetworkSerializable<ItemBase> {
     protected boolean clipsGeometry;
     protected boolean renderDeployablePreview;
     protected boolean dropOnDeath;
+    protected boolean durabilityLossOnDeath = true;
     private transient SoftReference<ItemBase> cachedPacket;
 
     public static AssetStore<String, Item, DefaultAssetMap<String, Item>> getAssetStore() {
@@ -763,6 +768,10 @@ NetworkSerializable<ItemBase> {
 
     public double getDurabilityLossOnHit() {
         return this.durabilityLossOnHit;
+    }
+
+    public boolean getDurabilityLossOnDeath() {
+        return this.durabilityLossOnDeath;
     }
 
     public int[] getDisplayEntityStatsHUD() {

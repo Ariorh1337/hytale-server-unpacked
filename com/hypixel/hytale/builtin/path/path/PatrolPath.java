@@ -85,6 +85,7 @@ implements IPrefabPath {
         PathPlugin.get().getLogger().at(Level.FINER).log("Adding waypoint %s to path %s.%s", (short)index, worldGenId, this.name);
         for (int i = 0; i < index; ++i) {
             PatrolPathMarkerEntity wp = (PatrolPathMarkerEntity)this.waypoints.get(i);
+            if (wp == null) continue;
             wp.markNeedsSave();
         }
         this.pathChanged.set(true);
@@ -97,10 +98,15 @@ implements IPrefabPath {
         int i;
         for (i = 0; i < index; ++i) {
             wp = (PatrolPathMarkerEntity)this.waypoints.get(i);
+            if (wp == null) continue;
             wp.markNeedsSave();
         }
         for (i = this.waypoints.size() - 1; i >= index; --i) {
             wp = (PatrolPathMarkerEntity)this.waypoints.remove(i);
+            if (wp == null) {
+                this.waypoints.remove(i + 1);
+                continue;
+            }
             wp.setOrder((short)(i + 1));
             this.waypoints.put(i + 1, wp);
         }
@@ -131,10 +137,15 @@ implements IPrefabPath {
         this.loadedCount.getAndDecrement();
         for (i = 0; i < index; ++i) {
             wp = (PatrolPathMarkerEntity)this.waypoints.get(i);
+            if (wp == null) continue;
             wp.markNeedsSave();
         }
         for (i = index; i < this.waypoints.size(); ++i) {
             wp = (PatrolPathMarkerEntity)this.waypoints.remove(i + 1);
+            if (wp == null) {
+                this.waypoints.remove(i);
+                continue;
+            }
             wp.setOrder(i);
             this.waypoints.put(i, wp);
         }

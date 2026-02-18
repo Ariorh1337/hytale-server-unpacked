@@ -3,7 +3,9 @@
  */
 package com.hypixel.hytale.protocol.packets.serveraccess;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.packets.serveraccess.Access;
 import io.netty.buffer.ByteBuf;
@@ -11,7 +13,8 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class RequestServerAccess
-implements Packet {
+implements Packet,
+ToClientPacket {
     public static final int PACKET_ID = 250;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 0;
@@ -26,6 +29,11 @@ implements Packet {
     @Override
     public int getId() {
         return 250;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public RequestServerAccess() {

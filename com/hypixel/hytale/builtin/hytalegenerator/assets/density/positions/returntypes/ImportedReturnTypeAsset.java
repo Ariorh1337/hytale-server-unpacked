@@ -19,13 +19,14 @@ import javax.annotation.Nullable;
 
 public class ImportedReturnTypeAsset
 extends ReturnTypeAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedReturnTypeAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedReturnTypeAsset.class, ImportedReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, true), (t, k) -> {
         t.importedAssetName = k;
     }, k -> k.importedAssetName).add()).build();
     private String importedAssetName = "";
 
     @Override
-    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
+    public ReturnType build(@Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
         ReturnTypeAsset asset = ImportedReturnTypeAsset.getExportedAsset(this.importedAssetName);
         if (asset == null) {
             Logger.getLogger("Density").warning("Couldn't find ReturnType asset exported with name: '" + this.importedAssetName + "'. Using a return type that only outputs 0 instead.");
@@ -37,7 +38,7 @@ extends ReturnTypeAsset {
                 }
             };
         }
-        return asset.build(parentSeed, referenceBundle, workerIndexer);
+        return asset.build(parentSeed, referenceBundle, workerId);
     }
 }
 

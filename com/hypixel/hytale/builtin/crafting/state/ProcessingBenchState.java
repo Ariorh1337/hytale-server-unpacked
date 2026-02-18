@@ -20,13 +20,12 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventPriority;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.SoundCategory;
-import com.hypixel.hytale.protocol.Transform;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
@@ -34,7 +33,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.BenchTie
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.ProcessingBench;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.ResourceQuantity;
@@ -51,21 +49,18 @@ import com.hypixel.hytale.server.core.inventory.transaction.ListTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.MaterialSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.MaterialTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ResourceTransaction;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.state.TickableBlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.DestroyableBlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerBlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.state.MarkerBlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.PlacedByBlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collection;
@@ -75,7 +70,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -87,11 +81,12 @@ extends BenchState
 implements TickableBlockState,
 ItemContainerBlockState,
 DestroyableBlockState,
-MarkerBlockState,
 PlacedByBlockState {
+    @Nonnull
     public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final boolean EXACT_RESOURCE_AMOUNTS = true;
-    public static final Codec<ProcessingBenchState> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ProcessingBenchState.class, ProcessingBenchState::new, BenchState.CODEC).append(new KeyedCodec<ItemContainer>("InputContainer", ItemContainer.CODEC), (state, o) -> {
+    @Nonnull
+    public static final Codec<ProcessingBenchState> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ProcessingBenchState.class, ProcessingBenchState::new, BenchState.CODEC).append(new KeyedCodec<ItemContainer>("InputContainer", ItemContainer.CODEC), (state, o) -> {
         state.inputContainer = o;
     }, state -> state.inputContainer).add()).append(new KeyedCodec<ItemContainer>("FuelContainer", ItemContainer.CODEC), (state, o) -> {
         state.fuelContainer = o;
@@ -105,17 +100,16 @@ PlacedByBlockState {
         state.active = b;
     }, state -> state.active).add()).append(new KeyedCodec<Integer>("NextExtra", Codec.INTEGER), (state, b) -> {
         state.nextExtra = b;
-    }, state -> state.nextExtra).add()).append(new KeyedCodec<WorldMapManager.MarkerReference>("Marker", WorldMapManager.MarkerReference.CODEC), (state, o) -> {
-        state.marker = o;
-    }, state -> state.marker).add()).append(new KeyedCodec<String>("RecipeId", Codec.STRING), (state, o) -> {
+    }, state -> state.nextExtra).add()).append(new KeyedCodec<String>("RecipeId", Codec.STRING), (state, o) -> {
         state.recipeId = o;
     }, state -> state.recipeId).add()).build();
     private static final float EJECT_VELOCITY = 2.0f;
     private static final float EJECT_SPREAD_VELOCITY = 1.0f;
     private static final float EJECT_VERTICAL_VELOCITY = 3.25f;
+    @Nonnull
     public static final String PROCESSING = "Processing";
+    @Nonnull
     public static final String PROCESS_COMPLETED = "ProcessCompleted";
-    protected WorldMapManager.MarkerReference marker;
     private ProcessingBench processingBench;
     private ItemContainer inputContainer;
     private ItemContainer fuelContainer;
@@ -125,7 +119,9 @@ PlacedByBlockState {
     private float fuelTime;
     private int lastConsumedFuelTotal;
     private int nextExtra = -1;
+    @Nonnull
     private final Set<Short> processingSlots = new HashSet<Short>();
+    @Nonnull
     private final Set<Short> processingFuelSlots = new HashSet<Short>();
     @Nullable
     private String recipeId;
@@ -586,9 +582,6 @@ PlacedByBlockState {
                 world.execute(() -> entityStore.addEntities(itemEntityHolders, AddReason.SPAWN));
             }
         }
-        if (this.marker != null) {
-            this.marker.remove();
-        }
     }
 
     @Override
@@ -701,25 +694,7 @@ PlacedByBlockState {
     }
 
     @Override
-    public void setMarker(WorldMapManager.MarkerReference marker) {
-        this.marker = marker;
-        this.markNeedsSave();
-    }
-
-    @Override
     public void placedBy(@Nonnull Ref<EntityStore> playerRef, @Nonnull String blockTypeKey, @Nonnull BlockState blockState, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-        if (blockTypeKey.equals(this.processingBench.getIconItem()) && this.processingBench.getIcon() != null) {
-            Player playerComponent = componentAccessor.getComponent(playerRef, Player.getComponentType());
-            assert (playerComponent != null);
-            TransformComponent transformComponent = componentAccessor.getComponent(playerRef, TransformComponent.getComponentType());
-            assert (transformComponent != null);
-            Transform transformPacket = PositionUtil.toTransformPacket(transformComponent.getTransform());
-            transformPacket.orientation.yaw = 0.0f;
-            transformPacket.orientation.pitch = 0.0f;
-            transformPacket.orientation.roll = 0.0f;
-            MapMarker marker = new MapMarker(this.processingBench.getIconId() + "-" + String.valueOf(UUID.randomUUID()), this.processingBench.getIconName(), this.processingBench.getIcon(), transformPacket, null);
-            ((MarkerBlockState)((Object)blockState)).setMarker(WorldMapManager.createPlayerMarker(playerRef, marker, componentAccessor));
-        }
     }
 
     private void playSound(@Nonnull World world, int soundEventIndex, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -727,7 +702,15 @@ PlacedByBlockState {
             return;
         }
         Vector3i pos = this.getBlockPosition();
-        SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, (double)pos.x + 0.5, (double)pos.y + 0.5, (double)pos.z + 0.5, componentAccessor);
+        Object chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
+        int rotationIndex = ((WorldChunk)chunk).getRotationIndex(pos.x, pos.y, pos.z);
+        Vector3d soundPos = new Vector3d();
+        BlockType blockType = this.getBlockType();
+        if (blockType != null) {
+            blockType.getBlockCenter(rotationIndex, soundPos);
+        }
+        soundPos.add(pos);
+        SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, soundPos, componentAccessor);
     }
 
     @Override

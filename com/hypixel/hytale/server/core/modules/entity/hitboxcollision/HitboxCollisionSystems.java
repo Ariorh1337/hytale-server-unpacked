@@ -16,8 +16,8 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
+import com.hypixel.hytale.protocol.HitboxCollisionUpdate;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
@@ -113,9 +113,7 @@ public class HitboxCollisionSystems {
         }
 
         private static void queueUpdatesFor(Ref<EntityStore> ref, @Nonnull HitboxCollision hitboxCollision, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo) {
-            ComponentUpdate update = new ComponentUpdate();
-            update.type = ComponentUpdateType.HitboxCollision;
-            update.hitboxCollisionConfigIndex = hitboxCollision.getHitboxCollisionConfigIndex();
+            HitboxCollisionUpdate update = new HitboxCollisionUpdate(hitboxCollision.getHitboxCollisionConfigIndex());
             for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
                 viewer.queueUpdate(ref, update);
             }

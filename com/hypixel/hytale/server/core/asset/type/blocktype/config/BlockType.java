@@ -55,6 +55,7 @@ import com.hypixel.hytale.server.core.asset.type.blockbreakingdecal.config.Block
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blockparticle.config.BlockParticleSet;
 import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet;
+import com.hypixel.hytale.server.core.asset.type.blocktick.config.RandomTickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.TickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFaceSupport;
@@ -111,7 +112,7 @@ import javax.annotation.Nullable;
 public class BlockType
 implements JsonAssetWithMap<String, BlockTypeAssetMap<String, BlockType>>,
 NetworkSerializable<com.hypixel.hytale.protocol.BlockType> {
-    public static final AssetBuilderCodec<String, BlockType> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(BlockType.class, BlockType::new, Codec.STRING, (t, k) -> {
+    public static final AssetBuilderCodec<String, BlockType> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(BlockType.class, BlockType::new, Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (asset, data) -> {
         asset.data = data;
@@ -183,6 +184,10 @@ NetworkSerializable<com.hypixel.hytale.protocol.BlockType> {
         blockType.tickProcedure = v;
     }, blockType -> blockType.tickProcedure, (blockType, parent) -> {
         blockType.tickProcedure = parent.tickProcedure;
+    }).add()).appendInherited(new KeyedCodec<RandomTickProcedure>("RandomTickProcedure", RandomTickProcedure.CODEC), (blockType, v) -> {
+        blockType.randomTickProcedure = v;
+    }, blockType -> blockType.randomTickProcedure, (blockType, parent) -> {
+        blockType.randomTickProcedure = parent.randomTickProcedure;
     }).add()).appendInherited(new KeyedCodec<ConnectedBlockRuleSet>("ConnectedBlockRuleSet", ConnectedBlockRuleSet.CODEC), (blockType, connectedBlockRuleSet) -> {
         blockType.connectedBlockRuleSet = connectedBlockRuleSet;
     }, blockType -> blockType.connectedBlockRuleSet, (blockType, parent) -> {
@@ -456,6 +461,7 @@ NetworkSerializable<com.hypixel.hytale.protocol.BlockType> {
     protected String blockBreakingDecalId;
     protected Color particleColor;
     protected TickProcedure tickProcedure;
+    private RandomTickProcedure randomTickProcedure;
     protected ShaderType[] effect;
     protected BlockTypeTextures[] textures;
     protected String textureSideMask;
@@ -917,6 +923,10 @@ NetworkSerializable<com.hypixel.hytale.protocol.BlockType> {
 
     public TickProcedure getTickProcedure() {
         return this.tickProcedure;
+    }
+
+    public RandomTickProcedure getRandomTickProcedure() {
+        return this.randomTickProcedure;
     }
 
     public ShaderType[] getEffect() {

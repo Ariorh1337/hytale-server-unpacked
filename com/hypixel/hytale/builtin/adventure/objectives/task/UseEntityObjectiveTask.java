@@ -30,10 +30,13 @@ import javax.annotation.Nonnull;
 
 public class UseEntityObjectiveTask
 extends CountObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<UseEntityObjectiveTask> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(UseEntityObjectiveTask.class, UseEntityObjectiveTask::new, CountObjectiveTask.CODEC).append(new KeyedCodec<T[]>("NpcUUIDs", new ArrayCodec<UUID>(Codec.UUID_BINARY, UUID[]::new)), (useEntityObjectiveTask, uuids) -> {
         useEntityObjectiveTask.npcUUIDs.clear();
         Collections.addAll(useEntityObjectiveTask.npcUUIDs, uuids);
     }, useEntityObjectiveTask -> (UUID[])useEntityObjectiveTask.npcUUIDs.toArray(UUID[]::new)).add()).build();
+    @Nonnull
+    private static final Message MESSAGE_SERVER_MODULES_OBJECTIVE_TASK_ALREADY_INTERACTED_WITH_NPC = Message.translation("server.modules.objective.task.alreadyInteractedWithNPC");
     @Nonnull
     protected Set<UUID> npcUUIDs = new HashSet<UUID>();
 
@@ -65,7 +68,7 @@ extends CountObjectiveTask {
     public boolean increaseTaskCompletion(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, int qty, @Nonnull Objective objective, @Nonnull PlayerRef playerRef, UUID npcUUID) {
         UseEntityObjectiveTaskAsset.DialogOptions dialogOptions;
         if (!this.npcUUIDs.add(npcUUID)) {
-            playerRef.sendMessage(Message.translation("server.modules.objective.task.alreadyInteractedWithNPC"));
+            playerRef.sendMessage(MESSAGE_SERVER_MODULES_OBJECTIVE_TASK_ALREADY_INTERACTED_WITH_NPC);
             return false;
         }
         super.increaseTaskCompletion(store, ref, qty, objective);

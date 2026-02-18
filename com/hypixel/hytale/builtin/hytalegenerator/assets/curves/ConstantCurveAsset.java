@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class ConstantCurveAsset
 extends CurveAsset {
+    @Nonnull
     public static final BuilderCodec<ConstantCurveAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ConstantCurveAsset.class, ConstantCurveAsset::new, CurveAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Value", Codec.DOUBLE, true), (asset, value) -> {
         asset.value = value;
     }, asset -> asset.value).add()).build();

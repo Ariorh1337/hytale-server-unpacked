@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 
 public class WeightedThicknessLayerAsset
 extends LayerAsset {
+    @Nonnull
     public static final BuilderCodec<WeightedThicknessLayerAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WeightedThicknessLayerAsset.class, WeightedThicknessLayerAsset::new, LayerAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("PossibleThicknesses", new ArrayCodec(WeightedThicknessAsset.CODEC, WeightedThicknessAsset[]::new), true), (t, k) -> {
         t.possibleThicknessAssets = k;
     }, k -> k.possibleThicknessAssets).addValidator(Validators.nonNullArrayElements()).add()).append(new KeyedCodec("Material", MaterialProviderAsset.CODEC, true), (t, k) -> {
@@ -51,6 +52,7 @@ extends LayerAsset {
 
     public static class WeightedThicknessAsset
     implements JsonAssetWithMap<String, DefaultAssetMap<String, WeightedThicknessAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, WeightedThicknessAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(WeightedThicknessAsset.class, WeightedThicknessAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

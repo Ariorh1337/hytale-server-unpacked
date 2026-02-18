@@ -12,7 +12,6 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldC
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.message.MessageFormat;
 import javax.annotation.Nonnull;
 
 public class WorldConfigSetPvpCommand
@@ -30,7 +29,7 @@ extends AbstractWorldCommand {
         WorldConfig worldConfig = world.getWorldConfig();
         worldConfig.setPvpEnabled(isPvpEnabled);
         worldConfig.markChanged();
-        context.sendMessage(Message.translation("server.universe.setpvp.info").param("status", MessageFormat.enabled(isPvpEnabled)).param("worldName", world.getName()));
+        context.sendMessage(Message.translation("server.universe.setpvp.info").param("enabled", isPvpEnabled ? "true" : "false").param("worldName", world.getName()));
     }
 }
 

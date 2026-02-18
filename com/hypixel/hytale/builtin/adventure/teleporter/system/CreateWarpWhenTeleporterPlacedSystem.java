@@ -35,6 +35,25 @@ import javax.annotation.Nullable;
 
 public class CreateWarpWhenTeleporterPlacedSystem
 extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
+    @Nonnull
+    private final ComponentType<ChunkStore, PlacedByInteractionComponent> placedByInteractionComponentType;
+    @Nonnull
+    private final ComponentType<ChunkStore, Teleporter> teleporterComponentType;
+    @Nonnull
+    private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType;
+    @Nonnull
+    private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+    @Nonnull
+    private final Query<ChunkStore> query;
+
+    public CreateWarpWhenTeleporterPlacedSystem(@Nonnull ComponentType<ChunkStore, PlacedByInteractionComponent> placedByInteractionComponentType, @Nonnull ComponentType<ChunkStore, Teleporter> teleporterComponentType, @Nonnull ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType, @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType) {
+        this.placedByInteractionComponentType = placedByInteractionComponentType;
+        this.teleporterComponentType = teleporterComponentType;
+        this.blockStateInfoComponentType = blockStateInfoComponentType;
+        this.playerRefComponentType = playerRefComponentType;
+        this.query = Query.and(placedByInteractionComponentType, teleporterComponentType, blockStateInfoComponentType);
+    }
+
     @Override
     public void onComponentAdded(@Nonnull Ref<ChunkStore> ref, @Nonnull PlacedByInteractionComponent placedBy, @Nonnull Store<ChunkStore> chunkStore, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
         String language;
@@ -45,15 +64,15 @@ extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
         if (whoPlacedRef == null || !whoPlacedRef.isValid()) {
             return;
         }
-        PlayerRef playerRefComponent = entityStore.getStore().getComponent(whoPlacedRef, PlayerRef.getComponentType());
+        PlayerRef playerRefComponent = entityStore.getStore().getComponent(whoPlacedRef, this.playerRefComponentType);
         String string = language = playerRefComponent == null ? null : playerRefComponent.getLanguage();
         if (language == null) {
             return;
         }
-        BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType());
+        BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
         assert (blockStateInfoComponent != null);
         Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
-        if (chunkRef == null || !chunkRef.isValid()) {
+        if (!chunkRef.isValid()) {
             return;
         }
         WorldChunk worldChunk = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
@@ -65,7 +84,7 @@ extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
             return;
         }
         CreateWarpWhenTeleporterPlacedSystem.createWarp(worldChunk, blockStateInfoComponent, cannedName);
-        Teleporter teleporterComponent = commandBuffer.getComponent(ref, Teleporter.getComponentType());
+        Teleporter teleporterComponent = commandBuffer.getComponent(ref, this.teleporterComponentType);
         assert (teleporterComponent != null);
         teleporterComponent.setOwnedWarp(cannedName);
     }
@@ -78,7 +97,9 @@ extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
         int y = ChunkUtil.yFromBlockInColumn(index);
         int z = chunkBlockZ + ChunkUtil.zFromBlockInColumn(index);
         BlockChunk blockChunkComponent = worldChunk.getBlockChunk();
-        assert (blockChunkComponent != null);
+        if (blockChunkComponent == null) {
+            return;
+        }
         BlockSection section = blockChunkComponent.getSectionAtBlockY(y);
         int rotationIndex = section.getRotationIndex(x, y, z);
         RotationTuple rotationTuple = RotationTuple.get(rotationIndex);
@@ -104,13 +125,13 @@ extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
     @Override
     @Nonnull
     public ComponentType<ChunkStore, PlacedByInteractionComponent> componentType() {
-        return PlacedByInteractionComponent.getComponentType();
+        return this.placedByInteractionComponentType;
     }
 
     @Override
-    @Nullable
+    @Nonnull
     public Query<ChunkStore> getQuery() {
-        return Query.and(PlacedByInteractionComponent.getComponentType(), Teleporter.getComponentType(), BlockModule.BlockStateInfo.getComponentType());
+        return this.query;
     }
 }
 

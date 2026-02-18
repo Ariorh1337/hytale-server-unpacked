@@ -15,11 +15,13 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.time.Instant;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class TilledSoilBlock
 implements Component<ChunkStore> {
     public static int VERSION = 1;
+    @Nonnull
     public static final BuilderCodec<TilledSoilBlock> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TilledSoilBlock.class, TilledSoilBlock::new).versioned()).codecVersion(VERSION)).append(new KeyedCodec<Boolean>("Planted", Codec.BOOLEAN), (state, planted) -> {
         state.planted = planted;
     }, state -> state.planted ? Boolean.TRUE : null).add()).append(new KeyedCodec("ModifierTimes", new MapCodec(Codec.INSTANT, Object2ObjectOpenHashMap::new, false)), (state, times) -> {
@@ -107,7 +109,8 @@ implements Component<ChunkStore> {
         this.decayTime = decayTime;
     }
 
-    public String computeBlockType(Instant gameTime, BlockType type) {
+    @Nullable
+    public String computeBlockType(@Nonnull Instant gameTime, @Nonnull BlockType type) {
         boolean watered;
         boolean bl = watered = this.hasExternalWater() || this.wateredUntil != null && this.wateredUntil.isAfter(gameTime);
         if (this.fertilized && watered) {
@@ -122,6 +125,7 @@ implements Component<ChunkStore> {
         return type.getBlockKeyForState("default");
     }
 
+    @Nonnull
     public String toString() {
         return "TilledSoilBlock{planted=" + this.planted + ", fertilized=" + this.fertilized + ", externalWater=" + this.externalWater + ", wateredUntil=" + String.valueOf(this.wateredUntil) + ", decayTime=" + String.valueOf(this.decayTime) + "}";
     }

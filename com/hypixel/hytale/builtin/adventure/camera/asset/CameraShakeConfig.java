@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class CameraShakeConfig
 implements NetworkSerializable<com.hypixel.hytale.protocol.CameraShakeConfig> {
+    @Nonnull
     public static final BuilderCodec<CameraShakeConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CameraShakeConfig.class, CameraShakeConfig::new).appendInherited(new KeyedCodec<Float>("Duration", Codec.FLOAT), (o, v) -> {
         o.duration = v.floatValue();
     }, o -> Float.valueOf(o.duration), (o, p) -> {
@@ -62,6 +63,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.CameraShakeConfig> {
 
     public static class OffsetNoise
     implements NetworkSerializable<com.hypixel.hytale.protocol.OffsetNoise> {
+        @Nonnull
         public static final BuilderCodec<OffsetNoise> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(OffsetNoise.class, OffsetNoise::new).documentation("The translational offset noise sources. Each component's list of noise configurations are summed together to calculate the output value for that component")).appendInherited(new KeyedCodec<T[]>("X", NoiseConfig.ARRAY_CODEC), (o, v) -> {
             o.x = v;
         }, o -> o.x, (o, p) -> {
@@ -75,6 +77,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.CameraShakeConfig> {
         }, o -> o.z, (o, p) -> {
             o.z = p.z;
         }).documentation("The noise used to vary the camera z-offset").add()).build();
+        @Nonnull
         public static final OffsetNoise NONE = new OffsetNoise();
         protected NoiseConfig[] x;
         protected NoiseConfig[] y;
@@ -94,6 +97,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.CameraShakeConfig> {
 
     public static class RotationNoise
     implements NetworkSerializable<com.hypixel.hytale.protocol.RotationNoise> {
+        @Nonnull
         public static final BuilderCodec<RotationNoise> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RotationNoise.class, RotationNoise::new).documentation("The rotational noise sources. Each component's list of noise configurations are summed together to calculate the output value for that component")).appendInherited(new KeyedCodec<T[]>("Pitch", NoiseConfig.ARRAY_CODEC), (o, v) -> {
             o.pitch = v;
         }, o -> o.pitch, (o, p) -> {
@@ -107,6 +111,7 @@ implements NetworkSerializable<com.hypixel.hytale.protocol.CameraShakeConfig> {
         }, o -> o.roll, (o, p) -> {
             o.roll = p.roll;
         }).documentation("The noise used to vary the camera roll").add()).build();
+        @Nonnull
         public static final RotationNoise NONE = new RotationNoise();
         protected NoiseConfig[] pitch;
         protected NoiseConfig[] yaw;

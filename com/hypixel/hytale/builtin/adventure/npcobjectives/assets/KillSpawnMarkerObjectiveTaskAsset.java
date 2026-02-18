@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 
 public class KillSpawnMarkerObjectiveTaskAsset
 extends KillObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<KillSpawnMarkerObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(KillSpawnMarkerObjectiveTaskAsset.class, KillSpawnMarkerObjectiveTaskAsset::new, KillObjectiveTaskAsset.CODEC).append(new KeyedCodec<Float>("Radius", Codec.FLOAT), (killSpawnMarkerObjectiveTaskAsset, aFloat) -> {
         killSpawnMarkerObjectiveTaskAsset.radius = aFloat.floatValue();
     }, killSpawnMarkerObjectiveTaskAsset -> Float.valueOf(killSpawnMarkerObjectiveTaskAsset.radius)).addValidator(Validators.greaterThan(Float.valueOf(0.0f))).add()).append(new KeyedCodec<T[]>("SpawnMarkerIds", Codec.STRING_ARRAY), (killSpawnMarkerObjectiveTaskAsset, s) -> {

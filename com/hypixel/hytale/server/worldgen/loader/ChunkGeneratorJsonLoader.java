@@ -6,18 +6,24 @@ package com.hypixel.hytale.server.worldgen.loader;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
+import com.hypixel.hytale.common.semver.Semver;
 import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.common.util.PathUtil;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.vector.Vector2i;
+import com.hypixel.hytale.procedurallib.file.FileIO;
+import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.Loader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
+import com.hypixel.hytale.server.worldgen.WorldGenConfig;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGenerator;
 import com.hypixel.hytale.server.worldgen.chunk.MaskProvider;
+import com.hypixel.hytale.server.worldgen.loader.AssetFileSystem;
 import com.hypixel.hytale.server.worldgen.loader.MaskProviderJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.ZonesJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.climate.ClimateMaskJsonLoader;
@@ -25,16 +31,23 @@ import com.hypixel.hytale.server.worldgen.loader.context.FileContextLoader;
 import com.hypixel.hytale.server.worldgen.loader.context.FileLoadingContext;
 import com.hypixel.hytale.server.worldgen.loader.zone.ZonePatternProviderJsonLoader;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabStoreRoot;
+import com.hypixel.hytale.server.worldgen.util.LogUtil;
 import com.hypixel.hytale.server.worldgen.zone.Zone;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class ChunkGeneratorJsonLoader
 extends Loader<SeedStringResource, ChunkGenerator> {
-    public ChunkGeneratorJsonLoader(SeedString<SeedStringResource> seed, Path dataFolder) {
-        super(seed, dataFolder);
+    @Nonnull
+    private final WorldGenConfig config;
+
+    public ChunkGeneratorJsonLoader(@Nonnull SeedString<SeedStringResource> seed, @Nonnull WorldGenConfig config) {
+        super(seed, config.path());
+        this.config = config;
     }
 
     @Override
@@ -48,18 +61,22 @@ extends Loader<SeedStringResource, ChunkGenerator> {
             throw new IllegalArgumentException(String.valueOf(worldFile));
         }
         JsonObject worldJson = this.loadWorldJson(worldFile);
-        Vector2i worldSize = this.loadWorldSize(worldJson);
-        Vector2i worldOffset = this.loadWorldOffset(worldJson);
-        MaskProvider maskProvider = this.loadMaskProvider(worldJson, worldSize, worldOffset);
-        PrefabStoreRoot prefabStore = this.loadPrefabStore(worldJson);
-        Path overrideDataFolder = this.loadOverrideDataFolderPath(worldJson, this.dataFolder);
-        ((SeedStringResource)this.seed.get()).setPrefabStore(prefabStore);
-        ((SeedStringResource)this.seed.get()).setDataFolder(overrideDataFolder);
-        ZonePatternProviderJsonLoader loader = this.loadZonePatternGenerator(maskProvider);
-        FileLoadingContext loadingContext = new FileContextLoader(overrideDataFolder, loader.loadZoneRequirement()).load();
-        Zone[] zones = new ZonesJsonLoader(this.seed, overrideDataFolder, loadingContext).load();
-        loader.setZones(zones);
-        return new ChunkGenerator(loader.load(), overrideDataFolder);
+        Path overrideDataFolder = this.loadOverrideDataFolderPath(worldJson, this.config.path());
+        WorldGenConfig config = this.config.withOverride(overrideDataFolder);
+        try (AssetFileSystem fs = FileIO.openFileIOSystem(new AssetFileSystem(config));){
+            ChunkGeneratorJsonLoader.logAssetPacks(fs.packs());
+            Vector2i worldSize = this.loadWorldSize(worldJson);
+            Vector2i worldOffset = this.loadWorldOffset(worldJson);
+            MaskProvider maskProvider = this.loadMaskProvider(worldJson, worldSize, worldOffset);
+            PrefabStoreRoot prefabStore = this.loadPrefabStore(worldJson);
+            ((SeedStringResource)this.seed.get()).setPrefabConfig(config, prefabStore);
+            ZonePatternProviderJsonLoader loader = this.loadZonePatternGenerator(maskProvider);
+            FileLoadingContext loadingContext = new FileContextLoader(overrideDataFolder, loader.loadZoneRequirement()).load();
+            Zone[] zones = new ZonesJsonLoader(this.seed, overrideDataFolder, loadingContext).load();
+            loader.setZones(zones);
+            ChunkGenerator chunkGenerator = new ChunkGenerator(loader.load(), overrideDataFolder);
+            return chunkGenerator;
+        }
     }
 
     @Nonnull
@@ -77,14 +94,12 @@ extends Loader<SeedStringResource, ChunkGenerator> {
 
     @Nonnull
     protected JsonObject loadWorldJson(@Nonnull Path file) {
-        JsonObject worldJson;
-        try (JsonReader reader = new JsonReader(Files.newBufferedReader(file));){
-            worldJson = JsonParser.parseReader(reader).getAsJsonObject();
+        try {
+            return FileIO.load(file, JsonLoader.JSON_OBJ_LOADER);
         }
         catch (Throwable e) {
             throw new Error(String.format("Could not read JSON configuration for world. File: %s", file), e);
         }
-        return worldJson;
     }
 
     @Nonnull
@@ -141,8 +156,12 @@ extends Loader<SeedStringResource, ChunkGenerator> {
             }
         }
         IWeightedMap<String> weightedMap = builder.build();
-        Path maskFile = this.dataFolder.resolve(weightedMap.get(new FastRandom(this.seed.hashCode())));
-        if (maskFile.getFileName().endsWith("Mask.json")) {
+        String maskName = weightedMap.get(new FastRandom(this.seed.hashCode()));
+        Path maskFile = PathUtil.resolvePathWithinDir(this.dataFolder, maskName);
+        if (maskFile == null) {
+            throw new Error("Invalid mask file path: " + maskName);
+        }
+        if (maskFile.getFileName().toString().endsWith("Mask.json")) {
             return new ClimateMaskJsonLoader(this.seed, this.dataFolder, maskFile).load();
         }
         return new MaskProviderJsonLoader(this.seed, this.dataFolder, worldJson.get("Randomizer"), maskFile, worldSize, worldOffset).load();
@@ -168,29 +187,27 @@ extends Loader<SeedStringResource, ChunkGenerator> {
 
     @Nonnull
     protected ZonePatternProviderJsonLoader loadZonePatternGenerator(MaskProvider maskProvider) {
-        ZonePatternProviderJsonLoader zonePatternProviderJsonLoader;
         Path zoneFile = this.dataFolder.resolve("Zones.json");
-        JsonReader reader = new JsonReader(Files.newBufferedReader(zoneFile));
         try {
-            JsonObject zoneJson = JsonParser.parseReader(reader).getAsJsonObject();
-            zonePatternProviderJsonLoader = new ZonePatternProviderJsonLoader(this.seed, this.dataFolder, zoneJson, maskProvider);
+            JsonObject zoneJson = FileIO.load(zoneFile, JsonLoader.JSON_OBJ_LOADER);
+            return new ZonePatternProviderJsonLoader(this.seed, this.dataFolder, zoneJson, maskProvider);
         }
-        catch (Throwable throwable) {
-            try {
-                try {
-                    reader.close();
-                }
-                catch (Throwable throwable2) {
-                    throwable.addSuppressed(throwable2);
-                }
-                throw throwable;
-            }
-            catch (Throwable e) {
-                throw new Error(String.format("Failed to read zone configuration file! File: %s", zoneFile.toString()), e);
-            }
+        catch (Throwable e) {
+            throw new Error(String.format("Failed to read zone configuration file! File: %s", zoneFile.toString()), e);
         }
-        reader.close();
-        return zonePatternProviderJsonLoader;
+    }
+
+    protected static void logAssetPacks(@Nonnull List<AssetPack> packs) {
+        HytaleLogger.Api logger = (HytaleLogger.Api)LogUtil.getLogger().atInfo();
+        Semver unversioned = new Semver(0L, 0L, 0L);
+        logger.log("Loading world-gen with the following asset-packs (highest priority first):");
+        for (int i = 0; i < packs.size(); ++i) {
+            AssetPack pack = packs.get(i);
+            String name = pack.getName();
+            Semver version = Objects.requireNonNullElse(pack.getManifest().getVersion(), unversioned);
+            Path location = pack.getPackLocation();
+            logger.log("- [%3d] %s:%s - [%s]", i, name, version, location);
+        }
     }
 
     public static interface Constants {

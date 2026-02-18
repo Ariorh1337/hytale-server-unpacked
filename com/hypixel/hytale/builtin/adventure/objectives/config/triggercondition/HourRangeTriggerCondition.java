@@ -17,11 +17,13 @@ import javax.annotation.Nonnull;
 
 public class HourRangeTriggerCondition
 extends ObjectiveLocationTriggerCondition {
+    @Nonnull
     public static final BuilderCodec<HourRangeTriggerCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HourRangeTriggerCondition.class, HourRangeTriggerCondition::new).append(new KeyedCodec<Integer>("MinHour", Codec.INTEGER), (hourRangeTriggerCondition, integer) -> {
         hourRangeTriggerCondition.minHour = integer;
     }, hourRangeTriggerCondition -> hourRangeTriggerCondition.minHour).add()).append(new KeyedCodec<Integer>("MaxHour", Codec.INTEGER), (hourRangeTriggerCondition, integer) -> {
         hourRangeTriggerCondition.maxHour = integer;
     }, hourRangeTriggerCondition -> hourRangeTriggerCondition.maxHour).add()).build();
+    @Nonnull
     protected static final ResourceType<EntityStore, WorldTimeResource> WORLD_TIME_RESOURCE_RESOURCE_TYPE = WorldTimeResource.getResourceType();
     protected int minHour;
     protected int maxHour;

@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class CanStartObjectiveRequirement
 extends ChoiceRequirement {
+    @Nonnull
     public static final BuilderCodec<CanStartObjectiveRequirement> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CanStartObjectiveRequirement.class, CanStartObjectiveRequirement::new, ChoiceRequirement.BASE_CODEC).append(new KeyedCodec<String>("ObjectiveId", Codec.STRING), (canStartObjectiveRequirement, s) -> {
         canStartObjectiveRequirement.objectiveId = s;
     }, canStartObjectiveRequirement -> canStartObjectiveRequirement.objectiveId).add()).build();

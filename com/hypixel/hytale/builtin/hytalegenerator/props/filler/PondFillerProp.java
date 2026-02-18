@@ -29,14 +29,23 @@ extends Prop {
     private static final int LEAKS = 16;
     private static final int SOLID = 256;
     private static final int STACKED = 4096;
+    @Nonnull
     private final Vector3i boundingMin;
+    @Nonnull
     private final Vector3i boundingMax;
+    @Nonnull
     private final MaterialProvider<Material> filledMaterialProvider;
+    @Nonnull
     private final MaterialSet solidSet;
+    @Nonnull
     private final Scanner scanner;
+    @Nonnull
     private final Pattern pattern;
+    @Nonnull
     private final ContextDependency contextDependency;
+    @Nonnull
     private final Bounds3i readBounds_voxelGrid;
+    @Nonnull
     private final Bounds3i writeBounds_voxelGrid;
 
     public PondFillerProp(@Nonnull Vector3i boundingMin, @Nonnull Vector3i boundingMax, @Nonnull MaterialSet solidSet, @Nonnull MaterialProvider<Material> filledMaterialProvider, @Nonnull Scanner scanner, @Nonnull Pattern pattern) {
@@ -56,6 +65,7 @@ extends Prop {
     }
 
     @Override
+    @Nonnull
     public FillerPropScanResult scan(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id id) {
         Scanner.Context scannerContext = new Scanner.Context(position, this.pattern, materialSpace, id);
         List<Vector3i> scanResults = this.scanner.scan(scannerContext);
@@ -71,6 +81,7 @@ extends Prop {
         return new FillerPropScanResult(resultList);
     }
 
+    @Nonnull
     private List<Vector3i> renderFluidBlocks(@Nonnull Vector3i origin, @Nonnull VoxelSpace<Material> materialSpace) {
         int z;
         int x;
@@ -167,12 +178,13 @@ extends Prop {
         for (Vector3i position : fluidBlocks) {
             MaterialProvider.Context materialsContext;
             Material material;
-            if (!context.materialSpace.isInsideSpace(position.x, position.y, position.z) || (material = this.filledMaterialProvider.getVoxelTypeAt(materialsContext = new MaterialProvider.Context(position, 0.0, 0, 0, 0, 0, context.workerId, null, context.distanceFromBiomeEdge))) == null) continue;
+            if (!context.materialSpace.isInsideSpace(position.x, position.y, position.z) || (material = this.filledMaterialProvider.getVoxelTypeAt(materialsContext = new MaterialProvider.Context(position, 0.0, 0, 0, 0, 0, null, context.distanceFromBiomeEdge))) == null) continue;
             context.materialSpace.set(material, position.x, position.y, position.z);
         }
     }
 
     @Override
+    @Nonnull
     public ContextDependency getContextDependency() {
         return this.contextDependency.clone();
     }

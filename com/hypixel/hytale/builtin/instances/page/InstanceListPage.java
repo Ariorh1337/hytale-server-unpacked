@@ -19,7 +19,6 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
-import com.hypixel.hytale.server.core.ui.Value;
 import com.hypixel.hytale.server.core.ui.browser.FileBrowserConfig;
 import com.hypixel.hytale.server.core.ui.browser.FileBrowserEventData;
 import com.hypixel.hytale.server.core.ui.browser.ServerFileBrowser;
@@ -38,9 +37,7 @@ import javax.annotation.Nullable;
 
 public class InstanceListPage
 extends InteractiveCustomUIPage<PageData> {
-    private static final String COMMON_TEXT_BUTTON_DOCUMENT = "Pages/BasicTextButton.ui";
-    private static final Value<String> BUTTON_LABEL_STYLE = Value.ref("Pages/BasicTextButton.ui", "LabelStyle");
-    private static final Value<String> BUTTON_LABEL_STYLE_SELECTED = Value.ref("Pages/BasicTextButton.ui", "SelectedLabelStyle");
+    @Nonnull
     private static final String ASSET_PACK_SUB_PATH = "Server/Instances";
     @Nullable
     private String selectedInstance;
@@ -202,8 +199,11 @@ extends InteractiveCustomUIPage<PageData> {
     }
 
     public static class PageData {
+        @Nonnull
         public static final String KEY_INSTANCE = "Instance";
+        @Nonnull
         public static final String KEY_ACTION = "Action";
+        @Nonnull
         public static final BuilderCodec<PageData> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PageData.class, PageData::new).addField(new KeyedCodec<String>("Instance", BuilderCodec.STRING), (o, i) -> {
             o.instance = i;
         }, o -> o.instance)).addField(new KeyedCodec<Action>("Action", new EnumCodec<Action>(Action.class)), (o, i) -> {

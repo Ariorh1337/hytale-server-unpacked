@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 public class CraftObjectiveTaskAsset
 extends CountObjectiveTaskAsset {
+    @Nonnull
     public static final BuilderCodec<CraftObjectiveTaskAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CraftObjectiveTaskAsset.class, CraftObjectiveTaskAsset::new, CountObjectiveTaskAsset.CODEC).append(new KeyedCodec<String>("ItemId", Codec.STRING), (objective, entityType) -> {
         objective.itemId = entityType;
     }, objective -> objective.itemId).addValidator(Validators.nonNull()).addValidator(Item.VALIDATOR_CACHE.getValidator()).add()).build();

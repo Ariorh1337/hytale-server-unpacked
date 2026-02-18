@@ -14,17 +14,18 @@ import javax.annotation.Nonnull;
 
 public class KillTrackerResource
 implements Resource<EntityStore> {
+    @Nonnull
     private final List<KillTaskTransaction> killTasks = new ObjectArrayList<KillTaskTransaction>();
 
     public static ResourceType<EntityStore, KillTrackerResource> getResourceType() {
         return NPCObjectivesPlugin.get().getKillTrackerResourceType();
     }
 
-    public void watch(KillTaskTransaction task) {
+    public void watch(@Nonnull KillTaskTransaction task) {
         this.killTasks.add(task);
     }
 
-    public void unwatch(KillTaskTransaction task) {
+    public void unwatch(@Nonnull KillTaskTransaction task) {
         this.killTasks.remove(task);
     }
 

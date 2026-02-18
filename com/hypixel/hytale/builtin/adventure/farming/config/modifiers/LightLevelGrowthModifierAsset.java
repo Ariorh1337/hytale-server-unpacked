@@ -13,13 +13,16 @@ import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.GrowthModifierAsset;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkLightData;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class LightLevelGrowthModifierAsset
 extends GrowthModifierAsset {
+    @Nonnull
     public static final BuilderCodec<LightLevelGrowthModifierAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(LightLevelGrowthModifierAsset.class, LightLevelGrowthModifierAsset::new, ABSTRACT_CODEC).addField(new KeyedCodec<ArtificialLight>("ArtificialLight", ArtificialLight.CODEC), (lightLevel, artificialLight) -> {
         lightLevel.artificialLight = artificialLight;
     }, lightLevel -> lightLevel.artificialLight)).addField(new KeyedCodec<Rangef>("Sunlight", ProtocolCodecs.RANGEF), (lightLevel, sunLight) -> {
@@ -51,7 +54,7 @@ extends GrowthModifierAsset {
         return LightLevelGrowthModifierAsset.isInRange(redRange, red) && LightLevelGrowthModifierAsset.isInRange(greenRange, green) && LightLevelGrowthModifierAsset.isInRange(blueRange, blue);
     }
 
-    protected boolean checkSunLight(WorldTimeResource worldTimeResource, byte sky) {
+    protected boolean checkSunLight(@Nonnull WorldTimeResource worldTimeResource, byte sky) {
         Rangef range = this.sunlight;
         double sunlightFactor = worldTimeResource.getSunlightFactor();
         double daylight = sunlightFactor * (double)sky;
@@ -63,14 +66,17 @@ extends GrowthModifierAsset {
     }
 
     @Override
-    public double getCurrentGrowthMultiplier(CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, boolean initialTick) {
-        BlockSection blockSection = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
-        short lightRaw = blockSection.getGlobalLight().getLightRaw(x, y, z);
+    public double getCurrentGrowthMultiplier(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z, boolean initialTick) {
+        BlockSection blockSectionComponent = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
+        assert (blockSectionComponent != null);
+        short lightRaw = blockSectionComponent.getGlobalLight().getLightRaw(x, y, z);
         byte redLight = ChunkLightData.getLightValue(lightRaw, 0);
         byte greenLight = ChunkLightData.getLightValue(lightRaw, 1);
         byte blueLight = ChunkLightData.getLightValue(lightRaw, 2);
         byte skyLight = ChunkLightData.getLightValue(lightRaw, 3);
-        WorldTimeResource worldTimeResource = commandBuffer.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType());
+        World world = commandBuffer.getExternalData().getWorld();
+        EntityStore entityStore = world.getEntityStore();
+        WorldTimeResource worldTimeResource = entityStore.getStore().getResource(WorldTimeResource.getResourceType());
         boolean active = false;
         boolean onlySunlight = false;
         if (this.requireBoth) {
@@ -97,6 +103,7 @@ extends GrowthModifierAsset {
     }
 
     public static class ArtificialLight {
+        @Nonnull
         public static final BuilderCodec<ArtificialLight> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ArtificialLight.class, ArtificialLight::new).addField(new KeyedCodec<Range>("Red", ProtocolCodecs.RANGE), (light, red) -> {
             light.red = red;
         }, light -> light.red)).addField(new KeyedCodec<Range>("Green", ProtocolCodecs.RANGE), (light, green) -> {

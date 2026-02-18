@@ -5,7 +5,7 @@ package com.hypixel.hytale.server.core.modules.item;
 
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.protocol.ItemQuality;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateItemQualities;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class ItemQualityPacketGenerator
 extends SimpleAssetPacketGenerator<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality, IndexedLookupTableAssetMap<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assetMap, @Nonnull Map<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assetMap, @Nonnull Map<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assets) {
         UpdateItemQualities packet = new UpdateItemQualities();
         packet.type = UpdateType.Init;
         packet.itemQualities = new Int2ObjectOpenHashMap<ItemQuality>();
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, com.hypixel.hytale.server.core.asset.
 
     @Override
     @Nonnull
-    protected Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assetMap, @Nonnull Map<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> loadedAssets) {
+    protected ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assetMap, @Nonnull Map<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> loadedAssets) {
         UpdateItemQualities packet = new UpdateItemQualities();
         packet.type = UpdateType.AddOrUpdate;
         packet.itemQualities = new Int2ObjectOpenHashMap<ItemQuality>();
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, com.hypixel.hytale.server.core.asset.
 
     @Override
     @Nonnull
-    protected Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assetMap, @Nonnull Set<String> removed) {
+    protected ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality> assetMap, @Nonnull Set<String> removed) {
         UpdateItemQualities packet = new UpdateItemQualities();
         packet.type = UpdateType.Remove;
         packet.itemQualities = new Int2ObjectOpenHashMap<ItemQuality>();

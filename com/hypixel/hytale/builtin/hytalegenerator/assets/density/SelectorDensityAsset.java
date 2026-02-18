@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class SelectorDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SelectorDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SelectorDensityAsset.class, SelectorDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("FromMin", Codec.DOUBLE, true), (t, k) -> {
         t.fromMin = k;
     }, k -> k.fromMin).add()).append(new KeyedCodec<Double>("FromMax", Codec.DOUBLE, true), (t, k) -> {

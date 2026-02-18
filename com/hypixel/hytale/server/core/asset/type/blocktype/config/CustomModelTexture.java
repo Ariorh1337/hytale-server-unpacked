@@ -14,9 +14,9 @@ public class CustomModelTexture {
     @Nonnull
     public static BuilderCodec<CustomModelTexture> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(CustomModelTexture.class, CustomModelTexture::new).append(new KeyedCodec<String>("Texture", Codec.STRING), (customModelTexture, s) -> {
         customModelTexture.texture = s;
-    }, customModelTexture -> customModelTexture.texture).addValidator(CommonAssetValidator.TEXTURE_ITEM).add()).addField(new KeyedCodec<Integer>("Weight", Codec.INTEGER), (customModelTexture, i) -> {
+    }, customModelTexture -> customModelTexture.texture).addValidator(CommonAssetValidator.TEXTURE_ITEM).add()).append(new KeyedCodec<Integer>("Weight", Codec.INTEGER), (customModelTexture, i) -> {
         customModelTexture.weight = i;
-    }, customModelTexture -> customModelTexture.weight)).build();
+    }, customModelTexture -> customModelTexture.weight).add()).build();
     private String texture;
     private int weight;
 

@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class CellWallDistanceDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<CellWallDistanceDensityAsset> CODEC = BuilderCodec.builder(CellWallDistanceDensityAsset.class, CellWallDistanceDensityAsset::new, DensityAsset.ABSTRACT_CODEC).build();
 
     @Override

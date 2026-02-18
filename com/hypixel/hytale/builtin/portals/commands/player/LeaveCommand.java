@@ -31,7 +31,9 @@ extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-        assert (playerComponent != null);
+        if (playerComponent == null) {
+            return;
+        }
         PortalWorld portalWorldResource = store.getResource(PortalWorld.getResourceType());
         if (!portalWorldResource.exists()) {
             playerRef.sendMessage(MESSAGE_COMMANDS_LEAVE_NOT_IN_PORTAL);

@@ -11,7 +11,9 @@ import javax.annotation.Nonnull;
 
 public class MaterialPattern
 extends Pattern {
+    @Nonnull
     private static final SpaceSize READ_SPACE_SIZE = new SpaceSize(new Vector3i(0, 0, 0), new Vector3i(1, 0, 1));
+    @Nonnull
     private final Material material;
 
     public MaterialPattern(@Nonnull Material material) {
@@ -28,6 +30,7 @@ extends Pattern {
     }
 
     @Override
+    @Nonnull
     public SpaceSize readSpace() {
         return READ_SPACE_SIZE.clone();
     }

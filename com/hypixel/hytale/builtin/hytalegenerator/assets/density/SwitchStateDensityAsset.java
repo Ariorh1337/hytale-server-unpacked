@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class SwitchStateDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SwitchStateDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(SwitchStateDensityAsset.class, SwitchStateDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("SwitchState", Codec.STRING, true), (t, k) -> {
         t.switchState = k;
     }, t -> t.switchState).add()).build();

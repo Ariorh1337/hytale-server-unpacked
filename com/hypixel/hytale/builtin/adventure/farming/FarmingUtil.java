@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.Farmin
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.GrowthModifierAsset;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
@@ -37,6 +38,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.metadata.CapturedNPCMetadata;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -45,11 +47,12 @@ public class FarmingUtil {
     private static final int MAX_SECONDS_BETWEEN_TICKS = 15;
     private static final int BETWEEN_RANDOM = 10;
 
-    public static void tickFarming(CommandBuffer<ChunkStore> commandBuffer, BlockChunk blockChunk, BlockSection blockSection, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, FarmingBlock farmingBlock, int x, int y, int z, boolean initialTick) {
+    public static void tickFarming(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull BlockChunk blockChunk, @Nonnull BlockSection blockSection, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, @Nonnull FarmingBlock farmingBlock, int x, int y, int z, boolean initialTick) {
         FarmingStageData[] stages;
         BlockType blockType;
         World world = commandBuffer.getExternalData().getWorld();
-        WorldTimeResource worldTimeResource = world.getEntityStore().getStore().getResource(WorldTimeResource.getResourceType());
+        Store<EntityStore> entityStore = world.getEntityStore().getStore();
+        WorldTimeResource worldTimeResource = entityStore.getResource(WorldTimeResource.getResourceType());
         Instant currentTime = worldTimeResource.getGameTime();
         BlockType blockType2 = blockType = farmingBlock.getPreviousBlockType() != null ? (BlockType)BlockType.getAssetMap().getAsset(farmingBlock.getPreviousBlockType()) : BlockType.getAssetMap().getAsset(blockSection.get(x, y, z));
         if (blockType == null) {
@@ -88,10 +91,13 @@ public class FarmingUtil {
             return;
         }
         long remainingTimeSeconds = currentTime.getEpochSecond() - farmingBlock.getLastTickGameTime().getEpochSecond();
-        ChunkSection section = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-        int worldX = ChunkUtil.worldCoordFromLocalCoord(section.getX(), x);
-        int worldY = ChunkUtil.worldCoordFromLocalCoord(section.getY(), y);
-        int worldZ = ChunkUtil.worldCoordFromLocalCoord(section.getZ(), z);
+        ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+        if (chunkSectionComponent == null) {
+            return;
+        }
+        int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
+        int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
+        int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
         while (currentStage < stages.length) {
             FarmingStageData stage = stages[currentStage];
             if (stage.shouldStop(commandBuffer, sectionRef, blockRef, x, y, z)) {
@@ -112,9 +118,9 @@ public class FarmingUtil {
             double growthMultiplier = 1.0;
             if (farmingConfig.getGrowthModifiers() != null) {
                 for (String modifierName : farmingConfig.getGrowthModifiers()) {
-                    GrowthModifierAsset modifier = GrowthModifierAsset.getAssetMap().getAsset(modifierName);
-                    if (modifier == null) continue;
-                    growthMultiplier *= modifier.getCurrentGrowthMultiplier(commandBuffer, sectionRef, blockRef, x, y, z, initialTick);
+                    GrowthModifierAsset modifierAsset = GrowthModifierAsset.getAssetMap().getAsset(modifierName);
+                    if (modifierAsset == null) continue;
+                    growthMultiplier *= modifierAsset.getCurrentGrowthMultiplier(commandBuffer, sectionRef, blockRef, x, y, z, initialTick);
                 }
             }
             if (remainingTimeSeconds < (remainingDurationSeconds = Math.round((double)remainingDurationSeconds / growthMultiplier))) {
@@ -147,14 +153,15 @@ public class FarmingUtil {
         farmingBlock.setLastTickGameTime(currentTime);
     }
 
-    public static void harvest(@Nonnull World world, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull BlockType blockType, int rotationIndex, @Nonnull Vector3i blockPosition) {
+    public static boolean harvest(@Nonnull World world, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> ref, @Nonnull BlockType blockType, int rotationIndex, @Nonnull Vector3i blockPosition) {
         if (world.getGameplayConfig().getWorldConfig().isBlockGatheringAllowed()) {
-            FarmingUtil.harvest0(store, ref, blockType, rotationIndex, blockPosition);
+            return FarmingUtil.harvest0(componentAccessor, ref, blockType, rotationIndex, blockPosition);
         }
+        return false;
     }
 
     @Nullable
-    public static CapturedNPCMetadata generateCapturedNPCMetadata(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> entityRef, int roleIndex) {
+    public static CapturedNPCMetadata generateCapturedNPCMetadata(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> entityRef, String npcNameKey) {
         PersistentModel persistentModel = componentAccessor.getComponent(entityRef, PersistentModel.getComponentType());
         if (persistentModel == null) {
             return null;
@@ -164,15 +171,16 @@ public class FarmingUtil {
         if (modelAsset != null) {
             meta.setIconPath(modelAsset.getIcon());
         }
-        meta.setRoleIndex(roleIndex);
+        meta.setNpcNameKey(npcNameKey);
         return meta;
     }
 
     protected static boolean harvest0(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull BlockType blockType, int rotationIndex, @Nonnull Vector3i blockPosition) {
         FarmingBlock farmingBlock;
         FarmingData farmingConfig = blockType.getFarming();
+        boolean isFarmable = true;
         if (farmingConfig == null || farmingConfig.getStages() == null) {
-            return false;
+            isFarmable = false;
         }
         if (blockType.getGathering().getHarvest() == null) {
             return false;
@@ -181,7 +189,7 @@ public class FarmingUtil {
         Vector3d centerPosition = new Vector3d();
         blockType.getBlockCenter(rotationIndex, centerPosition);
         centerPosition.add(blockPosition);
-        if (farmingConfig.getStageSetAfterHarvest() == null) {
+        if (!isFarmable || farmingConfig.getStageSetAfterHarvest() == null) {
             FarmingUtil.giveDrops(store, ref, centerPosition, blockType);
             WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
             if (chunk != null) {
@@ -243,7 +251,8 @@ public class FarmingUtil {
         }
         BlockSection section = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
         if (section != null) {
-            section.scheduleTick(ChunkUtil.indexBlock(blockPosition.x, blockPosition.y, blockPosition.z), now);
+            int blockIndex = ChunkUtil.indexBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+            section.scheduleTick(blockIndex, now);
         }
         newStages[0].apply(chunkStore, sectionRef, blockRef, blockPosition.x, blockPosition.y, blockPosition.z, previousStage);
         return true;
@@ -253,7 +262,10 @@ public class FarmingUtil {
         HarvestingDropType harvest = blockType.getGathering().getHarvest();
         String itemId = harvest.getItemId();
         String dropListId = harvest.getDropListId();
-        BlockHarvestUtils.getDrops(blockType, 1, itemId, dropListId).forEach(itemStack -> ItemUtils.interactivelyPickupItem(ref, itemStack, origin, store));
+        List<ItemStack> drops = BlockHarvestUtils.getDrops(blockType, 1, itemId, dropListId);
+        for (ItemStack itemStack : drops) {
+            ItemUtils.interactivelyPickupItem(ref, itemStack, origin, store);
+        }
     }
 }
 

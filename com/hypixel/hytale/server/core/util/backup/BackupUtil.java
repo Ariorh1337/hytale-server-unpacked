@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.util.backup;
 
 import com.hypixel.hytale.common.util.java.ManifestUtil;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interface_.WorldSavingStatus;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
@@ -61,7 +61,7 @@ class BackupUtil {
     }
 
     static void broadcastBackupStatus(boolean isWorldSaving) {
-        Universe.get().broadcastPacket((Packet)new WorldSavingStatus(isWorldSaving));
+        Universe.get().broadcastPacket((ToClientPacket)new WorldSavingStatus(isWorldSaving));
     }
 
     static void broadcastBackupError(Throwable cause) {

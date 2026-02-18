@@ -8,7 +8,6 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.Asset;
 import com.hypixel.hytale.protocol.ComponentUpdate;
-import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.EntityUpdate;
 import com.hypixel.hytale.protocol.InstantData;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.TeleportAck;
+import com.hypixel.hytale.protocol.TransformUpdate;
 import com.hypixel.hytale.protocol.io.netty.PacketDecoder;
 import com.hypixel.hytale.protocol.io.netty.PacketEncoder;
 import com.hypixel.hytale.protocol.packets.connection.ClientType;
@@ -174,7 +174,7 @@ extends SimpleChannelInboundHandler<Packet> {
     @Override
     public void channelActive(@Nonnull ChannelHandlerContext ctx) {
         UUID uuid = UUID.nameUUIDFromBytes(("BOT|" + this.name).getBytes(StandardCharsets.UTF_8));
-        ctx.writeAndFlush(new Connect(1789265863, 2, "bot", ClientType.Game, uuid, this.name, null, "en", null, null));
+        ctx.writeAndFlush(new Connect(-1356075132, 20, "bot", ClientType.Game, uuid, this.name, null, "en", null, null));
         this.logger.at(Level.INFO).log("Connected!");
     }
 
@@ -213,8 +213,9 @@ extends SimpleChannelInboundHandler<Packet> {
                     return;
                 }
                 for (ComponentUpdate update : entry.updates) {
-                    if (update.type != ComponentUpdateType.Transform) continue;
-                    this.updateModelTransform(update.transform);
+                    if (!(update instanceof TransformUpdate)) continue;
+                    TransformUpdate transformUpdate = (TransformUpdate)update;
+                    this.updateModelTransform(transformUpdate.transform);
                     break block0;
                 }
                 break;

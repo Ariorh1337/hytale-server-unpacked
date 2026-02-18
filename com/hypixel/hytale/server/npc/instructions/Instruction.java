@@ -306,7 +306,7 @@ IAnnotatedComponentCollection {
             debugSupport.setLastFailingSensor(this.sensor);
         }
         if (this.sensor.matches(ref, role, dt, store)) {
-            if (!this.treeMode && !this.continueAfter) {
+            if (!(this.treeMode || this.continueAfter || this.invertTreeModeResult)) {
                 role.notifySensorMatch();
             }
             if (traceSensorFails) {
@@ -375,15 +375,17 @@ IAnnotatedComponentCollection {
     }
 
     public void onMatched(@Nonnull Role role) {
-        if (!this.treeMode) {
+        if (!this.treeMode && !this.invertTreeModeResult) {
             return;
         }
         this.parentTreeModeStep = role.swapTreeModeSteps(this);
-        this.continueAfter = true;
+        if (this.treeMode) {
+            this.continueAfter = true;
+        }
     }
 
     public void onCompleted(@Nonnull Role role) {
-        if (!this.treeMode) {
+        if (!this.treeMode && !this.invertTreeModeResult) {
             return;
         }
         role.swapTreeModeSteps(this.parentTreeModeStep);

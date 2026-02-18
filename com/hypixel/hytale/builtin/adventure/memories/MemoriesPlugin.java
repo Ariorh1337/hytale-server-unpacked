@@ -44,6 +44,7 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
 import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSystems;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
@@ -75,9 +76,14 @@ import javax.annotation.Nullable;
 
 public class MemoriesPlugin
 extends JavaPlugin {
+    @Nonnull
+    public static final String MEMORIES_JSON_PATH = "memories.json";
     private static MemoriesPlugin instance;
+    @Nonnull
     private final Config<MemoriesPluginConfig> config = this.withConfig(MemoriesPluginConfig.CODEC);
+    @Nonnull
     private final List<MemoryProvider<?>> providers = new ObjectArrayList();
+    @Nonnull
     private final Map<String, Set<Memory>> allMemories = new Object2ObjectRBTreeMap<String, Set<Memory>>();
     private ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
     @Nullable
@@ -101,26 +107,29 @@ extends JavaPlugin {
         OpenCustomUIInteraction.registerCustomPageSupplier(this, MemoriesUnlockedPage.class, "MemoriesUnlocked", new MemoriesUnlockedPageSuplier());
         Window.CLIENT_REQUESTABLE_WINDOW_TYPES.put(WindowType.Memories, MemoriesWindow::new);
         this.playerMemoriesComponentType = entityStoreRegistry.registerComponent(PlayerMemories.class, "PlayerMemories", PlayerMemories.CODEC);
+        ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
+        ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
         NPCMemoryProvider npcMemoryProvider = new NPCMemoryProvider();
         this.registerMemoryProvider(npcMemoryProvider);
-        entityStoreRegistry.registerSystem(new NPCMemory.GatherMemoriesSystem(npcMemoryProvider.getCollectionRadius()));
+        entityStoreRegistry.registerSystem(new NPCMemory.GatherMemoriesSystem(transformComponentType, playerComponentType, playerRefComponentType, this.playerMemoriesComponentType, npcMemoryProvider.getCollectionRadius()));
         for (MemoryProvider<?> provider : this.providers) {
             BuilderCodec<?> codec = provider.getCodec();
             this.getCodecRegistry(Memory.CODEC).register(provider.getId(), codec.getInnerClass(), codec);
         }
         this.getEventRegistry().register(AllNPCsLoadedEvent.class, event -> this.onAssetsLoad());
-        entityStoreRegistry.registerSystem(new PlayerAddedSystem());
+        entityStoreRegistry.registerSystem(new PlayerAddedSystem(playerComponentType, playerRefComponentType, this.playerMemoriesComponentType));
         this.getCodecRegistry(Interaction.CODEC).register("SetMemoriesCapacity", SetMemoriesCapacityInteraction.class, SetMemoriesCapacityInteraction.CODEC);
         this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(MemoriesGameplayConfig.class, "Memories", MemoriesGameplayConfig.CODEC);
         this.getCodecRegistry(Interaction.CODEC).register("MemoriesCondition", MemoriesConditionInteraction.class, MemoriesConditionInteraction.CODEC);
-        entityStoreRegistry.registerSystem(new TempleRespawnPlayersSystem());
+        entityStoreRegistry.registerSystem(new TempleRespawnPlayersSystem(playerRefComponentType, transformComponentType));
         this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(ForgottenTempleConfig.class, "ForgottenTemple", ForgottenTempleConfig.CODEC);
     }
 
     @Override
     protected void start() {
         try {
-            Path path = Constants.UNIVERSE_PATH.resolve("memories.json");
+            Path path = Constants.UNIVERSE_PATH.resolve(MEMORIES_JSON_PATH);
             this.recordedMemories = Files.exists(path, new LinkOption[0]) ? RawJsonReader.readSync(path, RecordedMemories.CODEC, this.getLogger()) : new RecordedMemories();
         }
         catch (IOException e) {
@@ -137,7 +146,7 @@ extends JavaPlugin {
         }
         this.recordedMemories.lock.readLock().lock();
         try {
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve(MEMORIES_JSON_PATH), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -171,6 +180,7 @@ extends JavaPlugin {
         this.providers.add(memoryProvider);
     }
 
+    @Nonnull
     public Map<String, Set<Memory>> getAllMemories() {
         return this.allMemories;
     }
@@ -205,7 +215,7 @@ extends JavaPlugin {
         this.recordedMemories.lock.writeLock().lock();
         try {
             if (playerMemories.takeMemories(this.recordedMemories.memories)) {
-                BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+                BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve(MEMORIES_JSON_PATH), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
                 boolean bl = true;
                 return bl;
             }
@@ -235,7 +245,7 @@ extends JavaPlugin {
         this.recordedMemories.lock.writeLock().lock();
         try {
             this.recordedMemories.memories.clear();
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve(MEMORIES_JSON_PATH), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -251,7 +261,7 @@ extends JavaPlugin {
             for (Map.Entry<String, Set<Memory>> entry : this.allMemories.entrySet()) {
                 this.recordedMemories.memories.addAll((Collection<Memory>)entry.getValue());
             }
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve(MEMORIES_JSON_PATH), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -276,7 +286,7 @@ extends JavaPlugin {
             for (int i = 0; i < actualCount; ++i) {
                 this.recordedMemories.memories.add((Memory)allAvailableMemories.get(i));
             }
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve(MEMORIES_JSON_PATH), RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
             int n = actualCount;
             return n;
         }
@@ -289,6 +299,7 @@ extends JavaPlugin {
     }
 
     public static class MemoriesPluginConfig {
+        @Nonnull
         public static final BuilderCodec<MemoriesPluginConfig> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(MemoriesPluginConfig.class, MemoriesPluginConfig::new).append(new KeyedCodec<String>("CollectionRadius", new Object2DoubleMapCodec<String>(Codec.STRING, Object2DoubleOpenHashMap::new)), (config, map) -> {
             config.collectionRadius = map;
         }, config -> config.collectionRadius).add()).build();
@@ -305,7 +316,20 @@ extends JavaPlugin {
         @Nonnull
         private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency(Order.AFTER, PlayerSystems.PlayerSpawnedSystem.class));
         @Nonnull
-        private final Query<EntityStore> query = Query.and(Player.getComponentType(), PlayerRef.getComponentType());
+        private final ComponentType<EntityStore, Player> playerComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+        @Nonnull
+        private final ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
+        @Nonnull
+        private final Query<EntityStore> query;
+
+        public PlayerAddedSystem(@Nonnull ComponentType<EntityStore, Player> playerComponentType, @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType, @Nonnull ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType) {
+            this.playerComponentType = playerComponentType;
+            this.playerRefComponentType = playerRefComponentType;
+            this.playerMemoriesComponentType = playerMemoriesComponentType;
+            this.query = Query.and(playerComponentType, playerRefComponentType);
+        }
 
         @Override
         @Nonnull
@@ -321,11 +345,11 @@ extends JavaPlugin {
 
         @Override
         public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            Player playerComponent = store.getComponent(ref, this.playerComponentType);
             assert (playerComponent != null);
-            PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+            PlayerRef playerRefComponent = store.getComponent(ref, this.playerRefComponentType);
             assert (playerRefComponent != null);
-            PlayerMemories playerMemoriesComponent = store.getComponent(ref, PlayerMemories.getComponentType());
+            PlayerMemories playerMemoriesComponent = store.getComponent(ref, this.playerMemoriesComponentType);
             boolean isFeatureUnlockedByPlayer = playerMemoriesComponent != null;
             PacketHandler playerConnection = playerRefComponent.getPacketHandler();
             playerConnection.writeNoCache(new UpdateMemoriesFeatureStatus(isFeatureUnlockedByPlayer));
@@ -337,13 +361,16 @@ extends JavaPlugin {
     }
 
     private static class RecordedMemories {
+        @Nonnull
         public static final BuilderCodec<RecordedMemories> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(RecordedMemories.class, RecordedMemories::new).append(new KeyedCodec<T[]>("Memories", new ArrayCodec<Memory>(Memory.CODEC, Memory[]::new)), (recordedMemories, memories) -> {
             if (memories == null) {
                 return;
             }
             Collections.addAll(recordedMemories.memories, memories);
         }, recordedMemories -> (Memory[])recordedMemories.memories.toArray(Memory[]::new)).add()).build();
+        @Nonnull
         private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+        @Nonnull
         private final Set<Memory> memories = new HashSet<Memory>();
 
         private RecordedMemories() {

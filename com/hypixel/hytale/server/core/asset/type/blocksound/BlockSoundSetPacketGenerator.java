@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.blocksound;
 
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockSoundSets;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class BlockSoundSetPacketGenerator
 extends SimpleAssetPacketGenerator<String, BlockSoundSet, IndexedLookupTableAssetMap<String, BlockSoundSet>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSoundSet> assetMap, @Nonnull Map<String, BlockSoundSet> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSoundSet> assetMap, @Nonnull Map<String, BlockSoundSet> assets) {
         UpdateBlockSoundSets packet = new UpdateBlockSoundSets();
         packet.type = UpdateType.Init;
         packet.blockSoundSets = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.BlockSoundSet>();
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, BlockSoundSet, IndexedLookupTableAsse
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSoundSet> assetMap, @Nonnull Map<String, BlockSoundSet> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSoundSet> assetMap, @Nonnull Map<String, BlockSoundSet> loadedAssets) {
         UpdateBlockSoundSets packet = new UpdateBlockSoundSets();
         packet.type = UpdateType.AddOrUpdate;
         packet.blockSoundSets = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.BlockSoundSet>();
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, BlockSoundSet, IndexedLookupTableAsse
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSoundSet> assetMap, @Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, BlockSoundSet> assetMap, @Nonnull Set<String> removed) {
         UpdateBlockSoundSets packet = new UpdateBlockSoundSets();
         packet.type = UpdateType.Remove;
         packet.blockSoundSets = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.BlockSoundSet>();

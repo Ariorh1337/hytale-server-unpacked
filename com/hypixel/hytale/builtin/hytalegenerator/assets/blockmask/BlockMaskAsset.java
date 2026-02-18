@@ -24,7 +24,9 @@ import javax.annotation.Nonnull;
 public class BlockMaskAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, BlockMaskAsset>>,
 Cleanable {
+    @Nonnull
     private static final Map<String, Exported> exportedNodes = new HashMap<String, Exported>();
+    @Nonnull
     public static final AssetBuilderCodec<String, BlockMaskAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(BlockMaskAsset.class, BlockMaskAsset::new, Codec.STRING, (asset, id) -> {
         asset.id = id;
     }, config -> config.id, (config, data) -> {

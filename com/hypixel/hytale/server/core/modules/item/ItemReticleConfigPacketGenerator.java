@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.modules.item;
 
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateItemReticles;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class ItemReticleConfigPacketGenerator
 extends SimpleAssetPacketGenerator<String, ItemReticleConfig, IndexedLookupTableAssetMap<String, ItemReticleConfig>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, ItemReticleConfig> assetMap, @Nonnull Map<String, ItemReticleConfig> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, ItemReticleConfig> assetMap, @Nonnull Map<String, ItemReticleConfig> assets) {
         UpdateItemReticles packet = new UpdateItemReticles();
         packet.type = UpdateType.Init;
         packet.itemReticleConfigs = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.ItemReticleConfig>();
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, ItemReticleConfig, IndexedLookupTable
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemReticleConfig> assetMap, @Nonnull Map<String, ItemReticleConfig> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemReticleConfig> assetMap, @Nonnull Map<String, ItemReticleConfig> loadedAssets) {
         UpdateItemReticles packet = new UpdateItemReticles();
         packet.type = UpdateType.AddOrUpdate;
         packet.itemReticleConfigs = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.ItemReticleConfig>();
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, ItemReticleConfig, IndexedLookupTable
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemReticleConfig> assetMap, @Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemReticleConfig> assetMap, @Nonnull Set<String> removed) {
         UpdateItemReticles packet = new UpdateItemReticles();
         packet.type = UpdateType.Remove;
         packet.itemReticleConfigs = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.ItemReticleConfig>();

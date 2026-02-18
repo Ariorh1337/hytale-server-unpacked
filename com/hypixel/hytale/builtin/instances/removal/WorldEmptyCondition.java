@@ -17,8 +17,11 @@ import javax.annotation.Nonnull;
 
 public class WorldEmptyCondition
 implements RemovalCondition {
+    @Nonnull
     public static final WorldEmptyCondition INSTANCE = new WorldEmptyCondition();
+    @Nonnull
     public static final RemovalCondition[] REMOVE_WHEN_EMPTY = new RemovalCondition[]{INSTANCE};
+    @Nonnull
     public static final BuilderCodec<WorldEmptyCondition> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(WorldEmptyCondition.class, WorldEmptyCondition::new).documentation("A condition that triggers when the world is empty.\n\nIt will only trigger after at least one player has joined. As a safety measure it provides a timeout for waiting for a player to join in case the player disconnected before entering the world.")).append(new KeyedCodec<Double>("TimeoutSeconds", Codec.DOUBLE), (o, i) -> {
         o.timeoutSeconds = i;
     }, o -> o.timeoutSeconds).documentation("How long to wait (in seconds) for a player to join before closing the world.").add()).build();

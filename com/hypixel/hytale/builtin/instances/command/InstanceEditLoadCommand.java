@@ -36,10 +36,10 @@ extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
         }
         String name = (String)this.instanceNameArg.get(context);
-        context.sendMessage(Message.translation("server.commands.instance.beginLoading").param("name", name));
+        context.sendMessage(Message.translation("server.commands.instances.beginLoading").param("name", name));
         InstancesPlugin.get();
         return InstancesPlugin.loadInstanceAssetForEdit(name).thenAccept(world -> {
-            context.sendMessage(Message.translation("server.commands.instance.doneLoading").param("world", world.getName()));
+            context.sendMessage(Message.translation("server.commands.instances.doneLoading").param("world", world.getName()));
             if (context.isPlayer()) {
                 Ref<EntityStore> ref = context.senderAsPlayerRef();
                 if (ref == null || !ref.isValid()) {

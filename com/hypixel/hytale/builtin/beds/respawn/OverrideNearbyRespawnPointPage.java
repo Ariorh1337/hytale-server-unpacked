@@ -24,12 +24,17 @@ import javax.annotation.Nonnull;
 
 public class OverrideNearbyRespawnPointPage
 extends RespawnPointPage {
+    @Nonnull
+    private static final String PAGE_OVERRIDE_NEARBY_SPAWN_POINT_PAGE = "Pages/OverrideNearbyRespawnPointPage.ui";
+    @Nonnull
     private final Vector3i respawnPointPosition;
+    @Nonnull
     private final RespawnBlock respawnPointToAdd;
+    @Nonnull
     private final PlayerRespawnPointData[] nearbyRespawnPoints;
-    private int radiusLimitRespawnPoint;
+    private final int radiusLimitRespawnPoint;
 
-    public OverrideNearbyRespawnPointPage(@Nonnull PlayerRef playerRef, InteractionType interactionType, Vector3i respawnPointPosition, RespawnBlock respawnPointToAdd, PlayerRespawnPointData[] nearbyRespawnPoints, int radiusLimitRespawnPoint) {
+    public OverrideNearbyRespawnPointPage(@Nonnull PlayerRef playerRef, @Nonnull InteractionType interactionType, @Nonnull Vector3i respawnPointPosition, @Nonnull RespawnBlock respawnPointToAdd, @Nonnull PlayerRespawnPointData[] nearbyRespawnPoints, int radiusLimitRespawnPoint) {
         super(playerRef, interactionType);
         this.respawnPointPosition = respawnPointPosition;
         this.respawnPointToAdd = respawnPointToAdd;
@@ -39,11 +44,15 @@ extends RespawnPointPage {
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
-        commandBuilder.append("Pages/OverrideNearbyRespawnPointPage.ui");
+        commandBuilder.append(PAGE_OVERRIDE_NEARBY_SPAWN_POINT_PAGE);
         HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
-        assert (headRotationComponent != null);
+        if (headRotationComponent == null) {
+            return;
+        }
         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-        assert (playerRefComponent != null);
+        if (playerRefComponent == null) {
+            return;
+        }
         double direction = Math.toDegrees(headRotationComponent.getRotation().getYaw());
         commandBuilder.set("#DescriptionLabel.Text", Message.translation("server.customUI.overrideNearbyRespawnPoint.label").param("respawnPointCount", this.nearbyRespawnPoints.length).param("minDistance", this.radiusLimitRespawnPoint));
         for (int i = 0; i < this.nearbyRespawnPoints.length; ++i) {
@@ -65,11 +74,11 @@ extends RespawnPointPage {
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPointPage.RespawnPointEventData data) {
+        Player playerComponent;
         String respawnPointName = data.getRespawnPointName();
         if (respawnPointName != null) {
             this.setRespawnPointForPlayer(ref, store, this.respawnPointPosition, this.respawnPointToAdd, respawnPointName, this.nearbyRespawnPoints);
-        } else if ("Cancel".equals(data.getAction())) {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        } else if ("Cancel".equals(data.getAction()) && (playerComponent = store.getComponent(ref, Player.getComponentType())) != null) {
             playerComponent.getPageManager().setPage(ref, store, Page.None);
         }
     }

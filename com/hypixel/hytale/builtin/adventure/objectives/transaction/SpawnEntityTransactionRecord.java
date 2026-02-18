@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class SpawnEntityTransactionRecord
 extends TransactionRecord {
+    @Nonnull
     public static final BuilderCodec<SpawnEntityTransactionRecord> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpawnEntityTransactionRecord.class, SpawnEntityTransactionRecord::new, BASE_CODEC).append(new KeyedCodec<UUID>("WorldUUID", Codec.UUID_BINARY), (spawnEntityTransactionRecord, uuid) -> {
         spawnEntityTransactionRecord.worldUUID = uuid;
     }, spawnEntityTransactionRecord -> spawnEntityTransactionRecord.worldUUID).add()).append(new KeyedCodec<UUID>("EntityUUID", Codec.UUID_BINARY), (spawnEntityTransactionRecord, uuid) -> {

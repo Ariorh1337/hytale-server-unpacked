@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldCommand;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.message.MessageFormat;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -41,7 +40,7 @@ extends AbstractWorldCommand {
         Boolean enabled = this.enabledArg.provided(context) ? (Boolean)this.enabledArg.get(context) : null;
         Boolean newValue = Objects.requireNonNullElseGet(enabled, () -> !this.getter.getAsBoolean());
         this.setter.accept(newValue);
-        context.sendMessage(Message.translation(this.statusTranslationKey).param("status", MessageFormat.enabled(newValue)));
+        context.sendMessage(Message.translation(this.statusTranslationKey).param("enabled", newValue.toString()));
     }
 }
 

@@ -6,6 +6,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.props;
 import javax.annotation.Nonnull;
 
 public interface ScanResult {
+    @Nonnull
     public static final ScanResult NONE = new ScanResult(){
 
         @Override

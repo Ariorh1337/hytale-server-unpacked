@@ -142,26 +142,26 @@ public class WorldSpawnJobSystems {
                 spawnJobData.incrementSpansTried();
                 ++spansTested;
                 if (!spawnJobData.getSpawnConfig().withinLightRange(spawningContext)) {
-                    WorldSpawnJobSystems.rejectSpan(spawnJobData.getRejectionMap(), SpawnRejection.OUTSIDE_LIGHT_RANGE);
+                    WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.OUTSIDE_LIGHT_RANGE);
                 } else if (!WorldSpawnJobSystems.canSpawnOnBlock(spawnBlockSet, spawnFluidTag, spawningContext)) {
                     ++spansBlocked;
-                    WorldSpawnJobSystems.rejectSpan(spawnJobData.getRejectionMap(), SpawnRejection.INVALID_SPAWN_BLOCK);
+                    WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.INVALID_SPAWN_BLOCK);
                 } else {
                     SpawnTestResult spawnTestResult = spawningContext.canSpawn();
                     if (spawnTestResult == SpawnTestResult.TEST_OK) {
                         return WorldSpawnJobSystems.spawn(spawnJobData, worldChunk, worldSpawnData);
                     }
                     if (spawnTestResult == SpawnTestResult.FAIL_INVALID_POSITION) {
-                        WorldSpawnJobSystems.rejectSpan(spawnJobData.getRejectionMap(), SpawnRejection.INVALID_POSITION);
+                        WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.INVALID_POSITION);
                         ++spansBlocked;
                     } else if (spawnTestResult == SpawnTestResult.FAIL_NO_POSITION) {
-                        WorldSpawnJobSystems.rejectSpan(spawnJobData.getRejectionMap(), SpawnRejection.NO_POSITION);
+                        WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.NO_POSITION);
                         ++spansBlocked;
                     } else if (spawnTestResult == SpawnTestResult.FAIL_NOT_BREATHABLE) {
-                        WorldSpawnJobSystems.rejectSpan(spawnJobData.getRejectionMap(), SpawnRejection.NOT_BREATHABLE);
+                        WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.NOT_BREATHABLE);
                         ++spansBlocked;
                     } else {
-                        WorldSpawnJobSystems.rejectSpan(spawnJobData.getRejectionMap(), SpawnRejection.OTHER);
+                        WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.OTHER);
                     }
                 }
                 spawningContext.deleteCurrentSpawnSpan();
@@ -204,13 +204,18 @@ public class WorldSpawnJobSystems {
         try {
             Store<EntityStore> store = spawningContext.world.getEntityStore().getStore();
             Pair<Ref<EntityStore>, NPCEntity> npcPair = npcModule.spawnEntity(store, roleIndex, position, rotation, spawningContext.getModel(), (_npc, _holder, _store) -> WorldSpawnJobSystems.preAddToWorld(_npc, _holder, roleIndex, spawnJobData), null);
+            if (npcPair == null) {
+                LOGGER.at(Level.SEVERE).log("Spawn job %s: Failed to create %s: The spawned entity returned null", (Object)spawnJobData.getJobId(), (Object)npcModule.getName(roleIndex));
+                WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.OTHER);
+                return WorldSpawnJobSystems.endProbing(Result.FAILED, spawnJobData, worldChunk, worldSpawnData);
+            }
             NPCEntity npcComponent = npcPair.right();
             Ref<EntityStore> npcRef = npcPair.left();
             FlockPlugin.trySpawnFlock(npcRef, npcComponent, roleIndex, position, rotation, spawnJobData.getFlockSize(), spawnJobData.getFlockAsset(), (_npc, _holder, _store) -> WorldSpawnJobSystems.preAddToWorld(_npc, _holder, roleIndex, spawnJobData), null, store);
         }
         catch (RuntimeException e) {
             ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Spawn job %s: Failed to create %s: %s", spawnJobData.getJobId(), npcModule.getName(roleIndex), e.getMessage());
-            WorldSpawnJobSystems.rejectSpan(spawnJobData.getRejectionMap(), SpawnRejection.OTHER);
+            WorldSpawnJobSystems.rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.OTHER);
             return WorldSpawnJobSystems.endProbing(Result.FAILED, spawnJobData, worldChunk, worldSpawnData);
         }
         HytaleLogger.Api context = LOGGER.at(Level.FINEST);
@@ -240,7 +245,7 @@ public class WorldSpawnJobSystems {
         return spawnFluidTag != Integer.MIN_VALUE && Fluid.getAssetMap().getIndexesForTag(spawnFluidTag).contains(spawningContext.groundFluidId);
     }
 
-    private static void rejectSpan(@Nonnull Object2IntMap<SpawnRejection> rejectionMap, SpawnRejection rejection) {
+    private static void rejectSpawn(@Nonnull Object2IntMap<SpawnRejection> rejectionMap, @Nonnull SpawnRejection rejection) {
         rejectionMap.mergeInt(rejection, 1, Integer::sum);
     }
 

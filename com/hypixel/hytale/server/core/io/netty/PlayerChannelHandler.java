@@ -3,7 +3,7 @@
  */
 package com.hypixel.hytale.server.core.io.netty;
 
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
 import io.netty.channel.ChannelHandlerContext;
@@ -32,7 +32,7 @@ extends ChannelInboundHandlerAdapter {
         if (!ctx.channel().isActive()) {
             return;
         }
-        Packet packet = (Packet)msg;
+        ToServerPacket packet = (ToServerPacket)msg;
         if (!PacketAdapters.__handleInbound(this.handler, packet)) {
             this.handler.handle(packet);
         }

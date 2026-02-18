@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class GiveItemInteraction
 extends ChoiceInteraction {
+    @Nonnull
     public static final BuilderCodec<GiveItemInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(GiveItemInteraction.class, GiveItemInteraction::new, ChoiceInteraction.BASE_CODEC).append(new KeyedCodec<String>("ItemId", Codec.STRING), (giveItemInteraction, blockTypeKey) -> {
         giveItemInteraction.itemId = blockTypeKey;
     }, giveItemInteraction -> giveItemInteraction.itemId).addValidator(Validators.nonNull()).addValidator(Item.VALIDATOR_CACHE.getValidator()).add()).append(new KeyedCodec<Integer>("Quantity", Codec.INTEGER), (giveItemInteraction, integer) -> {
@@ -46,6 +47,9 @@ extends ChoiceInteraction {
     @Override
     public void run(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef) {
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+        if (playerComponent == null) {
+            return;
+        }
         playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(new ItemStack(this.itemId, this.quantity));
     }
 

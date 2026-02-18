@@ -3,7 +3,9 @@
  */
 package com.hypixel.hytale.protocol.packets.assets;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
@@ -17,7 +19,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class UpdateTranslations
-implements Packet {
+implements Packet,
+ToClientPacket {
     public static final int PACKET_ID = 64;
     public static final boolean IS_COMPRESSED = true;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -33,6 +36,11 @@ implements Packet {
     @Override
     public int getId() {
         return 64;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public UpdateTranslations() {

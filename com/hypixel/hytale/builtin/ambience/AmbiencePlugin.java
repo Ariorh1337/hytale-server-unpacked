@@ -13,12 +13,20 @@ import com.hypixel.hytale.builtin.ambience.systems.ForcedMusicSystems;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
 import java.util.logging.Level;
@@ -26,11 +34,13 @@ import javax.annotation.Nonnull;
 
 public class AmbiencePlugin
 extends JavaPlugin {
+    @Nonnull
     private static final String DEFAULT_AMBIENT_EMITTER_MODEL = "NPC_Spawn_Marker";
     private static AmbiencePlugin instance;
     private ComponentType<EntityStore, AmbienceTracker> ambienceTrackerComponentType;
     private ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType;
     private ResourceType<EntityStore, AmbienceResource> ambienceResourceType;
+    @Nonnull
     private final Config<AmbiencePluginConfig> config = this.withConfig("AmbiencePlugin", AmbiencePluginConfig.CODEC);
     private Model ambientEmitterModel;
 
@@ -45,14 +55,22 @@ extends JavaPlugin {
 
     @Override
     protected void setup() {
-        this.ambienceTrackerComponentType = this.getEntityStoreRegistry().registerComponent(AmbienceTracker.class, AmbienceTracker::new);
-        this.ambientEmitterComponentType = this.getEntityStoreRegistry().registerComponent(AmbientEmitterComponent.class, "AmbientEmitter", AmbientEmitterComponent.CODEC);
-        this.ambienceResourceType = this.getEntityStoreRegistry().registerResource(AmbienceResource.class, AmbienceResource::new);
-        this.getEntityStoreRegistry().registerSystem(new AmbientEmitterSystems.EntityAdded());
-        this.getEntityStoreRegistry().registerSystem(new AmbientEmitterSystems.EntityRefAdded());
-        this.getEntityStoreRegistry().registerSystem(new AmbientEmitterSystems.Ticking());
-        this.getEntityStoreRegistry().registerSystem(new ForcedMusicSystems.Tick());
-        this.getEntityStoreRegistry().registerSystem(new ForcedMusicSystems.PlayerAdded());
+        ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
+        this.ambienceTrackerComponentType = entityStoreRegistry.registerComponent(AmbienceTracker.class, AmbienceTracker::new);
+        this.ambientEmitterComponentType = entityStoreRegistry.registerComponent(AmbientEmitterComponent.class, "AmbientEmitter", AmbientEmitterComponent.CODEC);
+        this.ambienceResourceType = entityStoreRegistry.registerResource(AmbienceResource.class, AmbienceResource::new);
+        ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
+        ComponentType<EntityStore, NetworkId> networkIdComponentType = NetworkId.getComponentType();
+        ComponentType<EntityStore, Intangible> intangibleComponentType = Intangible.getComponentType();
+        ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType = PrefabCopyableComponent.getComponentType();
+        ComponentType<EntityStore, AudioComponent> audioComponentType = AudioComponent.getComponentType();
+        ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+        ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
+        entityStoreRegistry.registerSystem(new AmbientEmitterSystems.EntityAdded(this.ambientEmitterComponentType, transformComponentType, networkIdComponentType, intangibleComponentType, prefabCopyableComponentType));
+        entityStoreRegistry.registerSystem(new AmbientEmitterSystems.EntityRefAdded(this.ambientEmitterComponentType, transformComponentType, audioComponentType, networkIdComponentType, intangibleComponentType));
+        entityStoreRegistry.registerSystem(new AmbientEmitterSystems.Ticking(this.ambientEmitterComponentType, transformComponentType));
+        entityStoreRegistry.registerSystem(new ForcedMusicSystems.Tick(playerComponentType, playerRefComponentType, this.ambienceTrackerComponentType, this.ambienceResourceType));
+        entityStoreRegistry.registerSystem(new ForcedMusicSystems.PlayerAdded(playerRefComponentType, this.ambienceTrackerComponentType));
         this.getCommandRegistry().registerCommand(new AmbienceCommands());
     }
 
@@ -89,6 +107,7 @@ extends JavaPlugin {
     }
 
     public static class AmbiencePluginConfig {
+        @Nonnull
         public static final BuilderCodec<AmbiencePluginConfig> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(AmbiencePluginConfig.class, AmbiencePluginConfig::new).append(new KeyedCodec<String>("AmbientEmitterModel", Codec.STRING), (o, i) -> {
             o.ambientEmitterModel = i;
         }, o -> o.ambientEmitterModel).add()).build();

@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class AmplitudeDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<AmplitudeDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(AmplitudeDensityAsset.class, AmplitudeDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("FunctionForY", NodeFunctionYOutAsset.CODEC, true), (t, k) -> {
         t.nodeFunctionYOutAsset = k;
     }, k -> k.nodeFunctionYOutAsset).add()).build();

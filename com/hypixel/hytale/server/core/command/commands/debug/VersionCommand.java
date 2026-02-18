@@ -12,7 +12,7 @@ import javax.annotation.Nonnull;
 public class VersionCommand
 extends CommandBase {
     public VersionCommand() {
-        super("version", "Displays version information about the currently running server");
+        super("version", "server.commands.version.desc");
     }
 
     @Override

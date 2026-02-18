@@ -12,9 +12,11 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.protocol.BlockMountType;
+import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.gameplay.SleepConfig;
+import com.hypixel.hytale.server.core.asset.type.gameplay.sleep.SleepConfig;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
@@ -28,35 +30,54 @@ import javax.annotation.Nullable;
  */
 public class EnterBedSystem
 extends RefChangeSystem<EntityStore, MountedComponent> {
-    public static final Query<EntityStore> QUERY = Query.and(MountedComponent.getComponentType(), PlayerRef.getComponentType());
+    @Nonnull
+    private static final Message MESSAGE_SERVER_INTERACTIONS_SLEEP_GAME_TIME_PAUSED = Message.translation("server.interactions.sleep.gameTimePaused");
+    @Nonnull
+    private static final Message MESSAGE_SERVER_INTERACTIONS_SLEEP_NOT_WITHIN_HOURS = Message.translation("server.interactions.sleep.notWithinHours");
+    @Nonnull
+    private static final Message MESSAGE_SERVER_INTERACTIONS_SLEEP_DISABLED = Message.translation("server.interactions.sleep.disabled");
+    @Nonnull
+    private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
+    @Nonnull
+    private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+    @Nonnull
+    private final Query<EntityStore> query;
 
-    @Override
-    public ComponentType<EntityStore, MountedComponent> componentType() {
-        return MountedComponent.getComponentType();
+    public EnterBedSystem(@Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType, @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType) {
+        this.mountedComponentType = mountedComponentType;
+        this.playerRefComponentType = playerRefComponentType;
+        this.query = Query.and(mountedComponentType, playerRefComponentType);
     }
 
     @Override
+    @Nonnull
+    public ComponentType<EntityStore, MountedComponent> componentType() {
+        return this.mountedComponentType;
+    }
+
+    @Override
+    @Nonnull
     public Query<EntityStore> getQuery() {
-        return QUERY;
+        return this.query;
     }
 
     @Override
     public void onComponentAdded(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        this.check(ref, component, store);
+        EnterBedSystem.check(ref, component, store, this.playerRefComponentType);
     }
 
     @Override
     public void onComponentSet(@Nonnull Ref<EntityStore> ref, @Nullable MountedComponent oldComponent, @Nonnull MountedComponent newComponent, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-        this.check(ref, newComponent, store);
+        EnterBedSystem.check(ref, newComponent, store, this.playerRefComponentType);
     }
 
     @Override
     public void onComponentRemoved(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
     }
 
-    public void check(Ref<EntityStore> ref, MountedComponent component, Store<EntityStore> store) {
+    private static void check(@Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType) {
         if (component.getBlockMountType() == BlockMountType.Bed) {
-            this.onEnterBed(ref, store);
+            EnterBedSystem.onEnterBed(ref, store, playerRefComponentType);
         }
     }
 
@@ -65,41 +86,43 @@ extends RefChangeSystem<EntityStore, MountedComponent> {
      * Enabled unnecessary exception pruning
      * Enabled aggressive exception aggregation
      */
-    public void onEnterBed(Ref<EntityStore> ref, Store<EntityStore> store) {
+    private static void onEnterBed(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType) {
+        Object sleepConfig;
         World world = store.getExternalData().getWorld();
         CanSleepInWorld.Result canSleepResult = CanSleepInWorld.check(world);
         if (!canSleepResult.isNegative()) return;
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        assert (playerRef != null);
+        PlayerRef playerRefComponent = store.getComponent(ref, playerRefComponentType);
+        assert (playerRefComponent != null);
         if (!(canSleepResult instanceof CanSleepInWorld.NotDuringSleepHoursRange)) {
-            Message msg = this.getMessage(canSleepResult);
-            playerRef.sendMessage(msg);
+            Message msg = EnterBedSystem.getMessage(canSleepResult);
+            playerRefComponent.sendMessage(msg);
             return;
         }
         CanSleepInWorld.NotDuringSleepHoursRange notDuringSleepHoursRange = (CanSleepInWorld.NotDuringSleepHoursRange)canSleepResult;
         try {
             Object object = notDuringSleepHoursRange.worldTime();
             LocalDateTime worldTime = object;
-            Object sleepConfig = object = notDuringSleepHoursRange.sleepConfig();
+            sleepConfig = object = notDuringSleepHoursRange.sleepConfig();
             LocalTime startTime = ((SleepConfig)sleepConfig).getSleepStartTime();
             Duration untilSleep = ((SleepConfig)sleepConfig).computeDurationUntilSleep(worldTime);
-            Message msg = Message.translation("server.interactions.sleep.sleepAtTheseHours").param("time", EnterBedSystem.formatTime(startTime)).param("until", EnterBedSystem.formatDuration(untilSleep));
-            playerRef.sendMessage(msg.color("#F2D729"));
-            return;
+            Message msg = Message.translation("server.interactions.sleep.sleepAtTheseHours").param("timeValue", startTime.toString()).param("until", EnterBedSystem.formatDuration(untilSleep));
+            playerRefComponent.sendMessage(msg.color("#F2D729"));
         }
         catch (Throwable throwable) {
             throw new MatchException(throwable.toString(), throwable);
         }
+        SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, ((SleepConfig)sleepConfig).getSounds().getFailIndex(), SoundCategory.UI);
     }
 
     /*
      * Exception decompiling
      */
-    private Message getMessage(CanSleepInWorld.Result result) {
+    @Nonnull
+    private static Message getMessage(@Nonnull CanSleepInWorld.Result result) {
         /*
          * This method has failed to decompile.  When submitting a bug report, please provide this stack trace, and (if you hold appropriate legal rights) the relevant class file.
          * 
-         * org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,321
+         * org.benf.cfr.reader.util.ConfusedCFRException: Can't turn ConstantPoolEntry into Literal - got DynamicInfo value=1,331
          *     at org.benf.cfr.reader.bytecode.analysis.parse.literal.TypedLiteral.getConstantPoolEntry(TypedLiteral.java:340)
          *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op02WithProcessedDataAndRefs.getBootstrapArg(Op02WithProcessedDataAndRefs.java:538)
          *     at org.benf.cfr.reader.bytecode.analysis.opgraph.Op02WithProcessedDataAndRefs.getVarArgs(Op02WithProcessedDataAndRefs.java:671)
@@ -127,18 +150,7 @@ extends RefChangeSystem<EntityStore, MountedComponent> {
         throw new IllegalStateException("Decompilation failed");
     }
 
-    private static Message formatTime(LocalTime time) {
-        int hour = time.getHour();
-        int minute = time.getMinute();
-        boolean isPM = hour >= 12;
-        int displayHour = hour % 12;
-        if (displayHour == 0) {
-            displayHour = 12;
-        }
-        String msgKey = isPM ? "server.interactions.sleep.timePM" : "server.interactions.sleep.timeAM";
-        return Message.translation(msgKey).param("h", displayHour).param("m", String.format("%02d", minute));
-    }
-
+    @Nonnull
     private static Message formatDuration(@Nonnull Duration duration) {
         long totalMinutes = duration.toMinutes();
         long hours = totalMinutes / 60L;

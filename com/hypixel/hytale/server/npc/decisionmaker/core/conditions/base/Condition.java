@@ -46,22 +46,28 @@ implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, Condition
     public static final int NORMALISED_CURVE_SIMPLICITY = 20;
     public static final int SCALED_CURVE_SIMPLICITY = 30;
     public static final int HIGH_COST_SIMPLICITY = 40;
+    @Nonnull
     public static final AssetCodecMapCodec<String, Condition> CODEC = new AssetCodecMapCodec<String, Condition>(Codec.STRING, (t, k) -> {
         t.id = k;
     }, t -> t.id, (t, data) -> {
         t.data = data;
     }, t -> t.data);
+    @Nonnull
     public static final BuilderCodec<Condition> BASE_CODEC = ((BuilderCodec.Builder)BuilderCodec.abstractBuilder(Condition.class).afterDecode(condition -> {
         condition.reference = new WeakReference<Condition>((Condition)condition);
     })).build();
+    @Nonnull
     public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec(Condition.class, CODEC);
+    @Nonnull
     public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<String>(CHILD_ASSET_CODEC, String[]::new);
+    @Nonnull
     public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache(new AssetKeyValidator(Condition::getAssetStore));
     private static AssetStore<String, Condition, IndexedLookupTableAssetMap<String, Condition>> ASSET_STORE;
     protected AssetExtraInfo.Data data;
     protected String id;
     protected WeakReference<Condition> reference;
 
+    @Nonnull
     public static AssetStore<String, Condition, IndexedLookupTableAssetMap<String, Condition>> getAssetStore() {
         if (ASSET_STORE == null) {
             ASSET_STORE = AssetRegistry.getAssetStore(Condition.class);

@@ -15,7 +15,6 @@ import com.hypixel.hytale.event.EventRegistration;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.ItemSoundEvent;
-import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.window.ChangeBlockAction;
 import com.hypixel.hytale.protocol.packets.window.CraftRecipeAction;
 import com.hypixel.hytale.protocol.packets.window.SelectSlotAction;
@@ -25,8 +24,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Structur
 import com.hypixel.hytale.server.core.asset.type.item.config.BlockGroup;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
-import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemContainerWindow;
 import com.hypixel.hytale.server.core.inventory.Inventory;
@@ -53,15 +50,19 @@ public class StructuralCraftingWindow
 extends CraftingWindow
 implements ItemContainerWindow {
     private static final int MAX_OPTIONS = 64;
+    @Nonnull
     private final SimpleItemContainer inputContainer;
+    @Nonnull
     private final SimpleItemContainer optionsContainer;
+    @Nonnull
     private final CombinedItemContainer combinedItemContainer;
+    @Nonnull
     private final Int2ObjectMap<String> optionSlotToRecipeMap = new Int2ObjectOpenHashMap<String>();
     private int selectedSlot;
     @Nullable
     private EventRegistration inventoryRegistration;
 
-    public StructuralCraftingWindow(BenchState benchState) {
+    public StructuralCraftingWindow(@Nonnull BenchState benchState) {
         super(WindowType.StructuralCrafting, benchState);
         this.inputContainer = new SimpleItemContainer(1);
         this.inputContainer.registerChangeEvent(e -> this.updateRecipes());
@@ -83,7 +84,7 @@ implements ItemContainerWindow {
         return matchingRecipes != null && !matchingRecipes.isEmpty();
     }
 
-    private static void sortRecipes(ObjectList<CraftingRecipe> matching, StructuralCraftingBench structuralBench) {
+    private static void sortRecipes(@Nonnull ObjectList<CraftingRecipe> matching, @Nonnull StructuralCraftingBench structuralBench) {
         matching.sort((a, b) -> {
             int categoryB;
             boolean bHasHeaderCategory;
@@ -97,7 +98,7 @@ implements ItemContainerWindow {
         });
     }
 
-    private static boolean hasHeaderCategory(StructuralCraftingBench bench, CraftingRecipe recipe) {
+    private static boolean hasHeaderCategory(@Nonnull StructuralCraftingBench bench, @Nonnull CraftingRecipe recipe) {
         for (BenchRequirement requirement : recipe.getBenchRequirement()) {
             if (requirement.type != bench.getType() || !requirement.id.equals(bench.getId()) || requirement.categories == null) continue;
             for (String category : requirement.categories) {
@@ -108,7 +109,7 @@ implements ItemContainerWindow {
         return false;
     }
 
-    private static int getSortingPriority(StructuralCraftingBench bench, CraftingRecipe recipe) {
+    private static int getSortingPriority(@Nonnull StructuralCraftingBench bench, @Nonnull CraftingRecipe recipe) {
         int priority = Integer.MAX_VALUE;
         for (BenchRequirement requirement : recipe.getBenchRequirement()) {
             if (requirement.type != bench.getType() || !requirement.id.equals(bench.getId()) || requirement.categories == null) continue;
@@ -122,7 +123,10 @@ implements ItemContainerWindow {
 
     @Override
     public void handleAction(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull WindowAction action) {
-        CraftingManager craftingManager = store.getComponent(ref, CraftingManager.getComponentType());
+        CraftingManager craftingManagerComponent = store.getComponent(ref, CraftingManager.getComponentType());
+        if (craftingManagerComponent == null) {
+            return;
+        }
         WindowAction windowAction = action;
         Objects.requireNonNull(windowAction);
         WindowAction windowAction2 = windowAction;
@@ -154,9 +158,9 @@ implements ItemContainerWindow {
                 MaterialQuantity primaryOutput = recipe.getPrimaryOutput();
                 String primaryOutputItemId = primaryOutput.getItemId();
                 if (primaryOutputItemId != null && (primaryOutputItem = Item.getAssetMap().getAsset(primaryOutputItemId)) != null) {
-                    this.playCraftSound(ref, store, primaryOutputItem);
+                    SoundUtil.playItemSoundEvent(ref, store, primaryOutputItem, ItemSoundEvent.Drop);
                 }
-                craftingManager.queueCraft(ref, store, this, 0, recipe, quantity, this.inputContainer, CraftingManager.InputRemovalType.ORDERED);
+                craftingManagerComponent.queueCraft(ref, store, this, 0, recipe, quantity, this.inputContainer, CraftingManager.InputRemovalType.ORDERED);
                 this.invalidate();
                 break;
             }
@@ -167,22 +171,6 @@ implements ItemContainerWindow {
                 break;
             }
         }
-    }
-
-    private void playCraftSound(Ref<EntityStore> ref, Store<EntityStore> store, Item item) {
-        ItemSoundSet soundSet = ItemSoundSet.getAssetMap().getAsset(item.getItemSoundSetIndex());
-        if (soundSet == null) {
-            return;
-        }
-        String dragSound = soundSet.getSoundEventIds().get((Object)ItemSoundEvent.Drop);
-        if (dragSound == null) {
-            return;
-        }
-        int dragSoundIndex = SoundEvent.getAssetMap().getIndex(dragSound);
-        if (dragSoundIndex == 0) {
-            return;
-        }
-        SoundUtil.playSoundEvent2d(ref, dragSoundIndex, SoundCategory.UI, store);
     }
 
     private void changeBlockType(@Nonnull Ref<EntityStore> ref, boolean down, @Nonnull Store<EntityStore> store) {
@@ -210,7 +198,7 @@ implements ItemContainerWindow {
             return;
         }
         this.inputContainer.replaceItemStackInSlot((short)0, item, new ItemStack(next, item.getQuantity()));
-        this.playCraftSound(ref, store, desiredItem);
+        SoundUtil.playItemSoundEvent(ref, store, desiredItem, ItemSoundEvent.Drop);
     }
 
     @Override

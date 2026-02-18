@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class PowDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<PowDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(PowDensityAsset.class, PowDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Exponent", Codec.DOUBLE, true), (t, k) -> {
         t.exponent = k;
     }, t -> t.exponent).add()).build();

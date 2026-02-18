@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 
 public class MultiMixDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<MultiMixDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(MultiMixDensityAsset.class, MultiMixDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Keys", new ArrayCodec(KeyAsset.CODEC, KeyAsset[]::new), true), (asset, v) -> {
         asset.keyAssets = v;
     }, asset -> asset.keyAssets).add()).build();
@@ -39,7 +40,7 @@ extends DensityAsset {
         }
         ArrayList<MultiMixDensity.Key> keys = new ArrayList<MultiMixDensity.Key>(this.keyAssets.length);
         for (KeyAsset keyAsset : this.keyAssets) {
-            if (keyAsset.densityIndex <= 0) {
+            if (keyAsset.densityIndex < 0) {
                 keys.add(new MultiMixDensity.Key(keyAsset.value, null));
                 continue;
             }
@@ -95,6 +96,7 @@ extends DensityAsset {
     public static class KeyAsset
     implements JsonAssetWithMap<String, DefaultAssetMap<String, KeyAsset>> {
         public static final int NO_DENSITY_INDEX = 0;
+        @Nonnull
         public static final AssetBuilderCodec<String, KeyAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(KeyAsset.class, KeyAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

@@ -7,6 +7,8 @@ import com.hypixel.hytale.builtin.creativehub.command.HubCommand;
 import com.hypixel.hytale.builtin.creativehub.config.CreativeHubEntityConfig;
 import com.hypixel.hytale.builtin.creativehub.config.CreativeHubWorldConfig;
 import com.hypixel.hytale.builtin.creativehub.interactions.HubPortalInteraction;
+import com.hypixel.hytale.builtin.creativehub.systems.ReturnToHubButtonSystem;
+import com.hypixel.hytale.builtin.creativehub.ui.ReturnToHubButtonUI;
 import com.hypixel.hytale.builtin.instances.InstancesPlugin;
 import com.hypixel.hytale.builtin.instances.config.InstanceEntityConfig;
 import com.hypixel.hytale.builtin.instances.config.InstanceWorldConfig;
@@ -51,6 +53,7 @@ extends JavaPlugin {
     @Nonnull
     private static final Message MESSAGE_HUB_RETURN_HINT = Message.translation("server.creativehub.portal.returnHint");
     private static CreativeHubPlugin instance;
+    @Nonnull
     private final Map<UUID, World> activeHubInstances = new ConcurrentHashMap<UUID, World>();
     private ComponentType<EntityStore, CreativeHubEntityConfig> creativeHubEntityConfigComponentType;
 
@@ -104,11 +107,13 @@ extends JavaPlugin {
             return universe.loadWorld(permanentWorldName);
         }
         Path assetPath = InstancesPlugin.getInstanceAssetPath(instanceAssetName);
-        Path worldPath = universe.getPath().resolve("worlds").resolve(permanentWorldName);
+        Path worldPath = universe.validateWorldPath(permanentWorldName);
         return ((CompletableFuture)WorldConfig.load(assetPath.resolve("instance.bson")).thenApplyAsync(SneakyThrow.sneakyFunction(config -> {
             config.setUuid(UUID.randomUUID());
             config.setDeleteOnRemove(false);
-            config.setDisplayName(WorldConfig.formatDisplayName(instanceAssetName));
+            if (config.getDisplayName() == null) {
+                config.setDisplayName(WorldConfig.formatDisplayName(instanceAssetName));
+            }
             config.getPluginConfig().remove(InstanceWorldConfig.class);
             config.markChanged();
             long start = System.nanoTime();
@@ -142,9 +147,11 @@ extends JavaPlugin {
         this.getCodecRegistry(Interaction.CODEC).register("HubPortal", HubPortalInteraction.class, HubPortalInteraction.CODEC);
         this.getCodecRegistry(WorldConfig.PLUGIN_CODEC).register(CreativeHubWorldConfig.class, "CreativeHub", CreativeHubWorldConfig.CODEC);
         this.creativeHubEntityConfigComponentType = this.getEntityStoreRegistry().registerComponent(CreativeHubEntityConfig.class, "CreativeHub", CreativeHubEntityConfig.CODEC);
+        this.getEntityStoreRegistry().registerSystem(new ReturnToHubButtonSystem());
         this.getEventRegistry().registerGlobal(PlayerConnectEvent.class, CreativeHubPlugin::onPlayerConnect);
         this.getEventRegistry().registerGlobal(RemoveWorldEvent.class, CreativeHubPlugin::onWorldRemove);
         this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, CreativeHubPlugin::onPlayerAddToWorld);
+        ReturnToHubButtonUI.register();
     }
 
     private static void onWorldRemove(@Nonnull RemoveWorldEvent event) {
@@ -203,12 +210,13 @@ extends JavaPlugin {
             return;
         }
         World hubInstance = CreativeHubPlugin.get().getActiveHubInstance(parentWorld);
-        if (hubInstance != null && world.equals(hubInstance)) {
-            return;
-        }
+        boolean isInHubInstance = world.equals(hubInstance);
         PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
         if (playerRef != null) {
-            world.execute(() -> playerRef.sendMessage(MESSAGE_HUB_RETURN_HINT));
+            ReturnToHubButtonUI.send(playerRef, isInHubInstance);
+            if (!isInHubInstance) {
+                world.execute(() -> playerRef.sendMessage(MESSAGE_HUB_RETURN_HINT));
+            }
         }
     }
 }

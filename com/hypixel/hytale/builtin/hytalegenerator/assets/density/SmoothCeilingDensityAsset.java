@@ -15,13 +15,14 @@ import javax.annotation.Nonnull;
 
 public class SmoothCeilingDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<SmoothCeilingDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SmoothCeilingDensityAsset.class, SmoothCeilingDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("Limit", Codec.DOUBLE, true), (t, k) -> {
         t.limit = k;
     }, k -> k.limit).add()).append(new KeyedCodec<Double>("SmoothRange", Codec.DOUBLE, true), (t, k) -> {
         t.smoothRange = k;
     }, k -> k.smoothRange).addValidator(Validators.greaterThanOrEqual(0.0)).add()).build();
     private double smoothRange = 1.0;
-    private double limit = 0.0;
+    private double limit;
 
     @Override
     @Nonnull

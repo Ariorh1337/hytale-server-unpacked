@@ -614,6 +614,21 @@ MetricProvider {
         }
     }
 
+    public void clearAllSupportValues() {
+        this.blocksLock.writeLock().lock();
+        try {
+            this.blocks.replaceAll((k, b) -> {
+                if (b.supportValue() == 0) {
+                    return b;
+                }
+                return new BlockHolder(b.blockId(), b.rotation(), b.filler(), 0, b.holder());
+            });
+        }
+        finally {
+            this.blocksLock.writeLock().unlock();
+        }
+    }
+
     public void addEntityFromWorld(@Nonnull Holder<EntityStore> entityHolder) {
         TransformComponent transformComponent = entityHolder.getComponent(TransformComponent.getComponentType());
         assert (transformComponent != null);

@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 
 public class PondFillerPropAsset
 extends PropAsset {
+    @Nonnull
     public static final BuilderCodec<PondFillerPropAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PondFillerPropAsset.class, PondFillerPropAsset::new, PropAsset.ABSTRACT_CODEC).append(new KeyedCodec<Vector3i>("BoundingMin", Vector3i.CODEC, true), (asset, v) -> {
         asset.boundingMin = v;
     }, asset -> asset.boundingMin).add()).append(new KeyedCodec<Vector3i>("BoundingMax", Vector3i.CODEC, true), (asset, v) -> {
@@ -58,8 +59,7 @@ extends PropAsset {
         MaterialSet solidSet = this.solidSetAsset.build(argument.materialCache);
         Pattern pattern = this.patternAsset.build(PatternAsset.argumentFrom(argument));
         Scanner scanner = this.scannerAsset.build(ScannerAsset.argumentFrom(argument));
-        PondFillerProp prop = new PondFillerProp(this.boundingMin, this.boundingMax, solidSet, materialProvider, scanner, pattern);
-        return prop;
+        return new PondFillerProp(this.boundingMin, this.boundingMax, solidSet, materialProvider, scanner, pattern);
     }
 
     @Override

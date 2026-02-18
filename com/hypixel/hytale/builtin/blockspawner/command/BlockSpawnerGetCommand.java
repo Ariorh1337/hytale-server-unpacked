@@ -29,6 +29,8 @@ extends AbstractWorldCommand {
     @Nonnull
     private static final Message MESSAGE_COMMANDS_ERRORS_PROVIDE_POSITION = Message.translation("server.commands.errors.providePosition");
     @Nonnull
+    private static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD = Message.translation("server.commands.errors.playerNotInWorld");
+    @Nonnull
     private static final Message MESSAGE_COMMANDS_BLOCK_SPAWNER_NO_BLOCK_SPAWNER_SET = Message.translation("server.commands.blockspawner.noBlockSpawnerSet");
     @Nonnull
     private final OptionalArg<RelativeIntPosition> positionArg = this.withOptionalArg("position", "server.commands.blockspawner.position.desc", ArgTypes.RELATIVE_BLOCK_POSITION);
@@ -45,6 +47,9 @@ extends AbstractWorldCommand {
             position = relativePosition.getBlockPosition(context, store);
         } else if (context.isPlayer()) {
             Ref<EntityStore> ref = context.senderAsPlayerRef();
+            if (ref == null || !ref.isValid()) {
+                throw new GeneralCommandException(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);
+            }
             Vector3i targetBlock = TargetUtil.getTargetBlock(ref, 10.0, store);
             if (targetBlock == null) {
                 throw new GeneralCommandException(MESSAGE_GENERAL_BLOCK_TARGET_NOT_IN_RANGE);
@@ -63,7 +68,7 @@ extends AbstractWorldCommand {
         WorldChunk worldChunkComponent = chunkStore.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
         assert (worldChunkComponent != null);
         Ref<ChunkStore> blockRef = worldChunkComponent.getBlockComponentEntity(position.x, position.y, position.z);
-        if (blockRef == null) {
+        if (blockRef == null || !blockRef.isValid()) {
             context.sendMessage(Message.translation("server.general.containerNotFound").param("block", position.toString()));
             return;
         }

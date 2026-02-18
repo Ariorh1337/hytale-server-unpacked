@@ -17,8 +17,11 @@ import javax.annotation.Nonnull;
 
 public class NEntityBufferView
 implements EntityContainer {
+    @Nonnull
     private final NBufferBundle.Access.View access;
+    @Nonnull
     private final Bounds3i bounds_voxelGrid;
+    @Nonnull
     private final Bounds3i bounds_bufferGrid;
 
     public NEntityBufferView(@Nonnull NBufferBundle.Access.View bufferAccess) {
@@ -46,6 +49,7 @@ implements EntityContainer {
         }
     }
 
+    @Nonnull
     private NEntityBuffer getBuffer_fromBufferGrid(@Nonnull Vector3i position_bufferGrid) {
         return (NEntityBuffer)this.access.getBuffer(position_bufferGrid).buffer();
     }

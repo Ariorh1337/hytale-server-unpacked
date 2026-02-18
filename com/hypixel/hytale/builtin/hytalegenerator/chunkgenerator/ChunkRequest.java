@@ -14,10 +14,12 @@ public record ChunkRequest(@Nonnull GeneratorProfile generatorProfile, @Nonnull 
         @Nonnull
         private final String worldStructureName;
         private int seed;
+        private int worldCounter;
 
-        public GeneratorProfile(@Nonnull String worldStructureName, int seed) {
+        public GeneratorProfile(@Nonnull String worldStructureName, int seed, int worldCounter) {
             this.worldStructureName = worldStructureName;
             this.seed = seed;
+            this.worldCounter = worldCounter;
         }
 
         @Nonnull
@@ -33,23 +35,25 @@ public record ChunkRequest(@Nonnull GeneratorProfile generatorProfile, @Nonnull 
             this.seed = seed;
         }
 
-        public boolean equals(Object obj) {
-            if (obj == this) {
-                return true;
-            }
-            if (obj == null || obj.getClass() != this.getClass()) {
+        public boolean equals(Object o) {
+            if (!(o instanceof GeneratorProfile)) {
                 return false;
             }
-            GeneratorProfile that = (GeneratorProfile)obj;
-            return Objects.equals(this.worldStructureName, that.worldStructureName) && this.seed == that.seed;
+            GeneratorProfile that = (GeneratorProfile)o;
+            return this.seed == that.seed && this.worldCounter == that.worldCounter && Objects.equals(this.worldStructureName, that.worldStructureName);
         }
 
         public int hashCode() {
-            return Objects.hash(this.worldStructureName, this.seed);
+            return Objects.hash(this.worldStructureName, this.seed, this.worldCounter);
         }
 
+        public GeneratorProfile clone() {
+            return new GeneratorProfile(this.worldStructureName, this.seed, this.worldCounter);
+        }
+
+        @Nonnull
         public String toString() {
-            return "GeneratorProfile[worldStructureName=" + this.worldStructureName + ", seed=" + this.seed + "]";
+            return "GeneratorProfile{worldStructureName='" + this.worldStructureName + "', seed=" + this.seed + ", worldCounter=" + this.worldCounter + "}";
         }
     }
 

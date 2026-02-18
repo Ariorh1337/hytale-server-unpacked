@@ -66,6 +66,10 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, SpawnMarker>> {
     }).documentation("The delay before deactivation happens when no players are in range.").addValidator(Validators.greaterThan(0.0)).add()).validator((asset, results) -> {
         boolean isRealtime = asset.isRealtimeRespawn();
         IWeightedMap<SpawnConfiguration> configs = asset.getWeightedConfigurations();
+        if (configs == null || configs.size() == 0) {
+            results.fail(String.format("Spawn marker %s must define at least one NPC configuration to spawn", asset.getId()));
+            return;
+        }
         configs.forEach(config -> {
             if (isRealtime && config.getRealtimeRespawnTime() <= 0.0) {
                 results.fail(String.format("Value for RealtimeRespawn in %s:%s must be greater than zero if using realtime spawning", asset.getId(), config.getNpc()));
@@ -85,6 +89,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, SpawnMarker>> {
     private AssetExtraInfo.Data data;
     protected String id;
     protected String model;
+    @Nullable
     protected IWeightedMap<SpawnConfiguration> weightedConfigurations;
     protected double exclusionRadius;
     protected double maxDropHeightSquared = 4.0;
@@ -107,6 +112,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, SpawnMarker>> {
     protected SpawnMarker() {
     }
 
+    @Nullable
     public IWeightedMap<SpawnConfiguration> getWeightedConfigurations() {
         return this.weightedConfigurations;
     }

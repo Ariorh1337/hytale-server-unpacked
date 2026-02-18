@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class FieldFunctionOccurrencePositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<FieldFunctionOccurrencePositionProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FieldFunctionOccurrencePositionProviderAsset.class, FieldFunctionOccurrencePositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Seed", Codec.STRING, true), (asset, v) -> {
         asset.seed = v;
     }, asset -> asset.seed).add()).append(new KeyedCodec("FieldFunction", DensityAsset.CODEC, true), (asset, v) -> {

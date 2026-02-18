@@ -437,12 +437,12 @@ extends JavaPlugin {
         return this.localSpawnControllerJoinDelay;
     }
 
-    public static <T extends NPCSpawn> void validateSpawnsConfigurations(String type, @Nonnull Map<String, T> spawns, @Nonnull List<String> errors) {
+    public static <T extends NPCSpawn> void validateSpawnsConfigurations(@Nonnull String type, @Nonnull Map<String, T> spawns, @Nonnull List<String> errors) {
         for (Map.Entry<String, T> spawn : spawns.entrySet()) {
-            RoleSpawnParameters[] npcs;
-            for (RoleSpawnParameters npc : npcs = ((NPCSpawn)spawn.getValue()).getNPCs()) {
+            RoleSpawnParameters[] spawnParameters;
+            for (RoleSpawnParameters spawnParameter : spawnParameters = ((NPCSpawn)spawn.getValue()).getNPCs()) {
                 try {
-                    NPCPlugin.get().validateSpawnableRole(npc.getId());
+                    NPCPlugin.get().validateSpawnableRole(spawnParameter.getId());
                 }
                 catch (IllegalArgumentException e) {
                     errors.add(type + " " + spawn.getKey() + ": " + e.getMessage());
@@ -453,12 +453,16 @@ extends JavaPlugin {
 
     public static void validateSpawnMarkers(@Nonnull Map<String, SpawnMarker> markers, @Nonnull List<String> errors) {
         for (Map.Entry<String, SpawnMarker> marker : markers.entrySet()) {
-            IWeightedMap<SpawnMarker.SpawnConfiguration> npcs = marker.getValue().getWeightedConfigurations();
-            npcs.forEach(config -> {
+            IWeightedMap<SpawnMarker.SpawnConfiguration> configs = marker.getValue().getWeightedConfigurations();
+            if (configs == null) {
+                errors.add("Spawn marker " + marker.getKey() + ": No configurations defined");
+                continue;
+            }
+            configs.forEach(config -> {
                 try {
-                    String npc = config.getNpc();
-                    if (npc != null) {
-                        NPCPlugin.get().validateSpawnableRole(npc);
+                    String npcConfig = config.getNpc();
+                    if (npcConfig != null) {
+                        NPCPlugin.get().validateSpawnableRole(npcConfig);
                     }
                 }
                 catch (IllegalArgumentException e) {
@@ -497,8 +501,8 @@ extends JavaPlugin {
         Set<String> removedAssets = event.getRemovedAssets();
         Universe.get().getWorlds().forEach((name, world) -> world.execute(() -> world.getEntityStore().getStore().forEachChunk(SpawnMarkerEntity.getComponentType(), (archetypeChunk, commandBuffer) -> {
             for (int index = 0; index < archetypeChunk.size(); ++index) {
-                SpawnMarkerEntity spawnMarkerEntity = archetypeChunk.getComponent(index, SpawnMarkerEntity.getComponentType());
-                if (!removedAssets.contains(spawnMarkerEntity.getSpawnMarkerId())) continue;
+                SpawnMarkerEntity spawnMarkerEntityComponent = archetypeChunk.getComponent(index, SpawnMarkerEntity.getComponentType());
+                if (spawnMarkerEntityComponent == null || !removedAssets.contains(spawnMarkerEntityComponent.getSpawnMarkerId())) continue;
                 commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
             }
         })));
@@ -710,6 +714,7 @@ extends JavaPlugin {
     }
 
     public static class NPCSpawningConfig {
+        @Nonnull
         public static final BuilderCodec<NPCSpawningConfig> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(NPCSpawningConfig.class, NPCSpawningConfig::new).append(new KeyedCodec<Double>("SpawnBudgetFactor", Codec.DOUBLE), (o, i) -> {
             o.spawnBudgetFactor = i;
         }, o -> o.spawnBudgetFactor).add()).append(new KeyedCodec<Integer>("MaxActiveJobs", Codec.INTEGER), (o, i) -> {
@@ -736,7 +741,9 @@ extends JavaPlugin {
 
         @Override
         public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-            Map<String, BsonDocument> unknownComponents = holder.getComponent(this.unknownComponentsComponentType).getUnknownComponents();
+            UnknownComponents<EntityStore> unknownComponent = holder.getComponent(this.unknownComponentsComponentType);
+            assert (unknownComponent != null);
+            Map<String, BsonDocument> unknownComponents = unknownComponent.getUnknownComponents();
             BsonDocument spawnSuppressor = unknownComponents.remove("SpawnSuppressor");
             if (spawnSuppressor == null) {
                 return;

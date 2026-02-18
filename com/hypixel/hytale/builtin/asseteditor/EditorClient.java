@@ -4,7 +4,7 @@
 package com.hypixel.hytale.builtin.asseteditor;
 
 import com.hypixel.hytale.protocol.FormattedMessage;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotification;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotificationType;
 import com.hypixel.hytale.protocol.packets.asseteditor.FailureReply;
@@ -96,7 +96,7 @@ implements PermissionHolder {
 
     public void sendPopupNotification(AssetEditorPopupNotificationType type, @Nonnull Message message) {
         FormattedMessage msg = message.getFormattedMessage();
-        this.getPacketHandler().write((Packet)new AssetEditorPopupNotification(type, msg));
+        this.getPacketHandler().write((ToClientPacket)new AssetEditorPopupNotification(type, msg));
     }
 
     public void sendSuccessReply(int token) {
@@ -105,12 +105,12 @@ implements PermissionHolder {
 
     public void sendSuccessReply(int token, @Nullable Message message) {
         FormattedMessage msg = message != null ? message.getFormattedMessage() : null;
-        this.getPacketHandler().write((Packet)new SuccessReply(token, msg));
+        this.getPacketHandler().write((ToClientPacket)new SuccessReply(token, msg));
     }
 
     public void sendFailureReply(int token, @Nonnull Message message) {
         FormattedMessage msg = message.getFormattedMessage();
-        this.getPacketHandler().write((Packet)new FailureReply(token, msg));
+        this.getPacketHandler().write((ToClientPacket)new FailureReply(token, msg));
     }
 }
 

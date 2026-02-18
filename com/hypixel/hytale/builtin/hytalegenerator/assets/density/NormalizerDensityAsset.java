@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class NormalizerDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<NormalizerDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(NormalizerDensityAsset.class, NormalizerDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<Double>("FromMin", Codec.DOUBLE, true), (t, k) -> {
         t.fromMin = k;
     }, k -> k.fromMin).add()).append(new KeyedCodec<Double>("FromMax", Codec.DOUBLE, true), (t, k) -> {
@@ -23,9 +24,9 @@ extends DensityAsset {
     }, k -> k.toMin).add()).append(new KeyedCodec<Double>("ToMax", Codec.DOUBLE, true), (t, k) -> {
         t.toMax = k;
     }, k -> k.toMax).add()).build();
-    private double fromMin = 0.0;
+    private double fromMin;
     private double fromMax = 1.0;
-    private double toMin = 0.0;
+    private double toMin;
     private double toMax = 1.0;
 
     @Override

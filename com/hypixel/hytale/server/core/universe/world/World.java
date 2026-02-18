@@ -26,7 +26,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.metrics.ExecutorMetricsRegistry;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.entities.SetEntitySeed;
 import com.hypixel.hytale.protocol.packets.player.JoinWorld;
 import com.hypixel.hytale.protocol.packets.player.SetClientId;
@@ -96,11 +96,14 @@ import com.hypixel.hytale.server.core.util.thread.TickingThread;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.awt.Color;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
@@ -256,13 +259,27 @@ IMessageReceiver {
     }
 
     public void stopIndividualWorld() {
+        this.stopIndividualWorld(this.players);
+    }
+
+    public void stopIndividualWorld(Map<UUID, PlayerRef> players) {
         this.logger.at(Level.INFO).log("Removing individual world: %s", this.name);
         World defaultWorld = Universe.get().getDefaultWorld();
-        if (defaultWorld != null) {
-            this.drainPlayersTo(defaultWorld).join();
+        if (defaultWorld != null && !defaultWorld.equals(this)) {
+            message = this.getFailureException() == null ? Message.translation("server.universe.worldRemoved") : (this.getPossibleFailureCause() == null ? Message.translation("server.universe.worldCrash.unknown") : Message.translation("server.universe.worldCrash.mod").param("mod", this.getPossibleFailureCause().toString()));
+            ((Message)message).color(Color.RED);
+            for (PlayerRef playerRef : players.values()) {
+                playerRef.sendMessage((Message)message);
+            }
+            if (this.isInThread()) {
+                this.drainPlayersTo(defaultWorld, players.values()).join();
+            } else {
+                ((CompletableFuture)CompletableFuture.supplyAsync(() -> this.drainPlayersTo(defaultWorld, players.values()), this).thenCompose(v -> v)).join();
+            }
         } else {
-            for (PlayerRef playerRef : this.players.values()) {
-                playerRef.getPacketHandler().disconnect("The world you were in was shutdown and there was no default world to move you to!");
+            message = this.getFailureException() == null ? "The world you were on was removed" : (this.getPossibleFailureCause() == null ? "The world you were on has crashed" : "The world you were on has crashed (possibly caused by " + String.valueOf(this.getPossibleFailureCause()) + ")");
+            for (PlayerRef playerRef : players.values()) {
+                playerRef.getPacketHandler().disconnect((String)message);
             }
         }
         if (this.alive.getAndSet(false)) {
@@ -278,12 +295,22 @@ IMessageReceiver {
     public void validateDeleteOnRemove() {
         if (this.worldConfig.isDeleteOnRemove()) {
             try {
-                FileUtil.deleteDirectory(this.getSavePath());
+                this.deleteWorldFromDisk();
             }
             catch (Throwable t) {
                 ((HytaleLogger.Api)this.logger.at(Level.SEVERE).withCause(t)).log("Exception while deleting world on remove:");
             }
         }
+    }
+
+    private void deleteWorldFromDisk() throws IOException {
+        Path originDir = this.getSavePath();
+        Path filename = originDir.getFileName();
+        String noCollisionsName = String.valueOf(filename) + "_del" + UUID.randomUUID().toString().substring(0, 8);
+        Path deletionDir = Universe.get().getWorldsDeletedPath().resolve(noCollisionsName);
+        Files.createDirectories(deletionDir.getParent(), new FileAttribute[0]);
+        FileUtil.atomicMove(originDir, deletionDir);
+        FileUtil.deleteDirectory(deletionDir);
     }
 
     @Override
@@ -334,6 +361,7 @@ IMessageReceiver {
         this.chunkLighting.stop();
         this.worldMapManager.stop();
         this.logger.at(Level.INFO).log("Removing players...");
+        Object2ObjectOpenHashMap<UUID, PlayerRef> currentPlayers = new Object2ObjectOpenHashMap<UUID, PlayerRef>(this.players);
         for (PlayerRef playerRef : this.playerRefs) {
             if (playerRef.getReference() == null) continue;
             playerRef.removeFromStore();
@@ -348,6 +376,7 @@ IMessageReceiver {
             this.consumeTaskQueue();
             this.entityStore.shutdown();
             this.consumeTaskQueue();
+            this.eventRegistry.shutdownAndCleanup(true);
         }
         finally {
             this.logger.at(Level.INFO).log("Saving Config...");
@@ -357,7 +386,8 @@ IMessageReceiver {
         }
         this.acceptingTasks.set(false);
         if (this.alive.getAndSet(false)) {
-            Universe.get().removeWorldExceptionally(this.name);
+            this.stopIndividualWorld(currentPlayers);
+            Universe.get().removeWorldExceptionally(this.name, currentPlayers);
         }
         HytaleServer.get().reportSingleplayerStatus("Closing world '" + this.name + "'");
     }
@@ -793,9 +823,9 @@ IMessageReceiver {
         float timeDilationModifier = timeResource.getTimeDilationModifier();
         int maxViewRadius = HytaleServer.get().getConfig().getMaxViewRadius();
         packetHandler.write(new ViewRadius(maxViewRadius * 32), new SetEntitySeed(this.entitySeed.get()), new SetClientId(playerComponent.getNetworkId()), new SetTimeDilation(timeDilationModifier));
-        packetHandler.write((Packet)new UpdateFeatures(this.features));
-        packetHandler.write((Packet)this.worldConfig.getClientEffects().createSunSettingsPacket());
-        packetHandler.write((Packet)this.worldConfig.getClientEffects().createPostFxSettingsPacket());
+        packetHandler.write((ToClientPacket)new UpdateFeatures(this.features));
+        packetHandler.write((ToClientPacket)this.worldConfig.getClientEffects().createSunSettingsPacket());
+        packetHandler.write((ToClientPacket)this.worldConfig.getClientEffects().createPostFxSettingsPacket());
         UUID playerUuid = playerRefComponent.getUuid();
         Store<EntityStore> store = this.entityStore.getStore();
         WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
@@ -835,28 +865,26 @@ IMessageReceiver {
             LegacyEntityTrackerSystems.clear(playerComponent, holder);
             ChunkTracker chunkTrackerComponent = holder.getComponent(ChunkTracker.getComponentType());
             if (chunkTrackerComponent != null) {
-                chunkTrackerComponent.clear();
+                chunkTrackerComponent.unloadAll(playerRefComponent);
             }
         }
         playerComponent.getPageManager().clearCustomPageAcknowledgements();
         JoinWorld packet = new JoinWorld(clearWorld, fadeInOut, this.worldConfig.getUuid());
-        packetHandler.write((Packet)packet);
+        packetHandler.write((ToClientPacket)packet);
         packetHandler.tryFlush();
         HytaleLogger.getLogger().at(Level.INFO).log("%s: Sent %s", (Object)packetHandler.getIdentifier(), (Object)packet);
         packetHandler.setQueuePackets(true);
     }
 
     @Nonnull
-    public CompletableFuture<Void> drainPlayersTo(@Nonnull World fallbackTargetWorld) {
-        return CompletableFuture.completedFuture(null).thenComposeAsync(aVoid -> {
-            ObjectArrayList<CompletableFuture<PlayerRef>> futures = new ObjectArrayList<CompletableFuture<PlayerRef>>();
-            for (PlayerRef playerRef : this.playerRefs) {
-                Holder<EntityStore> holder = playerRef.removeFromStore();
-                DrainPlayerFromWorldEvent event = HytaleServer.get().getEventBus().dispatchFor(DrainPlayerFromWorldEvent.class, this.name).dispatch(new DrainPlayerFromWorldEvent(holder, fallbackTargetWorld, null));
-                futures.add(event.getWorld().addPlayer(playerRef, event.getTransform()));
-            }
-            return CompletableFuture.allOf((CompletableFuture[])futures.toArray(CompletableFuture[]::new));
-        }, (Executor)this);
+    public CompletableFuture<Void> drainPlayersTo(@Nonnull World fallbackTargetWorld, Collection<PlayerRef> players) {
+        ObjectArrayList<CompletableFuture<PlayerRef>> futures = new ObjectArrayList<CompletableFuture<PlayerRef>>();
+        for (PlayerRef playerRef : players) {
+            Holder<EntityStore> holder = playerRef.getReference() != null ? playerRef.removeFromStore() : playerRef.getHolder();
+            DrainPlayerFromWorldEvent event = HytaleServer.get().getEventBus().dispatchFor(DrainPlayerFromWorldEvent.class, this.name).dispatch(new DrainPlayerFromWorldEvent(holder, fallbackTargetWorld, null));
+            futures.add(event.getWorld().addPlayer(playerRef, event.getTransform()));
+        }
+        return CompletableFuture.allOf((CompletableFuture[])futures.toArray(CompletableFuture[]::new));
     }
 
     @Nonnull
@@ -886,7 +914,7 @@ IMessageReceiver {
     public void broadcastFeatures() {
         UpdateFeatures packet = new UpdateFeatures(this.features);
         for (PlayerRef playerRef : this.playerRefs) {
-            playerRef.getPacketHandler().write((Packet)packet);
+            playerRef.getPacketHandler().write((ToClientPacket)packet);
         }
     }
 
@@ -898,7 +926,7 @@ IMessageReceiver {
     public void updateEntitySeed(@Nonnull Store<EntityStore> store) {
         int newEntitySeed = this.random.nextInt();
         this.entitySeed.set(newEntitySeed);
-        PlayerUtil.broadcastPacketToPlayers(store, (Packet)new SetEntitySeed(newEntitySeed));
+        PlayerUtil.broadcastPacketToPlayers(store, (ToClientPacket)new SetEntitySeed(newEntitySeed));
     }
 
     public void markGCHasRun() {

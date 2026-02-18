@@ -22,8 +22,8 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.terrains.DensityTerrain
 import com.hypixel.hytale.builtin.hytalegenerator.assets.terrains.TerrainAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.ConstantTintProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.TintProviderAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.biome.BiomeType;
-import com.hypixel.hytale.builtin.hytalegenerator.biome.SimpleBiomeType;
+import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
+import com.hypixel.hytale.builtin.hytalegenerator.biome.SimpleBiome;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.EnvironmentProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
@@ -44,8 +44,10 @@ import javax.annotation.Nonnull;
 public class BiomeAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, BiomeAsset>>,
 Cleanable {
+    @Nonnull
     public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache(new AssetKeyValidator(BiomeAsset::getAssetStore));
     private static AssetStore<String, BiomeAsset, DefaultAssetMap<String, BiomeAsset>> STORE;
+    @Nonnull
     public static final AssetBuilderCodec<String, BiomeAsset> CODEC;
     private String id;
     private AssetExtraInfo.Data data;
@@ -57,6 +59,7 @@ Cleanable {
     private String biomeName = "DefaultName";
     private DensityAsset[] floatingFunctionNodeAssets = new DensityAsset[0];
 
+    @Nonnull
     public static AssetStore<String, BiomeAsset, DefaultAssetMap<String, BiomeAsset>> getAssetStore() {
         if (STORE == null) {
             STORE = AssetRegistry.getAssetStore(BiomeAsset.class);
@@ -81,22 +84,23 @@ Cleanable {
         }
     }
 
-    public BiomeType build(@Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer workerIndexer) {
-        MaterialProvider<Material> materialProvider = this.materialProviderAsset.build(new MaterialProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerIndexer));
-        Density density = this.terrainAsset.buildDensity(parentSeed, referenceBundle, workerIndexer);
-        EnvironmentProvider environments = EnvironmentProvider.noEnvironmentProvider();
+    @Nonnull
+    public Biome build(@Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed, @Nonnull ReferenceBundle referenceBundle, @Nonnull WorkerIndexer.Id workerId) {
+        MaterialProvider<Material> materialProvider = this.materialProviderAsset.build(new MaterialProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerId));
+        Density density = this.terrainAsset.buildDensity(parentSeed, referenceBundle, workerId);
+        EnvironmentProvider provider = EnvironmentProvider.noEnvironmentProvider();
         if (this.environmentProviderAsset != null) {
-            environments = this.environmentProviderAsset.build(new EnvironmentProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerIndexer));
+            provider = this.environmentProviderAsset.build(new EnvironmentProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerId));
         }
         TintProvider tints = TintProvider.noTintProvider();
         if (this.tintProviderAsset != null) {
-            tints = this.tintProviderAsset.build(new TintProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerIndexer));
+            tints = this.tintProviderAsset.build(new TintProviderAsset.Argument(parentSeed, materialCache, referenceBundle, workerId));
         }
-        SimpleBiomeType biome = new SimpleBiomeType(this.biomeName, density, materialProvider, environments, tints);
+        SimpleBiome biome = new SimpleBiome(this.biomeName, density, materialProvider, provider, tints);
         for (PropRuntimeAsset fieldAsset : this.propRuntimeAssets) {
             if (fieldAsset.isSkip()) continue;
-            PositionProvider positionProvider = fieldAsset.buildPositionProvider(parentSeed, referenceBundle, workerIndexer);
-            Assignments distribution = fieldAsset.buildPropDistribution(parentSeed, materialCache, fieldAsset.getRuntime(), referenceBundle, workerIndexer);
+            PositionProvider positionProvider = fieldAsset.buildPositionProvider(parentSeed, referenceBundle, workerId);
+            Assignments distribution = fieldAsset.buildPropDistribution(parentSeed, materialCache, fieldAsset.getRuntime(), referenceBundle, workerId);
             PropField field = new PropField(fieldAsset.getRuntime(), distribution, positionProvider);
             biome.addPropFieldTo(field);
         }

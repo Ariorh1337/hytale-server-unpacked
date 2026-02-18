@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 
 public class EuclideanDistanceFunctionAsset
 extends DistanceFunctionAsset {
+    @Nonnull
     public static final BuilderCodec<EuclideanDistanceFunctionAsset> CODEC = BuilderCodec.builder(EuclideanDistanceFunctionAsset.class, EuclideanDistanceFunctionAsset::new, DistanceFunctionAsset.ABSTRACT_CODEC).build();
 
     @Override

@@ -7,6 +7,7 @@ import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfig;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigCommandExecutor;
 import com.hypixel.hytale.builtin.buildertools.tooloperations.ToolOperation;
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
@@ -17,6 +18,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,9 +41,13 @@ public class PrototypePlayerBuilderToolSettings {
     @Nullable
     private FluidChange[] fluidChangesForPlaySelectionToolPasteMode = null;
     @Nullable
+    private EntityChange[] entityChangesForPlaySelectionToolPasteMode = null;
+    @Nullable
     private Vector3i lastBrushPosition = null;
     @Nullable
     private Vector3i blockChangeOffsetOrigin = null;
+    @Nullable
+    private List<Ref<EntityStore>> lastTransformEntityRefs = null;
 
     public PrototypePlayerBuilderToolSettings(UUID player) {
         this.player = player;
@@ -61,6 +67,7 @@ public class PrototypePlayerBuilderToolSettings {
         if (!this.isInSelectionTransformationMode) {
             this.blockChangesForPlaySelectionToolPasteMode = null;
             this.fluidChangesForPlaySelectionToolPasteMode = null;
+            this.entityChangesForPlaySelectionToolPasteMode = null;
             this.blockChangeOffsetOrigin = null;
         }
     }
@@ -99,6 +106,15 @@ public class PrototypePlayerBuilderToolSettings {
         return this.fluidChangesForPlaySelectionToolPasteMode;
     }
 
+    public void setEntityChangesForPlaySelectionToolPasteMode(@Nullable EntityChange[] entityChanges) {
+        this.entityChangesForPlaySelectionToolPasteMode = entityChanges;
+    }
+
+    @Nullable
+    public EntityChange[] getEntityChangesForPlaySelectionToolPasteMode() {
+        return this.entityChangesForPlaySelectionToolPasteMode;
+    }
+
     public void setBlockChangeOffsetOrigin(@Nullable Vector3i blockChangeOffsetOrigin) {
         this.blockChangeOffsetOrigin = blockChangeOffsetOrigin;
     }
@@ -106,6 +122,19 @@ public class PrototypePlayerBuilderToolSettings {
     @Nullable
     public Vector3i getBlockChangeOffsetOrigin() {
         return this.blockChangeOffsetOrigin;
+    }
+
+    public void setLastTransformEntityRefs(@Nullable List<Ref<EntityStore>> refs) {
+        this.lastTransformEntityRefs = refs;
+    }
+
+    @Nullable
+    public List<Ref<EntityStore>> getLastTransformEntityRefs() {
+        return this.lastTransformEntityRefs;
+    }
+
+    public void clearLastTransformEntityRefs() {
+        this.lastTransformEntityRefs = null;
     }
 
     @Nonnull
@@ -198,6 +227,9 @@ public class PrototypePlayerBuilderToolSettings {
     }
 
     public record FluidChange(int x, int y, int z, int fluidId, byte fluidLevel) {
+    }
+
+    public record EntityChange(double x, double y, double z, Holder<EntityStore> entityHolder) {
     }
 }
 

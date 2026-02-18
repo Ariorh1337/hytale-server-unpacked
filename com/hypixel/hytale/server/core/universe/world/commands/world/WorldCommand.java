@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.commands.world.WorldListCom
 import com.hypixel.hytale.server.core.universe.world.commands.world.WorldLoadCommand;
 import com.hypixel.hytale.server.core.universe.world.commands.world.WorldPruneCommand;
 import com.hypixel.hytale.server.core.universe.world.commands.world.WorldRemoveCommand;
+import com.hypixel.hytale.server.core.universe.world.commands.world.WorldRocksDbCommand;
 import com.hypixel.hytale.server.core.universe.world.commands.world.WorldSaveCommand;
 import com.hypixel.hytale.server.core.universe.world.commands.world.WorldSetDefaultCommand;
 import com.hypixel.hytale.server.core.universe.world.commands.world.perf.WorldPerfCommand;
@@ -34,6 +35,7 @@ extends AbstractCommandCollection {
         this.addSubCommand(new WorldSettingsCommand());
         this.addSubCommand(new WorldPerfCommand());
         this.addSubCommand(new WorldTpsCommand());
+        this.addSubCommand(new WorldRocksDbCommand());
     }
 }
 

@@ -7,8 +7,8 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.BlockParticleEvent;
 import com.hypixel.hytale.protocol.BlockPosition;
-import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.Position;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.SpawnBlockParticleSystem;
 import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -45,7 +45,7 @@ public class WorldNotificationHandler {
         if (!(oldState instanceof SendableBlockState)) ** GOTO lbl-1000
         sendableBlockState = (SendableBlockState)oldState;
         if (state != oldState) {
-            removeOldState = (Consumer<List>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)V, unloadFrom(java.util.List<com.hypixel.hytale.protocol.Packet> ), (Ljava/util/List;)V)((SendableBlockState)sendableBlockState);
+            removeOldState = (Consumer<List>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)V, unloadFrom(java.util.List<com.hypixel.hytale.protocol.ToClientPacket> ), (Ljava/util/List;)V)((SendableBlockState)sendableBlockState);
             canPlayerSeeOld = (Predicate<PlayerRef>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)Z, canPlayerSee(com.hypixel.hytale.server.core.universe.PlayerRef ), (Lcom/hypixel/hytale/server/core/universe/PlayerRef;)Z)((SendableBlockState)sendableBlockState);
         } else lbl-1000:
         // 2 sources
@@ -56,7 +56,7 @@ public class WorldNotificationHandler {
         }
         if (state instanceof SendableBlockState) {
             sendableBlockState = (SendableBlockState)state;
-            updateBlockState = (Consumer<List>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)V, sendTo(java.util.List<com.hypixel.hytale.protocol.Packet> ), (Ljava/util/List;)V)((SendableBlockState)sendableBlockState);
+            updateBlockState = (Consumer<List>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)V, sendTo(java.util.List<com.hypixel.hytale.protocol.ToClientPacket> ), (Ljava/util/List;)V)((SendableBlockState)sendableBlockState);
             canPlayerSee = (Predicate<PlayerRef>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)Z, canPlayerSee(com.hypixel.hytale.server.core.universe.PlayerRef ), (Lcom/hypixel/hytale/server/core/universe/PlayerRef;)Z)((SendableBlockState)sendableBlockState);
         } else {
             updateBlockState = null;
@@ -74,7 +74,7 @@ public class WorldNotificationHandler {
                 if (updateBlockState != null && canPlayerSee.test(playerRef)) {
                     updateBlockState.accept(packets);
                 }
-                for (Packet packet : packets) {
+                for (ToClientPacket packet : packets) {
                     playerRef.getPacketHandler().write(packet);
                 }
                 packets.clear();
@@ -89,7 +89,7 @@ public class WorldNotificationHandler {
     }
 
     public void sendBlockParticle(double x, double y, double z, int id, @Nonnull BlockParticleEvent particleType) {
-        this.sendPacketIfChunkLoaded((Packet)this.getBlockParticlePacket(x, y, z, id, particleType), MathUtil.floor(x), MathUtil.floor(z));
+        this.sendPacketIfChunkLoaded((ToClientPacket)this.getBlockParticlePacket(x, y, z, id, particleType), MathUtil.floor(x), MathUtil.floor(z));
     }
 
     public void sendBlockParticle(@Nonnull PlayerRef playerRef, double x, double y, double z, int id, @Nonnull BlockParticleEvent particleType) {
@@ -97,43 +97,43 @@ public class WorldNotificationHandler {
     }
 
     public void updateBlockDamage(int x, int y, int z, float health, float healthDelta) {
-        this.sendPacketIfChunkLoaded((Packet)this.getBlockDamagePacket(x, y, z, health, healthDelta), x, z);
+        this.sendPacketIfChunkLoaded((ToClientPacket)this.getBlockDamagePacket(x, y, z, health, healthDelta), x, z);
     }
 
     public void updateBlockDamage(int x, int y, int z, float health, float healthDelta, @Nullable Predicate<PlayerRef> filter) {
         this.sendPacketIfChunkLoaded(this.getBlockDamagePacket(x, y, z, health, healthDelta), x, z, filter);
     }
 
-    public void sendPacketIfChunkLoaded(@Nonnull Packet packet, int x, int z) {
+    public void sendPacketIfChunkLoaded(@Nonnull ToClientPacket packet, int x, int z) {
         long indexChunk = ChunkUtil.indexChunkFromBlock(x, z);
         this.sendPacketIfChunkLoaded(packet, indexChunk);
     }
 
-    public void sendPacketIfChunkLoaded(@Nonnull Packet packet, long indexChunk) {
+    public void sendPacketIfChunkLoaded(@Nonnull ToClientPacket packet, long indexChunk) {
         for (PlayerRef playerRef : this.world.getPlayerRefs()) {
             if (!playerRef.getChunkTracker().isLoaded(indexChunk)) continue;
             playerRef.getPacketHandler().write(packet);
         }
     }
 
-    public void sendPacketIfChunkLoaded(@Nonnull Packet packet, int x, int z, @Nullable Predicate<PlayerRef> filter) {
+    public void sendPacketIfChunkLoaded(@Nonnull ToClientPacket packet, int x, int z, @Nullable Predicate<PlayerRef> filter) {
         long indexChunk = ChunkUtil.indexChunkFromBlock(x, z);
         this.sendPacketIfChunkLoaded(packet, indexChunk, filter);
     }
 
-    public void sendPacketIfChunkLoaded(@Nonnull Packet packet, long indexChunk, @Nullable Predicate<PlayerRef> filter) {
+    public void sendPacketIfChunkLoaded(@Nonnull ToClientPacket packet, long indexChunk, @Nullable Predicate<PlayerRef> filter) {
         for (PlayerRef playerRef : this.world.getPlayerRefs()) {
             if (filter != null && !filter.test(playerRef) || !playerRef.getChunkTracker().isLoaded(indexChunk)) continue;
             playerRef.getPacketHandler().write(packet);
         }
     }
 
-    private void sendPacketIfChunkLoaded(@Nonnull PlayerRef player, @Nonnull Packet packet, int x, int z) {
+    private void sendPacketIfChunkLoaded(@Nonnull PlayerRef player, @Nonnull ToClientPacket packet, int x, int z) {
         long indexChunk = ChunkUtil.indexChunkFromBlock(x, z);
         this.sendPacketIfChunkLoaded(player, packet, indexChunk);
     }
 
-    private void sendPacketIfChunkLoaded(@Nonnull PlayerRef playerRef, @Nonnull Packet packet, long indexChunk) {
+    private void sendPacketIfChunkLoaded(@Nonnull PlayerRef playerRef, @Nonnull ToClientPacket packet, long indexChunk) {
         if (playerRef.getChunkTracker().isLoaded(indexChunk)) {
             playerRef.getPacketHandler().write(packet);
         }

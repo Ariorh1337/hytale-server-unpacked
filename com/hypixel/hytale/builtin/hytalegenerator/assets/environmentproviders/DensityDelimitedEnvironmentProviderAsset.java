@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 
 public class DensityDelimitedEnvironmentProviderAsset
 extends EnvironmentProviderAsset {
+    @Nonnull
     public static final BuilderCodec<DensityDelimitedEnvironmentProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DensityDelimitedEnvironmentProviderAsset.class, DensityDelimitedEnvironmentProviderAsset::new, EnvironmentProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (t, k) -> {
         t.delimiterAssets = k;
     }, k -> k.delimiterAssets).add()).append(new KeyedCodec("Density", DensityAsset.CODEC, true), (t, value) -> {
@@ -58,6 +59,7 @@ extends EnvironmentProviderAsset {
     public static class DelimiterAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, DelimiterAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
-import com.hypixel.hytale.server.core.util.message.MessageFormat;
 import javax.annotation.Nonnull;
 
 public class LANDiscoveryCommand
@@ -28,16 +27,16 @@ extends CommandBase {
     @Override
     protected void executeSync(@Nonnull CommandContext context) {
         if (this.enabledArg.provided(context)) {
-            boolean enabled = (Boolean)this.enabledArg.get(context);
+            Boolean enabled = (Boolean)this.enabledArg.get(context);
             LANDiscoveryPlugin plugin = LANDiscoveryPlugin.get();
-            if (!enabled && plugin.getLanDiscoveryThread() != null) {
+            if (!enabled.booleanValue() && plugin.getLanDiscoveryThread() != null) {
                 plugin.setLANDiscoveryEnabled(false);
                 context.sendMessage(MESSAGE_IO_LAN_DISCOVERY_DISABLED);
-            } else if (enabled && plugin.getLanDiscoveryThread() == null) {
+            } else if (enabled.booleanValue() && plugin.getLanDiscoveryThread() == null) {
                 plugin.setLANDiscoveryEnabled(true);
                 context.sendMessage(MESSAGE_IO_LAN_DISCOVERY_ENABLED);
             } else {
-                context.sendMessage(Message.translation("server.io.landiscovery.alreadyToggled").param("status", MessageFormat.enabled(enabled)));
+                context.sendMessage(Message.translation("server.io.landiscovery.alreadyToggled").param("enabled", enabled.toString()));
             }
             return;
         }

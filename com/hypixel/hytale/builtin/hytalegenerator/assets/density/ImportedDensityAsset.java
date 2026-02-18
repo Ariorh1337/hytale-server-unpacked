@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class ImportedDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedDensityAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedDensityAsset.class, ImportedDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, true), (t, k) -> {
         t.importedNodeName = k;
     }, k -> k.importedNodeName).add()).build();
@@ -25,18 +26,20 @@ extends DensityAsset {
         if (this.isSkipped()) {
             return new ConstantValueDensity(0.0);
         }
-        DensityAsset.Exported asset = ImportedDensityAsset.getExportedAsset(this.importedNodeName);
-        if (asset == null) {
+        DensityAsset.Exported exported = ImportedDensityAsset.getExportedAsset(this.importedNodeName);
+        if (exported == null) {
             LoggerUtil.getLogger().warning("Couldn't find Density asset exported with name: '" + this.importedNodeName + "'. Using empty Node instead.");
             return new ConstantValueDensity(0.0);
         }
-        if (asset.singleInstance) {
-            if (asset.builtInstance == null) {
-                asset.builtInstance = asset.asset.build(argument);
+        if (exported.isSingleInstance) {
+            Density builtInstance = exported.threadInstances.get(argument.workerId);
+            if (builtInstance == null) {
+                builtInstance = exported.asset.build(argument);
+                exported.threadInstances.put(argument.workerId, builtInstance);
             }
-            return asset.builtInstance;
+            return builtInstance;
         }
-        return asset.asset.build(argument);
+        return exported.asset.build(argument);
     }
 
     @Override
@@ -56,7 +59,7 @@ extends DensityAsset {
         if (exported == null) {
             return;
         }
-        exported.builtInstance = null;
+        exported.threadInstances.clear();
         for (DensityAsset input : this.inputs()) {
             input.cleanUp();
         }

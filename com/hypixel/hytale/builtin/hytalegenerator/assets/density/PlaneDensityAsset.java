@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 public class PlaneDensityAsset
 extends DensityAsset {
+    @Nonnull
     public static final BuilderCodec<PlaneDensityAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(PlaneDensityAsset.class, PlaneDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Curve", CurveAsset.CODEC, true), (t, k) -> {
         t.distanceCurveAsset = k;
     }, k -> k.distanceCurveAsset).add()).append(new KeyedCodec<Boolean>("IsAnchored", Codec.BOOLEAN, false), (t, k) -> {
@@ -30,7 +31,7 @@ extends DensityAsset {
     }).add()).build();
     private CurveAsset distanceCurveAsset = new ConstantCurveAsset();
     private Vector3d planeNormal = new Vector3d(0.0, 1.0, 0.0);
-    private boolean isAnchored = false;
+    private boolean isAnchored;
 
     @Override
     @Nonnull

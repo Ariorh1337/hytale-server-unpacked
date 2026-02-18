@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class ImportedPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<ImportedPositionProviderAsset> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ImportedPositionProviderAsset.class, ImportedPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec<String>("Name", Codec.STRING, true), (asset, v) -> {
         asset.name = v;
     }, asset -> asset.name).add()).build();

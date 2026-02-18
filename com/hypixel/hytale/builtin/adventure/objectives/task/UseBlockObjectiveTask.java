@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 
 public class UseBlockObjectiveTask
 extends CountObjectiveTask {
+    @Nonnull
     public static final BuilderCodec<UseBlockObjectiveTask> CODEC = BuilderCodec.builder(UseBlockObjectiveTask.class, UseBlockObjectiveTask::new, CountObjectiveTask.CODEC).build();
 
     public UseBlockObjectiveTask(@Nonnull UseBlockObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {

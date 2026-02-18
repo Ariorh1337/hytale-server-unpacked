@@ -36,11 +36,16 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
 public class BarterShopState {
+    @Nonnull
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+    @Nullable
     private static BarterShopState instance;
     private static Path saveDirectory;
+    @Nonnull
     public static final BuilderCodec<ShopInstanceState> SHOP_INSTANCE_CODEC;
+    @Nonnull
     public static final BuilderCodec<BarterShopState> CODEC;
+    @Nonnull
     private final Map<String, ShopInstanceState> shopStates = new ConcurrentHashMap<String, ShopInstanceState>();
 
     public static void initialize(@Nonnull Path dataDirectory) {
@@ -107,6 +112,7 @@ public class BarterShopState {
         instance = null;
     }
 
+    @Nonnull
     private static Instant calculateNextScheduledRestock(@Nonnull Instant gameTime, int intervalDays, int restockHour) {
         boolean isTodayRestockDay;
         LocalDateTime dateTime = LocalDateTime.ofInstant(gameTime, ZoneOffset.UTC);
@@ -117,12 +123,11 @@ public class BarterShopState {
         if (isTodayRestockDay && dateTime.getHour() < restockHour) {
             nextRestockDaySinceEpoch = daysSinceEpoch;
         }
-        Instant nextRestockInstant = WorldTimeResource.ZERO_YEAR.plus(Duration.ofDays(nextRestockDaySinceEpoch)).plus(Duration.ofHours(restockHour));
-        return nextRestockInstant;
+        return WorldTimeResource.ZERO_YEAR.plus(Duration.ofDays(nextRestockDaySinceEpoch)).plus(Duration.ofHours(restockHour));
     }
 
     @Nonnull
-    public ShopInstanceState getOrCreateShopState(BarterShopAsset asset, @Nonnull Instant gameTime) {
+    public ShopInstanceState getOrCreateShopState(@Nonnull BarterShopAsset asset, @Nonnull Instant gameTime) {
         return this.shopStates.computeIfAbsent(asset.getId(), id -> {
             ShopInstanceState state = new ShopInstanceState();
             state.resetStockAndResolve(asset);
@@ -134,7 +139,7 @@ public class BarterShopState {
         });
     }
 
-    public void checkRefresh(BarterShopAsset asset, @Nonnull Instant gameTime) {
+    public void checkRefresh(@Nonnull BarterShopAsset asset, @Nonnull Instant gameTime) {
         RefreshInterval interval = asset.getRefreshInterval();
         if (interval == null) {
             return;
@@ -153,7 +158,7 @@ public class BarterShopState {
         }
     }
 
-    public int[] getStockArray(BarterShopAsset asset, @Nonnull Instant gameTime) {
+    public int[] getStockArray(@Nonnull BarterShopAsset asset, @Nonnull Instant gameTime) {
         this.checkRefresh(asset, gameTime);
         ShopInstanceState state = this.getOrCreateShopState(asset, gameTime);
         if (state.expandStockIfNeeded(asset)) {
@@ -163,13 +168,13 @@ public class BarterShopState {
     }
 
     @Nonnull
-    public BarterTrade[] getResolvedTrades(BarterShopAsset asset, @Nonnull Instant gameTime) {
+    public BarterTrade[] getResolvedTrades(@Nonnull BarterShopAsset asset, @Nonnull Instant gameTime) {
         this.checkRefresh(asset, gameTime);
         ShopInstanceState state = this.getOrCreateShopState(asset, gameTime);
         return state.getResolvedTrades(asset);
     }
 
-    public boolean executeTrade(BarterShopAsset asset, int tradeIndex, int quantity, @Nonnull Instant gameTime) {
+    public boolean executeTrade(@Nonnull BarterShopAsset asset, int tradeIndex, int quantity, @Nonnull Instant gameTime) {
         this.checkRefresh(asset, gameTime);
         ShopInstanceState state = this.getOrCreateShopState(asset, gameTime);
         boolean success = state.decrementStock(tradeIndex, quantity);
@@ -191,9 +196,16 @@ public class BarterShopState {
     }
 
     public static class ShopInstanceState {
-        private int[] currentStock = new int[0];
+        @Nonnull
+        public static final BarterTrade[] BARTER_TRADES = new BarterTrade[0];
+        @Nonnull
+        public static final int[] INTS = new int[0];
+        private int[] currentStock = INTS;
+        @Nullable
         private Instant nextRefreshTime;
+        @Nullable
         private Long resolveSeed;
+        @Nullable
         private transient BarterTrade[] resolvedTrades;
 
         public ShopInstanceState() {
@@ -213,7 +225,7 @@ public class BarterShopState {
             return this.nextRefreshTime;
         }
 
-        public void setNextRefreshTime(Instant time) {
+        public void setNextRefreshTime(@Nonnull Instant time) {
             this.nextRefreshTime = time;
         }
 
@@ -229,7 +241,7 @@ public class BarterShopState {
         @Nonnull
         public BarterTrade[] getResolvedTrades(@Nonnull BarterShopAsset asset) {
             if (!asset.hasTradeSlots()) {
-                return asset.getTrades() != null ? asset.getTrades() : new BarterTrade[]{};
+                return asset.getTrades() != null ? asset.getTrades() : BARTER_TRADES;
             }
             if (this.resolvedTrades != null) {
                 return this.resolvedTrades;
@@ -245,14 +257,14 @@ public class BarterShopState {
         private static BarterTrade[] resolveTradeSlots(@Nonnull BarterShopAsset asset, long seed) {
             TradeSlot[] slots = asset.getTradeSlots();
             if (slots == null || slots.length == 0) {
-                return new BarterTrade[0];
+                return BARTER_TRADES;
             }
             Random random = new Random(seed);
             ObjectArrayList result = new ObjectArrayList();
             for (TradeSlot slot : slots) {
                 result.addAll(slot.resolve(random));
             }
-            return result.toArray(new BarterTrade[0]);
+            return result.toArray(BARTER_TRADES);
         }
 
         public void resetStockAndResolve(@Nonnull BarterShopAsset asset) {
@@ -269,7 +281,7 @@ public class BarterShopState {
             }
         }
 
-        public void resetStock(BarterShopAsset asset) {
+        public void resetStock(@Nonnull BarterShopAsset asset) {
             BarterTrade[] trades = this.getResolvedTrades(asset);
             if (this.currentStock.length != trades.length) {
                 this.currentStock = new int[trades.length];
@@ -279,7 +291,7 @@ public class BarterShopState {
             }
         }
 
-        public boolean expandStockIfNeeded(BarterShopAsset asset) {
+        public boolean expandStockIfNeeded(@Nonnull BarterShopAsset asset) {
             BarterTrade[] trades = this.getResolvedTrades(asset);
             if (this.currentStock.length >= trades.length) {
                 return false;

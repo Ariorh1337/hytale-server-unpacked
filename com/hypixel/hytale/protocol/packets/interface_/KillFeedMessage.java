@@ -4,7 +4,9 @@
 package com.hypixel.hytale.protocol.packets.interface_;
 
 import com.hypixel.hytale.protocol.FormattedMessage;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
@@ -15,7 +17,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class KillFeedMessage
-implements Packet {
+implements Packet,
+ToClientPacket {
     public static final int PACKET_ID = 213;
     public static final boolean IS_COMPRESSED = false;
     public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -33,6 +36,11 @@ implements Packet {
     @Override
     public int getId() {
         return 213;
+    }
+
+    @Override
+    public NetworkChannel getChannel() {
+        return NetworkChannel.Default;
     }
 
     public KillFeedMessage() {

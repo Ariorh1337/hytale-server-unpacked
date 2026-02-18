@@ -27,6 +27,7 @@ import javax.annotation.Nonnull;
 
 public class ObjectiveAsset
 implements JsonAssetWithMap<String, DefaultAssetMap<String, ObjectiveAsset>> {
+    @Nonnull
     public static final AssetBuilderCodec<String, ObjectiveAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(ObjectiveAsset.class, ObjectiveAsset::new, Codec.STRING, (objective, s) -> {
         objective.id = s;
     }, objective -> objective.id, (objective, data) -> {
@@ -63,6 +64,7 @@ implements JsonAssetWithMap<String, DefaultAssetMap<String, ObjectiveAsset>> {
             objectiveAsset.objectiveDescriptionKey = MessageFormat.format("server.objectives.{0}.desc", objectiveAsset.id);
         }
     })).build();
+    @Nonnull
     public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache(new AssetKeyValidator(ObjectiveAsset::getAssetStore));
     private static AssetStore<String, ObjectiveAsset, DefaultAssetMap<String, ObjectiveAsset>> ASSET_STORE;
     protected AssetExtraInfo.Data extraData;

@@ -33,6 +33,7 @@ implements Component<EntityStore> {
     private final Object2IntMap<String> deployableCountPerId = new Object2IntOpenHashMap<String>();
     @Nonnull
     private final List<Ref<EntityStore>> deployablesForDestruction = new ObjectArrayList<Ref<EntityStore>>();
+    @Nonnull
     private final List<Pair<String, Ref<EntityStore>>> tempDestructionList = new ObjectArrayList<Pair<String, Ref<EntityStore>>>();
 
     @Nonnull

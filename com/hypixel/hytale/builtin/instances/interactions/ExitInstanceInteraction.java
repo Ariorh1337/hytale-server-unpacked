@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 
 public class ExitInstanceInteraction
 extends SimpleInstantInteraction {
+    @Nonnull
     public static final BuilderCodec<ExitInstanceInteraction> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ExitInstanceInteraction.class, ExitInstanceInteraction::new, SimpleInstantInteraction.CODEC).documentation("Teleports the **Entity** out of the current **Instance** and places them at their set return point.")).build();
 
     @Override
@@ -31,8 +32,9 @@ extends SimpleInstantInteraction {
 
     @Override
     protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-        Ref<EntityStore> ref = context.getEntity();
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+        assert (commandBuffer != null);
+        Ref<EntityStore> ref = context.getEntity();
         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
         if (playerComponent != null && playerComponent.isWaitingForClientReady()) {
             return;

@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 
 public class FieldFunctionAssignmentsAsset
 extends AssignmentsAsset {
+    @Nonnull
     public static final BuilderCodec<FieldFunctionAssignmentsAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FieldFunctionAssignmentsAsset.class, FieldFunctionAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC).append(new KeyedCodec<T[]>("Delimiters", new ArrayCodec(DelimiterAsset.CODEC, DelimiterAsset[]::new), true), (asset, v) -> {
         asset.delimiterAssets = v;
     }, asset -> asset.delimiterAssets).add()).append(new KeyedCodec("FieldFunction", DensityAsset.CODEC, true), (asset, v) -> {
@@ -56,6 +57,7 @@ extends AssignmentsAsset {
     public static class DelimiterAsset
     implements Cleanable,
     JsonAssetWithMap<String, DefaultAssetMap<String, DelimiterAsset>> {
+        @Nonnull
         public static final AssetBuilderCodec<String, DelimiterAsset> CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(DelimiterAsset.class, DelimiterAsset::new, Codec.STRING, (asset, id) -> {
             asset.id = id;
         }, config -> config.id, (config, data) -> {

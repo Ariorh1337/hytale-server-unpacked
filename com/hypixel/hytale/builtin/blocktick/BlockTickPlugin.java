@@ -62,19 +62,19 @@ implements IBlockTickProvider {
         this.discoverTickingBlocks(event.getHolder(), event.getChunk());
     }
 
-    public int discoverTickingBlocks(@Nonnull Holder<ChunkStore> holder, @Nonnull WorldChunk chunk) {
+    public int discoverTickingBlocks(@Nonnull Holder<ChunkStore> holder, @Nonnull WorldChunk worldChunk) {
         if (!this.isEnabled()) {
             return 0;
         }
-        BlockChunk bc = chunk.getBlockChunk();
-        if (!bc.consumeNeedsPhysics()) {
+        BlockChunk blockChunkComponent = worldChunk.getBlockChunk();
+        if (blockChunkComponent == null || !blockChunkComponent.consumeNeedsPhysics()) {
             return 0;
         }
-        ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
-        if (column == null) {
+        ChunkColumn chunkColumnComponent = holder.getComponent(ChunkColumn.getComponentType());
+        if (chunkColumnComponent == null) {
             return 0;
         }
-        Holder<ChunkStore>[] sections = column.getSectionHolders();
+        Holder<ChunkStore>[] sections = chunkColumnComponent.getSectionHolders();
         if (sections == null) {
             return 0;
         }
@@ -82,14 +82,14 @@ implements IBlockTickProvider {
         int count = 0;
         for (int i = 0; i < sections.length; ++i) {
             Holder<ChunkStore> sectionHolder = sections[i];
-            BlockSection section = sectionHolder.ensureAndGetComponent(BlockSection.getComponentType());
-            if (section.isSolidAir()) continue;
+            BlockSection blockSectionComponent = sectionHolder.ensureAndGetComponent(BlockSection.getComponentType());
+            if (blockSectionComponent.isSolidAir()) continue;
             for (int blockIdx = 0; blockIdx < 32768; ++blockIdx) {
-                int blockId = section.get(blockIdx);
+                int blockId = blockSectionComponent.get(blockIdx);
                 BlockType blockType = assetMap.getAsset(blockId);
                 if (blockType == null || blockType.getTickProcedure() == null) continue;
-                section.setTicking(blockIdx, true);
-                bc.markNeedsSaving();
+                blockSectionComponent.setTicking(blockIdx, true);
+                blockChunkComponent.markNeedsSaving();
                 ++count;
             }
         }

@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 public class CreativeHubEntityConfig
 implements Component<EntityStore> {
+    @Nonnull
     public static final String ID = "CreativeHub";
     @Nonnull
     public static final BuilderCodec<CreativeHubEntityConfig> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CreativeHubEntityConfig.class, CreativeHubEntityConfig::new).appendInherited(new KeyedCodec("ParentHubWorldUuid", Codec.UUID_STRING), (o, i) -> {

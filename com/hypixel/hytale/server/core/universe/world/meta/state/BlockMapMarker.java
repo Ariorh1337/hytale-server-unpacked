@@ -18,11 +18,10 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.Direction;
-import com.hypixel.hytale.protocol.Position;
-import com.hypixel.hytale.protocol.Transform;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -30,7 +29,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.meta.state.BlockMapMarkersResource;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -76,16 +76,13 @@ implements Component<ChunkStore> {
         public static final MarkerProvider INSTANCE = new MarkerProvider();
 
         @Override
-        public void update(World world, MapMarkerTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
+        public void update(@Nonnull World world, @Nonnull Player player, @Nonnull MarkersCollector collector) {
             BlockMapMarkersResource resource = world.getChunkStore().getStore().getResource(BlockMapMarkersResource.getResourceType());
             Long2ObjectMap<BlockMapMarkersResource.BlockMapMarkerData> markers = resource.getMarkers();
             for (BlockMapMarkersResource.BlockMapMarkerData markerData : markers.values()) {
                 Vector3i position = markerData.getPosition();
-                Transform transform = new Transform();
-                transform.position = new Position((float)position.getX() + 0.5f, position.getY(), (float)position.getZ() + 0.5f);
-                transform.orientation = new Direction(0.0f, 0.0f, 0.0f);
-                MapMarker marker = new MapMarker(markerData.getMarkerId(), markerData.getName(), markerData.getIcon(), transform, null);
-                tracker.trySendMarker(chunkViewRadius, playerChunkX, playerChunkZ, marker);
+                MapMarker marker = new MapMarkerBuilder(markerData.getMarkerId(), markerData.getIcon(), new Transform(position)).withCustomName(markerData.getName()).build();
+                collector.add(marker);
             }
         }
     }

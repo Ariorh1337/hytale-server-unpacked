@@ -7,7 +7,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.AnimationSlot;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.entities.PlayAnimation;
 import com.hypixel.hytale.server.core.asset.type.itemanimation.config.ItemPlayerAnimations;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -64,9 +64,9 @@ public class AnimationUtils {
         assert (networkIdComponent != null);
         PlayAnimation animationPacket = new PlayAnimation(networkIdComponent.getId(), null, null, animationSlot);
         if (sendToSelf) {
-            PlayerUtil.forEachPlayerThatCanSeeEntity(ref, (playerRef, playerRefComponent, ca) -> playerRefComponent.getPacketHandler().write((Packet)animationPacket), componentAccessor);
+            PlayerUtil.forEachPlayerThatCanSeeEntity(ref, (playerRef, playerRefComponent, ca) -> playerRefComponent.getPacketHandler().write((ToClientPacket)animationPacket), componentAccessor);
         } else {
-            PlayerUtil.forEachPlayerThatCanSeeEntity(ref, (playerRef, playerRefComponent, ca) -> playerRefComponent.getPacketHandler().write((Packet)animationPacket), ref, componentAccessor);
+            PlayerUtil.forEachPlayerThatCanSeeEntity(ref, (playerRef, playerRefComponent, ca) -> playerRefComponent.getPacketHandler().write((ToClientPacket)animationPacket), ref, componentAccessor);
         }
     }
 

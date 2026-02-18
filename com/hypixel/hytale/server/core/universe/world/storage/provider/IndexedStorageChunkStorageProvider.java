@@ -9,15 +9,11 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.component.Resource;
-import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.component.SystemGroup;
-import com.hypixel.hytale.component.system.StoreSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.BufferChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.BufferChunkSaver;
@@ -48,9 +44,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class IndexedStorageChunkStorageProvider
-implements IChunkStorageProvider {
+implements IChunkStorageProvider<IndexedStorageCache> {
     public static final String ID = "IndexedStorage";
     @Nonnull
     public static final BuilderCodec<IndexedStorageChunkStorageProvider> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(IndexedStorageChunkStorageProvider.class, IndexedStorageChunkStorageProvider::new).documentation("Uses the indexed storage file format to store chunks.")).appendInherited(new KeyedCodec<Boolean>("FlushOnWrite", Codec.BOOLEAN), (o, i) -> {
@@ -61,15 +58,28 @@ implements IChunkStorageProvider {
     private boolean flushOnWrite = false;
 
     @Override
-    @Nonnull
-    public IChunkLoader getLoader(@Nonnull Store<ChunkStore> store) {
-        return new IndexedStorageChunkLoader(store, this.flushOnWrite);
+    public IndexedStorageCache initialize(@NonNullDecl Store<ChunkStore> store) throws IOException {
+        World world = store.getExternalData().getWorld();
+        IndexedStorageCache cache = new IndexedStorageCache();
+        cache.path = world.getSavePath().resolve("chunks");
+        return cache;
+    }
+
+    @Override
+    public void close(@NonNullDecl IndexedStorageCache cache, @NonNullDecl Store<ChunkStore> store) throws IOException {
+        cache.close();
     }
 
     @Override
     @Nonnull
-    public IChunkSaver getSaver(@Nonnull Store<ChunkStore> store) {
-        return new IndexedStorageChunkSaver(store, this.flushOnWrite);
+    public IChunkLoader getLoader(@Nonnull IndexedStorageCache cache, @Nonnull Store<ChunkStore> store) {
+        return new IndexedStorageChunkLoader(store, cache, this.flushOnWrite);
+    }
+
+    @Override
+    @Nonnull
+    public IChunkSaver getSaver(@Nonnull IndexedStorageCache cache, @Nonnull Store<ChunkStore> store) {
+        return new IndexedStorageChunkSaver(store, cache, this.flushOnWrite);
     }
 
     @Nonnull
@@ -98,139 +108,6 @@ implements IChunkStorageProvider {
         return ChunkUtil.indexChunk(regionX, regionZ);
     }
 
-    public static class IndexedStorageChunkLoader
-    extends BufferChunkLoader
-    implements MetricProvider {
-        private final boolean flushOnWrite;
-
-        public IndexedStorageChunkLoader(@Nonnull Store<ChunkStore> store, boolean flushOnWrite) {
-            super(store);
-            this.flushOnWrite = flushOnWrite;
-        }
-
-        @Override
-        public void close() throws IOException {
-            this.getStore().getResource(IndexedStorageCache.getResourceType()).close();
-        }
-
-        @Override
-        @Nonnull
-        public CompletableFuture<ByteBuffer> loadBuffer(int x, int z) {
-            int regionX = x >> 5;
-            int regionZ = z >> 5;
-            int localX = x & 0x1F;
-            int localZ = z & 0x1F;
-            int index = ChunkUtil.indexColumn(localX, localZ);
-            IndexedStorageCache indexedStorageCache = this.getStore().getResource(IndexedStorageCache.getResourceType());
-            return CompletableFuture.supplyAsync(SneakyThrow.sneakySupplier(() -> {
-                IndexedStorageFile chunks = indexedStorageCache.getOrTryOpen(regionX, regionZ, this.flushOnWrite);
-                if (chunks == null) {
-                    return null;
-                }
-                return chunks.readBlob(index);
-            }));
-        }
-
-        @Override
-        @Nonnull
-        public LongSet getIndexes() throws IOException {
-            return this.getStore().getResource(IndexedStorageCache.getResourceType()).getIndexes();
-        }
-
-        @Override
-        @Nullable
-        public MetricResults toMetricResults() {
-            if (this.getStore().getExternalData().getSaver() instanceof IndexedStorageChunkSaver) {
-                return null;
-            }
-            return this.getStore().getResource(IndexedStorageCache.getResourceType()).toMetricResults();
-        }
-    }
-
-    public static class IndexedStorageChunkSaver
-    extends BufferChunkSaver
-    implements MetricProvider {
-        private final boolean flushOnWrite;
-
-        protected IndexedStorageChunkSaver(@Nonnull Store<ChunkStore> store, boolean flushOnWrite) {
-            super(store);
-            this.flushOnWrite = flushOnWrite;
-        }
-
-        @Override
-        public void close() throws IOException {
-            IndexedStorageCache indexedStorageCache = this.getStore().getResource(IndexedStorageCache.getResourceType());
-            indexedStorageCache.close();
-        }
-
-        @Override
-        @Nonnull
-        public CompletableFuture<Void> saveBuffer(int x, int z, @Nonnull ByteBuffer buffer) {
-            int regionX = x >> 5;
-            int regionZ = z >> 5;
-            int localX = x & 0x1F;
-            int localZ = z & 0x1F;
-            int index = ChunkUtil.indexColumn(localX, localZ);
-            IndexedStorageCache indexedStorageCache = this.getStore().getResource(IndexedStorageCache.getResourceType());
-            return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> {
-                IndexedStorageFile chunks = indexedStorageCache.getOrCreate(regionX, regionZ, this.flushOnWrite);
-                chunks.writeBlob(index, buffer);
-            }));
-        }
-
-        @Override
-        @Nonnull
-        public CompletableFuture<Void> removeBuffer(int x, int z) {
-            int regionX = x >> 5;
-            int regionZ = z >> 5;
-            int localX = x & 0x1F;
-            int localZ = z & 0x1F;
-            int index = ChunkUtil.indexColumn(localX, localZ);
-            IndexedStorageCache indexedStorageCache = this.getStore().getResource(IndexedStorageCache.getResourceType());
-            return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> {
-                IndexedStorageFile chunks = indexedStorageCache.getOrTryOpen(regionX, regionZ, this.flushOnWrite);
-                if (chunks != null) {
-                    chunks.removeBlob(index);
-                }
-            }));
-        }
-
-        @Override
-        @Nonnull
-        public LongSet getIndexes() throws IOException {
-            return this.getStore().getResource(IndexedStorageCache.getResourceType()).getIndexes();
-        }
-
-        @Override
-        public void flush() throws IOException {
-            this.getStore().getResource(IndexedStorageCache.getResourceType()).flush();
-        }
-
-        @Override
-        public MetricResults toMetricResults() {
-            return this.getStore().getResource(IndexedStorageCache.getResourceType()).toMetricResults();
-        }
-    }
-
-    public static class IndexedStorageCacheSetupSystem
-    extends StoreSystem<ChunkStore> {
-        @Override
-        @Nullable
-        public SystemGroup<ChunkStore> getGroup() {
-            return ChunkStore.INIT_GROUP;
-        }
-
-        @Override
-        public void onSystemAddedToStore(@Nonnull Store<ChunkStore> store) {
-            World world = store.getExternalData().getWorld();
-            store.getResource(IndexedStorageCache.getResourceType()).path = world.getSavePath().resolve("chunks");
-        }
-
-        @Override
-        public void onSystemRemovedFromStore(@Nonnull Store<ChunkStore> store) {
-        }
-    }
-
     public static class IndexedStorageCache
     implements Closeable,
     MetricProvider,
@@ -239,10 +116,6 @@ implements IChunkStorageProvider {
         public static final MetricsRegistry<IndexedStorageCache> METRICS_REGISTRY = new MetricsRegistry<IndexedStorageCache>().register("Files", cache -> (CacheEntryMetricData[])cache.cache.long2ObjectEntrySet().stream().map(CacheEntryMetricData::new).toArray(CacheEntryMetricData[]::new), new ArrayCodec<CacheEntryMetricData>(CacheEntryMetricData.CODEC, CacheEntryMetricData[]::new));
         private final Long2ObjectConcurrentHashMap<IndexedStorageFile> cache = new Long2ObjectConcurrentHashMap(true, ChunkUtil.NOT_FOUND);
         private Path path;
-
-        public static ResourceType<ChunkStore, IndexedStorageCache> getResourceType() {
-            return Universe.get().getIndexedStorageCacheResourceType();
-        }
 
         @Nonnull
         public Long2ObjectConcurrentHashMap<IndexedStorageFile> getCache() {
@@ -400,6 +273,120 @@ implements IChunkStorageProvider {
                 this.key = entry.getLongKey();
                 this.value = (IndexedStorageFile)entry.getValue();
             }
+        }
+    }
+
+    public static class IndexedStorageChunkLoader
+    extends BufferChunkLoader
+    implements MetricProvider {
+        @Nonnull
+        private final IndexedStorageCache cache;
+        private final boolean flushOnWrite;
+
+        public IndexedStorageChunkLoader(@Nonnull Store<ChunkStore> store, @Nonnull IndexedStorageCache cache, boolean flushOnWrite) {
+            super(store);
+            this.cache = cache;
+            this.flushOnWrite = flushOnWrite;
+        }
+
+        @Override
+        public void close() throws IOException {
+        }
+
+        @Override
+        @Nonnull
+        public CompletableFuture<ByteBuffer> loadBuffer(int x, int z) {
+            int regionX = x >> 5;
+            int regionZ = z >> 5;
+            int localX = x & 0x1F;
+            int localZ = z & 0x1F;
+            int index = ChunkUtil.indexColumn(localX, localZ);
+            return CompletableFuture.supplyAsync(SneakyThrow.sneakySupplier(() -> {
+                IndexedStorageFile chunks = this.cache.getOrTryOpen(regionX, regionZ, this.flushOnWrite);
+                if (chunks == null) {
+                    return null;
+                }
+                return chunks.readBlob(index);
+            }));
+        }
+
+        @Override
+        @Nonnull
+        public LongSet getIndexes() throws IOException {
+            return this.cache.getIndexes();
+        }
+
+        @Override
+        @Nullable
+        public MetricResults toMetricResults() {
+            if (this.getStore().getExternalData().getSaver() instanceof IndexedStorageChunkSaver) {
+                return null;
+            }
+            return this.cache.toMetricResults();
+        }
+    }
+
+    public static class IndexedStorageChunkSaver
+    extends BufferChunkSaver
+    implements MetricProvider {
+        @Nonnull
+        private final IndexedStorageCache cache;
+        private final boolean flushOnWrite;
+
+        protected IndexedStorageChunkSaver(@Nonnull Store<ChunkStore> store, @Nonnull IndexedStorageCache cache, boolean flushOnWrite) {
+            super(store);
+            this.cache = cache;
+            this.flushOnWrite = flushOnWrite;
+        }
+
+        @Override
+        public void close() throws IOException {
+        }
+
+        @Override
+        @Nonnull
+        public CompletableFuture<Void> saveBuffer(int x, int z, @Nonnull ByteBuffer buffer) {
+            int regionX = x >> 5;
+            int regionZ = z >> 5;
+            int localX = x & 0x1F;
+            int localZ = z & 0x1F;
+            int index = ChunkUtil.indexColumn(localX, localZ);
+            return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> {
+                IndexedStorageFile chunks = this.cache.getOrCreate(regionX, regionZ, this.flushOnWrite);
+                chunks.writeBlob(index, buffer);
+            }));
+        }
+
+        @Override
+        @Nonnull
+        public CompletableFuture<Void> removeBuffer(int x, int z) {
+            int regionX = x >> 5;
+            int regionZ = z >> 5;
+            int localX = x & 0x1F;
+            int localZ = z & 0x1F;
+            int index = ChunkUtil.indexColumn(localX, localZ);
+            return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> {
+                IndexedStorageFile chunks = this.cache.getOrTryOpen(regionX, regionZ, this.flushOnWrite);
+                if (chunks != null) {
+                    chunks.removeBlob(index);
+                }
+            }));
+        }
+
+        @Override
+        @Nonnull
+        public LongSet getIndexes() throws IOException {
+            return this.cache.getIndexes();
+        }
+
+        @Override
+        public void flush() throws IOException {
+            this.cache.flush();
+        }
+
+        @Override
+        public MetricResults toMetricResults() {
+            return this.cache.toMetricResults();
         }
     }
 }

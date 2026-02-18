@@ -35,11 +35,17 @@ import javax.annotation.Nullable;
 
 public class OpenBenchPageInteraction
 extends SimpleBlockInteraction {
+    @Nonnull
     public static final OpenBenchPageInteraction SIMPLE_CRAFTING = new OpenBenchPageInteraction("*Simple_Crafting_Default", PageType.SIMPLE_CRAFTING);
+    @Nonnull
     public static final RootInteraction SIMPLE_CRAFTING_ROOT = new RootInteraction(SIMPLE_CRAFTING.getId(), SIMPLE_CRAFTING.getId());
+    @Nonnull
     public static final OpenBenchPageInteraction DIAGRAM_CRAFTING = new OpenBenchPageInteraction("*Diagram_Crafting_Default", PageType.DIAGRAM_CRAFTING);
+    @Nonnull
     public static final RootInteraction DIAGRAM_CRAFTING_ROOT = new RootInteraction(DIAGRAM_CRAFTING.getId(), DIAGRAM_CRAFTING.getId());
+    @Nonnull
     public static final OpenBenchPageInteraction STRUCTURAL_CRAFTING = new OpenBenchPageInteraction("*Structural_Crafting_Default", PageType.STRUCTURAL_CRAFTING);
+    @Nonnull
     public static final RootInteraction STRUCTURAL_CRAFTING_ROOT = new RootInteraction(STRUCTURAL_CRAFTING.getId(), STRUCTURAL_CRAFTING.getId());
     @Nonnull
     public static final BuilderCodec<OpenBenchPageInteraction> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(OpenBenchPageInteraction.class, OpenBenchPageInteraction::new, SimpleBlockInteraction.CODEC).documentation("Opens the given crafting bench page.")).appendInherited(new KeyedCodec<PageType>("Page", new EnumCodec<PageType>(PageType.class)), (o, v) -> {
@@ -67,8 +73,7 @@ extends SimpleBlockInteraction {
             return;
         }
         CraftingManager craftingManagerComponent = commandBuffer.getComponent(ref, CraftingManager.getComponentType());
-        assert (craftingManagerComponent != null);
-        if (craftingManagerComponent.hasBenchSet()) {
+        if (craftingManagerComponent == null || craftingManagerComponent.hasBenchSet()) {
             return;
         }
         BlockState blockState = world.getState(targetBlock.x, targetBlock.y, targetBlock.z, true);
@@ -81,7 +86,9 @@ extends SimpleBlockInteraction {
                 case 2 -> new StructuralCraftingWindow(benchState);
             };
             UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-            assert (uuidComponent != null);
+            if (uuidComponent == null) {
+                return;
+            }
             UUID uuid = uuidComponent.getUuid();
             if (benchState.getWindows().putIfAbsent(uuid, benchWindow) == null) {
                 benchWindow.registerCloseEvent(event -> benchState.getWindows().remove(uuid, benchWindow));
@@ -94,7 +101,7 @@ extends SimpleBlockInteraction {
     protected void simulateInteractWithBlock(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock) {
     }
 
-    private static enum PageType {
+    public static enum PageType {
         SIMPLE_CRAFTING,
         DIAGRAM_CRAFTING,
         STRUCTURAL_CRAFTING;

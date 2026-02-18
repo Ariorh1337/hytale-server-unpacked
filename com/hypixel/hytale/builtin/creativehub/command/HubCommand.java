@@ -31,13 +31,13 @@ extends AbstractPlayerCommand {
 
     public HubCommand() {
         super("hub", "server.commands.hub.desc");
-        this.addAliases("converge", "convergence");
+        this.addAliases("cosmos", "crossroads");
         this.setPermissionGroup(GameMode.Creative);
     }
 
     @Override
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
-        World parentWorld = this.findParentHubWorld(store, ref);
+        World parentWorld = HubCommand.findParentHubWorld(store, ref);
         if (parentWorld == null) {
             playerRef.sendMessage(MESSAGE_NOT_IN_HUB_WORLD);
             return;
@@ -48,7 +48,7 @@ extends AbstractPlayerCommand {
             return;
         }
         World currentHub = CreativeHubPlugin.get().getActiveHubInstance(parentWorld);
-        if (currentHub != null && world.equals(currentHub)) {
+        if (world.equals(currentHub)) {
             playerRef.sendMessage(MESSAGE_ALREADY_IN_HUB);
             return;
         }
@@ -59,7 +59,7 @@ extends AbstractPlayerCommand {
     }
 
     @Nullable
-    private World findParentHubWorld(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
+    private static World findParentHubWorld(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
         CreativeHubWorldConfig hubConfig;
         World parentWorld;
         CreativeHubEntityConfig hubEntityConfig = store.getComponent(ref, CreativeHubEntityConfig.getComponentType());

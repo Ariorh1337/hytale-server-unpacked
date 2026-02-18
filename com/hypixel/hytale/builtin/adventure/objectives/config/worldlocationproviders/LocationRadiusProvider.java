@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 
 public class LocationRadiusProvider
 extends WorldLocationProvider {
+    @Nonnull
     public static final BuilderCodec<LocationRadiusProvider> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(LocationRadiusProvider.class, LocationRadiusProvider::new, BASE_CODEC).append(new KeyedCodec<Integer>("MinRadius", Codec.INTEGER), (locationRadiusCondition, integer) -> {
         locationRadiusCondition.minRadius = integer;
     }, locationRadiusCondition -> locationRadiusCondition.minRadius).addValidator(Validators.greaterThan(0)).add()).append(new KeyedCodec<Integer>("MaxRadius", Codec.INTEGER), (locationRadiusCondition, integer) -> {
@@ -32,13 +33,18 @@ extends WorldLocationProvider {
     protected int maxRadius = 50;
 
     @Override
-    @Nonnull
+    @Nullable
     public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
         double angle = Math.random() * 6.2831854820251465;
         int radius = MathUtil.randomInt(this.minRadius, this.maxRadius);
         Vector3i newPosition = position.clone();
         newPosition.add((int)((float)radius * TrigMathUtil.cos(angle)), 0, (int)((float)radius * TrigMathUtil.sin(angle)));
-        newPosition.y = ((WorldChunk)world.getChunk(ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z))).getHeight(newPosition.x, newPosition.z);
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z);
+        Object worldChunkComponent = world.getChunk(chunkIndex);
+        if (worldChunkComponent == null) {
+            return null;
+        }
+        newPosition.y = ((WorldChunk)worldChunkComponent).getHeight(newPosition.x, newPosition.z);
         return newPosition;
     }
 

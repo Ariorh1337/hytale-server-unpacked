@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 
 public class Mesh2DPositionProviderAsset
 extends PositionProviderAsset {
+    @Nonnull
     public static final BuilderCodec<Mesh2DPositionProviderAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Mesh2DPositionProviderAsset.class, Mesh2DPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("PointGenerator", PointGeneratorAsset.CODEC, true), (asset, v) -> {
         asset.pointGeneratorAsset = v;
     }, asset -> asset.pointGeneratorAsset).add()).append(new KeyedCodec<Integer>("PointsY", Codec.INTEGER, true), (asset, v) -> {

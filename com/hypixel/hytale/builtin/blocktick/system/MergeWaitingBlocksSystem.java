@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 
 public class MergeWaitingBlocksSystem
 extends RefSystem<ChunkStore> {
+    @Nonnull
     private static final ComponentType<ChunkStore, WorldChunk> COMPONENT_TYPE = WorldChunk.getComponentType();
 
     @Override
@@ -29,9 +30,10 @@ extends RefSystem<ChunkStore> {
     @Override
     public void onEntityAdded(@Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer) {
         ChunkStore chunkStore = store.getExternalData();
-        WorldChunk chunk = store.getComponent(ref, COMPONENT_TYPE);
-        int x = chunk.getX();
-        int z = chunk.getZ();
+        WorldChunk worldChunkComponent = store.getComponent(ref, COMPONENT_TYPE);
+        assert (worldChunkComponent != null);
+        int x = worldChunkComponent.getX();
+        int z = worldChunkComponent.getZ();
         MergeWaitingBlocksSystem.mergeTickingBlocks(chunkStore, x - 1, z);
         MergeWaitingBlocksSystem.mergeTickingBlocks(chunkStore, x + 1, z);
         MergeWaitingBlocksSystem.mergeTickingBlocks(chunkStore, x, z - 1);
@@ -43,9 +45,10 @@ extends RefSystem<ChunkStore> {
     }
 
     public static void mergeTickingBlocks(@Nonnull ChunkStore store, int x, int z) {
-        BlockChunk blockChunk = store.getChunkComponent(ChunkUtil.indexChunk(x, z), BlockChunk.getComponentType());
-        if (blockChunk != null) {
-            blockChunk.mergeTickingBlocks();
+        long chunkIndex = ChunkUtil.indexChunk(x, z);
+        BlockChunk blockChunkComponent = store.getChunkComponent(chunkIndex, BlockChunk.getComponentType());
+        if (blockChunkComponent != null) {
+            blockChunkComponent.mergeTickingBlocks();
         }
     }
 }

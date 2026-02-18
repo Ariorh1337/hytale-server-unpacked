@@ -36,20 +36,21 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PrefabBufferValidator {
+    @Nonnull
     private static final FillerBlockUtil.FillerFetcher<IPrefabBuffer, Void> FILLER_FETCHER = new FillerBlockUtil.FillerFetcher<IPrefabBuffer, Void>(){
 
         @Override
-        public int getBlock(IPrefabBuffer iPrefabBuffer, Void unused, int x, int y, int z) {
+        public int getBlock(@Nonnull IPrefabBuffer iPrefabBuffer, Void unused, int x, int y, int z) {
             return iPrefabBuffer.getBlockId(x, y, z);
         }
 
         @Override
-        public int getFiller(IPrefabBuffer iPrefabBuffer, Void unused, int x, int y, int z) {
+        public int getFiller(@Nonnull IPrefabBuffer iPrefabBuffer, Void unused, int x, int y, int z) {
             return iPrefabBuffer.getFiller(x, y, z);
         }
 
         @Override
-        public int getRotationIndex(IPrefabBuffer iPrefabBuffer, Void unused, int x, int y, int z) {
+        public int getRotationIndex(@Nonnull IPrefabBuffer iPrefabBuffer, Void unused, int x, int y, int z) {
             return iPrefabBuffer.getRotationIndex(x, y, z);
         }
     };

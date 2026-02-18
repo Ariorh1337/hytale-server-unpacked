@@ -6,12 +6,12 @@ package com.hypixel.hytale.builtin.adventure.objectives.markers;
 import com.hypixel.hytale.builtin.adventure.objectives.Objective;
 import com.hypixel.hytale.builtin.adventure.objectives.ObjectiveDataStore;
 import com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin;
+import com.hypixel.hytale.builtin.adventure.objectives.markers.ObjectiveTaskMarker;
 import com.hypixel.hytale.builtin.adventure.objectives.task.ObjectiveTask;
-import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -24,8 +24,7 @@ implements WorldMapManager.MarkerProvider {
     }
 
     @Override
-    public void update(@Nonnull World world, @Nonnull MapMarkerTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ) {
-        Player player = tracker.getPlayer();
+    public void update(@Nonnull World world, @Nonnull Player player, @Nonnull MarkersCollector collector) {
         Set<UUID> activeObjectiveUUIDs = player.getPlayerConfigData().getActiveObjectiveUUIDs();
         if (activeObjectiveUUIDs.isEmpty()) {
             return;
@@ -37,8 +36,8 @@ implements WorldMapManager.MarkerProvider {
             Objective objective = objectiveDataStore.getObjective(objectiveUUID);
             if (objective == null || !objective.getActivePlayerUUIDs().contains(playerUUID) || (tasks = objective.getCurrentTasks()) == null) continue;
             for (ObjectiveTask task : tasks) {
-                for (MapMarker marker : task.getMarkers()) {
-                    tracker.trySendMarker(chunkViewRadius, playerChunkX, playerChunkZ, marker);
+                for (ObjectiveTaskMarker marker : task.getMarkers()) {
+                    collector.add(marker.toProto());
                 }
             }
         }

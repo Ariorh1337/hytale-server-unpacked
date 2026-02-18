@@ -16,8 +16,10 @@ import com.hypixel.hytale.math.shape.Box2D;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.worldmap.ClearWorldMap;
 import com.hypixel.hytale.protocol.packets.worldmap.MapChunk;
 import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
@@ -25,6 +27,7 @@ import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapSettings;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DiscoverZoneEvent;
@@ -79,6 +82,8 @@ implements Tickable {
     private String currentBiomeName;
     @Nullable
     private ZoneDiscoveryInfo currentZone;
+    private boolean allowTeleportToCoordinates = true;
+    private boolean allowTeleportToMarkers = true;
     private boolean clientHasWorldMapVisible;
     @Nullable
     private TransformComponent transformComponent;
@@ -95,7 +100,7 @@ implements Tickable {
             this.started = true;
             LOGGER.at(Level.INFO).log("Started Generating Map!");
         }
-        if ((world = this.player.getWorld()) == null) {
+        if ((world = this.player.getWorld()) == null || !this.player.getPlayerConnection().getChannel(NetworkChannel.WorldMap).isWritable()) {
             return;
         }
         if (this.transformComponent == null) {
@@ -375,7 +380,7 @@ implements Tickable {
         if (list != null) {
             UpdateWorldMap packet = new UpdateWorldMap((MapChunk[])list.toArray(MapChunk[]::new), null, null);
             LOGGER.at(Level.FINE).log("Sending world map update to %s - %d chunks", (Object)this.player.getUuid(), list.size());
-            this.player.getPlayerConnection().write((Packet)packet);
+            this.player.getPlayerConnection().write((ToClientPacket)packet);
         }
     }
 
@@ -404,7 +409,7 @@ implements Tickable {
         finally {
             this.loadedLock.writeLock().unlock();
         }
-        this.player.getPlayerConnection().write((Packet)new ClearWorldMap());
+        this.player.getPlayerConnection().write((ToClientPacket)new ClearWorldMap());
     }
 
     public void clearChunks(@Nonnull LongSet chunkIndices) {
@@ -434,9 +439,14 @@ implements Tickable {
             assert (playerComponent != null);
             PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
             assert (playerRefComponent != null);
-            worldMapSettingsPacket.allowTeleportToCoordinates = this.isAllowTeleportToCoordinates();
-            worldMapSettingsPacket.allowTeleportToMarkers = this.isAllowTeleportToMarkers();
-            playerRefComponent.getPacketHandler().write((Packet)worldMapSettingsPacket);
+            worldMapSettingsPacket.allowTeleportToCoordinates = this.allowTeleportToCoordinates && playerComponent.getGameMode() != GameMode.Adventure;
+            worldMapSettingsPacket.allowTeleportToMarkers = this.allowTeleportToMarkers && playerComponent.getGameMode() != GameMode.Adventure;
+            WorldMapConfig worldMapConfig = world.getGameplayConfig().getWorldMapConfig();
+            worldMapSettingsPacket.allowCreatingMapMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowCreatingMarkers();
+            worldMapSettingsPacket.allowShowOnMapToggle = worldMapConfig.canTogglePlayersInMap();
+            worldMapSettingsPacket.allowCompassTrackingToggle = worldMapConfig.canTrackPlayersInCompass();
+            worldMapSettingsPacket.allowRemovingOtherPlayersMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowDeleteOtherPlayersSharedMarkers();
+            playerRefComponent.getPacketHandler().write((ToClientPacket)worldMapSettingsPacket);
         });
     }
 
@@ -493,11 +503,11 @@ implements Tickable {
     }
 
     public boolean isAllowTeleportToCoordinates() {
-        return this.player.hasPermission("hytale.world_map.teleport.coordinate");
+        return this.player.hasPermission("hytale.world_map.teleport.coordinate") && this.player.getGameMode() != GameMode.Adventure;
     }
 
     public boolean isAllowTeleportToMarkers() {
-        return this.player.hasPermission("hytale.world_map.teleport.marker");
+        return this.player.hasPermission("hytale.world_map.teleport.marker") && this.player.getGameMode() != GameMode.Adventure;
     }
 
     public void setPlayerMapFilter(Predicate<PlayerRef> playerMapFilter) {

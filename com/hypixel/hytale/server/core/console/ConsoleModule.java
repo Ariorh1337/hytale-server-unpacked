@@ -27,9 +27,10 @@ import org.jline.terminal.TerminalBuilder;
 
 public class ConsoleModule
 extends JavaPlugin {
+    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
     public static final PluginManifest MANIFEST = PluginManifest.corePlugin(ConsoleModule.class).build();
     private static ConsoleModule instance;
-    private Terminal terminal;
+    private static Terminal terminal;
     private ConsoleRunnable consoleRunnable;
 
     public static ConsoleModule get() {
@@ -40,10 +41,7 @@ extends JavaPlugin {
         super(init);
     }
 
-    @Override
-    protected void setup() {
-        instance = this;
-        this.getCommandRegistry().registerCommand(new SayCommand());
+    public static void initializeTerminal() {
         try {
             TerminalBuilder builder = TerminalBuilder.builder();
             if (Constants.SINGLEPLAYER) {
@@ -51,22 +49,28 @@ extends JavaPlugin {
             } else {
                 builder.color(true);
             }
-            this.terminal = builder.build();
-            HytaleConsole.INSTANCE.setTerminal(this.terminal.getType());
-            LineReader lineReader = LineReaderBuilder.builder().terminal(this.terminal).build();
-            this.consoleRunnable = new ConsoleRunnable(lineReader, ConsoleSender.INSTANCE);
-            this.getLogger().at(Level.INFO).log("Setup console with type: %s", this.terminal.getType());
+            terminal = builder.build();
+            HytaleConsole.INSTANCE.setTerminal(terminal.getType());
         }
         catch (IOException e) {
-            ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(e)).log("Failed to start console reader");
+            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(e)).log("Failed to start console reader");
         }
+    }
+
+    @Override
+    protected void setup() {
+        instance = this;
+        this.getCommandRegistry().registerCommand(new SayCommand());
+        LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).build();
+        this.consoleRunnable = new ConsoleRunnable(lineReader, ConsoleSender.INSTANCE);
+        this.getLogger().at(Level.INFO).log("Setup console with type: %s", terminal.getType());
     }
 
     @Override
     protected void shutdown() {
         this.getLogger().at(Level.INFO).log("Restoring terminal...");
         try {
-            this.terminal.close();
+            terminal.close();
         }
         catch (IOException e) {
             ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(e)).log("Failed to restore terminal!");
@@ -75,7 +79,7 @@ extends JavaPlugin {
     }
 
     public Terminal getTerminal() {
-        return this.terminal;
+        return terminal;
     }
 
     private static class ConsoleRunnable

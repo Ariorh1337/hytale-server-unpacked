@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.beds.respawn.SelectOverrideRespawnPointPage;
 import com.hypixel.hytale.builtin.beds.respawn.SetNameRespawnPointPage;
 import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSleep;
 import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSomnolence;
+import com.hypixel.hytale.builtin.beds.sleep.systems.player.SleepNotificationSystem;
 import com.hypixel.hytale.builtin.mounts.BlockMountAPI;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.AddReason;
@@ -53,56 +54,67 @@ extends SimpleBlockInteraction {
     protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull Vector3i pos, @Nonnull CooldownHandler cooldownHandler) {
         RespawnConfig respawnConfig;
         int radiusLimitRespawnPoint;
-        RespawnBlock respawnBlockComponent;
         Ref<EntityStore> ref = context.getEntity();
-        Player player = commandBuffer.getComponent(ref, Player.getComponentType());
-        if (player == null) {
+        Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+        if (playerComponent == null) {
             return;
         }
         Store<EntityStore> store = commandBuffer.getStore();
         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-        assert (playerRefComponent != null);
-        UUIDComponent playerUuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-        assert (playerUuidComponent != null);
-        UUID playerUuid = playerUuidComponent.getUuid();
-        Ref<ChunkStore> chunkReference = world.getChunkStore().getChunkReference(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
-        if (chunkReference == null) {
+        if (playerRefComponent == null) {
             return;
         }
-        Store<ChunkStore> chunkStore = chunkReference.getStore();
-        BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkReference, BlockComponentChunk.getComponentType());
-        assert (blockComponentChunk != null);
+        UUIDComponent playerUuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+        if (playerUuidComponent == null) {
+            return;
+        }
+        UUID playerUuid = playerUuidComponent.getUuid();
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(pos.x, pos.z);
+        Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(chunkIndex);
+        if (chunkRef == null || !chunkRef.isValid()) {
+            return;
+        }
+        Store<ChunkStore> chunkStore = chunkRef.getStore();
+        BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
+        if (blockComponentChunk == null) {
+            return;
+        }
         int blockIndex = ChunkUtil.indexBlockInColumn(pos.x, pos.y, pos.z);
         Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndex);
-        if (blockRef == null) {
+        if (blockRef == null || !blockRef.isValid()) {
             Holder<ChunkStore> holder = ChunkStore.REGISTRY.newHolder();
-            holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(blockIndex, chunkReference));
+            holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(blockIndex, chunkRef));
             holder.ensureComponent(RespawnBlock.getComponentType());
             blockRef = chunkStore.addEntity(holder, AddReason.SPAWN);
         }
-        if ((respawnBlockComponent = chunkStore.getComponent(blockRef, RespawnBlock.getComponentType())) == null) {
+        if (blockRef == null || !blockRef.isValid()) {
+            return;
+        }
+        RespawnBlock respawnBlockComponent = chunkStore.getComponent(blockRef, RespawnBlock.getComponentType());
+        if (respawnBlockComponent == null) {
             return;
         }
         UUID ownerUUID = respawnBlockComponent.getOwnerUUID();
-        PageManager pageManager = player.getPageManager();
+        PageManager pageManager = playerComponent.getPageManager();
         boolean isOwner = playerUuid.equals(ownerUUID);
         if (isOwner) {
-            BlockPosition rawTarget = (BlockPosition)context.getMetaStore().getMetaObject(TARGET_BLOCK_RAW);
-            Vector3f whereWasHit = new Vector3f((float)rawTarget.x + 0.5f, (float)rawTarget.y + 0.5f, (float)rawTarget.z + 0.5f);
+            BlockPosition targetBlockPosition = (BlockPosition)context.getMetaStore().getMetaObject(TARGET_BLOCK_RAW);
+            Vector3f whereWasHit = new Vector3f((float)targetBlockPosition.x + 0.5f, (float)targetBlockPosition.y + 0.5f, (float)targetBlockPosition.z + 0.5f);
             BlockMountAPI.BlockMountResult result = BlockMountAPI.mountOnBlock(ref, commandBuffer, pos, whereWasHit);
             if (result instanceof BlockMountAPI.DidNotMount) {
-                player.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
+                playerComponent.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
             } else if (result instanceof BlockMountAPI.Mounted) {
                 commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.NoddingOff.createComponent());
+                commandBuffer.run(s -> SleepNotificationSystem.maybeDoNotification(s, false));
             }
             return;
         }
         if (ownerUUID != null) {
-            player.sendMessage(MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED);
+            playerComponent.sendMessage(MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED);
             return;
         }
-        PlayerRespawnPointData[] respawnPoints = player.getPlayerConfigData().getPerWorldData(world.getName()).getRespawnPoints();
-        PlayerRespawnPointData[] nearbyRespawnPoints = this.getNearbySavedRespawnPoints(pos, respawnBlockComponent, respawnPoints, radiusLimitRespawnPoint = (respawnConfig = world.getGameplayConfig().getRespawnConfig()).getRadiusLimitRespawnPoint());
+        PlayerRespawnPointData[] respawnPoints = playerComponent.getPlayerConfigData().getPerWorldData(world.getName()).getRespawnPoints();
+        PlayerRespawnPointData[] nearbyRespawnPoints = BedInteraction.getNearbySavedRespawnPoints(pos, respawnPoints, radiusLimitRespawnPoint = (respawnConfig = world.getGameplayConfig().getRespawnConfig()).getRadiusLimitRespawnPoint());
         if (nearbyRespawnPoints != null) {
             pageManager.openCustomPage(ref, store, new OverrideNearbyRespawnPointPage(playerRefComponent, type, pos, respawnBlockComponent, nearbyRespawnPoints, radiusLimitRespawnPoint));
             return;
@@ -119,7 +131,7 @@ extends SimpleBlockInteraction {
     }
 
     @Nullable
-    private PlayerRespawnPointData[] getNearbySavedRespawnPoints(@Nonnull Vector3i currentRespawnPointPosition, @Nonnull RespawnBlock respawnBlock, @Nullable PlayerRespawnPointData[] respawnPoints, int radiusLimitRespawnPoint) {
+    private static PlayerRespawnPointData[] getNearbySavedRespawnPoints(@Nonnull Vector3i currentRespawnPointPosition, @Nullable PlayerRespawnPointData[] respawnPoints, int radiusLimitRespawnPoint) {
         if (respawnPoints == null || respawnPoints.length == 0) {
             return null;
         }

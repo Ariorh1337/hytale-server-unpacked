@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 
 public class FloorPatternAsset
 extends PatternAsset {
+    @Nonnull
     public static final BuilderCodec<FloorPatternAsset> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(FloorPatternAsset.class, FloorPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Floor", PatternAsset.CODEC, true), (t, k) -> {
         t.floor = k;
     }, k -> k.floor).add()).append(new KeyedCodec("Origin", PatternAsset.CODEC, true), (t, k) -> {

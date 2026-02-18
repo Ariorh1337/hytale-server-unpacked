@@ -10,6 +10,7 @@ import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 
 public class BarterItemStack {
+    @Nonnull
     public static final BuilderCodec<BarterItemStack> CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BarterItemStack.class, BarterItemStack::new).append(new KeyedCodec<String>("ItemId", Codec.STRING), (stack, s) -> {
         stack.itemId = s;
     }, stack -> stack.itemId).addValidator(Validators.nonNull()).add()).append(new KeyedCodec<Integer>("Quantity", Codec.INTEGER), (stack, i) -> {

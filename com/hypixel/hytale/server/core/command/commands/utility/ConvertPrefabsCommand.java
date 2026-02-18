@@ -3,6 +3,7 @@
  */
 package com.hypixel.hytale.server.core.command.commands.utility;
 
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -89,6 +90,10 @@ extends AbstractAsyncCommand {
         String storeOption = (String)this.storeArg.get(context);
         if (this.pathArg.provided(context)) {
             Path assetPath = Paths.get((String)this.pathArg.get(context), new String[0]);
+            if (!PathUtil.isInTrustedRoot(assetPath)) {
+                context.sendMessage(Message.translation("server.commands.convertprefabs.invalidPath"));
+                return CompletableFuture.completedFuture(null);
+            }
             return this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
                 this.sendCompletionMessages(context, assetPath, failed, skipped);
                 return null;

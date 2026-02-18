@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 public class BrushConfigCommand
 extends AbstractCommandCollection {
     public BrushConfigCommand() {
-        super("scriptedbrushes", "Scripted brushes related commands");
+        super("scriptedbrushes", "server.commands.scriptedbrushes.desc");
         this.addAliases("scriptbrush", "scriptedbrush", "sb");
         this.requirePermission("hytale.editor.brush.config");
         this.addSubCommand(new BrushConfigClearCommand());
@@ -31,7 +31,7 @@ extends AbstractCommandCollection {
         this.addSubCommand(new BrushConfigDebugStepCommand());
         this.addSubCommand(new BrushConfigExitCommand());
         this.addSubCommand(new BrushConfigLoadCommand());
-        this.addSubCommand(new AbstractPlayerCommand(this, "info", "Information on the current brush configuration"){
+        this.addSubCommand(new AbstractPlayerCommand(this, "info", "server.commands.scriptedbrushes.info.desc"){
 
             @Override
             protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {

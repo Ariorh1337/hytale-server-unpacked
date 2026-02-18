@@ -7,7 +7,8 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 
 public enum PickupLocation {
     Hotbar(0),
-    Storage(1);
+    Storage(1),
+    Backpack(2);
 
     public static final PickupLocation[] VALUES;
     private final int value;

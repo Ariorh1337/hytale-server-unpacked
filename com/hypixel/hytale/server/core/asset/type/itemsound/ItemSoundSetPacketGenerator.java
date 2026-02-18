@@ -4,7 +4,7 @@
 package com.hypixel.hytale.server.core.asset.type.itemsound;
 
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateItemSoundSets;
 import com.hypixel.hytale.server.core.asset.packet.SimpleAssetPacketGenerator;
@@ -18,7 +18,7 @@ public class ItemSoundSetPacketGenerator
 extends SimpleAssetPacketGenerator<String, ItemSoundSet, IndexedLookupTableAssetMap<String, ItemSoundSet>> {
     @Override
     @Nonnull
-    public Packet generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, ItemSoundSet> assetMap, @Nonnull Map<String, ItemSoundSet> assets) {
+    public ToClientPacket generateInitPacket(@Nonnull IndexedLookupTableAssetMap<String, ItemSoundSet> assetMap, @Nonnull Map<String, ItemSoundSet> assets) {
         UpdateItemSoundSets packet = new UpdateItemSoundSets();
         packet.type = UpdateType.Init;
         packet.itemSoundSets = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.ItemSoundSet>();
@@ -36,7 +36,7 @@ extends SimpleAssetPacketGenerator<String, ItemSoundSet, IndexedLookupTableAsset
 
     @Override
     @Nonnull
-    public Packet generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemSoundSet> assetMap, @Nonnull Map<String, ItemSoundSet> loadedAssets) {
+    public ToClientPacket generateUpdatePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemSoundSet> assetMap, @Nonnull Map<String, ItemSoundSet> loadedAssets) {
         UpdateItemSoundSets packet = new UpdateItemSoundSets();
         packet.type = UpdateType.AddOrUpdate;
         packet.itemSoundSets = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.ItemSoundSet>();
@@ -54,7 +54,7 @@ extends SimpleAssetPacketGenerator<String, ItemSoundSet, IndexedLookupTableAsset
 
     @Override
     @Nonnull
-    public Packet generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemSoundSet> assetMap, @Nonnull Set<String> removed) {
+    public ToClientPacket generateRemovePacket(@Nonnull IndexedLookupTableAssetMap<String, ItemSoundSet> assetMap, @Nonnull Set<String> removed) {
         UpdateItemSoundSets packet = new UpdateItemSoundSets();
         packet.type = UpdateType.Remove;
         packet.itemSoundSets = new Int2ObjectOpenHashMap<com.hypixel.hytale.protocol.ItemSoundSet>();

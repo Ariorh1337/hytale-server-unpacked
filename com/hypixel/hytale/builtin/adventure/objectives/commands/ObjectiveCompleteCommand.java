@@ -74,7 +74,7 @@ extends AbstractCommandCollection {
             int taskIndex = (Integer)this.taskIndexArg.get(context);
             Objective objective = ObjectiveCompleteCommand.getObjectiveFromId(ref, objectiveId, store);
             if (objective == null) {
-                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND);
+                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND.param("id", objectiveId));
                 return;
             }
             ObjectiveTask[] tasks = objective.getCurrentTasks();
@@ -105,7 +105,7 @@ extends AbstractCommandCollection {
             String objectiveId = (String)this.objectiveArg.get(context);
             Objective objective = ObjectiveCompleteCommand.getObjectiveFromId(ref, objectiveId, store);
             if (objective == null) {
-                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND);
+                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND.param("id", objectiveId));
                 return;
             }
             ObjectiveTask[] tasks = objective.getCurrentTasks();
@@ -134,7 +134,7 @@ extends AbstractCommandCollection {
             String objectiveId = (String)this.objectiveArg.get(context);
             Objective objective = ObjectiveCompleteCommand.getObjectiveFromId(ref, objectiveId, store);
             if (objective == null) {
-                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND);
+                context.sendMessage(MESSAGE_COMMANDS_OBJECTIVE_OBJECTIVE_NOT_FOUND.param("id", objectiveId));
                 return;
             }
             ObjectiveTask[] tasks = objective.getCurrentTasks();
