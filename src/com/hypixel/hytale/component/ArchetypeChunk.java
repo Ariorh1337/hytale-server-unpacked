@@ -230,7 +230,6 @@ public class ArchetypeChunk<ECS_TYPE> {
       @Nonnull IntObjectConsumer<Ref<ECS_TYPE>> referenceConsumer
    ) {
       int firstTransfered = Integer.MIN_VALUE;
-      int lastTransfered = Integer.MIN_VALUE;
       Component<ECS_TYPE>[] entityComponents = new Component[this.archetype.length()];
 
       for (int entityIndex = 0; entityIndex < this.entitiesSize; entityIndex++) {
@@ -239,7 +238,6 @@ public class ArchetypeChunk<ECS_TYPE> {
                firstTransfered = entityIndex;
             }
 
-            lastTransfered = entityIndex;
             Ref<ECS_TYPE> ref = this.refs[entityIndex];
             this.refs[entityIndex] = null;
 
@@ -261,29 +259,31 @@ public class ArchetypeChunk<ECS_TYPE> {
       }
 
       if (firstTransfered != Integer.MIN_VALUE) {
-         if (lastTransfered == this.entitiesSize - 1) {
-            this.entitiesSize = firstTransfered;
-            return;
-         }
+         int writeIndex = firstTransfered;
 
-         int newSize = this.entitiesSize - (lastTransfered - firstTransfered + 1);
-
-         for (int entityIndex = firstTransfered; entityIndex <= lastTransfered; entityIndex++) {
-            if (this.refs[entityIndex] == null) {
-               int lastIndex = this.entitiesSize - 1;
-               if (lastIndex == lastTransfered) {
-                  break;
+         for (int readIndex = firstTransfered + 1; readIndex < this.entitiesSize; readIndex++) {
+            if (this.refs[readIndex] != null) {
+               if (writeIndex != readIndex) {
+                  this.fillEmptyIndex(writeIndex, readIndex);
                }
 
-               if (entityIndex != lastIndex) {
-                  this.fillEmptyIndex(entityIndex, lastIndex);
-               }
-
-               this.entitiesSize--;
+               writeIndex++;
             }
          }
 
-         this.entitiesSize = newSize;
+         for (int i = writeIndex; i < this.entitiesSize; i++) {
+            this.refs[i] = null;
+
+            for (int j = this.archetype.getMinIndex(); j < this.archetype.length(); j++) {
+               ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>> componentType = (ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>>)this.archetype
+                  .get(j);
+               if (componentType != null) {
+                  this.components[componentType.getIndex()][i] = null;
+               }
+            }
+         }
+
+         this.entitiesSize = writeIndex;
       }
    }
 
