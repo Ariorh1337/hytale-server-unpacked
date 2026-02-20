@@ -5,8 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 public enum AmbienceFXSoundPlay3D {
    Random(0),
    LocationName(1),
-   LocationNameRandom(2),
-   No(3);
+   No(2);
 
    public static final AmbienceFXSoundPlay3D[] VALUES = values();
    private final int value;

@@ -33,8 +33,10 @@ public class ParserContext {
    private String lastInsertedOptionalArgName;
    private int numPreOptSingleValueTokensBeforeListTokens;
    private int subCommandIndex;
-   private static final Pattern ARG_NAME_PATTERN = Pattern.compile("--([\\w-]*)");
+   private static final Pattern ARG_NAME_PATTERN = Pattern.compile("--(\\w*)");
+   private static final Matcher ARG_NAME_MATCHER = ARG_NAME_PATTERN.matcher("");
    private static final Pattern ARG_NAME_AND_VALUE_PATTERN = Pattern.compile("--(\\w+)=\"*(.*)\"*");
+   private static final Matcher ARG_NAME_AND_VALUE_MATCHER = ARG_NAME_AND_VALUE_PATTERN.matcher("");
 
    public ParserContext(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
       this.inputString = String.join(" ", tokens);
@@ -56,8 +58,6 @@ public class ParserContext {
       boolean isSingleValueList = false;
       boolean wasLastTokenASpecialValue = false;
       boolean hasEnteredListBefore = false;
-      Matcher argMatcher = ARG_NAME_PATTERN.matcher("");
-      Matcher argNameAndValueMatcher = ARG_NAME_AND_VALUE_PATTERN.matcher("");
 
       for (int i = 0; i < tokens.size(); i++) {
          String token = tokens.get(i);
@@ -86,13 +86,13 @@ public class ParserContext {
             wasLastTokenASpecialValue = false;
          }
 
-         argMatcher.reset(token);
-         if (argMatcher.lookingAt()) {
+         ARG_NAME_MATCHER.reset(token);
+         if (ARG_NAME_MATCHER.lookingAt()) {
             beganParsingOptionals = true;
-            this.addNewOptionalArg(argMatcher.group(1));
-            argNameAndValueMatcher.reset(token);
-            if (argNameAndValueMatcher.matches()) {
-               this.appendOptionalParameter(argNameAndValueMatcher.group(2), parseResult);
+            this.addNewOptionalArg(ARG_NAME_MATCHER.group(1));
+            ARG_NAME_AND_VALUE_MATCHER.reset(token);
+            if (ARG_NAME_AND_VALUE_MATCHER.matches()) {
+               this.appendOptionalParameter(ARG_NAME_AND_VALUE_MATCHER.group(2), parseResult);
                if (parseResult.failed()) {
                   return;
                }

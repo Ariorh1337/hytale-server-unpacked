@@ -1,12 +1,10 @@
 package com.hypixel.hytale.builtin.buildertools.tooloperations;
 
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
-import com.hypixel.hytale.builtin.buildertools.tooloperations.transform.Transform;
 import com.hypixel.hytale.builtin.buildertools.utils.Material;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.block.BlockUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -16,7 +14,6 @@ import javax.annotation.Nonnull;
 
 public class PaintOperation extends ToolOperation {
    private final int brushDensity;
-   private final Transform brushRotation;
    private LongOpenHashSet packedPlacedBlockPositions;
 
    public PaintOperation(
@@ -31,16 +28,10 @@ public class PaintOperation extends ToolOperation {
       PrototypePlayerBuilderToolSettings prototypePlayerBuilderToolSettings = ToolOperation.PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
       this.packedPlacedBlockPositions = prototypePlayerBuilderToolSettings.addIgnoredPaintOperation();
       this.brushDensity = this.getBrushDensity();
-      this.brushRotation = this.getBrushRotation(componentAccessor);
    }
 
    @Override
    boolean execute0(int x, int y, int z) {
-      Vector3i vector = new Vector3i(x - this.x, y - this.y, z - this.z);
-      this.brushRotation.apply(vector);
-      x = this.x + vector.x;
-      y = this.y + vector.y;
-      z = this.z + vector.z;
       if (y >= 0 && y < 320) {
          if (this.edit.getBlock(x, y, z) == 0) {
             this.packedPlacedBlockPositions.add(BlockUtil.pack(x, y, z));

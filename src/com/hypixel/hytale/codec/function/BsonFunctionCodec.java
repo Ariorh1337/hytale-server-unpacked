@@ -38,7 +38,7 @@ public class BsonFunctionCodec<T> implements Codec<T>, WrappedCodec<T> {
    @Nonnull
    @Override
    public Schema toSchema(@Nonnull SchemaContext context) {
-      return context.refDefinition(this.codec);
+      return this.codec.toSchema(context);
    }
 
    @Nonnull

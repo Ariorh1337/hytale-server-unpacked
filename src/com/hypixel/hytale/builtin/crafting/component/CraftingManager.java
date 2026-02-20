@@ -250,16 +250,6 @@ public class CraftingManager implements Component<EntityStore> {
       return true;
    }
 
-   public int getRemainingQueueSize() {
-      int total = 0;
-
-      for (CraftingManager.CraftingJob job : this.queuedCraftingJobs) {
-         total += job.quantity - job.quantityCompleted;
-      }
-
-      return total;
-   }
-
    public void tick(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, float dt) {
       if (this.upgradingJob != null) {
          if (dt > 0.0F) {
@@ -341,7 +331,6 @@ public class CraftingManager implements Component<EntityStore> {
                      giveOutput(ref, componentAccessor, currentJob, currentCompletedItemId);
                   }
 
-                  currentJob.window.updateQueueSize(this.getRemainingQueueSize());
                   if (this.queuedCraftingJobs.isEmpty()) {
                      currentJob.window.setBlockInteractionState("default", componentAccessor.getExternalData().getWorld());
                   }

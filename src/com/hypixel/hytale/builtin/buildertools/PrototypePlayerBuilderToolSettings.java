@@ -43,7 +43,6 @@ public class PrototypePlayerBuilderToolSettings {
    private PrototypePlayerBuilderToolSettings.EntityChange[] entityChangesForPlaySelectionToolPasteMode = null;
    @Nullable
    private Vector3i lastBrushPosition = null;
-   private int undoGroupSize = 10;
    @Nullable
    private Vector3i blockChangeOffsetOrigin = null;
    @Nullable
@@ -216,14 +215,6 @@ public class PrototypePlayerBuilderToolSettings {
 
    public void clearLastBrushPosition() {
       this.lastBrushPosition = null;
-   }
-
-   public int getUndoGroupSize() {
-      return this.undoGroupSize;
-   }
-
-   public void setUndoGroupSize(int undoGroupSize) {
-      this.undoGroupSize = undoGroupSize > 0 ? undoGroupSize : 10;
    }
 
    public static boolean isOkayToDoCommandsOnSelection(Ref<EntityStore> ref, @Nonnull Player player, ComponentAccessor<EntityStore> componentAccessor) {

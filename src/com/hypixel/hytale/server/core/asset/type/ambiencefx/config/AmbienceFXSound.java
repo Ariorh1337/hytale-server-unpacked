@@ -48,9 +48,6 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
          ambienceFXSound -> ambienceFXSound.frequency
       )
       .addField(new KeyedCodec<>("Radius", ProtocolCodecs.RANGE), (ambienceFXSound, o) -> ambienceFXSound.radius = o, ambienceFXSound -> ambienceFXSound.radius)
-      .documentation(
-         "Random radius within which to play the sound. When used in conjunction with LocationNameRandom for Play3D, acts as a distance bound on position selection. Ignored when Play3D is set to LocationName."
-      )
       .afterDecode(AmbienceFXSound::processConfig)
       .build();
    public static final Rangef DEFAULT_FREQUENCY = new Rangef(1.0F, 10.0F);

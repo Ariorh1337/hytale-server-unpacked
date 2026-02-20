@@ -15,6 +15,7 @@ import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
+import com.hypixel.hytale.event.EventPriority;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
@@ -123,10 +124,9 @@ public class AssetModule extends JavaPlugin {
       }
 
       if (this.assetPacks.isEmpty()) {
-         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.missingAssets.failedToLoad");
-         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage(reasonMessage));
+         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage("Failed to load any asset packs"));
       } else {
-         ArrayList<String> outdatedPacks = new ArrayList<>();
+         boolean hasOutdatedPacks = false;
          String serverVersion = ManifestUtil.getVersion();
 
          for (AssetPack pack : this.assetPacks) {
@@ -134,7 +134,7 @@ public class AssetModule extends JavaPlugin {
                PluginManifest manifest = pack.getManifest();
                String targetServerVersion = manifest.getServerVersion();
                if (targetServerVersion == null || !targetServerVersion.equals(serverVersion)) {
-                  outdatedPacks.add(pack.getName());
+                  hasOutdatedPacks = true;
                   if (targetServerVersion != null && !"*".equals(targetServerVersion)) {
                      this.getLogger()
                         .at(Level.WARNING)
@@ -155,7 +155,7 @@ public class AssetModule extends JavaPlugin {
             }
          }
 
-         if (!outdatedPacks.isEmpty() && System.getProperty("hytale.allow_outdated_mods") == null) {
+         if (hasOutdatedPacks && System.getProperty("hytale.allow_outdated_mods") == null) {
             this.getLogger()
                .at(Level.SEVERE)
                .log("One or more asset packs are targeting an older server version. It is recommended to update these plugins to ensure compatibility.");
@@ -164,13 +164,7 @@ public class AssetModule extends JavaPlugin {
                Player player = event.getHolder().getComponent(Player.getComponentType());
                if (playerRef != null && player != null) {
                   if (player.hasPermission("hytale.mods.outdated.notify")) {
-                     StringBuilder modsList = new StringBuilder();
-
-                     for (String packx : outdatedPacks) {
-                        modsList.append("\n - ").append(packx);
-                     }
-
-                     playerRef.sendMessage(Message.translation("server.assetModule.outOfDatePacks").param("mods", modsList.toString()).color(Color.RED));
+                     playerRef.sendMessage(Message.translation("server.assetModule.outOfDatePacks").color(Color.RED));
                   }
                }
             });
@@ -201,6 +195,7 @@ public class AssetModule extends JavaPlugin {
             }
          });
          this.getEventRegistry().register(LoadAssetEvent.class, AssetModule::validateWorldGen);
+         this.getEventRegistry().register(EventPriority.FIRST, LoadAssetEvent.class, SneakyThrow.sneakyConsumer(AssetRegistryLoader::writeSchemas));
          this.getEventRegistry().register(RegisterAssetStoreEvent.class, this::onNewStore);
          this.getEventRegistry().register(RemoveAssetStoreEvent.class, this::onRemoveStore);
          this.getEventRegistry().registerGlobal(BootEvent.class, event -> {

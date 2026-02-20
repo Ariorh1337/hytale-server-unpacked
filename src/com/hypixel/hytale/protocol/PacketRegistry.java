@@ -138,11 +138,10 @@ import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
 import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
-import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.Connect;
+import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.protocol.packets.connection.Ping;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
-import com.hypixel.hytale.protocol.packets.connection.ServerDisconnect;
 import com.hypixel.hytale.protocol.packets.entities.ApplyKnockback;
 import com.hypixel.hytale.protocol.packets.entities.ChangeVelocity;
 import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
@@ -230,11 +229,6 @@ import com.hypixel.hytale.protocol.packets.setup.ViewRadius;
 import com.hypixel.hytale.protocol.packets.setup.WorldLoadFinished;
 import com.hypixel.hytale.protocol.packets.setup.WorldLoadProgress;
 import com.hypixel.hytale.protocol.packets.setup.WorldSettings;
-import com.hypixel.hytale.protocol.packets.stream.StreamOpen;
-import com.hypixel.hytale.protocol.packets.stream.StreamOpenResponse;
-import com.hypixel.hytale.protocol.packets.voice.RelayedVoiceData;
-import com.hypixel.hytale.protocol.packets.voice.VoiceConfig;
-import com.hypixel.hytale.protocol.packets.voice.VoiceData;
 import com.hypixel.hytale.protocol.packets.window.ClientOpenWindow;
 import com.hypixel.hytale.protocol.packets.window.CloseWindow;
 import com.hypixel.hytale.protocol.packets.window.OpenWindow;
@@ -361,34 +355,22 @@ public final class PacketRegistry {
          Connect::deserialize
       );
       register(
-         PacketRegistry.PacketDirection.ToServer,
+         PacketRegistry.PacketDirection.Both,
          NetworkChannel.Default,
          1,
-         "ClientDisconnect",
-         ClientDisconnect.class,
+         "Disconnect",
+         Disconnect.class,
          2,
-         2,
+         16384007,
          false,
-         ClientDisconnect::validateStructure,
-         ClientDisconnect::deserialize
+         Disconnect::validateStructure,
+         Disconnect::deserialize
       );
       register(
-         PacketRegistry.PacketDirection.ToClient,
-         NetworkChannel.Default,
-         2,
-         "ServerDisconnect",
-         ServerDisconnect.class,
-         2,
-         1677721600,
-         false,
-         ServerDisconnect::validateStructure,
-         ServerDisconnect::deserialize
+         PacketRegistry.PacketDirection.ToClient, NetworkChannel.Default, 2, "Ping", Ping.class, 29, 29, false, Ping::validateStructure, Ping::deserialize
       );
       register(
-         PacketRegistry.PacketDirection.ToClient, NetworkChannel.Default, 3, "Ping", Ping.class, 29, 29, false, Ping::validateStructure, Ping::deserialize
-      );
-      register(
-         PacketRegistry.PacketDirection.ToServer, NetworkChannel.Default, 4, "Pong", Pong.class, 20, 20, false, Pong::validateStructure, Pong::deserialize
+         PacketRegistry.PacketDirection.ToServer, NetworkChannel.Default, 3, "Pong", Pong.class, 20, 20, false, Pong::validateStructure, Pong::deserialize
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2173,7 +2155,7 @@ public final class PacketRegistry {
          "ServerInfo",
          ServerInfo.class,
          5,
-         32769058,
+         32768023,
          false,
          ServerInfo::validateStructure,
          ServerInfo::deserialize
@@ -3420,8 +3402,8 @@ public final class PacketRegistry {
          413,
          "BuilderToolOnUseInteraction",
          BuilderToolOnUseInteraction.class,
-         61,
-         61,
+         57,
+         57,
          false,
          BuilderToolOnUseInteraction::validateStructure,
          BuilderToolOnUseInteraction::deserialize
@@ -3557,66 +3539,6 @@ public final class PacketRegistry {
          false,
          BuilderToolSetEntityCollision::validateStructure,
          BuilderToolSetEntityCollision::deserialize
-      );
-      register(
-         PacketRegistry.PacketDirection.ToServer,
-         NetworkChannel.Default,
-         450,
-         "VoiceData",
-         VoiceData.class,
-         6,
-         523,
-         false,
-         VoiceData::validateStructure,
-         VoiceData::deserialize
-      );
-      register(
-         PacketRegistry.PacketDirection.ToClient,
-         NetworkChannel.Default,
-         451,
-         "RelayedVoiceData",
-         RelayedVoiceData.class,
-         52,
-         569,
-         false,
-         RelayedVoiceData::validateStructure,
-         RelayedVoiceData::deserialize
-      );
-      register(
-         PacketRegistry.PacketDirection.ToClient,
-         NetworkChannel.Default,
-         452,
-         "VoiceConfig",
-         VoiceConfig.class,
-         17,
-         17,
-         false,
-         VoiceConfig::validateStructure,
-         VoiceConfig::deserialize
-      );
-      register(
-         PacketRegistry.PacketDirection.ToServer,
-         NetworkChannel.Default,
-         460,
-         "StreamOpen",
-         StreamOpen.class,
-         1,
-         1,
-         false,
-         StreamOpen::validateStructure,
-         StreamOpen::deserialize
-      );
-      register(
-         PacketRegistry.PacketDirection.ToClient,
-         NetworkChannel.Default,
-         461,
-         "StreamOpenResponse",
-         StreamOpenResponse.class,
-         3,
-         16384008,
-         false,
-         StreamOpenResponse::validateStructure,
-         StreamOpenResponse::deserialize
       );
    }
 

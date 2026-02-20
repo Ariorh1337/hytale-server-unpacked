@@ -233,46 +233,40 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                   PortalType portalType = canSpawn.portalType;
                   UUID playerUUID = uuidComponent.getUuid();
                   PortalGameplayConfig gameplayConfig = canSpawn.portalGameplayConfig;
-                  CompletableFuture<Void> future = InstancesPlugin.get()
-                     .spawnInstance(portalType.getInstanceId(), originWorld, transform)
-                     .thenCompose(spawnedWorld -> {
-                        WorldConfig worldConfig = spawnedWorld.getWorldConfig();
-                        worldConfig.setDeleteOnUniverseStart(true);
-                        worldConfig.setDeleteOnRemove(true);
-                        worldConfig.setGameplayConfig(portalType.getGameplayConfigId());
-                        InstanceWorldConfig instanceConfig = InstanceWorldConfig.ensureAndGet(worldConfig);
-                        if (instanceConfig.getDiscovery() == null) {
-                           InstanceDiscoveryConfig discoveryConfig = new InstanceDiscoveryConfig();
-                           discoveryConfig.setTitleKey(portalType.getDescription().getDisplayNameKey());
-                           discoveryConfig.setSubtitleKey("server.portals.discoverySubtitle");
-                           discoveryConfig.setDisplay(true);
-                           discoveryConfig.setAlwaysDisplay(true);
-                           instanceConfig.setDiscovery(discoveryConfig);
-                        }
+                  InstancesPlugin.get().spawnInstance(portalType.getInstanceId(), originWorld, transform).thenCompose(spawnedWorld -> {
+                     WorldConfig worldConfig = spawnedWorld.getWorldConfig();
+                     worldConfig.setDeleteOnUniverseStart(true);
+                     worldConfig.setDeleteOnRemove(true);
+                     worldConfig.setGameplayConfig(portalType.getGameplayConfigId());
+                     InstanceWorldConfig instanceConfig = InstanceWorldConfig.ensureAndGet(worldConfig);
+                     if (instanceConfig.getDiscovery() == null) {
+                        InstanceDiscoveryConfig discoveryConfig = new InstanceDiscoveryConfig();
+                        discoveryConfig.setTitleKey(portalType.getDescription().getDisplayNameKey());
+                        discoveryConfig.setSubtitleKey("server.portals.discoverySubtitle");
+                        discoveryConfig.setDisplay(true);
+                        discoveryConfig.setAlwaysDisplay(true);
+                        instanceConfig.setDiscovery(discoveryConfig);
+                     }
 
-                        PortalRemovalCondition portalRemoval = new PortalRemovalCondition(portalKey.getTimeLimitSeconds());
-                        instanceConfig.setRemovalConditions(portalRemoval);
-                        PortalWorld portalWorld = spawnedWorld.getEntityStore().getStore().getResource(PortalWorld.getResourceType());
-                        portalWorld.init(portalType, portalKey.getTimeLimitSeconds(), portalRemoval, gameplayConfig);
-                        String returnBlockType = portalDevice.getConfig().getReturnBlock();
-                        if (returnBlockType == null) {
-                           throw new RuntimeException("Return block type on PortalDevice is misconfigured");
-                        } else {
-                           return spawnReturnPortal(spawnedWorld, portalWorld, playerUUID, returnBlockType);
-                        }
-                     })
-                     .thenAcceptAsync(spawnedWorld -> {
-                        portalDevice.setDestinationWorld(spawnedWorld);
-                        worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(onType.getId()), onType, rotation, 0, 6);
-                     }, originWorld)
-                     .exceptionallyAsync(t -> {
-                        playerComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
-                        HytaleLogger.getLogger().at(Level.SEVERE).withCause(t).log("Error creating instance for Portal Device " + portalKey, t);
-                        worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(offType.getId()), offType, rotation, 0, 6);
-                        return null;
-                     }, originWorld)
-                     .whenComplete((unused, throwable) -> portalDevice.setPendingWorld(null));
-                  portalDevice.setPendingWorld(future);
+                     PortalRemovalCondition portalRemoval = new PortalRemovalCondition(portalKey.getTimeLimitSeconds());
+                     instanceConfig.setRemovalConditions(portalRemoval);
+                     PortalWorld portalWorld = spawnedWorld.getEntityStore().getStore().getResource(PortalWorld.getResourceType());
+                     portalWorld.init(portalType, portalKey.getTimeLimitSeconds(), portalRemoval, gameplayConfig);
+                     String returnBlockType = portalDevice.getConfig().getReturnBlock();
+                     if (returnBlockType == null) {
+                        throw new RuntimeException("Return block type on PortalDevice is misconfigured");
+                     } else {
+                        return spawnReturnPortal(spawnedWorld, portalWorld, playerUUID, returnBlockType);
+                     }
+                  }).thenAcceptAsync(spawnedWorld -> {
+                     portalDevice.setDestinationWorld(spawnedWorld);
+                     worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(onType.getId()), onType, rotation, 0, 6);
+                  }, originWorld).exceptionallyAsync(t -> {
+                     playerComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
+                     HytaleLogger.getLogger().at(Level.SEVERE).withCause(t).log("Error creating instance for Portal Device " + portalKey, t);
+                     worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(offType.getId()), offType, rotation, 0, 6);
+                     return null;
+                  }, originWorld);
                }
             }
          }
@@ -362,7 +356,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
          }
 
          World existingDestinationWorld = portalDevice.getDestinationWorld();
-         if (existingDestinationWorld != null || portalDevice.isLoadingWorld()) {
+         if (existingDestinationWorld != null) {
             return PortalDeviceSummonPage.Error.INVALID_DESTINATION;
          }
 

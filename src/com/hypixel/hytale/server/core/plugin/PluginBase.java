@@ -24,7 +24,6 @@ import com.hypixel.hytale.server.core.plugin.registry.CodecMapRegistry;
 import com.hypixel.hytale.server.core.plugin.registry.IRegistry;
 import com.hypixel.hytale.server.core.plugin.registry.MapKeyMapRegistry;
 import com.hypixel.hytale.server.core.registry.ClientFeatureRegistry;
-import com.hypixel.hytale.server.core.schema.SchemaGenerator;
 import com.hypixel.hytale.server.core.task.TaskRegistry;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockStateRegistry;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -118,9 +117,6 @@ public abstract class PluginBase implements CommandOwner {
 
       Config<T> config = new Config<>(this.dataDirectory, name, configCodec);
       this.configs.add(config);
-      PluginIdentifier id = this.getIdentifier();
-      String schemaName = "Plugin." + id.getGroup() + "." + id.getName() + "." + name;
-      SchemaGenerator.registerConfig(schemaName, configCodec, "Config/Plugin/" + id.getGroup() + "/" + id.getName(), null);
       return config;
    }
 

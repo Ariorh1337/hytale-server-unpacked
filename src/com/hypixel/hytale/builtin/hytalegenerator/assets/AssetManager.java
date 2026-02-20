@@ -15,7 +15,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.DistanceSCurveAs
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.FloorCurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.ImportedCurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.InverterCurveAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.MaxCurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.MinCurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.MultiplierCurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.NotCurveAsset;
@@ -565,7 +564,7 @@ public class AssetManager {
       CurveAsset.CODEC.register("Clamp", ClampCurveAsset.class, ClampCurveAsset.CODEC);
       CurveAsset.CODEC.register("SmoothClamp", SmoothClampCurveAsset.class, SmoothClampCurveAsset.CODEC);
       CurveAsset.CODEC.register("Min", MinCurveAsset.class, MinCurveAsset.CODEC);
-      CurveAsset.CODEC.register("Max", MaxCurveAsset.class, MaxCurveAsset.CODEC);
+      CurveAsset.CODEC.register("Max", MinCurveAsset.class, MinCurveAsset.CODEC);
       CurveAsset.CODEC.register("SmoothMin", SmoothMinCurveAsset.class, SmoothMinCurveAsset.CODEC);
       CurveAsset.CODEC.register("SmoothMax", SmoothMaxCurveAsset.class, SmoothMaxCurveAsset.CODEC);
       CurveAsset.CODEC.register("SmoothFloor", SmoothFloorCurveAsset.class, SmoothFloorCurveAsset.CODEC);

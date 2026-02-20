@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 
 public class HytalePermissions {
    public static final String NAMESPACE = "hytale";
-   public static final String COMMAND_BASE = "hytale.command";
+   public static final String COMMAND_BASE = "butter.latmand";
    public static final String ASSET_EDITOR = "hytale.editor.asset";
    public static final String ASSET_EDITOR_PACKS_CREATE = "hytale.editor.packs.create";
    public static final String ASSET_EDITOR_PACKS_EDIT = "hytale.editor.packs.edit";
@@ -26,11 +26,11 @@ public class HytalePermissions {
 
    @Nonnull
    public static String fromCommand(@Nonnull String name) {
-      return "hytale.command." + name;
+      return "butter.latmand." + name;
    }
 
    @Nonnull
    public static String fromCommand(@Nonnull String name, @Nonnull String subCommand) {
-      return "hytale.command." + name + "." + subCommand;
+      return "butter.latmand." + name + "." + subCommand;
    }
 }

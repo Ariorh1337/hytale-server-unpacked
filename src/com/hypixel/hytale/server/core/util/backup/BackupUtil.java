@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.util.backup;
 
-import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.protocol.packets.interface_.WorldSavingStatus;
 import com.hypixel.hytale.server.core.Message;
@@ -47,7 +46,7 @@ class BackupUtil {
                   }
                }
 
-               ZipEntry zipEntry = new ZipEntry(PathUtil.toUnixPathString(sourceDir.relativize(path)));
+               ZipEntry zipEntry = new ZipEntry(sourceDir.relativize(path).toString());
                zipEntry.setSize(size);
                zipEntry.setCompressedSize(size);
                zipEntry.setCrc(crc.getValue());

@@ -11,14 +11,13 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockRotation;
-import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
-import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
+import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
 import com.hypixel.hytale.protocol.packets.entities.MountMovement;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChain;
@@ -167,8 +166,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    protected void registerHandlers() {
-      this.registerHandler(1, p -> this.handle((ClientDisconnect)p));
-      this.registerHandler(4, p -> this.handlePong((Pong)p));
+      this.registerHandler(1, p -> this.handle((Disconnect)p));
+      this.registerHandler(3, p -> this.handlePong((Pong)p));
       this.registerHandler(108, p -> this.handle((ClientMovement)p));
       this.registerHandler(211, p -> this.handle((ChatMessage)p));
       this.registerHandler(23, p -> this.handle((RequestAssets)p));
@@ -208,7 +207,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    @Override
-   public void disconnect(@Nonnull FormattedMessage message) {
+   public void disconnect(@Nonnull String message) {
       this.disconnectReason.setServerDisconnectReason(message);
       if (this.playerRef != null) {
          HytaleLogger.getLogger()
@@ -218,7 +217,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                this.playerRef.getUsername(),
                NettyUtil.formatRemoteAddress(this.getChannel()),
                this.getSniHostname(),
-               MessageUtil.formatMessageToPlainString(message)
+               message
             );
          this.disconnect0(message);
          Universe.get().removePlayer(this.playerRef);
@@ -227,7 +226,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       }
    }
 
-   public void handle(@Nonnull ClientDisconnect packet) {
+   public void handle(@Nonnull Disconnect packet) {
       this.disconnectReason.setClientDisconnectType(packet.type);
       HytaleLogger.getLogger()
          .at(Level.INFO)
@@ -237,7 +236,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             this.playerRef.getUsername(),
             NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
-            packet.reason.name()
+            packet.reason
          );
       ProtocolUtil.closeApplicationConnection(this.getChannel());
    }
@@ -350,11 +349,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    public void handle(@Nonnull ChatMessage packet) {
-      if (packet.message == null || packet.message.isEmpty()) {
-         this.disconnect("Invalid chat message packet! Message was empty.");
-      } else if (MessageUtil.containsControlCharacters(packet.message)) {
-         this.playerRef.sendMessage(Message.translation("server.io.gamepackethandler.invalidMessageContent").param("msg", packet.message));
-      } else {
+      if (packet.message != null && !packet.message.isEmpty()) {
          String message = packet.message;
          char firstChar = message.charAt(0);
          if (firstChar == '/') {
@@ -392,6 +387,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                   }
                );
          }
+      } else {
+         this.disconnect("Invalid chat message packet! Message was empty.");
       }
    }
 

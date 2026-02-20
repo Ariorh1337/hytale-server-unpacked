@@ -7,7 +7,7 @@ import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.auth.PasswordAccepted;
 import com.hypixel.hytale.protocol.packets.auth.PasswordRejected;
 import com.hypixel.hytale.protocol.packets.auth.PasswordResponse;
-import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
+import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
@@ -79,7 +79,7 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
    public void accept(@Nonnull ToServerPacket packet) {
       switch (packet.getId()) {
          case 1:
-            this.handle((ClientDisconnect)packet);
+            this.handle((Disconnect)packet);
             break;
          case 15:
             this.handle((PasswordResponse)packet);
@@ -89,7 +89,7 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
       }
    }
 
-   public void handle(@Nonnull ClientDisconnect packet) {
+   public void handle(@Nonnull Disconnect packet) {
       this.disconnectReason.setClientDisconnectType(packet.type);
       LOGGER.at(Level.INFO)
          .log(
@@ -98,7 +98,7 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
             this.username,
             NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
-            packet.reason.name()
+            packet.reason
          );
       ProtocolUtil.closeApplicationConnection(this.getChannel());
    }

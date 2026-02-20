@@ -109,10 +109,6 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
       }
    }
 
-   public void updateQueueSize(int size) {
-      this.windowData.addProperty("queueSize", size);
-   }
-
    public void updateCraftingJob(float percent) {
       this.windowData.addProperty("progress", percent);
       this.checkProgressInvalidate(percent);

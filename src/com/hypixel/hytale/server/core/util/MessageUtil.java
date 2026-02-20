@@ -59,53 +59,6 @@ public class MessageUtil {
       return AttributedStyle.DEFAULT.foreground(colorId);
    }
 
-   public static boolean containsControlCharacters(@Nonnull String message) {
-      for (int i = 0; i < message.length(); i++) {
-         char c = message.charAt(i);
-         if (c < ' ') {
-            return true;
-         }
-
-         if (c == 127) {
-            return true;
-         }
-
-         if (c >= 128 && c <= 159) {
-            return true;
-         }
-      }
-
-      return false;
-   }
-
-   @Nullable
-   public static String formatMessageToPlainString(@Nullable FormattedMessage msg) {
-      if (msg == null) {
-         return null;
-      }
-
-      StringBuilder sb = new StringBuilder();
-      if (msg.rawText != null) {
-         sb.append(msg.rawText);
-      } else if (msg.messageId != null) {
-         try {
-            I18nModule i18n = I18nModule.get();
-            String message = i18n != null ? i18n.getMessage("en-US", msg.messageId) : null;
-            sb.append(message != null ? formatText(message, msg.params, msg.messageParams) : msg.messageId);
-         } catch (Exception e) {
-            sb.append(msg.messageId);
-         }
-      }
-
-      if (msg.children != null) {
-         for (FormattedMessage child : msg.children) {
-            sb.append(formatMessageToPlainString(child));
-         }
-      }
-
-      return sb.toString();
-   }
-
    @Deprecated
    public static void sendSuccessReply(@Nonnull PlayerRef playerRef, int token) {
       sendSuccessReply(playerRef, token, null);

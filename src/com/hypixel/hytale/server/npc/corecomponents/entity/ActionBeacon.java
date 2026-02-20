@@ -148,7 +148,7 @@ public class ActionBeacon extends ActionBase {
          matrix.rotateAxis(angleY + (float) (Math.PI / 2), 0.0, 1.0, 0.0, tmp);
          double angleX = Math.atan2(Math.sqrt(x * x + z * z), -y);
          matrix.rotateAxis(angleX, 1.0, 0.0, 0.0, tmp);
-         DebugUtils.addArrow(componentAccessor.getExternalData().getWorld(), matrix, color, pos.distanceTo(targetPos), 5.0F, DebugUtils.FLAG_FADE);
+         DebugUtils.addArrow(componentAccessor.getExternalData().getWorld(), matrix, color, pos.distanceTo(targetPos), 5.0F, true);
       }
 
       BeaconSupport beaconSupportComponent = componentAccessor.getComponent(targetRef, BeaconSupport.getComponentType());

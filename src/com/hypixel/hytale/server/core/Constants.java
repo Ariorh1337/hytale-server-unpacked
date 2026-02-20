@@ -31,7 +31,6 @@ import com.hypixel.hytale.server.core.modules.serverplayerlist.ServerPlayerListM
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
 import com.hypixel.hytale.server.core.modules.splitvelocity.SplitVelocity;
 import com.hypixel.hytale.server.core.modules.time.TimeModule;
-import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksModule;
@@ -86,8 +85,7 @@ public final class Constants {
       AccessControlModule.MANIFEST,
       SingleplayerModule.MANIFEST,
       Universe.MANIFEST,
-      ConnectedBlocksModule.MANIFEST,
-      VoiceModule.MANIFEST
+      ConnectedBlocksModule.MANIFEST
    };
 
    public static void init() {
@@ -109,5 +107,9 @@ public final class Constants {
 
    private static Path getUniversePath() {
       return OPTION_SET.has(Options.UNIVERSE) ? OPTION_SET.valueOf(Options.UNIVERSE) : Path.of("universe");
+   }
+
+   public static boolean shouldSkipModValidation() {
+      return OPTION_SET.has(Options.SKIP_MOD_VALIDATION) || HytaleServer.get().getConfig().shouldSkipModValidation();
    }
 }

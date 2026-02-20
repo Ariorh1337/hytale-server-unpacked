@@ -1,35 +1,25 @@
 package com.hypixel.hytale.builtin.buildertools.utils;
 
-import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
-import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import java.util.Objects;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public final class Material {
-   public static final Material EMPTY = new Material(0, 0, (byte)0, 0, 0, 0, null);
+   public static final Material EMPTY = new Material(0, 0, (byte)0, 0);
    private final int blockId;
    private final int fluidId;
    private final byte fluidLevel;
    private final int rotation;
-   private final int support;
-   private final int filler;
-   @Nullable
-   private final Holder<ChunkStore> holder;
 
-   private Material(int blockId, int fluidId, byte fluidLevel, int rotation, int support, int filler, @Nullable Holder<ChunkStore> holder) {
+   private Material(int blockId, int fluidId, byte fluidLevel, int rotation) {
       this.blockId = blockId;
       this.fluidId = fluidId;
       this.fluidLevel = fluidLevel;
       this.rotation = rotation;
-      this.support = support;
-      this.filler = filler;
-      this.holder = holder;
    }
 
    @Nonnull
@@ -39,22 +29,12 @@ public final class Material {
 
    @Nonnull
    public static Material block(int blockId, int rotation) {
-      return blockId == 0 ? EMPTY : new Material(blockId, 0, (byte)0, rotation, 0, 0, null);
+      return blockId == 0 ? EMPTY : new Material(blockId, 0, (byte)0, rotation);
    }
 
    @Nonnull
    public static Material fluid(int fluidId, byte fluidLevel) {
-      return fluidId == 0 ? EMPTY : new Material(0, fluidId, fluidLevel, 0, 0, 0, null);
-   }
-
-   @Nonnull
-   public static Material full(int blockId, int rotation, int support, int filler, @Nullable Holder<ChunkStore> holder) {
-      return blockId == 0 ? EMPTY : new Material(blockId, 0, (byte)0, rotation, support, filler, holder);
-   }
-
-   @Nonnull
-   public static Material full(int blockId, int rotation, int support, int filler, @Nullable Holder<ChunkStore> holder, int fluidId, byte fluidLevel) {
-      return new Material(blockId, fluidId, fluidLevel, rotation, support, filler, holder);
+      return fluidId == 0 ? EMPTY : new Material(0, fluidId, fluidLevel, 0);
    }
 
    @Nullable
@@ -117,19 +97,6 @@ public final class Material {
       return this.rotation != 0;
    }
 
-   public int getSupport() {
-      return this.support;
-   }
-
-   public int getFiller() {
-      return this.filler;
-   }
-
-   @Nullable
-   public Holder<ChunkStore> getHolder() {
-      return this.holder;
-   }
-
    @Override
    public String toString() {
       if (this.isEmpty()) {
@@ -151,20 +118,13 @@ public final class Material {
       } else {
          return !(obj instanceof Material other)
             ? false
-            : this.blockId == other.blockId
-               && this.fluidId == other.fluidId
-               && this.fluidLevel == other.fluidLevel
-               && this.rotation == other.rotation
-               && this.support == other.support
-               && this.filler == other.filler
-               && Objects.equals(this.holder, other.holder);
+            : this.blockId == other.blockId && this.fluidId == other.fluidId && this.fluidLevel == other.fluidLevel && this.rotation == other.rotation;
       }
    }
 
    @Override
    public int hashCode() {
-      int result = 31 * (31 * (31 * this.blockId + this.fluidId) + this.fluidLevel) + this.rotation;
-      return 31 * (31 * (31 * result + this.support) + this.filler) + Objects.hashCode(this.holder);
+      return 31 * (31 * (31 * this.blockId + this.fluidId) + this.fluidLevel) + this.rotation;
    }
 
    @Nonnull

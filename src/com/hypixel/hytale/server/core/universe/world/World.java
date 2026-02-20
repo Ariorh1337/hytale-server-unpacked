@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.universe.world;
 
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ComponentAccessor;
@@ -218,15 +217,13 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
             return this;
          } catch (WorldGenLoadException e) {
             if (this.name.equals(HytaleServer.get().getConfig().getDefaults().getWorld())) {
-               Message reasonMessage = Message.translation("client.disconnection.shutdownReason.worldGen.detail").param("detail", e.getTraceMessage("\n"));
-               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(reasonMessage));
+               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(e.getTraceMessage("\n")));
             }
 
             throw new SkipSentryException("Failed to load WorldGen!", e);
          } catch (WorldMapLoadException e) {
             if (this.name.equals(HytaleServer.get().getConfig().getDefaults().getWorld())) {
-               Message reasonMessage = Message.translation("client.disconnection.shutdownReason.worldGen.detail").param("detail", e.getTraceMessage("\n"));
-               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(reasonMessage));
+               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(e.getTraceMessage("\n")));
             }
 
             throw new SkipSentryException("Failed to load WorldGen!", e);
@@ -883,13 +880,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          .thenApplyAsync(aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.shouldBroadcastJoinMessage()), this)
          .exceptionally(throwable -> {
             this.logger.at(Level.WARNING).withCause(throwable).log("Exception when adding player to world!");
-            PluginIdentifier possibleCause = PluginIdentifier.identifyThirdPartyPlugin(throwable);
-            if (possibleCause == null) {
-               playerRef.getPacketHandler().disconnect("Exception when adding player to world!");
-            } else {
-               playerRef.getPacketHandler().disconnect("Exception when adding player to world! (possibly caused by " + possibleCause + ")");
-            }
-
+            playerRef.getPacketHandler().disconnect("Exception when adding player to world!");
             throw new RuntimeException("Exception when adding player '" + playerRef.getUsername() + "' to world '" + this.name + "'", throwable);
          });
    }

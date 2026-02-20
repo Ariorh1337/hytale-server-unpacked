@@ -14,12 +14,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public interface IChunkStorageProvider<Data> {
    @Nonnull
@@ -82,19 +80,6 @@ public interface IChunkStorageProvider<Data> {
 
    @Nonnull
    IChunkSaver getSaver(@Nonnull Data var1, @Nonnull Store<ChunkStore> var2) throws IOException;
-
-   @Nullable
-   default IChunkLoader getRecoveryLoader(@Nonnull Store<ChunkStore> store, Path backupPath) {
-      return null;
-   }
-
-   default void beginRecovery(Path file, Path recoveryPath) throws IOException {
-      throw new UnsupportedOperationException();
-   }
-
-   default void revertRecovery(Path file, Path recoveryPath) throws IOException {
-      throw new UnsupportedOperationException();
-   }
 
    default boolean isSame(IChunkStorageProvider<?> other) {
       return other.getClass().equals(this.getClass());

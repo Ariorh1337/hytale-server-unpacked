@@ -79,19 +79,14 @@ public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
             }
 
             long diff = System.nanoTime() - start;
-            if (printBlockName) {
-               BlockType findBlock = BlockType.getAssetMap().getAsset(blockId);
-               playerRef.sendMessage(
-                  Message.translation("server.commands.block.find-here.resultWithName")
-                     .param("count", found.get())
-                     .param("blockName", findBlock.getId())
-                     .param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
-               );
-            } else {
-               playerRef.sendMessage(
-                  Message.translation("server.commands.block.find-here.result").param("count", found.get()).param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
-               );
-            }
+            BlockType findBlock = BlockType.getAssetMap().getAsset(blockId);
+            String blockName = printBlockName ? " " + findBlock.getId() : "";
+            playerRef.sendMessage(
+               Message.translation("server.commands.block.find-here.result")
+                  .param("count", found.get())
+                  .param("blockName", blockName)
+                  .param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
+            );
          }
       );
    }

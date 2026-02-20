@@ -157,12 +157,7 @@ public class StructuralCraftingWindow extends CraftingWindow implements ItemCont
                      }
                   }
 
-                  if (craftingManagerComponent.queueCraft(ref, store, this, 0, recipe, quantity, this.inputContainer, CraftingManager.InputRemovalType.ORDERED)
-                     )
-                   {
-                     this.updateQueueSize(craftingManagerComponent.getRemainingQueueSize());
-                  }
-
+                  craftingManagerComponent.queueCraft(ref, store, this, 0, recipe, quantity, this.inputContainer, CraftingManager.InputRemovalType.ORDERED);
                   this.invalidate();
                }
                break;

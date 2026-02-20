@@ -55,7 +55,6 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabMarkerProvider
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabSelectionInteraction;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabSetAnchorInteraction;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.commands.PrefabEditCommand;
-import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfig;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigCommandExecutor;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigEditStore;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.ScriptedBrushAsset;
@@ -66,7 +65,6 @@ import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.global
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.BlockPatternOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.BreakpointOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.ClearOperationMaskOperation;
-import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.ClearRotationOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.DeleteOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOnceOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOperation;
@@ -113,7 +111,6 @@ import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequen
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.saveandload.PersistentDataOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.saveandload.SaveBrushConfigOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.saveandload.SaveIndexOperation;
-import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.transforms.RotateOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.system.BrushOperation;
 import com.hypixel.hytale.builtin.buildertools.snapshot.BlockSelectionSnapshot;
 import com.hypixel.hytale.builtin.buildertools.snapshot.ClipboardBoundsSnapshot;
@@ -513,8 +510,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       BrushOperation.OPERATION_CODEC.register("set", SetOperation.class, SetOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("smooth", SmoothOperation.class, SmoothOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("shape", ShapeOperation.class, ShapeOperation.CODEC);
-      BrushOperation.OPERATION_CODEC.register("rotation", RotateOperation.class, RotateOperation.CODEC);
-      BrushOperation.OPERATION_CODEC.register("clearrotation", ClearRotationOperation.class, ClearRotationOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("offset", OffsetOperation.class, OffsetOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("layer", LayerOperation.class, LayerOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("heightmaplayer", HeightmapLayerOperation.class, HeightmapLayerOperation.CODEC);
@@ -871,35 +866,25 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    }
 
    public enum Action {
-      EDIT("server.builderTools.action.edit"),
-      EDIT_SELECTION("server.builderTools.action.editSelection"),
-      EDIT_LINE("server.builderTools.action.editLine"),
-      CUT_COPY("server.builderTools.action.cutCopy"),
-      CUT_REMOVE("server.builderTools.action.cutRemove"),
-      COPY("server.builderTools.action.copy"),
-      PASTE("server.builderTools.action.paste"),
-      CLEAR("server.builderTools.action.clear"),
-      ROTATE("server.builderTools.action.rotate"),
-      FLIP("server.builderTools.action.flip"),
-      MOVE("server.builderTools.action.move"),
-      STACK("server.builderTools.action.stack"),
-      SET("server.builderTools.action.set"),
-      REPLACE("server.builderTools.action.replace"),
-      EXTRUDE("server.builderTools.action.extrude"),
-      UPDATE_SELECTION("server.builderTools.action.updateSelection"),
-      WALLS("server.builderTools.action.walls"),
-      HOLLOW("server.builderTools.action.hollow"),
-      LAYER("server.builderTools.action.layer");
-
-      private final String translationKey;
-
-      Action(String translationKey) {
-         this.translationKey = translationKey;
-      }
-
-      public Message toMessage() {
-         return Message.translation(this.translationKey);
-      }
+      EDIT,
+      EDIT_SELECTION,
+      EDIT_LINE,
+      CUT_COPY,
+      CUT_REMOVE,
+      COPY,
+      PASTE,
+      CLEAR,
+      ROTATE,
+      FLIP,
+      MOVE,
+      STACK,
+      SET,
+      REPLACE,
+      EXTRUDE,
+      UPDATE_SELECTION,
+      WALLS,
+      HOLLOW,
+      LAYER;
    }
 
    public static class ActionEntry {
@@ -1000,9 +985,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       private Path prefabListPath;
       @Nullable
       private String prefabListSearchQuery;
-      @Nullable
-      private BlockSelection pendingUndoSnapshot;
-      private int executionCountInGroup;
 
       private BuilderState(@Nonnull Player player, @Nonnull PlayerRef playerRef) {
          this.player = player;
@@ -1336,14 +1318,17 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
 
          if (protoSettings != null) {
-            protoSettings.setLastBrushPosition(positionsToExecute.get(positionsToExecute.size() - 1));
+            if (packet.isHoldDownInteraction) {
+               protoSettings.setLastBrushPosition(positionsToExecute.get(positionsToExecute.size() - 1));
+            } else {
+               protoSettings.clearLastBrushPosition();
+            }
          }
 
          EditOperation edit = toolOperation.getEditOperation();
          BlockSelection before = edit.getBefore();
          BlockSelection after = edit.getAfter();
-         int undoGroupSize = packet.undoGroupSize > 0 ? packet.undoGroupSize : 10;
-         this.handleBrushUndoGrouping(before, undoGroupSize, packet.isHoldDownInteraction);
+         this.pushHistory(BuilderToolsPlugin.Action.EDIT, new BlockSelectionSnapshot(before));
          after.placeNoReturn("Use Builder Tool ?/?", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
@@ -1354,7 +1339,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             .getLogger()
             .at(Level.FINE)
             .log("Took: %dns (%dms) to execute edit of %d blocks (%d positions)", diff, TimeUnit.NANOSECONDS.toMillis(diff), size, interpolatedCount);
-         if (protoSettings != null && protoSettings.isShouldShowEditorSettings() && toolOperation.showEditNotification()) {
+         if (protoSettings != null && protoSettings.isShouldShowEditorSettings()) {
             this.sendFeedback("Edit", size, componentAccessor);
          }
 
@@ -1372,11 +1357,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          World world = componentAccessor.getExternalData().getWorld();
          BlockSelection after = brushConfigEditStore.getAfter();
          BlockSelection before = brushConfigEditStore.getBefore();
-         PrototypePlayerBuilderToolSettings prototypePlayerBuilderToolSettings = ToolOperation.PROTOTYPE_TOOL_SETTINGS.get(playerRefComponent.getUuid());
-         BrushConfig brushConfig = brushConfigEditStore.getBrushConfig();
-         int undoGroupSize = prototypePlayerBuilderToolSettings != null ? prototypePlayerBuilderToolSettings.getUndoGroupSize() : 10;
-         boolean isHoldDown = brushConfig != null && brushConfig.isHoldDownInteraction();
-         this.handleBrushUndoGrouping(before, undoGroupSize, isHoldDown);
+         this.pushHistory(BuilderToolsPlugin.Action.EDIT, new BlockSelectionSnapshot(before));
          after.placeNoReturn("Use Builder Tool ?/?", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
@@ -1386,6 +1367,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             .getLogger()
             .at(Level.FINE)
             .log("Took: %dns (%dms) to execute edit of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), size);
+         PrototypePlayerBuilderToolSettings prototypePlayerBuilderToolSettings = ToolOperation.PROTOTYPE_TOOL_SETTINGS.get(playerRefComponent.getUuid());
          if (prototypePlayerBuilderToolSettings != null && prototypePlayerBuilderToolSettings.isShouldShowEditorSettings()) {
             this.sendFeedback("Edit", size, componentAccessor);
          }
@@ -4277,7 +4259,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
       @Nonnull
       public List<BuilderToolsPlugin.ActionEntry> undo(@Nonnull Ref<EntityStore> ref, int count, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-         this.commitPendingUndoGroup();
          long start = System.nanoTime();
          BlockSelection before = this.selection;
          List<BuilderToolsPlugin.ActionEntry> list = new ObjectArrayList<>();
@@ -4309,7 +4290,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             for (BuilderToolsPlugin.ActionEntry pair : list) {
                this.sendFeedback(
                   ref,
-                  Message.translation("server.builderTools.undoStatus").param("index", ++i).param("action", pair.getAction().toMessage()),
+                  Message.translation("server.builderTools.undoStatus").param("index", ++i).param("action", pair.getAction().name()),
                   "CREATE_UNDO",
                   componentAccessor
                );
@@ -4347,7 +4328,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             for (BuilderToolsPlugin.ActionEntry pair : list) {
                this.sendFeedback(
                   ref,
-                  Message.translation("server.builderTools.redoStatus").param("index", ++i).param("action", pair.getAction().toMessage()),
+                  Message.translation("server.builderTools.redoStatus").param("index", ++i).param("action", pair.getAction().name()),
                   "CREATE_REDO",
                   componentAccessor
                );
@@ -4677,62 +4658,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                && action != BuilderToolsPlugin.Action.CUT_COPY) {
                this.markPrefabsDirtyFromSnapshots(snapshots);
             }
-         }
-      }
-
-      private void handleBrushUndoGrouping(@Nonnull BlockSelection before, int undoGroupSize, boolean isHoldDown) {
-         if (!isHoldDown) {
-            this.commitPendingUndoGroup();
-         }
-
-         if (this.pendingUndoSnapshot == null) {
-            this.pendingUndoSnapshot = before;
-         } else {
-            this.mergeBeforeSnapshotPreservingOriginal(before);
-         }
-
-         this.executionCountInGroup++;
-         if (this.executionCountInGroup >= undoGroupSize) {
-            this.commitPendingUndoGroup();
-         }
-      }
-
-      private void mergeBeforeSnapshotPreservingOriginal(@Nonnull BlockSelection newBefore) {
-         newBefore.forEachBlock(
-            (x, y, z, block) -> {
-               int worldX = x + newBefore.getX();
-               int worldY = y + newBefore.getY();
-               int worldZ = z + newBefore.getZ();
-               if (!this.pendingUndoSnapshot.hasBlockAtWorldPos(worldX, worldY, worldZ)) {
-                  this.pendingUndoSnapshot
-                     .addBlockAtWorldPos(
-                        worldX,
-                        worldY,
-                        worldZ,
-                        block.blockId(),
-                        block.rotation(),
-                        block.filler(),
-                        block.supportValue(),
-                        block.holder() != null ? block.holder().clone() : null
-                     );
-               }
-            }
-         );
-         newBefore.forEachFluid((x, y, z, fluidId, fluidLevel) -> {
-            int worldX = x + newBefore.getX();
-            int worldY = y + newBefore.getY();
-            int worldZ = z + newBefore.getZ();
-            if (this.pendingUndoSnapshot.getFluidAtWorldPos(worldX, worldY, worldZ) < 0) {
-               this.pendingUndoSnapshot.addFluidAtWorldPos(worldX, worldY, worldZ, fluidId, fluidLevel);
-            }
-         });
-      }
-
-      private void commitPendingUndoGroup() {
-         if (this.pendingUndoSnapshot != null && this.executionCountInGroup > 0) {
-            this.pushHistory(BuilderToolsPlugin.Action.EDIT, new BlockSelectionSnapshot(this.pendingUndoSnapshot));
-            this.pendingUndoSnapshot = null;
-            this.executionCountInGroup = 0;
          }
       }
 

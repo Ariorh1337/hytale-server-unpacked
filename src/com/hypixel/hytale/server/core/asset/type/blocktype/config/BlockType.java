@@ -919,7 +919,6 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    @Nullable
    protected ConnectedBlockRuleSet connectedBlockRuleSet;
    protected Bench bench;
-   @Nullable
    protected BlockGathering gathering;
    protected BlockPlacementSettings placementSettings;
    protected StateData state;
@@ -1579,7 +1578,6 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return this.bench;
    }
 
-   @Nullable
    public BlockGathering getGathering() {
       return this.gathering;
    }

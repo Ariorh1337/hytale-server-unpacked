@@ -56,7 +56,7 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
    @Nonnull
    private ImageImportPage.Origin origin = ImageImportPage.Origin.BOTTOM_CENTER;
    @Nullable
-   private Message statusMessage = null;
+   private String statusMessage = null;
    private boolean isError = false;
    private boolean isProcessing = false;
    private boolean showBrowser = false;
@@ -133,14 +133,14 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
       }
    }
 
-   private void setError(@Nonnull Message message) {
+   private void setError(@Nonnull String message) {
       this.statusMessage = message;
       this.isError = true;
       this.isProcessing = false;
       this.rebuild();
    }
 
-   private void setStatus(@Nonnull Message message) {
+   private void setStatus(@Nonnull String message) {
       this.statusMessage = message;
       this.isError = false;
       this.rebuild();
@@ -255,16 +255,16 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
 
    private void performImport(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
       if (this.imagePath.isEmpty()) {
-         this.setError(Message.translation("server.builderTools.imageImport.emptyPath"));
+         this.setError("Please enter a path to an image file");
       } else {
          Path path = Paths.get(this.imagePath);
          if (!AssetModule.get().isWithinPackSubDir(path, "Server/Imports/Images")) {
-            this.setError(Message.translation("server.builderTools.imageImport.notInImportsDir"));
+            this.setError("File must be within an asset pack's imports directory");
          } else if (!Files.exists(path)) {
-            this.setError(Message.translation("server.builderTools.imageImport.fileNotFound").param("path", this.imagePath));
+            this.setError("File not found: " + this.imagePath);
          } else {
             this.isProcessing = true;
-            this.setStatus(Message.translation("server.builderTools.imageImport.processing"));
+            this.setStatus("Processing...");
             Player playerComponent = store.getComponent(ref, Player.getComponentType());
             PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerComponent != null && playerRefComponent != null) {
@@ -285,7 +285,7 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
                         }
 
                         if (image == null) {
-                           this.setError(Message.translation("server.builderTools.imageImport.unreadableImage"));
+                           this.setError("Unable to read image file (unsupported format or corrupted). Try PNG format.");
                            return;
                         }
 
@@ -300,7 +300,7 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
 
                         BlockColorIndex colorIndex = BuilderToolsPlugin.get().getBlockColorIndex();
                         if (colorIndex.isEmpty()) {
-                           this.setError(Message.translation("server.builderTools.imageImport.colorIndexEmpty"));
+                           this.setError("Block color index not initialized");
                            return;
                         }
 
@@ -405,11 +405,7 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
                         );
                         builderState.setSelection(selection);
                         builderState.sendSelectionToClient();
-                        this.statusMessage = Message.translation("server.builderTools.imageImport.success")
-                           .param("count", blockCount)
-                           .param("width", sizeX)
-                           .param("height", sizeY)
-                           .param("depth", sizeZ);
+                        this.statusMessage = String.format("Success! %d blocks copied to clipboard (%dx%dx%d)", blockCount, sizeX, sizeY, sizeZ);
                         this.isProcessing = false;
                         playerRefComponent.sendMessage(
                            Message.translation("server.builderTools.imageImport.success")
@@ -422,12 +418,12 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
                         PasteToolUtil.switchToPasteTool(playerComponent, playerRefComponent);
                      } catch (Exception e) {
                         BuilderToolsPlugin.get().getLogger().at(Level.WARNING).withCause(e).log("Image import error");
-                        this.setError(Message.translation("server.builderTools.imageImport.error").param("message", e.getMessage()));
+                        this.setError("Error: " + e.getMessage());
                      }
                   }
                );
             } else {
-               this.setError(Message.translation("server.builderTools.imageImport.playerNotFound"));
+               this.setError("Player not found");
             }
          }
       }

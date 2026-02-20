@@ -19,7 +19,7 @@ public class KickCommand extends CommandBase {
    @Override
    protected void executeSync(@Nonnull CommandContext context) {
       PlayerRef playerToKick = this.playerArg.get(context);
-      playerToKick.getPacketHandler().disconnect(Message.translation("server.general.disconnect.kick.reason"));
+      playerToKick.getPacketHandler().disconnect("You were kicked.");
       context.sendMessage(Message.translation("server.commands.kick.success").param("username", playerToKick.getUsername()));
    }
 }
