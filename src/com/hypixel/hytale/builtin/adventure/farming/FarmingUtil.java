@@ -13,6 +13,7 @@ import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Rangef;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockGathering;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.HarvestingDropType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.FarmingData;
@@ -211,13 +212,13 @@ public class FarmingUtil {
       int rotationIndex,
       @Nonnull Vector3i blockPosition
    ) {
-      FarmingData farmingConfig = blockType.getFarming();
-      boolean isFarmable = true;
-      if (farmingConfig == null || farmingConfig.getStages() == null) {
-         isFarmable = false;
+      BlockGathering gathering = blockType.getGathering();
+      if (gathering == null) {
+         return false;
       }
 
-      if (blockType.getGathering().getHarvest() == null) {
+      HarvestingDropType harvestingDropType = gathering.getHarvest();
+      if (harvestingDropType == null) {
          return false;
       }
 
@@ -225,8 +226,10 @@ public class FarmingUtil {
       Vector3d centerPosition = new Vector3d();
       blockType.getBlockCenter(rotationIndex, centerPosition);
       centerPosition.add(blockPosition);
+      FarmingData farmingConfig = blockType.getFarming();
+      boolean isFarmable = farmingConfig != null && farmingConfig.getStages() != null;
       if (isFarmable && farmingConfig.getStageSetAfterHarvest() != null) {
-         giveDrops(store, ref, centerPosition, blockType);
+         giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
          Map<String, FarmingStageData[]> stageSets = farmingConfig.getStages();
          FarmingStageData[] stages = stageSets.get(farmingConfig.getStartingStageSet());
          if (stages == null) {
@@ -299,7 +302,7 @@ public class FarmingUtil {
             return false;
          }
       } else {
-         giveDrops(store, ref, centerPosition, blockType);
+         giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
          WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
          if (chunk != null) {
             chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
@@ -310,11 +313,14 @@ public class FarmingUtil {
    }
 
    protected static void giveDrops(
-      @Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d origin, @Nonnull BlockType blockType
+      @Nonnull ComponentAccessor<EntityStore> store,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Vector3d origin,
+      @Nonnull BlockType blockType,
+      @Nonnull HarvestingDropType harvestingDropType
    ) {
-      HarvestingDropType harvest = blockType.getGathering().getHarvest();
-      String itemId = harvest.getItemId();
-      String dropListId = harvest.getDropListId();
+      String itemId = harvestingDropType.getItemId();
+      String dropListId = harvestingDropType.getDropListId();
 
       for (ItemStack itemStack : BlockHarvestUtils.getDrops(blockType, 1, itemId, dropListId)) {
          ItemUtils.interactivelyPickupItem(ref, itemStack, origin, store);

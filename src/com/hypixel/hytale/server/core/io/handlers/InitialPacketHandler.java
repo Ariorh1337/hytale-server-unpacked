@@ -5,9 +5,10 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.auth.ConnectAccept;
+import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.ClientType;
 import com.hypixel.hytale.protocol.packets.connection.Connect;
-import com.hypixel.hytale.protocol.packets.connection.Disconnect;
+import com.hypixel.hytale.protocol.packets.connection.QuicApplicationErrorCode;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
@@ -55,7 +56,7 @@ public class InitialPacketHandler extends PacketHandler {
       if (packet.getId() == 0) {
          this.handle((Connect)packet);
       } else if (packet.getId() == 1) {
-         this.handle((Disconnect)packet);
+         this.handle((ClientDisconnect)packet);
       } else {
          this.disconnect("Protocol error: unexpected packet " + packet.getId());
       }
@@ -75,16 +76,10 @@ public class InitialPacketHandler extends PacketHandler {
       this.receivedConnect = true;
       this.clearTimeout();
       PacketHandler.logConnectionTimings(this.getChannel(), "Connect", Level.FINE);
-      if (packet.protocolCrc != -1356075132) {
+      if (packet.protocolCrc != -1695325721) {
          int clientBuild = packet.protocolBuildNumber;
-         int serverBuild = 20;
-         int errorCode;
-         if (clientBuild < serverBuild) {
-            errorCode = 5;
-         } else {
-            errorCode = 6;
-         }
-
+         int serverBuild = 29;
+         QuicApplicationErrorCode errorCode = clientBuild < serverBuild ? QuicApplicationErrorCode.ClientOutdated : QuicApplicationErrorCode.ServerOutdated;
          String serverVersion = ManifestUtil.getImplementationVersion();
          ProtocolUtil.closeApplicationConnection(this.getChannel(), errorCode, serverVersion != null ? serverVersion : "unknown");
       } else if (HytaleServer.get().isShuttingDown()) {
@@ -250,7 +245,7 @@ public class InitialPacketHandler extends PacketHandler {
       }
    }
 
-   public void handle(@Nonnull Disconnect packet) {
+   public void handle(@Nonnull ClientDisconnect packet) {
       this.disconnectReason.setClientDisconnectType(packet.type);
       HytaleLogger.getLogger().at(Level.WARNING).log("Disconnecting %s - Sent disconnect packet???", NettyUtil.formatRemoteAddress(this.getChannel()));
       ProtocolUtil.closeApplicationConnection(this.getChannel());

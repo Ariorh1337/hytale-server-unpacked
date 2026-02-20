@@ -408,24 +408,30 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
                int baseX = worldX - fx;
                int baseY = y - fy;
                int baseZ = worldZ - fz;
-               FillerBlockUtil.forEachFillerBlock(hitboxAssetMap.getAsset(oldBlockType.getHitboxTypeIndex()).get(oldRotation), (x1, y1, z1) -> {
-                  if (x1 != fx || y1 != fy || z1 != fz) {
-                     int blockX = baseX + x1;
-                     int blockY = baseY + y1;
-                     int blockZ = baseZ + z1;
-                     if (ChunkUtil.isSameChunk(worldX, worldZ, blockX, blockZ)) {
-                        String blockTypeKey1 = this.getBlockType(blockX, blockY, blockZ).getId();
-                        if (blockTypeKey1.equals(oldBlockKey)) {
-                           this.breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
-                        }
-                     } else {
-                        String blockTypeKey1 = this.getWorld().getBlockType(blockX, blockY, blockZ).getId();
-                        if (blockTypeKey1.equals(oldBlockKey)) {
-                           this.getWorld().breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
+               FillerBlockUtil.forEachFillerBlock(
+                  hitboxAssetMap.getAsset(oldBlockType.getHitboxTypeIndex()).get(oldRotation),
+                  (x1, y1, z1) -> {
+                     if (x1 != fx || y1 != fy || z1 != fz) {
+                        int blockX = baseX + x1;
+                        int blockY = baseY + y1;
+                        int blockZ = baseZ + z1;
+                        if (ChunkUtil.isSameChunk(worldX, worldZ, blockX, blockZ)) {
+                           String blockTypeKey1 = this.getBlockType(blockX, blockY, blockZ).getId();
+                           if (blockTypeKey1.equals(oldBlockKey)) {
+                              this.breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
+                           }
+                        } else {
+                           String blockTypeKey1 = this.getWorld()
+                              .getNonTickingChunk(ChunkUtil.indexChunkFromBlock(blockX, blockZ))
+                              .getBlockType(blockX, blockY, blockZ)
+                              .getId();
+                           if (blockTypeKey1.equals(oldBlockKey)) {
+                              this.getWorld().breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
+                           }
                         }
                      }
                   }
-               });
+               );
             }
 
             if ((settings & 8) == 0 && filler == 0) {

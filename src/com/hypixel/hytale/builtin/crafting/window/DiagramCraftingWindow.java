@@ -134,7 +134,7 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
             }
             break;
          case CraftItemAction ignored:
-            label59: {
+            label63: {
                ItemStack itemStack = this.outputContainer.getItemStack((short)0);
                if (itemStack == null || itemStack.isEmpty()) {
                   playerRefComponent.sendMessage(Message.translation("server.ui.diagramcraftingwindow.noOutputItem"));
@@ -149,7 +149,12 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
                }
 
                CraftingRecipe recipe = recipes.getFirst();
-               craftingManagerComponent.queueCraft(ref, store, this, 0, recipe, 1, this.combinedInputItemContainer, CraftingManager.InputRemovalType.ORDERED);
+               if (craftingManagerComponent.queueCraft(
+                  ref, store, this, 0, recipe, 1, this.combinedInputItemContainer, CraftingManager.InputRemovalType.ORDERED
+               )) {
+                  this.updateQueueSize(craftingManagerComponent.getRemainingQueueSize());
+               }
+
                String completedState = recipe.getTimeSeconds() > 0.0F ? "CraftCompleted" : "CraftCompletedInstant";
                this.setBlockInteractionState(completedState, world);
                if (this.bench.getCompletedSoundEventIndex() != 0) {
@@ -159,7 +164,7 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
                if (CraftingPlugin.learnRecipe(ref, recipe.getId(), store)) {
                   this.updateInput(this.outputContainer, ref, store);
                }
-               break label59;
+               break label63;
             }
          default:
       }

@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.npc.role.support;
 
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
@@ -37,6 +38,9 @@ public class DebugSupport {
    protected List<DebugSupport.SensorVisData> sensorVisDataList;
    @Nullable
    protected Map<Ref<EntityStore>, List<DebugSupport.EntityVisData>> entityVisDataMap;
+   protected boolean visPath;
+   @Nullable
+   protected List<DebugSupport.PathWaypointVisData> pathVisDataList;
 
    public DebugSupport(NPCEntity parent, @Nonnull BuilderRole builder) {
       this.parent = parent;
@@ -129,6 +133,7 @@ public class DebugSupport {
       this.traceSuccess = this.isDebugFlagSet(RoleDebugFlags.TraceSuccess);
       this.traceSensorFails = this.isDebugFlagSet(RoleDebugFlags.TraceSensorFailures);
       this.visSensorRanges = this.isDebugFlagSet(RoleDebugFlags.VisSensorRanges);
+      this.visPath = this.isDebugFlagSet(RoleDebugFlags.VisPath);
       this.debugDisplay = RoleDebugDisplay.create(this.debugFlags, this.debugDisplay);
    }
 
@@ -201,11 +206,45 @@ public class DebugSupport {
       }
    }
 
+   public boolean isVisPath() {
+      return this.visPath;
+   }
+
+   public void clearPathVisualization() {
+      if (this.pathVisDataList != null) {
+         this.pathVisDataList.clear();
+      }
+   }
+
+   public void recordPathWaypoint(@Nonnull Vector3d position, boolean isCurrentTarget, boolean isEndNode) {
+      this.recordPathWaypoint(position, isCurrentTarget, isEndNode, false);
+   }
+
+   public void recordPathWaypoint(@Nonnull Vector3d position, boolean isCurrentTarget, boolean isEndNode, boolean isSeekTarget) {
+      if (this.pathVisDataList == null) {
+         this.pathVisDataList = new ArrayList<>();
+      }
+
+      this.pathVisDataList.add(new DebugSupport.PathWaypointVisData(position.clone(), isCurrentTarget, isEndNode, isSeekTarget));
+   }
+
+   @Nullable
+   public List<DebugSupport.PathWaypointVisData> getPathVisData() {
+      return this.pathVisDataList;
+   }
+
+   public boolean hasPathVisData() {
+      return this.pathVisDataList != null && !this.pathVisDataList.isEmpty();
+   }
+
    public interface DebugFlagsChangeListener {
       void onDebugFlagsChanged(EnumSet<RoleDebugFlags> var1);
    }
 
    public record EntityVisData(int sensorColorIndex, boolean matched) {
+   }
+
+   public record PathWaypointVisData(Vector3d position, boolean isCurrentTarget, boolean isEndNode, boolean isSeekTarget) {
    }
 
    public record SensorVisData(double range, double minRange, int colorIndex, double viewAngle) {

@@ -15,9 +15,7 @@ import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
-import com.hypixel.hytale.event.EventPriority;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Message;
@@ -54,7 +52,6 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -126,9 +123,10 @@ public class AssetModule extends JavaPlugin {
       }
 
       if (this.assetPacks.isEmpty()) {
-         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage("Failed to load any asset packs"));
+         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.missingAssets.failedToLoad");
+         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage(reasonMessage));
       } else {
-         boolean hasOutdatedPacks = false;
+         ArrayList<String> outdatedPacks = new ArrayList<>();
          String serverVersion = ManifestUtil.getVersion();
 
          for (AssetPack pack : this.assetPacks) {
@@ -136,7 +134,7 @@ public class AssetModule extends JavaPlugin {
                PluginManifest manifest = pack.getManifest();
                String targetServerVersion = manifest.getServerVersion();
                if (targetServerVersion == null || !targetServerVersion.equals(serverVersion)) {
-                  hasOutdatedPacks = true;
+                  outdatedPacks.add(pack.getName());
                   if (targetServerVersion != null && !"*".equals(targetServerVersion)) {
                      this.getLogger()
                         .at(Level.WARNING)
@@ -157,25 +155,22 @@ public class AssetModule extends JavaPlugin {
             }
          }
 
-         if (hasOutdatedPacks && System.getProperty("hytale.allow_outdated_mods") == null) {
+         if (!outdatedPacks.isEmpty() && System.getProperty("hytale.allow_outdated_mods") == null) {
             this.getLogger()
                .at(Level.SEVERE)
                .log("One or more asset packs are targeting an older server version. It is recommended to update these plugins to ensure compatibility.");
-
-            try {
-               if (!Constants.SINGLEPLAYER) {
-                  Thread.sleep(Duration.ofSeconds(2L));
-               }
-            } catch (InterruptedException e) {
-               throw new RuntimeException(e);
-            }
-
             HytaleServer.get().getEventBus().registerGlobal(AddPlayerToWorldEvent.class, event -> {
                PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
                Player player = event.getHolder().getComponent(Player.getComponentType());
                if (playerRef != null && player != null) {
                   if (player.hasPermission("hytale.mods.outdated.notify")) {
-                     playerRef.sendMessage(Message.translation("server.assetModule.outOfDatePacks").color(Color.RED));
+                     StringBuilder modsList = new StringBuilder();
+
+                     for (String packx : outdatedPacks) {
+                        modsList.append("\n - ").append(packx);
+                     }
+
+                     playerRef.sendMessage(Message.translation("server.assetModule.outOfDatePacks").param("mods", modsList.toString()).color(Color.RED));
                   }
                }
             });
@@ -206,7 +201,6 @@ public class AssetModule extends JavaPlugin {
             }
          });
          this.getEventRegistry().register(LoadAssetEvent.class, AssetModule::validateWorldGen);
-         this.getEventRegistry().register(EventPriority.FIRST, LoadAssetEvent.class, SneakyThrow.sneakyConsumer(AssetRegistryLoader::writeSchemas));
          this.getEventRegistry().register(RegisterAssetStoreEvent.class, this::onNewStore);
          this.getEventRegistry().register(RemoveAssetStoreEvent.class, this::onRemoveStore);
          this.getEventRegistry().registerGlobal(BootEvent.class, event -> {

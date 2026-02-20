@@ -18,11 +18,13 @@ public class AuthConfig {
    public static final String SCOPE_CLIENT = "hytale:client";
    public static final String SCOPE_SERVER = "hytale:server";
    public static final String SCOPE_EDITOR = "hytale:editor";
+   public static final String SCOPE_OFFLINE = "hytale:offline";
    public static final Duration HTTP_TIMEOUT = Duration.ofSeconds(30L);
    public static final int DEVICE_POLL_INTERVAL_SECONDS = 15;
    public static final String ENV_SERVER_AUDIENCE = "HYTALE_SERVER_AUDIENCE";
    public static final String ENV_SERVER_IDENTITY_TOKEN = "HYTALE_SERVER_IDENTITY_TOKEN";
    public static final String ENV_SERVER_SESSION_TOKEN = "HYTALE_SERVER_SESSION_TOKEN";
+   public static final String ENV_SERVER_OFFLINE_TOKEN = "HYTALE_SERVER_OFFLINE_TOKEN";
    private static final String SERVER_AUDIENCE_OVERRIDE = System.getenv("HYTALE_SERVER_AUDIENCE");
 
    @Nonnull

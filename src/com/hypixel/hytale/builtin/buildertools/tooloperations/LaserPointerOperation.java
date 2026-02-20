@@ -72,6 +72,11 @@ public class LaserPointerOperation extends ToolOperation {
    }
 
    @Override
+   public boolean showEditNotification() {
+      return false;
+   }
+
+   @Override
    public void execute(ComponentAccessor<EntityStore> componentAccessor) {
    }
 

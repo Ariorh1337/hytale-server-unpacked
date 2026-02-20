@@ -118,7 +118,7 @@ public class AvoidanceSystem extends SteppableTickingSystem {
    private static void renderDebugSteeringVector(@Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, @Nonnull World world) {
       if (!(direction.squaredLength() < 0.01)) {
          Vector3d scaledDir = direction.clone().scale(4.0);
-         DebugUtils.addArrow(world, position, scaledDir, color, 0.05F, false);
+         DebugUtils.addArrow(world, position, scaledDir, color, 0.05F, 0);
       }
    }
 
@@ -126,7 +126,7 @@ public class AvoidanceSystem extends SteppableTickingSystem {
       if (!(direction.squaredLength() < 0.01)) {
          Vector3d scaledDir = direction.clone().scale(4.0);
          Vector3d start = position.clone().subtract(scaledDir);
-         DebugUtils.addArrow(world, start, scaledDir, color, 0.05F, false);
+         DebugUtils.addArrow(world, start, scaledDir, color, 0.05F, 0);
       }
    }
 }

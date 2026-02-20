@@ -40,7 +40,11 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
       PortalDeviceActivePage.State state = this.computeState(ref, store);
       if (state != PortalDeviceActivePage.Error.INVALID_BLOCK) {
          commandBuilder.append("Pages/PortalDeviceActive.ui");
-         if (state instanceof PortalDeviceActivePage.PortalIsOpen(World world, PortalWorld portalWorld, boolean diedInIt)) {
+         if (state == PortalDeviceActivePage.Error.PORTAL_LOADING) {
+            commandBuilder.set("#Error.Visible", true);
+            commandBuilder.set("#ErrorTitle.Visible", false);
+            commandBuilder.set("#ErrorLabel.Text", Message.translation("server.customUI.portalDevice.loading"));
+         } else if (state instanceof PortalDeviceActivePage.PortalIsOpen(World world, PortalWorld portalWorld, boolean diedInIt)) {
             PortalType var18 = portalWorld.getPortalType();
             commandBuilder.set("#PortalPanel.Visible", true);
             if (diedInIt) {
@@ -106,6 +110,10 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
          return PortalDeviceActivePage.Error.INVALID_BLOCK;
       }
 
+      if (portalDevice.isLoadingWorld()) {
+         return PortalDeviceActivePage.Error.PORTAL_LOADING;
+      }
+
       World destinationWorld = portalDevice.getDestinationWorld();
       if (destinationWorld == null) {
          return PortalDeviceActivePage.Error.INVALID_WORLD;
@@ -139,7 +147,8 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
       INVALID_BLOCK,
       INVALID_WORLD,
       DESTINATION_NOT_FRAGMENT,
-      INACTIVE_PORTAL;
+      INACTIVE_PORTAL,
+      PORTAL_LOADING;
    }
 
    private record PortalIsOpen(World world, PortalWorld portalWorld, boolean diedInside) implements PortalDeviceActivePage.State {

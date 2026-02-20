@@ -78,22 +78,23 @@ public class PortalDevicePageSupplier implements OpenCustomUIInteraction.CustomP
       if (blockRef == null) {
          playerRef.sendMessage(Message.translation("server.portals.device.blockEntityMisconfigured"));
          return null;
+      } else {
+         PortalDevice existingDevice = chunkStore.getStore().getComponent(blockRef, PortalDevice.getComponentType());
+         World destinationWorld = existingDevice == null ? null : existingDevice.getDestinationWorld();
+         if (existingDevice != null && blockType == onBlockType && !isPortalWorldValid(destinationWorld)) {
+            world.setBlockInteractionState(new Vector3i(targetBlock.x, targetBlock.y, targetBlock.z), blockType, this.config.getOffState());
+            playerRef.sendMessage(Message.translation("server.portals.device.adjusted").color("#ff0000"));
+            return null;
+         } else {
+            boolean isLoading = existingDevice != null && existingDevice.isLoadingWorld();
+            if ((existingDevice == null || destinationWorld == null) && !isLoading) {
+               chunkStore.getStore().putComponent(blockRef, PortalDevice.getComponentType(), new PortalDevice(this.config, blockType.getId()));
+               return new PortalDeviceSummonPage(playerRef, this.config, blockRef, inHand);
+            } else {
+               return new PortalDeviceActivePage(playerRef, this.config, blockRef);
+            }
+         }
       }
-
-      PortalDevice existingDevice = chunkStore.getStore().getComponent(blockRef, PortalDevice.getComponentType());
-      World destinationWorld = existingDevice == null ? null : existingDevice.getDestinationWorld();
-      if (existingDevice != null && blockType == onBlockType && !isPortalWorldValid(destinationWorld)) {
-         world.setBlockInteractionState(new Vector3i(targetBlock.x, targetBlock.y, targetBlock.z), blockType, this.config.getOffState());
-         playerRef.sendMessage(Message.translation("server.portals.device.adjusted").color("#ff0000"));
-         return null;
-      }
-
-      if (existingDevice != null && destinationWorld != null) {
-         return new PortalDeviceActivePage(playerRef, this.config, blockRef);
-      }
-
-      chunkStore.getStore().putComponent(blockRef, PortalDevice.getComponentType(), new PortalDevice(this.config, blockType.getId()));
-      return new PortalDeviceSummonPage(playerRef, this.config, blockRef, inHand);
    }
 
    private static boolean isPortalWorldValid(@Nullable World world) {

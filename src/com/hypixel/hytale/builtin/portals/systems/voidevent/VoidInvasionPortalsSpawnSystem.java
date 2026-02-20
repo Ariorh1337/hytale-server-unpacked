@@ -17,6 +17,8 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Resource;
+import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
@@ -43,8 +45,9 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
    @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final int MAX_PORTALS = 24;
-   @Nullable
-   private CompletableFuture<Vector3d> findPortalSpawnPos;
+   private final ResourceType<EntityStore, VoidInvasionPortalsSpawnSystem.VoidInvasionData> voidInvasionDataResourceType = this.registerResource(
+      VoidInvasionPortalsSpawnSystem.VoidInvasionData.class, VoidInvasionPortalsSpawnSystem.VoidInvasionData::new
+   );
 
    public VoidInvasionPortalsSpawnSystem() {
       super(2.0F);
@@ -61,16 +64,17 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
       VoidEvent voidEventComponent = archetypeChunk.getComponent(index, VoidEvent.getComponentType());
       assert voidEventComponent != null;
       World world = store.getExternalData().getWorld();
-      if (this.findPortalSpawnPos == null) {
+      VoidInvasionPortalsSpawnSystem.VoidInvasionData data = commandBuffer.getResource(this.voidInvasionDataResourceType);
+      if (data.findPortalSpawnPos == null) {
          SpatialHashGrid<Ref<EntityStore>> spawners = cleanupAndGetSpawners(voidEventComponent);
          if (spawners.size() < 24) {
-            this.findPortalSpawnPos = findPortalSpawnPosition(world, voidEventComponent, commandBuffer);
+            data.findPortalSpawnPos = findPortalSpawnPosition(world, voidEventComponent, commandBuffer);
          }
-      } else if (this.findPortalSpawnPos.isDone()) {
+      } else if (data.findPortalSpawnPos.isDone()) {
          Vector3d portalPos;
          try {
-            portalPos = this.findPortalSpawnPos.join();
-            this.findPortalSpawnPos = null;
+            portalPos = data.findPortalSpawnPos.join();
+            data.findPortalSpawnPos = null;
          } catch (Throwable t) {
             LOGGER.at(Level.SEVERE).withCause(t).log("Error trying to find a void event spawn position");
             return;
@@ -178,5 +182,16 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
    @Override
    public Query<EntityStore> getQuery() {
       return VoidEvent.getComponentType();
+   }
+
+   public static class VoidInvasionData implements Resource<EntityStore> {
+      @Nullable
+      private CompletableFuture<Vector3d> findPortalSpawnPos;
+
+      @Nullable
+      @Override
+      public Resource<EntityStore> clone() {
+         return new VoidInvasionPortalsSpawnSystem.VoidInvasionData();
+      }
    }
 }

@@ -13,7 +13,6 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.metrics.MetricsRegistry;
-import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Message;
@@ -51,7 +50,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -86,7 +85,7 @@ public class PluginManager {
    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
    private final Map<PluginIdentifier, PluginBase> plugins = new Object2ObjectLinkedOpenHashMap<>();
    private final Map<Path, PluginClassLoader> classLoaders = new ConcurrentHashMap<>();
-   private boolean hasOutdatedPlugins = false;
+   private final List<PluginIdentifier> outdatedPlugins = new ArrayList<>();
    private final boolean loadExternalPlugins = true;
    @Nonnull
    private PluginState state = PluginState.NONE;
@@ -193,24 +192,21 @@ public class PluginManager {
          this.lock.readLock().unlock();
       }
 
-      if (this.hasOutdatedPlugins && System.getProperty("hytale.allow_outdated_mods") == null) {
+      if (!this.outdatedPlugins.isEmpty() && System.getProperty("hytale.allow_outdated_mods") == null) {
          LOGGER.at(Level.SEVERE)
             .log("One or more plugins are targeting a different server version. It is recommended to update these plugins to ensure compatibility.");
-
-         try {
-            if (!Constants.SINGLEPLAYER) {
-               Thread.sleep(Duration.ofSeconds(2L));
-            }
-         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-         }
-
          HytaleServer.get().getEventBus().registerGlobal(AddPlayerToWorldEvent.class, event -> {
             PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
             Player player = event.getHolder().getComponent(Player.getComponentType());
             if (playerRef != null && player != null) {
                if (player.hasPermission("hytale.mods.outdated.notify")) {
-                  playerRef.sendMessage(Message.translation("server.pluginManager.outOfDatePlugins").color(Color.RED));
+                  StringBuilder modsList = new StringBuilder();
+
+                  for (PluginIdentifier id : this.outdatedPlugins) {
+                     modsList.append("\n - ").append(id);
+                  }
+
+                  playerRef.sendMessage(Message.translation("server.pluginManager.outOfDatePlugins").param("mods", modsList.toString()).color(Color.RED));
                }
             }
          });
@@ -252,14 +248,15 @@ public class PluginManager {
          this.lock.writeLock().unlock();
       }
 
-      if (!failedBootPlugins.isEmpty() && !Constants.shouldSkipModValidation()) {
-         StringBuilder sb = new StringBuilder("Failed to boot the following plugins:\n");
+      if (!failedBootPlugins.isEmpty() && !Options.getOptionSet().has(Options.IGNORE_BROKEN_MODS)) {
+         StringBuilder sb = new StringBuilder();
 
          for (PluginIdentifier failed : failedBootPlugins) {
             sb.append(" - ").append(failed).append('\n');
          }
 
-         HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(sb.toString().trim()));
+         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.pluginError.detail").param("detail", sb.toString().trim());
+         HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(reasonMessage));
       } else {
          CompletableFuture.allOf(preLoadFutures.toArray(CompletableFuture[]::new)).join();
          boolean hasFailed = false;
@@ -271,10 +268,11 @@ public class PluginManager {
             }
          }
 
-         if (!Constants.shouldSkipModValidation() && hasFailed) {
-            StringBuilder sb = new StringBuilder("Failed to setup the following plugins:\n");
+         if (!Options.getOptionSet().has(Options.IGNORE_BROKEN_MODS) && hasFailed) {
+            StringBuilder sb = new StringBuilder();
             this.collectFailedPlugins(sb);
-            HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(sb.toString().trim()));
+            Message reasonMessage = Message.translation("client.disconnection.shutdownReason.pluginError.detail").param("detail", sb.toString().trim());
+            HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(reasonMessage));
          } else {
             this.loading.values().removeIf(v -> v.getState().isInactive());
          }
@@ -310,11 +308,13 @@ public class PluginManager {
       if (!sb.isEmpty()) {
          String msg = "Failed to start server! Missing Mods:\n" + sb;
          LOGGER.at(Level.SEVERE).log(msg);
-         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_REQUIRED_PLUGIN.withMessage(msg));
-      } else if (hasFailed && !Constants.shouldSkipModValidation()) {
-         sb = new StringBuilder("Failed to start the following plugins:\n");
+         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.missingRequiredPlugin.detail").param("detail", sb.toString());
+         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_REQUIRED_PLUGIN.withMessage(reasonMessage));
+      } else if (hasFailed && !Options.getOptionSet().has(Options.IGNORE_BROKEN_MODS)) {
+         sb = new StringBuilder();
          this.collectFailedPlugins(sb);
-         HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(sb.toString().trim()));
+         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.pluginError.detail").param("detail", sb.toString().trim());
+         HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(reasonMessage));
       } else {
          this.loadOrder = null;
          this.loading = null;
@@ -387,7 +387,7 @@ public class PluginManager {
                   );
             }
 
-            this.hasOutdatedPlugins = true;
+            this.outdatedPlugins.add(pendingLoadPlugin.getIdentifier());
          }
       }
 
@@ -863,7 +863,8 @@ public class PluginManager {
    }
 
    private boolean setup(@Nonnull PluginBase plugin) {
-      if (plugin.getState() == PluginState.NONE && this.dependenciesMatchState(plugin, PluginState.SETUP, PluginState.SETUP)) {
+      PluginState requiredDepState = this.state == PluginState.SETUP ? PluginState.SETUP : PluginState.ENABLED;
+      if (plugin.getState() == PluginState.NONE && this.dependenciesMatchState(plugin, requiredDepState, PluginState.SETUP)) {
          LOGGER.at(Level.FINE).log("Setting up plugin %s", plugin.getIdentifier());
          boolean prev = AssetStore.DISABLE_DYNAMIC_DEPENDENCIES;
          AssetStore.DISABLE_DYNAMIC_DEPENDENCIES = false;
@@ -933,11 +934,14 @@ public class PluginManager {
 
    private static void loadPendingPlugin(@Nonnull Map<PluginIdentifier, PendingLoadPlugin> pending, @Nonnull PendingLoadPlugin plugin) {
       if (pending.putIfAbsent(plugin.getIdentifier(), plugin) != null) {
-         throw new IllegalArgumentException("Tried to load duplicate plugin: " + plugin.getIdentifier());
-      }
-
-      for (PendingLoadPlugin subPlugin : plugin.createSubPendingLoadPlugins()) {
-         loadPendingPlugin(pending, subPlugin);
+         String detail = "Tried to load duplicate plugin: " + plugin.getIdentifier();
+         LOGGER.at(Level.SEVERE).log(detail);
+         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.pluginDuplicate").param("plugin", plugin.getIdentifier().toString());
+         HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(reasonMessage));
+      } else {
+         for (PendingLoadPlugin subPlugin : plugin.createSubPendingLoadPlugins()) {
+            loadPendingPlugin(pending, subPlugin);
+         }
       }
    }
 

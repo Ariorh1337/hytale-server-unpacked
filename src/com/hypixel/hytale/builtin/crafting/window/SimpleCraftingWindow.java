@@ -61,6 +61,9 @@ public class SimpleCraftingWindow extends CraftingWindow implements MaterialCont
                accepted = craftingManager.queueCraft(
                   ref, store, this, 0, craftRecipe, quantity, playerAndContainerInventory, CraftingManager.InputRemovalType.NORMAL
                );
+               if (accepted) {
+                  this.updateQueueSize(craftingManager.getRemainingQueueSize());
+               }
             } else {
                accepted = craftingManager.craftItem(ref, store, craftRecipe, quantity, playerAndContainerInventory);
             }
