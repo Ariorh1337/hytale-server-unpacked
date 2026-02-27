@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.universe.world;
 
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ComponentAccessor;
@@ -217,13 +218,15 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
             return this;
          } catch (WorldGenLoadException e) {
             if (this.name.equals(HytaleServer.get().getConfig().getDefaults().getWorld())) {
-               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(e.getTraceMessage("\n")));
+               Message reasonMessage = Message.translation("client.disconnection.shutdownReason.worldGen.detail").param("detail", e.getTraceMessage("\n"));
+               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(reasonMessage));
             }
 
             throw new SkipSentryException("Failed to load WorldGen!", e);
          } catch (WorldMapLoadException e) {
             if (this.name.equals(HytaleServer.get().getConfig().getDefaults().getWorld())) {
-               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(e.getTraceMessage("\n")));
+               Message reasonMessage = Message.translation("client.disconnection.shutdownReason.worldGen.detail").param("detail", e.getTraceMessage("\n"));
+               HytaleServer.get().shutdownServer(ShutdownReason.WORLD_GEN.withMessage(reasonMessage));
             }
 
             throw new SkipSentryException("Failed to load WorldGen!", e);
@@ -393,7 +396,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
 
       try {
          this.logger.at(Level.INFO).log("Shutting down stores...");
-         HytaleServer.get().reportSingleplayerStatus("Saving world '" + this.name + "'");
+         HytaleServer.get().reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.savingWorld").param("name", this.name));
          this.chunkStore.shutdown();
          this.consumeTaskQueue();
          this.entityStore.shutdown();
@@ -412,7 +415,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          Universe.get().removeWorldExceptionally(this.name, currentPlayers);
       }
 
-      HytaleServer.get().reportSingleplayerStatus("Closing world '" + this.name + "'");
+      HytaleServer.get().reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.closingWorld").param("name", this.name));
    }
 
    @Override
@@ -854,10 +857,13 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          SpawnUtil.applyTransform(holder, transform);
       }
 
+      Message joinMessage = Message.translation("server.general.playerJoinedWorld")
+         .param("username", playerRef.getUsername())
+         .param("world", this.worldConfig.getDisplayName() != null ? this.worldConfig.getDisplayName() : WorldConfig.formatDisplayName(this.name));
       AddPlayerToWorldEvent event = HytaleServer.get()
          .getEventBus()
          .dispatchFor(AddPlayerToWorldEvent.class, this.name)
-         .dispatch(new AddPlayerToWorldEvent(holder, this));
+         .dispatch(new AddPlayerToWorldEvent(holder, this, joinMessage));
       ChunkTracker chunkTrackerComponent = holder.getComponent(ChunkTracker.getComponentType());
       boolean clearWorld = clearWorldOverride != null ? clearWorldOverride : true;
       boolean fadeInOut = fadeInOutOverride != null ? fadeInOutOverride : true;
@@ -877,17 +883,23 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       );
       CompletableFuture<Void> playerReadyFuture = clientReadyFuture.orTimeout(30L, TimeUnit.SECONDS);
       return CompletableFuture.allOf(setupPlayerFuture, playerReadyFuture, loadTargetChunkFuture)
-         .thenApplyAsync(aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.shouldBroadcastJoinMessage()), this)
+         .thenApplyAsync(aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.getJoinMessage()), this)
          .exceptionally(throwable -> {
             this.logger.at(Level.WARNING).withCause(throwable).log("Exception when adding player to world!");
-            playerRef.getPacketHandler().disconnect("Exception when adding player to world!");
+            PluginIdentifier possibleCause = PluginIdentifier.identifyThirdPartyPlugin(throwable);
+            if (possibleCause == null) {
+               playerRef.getPacketHandler().disconnect("Exception when adding player to world!");
+            } else {
+               playerRef.getPacketHandler().disconnect("Exception when adding player to world! (possibly caused by " + possibleCause + ")");
+            }
+
             throw new RuntimeException("Exception when adding player '" + playerRef.getUsername() + "' to world '" + this.name + "'", throwable);
          });
    }
 
    @Nonnull
    private PlayerRef onFinishPlayerJoining(
-      @Nonnull Player playerComponent, @Nonnull PlayerRef playerRefComponent, @Nonnull PacketHandler packetHandler, boolean broadcastJoin
+      @Nonnull Player playerComponent, @Nonnull PlayerRef playerRefComponent, @Nonnull PacketHandler packetHandler, @Nullable Message joinMessage
    ) {
       TimeResource timeResource = this.entityStore.getStore().getResource(TimeResource.getResourceType());
       float timeDilationModifier = timeResource.getTimeDilationModifier();
@@ -916,11 +928,8 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
          worldMapTracker.clear();
          worldMapTracker.sendSettings(world);
-         if (broadcastJoin) {
-            Message message = Message.translation("server.general.playerJoinedWorld")
-               .param("username", playerRefComponent.getUsername())
-               .param("world", this.worldConfig.getDisplayName() != null ? this.worldConfig.getDisplayName() : WorldConfig.formatDisplayName(this.name));
-            PlayerUtil.broadcastMessageToPlayers(playerUuid, message, store);
+         if (joinMessage != null) {
+            PlayerUtil.broadcastMessageToPlayers(playerUuid, joinMessage, store);
          }
 
          TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());

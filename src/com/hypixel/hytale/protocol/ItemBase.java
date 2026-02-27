@@ -16,8 +16,8 @@ import javax.annotation.Nullable;
 public class ItemBase {
    public static final int NULLABLE_BIT_FIELD_SIZE = 4;
    public static final int FIXED_BLOCK_SIZE = 147;
-   public static final int VARIABLE_FIELD_COUNT = 26;
-   public static final int VARIABLE_BLOCK_START = 251;
+   public static final int VARIABLE_FIELD_COUNT = 27;
+   public static final int VARIABLE_BLOCK_START = 255;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String id;
@@ -95,6 +95,8 @@ public class ItemBase {
    public ItemPullbackConfiguration pullbackConfig;
    public boolean clipsGeometry;
    public boolean renderDeployablePreview;
+   @Nullable
+   public ItemHudUI[] hudUI;
 
    public ItemBase() {
    }
@@ -144,7 +146,8 @@ public class ItemBase {
       @Nullable int[] displayEntityStatsHUD,
       @Nullable ItemPullbackConfiguration pullbackConfig,
       boolean clipsGeometry,
-      boolean renderDeployablePreview
+      boolean renderDeployablePreview,
+      @Nullable ItemHudUI[] hudUI
    ) {
       this.id = id;
       this.model = model;
@@ -191,6 +194,7 @@ public class ItemBase {
       this.pullbackConfig = pullbackConfig;
       this.clipsGeometry = clipsGeometry;
       this.renderDeployablePreview = renderDeployablePreview;
+      this.hudUI = hudUI;
    }
 
    public ItemBase(@Nonnull ItemBase other) {
@@ -239,6 +243,7 @@ public class ItemBase {
       this.pullbackConfig = other.pullbackConfig;
       this.clipsGeometry = other.clipsGeometry;
       this.renderDeployablePreview = other.renderDeployablePreview;
+      this.hudUI = other.hudUI;
    }
 
    @Nonnull
@@ -280,7 +285,7 @@ public class ItemBase {
       obj.clipsGeometry = buf.getByte(offset + 145) != 0;
       obj.renderDeployablePreview = buf.getByte(offset + 146) != 0;
       if ((nullBits[0] & 32) != 0) {
-         int varPos0 = offset + 251 + buf.getIntLE(offset + 147);
+         int varPos0 = offset + 255 + buf.getIntLE(offset + 147);
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.negativeLength("Id", idLen);
@@ -294,7 +299,7 @@ public class ItemBase {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int varPos1 = offset + 251 + buf.getIntLE(offset + 151);
+         int varPos1 = offset + 255 + buf.getIntLE(offset + 151);
          int modelLen = VarInt.peek(buf, varPos1);
          if (modelLen < 0) {
             throw ProtocolException.negativeLength("Model", modelLen);
@@ -308,7 +313,7 @@ public class ItemBase {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos2 = offset + 251 + buf.getIntLE(offset + 155);
+         int varPos2 = offset + 255 + buf.getIntLE(offset + 155);
          int textureLen = VarInt.peek(buf, varPos2);
          if (textureLen < 0) {
             throw ProtocolException.negativeLength("Texture", textureLen);
@@ -322,7 +327,7 @@ public class ItemBase {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos3 = offset + 251 + buf.getIntLE(offset + 159);
+         int varPos3 = offset + 255 + buf.getIntLE(offset + 159);
          int animationLen = VarInt.peek(buf, varPos3);
          if (animationLen < 0) {
             throw ProtocolException.negativeLength("Animation", animationLen);
@@ -336,7 +341,7 @@ public class ItemBase {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos4 = offset + 251 + buf.getIntLE(offset + 163);
+         int varPos4 = offset + 255 + buf.getIntLE(offset + 163);
          int playerAnimationsIdLen = VarInt.peek(buf, varPos4);
          if (playerAnimationsIdLen < 0) {
             throw ProtocolException.negativeLength("PlayerAnimationsId", playerAnimationsIdLen);
@@ -350,7 +355,7 @@ public class ItemBase {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int varPos5 = offset + 251 + buf.getIntLE(offset + 167);
+         int varPos5 = offset + 255 + buf.getIntLE(offset + 167);
          int iconLen = VarInt.peek(buf, varPos5);
          if (iconLen < 0) {
             throw ProtocolException.negativeLength("Icon", iconLen);
@@ -364,12 +369,12 @@ public class ItemBase {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int varPos6 = offset + 251 + buf.getIntLE(offset + 171);
+         int varPos6 = offset + 255 + buf.getIntLE(offset + 171);
          obj.translationProperties = ItemTranslationProperties.deserialize(buf, varPos6);
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int varPos7 = offset + 251 + buf.getIntLE(offset + 175);
+         int varPos7 = offset + 255 + buf.getIntLE(offset + 175);
          int resourceTypesCount = VarInt.peek(buf, varPos7);
          if (resourceTypesCount < 0) {
             throw ProtocolException.negativeLength("ResourceTypes", resourceTypesCount);
@@ -394,37 +399,37 @@ public class ItemBase {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int varPos8 = offset + 251 + buf.getIntLE(offset + 179);
+         int varPos8 = offset + 255 + buf.getIntLE(offset + 179);
          obj.tool = ItemTool.deserialize(buf, varPos8);
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int varPos9 = offset + 251 + buf.getIntLE(offset + 183);
+         int varPos9 = offset + 255 + buf.getIntLE(offset + 183);
          obj.weapon = ItemWeapon.deserialize(buf, varPos9);
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int varPos10 = offset + 251 + buf.getIntLE(offset + 187);
+         int varPos10 = offset + 255 + buf.getIntLE(offset + 187);
          obj.armor = ItemArmor.deserialize(buf, varPos10);
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int varPos11 = offset + 251 + buf.getIntLE(offset + 191);
+         int varPos11 = offset + 255 + buf.getIntLE(offset + 191);
          obj.utility = ItemUtility.deserialize(buf, varPos11);
       }
 
       if ((nullBits[2] & 2) != 0) {
-         int varPos12 = offset + 251 + buf.getIntLE(offset + 195);
+         int varPos12 = offset + 255 + buf.getIntLE(offset + 195);
          obj.builderToolData = ItemBuilderToolData.deserialize(buf, varPos12);
       }
 
       if ((nullBits[2] & 4) != 0) {
-         int varPos13 = offset + 251 + buf.getIntLE(offset + 199);
+         int varPos13 = offset + 255 + buf.getIntLE(offset + 199);
          obj.itemEntity = ItemEntityConfig.deserialize(buf, varPos13);
       }
 
       if ((nullBits[2] & 8) != 0) {
-         int varPos14 = offset + 251 + buf.getIntLE(offset + 203);
+         int varPos14 = offset + 255 + buf.getIntLE(offset + 203);
          int setLen = VarInt.peek(buf, varPos14);
          if (setLen < 0) {
             throw ProtocolException.negativeLength("Set", setLen);
@@ -438,7 +443,7 @@ public class ItemBase {
       }
 
       if ((nullBits[2] & 16) != 0) {
-         int varPos15 = offset + 251 + buf.getIntLE(offset + 207);
+         int varPos15 = offset + 255 + buf.getIntLE(offset + 207);
          int categoriesCount = VarInt.peek(buf, varPos15);
          if (categoriesCount < 0) {
             throw ProtocolException.negativeLength("Categories", categoriesCount);
@@ -473,7 +478,7 @@ public class ItemBase {
       }
 
       if ((nullBits[2] & 32) != 0) {
-         int varPos16 = offset + 251 + buf.getIntLE(offset + 211);
+         int varPos16 = offset + 255 + buf.getIntLE(offset + 211);
          int particlesCount = VarInt.peek(buf, varPos16);
          if (particlesCount < 0) {
             throw ProtocolException.negativeLength("Particles", particlesCount);
@@ -498,7 +503,7 @@ public class ItemBase {
       }
 
       if ((nullBits[2] & 64) != 0) {
-         int varPos17 = offset + 251 + buf.getIntLE(offset + 215);
+         int varPos17 = offset + 255 + buf.getIntLE(offset + 215);
          int firstPersonParticlesCount = VarInt.peek(buf, varPos17);
          if (firstPersonParticlesCount < 0) {
             throw ProtocolException.negativeLength("FirstPersonParticles", firstPersonParticlesCount);
@@ -523,7 +528,7 @@ public class ItemBase {
       }
 
       if ((nullBits[2] & 128) != 0) {
-         int varPos18 = offset + 251 + buf.getIntLE(offset + 219);
+         int varPos18 = offset + 255 + buf.getIntLE(offset + 219);
          int trailsCount = VarInt.peek(buf, varPos18);
          if (trailsCount < 0) {
             throw ProtocolException.negativeLength("Trails", trailsCount);
@@ -548,7 +553,7 @@ public class ItemBase {
       }
 
       if ((nullBits[3] & 1) != 0) {
-         int varPos19 = offset + 251 + buf.getIntLE(offset + 223);
+         int varPos19 = offset + 255 + buf.getIntLE(offset + 223);
          int interactionsCount = VarInt.peek(buf, varPos19);
          if (interactionsCount < 0) {
             throw ProtocolException.negativeLength("Interactions", interactionsCount);
@@ -573,7 +578,7 @@ public class ItemBase {
       }
 
       if ((nullBits[3] & 2) != 0) {
-         int varPos20 = offset + 251 + buf.getIntLE(offset + 227);
+         int varPos20 = offset + 255 + buf.getIntLE(offset + 227);
          int interactionVarsCount = VarInt.peek(buf, varPos20);
          if (interactionVarsCount < 0) {
             throw ProtocolException.negativeLength("InteractionVars", interactionVarsCount);
@@ -609,12 +614,12 @@ public class ItemBase {
       }
 
       if ((nullBits[3] & 4) != 0) {
-         int varPos21 = offset + 251 + buf.getIntLE(offset + 231);
+         int varPos21 = offset + 255 + buf.getIntLE(offset + 231);
          obj.interactionConfig = InteractionConfiguration.deserialize(buf, varPos21);
       }
 
       if ((nullBits[3] & 8) != 0) {
-         int varPos22 = offset + 251 + buf.getIntLE(offset + 235);
+         int varPos22 = offset + 255 + buf.getIntLE(offset + 235);
          int droppedItemAnimationLen = VarInt.peek(buf, varPos22);
          if (droppedItemAnimationLen < 0) {
             throw ProtocolException.negativeLength("DroppedItemAnimation", droppedItemAnimationLen);
@@ -628,7 +633,7 @@ public class ItemBase {
       }
 
       if ((nullBits[3] & 16) != 0) {
-         int varPos23 = offset + 251 + buf.getIntLE(offset + 239);
+         int varPos23 = offset + 255 + buf.getIntLE(offset + 239);
          int tagIndexesCount = VarInt.peek(buf, varPos23);
          if (tagIndexesCount < 0) {
             throw ProtocolException.negativeLength("TagIndexes", tagIndexesCount);
@@ -651,7 +656,7 @@ public class ItemBase {
       }
 
       if ((nullBits[3] & 32) != 0) {
-         int varPos24 = offset + 251 + buf.getIntLE(offset + 243);
+         int varPos24 = offset + 255 + buf.getIntLE(offset + 243);
          int itemAppearanceConditionsCount = VarInt.peek(buf, varPos24);
          if (itemAppearanceConditionsCount < 0) {
             throw ProtocolException.negativeLength("ItemAppearanceConditions", itemAppearanceConditionsCount);
@@ -697,7 +702,7 @@ public class ItemBase {
       }
 
       if ((nullBits[3] & 64) != 0) {
-         int varPos25 = offset + 251 + buf.getIntLE(offset + 247);
+         int varPos25 = offset + 255 + buf.getIntLE(offset + 247);
          int displayEntityStatsHUDCount = VarInt.peek(buf, varPos25);
          if (displayEntityStatsHUDCount < 0) {
             throw ProtocolException.negativeLength("DisplayEntityStatsHUD", displayEntityStatsHUDCount);
@@ -719,15 +724,40 @@ public class ItemBase {
          }
       }
 
+      if ((nullBits[3] & 128) != 0) {
+         int varPos26 = offset + 255 + buf.getIntLE(offset + 251);
+         int hudUICount = VarInt.peek(buf, varPos26);
+         if (hudUICount < 0) {
+            throw ProtocolException.negativeLength("HudUI", hudUICount);
+         }
+
+         if (hudUICount > 4096000) {
+            throw ProtocolException.arrayTooLong("HudUI", hudUICount, 4096000);
+         }
+
+         int varIntLen = VarInt.length(buf, varPos26);
+         if (varPos26 + varIntLen + hudUICount * 2L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("HudUI", varPos26 + varIntLen + hudUICount * 2, buf.readableBytes());
+         }
+
+         obj.hudUI = new ItemHudUI[hudUICount];
+         int elemPos = varPos26 + varIntLen;
+
+         for (int i = 0; i < hudUICount; i++) {
+            obj.hudUI[i] = ItemHudUI.deserialize(buf, elemPos);
+            elemPos += ItemHudUI.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte[] nullBits = PacketIO.readBytes(buf, offset, 4);
-      int maxEnd = 251;
+      int maxEnd = 255;
       if ((nullBits[0] & 32) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 147);
-         int pos0 = offset + 251 + fieldOffset0;
+         int pos0 = offset + 255 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
@@ -737,7 +767,7 @@ public class ItemBase {
 
       if ((nullBits[0] & 64) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 151);
-         int pos1 = offset + 251 + fieldOffset1;
+         int pos1 = offset + 255 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1) + sl;
          if (pos1 - offset > maxEnd) {
@@ -747,7 +777,7 @@ public class ItemBase {
 
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 155);
-         int pos2 = offset + 251 + fieldOffset2;
+         int pos2 = offset + 255 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
          pos2 += VarInt.length(buf, pos2) + sl;
          if (pos2 - offset > maxEnd) {
@@ -757,7 +787,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 159);
-         int pos3 = offset + 251 + fieldOffset3;
+         int pos3 = offset + 255 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
          pos3 += VarInt.length(buf, pos3) + sl;
          if (pos3 - offset > maxEnd) {
@@ -767,7 +797,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 2) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 163);
-         int pos4 = offset + 251 + fieldOffset4;
+         int pos4 = offset + 255 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
          pos4 += VarInt.length(buf, pos4) + sl;
          if (pos4 - offset > maxEnd) {
@@ -777,7 +807,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 4) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 167);
-         int pos5 = offset + 251 + fieldOffset5;
+         int pos5 = offset + 255 + fieldOffset5;
          int sl = VarInt.peek(buf, pos5);
          pos5 += VarInt.length(buf, pos5) + sl;
          if (pos5 - offset > maxEnd) {
@@ -787,7 +817,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 8) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 171);
-         int pos6 = offset + 251 + fieldOffset6;
+         int pos6 = offset + 255 + fieldOffset6;
          pos6 += ItemTranslationProperties.computeBytesConsumed(buf, pos6);
          if (pos6 - offset > maxEnd) {
             maxEnd = pos6 - offset;
@@ -796,7 +826,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 16) != 0) {
          int fieldOffset7 = buf.getIntLE(offset + 175);
-         int pos7 = offset + 251 + fieldOffset7;
+         int pos7 = offset + 255 + fieldOffset7;
          int arrLen = VarInt.peek(buf, pos7);
          pos7 += VarInt.length(buf, pos7);
 
@@ -811,7 +841,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 32) != 0) {
          int fieldOffset8 = buf.getIntLE(offset + 179);
-         int pos8 = offset + 251 + fieldOffset8;
+         int pos8 = offset + 255 + fieldOffset8;
          pos8 += ItemTool.computeBytesConsumed(buf, pos8);
          if (pos8 - offset > maxEnd) {
             maxEnd = pos8 - offset;
@@ -820,7 +850,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 64) != 0) {
          int fieldOffset9 = buf.getIntLE(offset + 183);
-         int pos9 = offset + 251 + fieldOffset9;
+         int pos9 = offset + 255 + fieldOffset9;
          pos9 += ItemWeapon.computeBytesConsumed(buf, pos9);
          if (pos9 - offset > maxEnd) {
             maxEnd = pos9 - offset;
@@ -829,7 +859,7 @@ public class ItemBase {
 
       if ((nullBits[1] & 128) != 0) {
          int fieldOffset10 = buf.getIntLE(offset + 187);
-         int pos10 = offset + 251 + fieldOffset10;
+         int pos10 = offset + 255 + fieldOffset10;
          pos10 += ItemArmor.computeBytesConsumed(buf, pos10);
          if (pos10 - offset > maxEnd) {
             maxEnd = pos10 - offset;
@@ -838,7 +868,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 1) != 0) {
          int fieldOffset11 = buf.getIntLE(offset + 191);
-         int pos11 = offset + 251 + fieldOffset11;
+         int pos11 = offset + 255 + fieldOffset11;
          pos11 += ItemUtility.computeBytesConsumed(buf, pos11);
          if (pos11 - offset > maxEnd) {
             maxEnd = pos11 - offset;
@@ -847,7 +877,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 2) != 0) {
          int fieldOffset12 = buf.getIntLE(offset + 195);
-         int pos12 = offset + 251 + fieldOffset12;
+         int pos12 = offset + 255 + fieldOffset12;
          pos12 += ItemBuilderToolData.computeBytesConsumed(buf, pos12);
          if (pos12 - offset > maxEnd) {
             maxEnd = pos12 - offset;
@@ -856,7 +886,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 4) != 0) {
          int fieldOffset13 = buf.getIntLE(offset + 199);
-         int pos13 = offset + 251 + fieldOffset13;
+         int pos13 = offset + 255 + fieldOffset13;
          pos13 += ItemEntityConfig.computeBytesConsumed(buf, pos13);
          if (pos13 - offset > maxEnd) {
             maxEnd = pos13 - offset;
@@ -865,7 +895,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 8) != 0) {
          int fieldOffset14 = buf.getIntLE(offset + 203);
-         int pos14 = offset + 251 + fieldOffset14;
+         int pos14 = offset + 255 + fieldOffset14;
          int sl = VarInt.peek(buf, pos14);
          pos14 += VarInt.length(buf, pos14) + sl;
          if (pos14 - offset > maxEnd) {
@@ -875,7 +905,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 16) != 0) {
          int fieldOffset15 = buf.getIntLE(offset + 207);
-         int pos15 = offset + 251 + fieldOffset15;
+         int pos15 = offset + 255 + fieldOffset15;
          int arrLen = VarInt.peek(buf, pos15);
          pos15 += VarInt.length(buf, pos15);
 
@@ -891,7 +921,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 32) != 0) {
          int fieldOffset16 = buf.getIntLE(offset + 211);
-         int pos16 = offset + 251 + fieldOffset16;
+         int pos16 = offset + 255 + fieldOffset16;
          int arrLen = VarInt.peek(buf, pos16);
          pos16 += VarInt.length(buf, pos16);
 
@@ -906,7 +936,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 64) != 0) {
          int fieldOffset17 = buf.getIntLE(offset + 215);
-         int pos17 = offset + 251 + fieldOffset17;
+         int pos17 = offset + 255 + fieldOffset17;
          int arrLen = VarInt.peek(buf, pos17);
          pos17 += VarInt.length(buf, pos17);
 
@@ -921,7 +951,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 128) != 0) {
          int fieldOffset18 = buf.getIntLE(offset + 219);
-         int pos18 = offset + 251 + fieldOffset18;
+         int pos18 = offset + 255 + fieldOffset18;
          int arrLen = VarInt.peek(buf, pos18);
          pos18 += VarInt.length(buf, pos18);
 
@@ -936,7 +966,7 @@ public class ItemBase {
 
       if ((nullBits[3] & 1) != 0) {
          int fieldOffset19 = buf.getIntLE(offset + 223);
-         int pos19 = offset + 251 + fieldOffset19;
+         int pos19 = offset + 255 + fieldOffset19;
          int dictLen = VarInt.peek(buf, pos19);
          pos19 += VarInt.length(buf, pos19);
 
@@ -951,7 +981,7 @@ public class ItemBase {
 
       if ((nullBits[3] & 2) != 0) {
          int fieldOffset20 = buf.getIntLE(offset + 227);
-         int pos20 = offset + 251 + fieldOffset20;
+         int pos20 = offset + 255 + fieldOffset20;
          int dictLen = VarInt.peek(buf, pos20);
          pos20 += VarInt.length(buf, pos20);
 
@@ -968,7 +998,7 @@ public class ItemBase {
 
       if ((nullBits[3] & 4) != 0) {
          int fieldOffset21 = buf.getIntLE(offset + 231);
-         int pos21 = offset + 251 + fieldOffset21;
+         int pos21 = offset + 255 + fieldOffset21;
          pos21 += InteractionConfiguration.computeBytesConsumed(buf, pos21);
          if (pos21 - offset > maxEnd) {
             maxEnd = pos21 - offset;
@@ -977,7 +1007,7 @@ public class ItemBase {
 
       if ((nullBits[3] & 8) != 0) {
          int fieldOffset22 = buf.getIntLE(offset + 235);
-         int pos22 = offset + 251 + fieldOffset22;
+         int pos22 = offset + 255 + fieldOffset22;
          int sl = VarInt.peek(buf, pos22);
          pos22 += VarInt.length(buf, pos22) + sl;
          if (pos22 - offset > maxEnd) {
@@ -987,7 +1017,7 @@ public class ItemBase {
 
       if ((nullBits[3] & 16) != 0) {
          int fieldOffset23 = buf.getIntLE(offset + 239);
-         int pos23 = offset + 251 + fieldOffset23;
+         int pos23 = offset + 255 + fieldOffset23;
          int arrLen = VarInt.peek(buf, pos23);
          pos23 += VarInt.length(buf, pos23) + arrLen * 4;
          if (pos23 - offset > maxEnd) {
@@ -997,7 +1027,7 @@ public class ItemBase {
 
       if ((nullBits[3] & 32) != 0) {
          int fieldOffset24 = buf.getIntLE(offset + 243);
-         int pos24 = offset + 251 + fieldOffset24;
+         int pos24 = offset + 255 + fieldOffset24;
          int dictLen = VarInt.peek(buf, pos24);
          pos24 += VarInt.length(buf, pos24);
 
@@ -1018,11 +1048,26 @@ public class ItemBase {
 
       if ((nullBits[3] & 64) != 0) {
          int fieldOffset25 = buf.getIntLE(offset + 247);
-         int pos25 = offset + 251 + fieldOffset25;
+         int pos25 = offset + 255 + fieldOffset25;
          int arrLen = VarInt.peek(buf, pos25);
          pos25 += VarInt.length(buf, pos25) + arrLen * 4;
          if (pos25 - offset > maxEnd) {
             maxEnd = pos25 - offset;
+         }
+      }
+
+      if ((nullBits[3] & 128) != 0) {
+         int fieldOffset26 = buf.getIntLE(offset + 251);
+         int pos26 = offset + 255 + fieldOffset26;
+         int arrLen = VarInt.peek(buf, pos26);
+         pos26 += VarInt.length(buf, pos26);
+
+         for (int i = 0; i < arrLen; i++) {
+            pos26 += ItemHudUI.computeBytesConsumed(buf, pos26);
+         }
+
+         if (pos26 - offset > maxEnd) {
+            maxEnd = pos26 - offset;
          }
       }
 
@@ -1156,6 +1201,10 @@ public class ItemBase {
          nullBits[3] = (byte)(nullBits[3] | 64);
       }
 
+      if (this.hudUI != null) {
+         nullBits[3] = (byte)(nullBits[3] | 128);
+      }
+
       buf.writeBytes(nullBits);
       buf.writeFloatLE(this.scale);
       buf.writeByte(this.usePlayerAnimations ? 1 : 0);
@@ -1252,6 +1301,8 @@ public class ItemBase {
       int itemAppearanceConditionsOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int displayEntityStatsHUDOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int hudUIOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.id != null) {
@@ -1522,10 +1573,25 @@ public class ItemBase {
       } else {
          buf.setIntLE(displayEntityStatsHUDOffsetSlot, -1);
       }
+
+      if (this.hudUI != null) {
+         buf.setIntLE(hudUIOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.hudUI.length > 4096000) {
+            throw ProtocolException.arrayTooLong("HudUI", this.hudUI.length, 4096000);
+         }
+
+         VarInt.write(buf, this.hudUI.length);
+
+         for (ItemHudUI item : this.hudUI) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(hudUIOffsetSlot, -1);
+      }
    }
 
    public int computeSize() {
-      int size = 251;
+      int size = 255;
       if (this.id != null) {
          size += PacketIO.stringSize(this.id);
       }
@@ -1672,12 +1738,22 @@ public class ItemBase {
          size += VarInt.size(this.displayEntityStatsHUD.length) + this.displayEntityStatsHUD.length * 4;
       }
 
+      if (this.hudUI != null) {
+         int hudUISize = 0;
+
+         for (ItemHudUI elem : this.hudUI) {
+            hudUISize += elem.computeSize();
+         }
+
+         size += VarInt.size(this.hudUI.length) + hudUISize;
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 251) {
-         return ValidationResult.error("Buffer too small: expected at least 251 bytes");
+      if (buffer.readableBytes() - offset < 255) {
+         return ValidationResult.error("Buffer too small: expected at least 255 bytes");
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 4);
@@ -1687,7 +1763,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 251 + idOffset;
+         int pos = offset + 255 + idOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Id");
          }
@@ -1714,7 +1790,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Model");
          }
 
-         int pos = offset + 251 + modelOffset;
+         int pos = offset + 255 + modelOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Model");
          }
@@ -1741,7 +1817,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Texture");
          }
 
-         int pos = offset + 251 + textureOffset;
+         int pos = offset + 255 + textureOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Texture");
          }
@@ -1768,7 +1844,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Animation");
          }
 
-         int pos = offset + 251 + animationOffset;
+         int pos = offset + 255 + animationOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Animation");
          }
@@ -1795,7 +1871,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for PlayerAnimationsId");
          }
 
-         int pos = offset + 251 + playerAnimationsIdOffset;
+         int pos = offset + 255 + playerAnimationsIdOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for PlayerAnimationsId");
          }
@@ -1822,7 +1898,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Icon");
          }
 
-         int pos = offset + 251 + iconOffset;
+         int pos = offset + 255 + iconOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Icon");
          }
@@ -1849,7 +1925,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for TranslationProperties");
          }
 
-         int pos = offset + 251 + translationPropertiesOffset;
+         int pos = offset + 255 + translationPropertiesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for TranslationProperties");
          }
@@ -1868,7 +1944,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for ResourceTypes");
          }
 
-         int pos = offset + 251 + resourceTypesOffset;
+         int pos = offset + 255 + resourceTypesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ResourceTypes");
          }
@@ -1900,7 +1976,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Tool");
          }
 
-         int pos = offset + 251 + toolOffset;
+         int pos = offset + 255 + toolOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Tool");
          }
@@ -1919,7 +1995,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Weapon");
          }
 
-         int pos = offset + 251 + weaponOffset;
+         int pos = offset + 255 + weaponOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Weapon");
          }
@@ -1938,7 +2014,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Armor");
          }
 
-         int pos = offset + 251 + armorOffset;
+         int pos = offset + 255 + armorOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Armor");
          }
@@ -1957,7 +2033,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Utility");
          }
 
-         int pos = offset + 251 + utilityOffset;
+         int pos = offset + 255 + utilityOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Utility");
          }
@@ -1976,7 +2052,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for BuilderToolData");
          }
 
-         int pos = offset + 251 + builderToolDataOffset;
+         int pos = offset + 255 + builderToolDataOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for BuilderToolData");
          }
@@ -1995,7 +2071,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for ItemEntity");
          }
 
-         int pos = offset + 251 + itemEntityOffset;
+         int pos = offset + 255 + itemEntityOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ItemEntity");
          }
@@ -2014,7 +2090,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Set");
          }
 
-         int pos = offset + 251 + setOffset;
+         int pos = offset + 255 + setOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Set");
          }
@@ -2041,7 +2117,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Categories");
          }
 
-         int pos = offset + 251 + categoriesOffset;
+         int pos = offset + 255 + categoriesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Categories");
          }
@@ -2077,7 +2153,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Particles");
          }
 
-         int pos = offset + 251 + particlesOffset;
+         int pos = offset + 255 + particlesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Particles");
          }
@@ -2109,7 +2185,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for FirstPersonParticles");
          }
 
-         int pos = offset + 251 + firstPersonParticlesOffset;
+         int pos = offset + 255 + firstPersonParticlesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for FirstPersonParticles");
          }
@@ -2141,7 +2217,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Trails");
          }
 
-         int pos = offset + 251 + trailsOffset;
+         int pos = offset + 255 + trailsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Trails");
          }
@@ -2173,7 +2249,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for Interactions");
          }
 
-         int pos = offset + 251 + interactionsOffset;
+         int pos = offset + 255 + interactionsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for Interactions");
          }
@@ -2203,7 +2279,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for InteractionVars");
          }
 
-         int pos = offset + 251 + interactionVarsOffset;
+         int pos = offset + 255 + interactionVarsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for InteractionVars");
          }
@@ -2248,7 +2324,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for InteractionConfig");
          }
 
-         int pos = offset + 251 + interactionConfigOffset;
+         int pos = offset + 255 + interactionConfigOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for InteractionConfig");
          }
@@ -2267,7 +2343,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for DroppedItemAnimation");
          }
 
-         int pos = offset + 251 + droppedItemAnimationOffset;
+         int pos = offset + 255 + droppedItemAnimationOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for DroppedItemAnimation");
          }
@@ -2294,7 +2370,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for TagIndexes");
          }
 
-         int pos = offset + 251 + tagIndexesOffset;
+         int pos = offset + 255 + tagIndexesOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for TagIndexes");
          }
@@ -2321,7 +2397,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for ItemAppearanceConditions");
          }
 
-         int pos = offset + 251 + itemAppearanceConditionsOffset;
+         int pos = offset + 255 + itemAppearanceConditionsOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for ItemAppearanceConditions");
          }
@@ -2362,7 +2438,7 @@ public class ItemBase {
             return ValidationResult.error("Invalid offset for DisplayEntityStatsHUD");
          }
 
-         int pos = offset + 251 + displayEntityStatsHUDOffset;
+         int pos = offset + 255 + displayEntityStatsHUDOffset;
          if (pos >= buffer.writerIndex()) {
             return ValidationResult.error("Offset out of bounds for DisplayEntityStatsHUD");
          }
@@ -2380,6 +2456,38 @@ public class ItemBase {
          pos += displayEntityStatsHUDCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading DisplayEntityStatsHUD");
+         }
+      }
+
+      if ((nullBits[3] & 128) != 0) {
+         int hudUIOffset = buffer.getIntLE(offset + 251);
+         if (hudUIOffset < 0) {
+            return ValidationResult.error("Invalid offset for HudUI");
+         }
+
+         int pos = offset + 255 + hudUIOffset;
+         if (pos >= buffer.writerIndex()) {
+            return ValidationResult.error("Offset out of bounds for HudUI");
+         }
+
+         int hudUICount = VarInt.peek(buffer, pos);
+         if (hudUICount < 0) {
+            return ValidationResult.error("Invalid array count for HudUI");
+         }
+
+         if (hudUICount > 4096000) {
+            return ValidationResult.error("HudUI exceeds max length 4096000");
+         }
+
+         pos += VarInt.length(buffer, pos);
+
+         for (int i = 0; i < hudUICount; i++) {
+            ValidationResult structResult = ItemHudUI.validateStructure(buffer, pos);
+            if (!structResult.isValid()) {
+               return ValidationResult.error("Invalid ItemHudUI in HudUI[" + i + "]: " + structResult.error());
+            }
+
+            pos += ItemHudUI.computeBytesConsumed(buffer, pos);
          }
       }
 
@@ -2444,6 +2552,7 @@ public class ItemBase {
       copy.pullbackConfig = this.pullbackConfig != null ? this.pullbackConfig.clone() : null;
       copy.clipsGeometry = this.clipsGeometry;
       copy.renderDeployablePreview = this.renderDeployablePreview;
+      copy.hudUI = this.hudUI != null ? Arrays.stream(this.hudUI).map(ex -> ex.clone()).toArray(ItemHudUI[]::new) : null;
       return copy;
    }
 
@@ -2498,7 +2607,8 @@ public class ItemBase {
                && Arrays.equals(this.displayEntityStatsHUD, other.displayEntityStatsHUD)
                && Objects.equals(this.pullbackConfig, other.pullbackConfig)
                && this.clipsGeometry == other.clipsGeometry
-               && this.renderDeployablePreview == other.renderDeployablePreview;
+               && this.renderDeployablePreview == other.renderDeployablePreview
+               && Arrays.equals(this.hudUI, other.hudUI);
       }
    }
 
@@ -2549,6 +2659,7 @@ public class ItemBase {
       result = 31 * result + Arrays.hashCode(this.displayEntityStatsHUD);
       result = 31 * result + Objects.hashCode(this.pullbackConfig);
       result = 31 * result + Boolean.hashCode(this.clipsGeometry);
-      return 31 * result + Boolean.hashCode(this.renderDeployablePreview);
+      result = 31 * result + Boolean.hashCode(this.renderDeployablePreview);
+      return 31 * result + Arrays.hashCode(this.hudUI);
    }
 }

@@ -10,7 +10,7 @@ import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.auth.ClientReferral;
-import com.hypixel.hytale.protocol.packets.connection.Disconnect;
+import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
 import com.hypixel.hytale.protocol.packets.interface_.ServerInfo;
 import com.hypixel.hytale.protocol.packets.setup.PlayerOptions;
@@ -162,7 +162,9 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             worldSettings.requiredAssets = requiredAssets;
             this.write(worldSettings);
             HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-            this.write(new ServerInfo(HytaleServer.get().getServerName(), serverConfig.getMotd(), serverConfig.getMaxPlayers()));
+            this.write(
+               new ServerInfo(HytaleServer.get().getServerName(), serverConfig.getMotd(), serverConfig.getMaxPlayers(), serverConfig.getFallbackServer())
+            );
             this.continueStage("setup:assets-request", timeouts.getSetupAssetsRequest(), () -> this.receivedRequest);
          }
       }
@@ -172,7 +174,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
    public void accept(@Nonnull ToServerPacket packet) {
       switch (packet.getId()) {
          case 1:
-            this.handle((Disconnect)packet);
+            this.handle((ClientDisconnect)packet);
             break;
          case 23:
             this.handle((RequestAssets)packet);
@@ -210,7 +212,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
       }
    }
 
-   public void handle(@Nonnull Disconnect packet) {
+   public void handle(@Nonnull ClientDisconnect packet) {
       this.disconnectReason.setClientDisconnectType(packet.type);
       HytaleLogger.getLogger()
          .at(Level.INFO)
@@ -220,7 +222,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             this.username,
             NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
-            packet.reason
+            packet.reason.name()
          );
       ProtocolUtil.closeApplicationConnection(this.getChannel());
       if (packet.type == DisconnectType.Crash

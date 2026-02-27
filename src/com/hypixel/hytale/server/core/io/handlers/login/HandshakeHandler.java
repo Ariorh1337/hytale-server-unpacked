@@ -7,8 +7,8 @@ import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.auth.AuthGrant;
 import com.hypixel.hytale.protocol.packets.auth.AuthToken;
 import com.hypixel.hytale.protocol.packets.auth.ServerAuthToken;
+import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.ClientType;
-import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
@@ -69,7 +69,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
       if (sessionServiceClient == null) {
          synchronized (HandshakeHandler.class) {
             if (sessionServiceClient == null) {
-               sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+               sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
             }
          }
       }
@@ -81,7 +81,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
       if (jwtValidator == null) {
          synchronized (HandshakeHandler.class) {
             if (jwtValidator == null) {
-               jwtValidator = new JWTValidator(getSessionServiceClient(), "https://sessions.butter.lat", AuthConfig.getServerAudience());
+               jwtValidator = new JWTValidator(getSessionServiceClient(), "https://sessions.hytale.com", AuthConfig.getServerAudience());
             }
          }
       }
@@ -93,7 +93,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
    public void accept(@Nonnull ToServerPacket packet) {
       switch (packet.getId()) {
          case 1:
-            this.handle((Disconnect)packet);
+            this.handle((ClientDisconnect)packet);
             break;
          case 12:
             this.handle((AuthToken)packet);
@@ -210,7 +210,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
       }
    }
 
-   public void handle(@Nonnull Disconnect packet) {
+   public void handle(@Nonnull ClientDisconnect packet) {
       this.disconnectReason.setClientDisconnectType(packet.type);
       LOGGER.at(Level.INFO)
          .log(
@@ -219,7 +219,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
             this.username,
             NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
-            packet.reason
+            packet.reason.name()
          );
       ProtocolUtil.closeApplicationConnection(this.getChannel());
    }

@@ -62,6 +62,7 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
@@ -610,7 +611,13 @@ public class DamageSystems {
             long packed = LivingEntity.getPackedMaterialAndFluidAtBreathingHeight(ref, commandBuffer);
             BlockMaterial material = BlockMaterial.VALUES[MathUtil.unpackLeft(packed)];
             int fluidId = MathUtil.unpackRight(packed);
-            if (!entity.canBreathe(ref, material, fluidId, commandBuffer) && oxygenStatValue.get() <= oxygenStatValue.getMin()) {
+            boolean canBreathe = entity.canBreathe(ref, material, fluidId, commandBuffer);
+            CachedStatsComponent cachedStatsComponent = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
+            if (cachedStatsComponent != null) {
+               cachedStatsComponent.setCanBreathe(canBreathe);
+            }
+
+            if (!canBreathe && oxygenStatValue.get() <= oxygenStatValue.getMin()) {
                Damage damage;
                if (fluidId != 0) {
                   assert DamageCause.DROWNING != null;

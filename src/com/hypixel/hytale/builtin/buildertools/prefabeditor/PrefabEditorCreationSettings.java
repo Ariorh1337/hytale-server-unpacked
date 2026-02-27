@@ -223,7 +223,7 @@ public class PrefabEditorCreationSettings
             }
 
             try (Stream<Path> walk = Files.walk(resolvedDir, this.recursive ? 10 : 1)) {
-               walk.filter(x$0 -> Files.isRegularFile(x$0)).filter(path -> path.toString().endsWith(".prefab.json")).forEach(this.prefabPaths::add);
+               walk.filter(x$0 -> Files.isRegularFile(x$0)).filter(path -> path.toString().endsWith(".prefab.json")).sorted().forEach(this.prefabPaths::add);
             } catch (IOException e) {
                e.printStackTrace();
             }

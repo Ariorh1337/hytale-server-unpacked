@@ -43,6 +43,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.PrefabUnselectPrefab;
 import com.hypixel.hytale.protocol.packets.interface_.BlockChange;
 import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
 import com.hypixel.hytale.protocol.packets.interface_.FluidChange;
+import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle;
 import com.hypixel.hytale.protocol.packets.player.LoadHotbar;
 import com.hypixel.hytale.protocol.packets.player.SaveHotbar;
 import com.hypixel.hytale.server.core.Message;
@@ -75,6 +76,7 @@ import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.NotificationUtil;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -390,6 +392,16 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                      packetFluids[i] = new FluidChange(fc.x(), fc.y(), fc.z(), fc.fluidId(), fc.fluidLevel());
                   }
 
+                  if (blocksChange != null && blocksChange.length > 4000000) {
+                     NotificationUtil.sendNotification(
+                        playerRef.getPacketHandler(),
+                        Message.translation("server.builderTools.copycut.tooLarge"),
+                        Message.translation("server.builderTools.copycut.tooLarge.detail").param("overCount", blocksChange.length - 4000000),
+                        NotificationStyle.Warning
+                     );
+                     return;
+                  }
+
                   playerRef.getPacketHandler().write(new BuilderToolSelectionToolReplyWithClipboard(blocksChange, packetFluids));
                }
             }
@@ -417,7 +429,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          }
 
          boolean finalKeepEmptyBlocks = keepEmptyBlocks;
-         Quaterniond rotation = new Quaterniond(packet.rotation.x, packet.rotation.y, packet.rotation.z, packet.rotation.w);
+         Quaterniond rotation = new Quaterniond(packet.rotation);
          Vector3i translationOffset = new Vector3i(packet.translationOffset.x, packet.translationOffset.y, packet.translationOffset.z);
          Vector3i initialSelectionMin = new Vector3i(packet.initialSelectionMin.x, packet.initialSelectionMin.y, packet.initialSelectionMin.z);
          Vector3i initialSelectionMax = new Vector3i(packet.initialSelectionMax.x, packet.initialSelectionMax.y, packet.initialSelectionMax.z);
@@ -774,15 +786,12 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
    ) {
       Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
       if (targetRef != null && targetRef.isValid()) {
-         PropComponent propComponent = store.getComponent(targetRef, PropComponent.getComponentType());
-         if (propComponent != null) {
-            EntityScaleComponent scaleComponent = store.getComponent(targetRef, EntityScaleComponent.getComponentType());
-            if (scaleComponent == null) {
-               scaleComponent = new EntityScaleComponent(packet.scale);
-               store.addComponent(targetRef, EntityScaleComponent.getComponentType(), scaleComponent);
-            } else {
-               scaleComponent.setScale(packet.scale);
-            }
+         EntityScaleComponent scaleComponent = store.getComponent(targetRef, EntityScaleComponent.getComponentType());
+         if (scaleComponent == null) {
+            scaleComponent = new EntityScaleComponent(packet.scale);
+            store.addComponent(targetRef, EntityScaleComponent.getComponentType(), scaleComponent);
+         } else {
+            scaleComponent.setScale(packet.scale);
          }
       }
    }

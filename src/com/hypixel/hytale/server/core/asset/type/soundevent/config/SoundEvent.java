@@ -83,6 +83,17 @@ public class SoundEvent
       )
       .documentation("Maximum distance at which this sound event can be heard in blocks (i.e. the distance at which it's attenuated to zero).")
       .add()
+      .<Float>appendInherited(
+         new KeyedCodec<>("SpatialBlend", Codec.FLOAT),
+         (soundEvent, f) -> soundEvent.spatialBlend = f,
+         soundEvent -> soundEvent.spatialBlend,
+         (soundEvent, parent) -> soundEvent.spatialBlend = parent.spatialBlend
+      )
+      .addValidator(Validators.range(0.0F, 1.0F))
+      .documentation(
+         "Controls spatial blending. At 1.0 the source is fully 3D (i.e. a point source). At 0.0 the source is fully diffuse (i.e. centered on the player). Only applies to Stereo Headphone mode."
+      )
+      .add()
       .<Integer>appendInherited(
          new KeyedCodec<>("MaxInstance", Codec.INTEGER),
          (soundEvent, i) -> soundEvent.maxInstance = i,
@@ -130,6 +141,7 @@ public class SoundEvent
    protected transient float ambientDuckingVolume = 1.0F;
    protected float startAttenuationDistance = 2.0F;
    protected float maxDistance = 16.0F;
+   protected float spatialBlend = 0.6F;
    protected int maxInstance = 50;
    protected boolean preventSoundInterruption = false;
    protected SoundEventLayer[] layers;
@@ -224,6 +236,10 @@ public class SoundEvent
       return this.maxDistance;
    }
 
+   public float getSpatialBlend() {
+      return this.spatialBlend;
+   }
+
    public int getMaxInstance() {
       return this.maxInstance;
    }
@@ -266,6 +282,8 @@ public class SoundEvent
          + this.startAttenuationDistance
          + ", maxDistance="
          + this.maxDistance
+         + ", spatialBlend="
+         + this.spatialBlend
          + ", maxInstance="
          + this.maxInstance
          + ", preventSoundInterruption="
@@ -296,6 +314,7 @@ public class SoundEvent
       packet.ambientDuckingVolume = this.ambientDuckingVolume;
       packet.startAttenuationDistance = this.startAttenuationDistance;
       packet.maxDistance = this.maxDistance;
+      packet.spatialBlend = this.spatialBlend;
       packet.maxInstance = this.maxInstance;
       packet.preventSoundInterruption = this.preventSoundInterruption;
       packet.audioCategory = this.audioCategoryIndex;

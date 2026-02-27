@@ -5,17 +5,14 @@ import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.common.collection.Flags;
 import com.hypixel.hytale.common.util.CompletableFutureUtil;
-import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockParticleEvent;
 import com.hypixel.hytale.protocol.Opacity;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
@@ -24,7 +21,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktick.config.TickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
-import com.hypixel.hytale.server.core.modules.block.BlockModule;
+import com.hypixel.hytale.server.core.modules.block.BlockEntity;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldNotificationHandler;
 import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
@@ -32,9 +29,6 @@ import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.environment.EnvironmentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
-import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import java.util.concurrent.CompletableFuture;
@@ -364,31 +358,9 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
                Holder<ChunkStore> blockEntity = blockType.getBlockEntity();
                if (blockEntity != null && filler == 0) {
                   Holder<ChunkStore> newComponents = blockEntity.clone();
-                  this.setState(x, y, z, newComponents);
+                  this.setState(x, y, z, blockType, rotation, newComponents);
                } else {
-                  BlockState blockState = null;
-                  String blockStateType = blockType.getState() != null ? blockType.getState().getId() : null;
-                  if (id != 0 && blockStateType != null && filler == 0) {
-                     blockState = BlockStateModule.get().createBlockState(blockStateType, this, new Vector3i(x, y, z), blockType);
-                     if (blockState == null) {
-                        LOGGER.at(Level.WARNING).log("Failed to create BlockState: %s for BlockType: %s", blockStateType, blockTypeKey);
-                     }
-                  }
-
-                  BlockState oldState = this.getState(x, y, z);
-                  if (blockState instanceof ItemContainerState newState) {
-                     FillerBlockUtil.forEachFillerBlock(hitboxAssetMap.getAsset(blockType.getHitboxTypeIndex()).get(rotation), (x1, y1, z1) -> {
-                        int blockX = worldX + x1;
-                        int blockY = y + y1;
-                        int blockZ = worldZ + z1;
-                        boolean isZero = x1 == 0 && y1 == 0 && z1 == 0;
-                        if ((isZero ? oldState : this.getState(blockX, blockY, blockZ)) instanceof ItemContainerState oldContainer) {
-                           oldContainer.getItemContainer().moveAllItemStacksTo(newState.getItemContainer());
-                        }
-                     });
-                  }
-
-                  this.setState(x, y, z, blockState, (settings & 1) == 0);
+                  this.setState(x, y, z, blockType, rotation, null);
                }
             }
 
@@ -408,24 +380,30 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
                int baseX = worldX - fx;
                int baseY = y - fy;
                int baseZ = worldZ - fz;
-               FillerBlockUtil.forEachFillerBlock(hitboxAssetMap.getAsset(oldBlockType.getHitboxTypeIndex()).get(oldRotation), (x1, y1, z1) -> {
-                  if (x1 != fx || y1 != fy || z1 != fz) {
-                     int blockX = baseX + x1;
-                     int blockY = baseY + y1;
-                     int blockZ = baseZ + z1;
-                     if (ChunkUtil.isSameChunk(worldX, worldZ, blockX, blockZ)) {
-                        String blockTypeKey1 = this.getBlockType(blockX, blockY, blockZ).getId();
-                        if (blockTypeKey1.equals(oldBlockKey)) {
-                           this.breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
-                        }
-                     } else {
-                        String blockTypeKey1 = this.getWorld().getBlockType(blockX, blockY, blockZ).getId();
-                        if (blockTypeKey1.equals(oldBlockKey)) {
-                           this.getWorld().breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
+               FillerBlockUtil.forEachFillerBlock(
+                  hitboxAssetMap.getAsset(oldBlockType.getHitboxTypeIndex()).get(oldRotation),
+                  (x1, y1, z1) -> {
+                     if (x1 != fx || y1 != fy || z1 != fz) {
+                        int blockX = baseX + x1;
+                        int blockY = baseY + y1;
+                        int blockZ = baseZ + z1;
+                        if (ChunkUtil.isSameChunk(worldX, worldZ, blockX, blockZ)) {
+                           String blockTypeKey1 = this.getBlockType(blockX, blockY, blockZ).getId();
+                           if (blockTypeKey1.equals(oldBlockKey)) {
+                              this.breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
+                           }
+                        } else {
+                           String blockTypeKey1 = this.getWorld()
+                              .getNonTickingChunk(ChunkUtil.indexChunkFromBlock(blockX, blockZ))
+                              .getBlockType(blockX, blockY, blockZ)
+                              .getId();
+                           if (blockTypeKey1.equals(oldBlockKey)) {
+                              this.getWorld().breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
+                           }
                         }
                      }
                   }
-               });
+               );
             }
 
             if ((settings & 8) == 0 && filler == 0) {
@@ -528,27 +506,6 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
    }
 
    @Nullable
-   @Override
-   public BlockState getState(int x, int y, int z) {
-      if (y < 0 || y >= 320) {
-         return null;
-      }
-
-      if (!this.world.isInThread()) {
-         return CompletableFuture.<BlockState>supplyAsync(() -> this.getState(x, y, z), this.world).join();
-      }
-
-      int index = ChunkUtil.indexBlockInColumn(x, y, z);
-      Ref<ChunkStore> reference = this.blockComponentChunk.getEntityReference(index);
-      if (reference != null) {
-         return BlockState.getBlockState(reference, reference.getStore());
-      }
-
-      Holder<ChunkStore> holder = this.blockComponentChunk.getEntityHolder(index);
-      return holder != null ? BlockState.getBlockState(holder) : null;
-   }
-
-   @Nullable
    public Ref<ChunkStore> getBlockComponentEntity(int x, int y, int z) {
       if (y < 0 || y >= 320) {
          return null;
@@ -581,14 +538,6 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
 
       Holder<ChunkStore> holder = this.blockComponentChunk.getEntityHolder(index);
       return holder != null ? holder.clone() : null;
-   }
-
-   @Override
-   public void setState(int x, int y, int z, @Nullable BlockState state, boolean notify) {
-      if (y >= 0 && y < 320) {
-         Holder<ChunkStore> holder = state != null ? state.toHolder() : null;
-         this.setState(x, y, z, holder);
-      }
    }
 
    @Deprecated(forRemoval = true)
@@ -637,61 +586,12 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
    }
 
    @Deprecated
-   public void setState(int x, int y, int z, @Nullable Holder<ChunkStore> holder) {
-      if (y >= 0 && y < 320) {
+   public void setState(int x, int y, int z, BlockType blockType, int rotation, @Nullable Holder<ChunkStore> holder) {
+      if (y >= 0 && y < 320 && blockType != null) {
          if (!this.world.isInThread()) {
-            CompletableFutureUtil._catch(CompletableFuture.runAsync(() -> this.setState(x, y, z, holder), this.world));
+            CompletableFutureUtil._catch(CompletableFuture.runAsync(() -> this.setState(x, y, z, blockType, rotation, holder), this.world));
          } else {
-            boolean notify = true;
-            int index = ChunkUtil.indexBlockInColumn(x, y, z);
-            if (holder == null) {
-               Ref<ChunkStore> reference = this.blockComponentChunk.getEntityReference(index);
-               if (reference != null) {
-                  Holder<ChunkStore> oldHolder = reference.getStore().removeEntity(reference, RemoveReason.REMOVE);
-                  BlockState oldState = BlockState.getBlockState(oldHolder);
-                  if (notify) {
-                     this.world.getNotificationHandler().updateState(x, y, z, null, oldState);
-                  }
-               } else {
-                  this.blockComponentChunk.removeEntityHolder(index);
-               }
-            } else {
-               BlockState state = BlockState.getBlockState(holder);
-               if (state != null) {
-                  state.setPosition(this, new Vector3i(x, y, z));
-               }
-
-               Store<ChunkStore> blockComponentStore = this.world.getChunkStore().getStore();
-               if (!this.is(ChunkFlag.TICKING)) {
-                  Holder<ChunkStore> oldHolder = this.blockComponentChunk.getEntityHolder(index);
-                  BlockState oldState = null;
-                  if (oldHolder != null) {
-                     oldState = BlockState.getBlockState(oldHolder);
-                  }
-
-                  this.blockComponentChunk.removeEntityHolder(index);
-                  holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, this.reference));
-                  this.blockComponentChunk.addEntityHolder(index, holder);
-                  if (notify) {
-                     this.world.getNotificationHandler().updateState(x, y, z, state, oldState);
-                  }
-               } else {
-                  Ref<ChunkStore> oldReference = this.blockComponentChunk.getEntityReference(index);
-                  BlockState oldState = null;
-                  if (oldReference != null) {
-                     Holder<ChunkStore> oldEntityHolder = blockComponentStore.removeEntity(oldReference, RemoveReason.REMOVE);
-                     oldState = BlockState.getBlockState(oldEntityHolder);
-                  } else {
-                     this.blockComponentChunk.removeEntityHolder(index);
-                  }
-
-                  holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, this.reference));
-                  blockComponentStore.addEntity(holder, AddReason.SPAWN);
-                  if (notify) {
-                     this.world.getNotificationHandler().updateState(x, y, z, state, oldState);
-                  }
-               }
-            }
+            BlockEntity.setBlockEntity(this.world.getChunkStore().getStore(), this.reference, this.blockComponentChunk, x, y, z, blockType, rotation, holder);
          }
       }
    }

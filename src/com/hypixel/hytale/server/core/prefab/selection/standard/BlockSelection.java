@@ -33,7 +33,6 @@ import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.StateData;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.VariantRotation;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.asset.type.fluid.FluidTicker;
@@ -54,7 +53,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
@@ -76,7 +74,6 @@ import java.util.function.IntUnaryOperator;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bson.BsonDocument;
 
 public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, MetricProvider {
    public static final Consumer<Ref<EntityStore>> DEFAULT_ENTITY_CONSUMER = ref -> {};
@@ -522,23 +519,6 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                      if (blockType.getBlockEntity() != null) {
                         holder = blockType.getBlockEntity().clone();
                      }
-
-                     StateData state = blockType.getState();
-                     if (state != null && state.getId() != null) {
-                        Vector3i position = new Vector3i(BlockUtil.unpackX(k), BlockUtil.unpackY(k), BlockUtil.unpackZ(k));
-                        Codec<? extends BlockState> codec = BlockState.CODEC.getCodecFor(state.getId());
-                        if (codec == null) {
-                           return (BlockSelection.BlockHolder)b;
-                        }
-
-                        BlockState blockState = codec.decode(new BsonDocument());
-                        if (blockState == null) {
-                           return (BlockSelection.BlockHolder)b;
-                        }
-
-                        blockState.setPosition(null, position);
-                        holder = blockState.toHolder();
-                     }
                   }
 
                   if (holder != null && b.filler != 0) {
@@ -813,8 +793,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          int oldBlockId = chunk.getBlock(blockX, blockY, blockZ);
          if (blockMask == null || !blockMask.isExcluded(outerWorld, blockX, blockY, blockZ, this.min, this.max, oldBlockId)) {
             BlockChunk blockChunk = chunk.getBlockChunk();
+            BlockType newBlockType = assetMap.getAsset(newBlockId);
             if (blockChunk.setBlock(blockX, blockY, blockZ, newBlockId, newRotation, newFiller)) {
-               BlockType newBlockType = assetMap.getAsset(newBlockId);
                if (newBlockType != null && FluidTicker.isFullySolid(newBlockType)) {
                   this.clearFluidAtPosition(outerWorld, chunk, blockX, blockY, blockZ);
                }
@@ -829,7 +809,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                }
             }
 
-            chunk.setState(blockX, blockY, blockZ, holder);
+            chunk.setState(blockX, blockY, blockZ, newBlockType, newRotation, holder);
             dirtyChunks.add(chunkIndex);
             feedbackConsumer.accept(feedbackKey, totalBlocks, counter, feedback, componentAccessor);
          }
@@ -1034,8 +1014,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             int rotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
             before.addBlockAtLocalPos(localX, localY, localZ, oldBlockId, rotation, filler, supportValue, chunk.getBlockComponentHolder(blockX, blockY, blockZ));
             BlockChunk blockChunk = chunk.getBlockChunk();
+            BlockType newBlockType = assetMap.getAsset(newBlockId);
             if (blockChunk.setBlock(blockX, blockY, blockZ, newBlockId, newRotation, newFiller)) {
-               BlockType newBlockType = assetMap.getAsset(newBlockId);
                if (newBlockType != null && FluidTicker.isFullySolid(newBlockType)) {
                   this.clearFluidAtPosition(outerWorld, chunk, blockX, blockY, blockZ);
                }
@@ -1062,7 +1042,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                }
             }
 
-            chunk.setState(blockX, blockY, blockZ, holder);
+            chunk.setState(blockX, blockY, blockZ, newBlockType, newRotation, holder);
             dirtyChunks.add(chunkIndex);
          }
       }

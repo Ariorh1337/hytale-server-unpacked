@@ -228,6 +228,7 @@ public class CaveGenerator {
       @Nonnull CavePrefabContainer.CavePrefabEntry entry,
       @Nonnull Random random
    ) {
+      assert caveNode.getShape().hasGeometry() : "Cannot generate cave-prefab inside an invalid shape";
       CavePrefabContainer.CavePrefabEntry.CavePrefabConfig config = entry.getConfig();
       int iterations = config.getIterations(random.nextDouble());
 

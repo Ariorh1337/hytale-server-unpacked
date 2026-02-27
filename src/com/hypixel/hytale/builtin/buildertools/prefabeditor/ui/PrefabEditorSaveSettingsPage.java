@@ -1,6 +1,8 @@
 package com.hypixel.hytale.builtin.buildertools.prefabeditor.ui;
 
+import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSession;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionManager;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadata;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaver;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaverSettings;
@@ -24,6 +26,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -203,6 +206,8 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
             }
 
             World world = store.getExternalData().getWorld();
+            PrefabEditSessionManager editSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
+            World editSessionWorld = Universe.get().getWorld(editSessionManager.getPrefabEditSession(this.playerRef.getUuid()).getWorldName());
             int totalPrefabs = prefabsToSave.size();
             CompletableFuture<Boolean>[] saveFutures = new CompletableFuture[totalPrefabs];
             AtomicInteger completedCount = new AtomicInteger(0);
@@ -213,7 +218,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                Path savePath = this.getWritableSavePath(metadata);
                saveFutures[i] = PrefabSaver.savePrefab(
                      playerComponent,
-                     world,
+                     editSessionWorld,
                      savePath,
                      metadata.getAnchorPoint(),
                      metadata.getMinPoint(),
@@ -264,6 +269,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                               Message.translation("server.commands.editprefab.save.saveAll.success").param("successes", successes).param("failures", failures)
                            );
                         playerComponent.getPageManager().setPage(ref, store, Page.None);
+                        editSessionManager.exitEditSession(ref, world, this.playerRef, store);
                      } else {
                         this.onSavingFailed(
                            Message.translation("server.commands.editprefab.save.saveAll.success").param("successes", successes).param("failures", failures)
@@ -343,7 +349,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                   UIEventBuilder eventBuilderx = new UIEventBuilder();
                   this.buildPrefabList(commandBuilderx, eventBuilderx);
                   this.sendUpdate(commandBuilderx, eventBuilderx, false);
-               } catch (IllegalArgumentException var18) {
+               } catch (IllegalArgumentException var20) {
                }
             }
             break;

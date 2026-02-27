@@ -45,6 +45,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolsSetSoundSet;
 import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
 import com.hypixel.hytale.protocol.packets.inventory.SetActiveSlot;
 import com.hypixel.hytale.protocol.packets.player.SetBlockPlacementOverride;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.PlayerConfig;
@@ -58,6 +59,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.data.UniqueItemUsag
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.RespawnPage;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
+import com.hypixel.hytale.server.core.event.events.player.RemovedPlayerFromWorldEvent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -505,13 +507,16 @@ public class PlayerSystems {
          playerRefComponent.getPacketHandler().setQueuePackets(false);
          playerRefComponent.getPacketHandler().tryFlush();
          WorldConfig worldConfig = world.getWorldConfig();
-         PlayerUtil.broadcastMessageToPlayers(
-            playerRefComponent.getUuid(),
-            Message.translation("server.general.playerLeftWorld")
-               .param("username", playerRefComponent.getUsername())
-               .param("world", worldConfig.getDisplayName() != null ? worldConfig.getDisplayName() : WorldConfig.formatDisplayName(world.getName())),
-            store
-         );
+         Message leaveMessage = Message.translation("server.general.playerLeftWorld")
+            .param("username", playerRefComponent.getUsername())
+            .param("world", worldConfig.getDisplayName() != null ? worldConfig.getDisplayName() : WorldConfig.formatDisplayName(world.getName()));
+         RemovedPlayerFromWorldEvent event = HytaleServer.get()
+            .getEventBus()
+            .dispatchFor(RemovedPlayerFromWorldEvent.class, world.getName())
+            .dispatch(new RemovedPlayerFromWorldEvent(holder, world, leaveMessage));
+         if (event.shouldBroadcastLeaveMessage()) {
+            PlayerUtil.broadcastMessageToPlayers(playerRefComponent.getUuid(), event.getLeaveMessage(), store);
+         }
       }
    }
 

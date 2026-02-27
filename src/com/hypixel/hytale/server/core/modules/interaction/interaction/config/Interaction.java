@@ -441,7 +441,7 @@ public abstract class Interaction
       ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
 
       for (Ref<EntityStore> playerRef : results) {
-         if (!chain.requiresClient() || !playerRef.equals(owningEntityRef)) {
+         if (playerRef.isValid() && (!chain.requiresClient() || !playerRef.equals(owningEntityRef))) {
             PlayerRef playerPlayerRefComponent = commandBuffer.getComponent(playerRef, playerRefComponentType);
             assert playerPlayerRefComponent != null;
             playerPlayerRefComponent.getPacketHandler().writeNoCache(packet);

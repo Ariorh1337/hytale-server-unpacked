@@ -49,7 +49,7 @@ public class OAuthClient {
                server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
                int port = server.getAddress().getPort();
                String encodedState = this.encodeStateWithPort(csrfState, port);
-               String redirectUri = "https://accounts.butter.lat/consent/client";
+               String redirectUri = "https://accounts.hytale.com/consent/client";
                CompletableFuture<String> authCodeFuture = new CompletableFuture<>();
                HttpServer finalServer = server;
                String expectedState = csrfState;
@@ -199,7 +199,7 @@ public class OAuthClient {
             + "&refresh_token="
             + URLEncoder.encode(refreshToken, StandardCharsets.UTF_8);
          HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("https://oauth.accounts.butter.lat/oauth2/token"))
+            .uri(URI.create("https://oauth.accounts.hytale.com/oauth2/token"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("User-Agent", AuthConfig.USER_AGENT)
             .POST(BodyPublishers.ofString(body))
@@ -218,7 +218,7 @@ public class OAuthClient {
    }
 
    private String buildAuthUrl(String state, String codeChallenge, String redirectUri) {
-      return "https://oauth.accounts.butter.lat/oauth2/auth?response_type=code&client_id="
+      return "https://oauth.accounts.hytale.com/oauth2/auth?response_type=code&client_id="
          + URLEncoder.encode("hytale-server", StandardCharsets.UTF_8)
          + "&redirect_uri="
          + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
@@ -243,7 +243,7 @@ public class OAuthClient {
             + "&code_verifier="
             + URLEncoder.encode(codeVerifier, StandardCharsets.UTF_8);
          HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("https://oauth.accounts.butter.lat/oauth2/token"))
+            .uri(URI.create("https://oauth.accounts.hytale.com/oauth2/token"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("User-Agent", AuthConfig.USER_AGENT)
             .POST(BodyPublishers.ofString(body))
@@ -269,7 +269,7 @@ public class OAuthClient {
             + "&scope="
             + URLEncoder.encode(String.join(" ", AuthConfig.SCOPES), StandardCharsets.UTF_8);
          HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("https://oauth.accounts.butter.lat/oauth2/device/auth"))
+            .uri(URI.create("https://oauth.accounts.hytale.com/oauth2/device/auth"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("User-Agent", AuthConfig.USER_AGENT)
             .POST(BodyPublishers.ofString(body))
@@ -295,7 +295,7 @@ public class OAuthClient {
             + "&device_code="
             + URLEncoder.encode(deviceCode, StandardCharsets.UTF_8);
          HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("https://oauth.accounts.butter.lat/oauth2/token"))
+            .uri(URI.create("https://oauth.accounts.hytale.com/oauth2/token"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("User-Agent", AuthConfig.USER_AGENT)
             .POST(BodyPublishers.ofString(body))

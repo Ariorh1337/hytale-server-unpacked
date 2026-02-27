@@ -122,8 +122,28 @@ public class EffectControllerComponent implements Component<EntityStore> {
       }
 
       ActiveEntityEffect currentActiveEntityEffectEntry = this.activeEffects.get(entityEffectIndex);
-      label21:
-      if (currentActiveEntityEffectEntry == null) {
+      if (currentActiveEntityEffectEntry != null) {
+         if (currentActiveEntityEffectEntry.isInfinite()) {
+            return true;
+         } else if (overlapBehavior != OverlapBehavior.IGNORE) {
+            currentActiveEntityEffectEntry.remainingDuration = overlapBehavior == OverlapBehavior.EXTEND
+               ? currentActiveEntityEffectEntry.remainingDuration + duration
+               : duration;
+            this.addChange(
+               new EntityEffectUpdate(
+                  EffectOp.Add,
+                  entityEffectIndex,
+                  currentActiveEntityEffectEntry.remainingDuration,
+                  false,
+                  currentActiveEntityEffectEntry.debuff,
+                  currentActiveEntityEffectEntry.statusEffectIcon
+               )
+            );
+            return true;
+         } else {
+            return true;
+         }
+      } else {
          ActiveEntityEffect activeEntityEffectEntry = new ActiveEntityEffect(
             entityEffect.getId(), entityEffectIndex, duration, entityEffect.isDebuff(), entityEffect.getStatusEffectIcon(), entityEffect.isInvulnerable()
          );
@@ -145,31 +165,6 @@ public class EffectControllerComponent implements Component<EntityStore> {
          );
          this.invalidateCache();
          return true;
-      } else {
-         if (currentActiveEntityEffectEntry.isInfinite()) {
-            return true;
-         }
-
-         switch (overlapBehavior) {
-            case EXTEND:
-               currentActiveEntityEffectEntry.remainingDuration += duration;
-               this.addChange(
-                  new EntityEffectUpdate(
-                     EffectOp.Add,
-                     entityEffectIndex,
-                     currentActiveEntityEffectEntry.remainingDuration,
-                     false,
-                     currentActiveEntityEffectEntry.debuff,
-                     currentActiveEntityEffectEntry.statusEffectIcon
-                  )
-               );
-               return true;
-            case IGNORE:
-               return true;
-            case OVERWRITE:
-            default:
-               break label21;
-         }
       }
    }
 

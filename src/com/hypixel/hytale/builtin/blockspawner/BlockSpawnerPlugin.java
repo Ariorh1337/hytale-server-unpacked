@@ -198,7 +198,7 @@ public class BlockSpawnerPlugin extends JavaPlugin {
                               BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
                               worldChunkComponent.setBlock(x, y, z, blockId, blockType, rotation.index(), 0, flags);
                               if (holder != null) {
-                                 worldChunkComponent.setState(x, y, z, holder.clone());
+                                 worldChunkComponent.setState(x, y, z, blockType, rotation.index(), holder.clone());
                               }
                            });
                         }

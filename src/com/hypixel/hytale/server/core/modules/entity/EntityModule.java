@@ -64,6 +64,7 @@ import com.hypixel.hytale.server.core.modules.collision.TangiableEntitySpatialSy
 import com.hypixel.hytale.server.core.modules.entity.component.ActiveAnimationComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.CollisionResultComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
@@ -257,6 +258,7 @@ public class EntityModule extends JavaPlugin {
    private ComponentType<EntityStore, MovementAudioComponent> movementAudioComponentType;
    private ComponentType<EntityStore, PositionDataComponent> positionDataComponentType;
    private ComponentType<EntityStore, ActiveAnimationComponent> activeAnimationComponentType;
+   private ComponentType<EntityStore, CachedStatsComponent> cachedStatsComponentType;
    private ComponentType<EntityStore, NewSpawnComponent> newSpawnComponentType;
    private ComponentType<EntityStore, ItemComponent> itemComponentType;
    private ComponentType<EntityStore, PickupItemComponent> pickupItemComponentType;
@@ -330,6 +332,7 @@ public class EntityModule extends JavaPlugin {
       this.movementAudioComponentType = entityStoreRegistry.registerComponent(MovementAudioComponent.class, MovementAudioComponent::new);
       this.positionDataComponentType = entityStoreRegistry.registerComponent(PositionDataComponent.class, PositionDataComponent::new);
       this.activeAnimationComponentType = entityStoreRegistry.registerComponent(ActiveAnimationComponent.class, ActiveAnimationComponent::new);
+      this.cachedStatsComponentType = entityStoreRegistry.registerComponent(CachedStatsComponent.class, CachedStatsComponent::new);
       this.newSpawnComponentType = entityStoreRegistry.registerComponent(NewSpawnComponent.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
@@ -994,6 +997,10 @@ public class EntityModule extends JavaPlugin {
 
    public ComponentType<EntityStore, ActiveAnimationComponent> getActiveAnimationComponentType() {
       return this.activeAnimationComponentType;
+   }
+
+   public ComponentType<EntityStore, CachedStatsComponent> getCachedStatsComponentType() {
+      return this.cachedStatsComponentType;
    }
 
    @Nullable

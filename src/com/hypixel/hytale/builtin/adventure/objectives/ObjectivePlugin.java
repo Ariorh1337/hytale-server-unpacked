@@ -3,7 +3,7 @@ package com.hypixel.hytale.builtin.adventure.objectives;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-import com.hypixel.hytale.builtin.adventure.objectives.blockstates.TreasureChestState;
+import com.hypixel.hytale.builtin.adventure.objectives.blockstates.TreasureChestBlock;
 import com.hypixel.hytale.builtin.adventure.objectives.commands.ObjectiveCommand;
 import com.hypixel.hytale.builtin.adventure.objectives.completion.ClearObjectiveItemsCompletion;
 import com.hypixel.hytale.builtin.adventure.objectives.completion.GiveItemsCompletion;
@@ -29,6 +29,8 @@ import com.hypixel.hytale.builtin.adventure.objectives.historydata.ObjectiveHist
 import com.hypixel.hytale.builtin.adventure.objectives.historydata.ObjectiveLineHistoryData;
 import com.hypixel.hytale.builtin.adventure.objectives.historydata.ObjectiveRewardHistoryData;
 import com.hypixel.hytale.builtin.adventure.objectives.interactions.CanBreakRespawnPointInteraction;
+import com.hypixel.hytale.builtin.adventure.objectives.interactions.DestroyTreasureConditionInteraction;
+import com.hypixel.hytale.builtin.adventure.objectives.interactions.OpenTreasureContainerInteraction;
 import com.hypixel.hytale.builtin.adventure.objectives.interactions.StartObjectiveInteraction;
 import com.hypixel.hytale.builtin.adventure.objectives.markers.ObjectiveMarkerProvider;
 import com.hypixel.hytale.builtin.adventure.objectives.markers.objectivelocation.ObjectiveLocationMarker;
@@ -96,7 +98,7 @@ import com.hypixel.hytale.server.core.universe.datastore.DataStoreProvider;
 import com.hypixel.hytale.server.core.universe.datastore.DiskDataStoreProvider;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.events.AddWorldEvent;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
 import java.util.Arrays;
@@ -127,6 +129,7 @@ public class ObjectivePlugin extends JavaPlugin {
    private ComponentType<EntityStore, ObjectiveHistoryComponent> objectiveHistoryComponentType;
    private ComponentType<EntityStore, ReachLocationMarker> reachLocationMarkerComponentType;
    private ComponentType<EntityStore, ObjectiveLocationMarker> objectiveLocationMarkerComponentType;
+   private ComponentType<ChunkStore, TreasureChestBlock> treasureChestComponentType;
    @Nullable
    private ObjectiveDataStore objectiveDataStore;
 
@@ -293,7 +296,11 @@ public class ObjectivePlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new ObjectiveItemEntityRemovalSystem());
       this.getCodecRegistry(Interaction.CODEC).register("StartObjective", StartObjectiveInteraction.class, StartObjectiveInteraction.CODEC);
       this.getCodecRegistry(Interaction.CODEC).register("CanBreakRespawnPoint", CanBreakRespawnPointInteraction.class, CanBreakRespawnPointInteraction.CODEC);
-      BlockStateModule.get().registerBlockState(TreasureChestState.class, "TreasureChest", TreasureChestState.CODEC);
+      this.getCodecRegistry(Interaction.CODEC)
+         .register("DestroyTreasureCondition", DestroyTreasureConditionInteraction.class, DestroyTreasureConditionInteraction.CODEC);
+      this.getCodecRegistry(Interaction.CODEC)
+         .register("OpenTreasureContainer", OpenTreasureContainerInteraction.class, OpenTreasureContainerInteraction.CODEC);
+      this.treasureChestComponentType = this.getChunkStoreRegistry().registerComponent(TreasureChestBlock.class, "TreasureChest", TreasureChestBlock.CODEC);
       this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(ObjectiveGameplayConfig.class, "Objective", ObjectiveGameplayConfig.CODEC);
       entityStoreRegistry.registerSystem(
          new EntityModule.TangibleMigrationSystem(Query.or(ObjectiveLocationMarker.getComponentType(), ReachLocationMarker.getComponentType())), true
@@ -329,6 +336,10 @@ public class ObjectivePlugin extends JavaPlugin {
 
    public ComponentType<EntityStore, ObjectiveLocationMarker> getObjectiveLocationMarkerComponentType() {
       return this.objectiveLocationMarkerComponentType;
+   }
+
+   public ComponentType<ChunkStore, TreasureChestBlock> getTreasureChestComponentType() {
+      return this.treasureChestComponentType;
    }
 
    public <T extends ObjectiveTaskAsset, U extends ObjectiveTask> void registerTask(

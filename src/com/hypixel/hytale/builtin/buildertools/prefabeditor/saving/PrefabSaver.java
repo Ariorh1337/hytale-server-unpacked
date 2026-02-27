@@ -28,7 +28,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.EntityChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -179,10 +178,6 @@ public class PrefabSaver {
                         Holder<ChunkStore> holder = worldChunkComponent.getBlockComponentHolder(x, y, z);
                         if (holder != null) {
                            holder = holder.clone();
-                           BlockState blockState = BlockState.getBlockState(holder);
-                           if (blockState != null) {
-                              blockState.clearPositionForSerialization();
-                           }
                         }
 
                         int supportValue = settings.isClearSupportValues() ? 0 : (blockPhysicsComponent != null ? blockPhysicsComponent.get(x, y, z) : 0);

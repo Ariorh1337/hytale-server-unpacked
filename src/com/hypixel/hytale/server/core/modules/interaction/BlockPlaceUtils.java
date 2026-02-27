@@ -1,6 +1,8 @@
 package com.hypixel.hytale.server.core.modules.interaction;
 
+import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -40,8 +42,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksUtil;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.state.PlacedByBlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
@@ -168,7 +168,7 @@ public class BlockPlaceUtils {
                      entityStore
                   );
                   if (success) {
-                     onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition);
+                     onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition, blockTypeAsset, targetRotation);
                   } else {
                      onPlaceBlockFailure(itemStack, inventory, activeSlot, playerComponent, targetBlockSection, targetBlockPosition);
                   }
@@ -203,19 +203,27 @@ public class BlockPlaceUtils {
       blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
    }
 
-   private static void onPlaceBlockSuccess(@Nullable ItemStack itemStack, @Nonnull WorldChunk worldChunkComponent, @Nonnull Vector3i blockPosition) {
+   private static void onPlaceBlockSuccess(
+      @Nullable ItemStack itemStack,
+      @Nonnull WorldChunk worldChunkComponent,
+      @Nonnull Vector3i blockPosition,
+      BlockType blockTypeAsset,
+      RotationTuple targetRotation
+   ) {
       if (itemStack != null) {
          BsonDocument metadata = itemStack.getMetadata();
          if (metadata != null) {
-            BsonValue bsonValue = metadata.get("BlockState");
+            BsonValue bsonValue = metadata.get("BlockHolder");
             if (bsonValue != null) {
                try {
                   BsonDocument document = bsonValue.asDocument();
-                  BlockState blockState = BlockState.load(document, worldChunkComponent, blockPosition.clone());
-                  if (blockState != null) {
-                     worldChunkComponent.setState(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockState);
+                  Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.getEntityCodec().decode(document, EmptyExtraInfo.EMPTY);
+                  if (blockEntity != null) {
+                     worldChunkComponent.setState(
+                        blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockTypeAsset, targetRotation.index(), blockEntity
+                     );
                   } else {
-                     LOGGER.at(Level.WARNING).log("Failed to set BlockState from item metadata: %s, %s", itemStack.getItemId(), document);
+                     LOGGER.at(Level.WARNING).log("Failed to set Block Entity from item metadata: %s, %s", itemStack.getItemId(), document);
                   }
                } catch (Exception e) {
                   throw SneakyThrow.sneakyThrow(e);
@@ -349,11 +357,6 @@ public class BlockPlaceUtils {
             if (sectionRef != null && sectionRef.isValid()) {
                BlockPhysics.markDeco(chunkStore, sectionRef, blockPosition.x, blockPosition.y, blockPosition.z);
             }
-         }
-
-         BlockState blockState = worldChunkComponent.getState(blockPosition.x, blockPosition.y, blockPosition.z);
-         if (blockState instanceof PlacedByBlockState placedByBlockState) {
-            placedByBlockState.placedBy(ref, blockTypeKey, blockState, entityStore);
          }
 
          int blockIndexInChunk = ChunkUtil.indexBlockInColumn(blockPosition.x, blockPosition.y, blockPosition.z);

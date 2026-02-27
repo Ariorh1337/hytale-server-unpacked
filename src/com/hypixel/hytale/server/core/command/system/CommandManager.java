@@ -50,7 +50,6 @@ import com.hypixel.hytale.server.core.command.commands.utility.NotifyCommand;
 import com.hypixel.hytale.server.core.command.commands.utility.StashCommand;
 import com.hypixel.hytale.server.core.command.commands.utility.UIGalleryCommand;
 import com.hypixel.hytale.server.core.command.commands.utility.ValidateCPBCommand;
-import com.hypixel.hytale.server.core.command.commands.utility.git.GitCommand;
 import com.hypixel.hytale.server.core.command.commands.utility.help.HelpCommand;
 import com.hypixel.hytale.server.core.command.commands.utility.lighting.LightingCommand;
 import com.hypixel.hytale.server.core.command.commands.utility.metacommands.CommandsCommand;
@@ -161,7 +160,6 @@ public class CommandManager implements CommandOwner {
       this.registerSystemCommand(new NetworkCommand());
       this.registerSystemCommand(new CommandsCommand());
       this.registerSystemCommand(new UIGalleryCommand());
-      this.registerSystemCommand(new GitCommand());
    }
 
    public Map<String, Set<String>> createVirtualPermissionGroups() {

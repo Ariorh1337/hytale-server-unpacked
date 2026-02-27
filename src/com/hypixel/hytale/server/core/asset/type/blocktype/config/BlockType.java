@@ -30,7 +30,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.protocol.BenchType;
 import com.hypixel.hytale.protocol.BlockFlags;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.BlockNeighbor;
@@ -919,6 +918,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    @Nullable
    protected ConnectedBlockRuleSet connectedBlockRuleSet;
    protected Bench bench;
+   @Nullable
    protected BlockGathering gathering;
    protected BlockPlacementSettings placementSettings;
    protected StateData state;
@@ -1333,7 +1333,12 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return key;
    }
 
+   @Nullable
    public String getDefaultStateKey() {
+      if (this.data == null) {
+         return null;
+      }
+
       if (this.defaultStateKey == null) {
          this.defaultStateKey = this.data.getContainerKey(BlockType.class);
       }
@@ -1578,6 +1583,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return this.bench;
    }
 
+   @Nullable
    public BlockGathering getGathering() {
       return this.gathering;
    }
@@ -1777,28 +1783,22 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
    protected void processConfig() {
       if (this.bench != null) {
-         if (this.state == null && this.bench.getType() == BenchType.Processing) {
-            this.state = new StateData("processingBench");
-         }
-
          this.flags.isUsable = true;
          if (this.interactionHint == null) {
             this.interactionHint = "server.interactionHints.open";
          }
-      } else if (this.state == null || !"container".equalsIgnoreCase(this.state.getId()) && !"Door".equalsIgnoreCase(this.state.getId())) {
-         if (this.gathering != null && this.gathering.isHarvestable()) {
-            this.flags.isUsable = true;
-            if (this.interactionHint == null) {
-               this.interactionHint = "server.interactionHints.gather";
-            }
-         } else if (this.seats != null && this.seats.size() > 0 && this.interactionHint == null) {
-            this.interactionHint = "server.interactionHints.sit";
-         }
-      } else {
+      } else if (this.isDoor) {
          this.flags.isUsable = true;
          if (this.interactionHint == null) {
             this.interactionHint = "server.interactionHints.open";
          }
+      } else if (this.gathering != null && this.gathering.isHarvestable()) {
+         this.flags.isUsable = true;
+         if (this.interactionHint == null) {
+            this.interactionHint = "server.interactionHints.gather";
+         }
+      } else if (this.seats != null && this.seats.size() > 0 && this.interactionHint == null) {
+         this.interactionHint = "server.interactionHints.sit";
       }
 
       if (this.interactions.containsKey(InteractionType.Use)) {

@@ -41,7 +41,6 @@ import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.AssetPackRegisterEvent;
 import com.hypixel.hytale.server.core.asset.AssetPackUnregisterEvent;
-import com.hypixel.hytale.server.core.asset.GenerateSchemaEvent;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
 import com.hypixel.hytale.server.core.asset.LoadAssetEvent;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
@@ -64,6 +63,7 @@ import com.hypixel.hytale.server.core.modules.migrations.MigrationModule;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.schema.SchemaGenerator;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.npc.INonPlayerCharacter;
 import com.hypixel.hytale.server.core.universe.world.path.WorldPathChangedEvent;
@@ -441,7 +441,15 @@ public class NPCPlugin extends JavaPlugin {
       );
       eventRegistry.register(AssetPackRegisterEvent.class, event -> this.builderManager.loadBuilders(event.getAssetPack(), false));
       eventRegistry.register(AssetPackUnregisterEvent.class, event -> this.builderManager.unloadBuilders(event.getAssetPack()));
-      eventRegistry.register(GenerateSchemaEvent.class, this::onSchemaGenerate);
+      SchemaGenerator.registerAssetSchema("NPCRole.json", ctx -> {
+         Schema schema = this.builderManager.generateSchema(ctx);
+         schema.setId("NPCRole.json");
+         schema.setTitle("NPCRole");
+         Schema.HytaleMetadata hytale = schema.getHytale();
+         hytale.setPath("NPC/Roles");
+         hytale.setExtension(".json");
+         return schema;
+      }, List.of("NPC/Roles/*.json", "NPC/Roles/**/*.json"), null);
       AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
                               AttitudeGroup.class, new IndexedLookupTableAssetMap<>(AttitudeGroup[]::new)
@@ -593,17 +601,6 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new NPCSystems.PrefabPlaceEntityEventSystem());
       entityStoreRegistry.registerSystem(new NPCVelocityInstructionSystem());
       this.getEntityStoreRegistry().registerSystem(new NPCPlugin.NPCEntityRegenerateStatsSystem());
-   }
-
-   public void onSchemaGenerate(@Nonnull GenerateSchemaEvent event) {
-      Schema schema = this.builderManager.generateSchema(event.getContext());
-      event.addSchema("NPCRole.json", schema);
-      event.addSchemaLink("NPCRole", List.of("NPC/Roles/*.json", "NPC/Roles/**/*.json"), null);
-      Schema.HytaleMetadata hytale = schema.getHytale();
-      hytale.setPath("NPC/Roles");
-      hytale.setExtension(".json");
-      schema.setId("NPCRole.json");
-      schema.setTitle("NPCRole");
    }
 
    @Override

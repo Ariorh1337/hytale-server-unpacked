@@ -14,10 +14,12 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.BlockPosition;
+import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -29,6 +31,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
@@ -250,6 +253,13 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
                ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                playerSpatialResource.getSpatialStructure().collect(this.recordMemoriesParticlesPosition, 75.0, results);
                ParticleUtil.spawnParticleEffect(memoriesGameplayConfig.getMemoriesRecordParticles(), this.recordMemoriesParticlesPosition, results, store);
+               String restoreSoundEvent = memoriesGameplayConfig.getMemoriesRestoreSoundEventId();
+               if (restoreSoundEvent != null) {
+                  int soundEventId = SoundEvent.getAssetMap().getIndex(restoreSoundEvent);
+                  if (soundEventId != 0) {
+                     SoundUtil.playSoundEvent3d(soundEventId, SoundCategory.SFX, this.recordMemoriesParticlesPosition, store);
+                  }
+               }
             }
 
             this.close();

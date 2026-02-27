@@ -20,12 +20,10 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
@@ -359,10 +357,6 @@ public class BlockComponentChunk implements Component<ChunkStore> {
                   int y = ChunkUtil.yFromBlockInColumn(index);
                   int z = ChunkUtil.zFromBlockInColumn(index);
                   holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, ref));
-                  BlockState state = BlockState.getBlockState(holder);
-                  if (state != null) {
-                     state.setPosition(chunk, new Vector3i(x, y, z));
-                  }
                }
             }
 

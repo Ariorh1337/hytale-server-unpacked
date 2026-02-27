@@ -3,18 +3,19 @@ package com.hypixel.hytale.builtin.crafting.window;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.hypixel.hytale.builtin.crafting.CraftingPlugin;
+import com.hypixel.hytale.builtin.crafting.component.BenchBlock;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
-import com.hypixel.hytale.builtin.crafting.state.ProcessingBenchState;
+import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistration;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.window.SetActiveAction;
 import com.hypixel.hytale.protocol.packets.window.TierUpgradeAction;
 import com.hypixel.hytale.protocol.packets.window.WindowAction;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.ProcessingBench;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
@@ -22,8 +23,8 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemContainerWindow;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.HashSet;
 import java.util.Set;
@@ -31,6 +32,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ProcessingBenchWindow extends BenchWindow implements ItemContainerWindow {
+   @Nonnull
+   private final ProcessingBenchBlock processingBenchState;
+   @Nullable
+   private final BlockModule.BlockStateInfo blockStateInfo;
    private CombinedItemContainer itemContainer;
    @Nullable
    private EventRegistration<?, ?> inventoryRegistration;
@@ -43,9 +48,20 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
    @Nonnull
    private final Set<Short> processingFuelSlots = new HashSet<>();
 
-   public ProcessingBenchWindow(@Nonnull ProcessingBenchState benchState) {
-      super(WindowType.Processing, benchState);
-      ProcessingBench processingBench = (ProcessingBench)this.blockType.getBench();
+   public ProcessingBenchWindow(
+      @Nonnull ProcessingBenchBlock benchState,
+      @Nonnull BenchBlock benchBlock,
+      @Nullable BlockModule.BlockStateInfo blockStateInfo,
+      int x,
+      int y,
+      int z,
+      int rotationIndex,
+      @Nonnull BlockType blockType
+   ) {
+      super(WindowType.Processing, x, y, z, rotationIndex, blockType, benchBlock);
+      this.processingBenchState = benchState;
+      this.blockStateInfo = blockStateInfo;
+      ProcessingBench processingBench = (ProcessingBench)blockType.getBench();
       CraftingRecipe recipe = benchState.getRecipe();
       float inputProgress = benchState.getInputProgress();
       float progress = recipe != null && recipe.getTimeSeconds() > 0.0F ? inputProgress / recipe.getTimeSeconds() : 0.0F;
@@ -170,28 +186,26 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
 
    @Override
    public void handleAction(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull WindowAction action) {
-      World world = store.getExternalData().getWorld();
-      if (world.getChunk(ChunkUtil.indexChunkFromBlock(this.x, this.z)).getState(this.x, this.y, this.z) instanceof ProcessingBenchState benchState) {
-         switch (action) {
-            case SetActiveAction setActiveAction:
-               if (!benchState.setActive(setActiveAction.state)) {
-                  this.invalidate();
+      ProcessingBenchBlock benchState = this.processingBenchState;
+      switch (action) {
+         case SetActiveAction setActiveAction:
+            if (!benchState.setActive(setActiveAction.state, this.benchBlock, this.blockStateInfo)) {
+               this.invalidate();
+            }
+            break;
+         case TierUpgradeAction ignored:
+            label17: {
+               CraftingManager craftingManager = store.getComponent(ref, CraftingManager.getComponentType());
+               if (craftingManager == null) {
+                  return;
                }
-               break;
-            case TierUpgradeAction ignored:
-               label20: {
-                  CraftingManager craftingManager = store.getComponent(ref, CraftingManager.getComponentType());
-                  if (craftingManager == null) {
-                     return;
-                  }
 
-                  if (craftingManager.startTierUpgrade(ref, store, this) && this.bench.getBenchUpgradeSoundEventIndex() != 0) {
-                     SoundUtil.playSoundEvent3d(this.bench.getBenchUpgradeSoundEventIndex(), SoundCategory.SFX, this.x + 0.5, this.y + 0.5, this.z + 0.5, store);
-                  }
-                  break label20;
+               if (craftingManager.startTierUpgrade(ref, store, this) && this.bench.getBenchUpgradeSoundEventIndex() != 0) {
+                  SoundUtil.playSoundEvent3d(this.bench.getBenchUpgradeSoundEventIndex(), SoundCategory.SFX, this.x + 0.5, this.y + 0.5, this.z + 0.5, store);
                }
-            default:
-         }
+               break label17;
+            }
+         default:
       }
    }
 
@@ -235,9 +249,7 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
       super.updateBenchTierLevel(newValue);
       this.updateInputSlots(newValue);
       this.updateOutputSlots(newValue);
-      if (this.benchState instanceof ProcessingBenchState processingBenchState) {
-         this.itemContainer = processingBenchState.getItemContainer();
-      }
+      this.itemContainer = this.processingBenchState.getItemContainer();
    }
 
    @Override

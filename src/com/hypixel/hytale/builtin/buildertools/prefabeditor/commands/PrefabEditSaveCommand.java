@@ -33,6 +33,8 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
    @Nonnull
    private static final Message MESSAGE_PATH_OUTSIDE_PREFABS_DIR = Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir");
    @Nonnull
+   private static final Message MESSAGE_NOT_IN_EDIT_WORLD = Message.translation("server.commands.editprefab.notInEditWorldWarning");
+   @Nonnull
    private final FlagArg saveAllArg = this.withFlagArg("saveAll", "server.commands.editprefab.save.saveAll.desc").addAliases("all");
    @Nonnull
    private final FlagArg noEntitiesArg = this.withFlagArg("noEntities", "server.commands.editprefab.save.noEntities.desc");
@@ -72,6 +74,11 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
       PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
       if (prefabEditSession == null) {
          context.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_NOT_IN_EDIT_SESSION);
+         return CompletableFuture.completedFuture(null);
+      }
+
+      if (!prefabEditSessionManager.isInEditWorld(playerRef, store)) {
+         context.sendMessage(MESSAGE_NOT_IN_EDIT_WORLD);
          return CompletableFuture.completedFuture(null);
       }
 

@@ -10,16 +10,19 @@ import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockRotation;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
-import com.hypixel.hytale.protocol.packets.connection.Disconnect;
+import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
 import com.hypixel.hytale.protocol.packets.entities.MountMovement;
+import com.hypixel.hytale.protocol.packets.entities.PlayEmote;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChains;
 import com.hypixel.hytale.protocol.packets.interface_.ChatMessage;
@@ -61,6 +64,10 @@ import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.console.ConsoleModule;
+import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
+import com.hypixel.hytale.server.core.cosmetics.Emote;
+import com.hypixel.hytale.server.core.cosmetics.EmoteAsset;
+import com.hypixel.hytale.server.core.entity.AnimationUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ValidatedWindow;
@@ -110,6 +117,7 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -166,8 +174,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    protected void registerHandlers() {
-      this.registerHandler(1, p -> this.handle((Disconnect)p));
-      this.registerHandler(3, p -> this.handlePong((Pong)p));
+      this.registerHandler(1, p -> this.handle((ClientDisconnect)p));
+      this.registerHandler(4, p -> this.handlePong((Pong)p));
       this.registerHandler(108, p -> this.handle((ClientMovement)p));
       this.registerHandler(211, p -> this.handle((ChatMessage)p));
       this.registerHandler(23, p -> this.handle((RequestAssets)p));
@@ -184,6 +192,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       IWorldPacketHandler.registerHandler(this, 262, this::handleUpdateMachinimaScene);
       this.registerHandler(105, p -> this.handle((ClientReady)p));
       IWorldPacketHandler.registerHandler(this, 166, this::handleMountMovement);
+      IWorldPacketHandler.registerHandler(this, 167, this::handlePlayEmote);
       IWorldPacketHandler.registerHandler(this, 116, this::handleSyncPlayerPreferences);
       IWorldPacketHandler.registerHandler(this, 117, this::handleClientPlaceBlock);
       IWorldPacketHandler.registerHandler(this, 119, this::handleRemoveMapMarker);
@@ -207,7 +216,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    @Override
-   public void disconnect(@Nonnull String message) {
+   public void disconnect(@Nonnull FormattedMessage message) {
       this.disconnectReason.setServerDisconnectReason(message);
       if (this.playerRef != null) {
          HytaleLogger.getLogger()
@@ -217,7 +226,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                this.playerRef.getUsername(),
                NettyUtil.formatRemoteAddress(this.getChannel()),
                this.getSniHostname(),
-               message
+               MessageUtil.formatMessageToPlainString(message)
             );
          this.disconnect0(message);
          Universe.get().removePlayer(this.playerRef);
@@ -226,7 +235,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       }
    }
 
-   public void handle(@Nonnull Disconnect packet) {
+   public void handle(@Nonnull ClientDisconnect packet) {
       this.disconnectReason.setClientDisconnectType(packet.type);
       HytaleLogger.getLogger()
          .at(Level.INFO)
@@ -236,7 +245,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             this.playerRef.getUsername(),
             NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
-            packet.reason
+            packet.reason.name()
          );
       ProtocolUtil.closeApplicationConnection(this.getChannel());
    }
@@ -275,67 +284,61 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                            }
 
                            PendingTeleport pendingTeleport = store.getComponent(ref, PendingTeleport.getComponentType());
-                           if (pendingTeleport != null) {
-                              if (packet.teleportAck == null) {
-                                 return;
-                              }
+                           label76:
+                           if (pendingTeleport == null) {
+                              if (packet.mountedTo == playerInputComponent.getMountId()) {
+                                 if (packet.mountedTo != 0 && packet.riderMovementStates != null) {
+                                    playerInputComponent.queue(new PlayerInput.SetRiderMovementStates(packet.riderMovementStates));
+                                 }
 
+                                 if (packet.bodyOrientation != null) {
+                                    playerInputComponent.queue(new PlayerInput.SetBody(packet.bodyOrientation));
+                                 }
+
+                                 if (packet.lookOrientation != null) {
+                                    playerInputComponent.queue(new PlayerInput.SetHead(packet.lookOrientation));
+                                 }
+
+                                 if (packet.wishMovement != null) {
+                                    playerInputComponent.queue(
+                                       new PlayerInput.WishMovement(packet.wishMovement.x, packet.wishMovement.y, packet.wishMovement.z)
+                                    );
+                                 }
+
+                                 if (packet.absolutePosition != null) {
+                                    playerInputComponent.queue(
+                                       new PlayerInput.AbsoluteMovement(packet.absolutePosition.x, packet.absolutePosition.y, packet.absolutePosition.z)
+                                    );
+                                 } else if (packet.relativePosition != null
+                                    && (
+                                       packet.relativePosition.x != 0
+                                          || packet.relativePosition.y != 0
+                                          || packet.relativePosition.z != 0
+                                          || packet.movementStates != null
+                                    )) {
+                                    playerInputComponent.queue(
+                                       new PlayerInput.RelativeMovement(
+                                          packet.relativePosition.x / 10000.0, packet.relativePosition.y / 10000.0, packet.relativePosition.z / 10000.0
+                                       )
+                                    );
+                                 }
+                              }
+                           } else if (packet.teleportAck != null) {
                               switch (pendingTeleport.validate(packet.teleportAck.teleportId, packet.absolutePosition)) {
                                  case OK:
                                  default:
                                     if (!pendingTeleport.isEmpty()) {
                                        return;
+                                    } else {
+                                       store.removeComponent(ref, PendingTeleport.getComponentType());
+                                       break label76;
                                     }
-
-                                    store.removeComponent(ref, PendingTeleport.getComponentType());
-                                    break;
                                  case INVALID_ID:
                                     this.disconnect("Incorrect teleportId");
                                     return;
                                  case INVALID_POSITION:
                                     this.disconnect("Invalid teleport");
-                                    return;
                               }
-                           }
-
-                           if (packet.mountedTo != 0) {
-                              if (packet.mountedTo != playerInputComponent.getMountId()) {
-                                 return;
-                              }
-
-                              if (packet.riderMovementStates != null) {
-                                 playerInputComponent.queue(new PlayerInput.SetRiderMovementStates(packet.riderMovementStates));
-                              }
-                           }
-
-                           if (packet.bodyOrientation != null) {
-                              playerInputComponent.queue(new PlayerInput.SetBody(packet.bodyOrientation));
-                           }
-
-                           if (packet.lookOrientation != null) {
-                              playerInputComponent.queue(new PlayerInput.SetHead(packet.lookOrientation));
-                           }
-
-                           if (packet.wishMovement != null) {
-                              playerInputComponent.queue(new PlayerInput.WishMovement(packet.wishMovement.x, packet.wishMovement.y, packet.wishMovement.z));
-                           }
-
-                           if (packet.absolutePosition != null) {
-                              playerInputComponent.queue(
-                                 new PlayerInput.AbsoluteMovement(packet.absolutePosition.x, packet.absolutePosition.y, packet.absolutePosition.z)
-                              );
-                           } else if (packet.relativePosition != null
-                              && (
-                                 packet.relativePosition.x != 0
-                                    || packet.relativePosition.y != 0
-                                    || packet.relativePosition.z != 0
-                                    || packet.movementStates != null
-                              )) {
-                              playerInputComponent.queue(
-                                 new PlayerInput.RelativeMovement(
-                                    packet.relativePosition.x / 10000.0, packet.relativePosition.y / 10000.0, packet.relativePosition.z / 10000.0
-                                 )
-                              );
                            }
                         }
                      }
@@ -349,7 +352,11 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    public void handle(@Nonnull ChatMessage packet) {
-      if (packet.message != null && !packet.message.isEmpty()) {
+      if (packet.message == null || packet.message.isEmpty()) {
+         this.disconnect("Invalid chat message packet! Message was empty.");
+      } else if (MessageUtil.containsControlCharacters(packet.message)) {
+         this.playerRef.sendMessage(Message.translation("server.io.gamepackethandler.invalidMessageContent").param("msg", packet.message));
+      } else {
          String message = packet.message;
          char firstChar = message.charAt(0);
          if (firstChar == '/') {
@@ -387,8 +394,6 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                   }
                );
          }
-      } else {
-         this.disconnect("Invalid chat message packet! Message was empty.");
       }
    }
 
@@ -739,6 +744,19 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          MovementStatesComponent movementStatesComponent = store.getComponent(entityReference, MovementStatesComponent.getComponentType());
          assert movementStatesComponent != null;
          movementStatesComponent.setMovementStates(packet.movementStates);
+      }
+   }
+
+   public void handlePlayEmote(
+      @Nonnull PlayEmote packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
+      if (packet.emoteId != null && !packet.emoteId.isEmpty()) {
+         Map<String, Emote> builtinEmotes = CosmeticsModule.get().getRegistry().getEmotesInGame();
+         if (builtinEmotes.get(packet.emoteId) != null || EmoteAsset.getAssetMap().getAsset(packet.emoteId) != null) {
+            AnimationUtils.playAnimation(ref, AnimationSlot.Emote, null, packet.emoteId, true, store);
+         }
+      } else {
+         AnimationUtils.stopAnimation(ref, AnimationSlot.Emote, true, store);
       }
    }
 

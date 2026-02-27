@@ -24,9 +24,11 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -36,6 +38,7 @@ import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PickupItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
@@ -271,6 +274,13 @@ public class NPCMemory extends Memory {
                                  pickupItemComponent.setInitialLifeTime(0.62F);
                                  commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
                                  displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, npcRef, commandBuffer);
+                                 String memoriesCatchSoundEventId = memoriesGameplayConfig.getMemoriesCatchSoundEventId();
+                                 if (memoriesCatchSoundEventId != null) {
+                                    int soundEventIndex = SoundEvent.getAssetMap().getIndex(memoriesCatchSoundEventId);
+                                    if (soundEventIndex != 0) {
+                                       SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, npcTransformComponent.getPosition(), commandBuffer);
+                                    }
+                                 }
                               }
                            }
                         }

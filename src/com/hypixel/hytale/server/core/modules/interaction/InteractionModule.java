@@ -113,7 +113,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.ser
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.CheckUniqueItemUsageInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.ClearEntityEffectInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DestroyConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DoorInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.EquipItemInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.IncreaseBackpackCapacityInteraction;
@@ -275,7 +274,6 @@ public class InteractionModule extends JavaPlugin {
       Interaction.CODEC.register("LaunchPad", LaunchPadInteraction.class, LaunchPadInteraction.CODEC);
       Interaction.CODEC.register("OpenContainer", OpenContainerInteraction.class, OpenContainerInteraction.CODEC);
       Interaction.CODEC.register("OpenItemStackContainer", OpenItemStackContainerInteraction.class, OpenItemStackContainerInteraction.CODEC);
-      Interaction.CODEC.register("DestroyCondition", DestroyConditionInteraction.class, DestroyConditionInteraction.CODEC);
       Interaction.CODEC.register("OpenCustomUI", OpenCustomUIInteraction.class, OpenCustomUIInteraction.CODEC);
       Interaction.CODEC.register("OpenPage", OpenPageInteraction.class, OpenPageInteraction.CODEC);
       Interaction.CODEC.register("ApplyEffect", ApplyEffectInteraction.class, ApplyEffectInteraction.CODEC);

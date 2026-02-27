@@ -10,6 +10,7 @@ import com.hypixel.hytale.component.data.change.DataChange;
 import com.hypixel.hytale.component.data.change.SystemChange;
 import com.hypixel.hytale.component.data.unknown.UnknownComponents;
 import com.hypixel.hytale.component.event.EntityEventType;
+import com.hypixel.hytale.component.event.EntityHolderEventType;
 import com.hypixel.hytale.component.event.WorldEventType;
 import com.hypixel.hytale.component.metric.ArchetypeChunkData;
 import com.hypixel.hytale.component.metric.SystemMetricData;
@@ -18,6 +19,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.ArchetypeChunkSystem;
 import com.hypixel.hytale.component.system.EcsEvent;
 import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.component.system.EntityHolderEventSystem;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.ISystem;
 import com.hypixel.hytale.component.system.MetricSystem;
@@ -1532,6 +1534,45 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    }
 
    @Override
+   public <Event extends EcsEvent> void invoke(@Nonnull Holder<ECS_TYPE> holder, @Nonnull Event param) {
+      EntityHolderEventType<ECS_TYPE, ?> eventType = this.registry.getEntityHolderEventTypeForClass(param.getClass());
+      if (eventType != null) {
+         ((Store<ECS_TYPE>)this).invoke(eventType, holder, param);
+      }
+   }
+
+   @Override
+   public <Event extends EcsEvent> void invoke(
+      @Nonnull EntityHolderEventType<ECS_TYPE, Event> systemType, @Nonnull Holder<ECS_TYPE> holder, @Nonnull Event param
+   ) {
+      if (this.shutdown) {
+         throw new IllegalStateException("Store is shutdown!");
+      }
+
+      this.assertThread();
+      ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
+      CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
+      BitSet systemIndexes = data.getSystemIndexesForType(systemType);
+      this.processing.lock();
+
+      try {
+         Archetype<ECS_TYPE> archetype = holder.getArchetype();
+         int systemIndex = -1;
+
+         while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
+            EntityHolderEventSystem<ECS_TYPE, Event> system = data.getSystem(systemIndex, systemType);
+            if (system.getQuery() != null && system.getQuery().test(archetype)) {
+               system.handleInternal(holder, this, commandBuffer, param);
+            }
+         }
+      } finally {
+         this.processing.unlock();
+      }
+
+      commandBuffer.consume();
+   }
+
+   @Override
    public <Event extends EcsEvent> void invoke(@Nonnull Event param) {
       WorldEventType<ECS_TYPE, ?> eventType = this.registry.getWorldEventTypeForClass(param.getClass());
       if (eventType != null) {
@@ -1602,6 +1643,29 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       }
 
       commandBuffer.mergeParallel(sourceCommandBuffer);
+   }
+
+   protected <Event extends EcsEvent> void internal_invoke(CommandBuffer<ECS_TYPE> sourceCommandBuffer, Holder<ECS_TYPE> holder, Event param) {
+      EntityHolderEventType<ECS_TYPE, ?> eventType = this.registry.getEntityHolderEventTypeForClass(param.getClass());
+      if (eventType != null) {
+         ((Store<ECS_TYPE>)this).internal_invoke(sourceCommandBuffer, eventType, holder, param);
+      }
+   }
+
+   protected <Event extends EcsEvent> void internal_invoke(
+      CommandBuffer<ECS_TYPE> commandBuffer, @Nonnull EntityHolderEventType<ECS_TYPE, Event> systemType, Holder<ECS_TYPE> holder, Event param
+   ) {
+      ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
+      BitSet systemIndexes = data.getSystemIndexesForType(systemType);
+      Archetype<ECS_TYPE> archetype = holder.getArchetype();
+      int systemIndex = -1;
+
+      while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
+         EntityHolderEventSystem<ECS_TYPE, Event> system = data.getSystem(systemIndex, systemType);
+         if (system.getQuery() != null && system.getQuery().test(archetype)) {
+            system.handleInternal(holder, this, commandBuffer, param);
+         }
+      }
    }
 
    protected <Event extends EcsEvent> void internal_invoke(CommandBuffer<ECS_TYPE> sourceCommandBuffer, Event param) {
@@ -2007,7 +2071,13 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       int oldChunkEntityRef = this.entityChunkIndex[entityIndex];
       Holder<ECS_TYPE> holder = this.registry._internal_newEntityHolder();
       fromArchetypeChunk.removeEntity(oldChunkEntityRef, holder);
-      holder.addComponent(componentType, component);
+      if (!holder.addComponentInternal(componentType, component)) {
+         int chunkEntityRef = fromArchetypeChunk.addEntity(ref, holder);
+         this.entityToArchetypeChunk[entityIndex] = fromArchetypeIndex;
+         this.entityChunkIndex[entityIndex] = chunkEntityRef;
+         throw new IllegalArgumentException("Entity already contains component type: " + componentType);
+      }
+
       int toArchetypeIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
       ArchetypeChunk<ECS_TYPE> toArchetypeChunk = this.archetypeChunks[toArchetypeIndex];
       int chunkEntityRef = toArchetypeChunk.addEntity(ref, holder);

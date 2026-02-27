@@ -467,6 +467,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
          (item, parent) -> item.renderDeployablePreview = parent.renderDeployablePreview
       )
       .add()
+      .addField(new KeyedCodec<>("HudUI", new ArrayCodec<>(ItemHudUI.CODEC, ItemHudUI[]::new)), (item, s) -> item.hudUI = s, item -> item.hudUI)
       .appendInherited(
          new KeyedCodec<>("DropOnDeath", Codec.BOOLEAN),
          (item, aBoolean) -> item.dropOnDeath = aBoolean,
@@ -549,6 +550,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected ItemPullbackConfig pullbackConfig;
    protected boolean clipsGeometry;
    protected boolean renderDeployablePreview;
+   protected ItemHudUI[] hudUI;
    protected boolean dropOnDeath;
    protected boolean durabilityLossOnDeath = true;
    private transient SoftReference<ItemBase> cachedPacket;
@@ -791,6 +793,14 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
       packet.clipsGeometry = this.clipsGeometry;
       packet.renderDeployablePreview = this.renderDeployablePreview;
+      if (this.hudUI != null && this.hudUI.length > 0) {
+         packet.hudUI = new com.hypixel.hytale.protocol.ItemHudUI[this.hudUI.length];
+
+         for (int i = 0; i < this.hudUI.length; i++) {
+            packet.hudUI[i] = this.hudUI[i].toPacket();
+         }
+      }
+
       this.cachedPacket = new SoftReference<>(packet);
       return packet;
    }

@@ -9,6 +9,7 @@ import com.hypixel.hytale.builtin.buildertools.tooloperations.transform.Transfor
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.predicate.TriIntObjPredicate;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.block.BlockConeUtil;
 import com.hypixel.hytale.math.block.BlockCubeUtil;
 import com.hypixel.hytale.math.block.BlockCylinderUtil;
@@ -20,6 +21,7 @@ import com.hypixel.hytale.math.block.BlockSphereUtil;
 import com.hypixel.hytale.math.block.BlockTorusUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.protocol.Rotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushOrigin;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushShape;
@@ -46,6 +48,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class ToolOperation implements TriIntObjPredicate<Void> {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    protected static final int RANDOM_MAX = 100;
    @Nonnull
    public static final Map<String, OperationFactory> OPERATIONS = new ConcurrentHashMap<>();
@@ -78,8 +81,11 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    protected final Ref<EntityStore> playerRef;
    @Nonnull
    protected final BuilderToolsPlugin.BuilderState builderState;
-   private final Transform transform;
+   private Transform transform;
    private final Vector3i vector = new Vector3i();
+   protected int currentCenterX;
+   protected int currentCenterY;
+   protected int currentCenterZ;
    @Nullable
    private final BlockMask mask;
 
@@ -158,6 +164,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       this.originOffsetY = offsets.getY();
       this.originOffsetZ = offsets.getZ();
       this.random = this.builderState.getRandom();
+      this.currentCenterX = this.x;
+      this.currentCenterY = this.y;
+      this.currentCenterZ = this.z;
       Vector3i brushMin = new Vector3i(this.x - this.shapeRange, this.y - this.shapeHeight, this.z - this.shapeRange);
       Vector3i brushMax = new Vector3i(this.x + this.shapeRange, this.y + this.shapeHeight, this.z + this.shapeRange);
       this.edit = new EditOperation(world, this.x, this.y, this.z, this.shapeRange, brushMin, brushMax, this.mask);
@@ -234,12 +243,37 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       return this.args.tool().get("BrushDensity") instanceof Number number ? number.intValue() : 100;
    }
 
+   public Transform getBrushRotation(ComponentAccessor<EntityStore> componentAccessor) {
+      Object rotationValue = this.args.tool().get("RotationFace");
+      Transform transform = Transform.NONE;
+      if (rotationValue instanceof String rotationSelection) {
+         if (rotationSelection.equalsIgnoreCase("down")) {
+            transform = Rotate.forAxisAndAngle(BrushAxis.X, Rotation.OneEighty);
+         } else if (rotationSelection.equalsIgnoreCase("north")) {
+            transform = Rotate.forAxisAndAngle(BrushAxis.X, Rotation.TwoSeventy);
+         } else if (rotationSelection.equalsIgnoreCase("south")) {
+            transform = Rotate.forAxisAndAngle(BrushAxis.X, Rotation.Ninety);
+         } else if (rotationSelection.equalsIgnoreCase("east")) {
+            transform = Rotate.forAxisAndAngle(BrushAxis.Z, Rotation.TwoSeventy);
+         } else if (rotationSelection.equalsIgnoreCase("west")) {
+            transform = Rotate.forAxisAndAngle(BrushAxis.Z, Rotation.Ninety);
+         } else if (rotationSelection.equalsIgnoreCase("camera")) {
+            HeadRotation headRotationComponent = componentAccessor.getComponent(this.playerRef, HeadRotation.getComponentType());
+            assert headRotationComponent != null;
+            transform = Rotate.forDirection(headRotationComponent.getAxisDirection(), Rotation.None);
+         }
+      }
+
+      return transform;
+   }
+
    public void executeAsBrushConfig(
       @Nonnull PrototypePlayerBuilderToolSettings prototypePlayerBuilderToolSettings,
       @Nonnull BuilderToolOnUseInteraction packet,
       ComponentAccessor<EntityStore> componentAccessor
    ) {
       World world = componentAccessor.getExternalData().getWorld();
+      prototypePlayerBuilderToolSettings.setUndoGroupSize(packet.undoGroupSize);
       prototypePlayerBuilderToolSettings.getBrushConfigCommandExecutor()
          .execute(this.playerRef, world, new Vector3i(this.x, this.y, this.z), packet.isHoldDownInteraction, packet.type, bc -> {
             bc.setPattern(this.pattern);
@@ -248,6 +282,8 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
             bc.setShapeWidth(this.shapeRange);
             bc.setShape(this.shape);
             bc.setCapped(this.capped);
+            bc.setTransform(this.getBrushRotation(componentAccessor));
+            bc.setTransformOrigin(new Vector3i(this.x, this.y, this.z));
             bc.modifyOriginOffset(new Vector3i(this.originOffsetX, this.originOffsetY, this.originOffsetZ));
             bc.setBrushMask(this.mask);
             bc.setShapeThickness(this.shapeThickness);
@@ -316,12 +352,16 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          return this.execute0(x, y + this.originOffsetY, z);
       }
 
-      this.vector.assign(x - this.x, y - this.y, z - this.z);
+      this.vector.assign(x - this.currentCenterX, y - this.currentCenterY, z - this.currentCenterZ);
       this.transform.apply(this.vector);
-      x = this.x + this.originOffsetX + this.vector.x;
-      y = this.y + this.originOffsetY + this.vector.y;
-      z = this.z + this.originOffsetZ + this.vector.z;
+      x = this.currentCenterX + this.originOffsetX + this.vector.x;
+      y = this.currentCenterY + this.originOffsetY + this.vector.y;
+      z = this.currentCenterZ + this.originOffsetZ + this.vector.z;
       return this.execute0(x, y, z);
+   }
+
+   public boolean showEditNotification() {
+      return true;
    }
 
    abstract boolean execute0(int var1, int var2, int var3);
@@ -331,6 +371,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    }
 
    public void executeAt(int posX, int posY, int posZ, ComponentAccessor<EntityStore> componentAccessor) {
+      this.currentCenterX = posX;
+      this.currentCenterY = posY;
+      this.currentCenterZ = posZ;
       executeShapeOperation(posX, posY, posZ, this, this.shape, this.shapeRange, this.shapeHeight, this.shapeThickness, this.capped);
    }
 
@@ -502,5 +545,6 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       OPERATIONS.put("Sculpt", SculptOperation::new);
       OPERATIONS.put("Layers", LayersOperation::new);
       OPERATIONS.put("LaserPointer", LaserPointerOperation::new);
+      OPERATIONS.put("Revolve", RevolveOperation::new);
    }
 }

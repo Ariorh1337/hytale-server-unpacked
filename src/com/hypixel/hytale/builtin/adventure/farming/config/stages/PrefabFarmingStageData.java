@@ -259,7 +259,7 @@ public class PrefabFarmingStageData extends FarmingStageData {
 
                                     nonTickingChunk.setBlock(bx, by, bz, blockId, block, rotation, filler, updatedSetBlockSettings);
                                     if (stateWrapper != null) {
-                                       nonTickingChunk.setState(bx, by, bz, stateWrapper.clone());
+                                       nonTickingChunk.setState(bx, by, bz, block, rotation, stateWrapper.clone());
                                     }
                                  } else if (secondBlockId != 0 && secondBlockId != Integer.MIN_VALUE) {
                                     nonTickingChunk.breakBlock(bx, by, bz, updatedSetBlockSettings);
@@ -336,7 +336,7 @@ public class PrefabFarmingStageData extends FarmingStageData {
 
                                     nonTickingWorldChunkComponent.setBlock(bx, by, bz, blockId, blockTypeAsset, rotation, filler, 2);
                                     if (holder != null) {
-                                       nonTickingWorldChunkComponent.setState(bx, by, bz, holder.clone());
+                                       nonTickingWorldChunkComponent.setState(bx, by, bz, blockTypeAsset, rotation, holder.clone());
                                     }
                                  }
                               }

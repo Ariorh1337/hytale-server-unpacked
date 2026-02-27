@@ -29,6 +29,8 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public class PrefabEditSaveAsCommand extends AbstractAsyncPlayerCommand {
+   @Nonnull
+   private static final Message MESSAGE_NOT_IN_EDIT_WORLD = Message.translation("server.commands.editprefab.notInEditWorldWarning");
    private final RequiredArg<String> fileNameArg = this.withRequiredArg("fileNameArg", "server.commands.editprefab.save.saveAs.desc", ArgTypes.STRING);
    private final DefaultArg<PrefabRootDirectory> prefabPathArg = this.withDefaultArg(
       "prefabPath",
@@ -59,6 +61,11 @@ public class PrefabEditSaveAsCommand extends AbstractAsyncPlayerCommand {
       PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(uuid);
       if (prefabEditSession == null) {
          context.sendMessage(Message.translation("server.commands.editprefab.notInEditSession"));
+         return CompletableFuture.completedFuture(null);
+      }
+
+      if (!prefabEditSessionManager.isInEditWorld(playerRef, store)) {
+         context.sendMessage(MESSAGE_NOT_IN_EDIT_WORLD);
          return CompletableFuture.completedFuture(null);
       }
 

@@ -42,7 +42,6 @@ import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.asset.AssetModule;
-import com.hypixel.hytale.server.core.asset.GenerateSchemaEvent;
 import com.hypixel.hytale.server.core.asset.LoadAssetEvent;
 import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -60,6 +59,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.schema.SchemaGenerator;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -122,7 +122,18 @@ public class InstancesPlugin extends JavaPlugin {
       ComponentRegistryProxy<ChunkStore> chunkStoreRegistry = this.getChunkStoreRegistry();
       this.getCommandRegistry().registerCommand(new InstancesCommand());
       eventRegistry.register((short)64, LoadAssetEvent.class, this::validateInstanceAssets);
-      eventRegistry.register(GenerateSchemaEvent.class, InstancesPlugin::generateSchema);
+      SchemaGenerator.registerAssetSchema("InstanceConfig.json", ctx -> {
+         ObjectSchema worldConfig = WorldConfig.CODEC.toSchema(ctx);
+         Map<String, Schema> props = worldConfig.getProperties();
+         props.put("UUID", Schema.anyOf(new StringSchema(), new ObjectSchema()));
+         worldConfig.setTitle("Instance Configuration");
+         worldConfig.setId("InstanceConfig.json");
+         Schema.HytaleMetadata hytale = worldConfig.getHytale();
+         hytale.setPath("Instances");
+         hytale.setExtension("instance.bson");
+         hytale.setUiEditorIgnore(Boolean.TRUE);
+         return worldConfig;
+      }, List.of("Instances/**/instance.bson"), ".bson");
       eventRegistry.registerGlobal(AddPlayerToWorldEvent.class, InstancesPlugin::onPlayerAddToWorld);
       eventRegistry.registerGlobal(DrainPlayerFromWorldEvent.class, InstancesPlugin::onPlayerDrainFromWorld);
       eventRegistry.register(PlayerConnectEvent.class, InstancesPlugin::onPlayerConnect);
@@ -542,23 +553,6 @@ public class InstancesPlugin extends JavaPlugin {
       }
    }
 
-   private static void generateSchema(@Nonnull GenerateSchemaEvent event) {
-      ObjectSchema worldConfig = WorldConfig.CODEC.toSchema(event.getContext());
-      Map<String, Schema> props = worldConfig.getProperties();
-      props.put("UUID", Schema.anyOf(new StringSchema(), new ObjectSchema()));
-      worldConfig.setTitle("Instance Configuration");
-      worldConfig.setId("InstanceConfig.json");
-      Schema.HytaleMetadata hytaleMetadata = worldConfig.getHytale();
-      if (hytaleMetadata != null) {
-         hytaleMetadata.setPath("Instances");
-         hytaleMetadata.setExtension("instance.bson");
-         hytaleMetadata.setUiEditorIgnore(Boolean.TRUE);
-      }
-
-      event.addSchema("InstanceConfig.json", worldConfig);
-      event.addSchemaLink("InstanceConfig", List.of("Instances/**/instance.bson"), ".bson");
-   }
-
    private void validateInstanceAssets(@Nonnull LoadAssetEvent event) {
       Path path = AssetModule.get().getBaseAssetPack().getRoot().resolve("Server").resolve("Instances");
       if (Options.getOptionSet().has(Options.VALIDATE_ASSETS) && Files.isDirectory(path) && !event.isShouldShutdown()) {
@@ -587,7 +581,7 @@ public class InstancesPlugin extends JavaPlugin {
             try {
                World world = universe.makeWorld(worldName, instancePath, config, false).join();
                EnumSet<ValidationOption> options = EnumSet.of(ValidationOption.BLOCK_STATES, ValidationOption.BLOCKS);
-               world.validate(sb, WorldValidationUtil.blockValidator(errors, options), options);
+               world.validate(sb, WorldValidationUtil.blockValidator(sb, options), options);
             } catch (Exception e) {
                sb.append("\t").append(e.getMessage());
                this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to validate: " + name);

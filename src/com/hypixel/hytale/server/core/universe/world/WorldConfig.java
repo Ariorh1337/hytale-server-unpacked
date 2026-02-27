@@ -393,12 +393,16 @@ public class WorldConfig {
       return this.isPvpEnabled;
    }
 
+   public void setPvpEnabled(boolean pvpEnabled) {
+      this.isPvpEnabled = pvpEnabled;
+   }
+
    public boolean isFallDamageEnabled() {
       return this.isFallDamageEnabled;
    }
 
-   public void setPvpEnabled(boolean pvpEnabled) {
-      this.isPvpEnabled = pvpEnabled;
+   public void setFallDamageEnabled(boolean fallDamageEnabled) {
+      this.isFallDamageEnabled = fallDamageEnabled;
    }
 
    public boolean isGameTimePaused() {

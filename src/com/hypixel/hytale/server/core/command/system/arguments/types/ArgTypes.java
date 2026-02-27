@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxColli
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfig;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
+import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -736,7 +737,14 @@ public final class ArgTypes {
       @Nullable
       public BlockMask parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
          try {
-            return BlockMask.parse(input);
+            BlockMask mask = BlockMask.parse(input);
+            if (mask.hasInvalidBlocks()) {
+               BlockFilter.ParsedFilterParts parts = BlockFilter.parseComponents(input);
+               parseResult.fail(Message.translation("server.builderTools.invalidBlockType").param("key", parts.blocks()));
+               return null;
+            } else {
+               return mask;
+            }
          } catch (Exception e) {
             parseResult.fail(Message.raw("There was an error in the parsing of your block mask: " + input + ", please try again."));
             return null;

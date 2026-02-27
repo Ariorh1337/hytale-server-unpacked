@@ -327,6 +327,17 @@ public class CoopBlock implements Component<ChunkStore> {
                      } else if (!this.getCoopAcceptsNPC(resident.metadata.getNpcNameKey())) {
                         residentsToRemove.add(resident);
                      } else {
+                        ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
+                        if (npcComponentType != null && resident.persistentRef != null) {
+                           NPCEntity npcComponent = store.getComponent(entityRef, npcComponentType);
+                           if (npcComponent != null && !resident.getMetadata().getNpcNameKey().equals(npcComponent.getRoleName())) {
+                              CapturedNPCMetadata metadata = FarmingUtil.generateCapturedNPCMetadata(store, entityRef, npcComponent.getRoleName());
+                              if (metadata != null) {
+                                 resident.metadata = metadata;
+                              }
+                           }
+                        }
+
                         coopResidentComponent.setMarkedForDespawn(true);
                         resident.setPersistentRef(null);
                         resident.setDeployedToWorld(false);

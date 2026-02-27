@@ -8,6 +8,11 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetKeyPair;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.time.Duration;
@@ -29,6 +34,8 @@ public class JWTValidator {
    private static final int MIN_SIGNATURE_LENGTH = 80;
    private static final int MAX_SIGNATURE_LENGTH = 90;
    private static final Duration JWKS_REFRESH_MIN_INTERVAL = Duration.ofMinutes(5L);
+   private static final String JWKS_BUNDLED_RESOURCE = "/jwks_bundled.json";
+   private static final String JWKS_CACHE_FILE = ".jwks.json";
    private final SessionServiceClient sessionServiceClient;
    private final String expectedIssuer;
    private final String expectedAudience;
@@ -41,6 +48,7 @@ public class JWTValidator {
       this.sessionServiceClient = sessionServiceClient;
       this.expectedIssuer = expectedIssuer;
       this.expectedAudience = expectedAudience;
+      this.preSeedJwksCache();
    }
 
    @Nullable
@@ -230,6 +238,7 @@ public class JWTValidator {
                JWKSet newSet = new JWKSet(jwkList);
                this.cachedJwkSet = newSet;
                this.lastJwksRefresh = Instant.now();
+               this.saveJwksCacheToDisk(newSet);
                LOGGER.at(Level.INFO).log("JWKS loaded with %d keys (cached permanently)", (int)jwkList.size());
                return newSet;
             }
@@ -277,6 +286,78 @@ public class JWTValidator {
       } catch (Exception e) {
          LOGGER.at(Level.WARNING).withCause(e).log("Failed to parse Ed25519 key");
          return null;
+      }
+   }
+
+   private void preSeedJwksCache() {
+      JWKSet diskCache = this.loadJwksCacheFromDisk();
+      if (diskCache != null) {
+         this.cachedJwkSet = diskCache;
+         LOGGER.at(Level.INFO).log("JWKS pre-seeded from disk cache (%d keys)", (int)diskCache.getKeys().size());
+      } else {
+         JWKSet embedded = this.loadEmbeddedJwks();
+         if (embedded != null) {
+            this.cachedJwkSet = embedded;
+            LOGGER.at(Level.INFO).log("JWKS pre-seeded from embedded resource (%d keys)", (int)embedded.getKeys().size());
+         } else {
+            LOGGER.at(Level.INFO).log("No pre-seeded JWKS available, will fetch from network on first validation");
+         }
+      }
+   }
+
+   @Nullable
+   private JWKSet loadEmbeddedJwks() {
+      try (InputStream is = this.getClass().getResourceAsStream("/jwks_bundled.json")) {
+         if (is == null) {
+            LOGGER.at(Level.FINE).log("No embedded JWKS resource found");
+            return null;
+         } else {
+            String json = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            return JWKSet.parse(json);
+         }
+      } catch (IOException | ParseException e) {
+         LOGGER.at(Level.WARNING).withCause(e).log("Failed to load embedded JWKS");
+         return null;
+      }
+   }
+
+   @Nullable
+   private JWKSet loadJwksCacheFromDisk() {
+      Path cacheFile = Path.of(".jwks.json");
+      if (!Files.exists(cacheFile)) {
+         return null;
+      }
+
+      try {
+         String json = Files.readString(cacheFile, StandardCharsets.UTF_8);
+         JWKSet jwkSet = JWKSet.parse(json);
+         LOGGER.at(Level.FINE).log("Loaded JWKS cache from disk: %s", cacheFile);
+         return jwkSet;
+      } catch (IOException | ParseException e) {
+         LOGGER.at(Level.WARNING).withCause(e).log("Failed to load JWKS cache from disk");
+         return null;
+      }
+   }
+
+   private void saveJwksCacheToDisk(@Nonnull JWKSet jwkSet) {
+      try {
+         Files.writeString(Path.of(".jwks.json"), jwkSet.toString(), StandardCharsets.UTF_8);
+         LOGGER.at(Level.FINE).log("Saved JWKS cache to disk");
+      } catch (IOException e) {
+         LOGGER.at(Level.WARNING).withCause(e).log("Failed to save JWKS cache to disk");
+      }
+   }
+
+   @Nullable
+   public JWTValidator.IdentityTokenClaims validateOfflineToken(@Nonnull String offlineToken) {
+      JWTValidator.IdentityTokenClaims claims = this.validateIdentityToken(offlineToken);
+      if (claims == null) {
+         return null;
+      } else if (!claims.hasScope("hytale:offline")) {
+         LOGGER.at(Level.WARNING).log("Offline token missing required scope: expected %s, got %s", "hytale:offline", claims.scope);
+         return null;
+      } else {
+         return claims;
       }
    }
 

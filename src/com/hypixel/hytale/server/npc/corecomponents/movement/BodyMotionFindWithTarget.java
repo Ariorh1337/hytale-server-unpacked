@@ -252,6 +252,12 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
       return this.lastTargetPosition;
    }
 
+   @Nullable
+   @Override
+   protected Vector3d getSteeringTargetPosition() {
+      return this.haveValidTargetPosition ? this.lastTargetPosition : null;
+   }
+
    protected Vector3d getLastAccessibleTargetPosition(
       @Nonnull MotionController motionController, boolean approximate, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
