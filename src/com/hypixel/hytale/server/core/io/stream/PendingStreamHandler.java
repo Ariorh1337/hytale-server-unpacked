@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.packets.stream.StreamOpenResponse;
 import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.netty.NettyUtil;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -45,27 +46,36 @@ public class PendingStreamHandler extends ChannelInboundHandlerAdapter {
             } else if (!this.streamManager.isSupported(type)) {
                LOGGER.at(Level.INFO).log("Unsupported stream type %s from %s", type.name(), this.packetHandler.getIdentifier());
                ctx.writeAndFlush(new StreamOpenResponse(type, false, "Stream type not supported")).addListener(future -> ctx.close());
-            } else if (this.packetHandler.getChannel(type) != null) {
-               LOGGER.at(Level.WARNING).log("Duplicate stream type %s from %s", type.name(), this.packetHandler.getIdentifier());
-               ctx.writeAndFlush(new StreamOpenResponse(type, false, "Stream type already open")).addListener(future -> ctx.close());
-            } else if (this.packetHandler.getAuxiliaryChannels().size() >= 4) {
-               LOGGER.at(Level.WARNING).log("Maximum auxiliary streams exceeded for %s requesting %s", this.packetHandler.getIdentifier(), type.name());
-               ctx.writeAndFlush(new StreamOpenResponse(type, false, "Maximum auxiliary streams exceeded")).addListener(future -> ctx.close());
             } else {
-               ChannelHandler handler = this.streamManager.createHandler(type, this.packetHandler);
-               if (handler == null) {
-                  LOGGER.at(Level.SEVERE).log("Failed to create handler for stream type %s from %s", type.name(), this.packetHandler.getIdentifier());
-                  ctx.writeAndFlush(new StreamOpenResponse(type, false, "Internal error")).addListener(future -> ctx.close());
-               } else {
-                  LOGGER.at(Level.INFO).log("Opening %s stream for %s", type.name(), this.packetHandler.getIdentifier());
-                  ctx.pipeline().replace(this, type.name() + "Handler", handler);
-                  ctx.pipeline().remove("aux_read_timeout");
-                  this.packetHandler.setChannel(type, ctx.channel());
-                  if (ctx.channel() instanceof QuicStreamChannel quicStreamChannel) {
-                     quicStreamChannel.updatePriority(this.streamManager.getStreamPriority(type));
-                  }
+               Channel existingChannel = this.packetHandler.getChannel(type);
+               if (existingChannel != null) {
+                  LOGGER.at(Level.INFO)
+                     .log(
+                        "Replacing stale %s stream for %s (old channel active=%s)", type.name(), this.packetHandler.getIdentifier(), existingChannel.isActive()
+                     );
+                  this.packetHandler.setChannel(type, null);
+                  existingChannel.close();
+               }
 
-                  ctx.writeAndFlush(new StreamOpenResponse(type, true, null));
+               if (this.packetHandler.getAuxiliaryChannelCount() >= 4) {
+                  LOGGER.at(Level.WARNING).log("Maximum auxiliary streams exceeded for %s requesting %s", this.packetHandler.getIdentifier(), type.name());
+                  ctx.writeAndFlush(new StreamOpenResponse(type, false, "Maximum auxiliary streams exceeded")).addListener(future -> ctx.close());
+               } else {
+                  ChannelHandler handler = this.streamManager.createHandler(type, this.packetHandler);
+                  if (handler == null) {
+                     LOGGER.at(Level.SEVERE).log("Failed to create handler for stream type %s from %s", type.name(), this.packetHandler.getIdentifier());
+                     ctx.writeAndFlush(new StreamOpenResponse(type, false, "Internal error")).addListener(future -> ctx.close());
+                  } else {
+                     LOGGER.at(Level.INFO).log("Opening %s stream for %s", type.name(), this.packetHandler.getIdentifier());
+                     ctx.pipeline().replace(this, type.name() + "Handler", handler);
+                     ctx.pipeline().remove("aux_read_timeout");
+                     this.packetHandler.setChannel(type, ctx.channel());
+                     if (ctx.channel() instanceof QuicStreamChannel quicStreamChannel) {
+                        quicStreamChannel.updatePriority(this.streamManager.getStreamPriority(type));
+                     }
+
+                     ctx.writeAndFlush(new StreamOpenResponse(type, true, null));
+                  }
                }
             }
          } else {

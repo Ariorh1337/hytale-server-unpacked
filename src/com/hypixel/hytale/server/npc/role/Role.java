@@ -15,6 +15,7 @@ import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -124,6 +125,8 @@ public class Role implements IAnnotatedComponentCollection {
    @Nullable
    protected final String[] offHandItems;
    protected final double deathAnimationTime;
+   protected final String deathParticles;
+   protected final boolean dropDeathItemsInstantly;
    protected final float despawnAnimationTime;
    protected final String dropListId;
    @Nullable
@@ -171,6 +174,7 @@ public class Role implements IAnnotatedComponentCollection {
    protected final float spawnLockTime;
    protected final String nameTranslationKey;
    protected boolean backingAway;
+   protected boolean deathItemsDropped;
 
    public Role(@Nonnull BuilderRole builder, @Nonnull BuilderSupport builderSupport) {
       NPCEntity npcComponent = builderSupport.getEntity();
@@ -237,7 +241,9 @@ public class Role implements IAnnotatedComponentCollection {
       this.breathesInAir = builder.isBreathesInAir(builderSupport);
       this.breathesInWater = builder.isBreathesInWater(builderSupport);
       this.pickupDropOnDeath = builder.isPickupDropOnDeath();
-      this.deathAnimationTime = builder.getDeathAnimationTime();
+      this.deathAnimationTime = builder.getDeathAnimationTime(builderSupport);
+      this.deathParticles = builder.getDeathParticles(builderSupport);
+      this.dropDeathItemsInstantly = builder.isDropDeathItemsInstantly(builderSupport);
       this.deathInteraction = builder.getDeathInteraction(builderSupport);
       this.despawnAnimationTime = builder.getDespawnAnimationTime();
       this.inventorySlots = builder.getInventorySlots();
@@ -399,7 +405,7 @@ public class Role implements IAnnotatedComponentCollection {
          stateTransitions.spawned(this);
       }
 
-      this.initialiseInventories(npcComponent);
+      this.initialiseInventories(npcComponent, holder);
    }
 
    public void unloaded() {
@@ -963,6 +969,23 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    @Nullable
+   public String getDeathParticles() {
+      return this.deathParticles;
+   }
+
+   public boolean isDropDeathItemsInstantly() {
+      return this.dropDeathItemsInstantly;
+   }
+
+   public boolean hasDroppedDeathItems() {
+      return this.deathItemsDropped;
+   }
+
+   public void setDeathItemsDropped() {
+      this.deathItemsDropped = true;
+   }
+
+   @Nullable
    public String getDeathInteraction() {
       return this.deathInteraction;
    }
@@ -1072,7 +1095,7 @@ public class Role implements IAnnotatedComponentCollection {
       return this.roleName;
    }
 
-   private void initialiseInventories(@Nonnull NPCEntity npcComponent) {
+   private void initialiseInventories(@Nonnull NPCEntity npcComponent, @Nonnull Holder<EntityStore> holder) {
       List<ItemStack> inventoryItems = null;
       if (this.inventoryContentsDropList != null) {
          ItemModule itemModule = ItemModule.get();
@@ -1083,7 +1106,21 @@ public class Role implements IAnnotatedComponentCollection {
 
       int inventorySlots = inventoryItems != null && inventoryItems.size() > this.inventorySlots ? inventoryItems.size() : this.inventorySlots;
       if (inventorySlots > 0 || this.hotbarSlots > 3 || this.offHandSlots > 0) {
-         npcComponent.setInventorySize(this.hotbarSlots, inventorySlots, this.offHandSlots);
+         ObjectArrayList<ItemStack> remainder = new ObjectArrayList<>();
+         InventoryComponent.Hotbar hotbar = holder.getComponent(InventoryComponent.Hotbar.getComponentType());
+         if (hotbar != null) {
+            hotbar.ensureCapacity((short)this.hotbarSlots, remainder);
+         }
+
+         InventoryComponent.Utility utility = holder.getComponent(InventoryComponent.Utility.getComponentType());
+         if (utility != null) {
+            utility.ensureCapacity((short)this.offHandSlots, remainder);
+         }
+
+         InventoryComponent.Storage storage = holder.getComponent(InventoryComponent.Storage.getComponentType());
+         if (storage != null) {
+            storage.ensureCapacity((short)inventorySlots, remainder);
+         }
       }
 
       if (inventoryItems != null) {
@@ -1094,6 +1131,49 @@ public class Role implements IAnnotatedComponentCollection {
          }
       }
 
+      this.initialiseInventories(npcComponent);
+   }
+
+   private void initialiseInventories(@Nonnull NPCEntity npcComponent, @Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull Ref<EntityStore> ref) {
+      List<ItemStack> inventoryItems = null;
+      if (this.inventoryContentsDropList != null) {
+         ItemModule itemModule = ItemModule.get();
+         if (itemModule.isEnabled()) {
+            inventoryItems = itemModule.getRandomItemDrops(this.inventoryContentsDropList);
+         }
+      }
+
+      int inventorySlots = inventoryItems != null && inventoryItems.size() > this.inventorySlots ? inventoryItems.size() : this.inventorySlots;
+      if (inventorySlots > 0 || this.hotbarSlots > 3 || this.offHandSlots > 0) {
+         ObjectArrayList<ItemStack> remainder = new ObjectArrayList<>();
+         InventoryComponent.Hotbar hotbar = accessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbar != null) {
+            hotbar.ensureCapacity((short)this.hotbarSlots, remainder);
+         }
+
+         InventoryComponent.Utility utility = accessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+         if (utility != null) {
+            utility.ensureCapacity((short)this.offHandSlots, remainder);
+         }
+
+         InventoryComponent.Storage storage = accessor.getComponent(ref, InventoryComponent.Storage.getComponentType());
+         if (storage != null) {
+            storage.ensureCapacity((short)inventorySlots, remainder);
+         }
+      }
+
+      if (inventoryItems != null) {
+         ItemContainer inventory = npcComponent.getInventory().getStorage();
+
+         for (ItemStack item : inventoryItems) {
+            inventory.addItemStack(item);
+         }
+      }
+
+      this.initialiseInventories(npcComponent);
+   }
+
+   private void initialiseInventories(@Nonnull NPCEntity npcComponent) {
       if (this.hotbarItems != null && this.hotbarItems.length > 0 && npcComponent.getInventory().getHotbar().isEmpty()) {
          Inventory inventory = npcComponent.getInventory();
          ItemContainer hotbar = inventory.getHotbar();
@@ -1133,7 +1213,7 @@ public class Role implements IAnnotatedComponentCollection {
       @Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       this.entitySupport.pickRandomDisplayName(ref, true, componentAccessor);
-      this.initialiseInventories(npcComponent);
+      this.initialiseInventories(npcComponent, componentAccessor, ref);
    }
 
    public RoleStats getRoleStats() {

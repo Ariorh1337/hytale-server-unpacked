@@ -14,10 +14,9 @@ public class BoundPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
       PositionProvider.Context childContext = new PositionProvider.Context(context);
-      childContext.minInclusive = this.bounds.min;
-      childContext.maxExclusive = this.bounds.max;
-      this.positionProvider.positionsIn(childContext);
+      childContext.bounds.assign(this.bounds);
+      this.positionProvider.generate(childContext);
    }
 }

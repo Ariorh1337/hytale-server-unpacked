@@ -18,6 +18,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -61,12 +62,18 @@ import com.hypixel.hytale.server.core.modules.interaction.Interactions;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.UnarmedInteractions;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
+import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
+import com.hypixel.hytale.server.core.modules.voice.VoicePlayerState;
+import com.hypixel.hytale.server.core.modules.voice.VoiceRouter;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -161,14 +168,24 @@ public class DeathSystems {
 
    public static class CorpseRemoval extends EntityTickingSystem<EntityStore> {
       @Nonnull
-      private static final ComponentType<EntityStore, DeferredCorpseRemoval> DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE = DeferredCorpseRemoval.getComponentType();
+      private static final Query<EntityStore> QUERY = Query.and(
+         DeathComponent.getComponentType(), Query.not(Player.getComponentType()), TransformComponent.getComponentType()
+      );
       @Nonnull
-      private static final Query<EntityStore> QUERY = Query.and(DeathComponent.getComponentType(), Query.not(Player.getComponentType()));
+      private static final Set<Dependency<EntityStore>> DEPENDENCIES = Collections.singleton(
+         new SystemDependency<>(Order.AFTER, DeathSystems.TickCorpseRemoval.class)
+      );
 
       @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
          return QUERY;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return DEPENDENCIES;
       }
 
       @Override
@@ -183,9 +200,17 @@ public class DeathSystems {
          assert deathComponent != null;
          InteractionChain deathInteractionChain = deathComponent.getInteractionChain();
          if (deathInteractionChain == null || deathInteractionChain.getServerState() != InteractionState.NotFinished) {
-            DeferredCorpseRemoval corpseRemoval = archetypeChunk.getComponent(index, DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE);
-            if (corpseRemoval == null || corpseRemoval.tick(dt)) {
+            DeferredCorpseRemoval corpseRemoval = archetypeChunk.getComponent(index, DeferredCorpseRemoval.getComponentType());
+            if (corpseRemoval == null) {
                commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
+            } else if (corpseRemoval.shouldRemove()) {
+               commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
+               String deathParticles = corpseRemoval.getDeathParticles();
+               if (deathParticles != null) {
+                  TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+                  assert transformComponent != null;
+                  ParticleUtil.spawnParticleEffect(deathParticles, transformComponent.getPosition(), commandBuffer);
+               }
             }
          }
       }
@@ -570,6 +595,73 @@ public class DeathSystems {
       public void onEntityRemove(
          @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
+      }
+   }
+
+   public static class StopVoiceOnDeath extends DeathSystems.OnDeathSystem {
+      private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Query.and(Player.getComponentType(), PlayerRef.getComponentType());
+      }
+
+      public void onComponentAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            UUID playerId = playerRefComponent.getUuid();
+            VoiceModule voiceModule = VoiceModule.get();
+            if (voiceModule != null) {
+               VoicePlayerState voiceState = voiceModule.getPlayerState(playerId);
+               if (voiceState != null) {
+                  voiceState.setSilenced(true);
+                  voiceState.setSpeaking(false);
+                  VoiceRouter voiceRouter = voiceModule.getVoiceRouter();
+                  if (voiceRouter != null) {
+                     PlayerRef playerRef = Universe.get().getPlayer(playerId);
+                     if (playerRef != null) {
+                        voiceRouter.sendVoiceConfig(playerRef);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   public static class TickCorpseRemoval extends EntityTickingSystem<EntityStore> {
+      @Nonnull
+      private static final ComponentType<EntityStore, DeferredCorpseRemoval> DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE = DeferredCorpseRemoval.getComponentType();
+      @Nonnull
+      private static final Query<EntityStore> QUERY = Query.and(
+         DeathComponent.getComponentType(), Query.not(Player.getComponentType()), TransformComponent.getComponentType(), DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE
+      );
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return QUERY;
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         DeathComponent deathComponent = archetypeChunk.getComponent(index, DeathComponent.getComponentType());
+         assert deathComponent != null;
+         InteractionChain deathInteractionChain = deathComponent.getInteractionChain();
+         if (deathInteractionChain == null || deathInteractionChain.getServerState() != InteractionState.NotFinished) {
+            DeferredCorpseRemoval corpseRemoval = archetypeChunk.getComponent(index, DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE);
+            assert corpseRemoval != null;
+            corpseRemoval.tick(dt);
+         }
       }
    }
 }

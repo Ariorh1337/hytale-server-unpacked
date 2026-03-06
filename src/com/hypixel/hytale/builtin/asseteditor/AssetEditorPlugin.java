@@ -216,7 +216,9 @@ public class AssetEditorPlugin extends JavaPlugin {
    @Override
    protected void shutdown() {
       InitialPacketHandler.EDITOR_PACKET_HANDLER_SUPPLIER = null;
-      String message = HytaleServer.get().isShuttingDown() ? "Server is shutting down!" : "Asset editor was disabled!";
+      Message message = HytaleServer.get().isShuttingDown()
+         ? Message.translation("server.general.disconnect.stoppingServer")
+         : Message.translation("server.general.disconnect.assetEditorDisabled");
 
       for (Set<EditorClient> clients : this.uuidToEditorClients.values()) {
          for (EditorClient client : clients) {
@@ -277,7 +279,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                client.getPacketHandler().sendPing();
             } catch (Exception e) {
                this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to send ping to " + client);
-               client.getPacketHandler().disconnect("Exception when sending ping packet!");
+               client.getPacketHandler().disconnect(Message.translation("server.general.disconnect.pingException"));
             }
          }
       }

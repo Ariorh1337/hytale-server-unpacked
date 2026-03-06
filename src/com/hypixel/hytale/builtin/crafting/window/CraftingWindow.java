@@ -12,6 +12,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.window.CraftRecipeAction;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.CraftingBench;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
@@ -116,7 +117,7 @@ public abstract class CraftingWindow extends BenchWindow {
          if (recipe == null) {
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             assert playerRef != null;
-            playerRef.getPacketHandler().disconnect("Attempted to craft unknown recipe!");
+            playerRef.getPacketHandler().disconnect(Message.translation("server.general.disconnect.unknownRecipe"));
             return false;
          } else {
             Player playerComponent = store.getComponent(ref, Player.getComponentType());

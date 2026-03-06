@@ -274,6 +274,10 @@ public class PluginManager {
          boolean hasFailed = false;
 
          for (PendingLoadPlugin pendingPlugin : this.loadOrder) {
+            if (HytaleServer.get().isShuttingDown()) {
+               break;
+            }
+
             PluginBase plugin = this.loading.get(pendingPlugin.getIdentifier());
             if (plugin != null && !this.setup(plugin)) {
                hasFailed = true;

@@ -441,6 +441,7 @@ public class AssetRegistryLoader {
                            BlockBoundingBoxes.class,
                            BlockSoundSet.class,
                            SoundEvent.class,
+                           AmbienceFX.class,
                            BlockParticleSet.class,
                            BlockBreakingDecal.class,
                            CustomConnectedBlockTemplateAsset.class,

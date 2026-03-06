@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.math.SeedGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.math.util.FastRandom;
 import javax.annotation.Nonnull;
 
@@ -12,27 +12,28 @@ public class FieldFunctionOccurrencePositionProvider extends PositionProvider {
    @Nonnull
    private final PositionProvider positionProvider;
    @Nonnull
-   private final SeedGenerator seedGenerator;
+   private final RngField rngField;
 
    public FieldFunctionOccurrencePositionProvider(@Nonnull Density field, @Nonnull PositionProvider positionProvider, int seed) {
       this.field = field;
       this.positionProvider = positionProvider;
-      this.seedGenerator = new SeedGenerator(seed);
+      this.rngField = new RngField(seed);
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
       PositionProvider.Context childContext = new PositionProvider.Context(context);
-      childContext.consumer = position -> {
+      childContext.pipe = (position, control) -> {
          Density.Context densityContext = new Density.Context();
          densityContext.position = position;
          densityContext.positionsAnchor = context.anchor;
+         densityContext.densityAnchor = context.anchor;
          double discardChance = 1.0 - this.field.process(densityContext);
-         FastRandom random = new FastRandom(this.seedGenerator.seedAt(position.x, position.y, position.z, 100.0));
+         FastRandom random = new FastRandom(this.rngField.get(position.x, position.y, position.z));
          if (!(discardChance > random.nextDouble())) {
-            context.consumer.accept(position);
+            context.pipe.accept(position, control);
          }
       };
-      this.positionProvider.positionsIn(childContext);
+      this.positionProvider.generate(childContext);
    }
 }

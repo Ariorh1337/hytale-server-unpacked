@@ -386,39 +386,42 @@ public class BlockPlaceUtils {
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
       @Nonnull ComponentAccessor<EntityStore> entityStore
    ) {
-      BlockType existingBlock = worldChunkComponent.getBlockType(blockPosition);
-      if (existingBlock != null) {
-         if (existingBlock.getMaterial() != BlockMaterial.Empty) {
-            return;
-         }
-
-         BlockGathering gathering = existingBlock.getGathering();
-         int dropQuantity = 1;
-         String itemId = null;
-         String dropListId = null;
-         if (gathering != null) {
-            SoftBlockDropType softGathering = gathering.getSoft();
-            if (softGathering != null) {
-               itemId = softGathering.getItemId();
-               dropListId = softGathering.getDropListId();
+      int targetBlockId = worldChunkComponent.getBlock(blockPosition);
+      if (targetBlockId != 0) {
+         BlockType targetBlockType = BlockType.getAssetMap().getAsset(targetBlockId);
+         if (targetBlockType != null) {
+            if (targetBlockType.getMaterial() != BlockMaterial.Empty) {
+               return;
             }
-         }
 
-         int setBlockSettings = 288;
-         BlockHarvestUtils.performBlockBreak(
-            chunkStore.getExternalData().getWorld(),
-            blockPosition,
-            existingBlock,
-            null,
-            dropQuantity,
-            itemId,
-            dropListId,
-            288,
-            ref,
-            chunkReference,
-            entityStore,
-            chunkStore
-         );
+            BlockGathering gathering = targetBlockType.getGathering();
+            int dropQuantity = 1;
+            String itemId = null;
+            String dropListId = null;
+            if (gathering != null) {
+               SoftBlockDropType softGathering = gathering.getSoft();
+               if (softGathering != null) {
+                  itemId = softGathering.getItemId();
+                  dropListId = softGathering.getDropListId();
+               }
+            }
+
+            int setBlockSettings = 288;
+            BlockHarvestUtils.performBlockBreak(
+               chunkStore.getExternalData().getWorld(),
+               blockPosition,
+               targetBlockType,
+               null,
+               dropQuantity,
+               itemId,
+               dropListId,
+               288,
+               ref,
+               chunkReference,
+               entityStore,
+               chunkStore
+            );
+         }
       }
    }
 

@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.codec.ShapeCodecs;
+import com.hypixel.hytale.server.core.config.WorldWorldMapConfig;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.spawn.GlobalSpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
@@ -81,6 +82,9 @@ public class WorldConfig {
       .documentation("Sets the world generator that will be used by the world.")
       .add()
       .append(new KeyedCodec<>("WorldMap", IWorldMapProvider.CODEC), (o, i) -> o.worldMapProvider = i, o -> o.worldMapProvider)
+      .add()
+      .<WorldWorldMapConfig>append(new KeyedCodec<>("WorldMapConfig", WorldWorldMapConfig.CODEC), (o, i) -> o.worldMapConfig = i, o -> o.worldMapConfig)
+      .documentation("Optional per-world overrides for world map configuration and limits.")
       .add()
       .<IChunkStorageProvider<?>>append(
          new KeyedCodec<>("ChunkStorage", IChunkStorageProvider.CODEC), (o, i) -> o.chunkStorageProvider = i, o -> o.chunkStorageProvider
@@ -229,6 +233,8 @@ public class WorldConfig {
    private ISpawnProvider spawnProvider = null;
    private IWorldGenProvider worldGenProvider = IWorldGenProvider.CODEC.getDefault();
    private IWorldMapProvider worldMapProvider = IWorldMapProvider.CODEC.getDefault();
+   @Nullable
+   private WorldWorldMapConfig worldMapConfig;
    private IChunkStorageProvider<?> chunkStorageProvider = IChunkStorageProvider.CODEC.getDefault();
    @Nonnull
    private WorldConfig.ChunkConfig chunkConfig = new WorldConfig.ChunkConfig();
@@ -354,6 +360,16 @@ public class WorldConfig {
 
    public void setWorldMapProvider(IWorldMapProvider worldMapProvider) {
       this.worldMapProvider = worldMapProvider;
+   }
+
+   @Nullable
+   public WorldWorldMapConfig getWorldMapConfig() {
+      return this.worldMapConfig;
+   }
+
+   public void setWorldMapConfig(@Nullable WorldWorldMapConfig worldMapConfig) {
+      this.worldMapConfig = worldMapConfig;
+      this.markChanged();
    }
 
    public IChunkStorageProvider<?> getChunkStorageProvider() {

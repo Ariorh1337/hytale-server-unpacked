@@ -1,6 +1,8 @@
 package com.hypixel.hytale.server.core.asset.type.blocktype.config;
 
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 
 public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation roll) {
@@ -41,8 +43,37 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
    }
 
    @Nonnull
-   public Vector3d rotate(@Nonnull Vector3d vector) {
+   public RotationTuple add(@Nonnull RotationTuple rotation) {
+      return of(rotation.yaw.add(this.yaw), rotation.pitch.add(this.pitch), rotation.roll.add(this.roll));
+   }
+
+   @Nonnull
+   public Vector3d rotatedVector(@Nonnull Vector3d vector) {
       return Rotation.rotate(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void applyRotationTo(@Nonnull Vector3i vector) {
+      Rotation.applyRotationTo(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void applyRotationTo(@Nonnull Vector3f vector) {
+      Rotation.applyRotationTo(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void applyRotationTo(@Nonnull Vector3d vector) {
+      Rotation.applyRotationTo(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void undoRotationTo(@Nonnull Vector3i vector) {
+      Rotation.undoRotationTo(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void undoRotationTo(@Nonnull Vector3f vector) {
+      Rotation.undoRotationTo(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void undoRotationTo(@Nonnull Vector3d vector) {
+      Rotation.undoRotationTo(vector, this.yaw, this.pitch, this.roll);
    }
 
    static {

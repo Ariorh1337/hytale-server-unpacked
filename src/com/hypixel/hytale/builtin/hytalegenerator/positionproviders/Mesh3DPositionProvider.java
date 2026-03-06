@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.fields.points.PointProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.noise.pointprovider.PointProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import javax.annotation.Nonnull;
 
 public class Mesh3DPositionProvider extends PositionProvider {
@@ -12,7 +13,8 @@ public class Mesh3DPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
-      this.pointGenerator.points3d(context.minInclusive, context.maxExclusive, context.consumer);
+   public void generate(@Nonnull PositionProvider.Context context) {
+      Control control = new Control();
+      this.pointGenerator.points3d(context.bounds.min, context.bounds.max, position -> context.pipe.accept(position, control));
    }
 }

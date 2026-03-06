@@ -505,37 +505,39 @@ public class BlockHarvestUtils {
       @Nonnull ComponentAccessor<EntityStore> entityStore,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      World world = chunkStore.getExternalData().getWorld();
       int targetBlockX = targetBlock.getX();
       int targetBlockY = targetBlock.getY();
       int targetBlockZ = targetBlock.getZ();
       WorldChunk worldChunkComponent = chunkStore.getComponent(chunkReference, WorldChunk.getComponentType());
       assert worldChunkComponent != null;
-      int targetBlockTypeIndex = worldChunkComponent.getBlock(targetBlockX, targetBlockY, targetBlockZ);
-      BlockType targetBlockTypeAsset = BlockType.getAssetMap().getAsset(targetBlockTypeIndex);
-      if (targetBlockTypeAsset != null) {
-         Vector3i affectedBlock = targetBlock;
-         if (!targetBlockTypeAsset.isUnknown()) {
-            BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
-            assert blockChunkComponent != null;
-            BlockSection targetBlockSection = blockChunkComponent.getSectionAtBlockY(targetBlockY);
-            int filler = targetBlockSection.getFiller(targetBlockX, targetBlockY, targetBlockZ);
-            int fillerX = FillerBlockUtil.unpackX(filler);
-            int fillerY = FillerBlockUtil.unpackY(filler);
-            int fillerZ = FillerBlockUtil.unpackZ(filler);
-            if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
-               affectedBlock = affectedBlock.clone().subtract(fillerX, fillerY, fillerZ);
-               BlockType originBlock = world.getBlockType(affectedBlock);
-               if (originBlock != null && !targetBlockTypeAsset.getId().equals(originBlock.getId())) {
-                  world.breakBlock(targetBlockX, targetBlockY, targetBlockZ, setBlockSettings);
-                  return;
+      int targetBlockTypeId = worldChunkComponent.getBlock(targetBlockX, targetBlockY, targetBlockZ);
+      if (targetBlockTypeId != 0) {
+         BlockType targetBlockTypeAsset = BlockType.getAssetMap().getAsset(targetBlockTypeId);
+         if (targetBlockTypeAsset != null) {
+            World world = chunkStore.getExternalData().getWorld();
+            Vector3i affectedBlock = targetBlock;
+            if (!targetBlockTypeAsset.isUnknown()) {
+               BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
+               assert blockChunkComponent != null;
+               BlockSection targetBlockSection = blockChunkComponent.getSectionAtBlockY(targetBlockY);
+               int filler = targetBlockSection.getFiller(targetBlockX, targetBlockY, targetBlockZ);
+               int fillerX = FillerBlockUtil.unpackX(filler);
+               int fillerY = FillerBlockUtil.unpackY(filler);
+               int fillerZ = FillerBlockUtil.unpackZ(filler);
+               if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
+                  affectedBlock = affectedBlock.clone().subtract(fillerX, fillerY, fillerZ);
+                  BlockType originBlock = world.getBlockType(affectedBlock);
+                  if (originBlock != null && !targetBlockTypeAsset.getId().equals(originBlock.getId())) {
+                     world.breakBlock(targetBlockX, targetBlockY, targetBlockZ, setBlockSettings);
+                     return;
+                  }
                }
             }
-         }
 
-         performBlockBreak(
-            world, affectedBlock, targetBlockTypeAsset, heldItemStack, 0, null, null, setBlockSettings, ref, chunkReference, entityStore, chunkStore
-         );
+            performBlockBreak(
+               world, affectedBlock, targetBlockTypeAsset, heldItemStack, 0, null, null, setBlockSettings, ref, chunkReference, entityStore, chunkStore
+            );
+         }
       }
    }
 
@@ -553,64 +555,66 @@ public class BlockHarvestUtils {
       @Nonnull ComponentAccessor<EntityStore> entityStore,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      World targetWorld = world;
-      Vector3i targetBlockPosition = blockPosition;
-      Ref<ChunkStore> targetChunkReference = chunkReference;
-      ComponentAccessor<ChunkStore> targetChunkStore = chunkStore;
-      if (ref != null) {
-         BreakBlockEvent event = new BreakBlockEvent(heldItemStack, targetBlockPosition, targetBlockTypeKey);
-         entityStore.invoke(ref, event);
-         if (event.isCancelled()) {
-            BlockChunk blockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
+      if (targetBlockTypeKey != BlockType.EMPTY) {
+         World targetWorld = world;
+         Vector3i targetBlockPosition = blockPosition;
+         Ref<ChunkStore> targetChunkReference = chunkReference;
+         ComponentAccessor<ChunkStore> targetChunkStore = chunkStore;
+         if (ref != null) {
+            BreakBlockEvent event = new BreakBlockEvent(heldItemStack, targetBlockPosition, targetBlockTypeKey);
+            entityStore.invoke(ref, event);
+            if (event.isCancelled()) {
+               BlockChunk blockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
+               assert blockChunkComponent != null;
+               BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(targetBlockPosition.getY());
+               blockSection.invalidateBlock(targetBlockPosition.getX(), targetBlockPosition.getY(), targetBlockPosition.getZ());
+               return;
+            }
+
+            targetBlockPosition = event.getTargetBlock();
+            targetChunkStore = targetWorld.getChunkStore().getStore();
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPosition.x, targetBlockPosition.z);
+            targetChunkReference = targetChunkStore.getExternalData().getChunkReference(chunkIndex);
+            if (targetChunkReference == null || !targetChunkReference.isValid()) {
+               return;
+            }
+         }
+
+         if (!targetBlockPosition.equals(blockPosition) || !targetWorld.equals(world)) {
+            BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
             assert blockChunkComponent != null;
-            BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(targetBlockPosition.getY());
-            blockSection.invalidateBlock(targetBlockPosition.getX(), targetBlockPosition.getY(), targetBlockPosition.getZ());
-            return;
+            BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
+            blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
          }
 
-         targetBlockPosition = event.getTargetBlock();
-         targetChunkStore = targetWorld.getChunkStore().getStore();
-         long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPosition.x, targetBlockPosition.z);
-         targetChunkReference = targetChunkStore.getExternalData().getChunkReference(chunkIndex);
-         if (targetChunkReference == null || !targetChunkReference.isValid()) {
-            return;
-         }
-      }
-
-      if (!targetBlockPosition.equals(blockPosition) || !targetWorld.equals(world)) {
-         BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
+         int x = blockPosition.getX();
+         int y = blockPosition.getY();
+         int z = blockPosition.getZ();
+         BlockChunk blockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
          assert blockChunkComponent != null;
-         BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
-         blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
-      }
+         BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(y);
+         int filler = blockSection.getFiller(x, y, z);
+         int blockTypeIndex = blockSection.get(x, y, z);
+         BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeIndex);
+         boolean isNaturalBlockBreak = BlockInteractionUtils.isNaturalAction(ref, entityStore);
+         setBlockSettings |= 256;
+         if (!isNaturalBlockBreak) {
+            setBlockSettings |= 2048;
+         }
 
-      int x = blockPosition.getX();
-      int y = blockPosition.getY();
-      int z = blockPosition.getZ();
-      BlockChunk blockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
-      assert blockChunkComponent != null;
-      BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(y);
-      int filler = blockSection.getFiller(x, y, z);
-      int blockTypeIndex = blockSection.get(x, y, z);
-      BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeIndex);
-      boolean isNaturalBlockBreak = BlockInteractionUtils.isNaturalAction(ref, entityStore);
-      setBlockSettings |= 256;
-      if (!isNaturalBlockBreak) {
-         setBlockSettings |= 2048;
+         naturallyRemoveBlock(
+            targetBlockPosition,
+            blockTypeAsset,
+            filler,
+            dropQuantity,
+            dropItemId,
+            dropListId,
+            setBlockSettings,
+            targetChunkReference,
+            entityStore,
+            targetChunkStore
+         );
       }
-
-      naturallyRemoveBlock(
-         targetBlockPosition,
-         blockTypeAsset,
-         filler,
-         dropQuantity,
-         dropItemId,
-         dropListId,
-         setBlockSettings,
-         targetChunkReference,
-         entityStore,
-         targetChunkStore
-      );
    }
 
    @Deprecated

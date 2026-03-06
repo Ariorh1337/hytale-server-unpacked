@@ -451,6 +451,36 @@ public class AssetModule extends JavaPlugin {
       }
    }
 
+   public boolean validatePackExistsOnDisk(@Nonnull AssetPack pack) {
+      if (pack.getFileSystem() != null) {
+         return true;
+      }
+
+      Path root = pack.getRoot();
+      if (Files.isDirectory(root) && Files.exists(root.resolve("manifest.json"))) {
+         return true;
+      }
+
+      this.getLogger().at(Level.WARNING).log("Asset pack '%s' no longer exists on disk, unregistering", pack.getName());
+      this.assetPacks.remove(pack);
+      HytaleServer.SCHEDULED_EXECUTOR
+         .execute(
+            () -> {
+               AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+               try {
+                  HytaleServer.get()
+                     .getEventBus()
+                     .<Void, AssetPackUnregisterEvent>dispatchFor(AssetPackUnregisterEvent.class)
+                     .dispatch(new AssetPackUnregisterEvent(pack));
+               } finally {
+                  AssetRegistry.ASSET_LOCK.writeLock().unlock();
+               }
+            }
+         );
+      return false;
+   }
+
    public AssetPack getAssetPack(@Nonnull String name) {
       for (AssetPack pack : this.assetPacks) {
          if (name.equals(pack.getName())) {

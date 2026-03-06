@@ -288,13 +288,13 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
                .join();
          }
       } else {
-         String message;
+         Message message;
          if (this.getFailureException() == null) {
-            message = "The world you were on was removed";
+            message = Message.translation("server.general.disconnect.worldRemoved");
          } else if (this.getPossibleFailureCause() == null) {
-            message = "The world you were on has crashed";
+            message = Message.translation("server.general.disconnect.worldCrashed");
          } else {
-            message = "The world you were on has crashed (possibly caused by " + this.getPossibleFailureCause() + ")";
+            message = Message.translation("server.general.disconnect.worldCrashedCause").param("cause", this.getPossibleFailureCause().toString());
          }
 
          for (PlayerRef playerRef : players.values()) {
@@ -884,17 +884,20 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       CompletableFuture<Void> playerReadyFuture = clientReadyFuture.orTimeout(30L, TimeUnit.SECONDS);
       return CompletableFuture.allOf(setupPlayerFuture, playerReadyFuture, loadTargetChunkFuture)
          .thenApplyAsync(aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.getJoinMessage()), this)
-         .exceptionally(throwable -> {
-            this.logger.at(Level.WARNING).withCause(throwable).log("Exception when adding player to world!");
-            PluginIdentifier possibleCause = PluginIdentifier.identifyThirdPartyPlugin(throwable);
-            if (possibleCause == null) {
-               playerRef.getPacketHandler().disconnect("Exception when adding player to world!");
-            } else {
-               playerRef.getPacketHandler().disconnect("Exception when adding player to world! (possibly caused by " + possibleCause + ")");
-            }
+         .exceptionally(
+            throwable -> {
+               this.logger.at(Level.WARNING).withCause(throwable).log("Exception when adding player to world!");
+               PluginIdentifier possibleCause = PluginIdentifier.identifyThirdPartyPlugin(throwable);
+               if (possibleCause == null) {
+                  playerRef.getPacketHandler().disconnect(Message.translation("server.general.disconnect.exceptionJoiningWorld"));
+               } else {
+                  playerRef.getPacketHandler()
+                     .disconnect(Message.translation("server.general.disconnect.exceptionJoiningWorldCause").param("cause", possibleCause.toString()));
+               }
 
-            throw new RuntimeException("Exception when adding player '" + playerRef.getUsername() + "' to world '" + this.name + "'", throwable);
-         });
+               throw new RuntimeException("Exception when adding player '" + playerRef.getUsername() + "' to world '" + this.name + "'", throwable);
+            }
+         );
    }
 
    @Nonnull

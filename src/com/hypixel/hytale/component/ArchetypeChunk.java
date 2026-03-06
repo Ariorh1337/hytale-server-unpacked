@@ -202,11 +202,14 @@ public class ArchetypeChunk<ECS_TYPE> {
       for (int entityIndex = 0; entityIndex < this.entitiesSize; entityIndex++) {
          Ref<ECS_TYPE> ref = this.refs[entityIndex];
          this.refs[entityIndex] = null;
+         Arrays.fill(entityComponents, 0, this.archetype.getMinIndex(), null);
 
          for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
             ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>> componentType = (ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>>)this.archetype
                .get(i);
-            if (componentType != null) {
+            if (componentType == null) {
+               entityComponents[entityIndex] = null;
+            } else {
                int componentTypeIndex = componentType.getIndex();
                entityComponents[componentTypeIndex] = this.components[componentTypeIndex][entityIndex];
                this.components[componentTypeIndex][entityIndex] = null;
@@ -230,7 +233,7 @@ public class ArchetypeChunk<ECS_TYPE> {
       @Nonnull IntObjectConsumer<Ref<ECS_TYPE>> referenceConsumer
    ) {
       int firstTransfered = Integer.MIN_VALUE;
-      Component<ECS_TYPE>[] entityComponents = new Component[this.archetype.length()];
+      Component[] entityComponents = new Component[this.archetype.length()];
 
       for (int entityIndex = 0; entityIndex < this.entitiesSize; entityIndex++) {
          if (shouldTransfer.test(entityIndex)) {
@@ -240,11 +243,14 @@ public class ArchetypeChunk<ECS_TYPE> {
 
             Ref<ECS_TYPE> ref = this.refs[entityIndex];
             this.refs[entityIndex] = null;
+            Arrays.fill(entityComponents, 0, this.archetype.getMinIndex(), null);
 
             for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
                ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>> componentType = (ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>>)this.archetype
                   .get(i);
-               if (componentType != null) {
+               if (componentType == null) {
+                  entityComponents[i] = null;
+               } else {
                   int componentTypeIndex = componentType.getIndex();
                   entityComponents[componentTypeIndex] = this.components[componentTypeIndex][entityIndex];
                   this.components[componentTypeIndex][entityIndex] = null;

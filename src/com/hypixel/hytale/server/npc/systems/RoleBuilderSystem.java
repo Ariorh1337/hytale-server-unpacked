@@ -27,6 +27,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.system.ModelSystems;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsSystems;
 import com.hypixel.hytale.server.core.modules.interaction.Interactions;
 import com.hypixel.hytale.server.core.modules.physics.systems.PhysicsValuesAddSystem;
@@ -74,7 +75,10 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
    public RoleBuilderSystem() {
       this.npcComponentType = NPCEntity.getComponentType();
       this.dependencies = Set.of(
-         new SystemDependency<>(Order.AFTER, EntityStatsSystems.Setup.class), new SystemDependency<>(Order.AFTER, PhysicsValuesAddSystem.class)
+         new SystemDependency<>(Order.AFTER, EntityStatsSystems.Setup.class),
+         new SystemDependency<>(Order.AFTER, PhysicsValuesAddSystem.class),
+         new SystemDependency<>(Order.AFTER, NPCSystems.OnNPCAdded.class),
+         new SystemDependency<>(Order.BEFORE, ModelSystems.ModelSpawned.class)
       );
       this.query = Archetype.of(this.npcComponentType, this.transformComponentType);
    }
@@ -256,7 +260,7 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
                if (roleBuilder instanceof SpawnEffect spawnEffect) {
                   TransformComponent transformComponent = holder.getComponent(this.transformComponentType);
                   assert transformComponent != null;
-                  spawnEffect.spawnEffect(transformComponent.getPosition(), transformComponent.getRotation(), store);
+                  spawnEffect.spawnEffect(holder, builderSupport, transformComponent.getPosition(), transformComponent.getRotation(), store);
                }
             }
          }

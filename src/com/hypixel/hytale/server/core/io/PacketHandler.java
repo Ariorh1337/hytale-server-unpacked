@@ -123,39 +123,6 @@ public abstract class PacketHandler implements IPacketReceiver {
       return type == StreamType.Game ? this.channels[0] : this.auxiliaryChannels.get(type);
    }
 
-   public void setChannel(@Nonnull StreamType type, @Nullable Channel channel) {
-      if (type == StreamType.Game) {
-         throw new IllegalArgumentException("Cannot set Game channel - use the main channel");
-      }
-
-      if (channel != null) {
-         this.auxiliaryChannels.put(type, channel);
-      } else {
-         this.auxiliaryChannels.remove(type);
-      }
-   }
-
-   @Nonnull
-   public Map<StreamType, Channel> getAuxiliaryChannels() {
-      return Collections.unmodifiableMap(this.auxiliaryChannels);
-   }
-
-   public boolean checkStreamOpenRateLimit() {
-      long now = System.nanoTime();
-      long prev = this.lastStreamOpenTimeNanos.getAndUpdate(last -> now - last >= STREAM_OPEN_MIN_INTERVAL_NANOS ? now : last);
-      return now - prev < STREAM_OPEN_MIN_INTERVAL_NANOS;
-   }
-
-   @Deprecated(forRemoval = true)
-   public void setCompressionEnabled(boolean compressionEnabled) {
-      HytaleLogger.getLogger().at(Level.INFO).log(this.getIdentifier() + " compression now handled by encoder");
-   }
-
-   @Deprecated(forRemoval = true)
-   public boolean isCompressionEnabled() {
-      return true;
-   }
-
    @Nonnull
    public abstract String getIdentifier();
 
@@ -313,11 +280,6 @@ public abstract class PacketHandler implements IPacketReceiver {
       this.disconnect0(message);
    }
 
-   @Deprecated
-   public void disconnect(@Nonnull String message) {
-      this.disconnect(Message.raw(message).getFormattedMessage());
-   }
-
    protected void disconnect0(@Nonnull FormattedMessage message) {
       this.getChannel().writeAndFlush(new ServerDisconnect(message, DisconnectType.Disconnect)).addListener(ProtocolUtil.CLOSE_ON_COMPLETE);
    }
@@ -410,7 +372,7 @@ public abstract class PacketHandler implements IPacketReceiver {
                         HytaleLogger.getLogger()
                            .at(Level.WARNING)
                            .log("Stage timeout for %s at stage '%s' after %s connected", this.getIdentifier(), stageId, duration);
-                        this.disconnect("Either you took too long to login or we took too long to process your request! Retry again in a moment.");
+                        this.disconnect(Message.translation("client.general.disconnect.stageTimeout"));
                      }
                   }
                },
@@ -486,6 +448,12 @@ public abstract class PacketHandler implements IPacketReceiver {
       return this.getChannel() instanceof QuicStreamChannel quicStreamChannel ? quicStreamChannel.parent().attr(QUICTransport.SNI_HOSTNAME_ATTR).get() : null;
    }
 
+   public boolean checkStreamOpenRateLimit() {
+      long now = System.nanoTime();
+      long prev = this.lastStreamOpenTimeNanos.getAndUpdate(last -> now - last >= STREAM_OPEN_MIN_INTERVAL_NANOS ? now : last);
+      return now - prev < STREAM_OPEN_MIN_INTERVAL_NANOS;
+   }
+
    @Nonnull
    public PacketHandler.DisconnectReason getDisconnectReason() {
       return this.disconnectReason;
@@ -513,6 +481,43 @@ public abstract class PacketHandler implements IPacketReceiver {
 
    public void setChannel(@Nonnull NetworkChannel networkChannel, @Nonnull Channel channel) {
       this.channels[networkChannel.getValue()] = channel;
+   }
+
+   public void setChannel(@Nonnull StreamType type, @Nullable Channel channel) {
+      if (type == StreamType.Game) {
+         throw new IllegalArgumentException("Cannot set Game stream via auxiliary channel API");
+      }
+
+      if (channel != null) {
+         this.auxiliaryChannels.put(type, channel);
+      } else {
+         this.auxiliaryChannels.remove(type);
+      }
+   }
+
+   public boolean compareAndSetChannel(@Nonnull StreamType type, @Nullable Channel expected, @Nullable Channel newValue) {
+      if (type == StreamType.Game) {
+         throw new IllegalArgumentException("Cannot CAS Game stream via auxiliary channel API");
+      }
+
+      synchronized (this.auxiliaryChannels) {
+         Channel current = this.auxiliaryChannels.get(type);
+         if (current == expected) {
+            if (newValue != null) {
+               this.auxiliaryChannels.put(type, newValue);
+            } else {
+               this.auxiliaryChannels.remove(type);
+            }
+
+            return true;
+         } else {
+            return false;
+         }
+      }
+   }
+
+   public int getAuxiliaryChannelCount() {
+      return this.auxiliaryChannels.size();
    }
 
    public static void logConnectionTimings(@Nonnull Channel channel, @Nonnull String message, @Nonnull Level level) {

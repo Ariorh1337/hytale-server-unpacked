@@ -510,6 +510,16 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       .addValidator(SoundEventValidators.LOOPING)
       .documentation("A looping ambient sound event that emits from this block when placed in the world or held in-hand.")
       .add()
+      .<ConditionalBlockSound[]>appendInherited(
+         new KeyedCodec<>("ConditionalSounds", new ArrayCodec<>(ConditionalBlockSound.CODEC, ConditionalBlockSound[]::new)),
+         (blockType, o) -> blockType.conditionalSounds = o,
+         blockType -> blockType.conditionalSounds,
+         (blockType, parent) -> blockType.conditionalSounds = parent.conditionalSounds
+      )
+      .documentation(
+         "An array of conditional ambient sounds. Each entry references a looping sound event and an AmbienceFX whose conditions determine when the sound plays from this block."
+      )
+      .add()
       .<String>appendInherited(
          new KeyedCodec<>("InteractionSoundEventId", Codec.STRING),
          (blockType, s) -> blockType.interactionSoundEventId = s,
@@ -924,6 +934,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected StateData state;
    protected String ambientSoundEventId;
    protected transient int ambientSoundEventIndex;
+   protected ConditionalBlockSound[] conditionalSounds;
    protected String interactionSoundEventId;
    protected transient int interactionSoundEventIndex;
    protected boolean isLooping;
@@ -1043,6 +1054,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.interactions = other.interactions;
       this.ambientSoundEventId = other.ambientSoundEventId;
       this.ambientSoundEventIndex = other.ambientSoundEventIndex;
+      this.conditionalSounds = other.conditionalSounds;
       this.interactionSoundEventId = other.interactionSoundEventId;
       this.interactionSoundEventIndex = other.interactionSoundEventIndex;
       this.isLooping = other.isLooping;
@@ -1249,6 +1261,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
       packet.looping = this.isLooping;
       packet.ambientSoundEventIndex = this.ambientSoundEventIndex;
+      if (this.conditionalSounds != null && this.conditionalSounds.length > 0) {
+         packet.conditionalSounds = new com.hypixel.hytale.protocol.ConditionalBlockSound[this.conditionalSounds.length];
+
+         for (int i = 0; i < this.conditionalSounds.length; i++) {
+            packet.conditionalSounds[i] = this.conditionalSounds[i].toPacket();
+         }
+      }
+
       if (this.particles != null && this.particles.length > 0) {
          packet.particles = new com.hypixel.hytale.protocol.ModelParticle[this.particles.length];
 
@@ -2007,7 +2027,9 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          + this.ambientSoundEventId
          + "', ambientSoundEventIndex='"
          + this.ambientSoundEventIndex
-         + "', interactionSoundEventId='"
+         + "', conditionalSounds="
+         + Arrays.toString(this.conditionalSounds)
+         + ", interactionSoundEventId='"
          + this.interactionSoundEventId
          + "', interactionSoundEventIndex='"
          + this.interactionSoundEventIndex

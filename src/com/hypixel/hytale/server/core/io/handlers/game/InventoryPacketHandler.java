@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.io.handlers.game;
 
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -30,6 +31,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.SwitchActiveSlotEvent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -309,7 +311,17 @@ public class InventoryPacketHandler implements SubPacketHandler {
                   ItemUtils.throwItem(ref, item, 6.0F, store);
                   SoundUtil.playSoundEvent2d(ref, TempAssetIdUtil.getSoundEventIndex("SFX_Player_Drop_Item"), SoundCategory.UI, store);
                } else {
-                  playerComponent.sendInventory();
+                  ComponentType<EntityStore, ? extends InventoryComponent> type = InventoryComponent.getComponentTypeById(packet.inventorySectionId);
+                  if (type == null) {
+                     return;
+                  }
+
+                  InventoryComponent inv = store.getComponent(ref, type);
+                  if (inv == null) {
+                     return;
+                  }
+
+                  inv.markDirty();
                }
             }
          );
@@ -375,37 +387,41 @@ public class InventoryPacketHandler implements SubPacketHandler {
       if (ref != null && ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            assert playerComponent != null;
-            Inventory inventory = playerComponent.getInventory();
-            PacketHandler packetHandler = playerRef.getPacketHandler();
-            if (packet.inventorySectionId == -1) {
-               packetHandler.disconnect("Attempted to change the hotbar slot without an interaction");
-            } else if (packet.activeSlot < -1 || packet.activeSlot >= inventory.getSectionById(packet.inventorySectionId).getCapacity()) {
-               packetHandler.disconnect("Attempted to set " + packet.inventorySectionId + " slot outside of range!");
-            } else if (packet.activeSlot == inventory.getActiveSlot(packet.inventorySectionId)) {
-               packetHandler.disconnect("Attempted to set hotbar slot to already selected hotbar slot!");
-            } else {
-               byte previousSlot = inventory.getActiveSlot(packet.inventorySectionId);
-               byte targetSlot = (byte)packet.activeSlot;
-               SwitchActiveSlotEvent event = new SwitchActiveSlotEvent(packet.inventorySectionId, previousSlot, targetSlot, false);
-               store.invoke(ref, event);
-               if (event.isCancelled()) {
-                  targetSlot = previousSlot;
-               } else if (targetSlot != event.getNewSlot()) {
-                  targetSlot = event.getNewSlot();
-               }
+         world.execute(
+            () -> {
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
+               assert playerComponent != null;
+               Inventory inventory = playerComponent.getInventory();
+               PacketHandler packetHandler = playerRef.getPacketHandler();
+               if (packet.inventorySectionId == -1) {
+                  packetHandler.disconnect(Message.translation("server.general.disconnect.hotbarChangeWithoutInteraction"));
+               } else if (packet.activeSlot < -1 || packet.activeSlot >= inventory.getSectionById(packet.inventorySectionId).getCapacity()) {
+                  packetHandler.disconnect(
+                     Message.translation("server.general.disconnect.hotbarSlotOutOfRange").param("inventorySectionId", packet.inventorySectionId)
+                  );
+               } else if (packet.activeSlot == inventory.getActiveSlot(packet.inventorySectionId)) {
+                  packetHandler.disconnect(Message.translation("server.general.disconnect.hotbarSlotAlreadySelected"));
+               } else {
+                  byte previousSlot = inventory.getActiveSlot(packet.inventorySectionId);
+                  byte targetSlot = (byte)packet.activeSlot;
+                  SwitchActiveSlotEvent event = new SwitchActiveSlotEvent(packet.inventorySectionId, previousSlot, targetSlot, false);
+                  store.invoke(ref, event);
+                  if (event.isCancelled()) {
+                     targetSlot = previousSlot;
+                  } else if (targetSlot != event.getNewSlot()) {
+                     targetSlot = event.getNewSlot();
+                  }
 
-               if (targetSlot != packet.activeSlot) {
-                  packetHandler.writeNoCache(new SetActiveSlot(packet.inventorySectionId, targetSlot));
-               }
+                  if (targetSlot != packet.activeSlot) {
+                     packetHandler.writeNoCache(new SetActiveSlot(packet.inventorySectionId, targetSlot));
+                  }
 
-               if (targetSlot != previousSlot) {
-                  inventory.setActiveSlot(packet.inventorySectionId, targetSlot);
+                  if (targetSlot != previousSlot) {
+                     inventory.setActiveSlot(packet.inventorySectionId, targetSlot);
+                  }
                }
             }
-         });
+         );
       }
    }
 
@@ -469,17 +485,16 @@ public class InventoryPacketHandler implements SubPacketHandler {
                         }
                         break;
                      case Sort:
-                        SortType sortType = SortType.VALUES[packet.actionData];
                         if (packet.inventorySectionId == 0) {
-                           inventory.sortStorage(sortType);
+                           inventory.sortStorage();
                         } else {
                            if (packet.inventorySectionId == -9 && inventory.getBackpack() != null) {
-                              inventory.getBackpack().sortItems(sortType);
+                              inventory.getBackpack().sortItems(SortType.TYPE);
                               return;
                            }
 
                            if (playerComponent.getWindowManager().getWindow(packet.inventorySectionId) instanceof ItemContainerWindow itemContainerWindow) {
-                              itemContainerWindow.getItemContainer().sortItems(sortType);
+                              itemContainerWindow.getItemContainer().sortItems(SortType.TYPE);
                            }
                         }
                   }

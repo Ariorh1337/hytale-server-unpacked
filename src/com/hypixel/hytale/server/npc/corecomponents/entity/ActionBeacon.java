@@ -42,7 +42,7 @@ public class ActionBeacon extends ActionBase {
    public ActionBeacon(@Nonnull BuilderActionBeacon builderActionBeacon, @Nonnull BuilderSupport support) {
       super(builderActionBeacon);
       this.message = builderActionBeacon.getMessage(support);
-      this.range = builderActionBeacon.getRange();
+      this.range = builderActionBeacon.getRange(support);
       this.targetGroups = builderActionBeacon.getTargetGroups(support);
       this.targetToSendSlot = builderActionBeacon.getTargetToSendSlot(support);
       this.expirationTime = builderActionBeacon.getExpirationTime();

@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.layers;
 
-import com.hypixel.hytale.builtin.hytalegenerator.datastructures.WeightedMap;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.math.SeedGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.WeightedMap;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
-import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
+import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
 import com.hypixel.hytale.math.util.FastRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -13,12 +13,12 @@ public class WeightedThicknessLayer<V> extends SpaceAndDepthMaterialProvider.Lay
    @Nonnull
    private final WeightedMap<Integer> thicknessPool;
    @Nonnull
-   private final SeedGenerator seedGenerator;
+   private final RngField rngField;
    @Nullable
    private final MaterialProvider<V> materialProvider;
 
    public WeightedThicknessLayer(@Nonnull WeightedMap<Integer> thicknessPool, @Nullable MaterialProvider<V> materialProvider, @Nonnull SeedBox seedBox) {
-      this.seedGenerator = new SeedGenerator(seedBox.createSupplier().get().intValue());
+      this.rngField = new RngField(seedBox.createSupplier().get());
       this.materialProvider = materialProvider;
       this.thicknessPool = thicknessPool;
    }
@@ -31,7 +31,7 @@ public class WeightedThicknessLayer<V> extends SpaceAndDepthMaterialProvider.Lay
          return 0;
       }
 
-      FastRandom random = new FastRandom(this.seedGenerator.seedAt(x, z));
+      FastRandom random = new FastRandom(this.rngField.get(x, z));
       return this.thicknessPool.pick(random);
    }
 

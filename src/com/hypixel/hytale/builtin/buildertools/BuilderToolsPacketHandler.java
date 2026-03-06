@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.buildertools;
 import com.hypixel.hytale.builtin.buildertools.commands.CopyCommand;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSession;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionManager;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadata;
 import com.hypixel.hytale.builtin.buildertools.tooloperations.ToolOperation;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -26,6 +27,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGeneralAction
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLineAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPasteClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolResetClipboardRotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRotateClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolAskForClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolReplyWithClipboard;
@@ -39,6 +41,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityTran
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetNPCDebug;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetTransformationModeState;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolStackArea;
+import com.hypixel.hytale.protocol.packets.buildertools.PrefabSetAnchor;
 import com.hypixel.hytale.protocol.packets.buildertools.PrefabUnselectPrefab;
 import com.hypixel.hytale.protocol.packets.interface_.BlockChange;
 import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
@@ -125,7 +128,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
    @Override
    public void registerHandlers() {
       if (BuilderToolsPlugin.get().isDisabled()) {
-         this.packetHandler.registerNoOpHandlers(400, 401, 412, 409, 403, 406, 407, 413, 414, 417);
+         this.packetHandler.registerNoOpHandlers(400, 401, 412, 409, 403, 406, 427, 407, 413, 414, 417, 426);
       } else {
          IWorldPacketHandler.registerHandler(this.packetHandler, 106, this::handleLoadHotbar, BuilderToolsPacketHandler::hasPermission);
          IWorldPacketHandler.registerHandler(this.packetHandler, 107, this::handleSaveHotbar, BuilderToolsPacketHandler::hasPermission);
@@ -136,6 +139,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
             this.packetHandler, 408, this::handleBuilderToolSetTransformationModeState, BuilderToolsPacketHandler::hasPermission
          );
          IWorldPacketHandler.registerHandler(this.packetHandler, 417, this::handlePrefabUnselectPrefab, BuilderToolsPacketHandler::hasPermission);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 426, this::handlePrefabSetAnchor, BuilderToolsPacketHandler::hasPermission);
          IWorldPacketHandler.registerHandler(this.packetHandler, 421, this::handleBuilderToolSetEntityPickupEnabled, BuilderToolsPacketHandler::hasPermission);
          IWorldPacketHandler.registerHandler(this.packetHandler, 422, this::handleBuilderToolSetEntityLight, BuilderToolsPacketHandler::hasPermission);
          IWorldPacketHandler.registerHandler(this.packetHandler, 423, this::handleBuilderToolSetNPCDebug, BuilderToolsPacketHandler::hasPermission);
@@ -149,6 +153,9 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          );
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 406, this::handleBuilderToolRotateClipboard, p -> hasPermission(p, "hytale.editor.selection.clipboard")
+         );
+         IWorldPacketHandler.registerHandler(
+            this.packetHandler, 427, this::handleBuilderToolResetClipboardRotation, p -> hasPermission(p, "hytale.editor.selection.clipboard")
          );
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 407, this::handleBuilderToolPasteClipboard, p -> hasPermission(p, "hytale.editor.selection.clipboard")
@@ -631,7 +638,27 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
             ? Axis.X
             : (packet.axis == com.hypixel.hytale.protocol.packets.buildertools.Axis.Y ? Axis.Y : Axis.Z);
          LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.rotate(r, axis, packet.angle, componentAccessor));
+         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+            s.setSkipNextPreviewRebuild(true);
+            s.rotate(r, axis, packet.angle, componentAccessor);
+         });
+      }
+   }
+
+   public void handleBuilderToolResetClipboardRotation(
+      @Nonnull BuilderToolResetClipboardRotation packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      if (playerComponent != null) {
+         LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+            s.setSkipNextPreviewRebuild(true);
+            s.resetClipboardRotation(r, componentAccessor);
+         });
       }
    }
 
@@ -772,6 +799,38 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                playerComponent.sendMessage(Message.translation("server.commands.editprefab.unselected"));
             } else {
                playerComponent.sendMessage(Message.translation("server.commands.editprefab.noPrefabSelected"));
+            }
+         }
+      }
+   }
+
+   public void handlePrefabSetAnchor(
+      @Nonnull PrefabSetAnchor packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
+   ) {
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      if (playerComponent != null) {
+         LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+         PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
+         PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
+         if (prefabEditSession == null) {
+            playerComponent.sendMessage(Message.translation("server.commands.editprefab.notInEditSession"));
+         } else {
+            PrefabEditingMetadata prefabEditingMetadata = null;
+            Vector3i targetBlockPos = new Vector3i(packet.x, packet.y, packet.z);
+
+            for (PrefabEditingMetadata value : prefabEditSession.getLoadedPrefabMetadata().values()) {
+               boolean isWithinPrefab = value.isLocationWithinPrefabBoundingBox(new Vector3i(packet.x, packet.y, packet.z));
+               if (isWithinPrefab) {
+                  prefabEditingMetadata = value;
+                  break;
+               }
+            }
+
+            if (prefabEditingMetadata == null) {
+               playerRef.sendMessage(Message.translation("server.commands.editprefab.select.error.noPrefabFound"));
+            } else {
+               prefabEditingMetadata.setAnchorPoint(targetBlockPos, world);
+               prefabEditingMetadata.sendAnchorHighlightingPacket(playerRef.getPacketHandler());
             }
          }
       }

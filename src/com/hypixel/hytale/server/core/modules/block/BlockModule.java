@@ -417,7 +417,6 @@ public class BlockModule extends JavaPlugin {
       }
    }
 
-   @Deprecated(forRemoval = true)
    public static class MigrateItemContainer extends BlockModule.MigrationSystem {
       @Override
       public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {

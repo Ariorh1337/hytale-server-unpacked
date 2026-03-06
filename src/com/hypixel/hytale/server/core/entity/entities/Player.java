@@ -47,7 +47,6 @@ import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManag
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.ecs.ChangeGameModeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -182,18 +181,6 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       this.networkId = id;
    }
 
-   @Nonnull
-   @Override
-   protected Inventory createDefaultInventory() {
-      return new Inventory();
-   }
-
-   @Nonnull
-   @Override
-   public Inventory setInventory(Inventory inventory) {
-      return super.setInventory(inventory, true);
-   }
-
    @Override
    public boolean remove() {
       if (this.wasRemoved.getAndSet(true)) {
@@ -230,7 +217,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       }
 
       if (this.playerRef.getPacketHandler().getChannel().isActive()) {
-         this.playerRef.getPacketHandler().disconnect("Player removed from world!");
+         this.playerRef.getPacketHandler().disconnect(Message.translation("server.general.disconnect.playerRemovedFromWorld"));
          LOGGER.at(Level.WARNING).withCause(this.removedBy).log("Player removed from world! %s", this);
       }
 
@@ -280,7 +267,14 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    }
 
    public void startClientReadyTimeout() {
-      ScheduledFuture<?> task = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> this.handleClientReady(true), 10000L, TimeUnit.MILLISECONDS);
+      ScheduledFuture<?> task = HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+         World world = this.world;
+         if (world == null) {
+            this.waitingForClientReady.set(null);
+         } else {
+            world.execute(() -> this.handleClientReady(true));
+         }
+      }, 10000L, TimeUnit.MILLISECONDS);
       ScheduledFuture<?> oldTask = this.waitingForClientReady.getAndSet(task);
       if (oldTask != null) {
          oldTask.cancel(false);
@@ -302,11 +296,6 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
             dispatcher.dispatch(new PlayerReadyEvent(this.reference, this, this.readyId.getAndIncrement()));
          }
       }
-   }
-
-   public void sendInventory() {
-      this.getInventory().consumeIsDirty();
-      this.playerRef.getPacketHandler().write(this.getInventory().toPacket());
    }
 
    @Nonnull

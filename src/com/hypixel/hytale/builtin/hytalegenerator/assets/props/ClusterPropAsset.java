@@ -5,18 +5,20 @@ import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.WeightedMap;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.ConstantCurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.CurveAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.ConstantPatternAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.PatternAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.assets.scanners.OriginScannerAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.scanners.DirectScannerAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.scanners.ScannerAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.datastructures.WeightedMap;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
-import com.hypixel.hytale.builtin.hytalegenerator.props.ClusterProp;
+import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
-import com.hypixel.hytale.builtin.hytalegenerator.scanners.OriginScanner;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.ClusterProp;
+import com.hypixel.hytale.builtin.hytalegenerator.scanners.DirectScanner;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -53,13 +55,13 @@ public class ClusterPropAsset extends PropAsset {
    private String seed = "A";
    private ClusterPropAsset.WeightedPropAsset[] weightedPropAssets = new ClusterPropAsset.WeightedPropAsset[0];
    private PatternAsset patternAsset = new ConstantPatternAsset();
-   private ScannerAsset scannerAsset = new OriginScannerAsset();
+   private ScannerAsset scannerAsset = new DirectScannerAsset();
 
    @Nonnull
    @Override
    public Prop build(@Nonnull PropAsset.Argument argument) {
       if (super.skip()) {
-         return Prop.noProp();
+         return EmptyProp.INSTANCE;
       }
 
       WeightedMap<Prop> weightedMap = new WeightedMap<>();
@@ -77,8 +79,8 @@ public class ClusterPropAsset extends PropAsset {
          }
       }
 
-      Pattern pattern = this.patternAsset == null ? Pattern.yesPattern() : this.patternAsset.build(PatternAsset.argumentFrom(argument));
-      Scanner scanner = this.scannerAsset == null ? OriginScanner.getInstance() : this.scannerAsset.build(ScannerAsset.argumentFrom(argument));
+      Pattern pattern = this.patternAsset == null ? ConstantPattern.INSTANCE_TRUE : this.patternAsset.build(PatternAsset.argumentFrom(argument));
+      Scanner scanner = this.scannerAsset == null ? new DirectScanner() : this.scannerAsset.build(ScannerAsset.argumentFrom(argument));
       int intSeed = argument.parentSeed.child(this.seed).createSupplier().get();
       return new ClusterProp(this.range, this.distanceCurve.build(), intSeed, weightedMap, pattern, scanner);
    }

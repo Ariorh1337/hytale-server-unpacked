@@ -1031,7 +1031,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                PlayerRef existingPlayer = this.players.putIfAbsent(uuid, playerRefComponent);
                if (existingPlayer != null) {
                   this.getLogger().at(Level.WARNING).log("Player '%s' (%s) already joining from another connection, rejecting duplicate", username, uuid);
-                  playerConnection.disconnect("A connection with this account is already in progress");
+                  playerConnection.disconnect(Message.translation("client.general.disconnect.accountAlreadyConnecting"));
                   return CompletableFuture.completedFuture(null);
                }
 
@@ -1050,7 +1050,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                World world = event.getWorld() != null ? event.getWorld() : this.getDefaultWorld();
                if (world == null) {
                   this.players.remove(uuid, playerRefComponent);
-                  playerConnection.disconnect("No world available to join");
+                  playerConnection.disconnect(Message.translation("client.general.disconnect.noWorldAvailable"));
                   this.getLogger().at(Level.SEVERE).log("Player '%s' (%s) could not join - no default world configured", username, uuid);
                   return CompletableFuture.completedFuture(null);
                }
@@ -1155,7 +1155,11 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
             HytaleServer.get().shutdownServer();
          } else if (SingleplayerModule.isOwner(playerRef)) {
             this.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
-            this.getPlayers().forEach(p -> p.getPacketHandler().disconnect(playerRef.getUsername() + " left! Shutting down singleplayer world!"));
+            this.getPlayers()
+               .forEach(
+                  p -> p.getPacketHandler()
+                     .disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", playerRef.getUsername()))
+               );
             HytaleServer.get().shutdownServer();
          }
       }

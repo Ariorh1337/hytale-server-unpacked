@@ -81,11 +81,11 @@ public final class Constants {
       DebugPlugin.MANIFEST,
       ProjectileModule.MANIFEST,
       ServerPlayerListModule.MANIFEST,
+      VoiceModule.MANIFEST,
       AccessControlModule.MANIFEST,
       SingleplayerModule.MANIFEST,
       Universe.MANIFEST,
-      ConnectedBlocksModule.MANIFEST,
-      VoiceModule.MANIFEST
+      ConnectedBlocksModule.MANIFEST
    };
 
    public static void init() {

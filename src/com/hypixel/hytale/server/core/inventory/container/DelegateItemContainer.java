@@ -150,9 +150,11 @@ public class DelegateItemContainer<T extends ItemContainer> extends ItemContaine
 
    @Nonnull
    @Override
-   public EventRegistration registerChangeEvent(short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer) {
-      EventRegistration thisRegistration = super.registerChangeEvent(priority, consumer);
-      EventRegistration[] delegateRegistration = new EventRegistration[]{
+   public EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> registerChangeEvent(
+      short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer
+   ) {
+      EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> thisRegistration = super.registerChangeEvent(priority, consumer);
+      EventRegistration<Void, ItemContainer.ItemContainerChangeEvent>[] delegateRegistration = new EventRegistration[]{
          this.delegate
             .internalChangeEventRegistry
             .register(

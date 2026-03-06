@@ -168,7 +168,7 @@ public class QUICTransport implements Transport {
             .initialMaxStreamsUnidirectional(0L)
             .initialMaxStreamDataBidirectionalLocal(131072L)
             .initialMaxStreamDataBidirectionalRemote(131072L)
-            .initialMaxStreamsBidirectional(2L)
+            .initialMaxStreamsBidirectional(8L)
             .discoverPmtu(true)
             .congestionControlAlgorithm(QuicCongestionControlAlgorithm.BBR)
             .option(QuicChannelOption.QLOG, System.getProperty("hytale.qlog") != null ? new QLogConfiguration(".", "hytale-server-quic-qlogs", "") : null)

@@ -42,7 +42,6 @@ public class PrefabSpawnerModule extends JavaPlugin {
       return this.prefabSpawnerBlockType;
    }
 
-   @Deprecated(forRemoval = true)
    public static class MigratePrefabSpawn extends BlockModule.MigrationSystem {
       @Override
       public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {

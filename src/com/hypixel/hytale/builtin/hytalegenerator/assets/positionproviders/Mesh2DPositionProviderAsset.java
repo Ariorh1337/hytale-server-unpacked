@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.pointgenerators.NoPointGeneratorAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.pointgenerators.PointGeneratorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.Mesh2DPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.Codec;
@@ -27,6 +28,6 @@ public class Mesh2DPositionProviderAsset extends PositionProviderAsset {
    @Nonnull
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
-      return super.skip() ? PositionProvider.noPositionProvider() : new Mesh2DPositionProvider(this.pointGeneratorAsset.build(argument.parentSeed), this.y);
+      return super.skip() ? EmptyPositionProvider.INSTANCE : new Mesh2DPositionProvider(this.pointGeneratorAsset.build(argument.parentSeed), this.y);
    }
 }

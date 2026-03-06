@@ -30,7 +30,7 @@ public class VoiceData implements Packet, ToServerPacket {
 
    @Override
    public NetworkChannel getChannel() {
-      return NetworkChannel.Default;
+      return NetworkChannel.Voice;
    }
 
    public VoiceData() {

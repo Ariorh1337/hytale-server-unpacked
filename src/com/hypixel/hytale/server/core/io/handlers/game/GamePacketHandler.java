@@ -260,7 +260,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
 
    public void handle(@Nonnull ClientMovement packet) {
       if (packet.absolutePosition != null && !ValidateUtil.isSafePosition(packet.absolutePosition)) {
-         this.disconnect("Sent impossible position data!");
+         this.disconnect(Message.translation("server.general.disconnect.impossiblePosition"));
       } else if ((packet.bodyOrientation == null || ValidateUtil.isSafeDirection(packet.bodyOrientation))
          && (packet.lookOrientation == null || ValidateUtil.isSafeDirection(packet.lookOrientation))) {
          Ref<EntityStore> ref = this.playerRef.getReference();
@@ -334,10 +334,10 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                                        break label76;
                                     }
                                  case INVALID_ID:
-                                    this.disconnect("Incorrect teleportId");
+                                    this.disconnect(Message.translation("server.general.disconnect.incorrectTeleportId"));
                                     return;
                                  case INVALID_POSITION:
-                                    this.disconnect("Invalid teleport");
+                                    this.disconnect(Message.translation("server.general.disconnect.invalidTeleport"));
                               }
                            }
                         }
@@ -347,13 +347,13 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             );
          }
       } else {
-         this.disconnect("Sent impossible orientation data!");
+         this.disconnect(Message.translation("server.general.disconnect.impossibleOrientation"));
       }
    }
 
    public void handle(@Nonnull ChatMessage packet) {
       if (packet.message == null || packet.message.isEmpty()) {
-         this.disconnect("Invalid chat message packet! Message was empty.");
+         this.disconnect(Message.translation("server.general.disconnect.invalidChatMessage"));
       } else if (MessageUtil.containsControlCharacters(packet.message)) {
          this.playerRef.sendMessage(Message.translation("server.io.gamepackethandler.invalidMessageContent").param("msg", packet.message));
       } else {
@@ -677,7 +677,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       assert playerComponent != null;
       WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
       if (!worldMapTracker.isAllowTeleportToMarkers()) {
-         this.disconnect("You are not allowed to use TeleportToWorldMapMarker!");
+         this.disconnect(Message.translation("server.general.disconnect.teleportToMarkersNotAllowed"));
       } else {
          MapMarker marker = worldMapTracker.getSentMarkers().get(packet.id);
          if (marker != null) {
@@ -707,7 +707,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       assert playerComponent != null;
       WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
       if (!worldMapTracker.isAllowTeleportToCoordinates()) {
-         this.disconnect("You are not allowed to use TeleportToWorldMapMarker!");
+         this.disconnect(Message.translation("server.general.disconnect.teleportToCoordinatesNotAllowed"));
       } else {
          world.getChunkStore().getChunkReferenceAsync(ChunkUtil.indexChunkFromBlock(packet.x, packet.y)).thenAcceptAsync(chunkRef -> {
             BlockChunk blockChunkComponent = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());

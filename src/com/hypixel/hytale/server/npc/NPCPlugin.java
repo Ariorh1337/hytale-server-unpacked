@@ -539,6 +539,7 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new CombatViewSystems.EntityRemoved(this.combatDataComponentType, this.combatDataPoolResourceType));
       entityStoreRegistry.registerSystem(new CombatViewSystems.Ticking(this.combatDataComponentType, this.combatDataPoolResourceType));
       entityStoreRegistry.registerSystem(new NPCSystems.ModelChangeSystem());
+      entityStoreRegistry.registerSystem(new NPCSystems.OnNPCAdded());
       entityStoreRegistry.registerSystem(new RoleBuilderSystem());
       entityStoreRegistry.registerSystem(new BalancingInitialisationSystem());
       entityStoreRegistry.registerSystem(new RoleSystems.RoleActivateSystem(npcComponentType));
@@ -600,7 +601,7 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new NPCSystems.KillFeedDecedentEventSystem());
       entityStoreRegistry.registerSystem(new NPCSystems.PrefabPlaceEntityEventSystem());
       entityStoreRegistry.registerSystem(new NPCVelocityInstructionSystem());
-      this.getEntityStoreRegistry().registerSystem(new NPCPlugin.NPCEntityRegenerateStatsSystem());
+      entityStoreRegistry.registerSystem(new NPCPlugin.NPCEntityRegenerateStatsSystem());
    }
 
    @Override
@@ -1223,12 +1224,12 @@ public class NPCPlugin extends JavaPlugin {
          );
    }
 
-   protected void generateDescriptors() {
+   public void generateDescriptors() {
       this.getLogger().at(Level.INFO).log("===== Generating descriptors for NPC!");
       this.builderDescriptors = this.builderManager.generateDescriptors();
    }
 
-   protected void saveDescriptors() {
+   public void saveDescriptors() {
       this.getLogger().at(Level.INFO).log("===== Saving descriptors for NPC!");
       Path path = Path.of("npc_descriptors.json");
       BuilderManager.saveDescriptors(this.builderDescriptors, path);

@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.packets.window.CraftRecipeAction;
 import com.hypixel.hytale.protocol.packets.window.TierUpgradeAction;
 import com.hypixel.hytale.protocol.packets.window.WindowAction;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -44,7 +45,7 @@ public class SimpleCraftingWindow extends CraftingWindow implements MaterialCont
             if (craftRecipe == null) {
                PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
                if (playerRef != null) {
-                  playerRef.getPacketHandler().disconnect("Attempted to craft unknown recipe!");
+                  playerRef.getPacketHandler().disconnect(Message.translation("server.general.disconnect.unknownRecipe"));
                }
 
                return;

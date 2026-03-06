@@ -398,6 +398,15 @@ public class EffectControllerComponent implements Component<EntityStore> {
       return activeEntityEffects;
    }
 
+   public boolean hasEffect(@Nullable EntityEffect entityEffect) {
+      if (entityEffect == null) {
+         return false;
+      }
+
+      int entityEffectIndex = EntityEffect.getAssetMap().getIndex(entityEffect.getId());
+      return entityEffectIndex == Integer.MIN_VALUE ? false : this.activeEffects.containsKey(entityEffectIndex);
+   }
+
    @Nonnull
    @Override
    public String toString() {

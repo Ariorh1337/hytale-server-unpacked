@@ -27,9 +27,9 @@ public class FieldFunctionPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
       PositionProvider.Context childContext = new PositionProvider.Context(context);
-      childContext.consumer = p -> {
+      childContext.pipe = (p, control) -> {
          Density.Context densityContext = new Density.Context();
          densityContext.position = p;
          densityContext.positionsAnchor = context.anchor;
@@ -37,12 +37,12 @@ public class FieldFunctionPositionProvider extends PositionProvider {
 
          for (FieldFunctionPositionProvider.Delimiter d : this.delimiters) {
             if (d.isInside(value)) {
-               context.consumer.accept(p);
+               context.pipe.accept(p, control);
                return;
             }
          }
       };
-      this.positionProvider.positionsIn(childContext);
+      this.positionProvider.generate(childContext);
    }
 
    private static class Delimiter {

@@ -4,6 +4,7 @@ import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.ListPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.Codec;
@@ -32,7 +33,7 @@ public class ListPositionProviderAsset extends PositionProviderAsset {
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       if (super.skip()) {
-         return PositionProvider.noPositionProvider();
+         return EmptyPositionProvider.INSTANCE;
       }
 
       ArrayList<Vector3i> list = new ArrayList<>();

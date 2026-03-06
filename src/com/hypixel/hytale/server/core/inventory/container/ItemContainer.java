@@ -116,15 +116,21 @@ public abstract class ItemContainer {
       return map;
    }
 
-   public EventRegistration registerChangeEvent(@Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer) {
+   public EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> registerChangeEvent(
+      @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer
+   ) {
       return this.registerChangeEvent((short)0, consumer);
    }
 
-   public EventRegistration registerChangeEvent(@Nonnull EventPriority priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer) {
+   public EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> registerChangeEvent(
+      @Nonnull EventPriority priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer
+   ) {
       return this.registerChangeEvent(priority.getValue(), consumer);
    }
 
-   public EventRegistration registerChangeEvent(short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer) {
+   public EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> registerChangeEvent(
+      short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer
+   ) {
       return this.externalChangeEventRegistry.register(priority, null, consumer);
    }
 

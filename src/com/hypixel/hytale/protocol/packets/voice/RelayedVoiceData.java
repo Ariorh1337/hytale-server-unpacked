@@ -41,7 +41,7 @@ public class RelayedVoiceData implements Packet, ToClientPacket {
 
    @Override
    public NetworkChannel getChannel() {
-      return NetworkChannel.Default;
+      return NetworkChannel.Voice;
    }
 
    public RelayedVoiceData() {

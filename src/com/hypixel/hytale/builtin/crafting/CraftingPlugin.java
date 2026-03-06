@@ -340,7 +340,6 @@ public class CraftingPlugin extends JavaPlugin {
       return instance;
    }
 
-   @Deprecated(forRemoval = true)
    public static class MigrateCrafting extends BlockModule.MigrationSystem {
       @Override
       public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {

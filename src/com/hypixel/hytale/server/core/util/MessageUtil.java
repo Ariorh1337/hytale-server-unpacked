@@ -199,7 +199,7 @@ public class MessageUtil {
                   } else if (replacement != null) {
                      String formattedReplacement;
                      formattedReplacement = "";
-                     label171:
+                     label179:
                      switch (format) {
                         case "upper":
                            if (replacement instanceof StringParamValue s) {
@@ -222,7 +222,7 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label171;
+                                 break label179;
                               case "decimal":
                               case null:
                               default:
@@ -234,12 +234,19 @@ public class MessageUtil {
                                     case LongParamValue l -> Long.toString(l.value);
                                     default -> "";
                                  };
-                                 break label171;
+                                 break label179;
                            }
                         case "plural":
                            if (options != null) {
                               Map<String, String> pluralTexts = parsePluralOptions(options);
-                              int value = Integer.parseInt(replacement.toString());
+
+                              int value = switch (replacement) {
+                                 case IntParamValue iv -> iv.value;
+                                 case LongParamValue l -> (int)l.value;
+                                 case DoubleParamValue d -> (int)d.value;
+                                 case StringParamValue s -> Integer.parseInt(s.value);
+                                 default -> 0;
+                              };
                               String category = getPluralCategory(value, "en-US");
                               String selected;
                               if (pluralTexts.containsKey(category)) {

@@ -57,6 +57,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.longs.Long2IntMap;
+import it.unimi.dsi.fastutil.longs.Long2IntMaps;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -104,6 +107,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
    private final Long2ObjectMap<BlockSelection.FluidHolder> fluids;
    @Nonnull
    private final List<Holder<EntityStore>> entities;
+   @Nonnull
+   private final Long2IntMap tints;
    private final ReentrantReadWriteLock blocksLock = new ReentrantReadWriteLock();
    private final ReentrantReadWriteLock entitiesLock = new ReentrantReadWriteLock();
 
@@ -111,12 +116,14 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       this.blocks = new Long2ObjectOpenHashMap<>();
       this.fluids = new Long2ObjectOpenHashMap<>();
       this.entities = new ObjectArrayList<>();
+      this.tints = new Long2IntOpenHashMap();
    }
 
    public BlockSelection(int initialBlockCapacity, int initialEntityCapacity) {
       this.blocks = new Long2ObjectOpenHashMap<>(initialBlockCapacity);
       this.fluids = new Long2ObjectOpenHashMap<>(initialBlockCapacity);
       this.entities = new ObjectArrayList<>(initialEntityCapacity);
+      this.tints = new Long2IntOpenHashMap();
    }
 
    public BlockSelection(@Nonnull BlockSelection other) {
@@ -127,6 +134,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       this.blocks = new Long2ObjectOpenHashMap<>(other.getBlockCount());
       this.fluids = new Long2ObjectOpenHashMap<>(other.getFluidCount());
       this.entities = new ObjectArrayList<>(other.getEntityCount());
+      this.tints = new Long2IntOpenHashMap();
       this.copyPropertiesFrom(other);
       this.add(other);
    }
@@ -184,6 +192,16 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
       try {
          return this.fluids.size();
+      } finally {
+         this.blocksLock.readLock().unlock();
+      }
+   }
+
+   public int getTintCount() {
+      this.blocksLock.readLock().lock();
+
+      try {
+         return this.tints.size();
       } finally {
          this.blocksLock.readLock().unlock();
       }
@@ -398,6 +416,38 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             int y1 = BlockUtil.unpackY(packed);
             int z1 = BlockUtil.unpackZ(packed);
             iterator.accept(x1, y1, z1, block);
+         });
+      } finally {
+         this.blocksLock.readLock().unlock();
+      }
+   }
+
+   public void addTintAtLocalPos(int x, int z, int color) {
+      this.tints.put(BlockUtil.pack(x, 0, z), color);
+   }
+
+   public void addTintAtWorldPos(int worldX, int worldZ, int color) {
+      this.tints.put(BlockUtil.pack(worldX - this.x, 0, worldZ - this.z), color);
+   }
+
+   public int getTintAtWorldPos(int worldX, int worldZ) {
+      return this.tints.getOrDefault(BlockUtil.pack(worldX - this.x, 0, worldZ - this.z), -1);
+   }
+
+   public boolean hasTintAtWorldPos(int worldX, int worldZ) {
+      return this.tints.containsKey(BlockUtil.pack(worldX - this.x, 0, worldZ - this.z));
+   }
+
+   public void forEachTint(@Nonnull BlockSelection.TintIterator iterator) {
+      this.blocksLock.readLock().lock();
+
+      try {
+         Long2IntMaps.fastForEach(this.tints, e -> {
+            long packed = e.getLongKey();
+            int color = e.getIntValue();
+            int x1 = BlockUtil.unpackX(packed);
+            int z1 = BlockUtil.unpackZ(packed);
+            iterator.accept(x1, z1, color);
          });
       } finally {
          this.blocksLock.readLock().unlock();
@@ -759,6 +809,14 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                componentAccessor
             )
          );
+         this.forEachTint((x, z, newColor) -> {
+            int worldX = this.x + x;
+            int worldZ = this.z + z;
+            long chunkIdx = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
+            WorldChunk chunk = outerWorld.getNonTickingChunk(chunkIdx);
+            chunk.getBlockChunk().setTint(worldX, worldZ, newColor);
+            dirtyChunks.add(chunkIdx);
+         });
       } finally {
          this.blocksLock.readLock().unlock();
       }
@@ -970,6 +1028,16 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                fluidStore.fluidLevel
             )
          );
+         this.forEachTint((x, z, newColor) -> {
+            int worldX = this.x + x;
+            int worldZ = this.z + z;
+            long chunkIdx = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
+            WorldChunk chunk = outerWorld.getNonTickingChunk(chunkIdx);
+            int beforeColor = chunk.getBlockChunk().getTint(worldX, worldZ);
+            before.addTintAtWorldPos(worldX, worldZ, beforeColor);
+            chunk.getBlockChunk().setTint(worldX, worldZ, newColor);
+            dirtyChunks.add(chunkIdx);
+         });
       } finally {
          this.blocksLock.readLock().unlock();
       }
@@ -1493,6 +1561,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       try {
          Long2ObjectMaps.fastForEach(this.blocks, entry -> selection.blocks.put(entry.getLongKey(), entry.getValue().cloneBlockHolder()));
          selection.fluids.putAll(this.fluids);
+         selection.tints.putAll(this.tints);
       } finally {
          this.blocksLock.readLock().unlock();
       }
@@ -1803,5 +1872,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
    @FunctionalInterface
    public interface FluidIterator {
       void accept(int var1, int var2, int var3, int var4, byte var5);
+   }
+
+   @FunctionalInterface
+   public interface TintIterator {
+      void accept(int var1, int var2, int var3);
    }
 }

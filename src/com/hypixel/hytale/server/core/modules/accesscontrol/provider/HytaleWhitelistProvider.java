@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonWriter;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -67,12 +68,12 @@ public class HytaleWhitelistProvider extends BlockingDiskFile implements AccessP
 
    @Nonnull
    @Override
-   public CompletableFuture<Optional<String>> getDisconnectReason(UUID uuid) {
+   public CompletableFuture<Optional<Message>> getDisconnectReason(@Nonnull UUID uuid) {
       this.lock.readLock().lock();
 
       try {
          if (this.isEnabled && !this.whitelist.contains(uuid)) {
-            return CompletableFuture.completedFuture(Optional.of("You are not whitelisted!"));
+            return CompletableFuture.completedFuture(Optional.of(Message.translation("client.general.disconnect.notWhitelisted")));
          }
       } finally {
          this.lock.readLock().unlock();

@@ -192,5 +192,8 @@ public class TeleporterInteraction extends SimpleBlockInteraction {
    protected void simulateInteractWithBlock(
       @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock
    ) {
+      if (context.getServerState() != null) {
+         context.getState().state = context.getServerState().state;
+      }
    }
 }

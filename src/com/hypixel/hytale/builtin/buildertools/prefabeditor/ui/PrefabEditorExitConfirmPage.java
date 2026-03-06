@@ -90,7 +90,7 @@ public class PrefabEditorExitConfirmPage extends InteractiveCustomUIPage<PrefabE
             playerComponent.getPageManager().setPage(ref, store, Page.None);
             break;
          case SaveAndExit:
-            playerComponent.getPageManager().openCustomPage(ref, store, new PrefabEditorSaveSettingsPage(this.playerRef, this.prefabEditSession));
+            playerComponent.getPageManager().openCustomPage(ref, store, new PrefabEditorSaveSettingsPage(this.playerRef, this.prefabEditSession, true));
       }
    }
 

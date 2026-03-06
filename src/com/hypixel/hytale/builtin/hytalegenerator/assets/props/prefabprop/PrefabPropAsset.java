@@ -7,22 +7,23 @@ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.builtin.hytalegenerator.BlockMask;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.WeightedMap;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.blockmask.BlockMaskAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.ConstantPatternAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.PatternAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.PropAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.prefabprop.directionality.DirectionalityAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.assets.props.prefabprop.directionality.StaticDirectionalityAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.assets.scanners.OriginScannerAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.scanners.DirectScannerAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.scanners.ScannerAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.datastructures.WeightedMap;
-import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
+import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
-import com.hypixel.hytale.builtin.hytalegenerator.props.directionality.Directionality;
-import com.hypixel.hytale.builtin.hytalegenerator.props.prefab.MoldingDirection;
-import com.hypixel.hytale.builtin.hytalegenerator.props.prefab.PrefabMoldingConfiguration;
-import com.hypixel.hytale.builtin.hytalegenerator.props.prefab.PrefabProp;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.Directionality;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.MoldingDirection;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabMoldingConfiguration;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabProp;
+import com.hypixel.hytale.builtin.hytalegenerator.scanners.EmptyScanner;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -71,24 +72,15 @@ public class PrefabPropAsset extends PropAsset {
       .add()
       .build();
    private PrefabPropAsset.WeightedPathAsset[] weightedPrefabPathAssets = new PrefabPropAsset.WeightedPathAsset[0];
+   private DirectionalityAsset directionalityAsset = null;
+   private ScannerAsset scannerAsset = null;
    private boolean legacyPath = false;
    private boolean loadEntities = true;
-   private DirectionalityAsset directionalityAsset = new StaticDirectionalityAsset();
-   private ScannerAsset scannerAsset = new OriginScannerAsset();
    private BlockMaskAsset blockMaskAsset = new BlockMaskAsset();
    private MoldingDirection moldingDirectionName = MoldingDirection.NONE;
-   private ScannerAsset moldingScannerAsset = new OriginScannerAsset();
+   private ScannerAsset moldingScannerAsset = new DirectScannerAsset();
    private PatternAsset moldingPatternAsset = new ConstantPatternAsset();
    private boolean moldChildren = false;
-
-   @Override
-   public void cleanUp() {
-      this.directionalityAsset.cleanUp();
-      this.scannerAsset.cleanUp();
-      this.blockMaskAsset.cleanUp();
-      this.moldingScannerAsset.cleanUp();
-      this.moldingPatternAsset.cleanUp();
-   }
 
    @Nonnull
    @Override
@@ -104,46 +96,43 @@ public class PrefabPropAsset extends PropAsset {
          }
 
          if (prefabWeightedMap.size() == 0) {
-            return Prop.noProp();
+            return EmptyProp.INSTANCE;
          }
 
-         MaterialCache voxelCache = argument.materialCache;
-         BlockMask blockMask;
-         if (this.blockMaskAsset == null) {
-            blockMask = new BlockMask();
+         if (this.scannerAsset != null && this.directionalityAsset != null) {
+            BlockMask blockMask = this.blockMaskAsset.build(argument.materialCache);
+            Scanner scanner = this.scannerAsset.build(ScannerAsset.argumentFrom(argument));
+            Directionality directionality = this.directionalityAsset.build(DirectionalityAsset.argumentFrom(argument));
+            MoldingDirection moldingDirection = this.moldingDirectionName;
+            PrefabMoldingConfiguration moldingConfiguration = null;
+            if (moldingDirection != MoldingDirection.DOWN && moldingDirection != MoldingDirection.UP) {
+               moldingConfiguration = PrefabMoldingConfiguration.none();
+            } else {
+               Scanner moldingScanner = this.moldingScannerAsset == null
+                  ? EmptyScanner.INSTANCE
+                  : this.moldingScannerAsset.build(ScannerAsset.argumentFrom(argument));
+               Pattern moldingPattern = this.moldingPatternAsset == null
+                  ? ConstantPattern.INSTANCE_FALSE
+                  : this.moldingPatternAsset.build(PatternAsset.argumentFrom(argument));
+               moldingConfiguration = new PrefabMoldingConfiguration(moldingScanner, moldingPattern, moldingDirection, this.moldChildren);
+            }
+
+            return new PrefabProp(
+               prefabWeightedMap,
+               scanner,
+               directionality,
+               argument.materialCache,
+               blockMask,
+               moldingConfiguration,
+               this::loadPrefabBuffersFrom,
+               argument.parentSeed,
+               this.loadEntities
+            );
          } else {
-            blockMask = this.blockMaskAsset.build(voxelCache);
+            return new com.hypixel.hytale.builtin.hytalegenerator.props.PrefabProp(prefabWeightedMap, argument.materialCache, argument.parentSeed);
          }
-
-         Scanner scanner = this.scannerAsset.build(ScannerAsset.argumentFrom(argument));
-         Directionality directionality = this.directionalityAsset.build(DirectionalityAsset.argumentFrom(argument));
-         MoldingDirection moldingDirection = this.moldingDirectionName;
-         PrefabMoldingConfiguration moldingConfiguration = null;
-         if (moldingDirection != MoldingDirection.DOWN && moldingDirection != MoldingDirection.UP) {
-            moldingConfiguration = PrefabMoldingConfiguration.none();
-         } else {
-            Scanner moldingScanner = this.moldingScannerAsset == null
-               ? Scanner.noScanner()
-               : this.moldingScannerAsset.build(ScannerAsset.argumentFrom(argument));
-            Pattern moldingPattern = this.moldingPatternAsset == null
-               ? Pattern.noPattern()
-               : this.moldingPatternAsset.build(PatternAsset.argumentFrom(argument));
-            moldingConfiguration = new PrefabMoldingConfiguration(moldingScanner, moldingPattern, moldingDirection, this.moldChildren);
-         }
-
-         return new PrefabProp(
-            prefabWeightedMap,
-            scanner,
-            directionality,
-            voxelCache,
-            blockMask,
-            moldingConfiguration,
-            this::loadPrefabBuffersFrom,
-            argument.parentSeed,
-            this.loadEntities
-         );
       } else {
-         return Prop.noProp();
+         return EmptyProp.INSTANCE;
       }
    }
 
@@ -182,6 +171,21 @@ public class PrefabPropAsset extends PropAsset {
       } else {
          return pathPrefabs;
       }
+   }
+
+   @Override
+   public void cleanUp() {
+      if (this.directionalityAsset != null) {
+         this.directionalityAsset.cleanUp();
+      }
+
+      if (this.scannerAsset != null) {
+         this.scannerAsset.cleanUp();
+      }
+
+      this.blockMaskAsset.cleanUp();
+      this.moldingScannerAsset.cleanUp();
+      this.moldingPatternAsset.cleanUp();
    }
 
    public static class WeightedPathAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, PrefabPropAsset.WeightedPathAsset>> {

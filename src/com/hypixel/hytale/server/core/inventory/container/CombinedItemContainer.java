@@ -219,9 +219,11 @@ public class CombinedItemContainer extends ItemContainer {
 
    @Nonnull
    @Override
-   public EventRegistration registerChangeEvent(short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer) {
-      EventRegistration thisRegistration = super.registerChangeEvent(priority, consumer);
-      EventRegistration[] containerRegistrations = new EventRegistration[this.containers.length];
+   public EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> registerChangeEvent(
+      short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer
+   ) {
+      EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> thisRegistration = super.registerChangeEvent(priority, consumer);
+      EventRegistration<Void, ItemContainer.ItemContainerChangeEvent>[] containerRegistrations = new EventRegistration[this.containers.length];
       short start = 0;
 
       for (int i = 0; i < this.containers.length; i++) {

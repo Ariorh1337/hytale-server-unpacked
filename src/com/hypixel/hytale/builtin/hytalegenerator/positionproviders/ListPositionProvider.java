@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
@@ -35,12 +35,17 @@ public class ListPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
+      Control control = new Control();
+
       for (Vector3d p : this.positions3d) {
-         if (VectorUtil.isInside(p, context.minInclusive, context.maxExclusive)) {
+         if (control.stop) {
+            return;
          }
 
-         context.consumer.accept(p);
+         if (context.bounds.contains(p)) {
+            context.pipe.accept(p, control);
+         }
       }
    }
 }

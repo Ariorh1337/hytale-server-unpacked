@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
@@ -15,25 +15,30 @@ public class AnchorPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
       if (context != null) {
          Vector3d anchor = context.anchor;
          if (anchor != null) {
-            Vector3d offsetMin = this.isReversed ? context.minInclusive.clone().add(anchor) : context.minInclusive.clone().addScaled(anchor, -1.0);
-            Vector3d offsetMax = this.isReversed ? context.maxExclusive.clone().add(anchor) : context.maxExclusive.clone().addScaled(anchor, -1.0);
-            PositionProvider.Context childContext = new PositionProvider.Context(offsetMin, offsetMax, p -> {
-               Vector3d newPoint = p.clone();
+            Bounds3d offsetBounds;
+            if (this.isReversed) {
+               offsetBounds = context.bounds.clone().offset(anchor);
+            } else {
+               offsetBounds = context.bounds.clone().offset(anchor.clone().scale(-1.0));
+            }
+
+            PositionProvider.Context childContext = new PositionProvider.Context(offsetBounds, (position, control) -> {
+               Vector3d newPoint = position.clone();
                if (this.isReversed) {
                   newPoint.addScaled(anchor, -1.0);
                } else {
                   newPoint.add(anchor);
                }
 
-               if (VectorUtil.isInside(newPoint, context.minInclusive, context.maxExclusive)) {
-                  context.consumer.accept(newPoint);
+               if (context.bounds.contains(newPoint)) {
+                  context.pipe.accept(newPoint, control);
                }
             }, context.anchor);
-            this.positionProvider.positionsIn(childContext);
+            this.positionProvider.generate(childContext);
          }
       }
    }

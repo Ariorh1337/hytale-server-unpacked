@@ -1,16 +1,15 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
-import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class FieldFunctionPattern extends Pattern {
    @Nonnull
    private final Density field;
-   @Nonnull
-   private final SpaceSize readSpaceSize;
    @Nonnull
    private final List<FieldFunctionPattern.Delimiter> delimiters;
    @Nonnull
@@ -18,7 +17,6 @@ public class FieldFunctionPattern extends Pattern {
 
    public FieldFunctionPattern(@Nonnull Density field) {
       this.field = field;
-      this.readSpaceSize = SpaceSize.empty();
       this.delimiters = new ArrayList<>(1);
       this.rDensityContext = new Density.Context();
    }
@@ -37,10 +35,10 @@ public class FieldFunctionPattern extends Pattern {
       return false;
    }
 
-   @Nonnull
+   @NonNullDecl
    @Override
-   public SpaceSize readSpace() {
-      return this.readSpaceSize.clone();
+   public Bounds3i getBounds_voxelGrid() {
+      return Bounds3i.ZERO;
    }
 
    public void addDelimiter(double min, double max) {

@@ -1,6 +1,5 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
@@ -21,15 +20,15 @@ public class BaseHeightPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
       PositionProvider.Context childContext = new PositionProvider.Context(context);
-      childContext.consumer = position -> {
+      childContext.pipe = (position, control) -> {
          Vector3d offsetP = position.clone();
          offsetP.y = offsetP.y + this.baseHeight;
-         if (VectorUtil.isInside(offsetP, context.minInclusive, context.maxExclusive)) {
-            context.consumer.accept(offsetP);
+         if (context.bounds.contains(offsetP)) {
+            context.pipe.accept(offsetP, control);
          }
       };
-      this.positionProvider.positionsIn(childContext);
+      this.positionProvider.generate(childContext);
    }
 }

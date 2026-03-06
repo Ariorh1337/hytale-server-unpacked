@@ -141,6 +141,8 @@ public class MountPlugin extends JavaPlugin {
          assert mountComponent != null;
          resetOriginalMountRole(entityReference, store, mountComponent);
          resetOriginalPlayerMovementSettings(playerRef, store);
+      } else {
+         resetOriginalPlayerMovementSettings(playerRef, store);
       }
    }
 

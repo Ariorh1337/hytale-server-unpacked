@@ -49,6 +49,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class SetupPacketHandler extends GenericConnectionPacketHandler {
+   @Nonnull
    private final UUID uuid;
    private final String username;
    private final byte[] referralData;
@@ -57,7 +58,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
    private boolean receivedRequest;
    private int clientViewRadiusChunks = 6;
 
-   public SetupPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, UUID uuid, String username) {
+   public SetupPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull UUID uuid, String username) {
       this(channel, protocolVersion, language, uuid, username, null, null);
    }
 
@@ -65,7 +66,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
       @Nonnull Channel channel,
       @Nonnull ProtocolVersion protocolVersion,
       String language,
-      UUID uuid,
+      @Nonnull UUID uuid,
       String username,
       byte[] referralData,
       HostAddress referralSource
@@ -133,7 +134,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                HytaleLogger.getLogger().at(Level.INFO).log("Found match of player %s on %s", this.uuid, otherPlayer.getUsername());
                Channel otherPlayerChannel = otherPlayer.getPacketHandler().getChannel();
                if (!NettyUtil.isFromSameOrigin(otherPlayerChannel, this.getChannel())) {
-                  this.disconnect("You are already logged in on that account!");
+                  this.disconnect(Message.translation("client.general.disconnect.alreadyLoggedIn"));
                   otherPlayer.sendMessage(Message.translation("server.io.setuppackethandler.otherLoginAttempt"));
                   return;
                }
@@ -144,12 +145,12 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                   if (world != null) {
                      CompletableFuture<Void> removalFuture = new CompletableFuture<>();
                      world.execute(() -> {
-                        otherPlayer.getPacketHandler().disconnect("You logged in again with the account!");
+                        otherPlayer.getPacketHandler().disconnect(Message.translation("server.general.disconnect.loggedInAgain"));
                         world.execute(() -> removalFuture.complete(null));
                      });
                      removalFuture.join();
                   } else {
-                     otherPlayer.getPacketHandler().disconnect("You logged in again with the account!");
+                     otherPlayer.getPacketHandler().disconnect(Message.translation("server.general.disconnect.loggedInAgain"));
                   }
                }
             }
@@ -186,7 +187,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             this.handle((PlayerOptions)packet);
             break;
          default:
-            this.disconnect("Protocol error: unexpected packet " + packet.getId());
+            this.disconnect(Message.translation("client.general.disconnect.protocol.unexpectedPacket").param("packetId", packet.getId()));
       }
    }
 
@@ -206,7 +207,11 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             HytaleServer.get().shutdownServer();
          } else if (SingleplayerModule.isOwner(this.auth, this.uuid)) {
             HytaleLogger.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
-            Universe.get().getPlayers().forEach(p -> p.getPacketHandler().disconnect(this.username + " left! Shutting down singleplayer world!"));
+            Universe.get()
+               .getPlayers()
+               .forEach(
+                  p -> p.getPacketHandler().disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", this.username))
+               );
             HytaleServer.get().shutdownServer();
          }
       }
@@ -260,7 +265,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                   return null;
                }
 
-               this.disconnect("An exception occurred while trying to login!");
+               this.disconnect(Message.translation("client.general.disconnect.loginException"));
                throw new RuntimeException("Exception when player was joining", throwable);
             })
       );
@@ -283,9 +288,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             try {
                CosmeticsModule.get().validateSkin(packet.skin);
             } catch (CosmeticsModule.InvalidSkinException e) {
-               String msg = "Your skin contains parts that aren't available on this server.\nThis usually happens when assets are out of sync.\n\n"
-                  + e.getMessage();
-               this.disconnect(msg);
+               this.disconnect(Message.translation("client.general.disconnect.invalidSkin").param("details", e.getMessage()));
                return;
             }
          }
@@ -304,7 +307,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                      return null;
                   }
 
-                  this.disconnect("An exception occurred when adding to the universe!");
+                  this.disconnect(Message.translation("client.general.disconnect.universeException"));
                   throw new RuntimeException("Exception when player adding to universe", throwable);
                })
          );

@@ -15,13 +15,13 @@ public class SimpleHorizontalPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
       PositionProvider.Context childContext = new PositionProvider.Context(context);
-      childContext.consumer = positions -> {
+      childContext.pipe = (positions, control) -> {
          if (this.rangeY.contains(positions.y)) {
-            context.consumer.accept(positions);
+            context.pipe.accept(positions, control);
          }
       };
-      this.positionProvider.positionsIn(childContext);
+      this.positionProvider.generate(childContext);
    }
 }

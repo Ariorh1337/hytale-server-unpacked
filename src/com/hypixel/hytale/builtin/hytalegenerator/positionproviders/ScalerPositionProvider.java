@@ -1,0 +1,41 @@
+package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
+
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
+import com.hypixel.hytale.math.vector.Vector3d;
+import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+
+public class ScalerPositionProvider extends PositionProvider {
+   @Nonnull
+   private final Vector3d scale;
+   @Nonnull
+   private final Vector3d inverseScale;
+   @Nonnull
+   private final PositionProvider positionProvider;
+   @Nonnull
+   private final PositionProvider.Context rChildContext;
+   @Nonnull
+   private final Bounds3d rChildBounds;
+
+   public ScalerPositionProvider(@Nonnull Vector3d scale, @Nonnull PositionProvider positionProvider) {
+      this.scale = scale.clone();
+      this.inverseScale = new Vector3d(1.0 / scale.x, 1.0 / scale.y, 1.0 / scale.z);
+      this.positionProvider = positionProvider;
+      this.rChildContext = new PositionProvider.Context();
+      this.rChildBounds = new Bounds3d();
+   }
+
+   @Override
+   public void generate(@NonNullDecl PositionProvider.Context context) {
+      this.rChildBounds.assign(context.bounds);
+      this.rChildBounds.min.scale(this.inverseScale);
+      this.rChildBounds.max.scale(this.inverseScale);
+      this.rChildContext.assign(context);
+      this.rChildContext.bounds = this.rChildBounds;
+      this.rChildContext.pipe = (position, control) -> {
+         position.scale(this.scale);
+         context.pipe.accept(position, control);
+      };
+      this.positionProvider.generate(this.rChildContext);
+   }
+}

@@ -275,7 +275,7 @@ public class InstancesPlugin extends JavaPlugin {
                      defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
                   } else {
                      get().getLogger().at(Level.SEVERE).log("No fallback world for %s, disconnecting", playerRefComponent.getUsername());
-                     playerRefComponent.getPacketHandler().disconnect("Failed to teleport - no world available");
+                     playerRefComponent.getPacketHandler().disconnect(Message.translation("server.general.disconnect.teleportNoWorld"));
                   }
                }
             }

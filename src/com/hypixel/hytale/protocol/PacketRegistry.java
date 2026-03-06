@@ -120,6 +120,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLineAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPasteClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolResetClipboardRotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRotateClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolAskForClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolReplyWithClipboard;
@@ -135,6 +136,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetTransforma
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolShowAnchor;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolStackArea;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolsSetSoundSet;
+import com.hypixel.hytale.protocol.packets.buildertools.PrefabSetAnchor;
 import com.hypixel.hytale.protocol.packets.buildertools.PrefabUnselectPrefab;
 import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
 import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
@@ -1887,7 +1889,7 @@ public final class PacketRegistry {
          170,
          "UpdatePlayerInventory",
          UpdatePlayerInventory.class,
-         2,
+         1,
          1677721600,
          true,
          UpdatePlayerInventory::validateStructure,
@@ -2187,8 +2189,8 @@ public final class PacketRegistry {
          222,
          "EditorBlocksChange",
          EditorBlocksChange.class,
-         30,
-         139264048,
+         31,
+         139264049,
          true,
          EditorBlocksChange::validateStructure,
          EditorBlocksChange::deserialize
@@ -3600,6 +3602,30 @@ public final class PacketRegistry {
       register(
          PacketRegistry.PacketDirection.ToServer,
          NetworkChannel.Default,
+         426,
+         "PrefabSetAnchor",
+         PrefabSetAnchor.class,
+         12,
+         12,
+         false,
+         PrefabSetAnchor::validateStructure,
+         PrefabSetAnchor::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         427,
+         "BuilderToolResetClipboardRotation",
+         BuilderToolResetClipboardRotation.class,
+         0,
+         0,
+         false,
+         BuilderToolResetClipboardRotation::validateStructure,
+         BuilderToolResetClipboardRotation::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Voice,
          450,
          "VoiceData",
          VoiceData.class,
@@ -3611,7 +3637,7 @@ public final class PacketRegistry {
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
-         NetworkChannel.Default,
+         NetworkChannel.Voice,
          451,
          "RelayedVoiceData",
          RelayedVoiceData.class,

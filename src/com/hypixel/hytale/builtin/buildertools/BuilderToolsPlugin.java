@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.buildertools;
 
 import com.hypixel.fastutil.ints.Int2ObjectConcurrentHashMap;
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
@@ -53,7 +54,6 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionMan
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditorCreationSettings;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabMarkerProvider;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabSelectionInteraction;
-import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabSetAnchorInteraction;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.commands.PrefabEditCommand;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfig;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigCommandExecutor;
@@ -148,7 +148,6 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.function.predicate.TriIntObjPredicate;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.block.BlockCubeUtil;
-import com.hypixel.hytale.math.block.BlockSphereUtil;
 import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.iterator.LineIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -173,6 +172,7 @@ import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
 import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -193,6 +193,7 @@ import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.ToolArg
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.ToolArgException;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
@@ -201,6 +202,7 @@ import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.io.ServerManager;
@@ -276,7 +278,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -316,6 +317,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    private static final float SMOOTHING_KERNEL_TOTAL = 27.0F;
    private static final int[] SMOOTHING_KERNEL = new int[]{1, 2, 1, 2, 3, 2, 1, 2, 1, 2, 3, 2, 3, 4, 3, 2, 3, 2, 1, 2, 1, 2, 3, 2, 1, 2, 1};
    private final Config<BuilderToolsPlugin.BuilderToolsConfig> config = this.withConfig("BuilderToolsModule", BuilderToolsPlugin.BuilderToolsConfig.CODEC);
+   private static final Message MESSAGE_PACK_NOT_FOUND = Message.translation("server.commands.editprefab.save.pack.notFound");
+   private static final Message MESSAGE_PACK_IMMUTABLE = Message.translation("server.commands.editprefab.save.pack.immutable");
    private ResourceType<EntityStore, PrefabEditSession> prefabEditSessionResourceType;
 
    public BuilderToolsPlugin(@Nonnull JavaPluginInit init) {
@@ -370,6 +373,58 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       getState(player, playerRef).addToQueue(task);
    }
 
+   @Nullable
+   public static AssetPack resolveTargetPack(@Nonnull String explicitPackName, @Nonnull Player playerComponent, @Nonnull CommandContext context) {
+      return resolveTargetPack(explicitPackName, null, playerComponent, context);
+   }
+
+   @Nullable
+   public static AssetPack resolveTargetPack(
+      @Nonnull String explicitPackName, @Nullable Path prefabPath, @Nonnull Player playerComponent, @Nonnull CommandContext context
+   ) {
+      AssetModule assetModule = AssetModule.get();
+      if (!explicitPackName.isEmpty()) {
+         AssetPack pack = assetModule.getAssetPack(explicitPackName);
+         if (pack == null) {
+            context.sendMessage(MESSAGE_PACK_NOT_FOUND.param("name", explicitPackName));
+            return null;
+         } else if (pack.isImmutable()) {
+            context.sendMessage(MESSAGE_PACK_IMMUTABLE.param("name", explicitPackName));
+            return null;
+         } else {
+            return pack;
+         }
+      } else {
+         if (prefabPath != null) {
+            AssetPack sourcePack = PrefabStore.get().findAssetPackForPrefabPath(prefabPath);
+            if (sourcePack != null) {
+               if (!sourcePack.isImmutable()) {
+                  return sourcePack;
+               }
+
+               context.sendMessage(Message.translation("server.commands.editprefab.save.noPack"));
+               return null;
+            }
+         }
+
+         String lastPack = BuilderToolsUserData.get(playerComponent).getLastSavePack();
+         if (lastPack != null) {
+            AssetPack pack = assetModule.getAssetPack(lastPack);
+            if (pack != null && !pack.isImmutable()) {
+               return pack;
+            }
+         }
+
+         AssetPack basePack = assetModule.getBaseAssetPack();
+         if (!basePack.isImmutable()) {
+            return basePack;
+         }
+
+         context.sendMessage(Message.translation("server.commands.editprefab.save.noPack"));
+         return null;
+      }
+   }
+
    @Override
    protected void setup() {
       CommandRegistry commandRegistry = this.getCommandRegistry();
@@ -378,6 +433,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       ServerManager.get().registerSubPacketHandlers(BuilderToolsPacketHandler::new);
       eventRegistry.register(PlayerConnectEvent.class, this::onPlayerConnect);
       eventRegistry.register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+      eventRegistry.registerGlobal(PlayerReadyEvent.class, this::onPlayerReady);
       eventRegistry.registerGlobal(
          AddWorldEvent.class, event -> event.getWorld().getWorldMapManager().addMarkerProvider("prefabs", PrefabMarkerProvider.INSTANCE)
       );
@@ -386,7 +442,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       entityStoreRegistry.registerSystem(new PrefabDirtySystems.BlockPlaceDirtySystem());
       this.prefabAnchorComponentType = entityStoreRegistry.registerComponent(PrefabAnchor.class, "PrefabAnchor", PrefabAnchor.CODEC);
       Interaction.CODEC.register("PrefabSelectionInteraction", PrefabSelectionInteraction.class, PrefabSelectionInteraction.CODEC);
-      Interaction.CODEC.register("PrefabSetAnchorInteraction", PrefabSetAnchorInteraction.class, PrefabSetAnchorInteraction.CODEC);
       Interaction.CODEC.register("PickupItem", PickupItemInteraction.class, PickupItemInteraction.CODEC);
       Interaction.getAssetStore().loadAssets("Hytale:Hytale", List.of(new PickupItemInteraction("*PickupItem")));
       RootInteraction.getAssetStore().loadAssets("Hytale:Hytale", List.of(PickupItemInteraction.DEFAULT_ROOT));
@@ -584,6 +639,20 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
    private void onPlayerDisconnect(@Nonnull PlayerDisconnectEvent event) {
       this.releaseBuilderState(event.getPlayerRef().getUuid());
+   }
+
+   private void onPlayerReady(@Nonnull PlayerReadyEvent event) {
+      Ref<EntityStore> playerRef = event.getPlayer().getReference();
+      if (playerRef != null && playerRef.isValid()) {
+         Store<EntityStore> store = playerRef.getStore();
+         UUIDComponent uuidComponent = store.getComponent(playerRef, UUIDComponent.getComponentType());
+         if (uuidComponent != null) {
+            BuilderToolsPlugin.BuilderState state = this.builderStates.get(uuidComponent.getUuid());
+            if (state != null && state.getSelection() != null) {
+               state.sendSelectionToClient();
+            }
+         }
+      }
    }
 
    public void onToolArgUpdate(@Nonnull PlayerRef playerRef, @Nonnull Player player, @Nonnull BuilderToolArgUpdate packet) {
@@ -977,6 +1046,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       private volatile CompletableFuture<Void> taskFuture;
       private volatile long timestamp = Long.MAX_VALUE;
       private BlockSelection selection;
+      private boolean skipNextPreviewRebuild;
+      @Nullable
+      private BlockSelection preRotationSnapshot;
       private BlockMask globalMask;
       @Nonnull
       private Random random = new Random(26061984L);
@@ -1168,6 +1240,11 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
       public void setSelection(@Nonnull BlockSelection selection) {
          this.selection = selection;
+         this.preRotationSnapshot = null;
+      }
+
+      public void setSkipNextPreviewRebuild(boolean skip) {
+         this.skipNextPreviewRebuild = skip;
       }
 
       public void sendSelectionToClient() {
@@ -1337,7 +1414,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - start;
-         int size = after.getBlockCount() + after.getFluidCount();
+         int size = after.getBlockCount() + after.getFluidCount() + after.getTintCount();
          int interpolatedCount = positionsToExecute.size();
          BuilderToolsPlugin.get()
             .getLogger()
@@ -1370,7 +1447,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - startTime;
-         int size = after.getBlockCount() + after.getFluidCount();
+         int size = after.getBlockCount() + after.getFluidCount() + after.getTintCount();
          BuilderToolsPlugin.get()
             .getLogger()
             .at(Level.FINE)
@@ -1541,28 +1618,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          data.solidStrength = solidCount / 27.0F;
          return data;
-      }
-
-      public void editLine(
-         int x1,
-         int y1,
-         int z1,
-         int x2,
-         int y2,
-         int z2,
-         BlockPattern material,
-         int lineWidth,
-         int lineHeight,
-         int wallThickness,
-         BrushShape shape,
-         BrushOrigin origin,
-         int spacing,
-         int density,
-         ComponentAccessor<EntityStore> componentAccessor
-      ) {
-         this.editLine(
-            x1, y1, z1, x2, y2, z2, material, lineWidth, lineHeight, wallThickness, shape, origin, spacing, density, this.getGlobalMask(), componentAccessor
-         );
       }
 
       public void editLine(
@@ -2058,96 +2113,19 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             int minZ = this.selection.getSelectionMin().getZ();
             int maxX = this.selection.getSelectionMax().getX();
             int maxZ = this.selection.getSelectionMax().getZ();
+            BlockSelection place = new BlockSelection();
+            place.setPosition(minX, 0, minZ);
 
-            for (int cx = ChunkUtil.chunkCoordinate(minX); cx <= ChunkUtil.chunkCoordinate(maxX); cx++) {
-               for (int cz = ChunkUtil.chunkCoordinate(minZ); cz <= ChunkUtil.chunkCoordinate(maxZ); cz++) {
-                  int startX = Math.max(0, minX - ChunkUtil.minBlock(cx));
-                  int startZ = Math.max(0, minZ - ChunkUtil.minBlock(cz));
-                  int endX = Math.min(32, maxX - ChunkUtil.minBlock(cx));
-                  int endZ = Math.min(32, maxZ - ChunkUtil.minBlock(cz));
-                  WorldChunk chunk = world.getNonTickingChunk(ChunkUtil.indexChunk(cx, cz));
-
-                  for (int z = startZ; z < endZ; z++) {
-                     for (int x = startX; x < endX; x++) {
-                        chunk.getBlockChunk().setTint(x, z, color);
-                        count++;
-                     }
-                  }
-
-                  world.getNotificationHandler().updateChunk(chunk.getIndex());
+            for (int x = minX; x < maxX; x++) {
+               for (int z = minZ; z < maxZ; z++) {
+                  place.addTintAtWorldPos(x, z, color);
+                  count++;
                }
             }
 
+            BlockSelection before = place.place(null, world);
+            this.pushHistory(BuilderToolsPlugin.Action.EDIT, new BlockSelectionSnapshot(before));
             this.sendFeedback(Message.translation("server.builderTools.setColumnsTint").param("count", count), componentAccessor);
-         }
-      }
-
-      public void tint(
-         int x, int y, int z, int color, @Nonnull BrushShape shape, int shapeRange, int shapeHeight, ComponentAccessor<EntityStore> componentAccessor
-      ) {
-         if (y >= 0 && y < 320) {
-            World world = componentAccessor.getExternalData().getWorld();
-            LongSet dirtyChunks = new LongOpenHashSet();
-            AtomicInteger count = new AtomicInteger(0);
-            LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, x, z, shapeRange + 1);
-            TriIntObjPredicate<Void> tintBlock = (pxx, py, pzx, aVoid) -> {
-               WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(pxx, pzx));
-               chunk.getBlockChunk().setTint(pxx, pzx, color);
-               dirtyChunks.add(chunk.getIndex());
-               count.getAndIncrement();
-               return true;
-            };
-            if (shapeRange <= 1) {
-               tintBlock.test(x, y, z, null);
-            } else {
-               int radiusXZ = shapeRange / 2;
-               switch (shape) {
-                  case Cube:
-                  case Pyramid:
-                  case InvertedPyramid:
-                  case Diamond:
-                     label55:
-                     for (int px = -radiusXZ; px <= radiusXZ; px++) {
-                        for (int pz = -radiusXZ; pz <= radiusXZ; pz++) {
-                           if (!tintBlock.test(x + px, y, z + pz, null)) {
-                              break label55;
-                           }
-                        }
-                     }
-                     break;
-                  case Sphere:
-                  case Cylinder:
-                  case Cone:
-                  case InvertedCone:
-                  case Dome:
-                  case InvertedDome:
-                     BlockSphereUtil.forEachBlock(x, y, z, radiusXZ, 1, radiusXZ, null, tintBlock);
-                     break;
-                  case Torus:
-                     int minorRadius = Math.max(1, shapeHeight / 4);
-                     int outerRadius = radiusXZ;
-                     int majorRadius = Math.max(1, outerRadius - minorRadius);
-                     int sizeXZ = majorRadius + minorRadius;
-                     float minorRadiusAdjusted = minorRadius + 0.5F;
-
-                     for (int px = -sizeXZ; px <= sizeXZ; px++) {
-                        for (int pz = -sizeXZ; pz <= sizeXZ; pz++) {
-                           double distFromCenter = Math.sqrt(px * px + pz * pz);
-                           double distFromRing = Math.abs(distFromCenter - majorRadius);
-                           if (distFromRing <= minorRadiusAdjusted) {
-                              tintBlock.test(x + px, y, z + pz, null);
-                           }
-                        }
-                     }
-                     break;
-                  default:
-                     this.sendFeedback(Message.translation("server.builderTools.errorWithUsedShape"), componentAccessor);
-                     return;
-               }
-            }
-
-            dirtyChunks.forEach(value -> world.getNotificationHandler().updateChunk(value));
-            this.sendFeedback(Message.translation("server.builderTools.setColumnsTint").param("count", count.intValue()), componentAccessor);
          }
       }
 
@@ -2978,6 +2956,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       public void rotate(@Nonnull Ref<EntityStore> ref, @Nonnull Axis axis, int angle, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
          if (this.selection != null) {
             long start = System.nanoTime();
+            if (this.preRotationSnapshot == null) {
+               this.preRotationSnapshot = this.selection.cloneSelection();
+            }
+
             this.pushHistory(BuilderToolsPlugin.Action.ROTATE, ClipboardContentsSnapshot.copyOf(this.selection));
             this.selection = this.selection.rotate(axis, angle);
             long end = System.nanoTime();
@@ -2995,29 +2977,15 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
       }
 
-      public void rotate(
-         @Nonnull Ref<EntityStore> ref,
-         @Nonnull Axis axis,
-         int angle,
-         @Nonnull Vector3f originOfRotation,
-         @Nonnull ComponentAccessor<EntityStore> componentAccessor
-      ) {
-         if (this.selection != null) {
-            long start = System.nanoTime();
-            this.pushHistory(BuilderToolsPlugin.Action.ROTATE, ClipboardContentsSnapshot.copyOf(this.selection));
-            this.selection = this.selection.rotate(axis, angle, originOfRotation);
-            long end = System.nanoTime();
-            long diff = end - start;
-            BuilderToolsPlugin.get()
-               .getLogger()
-               .at(Level.FINE)
-               .log("Took: %dns (%dms) to execute rotate of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), this.selection.getBlockCount());
-            this.sendUpdate();
-            this.sendFeedback(
-               Message.translation("server.builderTools.clipboardRotatedBy").param("angle", angle).param("axis", axis.toString()), componentAccessor
-            );
+      public void resetClipboardRotation(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         if (this.preRotationSnapshot == null) {
+            this.sendErrorFeedback(ref, Message.translation("server.builderTools.noRotationToReset"), componentAccessor);
          } else {
-            this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionClipboardEmpty"), componentAccessor);
+            this.pushHistory(BuilderToolsPlugin.Action.ROTATE, ClipboardContentsSnapshot.copyOf(this.selection));
+            this.selection = this.preRotationSnapshot;
+            this.preRotationSnapshot = null;
+            this.sendUpdate();
+            this.sendFeedback(Message.translation("server.builderTools.clipboardRotationReset"), componentAccessor);
          }
       }
 
@@ -3137,17 +3105,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
       public void walls(
          @Nonnull Ref<EntityStore> ref,
-         int blockId,
-         int thickness,
-         boolean cappedTop,
-         boolean cappedBottom,
-         @Nonnull ComponentAccessor<EntityStore> componentAccessor
-      ) {
-         this.walls(ref, BlockPattern.parse(BlockType.getAssetMap().getAsset(blockId).getId()), thickness, cappedTop, cappedBottom, componentAccessor);
-      }
-
-      public void walls(
-         @Nonnull Ref<EntityStore> ref,
          @Nonnull final BlockPattern pattern,
          int thickness,
          boolean cappedTop,
@@ -3243,10 +3200,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                this.sendArea();
             }
          }
-      }
-
-      public void set(int blockId, ComponentAccessor<EntityStore> componentAccessor) {
-         this.set(BlockPattern.parse(BlockType.getAssetMap().getAsset(blockId).getId()), componentAccessor);
       }
 
       public void set(@Nonnull BlockPattern pattern, ComponentAccessor<EntityStore> componentAccessor) {
@@ -4424,17 +4377,12 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       public void save(
-         @Nonnull Ref<EntityStore> ref, @Nonnull String name, boolean relativize, boolean overwrite, ComponentAccessor<EntityStore> componentAccessor
-      ) {
-         this.save(ref, name, relativize, overwrite, false, componentAccessor);
-      }
-
-      public void save(
          @Nonnull Ref<EntityStore> ref,
          @Nonnull String name,
          boolean relativize,
          boolean overwrite,
          boolean clearSupport,
+         @Nullable AssetPack targetPack,
          ComponentAccessor<EntityStore> componentAccessor
       ) {
          if (this.selection == null) {
@@ -4446,8 +4394,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             PrefabStore prefabStore = PrefabStore.get();
-            Path serverPrefabsPath = prefabStore.getServerPrefabsPath();
-            if (!PathUtil.isChildOf(serverPrefabsPath, serverPrefabsPath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
+            Path basePath = prefabStore.getPrefabsPathForPack(targetPack);
+            if (!PathUtil.isChildOf(basePath, basePath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
                this.sendFeedback(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"), componentAccessor);
             } else {
                try {
@@ -4456,9 +4404,20 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                      postClone.clearAllSupportValues();
                   }
 
-                  prefabStore.saveServerPrefab(name, postClone, overwrite);
+                  if (targetPack != null) {
+                     prefabStore.savePrefabToPack(targetPack, name, postClone, overwrite);
+                  } else {
+                     prefabStore.saveServerPrefab(name, postClone, overwrite);
+                  }
+
                   this.sendUpdate();
-                  this.sendFeedback(Message.translation("server.builderTools.savedSelectionToPrefab").param("name", name), componentAccessor);
+                  String savedKey = targetPack != null ? "server.builderTools.savedSelectionToPrefab.pack" : "server.builderTools.savedSelectionToPrefab";
+                  Message savedMsg = Message.translation(savedKey).param("name", name);
+                  if (targetPack != null) {
+                     savedMsg = savedMsg.param("pack", targetPack.getName());
+                  }
+
+                  this.sendFeedback(savedMsg, componentAccessor);
                } catch (PrefabSaveException e) {
                   switch (e.getType()) {
                      case ERROR:
@@ -4491,20 +4450,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          boolean overwrite,
          boolean includeEntities,
          boolean includeEmpty,
-         @Nonnull ComponentAccessor<EntityStore> componentAccessor
-      ) {
-         this.saveFromSelection(ref, name, relativize, overwrite, includeEntities, includeEmpty, null, false, componentAccessor);
-      }
-
-      public void saveFromSelection(
-         @Nonnull Ref<EntityStore> ref,
-         @Nonnull String name,
-         boolean relativize,
-         boolean overwrite,
-         boolean includeEntities,
-         boolean includeEmpty,
          @Nullable Vector3i playerAnchor,
          boolean clearSupport,
+         @Nullable AssetPack targetPack,
          @Nonnull ComponentAccessor<EntityStore> componentAccessor
       ) {
          if (this.selection != null && (!this.selection.getSelectionMin().equals(Vector3i.ZERO) || !this.selection.getSelectionMax().equals(Vector3i.ZERO))) {
@@ -4515,8 +4463,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             PrefabStore prefabStore = PrefabStore.get();
-            Path serverPrefabsPath = prefabStore.getServerPrefabsPath();
-            if (!PathUtil.isChildOf(serverPrefabsPath, serverPrefabsPath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
+            Path basePath = prefabStore.getPrefabsPathForPack(targetPack);
+            if (!PathUtil.isChildOf(basePath, basePath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
                this.sendFeedback(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"), componentAccessor);
             } else {
                Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
@@ -4606,8 +4554,19 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                      postClone.clearAllSupportValues();
                   }
 
-                  prefabStore.saveServerPrefab(name, postClone, overwrite);
-                  this.sendFeedback(Message.translation("server.builderTools.savedSelectionToPrefab").param("name", name), componentAccessor);
+                  if (targetPack != null) {
+                     prefabStore.savePrefabToPack(targetPack, name, postClone, overwrite);
+                  } else {
+                     prefabStore.saveServerPrefab(name, postClone, overwrite);
+                  }
+
+                  String savedKey = targetPack != null ? "server.builderTools.savedSelectionToPrefab.pack" : "server.builderTools.savedSelectionToPrefab";
+                  Message savedMsg = Message.translation(savedKey).param("name", name);
+                  if (targetPack != null) {
+                     savedMsg = savedMsg.param("pack", targetPack.getName());
+                  }
+
+                  this.sendFeedback(savedMsg, componentAccessor);
                } catch (PrefabSaveException e) {
                   switch (e.getType()) {
                      case ERROR:
@@ -4633,14 +4592,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          } else {
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          }
-      }
-
-      public void load(@Nonnull String name, ComponentAccessor<EntityStore> componentAccessor) {
-         if (!name.endsWith(".prefab.json")) {
-            name = name + ".prefab.json";
-         }
-
-         this.load(name, PrefabStore.get().getServerPrefab(name), componentAccessor);
       }
 
       public void load(@Nonnull String name, @Nonnull BlockSelection serverPrefab, ComponentAccessor<EntityStore> componentAccessor) {
@@ -4706,7 +4657,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       private void sendUpdate() {
-         this.player.getPlayerConnection().write(Objects.requireNonNullElseGet(this.selection, BlockSelection::new).toPacket());
+         EditorBlocksChange packet = Objects.requireNonNullElseGet(this.selection, BlockSelection::new).toPacket();
+         packet.skipPreviewRebuild = this.skipNextPreviewRebuild;
+         this.skipNextPreviewRebuild = false;
+         this.player.getPlayerConnection().write(packet);
       }
 
       public void sendArea() {
@@ -4757,7 +4711,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.commitPendingUndoGroup();
          }
 
-         if (before.getBlockCount() != 0 || before.getFluidCount() != 0 || before.getEntityCount() != 0) {
+         if (before.getBlockCount() != 0 || before.getFluidCount() != 0 || before.getEntityCount() != 0 || before.getTintCount() != 0) {
             if (this.pendingUndoSnapshot == null) {
                this.pendingUndoSnapshot = before;
             } else {
@@ -4806,7 +4760,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                this.pendingUndoSnapshot.addFluidAtWorldPos(worldX, worldY, worldZ, fluidId, fluidLevel);
             }
          });
-         newBefore.forEachEntity(e -> this.pendingUndoSnapshot.addEntityHolderRaw(e));
+         newBefore.forEachTint((x, z, color) -> {
+            int worldX = x + newBefore.getX();
+            int worldZ = z + newBefore.getZ();
+            if (!this.pendingUndoSnapshot.hasTintAtWorldPos(worldX, worldZ)) {
+               this.pendingUndoSnapshot.addTintAtWorldPos(worldX, worldZ, color);
+            }
+         });
+         newBefore.forEachEntity(entity -> this.pendingUndoSnapshot.addEntityHolderRaw(entity));
       }
 
       private void commitPendingUndoGroup() {
