@@ -668,28 +668,28 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
       }
 
       float recipeTime = this.recipe.getTimeSeconds();
-      if (!(recipeTime <= 0.0F) && !(this.inputProgress < recipeTime)) {
-         List<MaterialQuantity> inputMaterials = CraftingManager.getInputMaterials(this.recipe);
-         List<ItemStack> outputItemStacks = CraftingManager.getOutputItemStacks(this.recipe);
-         if (!this.outputContainer.canAddItemStacks(outputItemStacks, false, false)) {
-            return false;
-         }
-
-         if (this.inputContainer.getSlotMaterialsToRemove(inputMaterials, true, true).isEmpty()) {
-            return false;
-         }
-
-         ListTransaction<MaterialTransaction> transaction = this.inputContainer.removeMaterials(inputMaterials, true, true, true);
-         if (!transaction.succeeded()) {
-            return false;
-         }
-
-         this.inputProgress -= recipeTime;
-         this.addOutputAndEjectRemainder(outputItemStacks, entityStore, blockX, blockY, blockZ, blockType, rotationIndex);
-         return true;
-      } else {
+      if (this.inputProgress < recipeTime) {
          return false;
       }
+
+      List<MaterialQuantity> inputMaterials = CraftingManager.getInputMaterials(this.recipe);
+      List<ItemStack> outputItemStacks = CraftingManager.getOutputItemStacks(this.recipe);
+      if (!this.outputContainer.canAddItemStacks(outputItemStacks, false, false)) {
+         return false;
+      }
+
+      if (this.inputContainer.getSlotMaterialsToRemove(inputMaterials, true, true).isEmpty()) {
+         return false;
+      }
+
+      ListTransaction<MaterialTransaction> transaction = this.inputContainer.removeMaterials(inputMaterials, true, true, true);
+      if (!transaction.succeeded()) {
+         return false;
+      }
+
+      this.inputProgress -= recipeTime;
+      this.addOutputAndEjectRemainder(outputItemStacks, entityStore, blockX, blockY, blockZ, blockType, rotationIndex);
+      return true;
    }
 
    public void consumeFuelForDuration(

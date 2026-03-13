@@ -1,12 +1,10 @@
-package com.hypixel.hytale.builtin.hytalegenerator.engine;
+package com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator;
 
 import com.hypixel.hytale.builtin.hytalegenerator.ArrayUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.FutureUtils;
 import com.hypixel.hytale.builtin.hytalegenerator.GridUtils;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkGenerator;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkRequest;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.BufferBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.EntityBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.SimplePixelBuffer;
@@ -272,10 +270,12 @@ public class StagedChunkGenerator implements ChunkGenerator {
 
       Vector3i bufferPositionClone_bufferTileGrid = position_bufferTileGrid.clone();
       return () -> {
-         stage.run(context);
-
-         for (BufferType outputType : stage.getOutputTypes()) {
-            updateTrackersForColumn(stageIndex, accessMap.get(outputType).createView(), bufferPositionClone_bufferTileGrid);
+         try {
+            stage.run(context);
+         } finally {
+            for (BufferType outputType : stage.getOutputTypes()) {
+               updateTrackersForColumn(stageIndex, accessMap.get(outputType).createView(), bufferPositionClone_bufferTileGrid);
+            }
          }
       };
    }

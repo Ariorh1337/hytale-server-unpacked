@@ -48,7 +48,6 @@ import com.hypixel.hytale.server.spawning.suppression.component.SpawnSuppression
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -126,7 +125,7 @@ public class SpawnSuppressionSystems {
          }
 
          if (suppression.isSuppressSpawnMarkers()) {
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(SpawningPlugin.get().getSpawnMarkerSpatialResource());
             spatialResource.getSpatialStructure().collect(position, radius, results);
 
@@ -388,41 +387,43 @@ public class SpawnSuppressionSystems {
                      long chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ);
                      ChunkSuppressionEntry chunkEntry = null;
                      ChunkSuppressionEntry oldEntry = chunkSuppressionMap.get(chunkIndex);
-                     if (oldEntry.containsOnly(uuid)) {
-                        chunkSuppressionMap.remove(chunkIndex);
-                     } else {
-                        List<ChunkSuppressionEntry.SuppressionSpan> oldSpans = oldEntry.getSuppressionSpans();
-                        ObjectArrayList<ChunkSuppressionEntry.SuppressionSpan> suppressedSpans = new ObjectArrayList<>();
-
-                        for (ChunkSuppressionEntry.SuppressionSpan span : oldSpans) {
-                           if (!span.getSuppressorId().equals(uuid)) {
-                              suppressedSpans.add(span);
-                           }
-                        }
-
-                        chunkEntry = new ChunkSuppressionEntry(suppressedSpans);
-                        chunkSuppressionMap.put(chunkIndex, chunkEntry);
-                     }
-
-                     Ref<ChunkStore> chunkReference = chunkComponentStore.getChunkReference(chunkIndex);
-                     if (chunkReference != null) {
-                        ChunkSuppressionQueue chunkSuppressionQueue = chunkStore.getResource(this.chunkSuppressionQueueResourceType);
-                        if (chunkEntry == null) {
-                           chunkSuppressionQueue.queueForRemove(chunkReference);
+                     if (oldEntry != null) {
+                        if (oldEntry.containsOnly(uuid)) {
+                           chunkSuppressionMap.remove(chunkIndex);
                         } else {
-                           chunkSuppressionQueue.queueForAdd(chunkReference, chunkEntry);
+                           List<ChunkSuppressionEntry.SuppressionSpan> oldSpans = oldEntry.getSuppressionSpans();
+                           ObjectArrayList<ChunkSuppressionEntry.SuppressionSpan> suppressedSpans = new ObjectArrayList<>();
+
+                           for (ChunkSuppressionEntry.SuppressionSpan span : oldSpans) {
+                              if (!span.getSuppressorId().equals(uuid)) {
+                                 suppressedSpans.add(span);
+                              }
+                           }
+
+                           chunkEntry = new ChunkSuppressionEntry(suppressedSpans);
+                           chunkSuppressionMap.put(chunkIndex, chunkEntry);
                         }
 
-                        SpawningPlugin.get()
-                           .getLogger()
-                           .at(Level.FINEST)
-                           .log("Queuing removal of suppression from chunk index %s, %s", chunkIndex, suppressionId);
+                        Ref<ChunkStore> chunkReference = chunkComponentStore.getChunkReference(chunkIndex);
+                        if (chunkReference != null) {
+                           ChunkSuppressionQueue chunkSuppressionQueue = chunkStore.getResource(this.chunkSuppressionQueueResourceType);
+                           if (chunkEntry == null) {
+                              chunkSuppressionQueue.queueForRemove(chunkReference);
+                           } else {
+                              chunkSuppressionQueue.queueForAdd(chunkReference, chunkEntry);
+                           }
+
+                           SpawningPlugin.get()
+                              .getLogger()
+                              .at(Level.FINEST)
+                              .log("Queuing removal of suppression from chunk index %s, %s", chunkIndex, suppressionId);
+                        }
                      }
                   }
                }
 
                if (suppression.isSuppressSpawnMarkers()) {
-                  ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                  List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                   SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.spawnMarkerSpatialResourceType);
                   spatialResource.getSpatialStructure().collect(position, radius, results);
 

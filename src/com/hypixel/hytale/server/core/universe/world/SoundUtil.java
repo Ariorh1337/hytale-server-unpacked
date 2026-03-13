@@ -20,7 +20,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -127,7 +127,7 @@ public class SoundUtil {
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(
                EntityModule.get().getPlayerSpatialResourceType()
             );
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(position, soundEvent.getMaxDistance(), results);
 
             for (Ref<EntityStore> playerRef : results) {
@@ -177,7 +177,7 @@ public class SoundUtil {
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(
                EntityModule.get().getPlayerSpatialResourceType()
             );
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(new Vector3d(x, y, z), soundEvent.getMaxDistance(), results);
 
             for (Ref<EntityStore> playerRef : results) {

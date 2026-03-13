@@ -21,6 +21,7 @@ import com.hypixel.hytale.builtin.instances.removal.RemovalCondition;
 import com.hypixel.hytale.builtin.instances.removal.RemovalSystem;
 import com.hypixel.hytale.builtin.instances.removal.TimeoutCondition;
 import com.hypixel.hytale.builtin.instances.removal.WorldEmptyCondition;
+import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.codec.schema.config.ObjectSchema;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.schema.config.StringSchema;
@@ -252,6 +253,12 @@ public class InstancesPlugin extends JavaPlugin {
       UUIDComponent uuidComponent = componentAccessor.getComponent(entityRef, UUIDComponent.getComponentType());
       assert uuidComponent != null;
       UUID playerUUID = uuidComponent.getUuid();
+      HeadRotation headRotation = componentAccessor.getComponent(entityRef, HeadRotation.getComponentType());
+      if (headRotation != null) {
+         componentAccessor.ensureAndGetComponent(entityRef, TeleportHistory.getComponentType())
+            .append(originalWorld, originalPosition.getPosition().clone(), headRotation.getRotation().clone(), "Instance");
+      }
+
       InstanceEntityConfig finalPlayerConfig = instanceEntityConfigComponent;
       CompletableFuture.runAsync(playerRefComponent::removeFromStore, originalWorld)
          .thenCombine(worldFuture.orTimeout(1L, TimeUnit.MINUTES), (ignored, world) -> (World)world)
@@ -304,6 +311,13 @@ public class InstancesPlugin extends JavaPlugin {
          throw new IllegalStateException("Spawn provider cannot be null when teleporting player to instance!");
       }
 
+      TransformComponent transformComponent = componentAccessor.getComponent(playerRef, TransformComponent.getComponentType());
+      HeadRotation headRotation = componentAccessor.getComponent(playerRef, HeadRotation.getComponentType());
+      if (transformComponent != null && headRotation != null) {
+         componentAccessor.ensureAndGetComponent(playerRef, TeleportHistory.getComponentType())
+            .append(originalWorld, transformComponent.getPosition().clone(), headRotation.getRotation().clone(), "Instance '" + targetWorld.getName() + "'");
+      }
+
       Transform spawnTransform = spawnProvider.getSpawnPoint(targetWorld, playerUUID);
       Teleport teleportComponent = Teleport.createForPlayer(targetWorld, spawnTransform);
       componentAccessor.addComponent(playerRef, Teleport.getComponentType(), teleportComponent);
@@ -326,6 +340,13 @@ public class InstancesPlugin extends JavaPlugin {
       World targetWorld = universe.getWorld(returnPoint.getWorld());
       if (targetWorld == null) {
          throw new IllegalArgumentException("Missing return world");
+      }
+
+      TransformComponent transformComponent = componentAccessor.getComponent(targetRef, TransformComponent.getComponentType());
+      HeadRotation headRotation = componentAccessor.getComponent(targetRef, HeadRotation.getComponentType());
+      if (transformComponent != null && headRotation != null) {
+         componentAccessor.ensureAndGetComponent(targetRef, TeleportHistory.getComponentType())
+            .append(world, transformComponent.getPosition().clone(), headRotation.getRotation().clone(), "Instance '" + world.getName() + "'");
       }
 
       Teleport teleportComponent = Teleport.createForPlayer(targetWorld, returnPoint.getReturnPoint());

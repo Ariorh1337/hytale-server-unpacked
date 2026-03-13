@@ -32,12 +32,13 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.common.util.PathUtil;
-import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.asset.AssetModule;
-import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
+import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -86,10 +87,10 @@ public class PrefabPropAsset extends PropAsset {
    @Override
    public Prop build(@Nonnull PropAsset.Argument argument) {
       if (!super.skip() && this.weightedPrefabPathAssets.length != 0) {
-         WeightedMap<List<PrefabBuffer>> prefabWeightedMap = new WeightedMap<>();
+         WeightedMap<List<IPrefabBuffer>> prefabWeightedMap = new WeightedMap<>();
 
          for (PrefabPropAsset.WeightedPathAsset pathAsset : this.weightedPrefabPathAssets) {
-            List<PrefabBuffer> pathPrefabs = this.loadPrefabBuffersFrom(pathAsset.path);
+            List<IPrefabBuffer> pathPrefabs = this.loadPrefabBuffersFrom(pathAsset.path);
             if (pathPrefabs != null) {
                prefabWeightedMap.add(pathPrefabs, pathAsset.weight);
             }
@@ -137,11 +138,14 @@ public class PrefabPropAsset extends PropAsset {
    }
 
    @Nullable
-   private List<PrefabBuffer> loadPrefabBuffersFrom(@Nonnull String path) {
-      List<PrefabBuffer> pathPrefabs = new ArrayList<>();
+   private List<IPrefabBuffer> loadPrefabBuffersFrom(@Nonnull String path) {
+      List<IPrefabBuffer> loadedPrefabs = new ArrayList<>();
+      Set<Path> traversedPaths = new HashSet<>();
+      List<AssetPack> packs = AssetModule.get().getAssetPacks();
 
-      for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-         Path prefabsDir = pack.getRoot().resolve("Server");
+      for (int i = packs.size() - 1; i >= 0; i--) {
+         Path packRootPath = packs.get(i).getRoot();
+         Path prefabsDir = packRootPath.resolve("Server");
          if (this.legacyPath) {
             prefabsDir = prefabsDir.resolve("World").resolve("Default").resolve("Prefabs");
          } else {
@@ -149,28 +153,26 @@ public class PrefabPropAsset extends PropAsset {
          }
 
          Path fullPath = PathUtil.resolvePathWithinDir(prefabsDir, path);
-         if (fullPath == null) {
-            LoggerUtil.getLogger().severe("Invalid prefab path: " + path);
-            return null;
-         }
-
-         try {
-            PrefabLoader.loadAllPrefabBuffersUnder(fullPath, pathPrefabs);
-         } catch (Exception e) {
-            String msg = "Couldn't load prefab with path: " + path;
-            msg = msg + "\n";
-            msg = msg + ExceptionUtil.toStringWithStack(e);
-            LoggerUtil.getLogger().severe(msg);
-            return null;
+         if (fullPath != null) {
+            try {
+               PrefabLoader.traverseAllPrefabBuffersUnder(fullPath, (fullPrefabPath, prefab) -> {
+                  Path relativePrefabPath = fullPrefabPath.subpath(packRootPath.getNameCount(), fullPrefabPath.getNameCount());
+                  if (!traversedPaths.contains(relativePrefabPath)) {
+                     traversedPaths.add(relativePrefabPath);
+                     loadedPrefabs.add(prefab);
+                  }
+               });
+            } catch (Exception e) {
+               String msg = "Couldn't load prefab with path: " + path;
+               msg = msg + "\n";
+               msg = msg + ExceptionUtil.toStringWithStack(e);
+               LoggerUtil.getLogger().severe(msg);
+               return null;
+            }
          }
       }
 
-      if (pathPrefabs.isEmpty()) {
-         HytaleLogger.getLogger().atWarning().log("This prefab path contains no prefabs: " + path);
-         return null;
-      } else {
-         return pathPrefabs;
-      }
+      return loadedPrefabs;
    }
 
    @Override

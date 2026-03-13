@@ -27,6 +27,7 @@ public class SoundEvent
    public static final int EMPTY_ID = 0;
    public static final String EMPTY = "EMPTY";
    public static final SoundEvent EMPTY_SOUND_EVENT = new SoundEvent("EMPTY");
+   private static final int MAX_SOUND_EVENT_LAYERS = 8;
    public static final AssetBuilderCodec<String, SoundEvent> CODEC = AssetBuilderCodec.builder(
          SoundEvent.class, SoundEvent::new, Codec.STRING, (t, k) -> t.id = k, t -> t.id, (asset, data) -> asset.data = data, asset -> asset.data
       )
@@ -117,7 +118,8 @@ public class SoundEvent
          soundEvent -> soundEvent.layers,
          (soundEvent, parent) -> soundEvent.layers = parent.layers
       )
-      .addValidator(Validators.nonEmptyArray())
+      .addValidator(Validators.nonNull())
+      .addValidator(Validators.arraySizeRange(1, 8))
       .documentation("The layered sounds that make up this sound event.")
       .add()
       .<String>appendInherited(

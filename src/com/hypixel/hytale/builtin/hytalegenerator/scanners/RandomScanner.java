@@ -29,6 +29,17 @@ public class RandomScanner extends Scanner {
    private final Control rControl;
    @Nonnull
    private final Vector3i rPosition;
+   @Nonnull
+   private Pipe.One<Vector3i> rContextPipe;
+   @Nonnull
+   private final Pipe.One<Vector3i> rChildPipe = new Pipe.One<Vector3i>() {
+      public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
+         RandomScanner.this.rContextPipe.accept(position, control);
+         if (control.stop) {
+            RandomScanner.this.rControl.stop = true;
+         }
+      }
+   };
 
    public RandomScanner(@Nonnull Axis axis, @Nonnull RangeInt range, @Nonnull Scanner childScanner, int seed) {
       this.axis = axis;
@@ -54,6 +65,7 @@ public class RandomScanner extends Scanner {
       this.bounds.stack(childScanner.getBounds_voxelGrid());
       this.rControl = new Control();
       this.rPosition = new Vector3i();
+      this.rContextPipe = Pipe.getEmptyOne();
    }
 
    @Override
@@ -62,6 +74,7 @@ public class RandomScanner extends Scanner {
 
    @Override
    public void scan(@NonNullDecl Vector3i anchor, @NonNullDecl Pipe.One<Vector3i> pipe) {
+      this.rContextPipe = pipe;
       this.rPosition.assign(anchor);
       this.rControl.reset();
       this.random.setSeed(this.rngField.get(anchor.x, anchor.y, anchor.z));
@@ -83,12 +96,7 @@ public class RandomScanner extends Scanner {
                this.rPosition.z = rollResult + anchor.z;
          }
 
-         this.childScanner.scan(this.rPosition, (position, control) -> {
-            pipe.accept(position, control);
-            if (control.stop) {
-               this.rControl.stop = true;
-            }
-         });
+         this.childScanner.scan(this.rPosition, this.rChildPipe);
       }
    }
 

@@ -28,6 +28,7 @@ public class BanCommand extends AbstractAsyncCommand {
    public BanCommand(@Nonnull HytaleBanProvider banProvider) {
       super("ban", "server.commands.ban.desc");
       this.setUnavailableInSingleplayer(true);
+      this.setAllowsExtraArguments(true);
       this.banProvider = banProvider;
    }
 

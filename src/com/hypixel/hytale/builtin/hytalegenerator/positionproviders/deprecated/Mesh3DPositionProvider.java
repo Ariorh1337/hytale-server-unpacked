@@ -1,7 +1,8 @@
-package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
+package com.hypixel.hytale.builtin.hytalegenerator.positionproviders.deprecated;
 
 import com.hypixel.hytale.builtin.hytalegenerator.noise.pointprovider.PointProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import javax.annotation.Nonnull;
 
 public class Mesh3DPositionProvider extends PositionProvider {

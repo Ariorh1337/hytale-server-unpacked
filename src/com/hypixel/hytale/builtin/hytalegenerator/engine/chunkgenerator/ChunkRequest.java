@@ -1,4 +1,4 @@
-package com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator;
+package com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator;
 
 import java.util.Objects;
 import java.util.function.LongPredicate;

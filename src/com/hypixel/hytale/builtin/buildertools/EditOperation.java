@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.accessor.LocalCachedChunkAc
 import com.hypixel.hytale.server.core.universe.world.accessor.OverridableChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -34,7 +35,7 @@ public class EditOperation {
    private final World world;
    private final Vector3i min;
    private final Vector3i max;
-   private final List<Ref<EntityStore>> spawnedEntityRefs = new ArrayList<>();
+   private final List<Ref<EntityStore>> spawnedEntityRefs = new ReferenceArrayList<>();
    private final List<EntityTransformSnapshot> movedEntitySnapshots = new ArrayList<>();
 
    public EditOperation(@Nonnull World world, int x, int y, int z, int editRange, Vector3i min, Vector3i max, BlockMask blockMask) {
@@ -167,7 +168,11 @@ public class EditOperation {
    public int getTint(int x, int z) {
       long chunkIdx = ChunkUtil.indexChunkFromBlock(x, z);
       WorldChunk chunk = this.world.getNonTickingChunk(chunkIdx);
-      return chunk.getBlockChunk().getTint(x, z);
+      if (chunk == null) {
+         return 0;
+      } else {
+         return chunk.getBlockChunk() == null ? 0 : chunk.getBlockChunk().getTint(x, z);
+      }
    }
 
    public void removeEntity(Ref<EntityStore> entityRef, Holder<EntityStore> entityStoreHolder) {

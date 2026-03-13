@@ -33,7 +33,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -159,7 +159,7 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
          return null;
       }
 
-      List<Ref<EntityStore>> players = new ObjectArrayList<>(playerRefs.size());
+      List<Ref<EntityStore>> players = new ReferenceArrayList<>(playerRefs.size());
 
       for (PlayerRef playerRef : playerRefs) {
          players.add(playerRef.getReference());

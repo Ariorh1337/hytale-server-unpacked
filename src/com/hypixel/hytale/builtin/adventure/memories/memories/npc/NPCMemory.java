@@ -47,7 +47,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGenerator;
 import com.hypixel.hytale.server.worldgen.chunk.ZoneBiomeResult;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -223,7 +223,7 @@ public class NPCMemory extends Memory {
             assert transformComponent != null;
             Vector3d position = transformComponent.getPosition();
             SpatialResource<Ref<EntityStore>, EntityStore> npcSpatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             npcSpatialResource.getSpatialStructure().collect(position, this.radius, results);
             if (!results.isEmpty()) {
                PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
@@ -323,7 +323,7 @@ public class NPCMemory extends Memory {
                SpawnModelParticles packet = new SpawnModelParticles(networkIdComponent.getId(), modelParticlesProtocol);
                SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
                SpatialStructure<Ref<EntityStore>> spatialStructure = spatialResource.getSpatialStructure();
-               ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+               List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                spatialStructure.ordered(targetPosition, memoriesGameplayConfig.getMemoriesCatchParticleViewDistance(), results);
 
                for (Ref<EntityStore> ref : results) {

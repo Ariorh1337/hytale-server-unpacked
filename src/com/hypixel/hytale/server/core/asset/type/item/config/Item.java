@@ -38,7 +38,7 @@ import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.protocol.ModelTrail;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderToolData;
+import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.asset.type.itemanimation.config.ItemPlayerAnimations;
 import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
@@ -309,10 +309,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .add()
       .appendInherited(
-         new KeyedCodec<>("BuilderTool", BuilderToolData.CODEC),
-         (item, s) -> item.builderToolData = s,
-         item -> item.builderToolData,
-         (item, parent) -> item.builderToolData = parent.builderToolData
+         new KeyedCodec<>("BuilderTool", BuilderTool.CODEC),
+         (item, s) -> item.builderTool = s,
+         item -> item.builderTool,
+         (item, parent) -> item.builderTool = parent.builderTool
       )
       .add()
       .<ItemWeapon>appendInherited(
@@ -509,7 +509,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected boolean variant;
    protected ItemTool tool;
    protected BlockSelectorToolData blockSelectorToolData;
-   protected BuilderToolData builderToolData;
+   protected BuilderTool builderTool;
    protected ItemWeapon weapon;
    protected ItemArmor armor;
    protected ItemGlider glider;
@@ -595,7 +595,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       this.animation = other.animation;
       this.tool = other.tool;
       this.blockSelectorToolData = other.blockSelectorToolData;
-      this.builderToolData = other.builderToolData;
+      this.builderTool = other.builderTool;
       this.weapon = other.weapon;
       this.armor = other.armor;
       this.utility = other.utility;
@@ -683,8 +683,8 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
          packet.blockSelectorTool = this.blockSelectorToolData.toPacket();
       }
 
-      if (this.builderToolData != null) {
-         packet.builderToolData = this.builderToolData.toPacket();
+      if (this.builderTool != null) {
+         packet.builderToolData = this.builderTool.toPacket();
       }
 
       if (this.weapon != null) {
@@ -930,8 +930,8 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       return this.blockSelectorToolData;
    }
 
-   public BuilderToolData getBuilderToolData() {
-      return this.builderToolData;
+   public BuilderTool getBuilderTool() {
+      return this.builderTool;
    }
 
    public ItemArmor getArmor() {
@@ -1061,7 +1061,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       }
 
       if (this.maxStack == -1) {
-         if (this.tool == null && this.weapon == null && this.armor == null && this.builderToolData == null && this.blockSelectorToolData == null) {
+         if (this.tool == null && this.weapon == null && this.armor == null && this.builderTool == null && this.blockSelectorToolData == null) {
             this.maxStack = 100;
          } else {
             this.maxStack = 1;

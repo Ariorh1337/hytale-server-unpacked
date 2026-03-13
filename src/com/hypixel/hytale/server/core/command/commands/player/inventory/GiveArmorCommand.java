@@ -20,9 +20,10 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceLists;
 import java.awt.Color;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -52,7 +53,7 @@ public class GiveArmorCommand extends AbstractAsyncCommand {
       if (this.playerArg.provided(context)) {
          String playerInput = this.playerArg.get(context);
          if ("*".equals(playerInput)) {
-            targets = new ObjectArrayList<>();
+            targets = new ReferenceArrayList<>();
 
             for (PlayerRef player : Universe.get().getPlayers()) {
                targets.add(player.getReference());
@@ -64,7 +65,7 @@ public class GiveArmorCommand extends AbstractAsyncCommand {
                return CompletableFuture.completedFuture(null);
             }
 
-            targets = Collections.singletonList(player.getReference());
+            targets = ReferenceLists.singleton(player.getReference());
          }
       } else {
          if (!context.isPlayer()) {
@@ -72,7 +73,7 @@ public class GiveArmorCommand extends AbstractAsyncCommand {
             return CompletableFuture.completedFuture(null);
          }
 
-         targets = Collections.singletonList(context.senderAsPlayerRef());
+         targets = ReferenceLists.singleton(context.senderAsPlayerRef());
       }
 
       if (targets.isEmpty()) {
@@ -99,7 +100,7 @@ public class GiveArmorCommand extends AbstractAsyncCommand {
          if (targetRef != null && targetRef.isValid()) {
             Store<EntityStore> store = targetRef.getStore();
             World world = store.getExternalData().getWorld();
-            playersByWorld.computeIfAbsent(world, k -> new ObjectArrayList<>()).add(targetRef);
+            playersByWorld.computeIfAbsent(world, k -> new ReferenceArrayList<>()).add(targetRef);
          }
       }
 

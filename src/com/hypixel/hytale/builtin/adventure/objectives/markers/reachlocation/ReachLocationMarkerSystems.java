@@ -30,8 +30,8 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.system.PlayerSpatialSystem;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -192,7 +192,7 @@ public class ReachLocationMarkerSystems {
             Set<UUID> players = reachLocationMarkerComponent.getPlayers();
             players.clear();
             SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
             assert transformComponent != null;
             Vector3d position = transformComponent.getPosition();

@@ -31,7 +31,7 @@ import com.hypixel.hytale.server.spawning.beacons.LegacySpawnBeaconEntity;
 import com.hypixel.hytale.server.spawning.beacons.SpawnBeacon;
 import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
 import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public class SpawnBeaconsCommand extends AbstractCommandCollection {
@@ -112,9 +112,7 @@ public class SpawnBeaconsCommand extends AbstractCommandCollection {
       }
 
       @Override
-      protected void execute(
-         @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
-      ) {
+      protected void execute(@Nonnull CommandContext context, @Nonnull List<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store) {
          if (entities.isEmpty()) {
             context.sendMessage(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_BEACONS);
          } else {

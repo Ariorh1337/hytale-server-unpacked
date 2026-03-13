@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.projectile.component.Projectile;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
@@ -129,7 +129,7 @@ public class EntityCollisionProvider {
       this.position = pos;
       this.direction = dir;
       this.boundingBox = boundingBox;
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       SpatialResource<Ref<EntityStore>, EntityStore> entitySpatialResource = componentAccessor.getResource(EntityModule.get().getEntitySpatialResourceType());
       entitySpatialResource.getSpatialStructure().collect(pos, radius, results);
 

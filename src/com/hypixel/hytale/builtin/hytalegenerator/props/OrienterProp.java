@@ -4,9 +4,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.RotatorPattern;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.math.util.FastRandom;
+import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +41,52 @@ public class OrienterProp extends Prop {
    private final boolean[] rHasGenerated;
    @Nonnull
    private final List<Integer> rValidPatternIndices;
+   @Nonnull
+   private Prop.Context rContext;
+   @Nonnull
+   private final Pipe.One<Vector3i> rFirstAllValidPipe = new Pipe.One<Vector3i>() {
+      public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
+         OrienterProp.this.rPatternContext.position = position;
+
+         for (int i = 0; i < OrienterProp.this.patterns.size(); i++) {
+            Pattern pattern = OrienterProp.this.patterns.get(i);
+            if (pattern.matches(OrienterProp.this.rPatternContext)) {
+               Prop prop = OrienterProp.this.props.get(i);
+               OrienterProp.this.rChildContext.assign(OrienterProp.this.rContext);
+               OrienterProp.this.rChildContext.position = position;
+               OrienterProp.this.rHasGenerated[0] = prop.generate(OrienterProp.this.rChildContext);
+               control.stop = true;
+               if (OrienterProp.this.selectionMode == OrienterProp.SelectionMode.FIRST_VALID) {
+                  return;
+               }
+            }
+         }
+      }
+   };
+   @Nonnull
+   private final Pipe.One<Vector3i> rRandomValidPipe = new Pipe.One<Vector3i>() {
+      public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
+         OrienterProp.this.rPatternContext.position = position;
+         OrienterProp.this.rValidPatternIndices.clear();
+
+         for (int i = 0; i < OrienterProp.this.patterns.size(); i++) {
+            Pattern pattern = OrienterProp.this.patterns.get(i);
+            if (pattern.matches(OrienterProp.this.rPatternContext)) {
+               OrienterProp.this.rValidPatternIndices.add(i);
+            }
+         }
+
+         if (!OrienterProp.this.rValidPatternIndices.isEmpty()) {
+            OrienterProp.this.random.setSeed(OrienterProp.this.rngField.get(position.x, position.y, position.z));
+            int pickedIndex = OrienterProp.this.random.nextInt(OrienterProp.this.rValidPatternIndices.size());
+            Prop prop = OrienterProp.this.props.get(OrienterProp.this.rValidPatternIndices.get(pickedIndex));
+            OrienterProp.this.rChildContext.assign(OrienterProp.this.rContext);
+            OrienterProp.this.rChildContext.position = position;
+            OrienterProp.this.rHasGenerated[0] = prop.generate(OrienterProp.this.rChildContext);
+            control.stop = true;
+         }
+      }
+   };
 
    public OrienterProp(
       @Nonnull List<RotationTuple> rotations,
@@ -81,52 +130,18 @@ public class OrienterProp extends Prop {
       this.rChildContext = new Prop.Context();
       this.rHasGenerated = new boolean[1];
       this.rValidPatternIndices = new ArrayList<>(this.patterns.size());
+      this.rContext = new Prop.Context();
    }
 
    @Override
    public boolean generate(@NonNullDecl Prop.Context context) {
+      this.rContext = context;
       this.rPatternContext.assign(context);
       this.rHasGenerated[0] = false;
       if (this.selectionMode != OrienterProp.SelectionMode.FIRST_VALID && this.selectionMode != OrienterProp.SelectionMode.ALL_VALID) {
-         this.scanner.scan(context.position, (position, control) -> {
-            this.rPatternContext.position = position;
-            this.rValidPatternIndices.clear();
-
-            for (int i = 0; i < this.patterns.size(); i++) {
-               Pattern pattern = this.patterns.get(i);
-               if (pattern.matches(this.rPatternContext)) {
-                  this.rValidPatternIndices.add(i);
-               }
-            }
-
-            if (!this.rValidPatternIndices.isEmpty()) {
-               this.random.setSeed(this.rngField.get(position.x, position.y, position.z));
-               int pickedIndex = this.random.nextInt(this.rValidPatternIndices.size());
-               Prop prop = this.props.get(this.rValidPatternIndices.get(pickedIndex));
-               this.rChildContext.assign(context);
-               this.rChildContext.position = position;
-               this.rHasGenerated[0] = prop.generate(this.rChildContext);
-               control.stop = true;
-            }
-         });
+         this.scanner.scan(context.position, this.rRandomValidPipe);
       } else {
-         this.scanner.scan(context.position, (position, control) -> {
-            this.rPatternContext.position = position;
-
-            for (int i = 0; i < this.patterns.size(); i++) {
-               Pattern pattern = this.patterns.get(i);
-               if (pattern.matches(this.rPatternContext)) {
-                  Prop prop = this.props.get(i);
-                  this.rChildContext.assign(context);
-                  this.rChildContext.position = position;
-                  this.rHasGenerated[0] = prop.generate(this.rChildContext);
-                  control.stop = true;
-                  if (this.selectionMode == OrienterProp.SelectionMode.FIRST_VALID) {
-                     return;
-                  }
-               }
-            }
-         });
+         this.scanner.scan(context.position, this.rFirstAllValidPipe);
       }
 
       return this.rHasGenerated[0];

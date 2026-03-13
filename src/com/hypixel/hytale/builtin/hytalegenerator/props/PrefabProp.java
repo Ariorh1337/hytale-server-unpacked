@@ -20,7 +20,6 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
-import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +31,7 @@ public class PrefabProp extends Prop {
    @Nonnull
    private final Bounds3i writeBounds;
    @Nonnull
-   private final WeightedMap<List<PrefabBuffer>> prefabPool;
+   private final WeightedMap<List<IPrefabBuffer>> prefabPool;
    @Nonnull
    private final MaterialCache materialCache;
    @Nonnull
@@ -49,7 +48,7 @@ public class PrefabProp extends Prop {
    @Nonnull
    private final Vector3d rEntityWorldPosition;
 
-   public PrefabProp(@Nonnull WeightedMap<List<PrefabBuffer>> prefabPool, @Nonnull MaterialCache materialCache, @Nonnull SeedBox seedBox) {
+   public PrefabProp(@Nonnull WeightedMap<List<IPrefabBuffer>> prefabPool, @Nonnull MaterialCache materialCache, @Nonnull SeedBox seedBox) {
       this.materialCache = materialCache;
       this.rngField = new RngField(seedBox.createSupplier().get());
       this.random = new FastRandom();
@@ -57,18 +56,16 @@ public class PrefabProp extends Prop {
       this.writeBounds = new Bounds3i();
       prefabPool.forEach((sourceList, weight) -> {
          if (!sourceList.isEmpty()) {
-            List<PrefabBuffer> prefabList = new ArrayList<>();
+            List<IPrefabBuffer> prefabList = new ArrayList<>();
 
-            for (PrefabBuffer prefab : sourceList) {
+            for (IPrefabBuffer prefab : sourceList) {
                assert prefab != null;
                if (prefab == null) {
                   return;
                }
 
                prefabList.add(prefab);
-               PrefabBuffer.PrefabBufferAccessor prefabAccess = prefab.newAccess();
-               this.writeBounds.encompass(getWriteBounds(prefabAccess));
-               prefabAccess.release();
+               this.writeBounds.encompass(getWriteBounds(prefab));
             }
 
             this.prefabPool.add(prefabList, weight);
@@ -85,14 +82,13 @@ public class PrefabProp extends Prop {
    public boolean generate(@NonNullDecl Prop.Context context) {
       this.random.setSeed(this.rngField.get(context.position.x, context.position.y, context.position.z));
       PrefabBufferCall callInstance = new PrefabBufferCall(this.random, PrefabRotation.ROTATION_0);
-      PrefabBuffer prefab = this.pickPrefab(this.random);
-      PrefabBuffer.PrefabBufferAccessor prefabAccess = prefab.newAccess();
+      IPrefabBuffer prefab = this.pickPrefab(this.random);
       this.rPrefabPosition.assign(context.position);
       this.rColumnPredicate.bounds.assign(context.materialWriteSpace.getBounds());
       this.rColumnPredicate.bounds.offsetOpposite(context.position);
 
       try {
-         prefabAccess.forEach(
+         prefab.forEach(
             this.rColumnPredicate,
             (x, y, z, blockId, holder, support, rotation, filler, call, fluidId, fluidLevel) -> {
                this.rWorldPosition.assign(x + context.position.x, y + context.position.y, z + context.position.z);
@@ -133,25 +129,23 @@ public class PrefabProp extends Prop {
          msg = msg + "\n";
          msg = msg + ExceptionUtil.toStringWithStack(e);
          HytaleLogger.getLogger().atWarning().log(msg);
-      } finally {
-         prefabAccess.release();
       }
 
       return true;
    }
 
    @Nonnull
-   private PrefabBuffer pickPrefab(@Nonnull Random rand) {
-      List<PrefabBuffer> list = this.prefabPool.pick(rand);
+   private IPrefabBuffer pickPrefab(@Nonnull Random rand) {
+      List<IPrefabBuffer> list = this.prefabPool.pick(rand);
       int randomIndex = rand.nextInt(list.size());
       return list.get(randomIndex);
    }
 
    @Nonnull
-   private static Bounds3i getWriteBounds(@Nonnull PrefabBuffer.PrefabBufferAccessor prefabAccess) {
-      Vector3i max = PrefabPropUtil.getMax(prefabAccess, PrefabRotation.ROTATION_0);
+   private static Bounds3i getWriteBounds(@Nonnull IPrefabBuffer prefab) {
+      Vector3i max = PrefabPropUtil.getMax(prefab, PrefabRotation.ROTATION_0);
       max.add(1, 1, 1);
-      Vector3i min = PrefabPropUtil.getMin(prefabAccess, PrefabRotation.ROTATION_0);
+      Vector3i min = PrefabPropUtil.getMin(prefab, PrefabRotation.ROTATION_0);
       return new Bounds3i(min, max);
    }
 

@@ -41,6 +41,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityTran
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetNPCDebug;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetTransformationModeState;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolStackArea;
+import com.hypixel.hytale.protocol.packets.buildertools.ClipboardEntityChange;
 import com.hypixel.hytale.protocol.packets.buildertools.PrefabSetAnchor;
 import com.hypixel.hytale.protocol.packets.buildertools.PrefabUnselectPrefab;
 import com.hypixel.hytale.protocol.packets.interface_.BlockChange;
@@ -50,7 +51,6 @@ import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle;
 import com.hypixel.hytale.protocol.packets.player.LoadHotbar;
 import com.hypixel.hytale.protocol.packets.player.SaveHotbar;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.buildertool.config.BrushData;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.command.commands.world.entity.EntityCloneCommand;
 import com.hypixel.hytale.server.core.command.commands.world.entity.EntityRemoveCommand;
@@ -375,28 +375,26 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                   );
                   prototypeSettings.setFluidChangesForPlaySelectionToolPasteMode(fluidChangesArray);
                   ArrayList<PrototypePlayerBuilderToolSettings.EntityChange> entityChanges = new ArrayList<>();
-                  int selectionX = selection.getX();
-                  int selectionY = selection.getY();
-                  int selectionZ = selection.getZ();
-                  selection.forEachEntity(
-                     holder -> {
-                        TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
-                        if (transform != null && transform.getPosition() != null) {
-                           Vector3d pos = transform.getPosition();
-                           entityChanges.add(
-                              new PrototypePlayerBuilderToolSettings.EntityChange(
-                                 pos.getX() + selectionX, pos.getY() + selectionY, pos.getZ() + selectionZ, holder.clone()
-                              )
-                           );
-                        }
+                  selection.forEachEntity(holder -> {
+                     TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+                     if (transform != null && transform.getPosition() != null) {
+                        Vector3d pos = transform.getPosition();
+                        entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.getX(), pos.getY(), pos.getZ(), holder.clone()));
                      }
-                  );
+                  });
                   prototypeSettings.setEntityChangesForPlaySelectionToolPasteMode(entityChanges.toArray(PrototypePlayerBuilderToolSettings.EntityChange[]::new));
                   FluidChange[] packetFluids = new FluidChange[fluidChangesArray.length];
 
                   for (int i = 0; i < fluidChangesArray.length; i++) {
                      PrototypePlayerBuilderToolSettings.FluidChange fc = fluidChangesArray[i];
                      packetFluids[i] = new FluidChange(fc.x(), fc.y(), fc.z(), fc.fluidId(), fc.fluidLevel());
+                  }
+
+                  ClipboardEntityChange[] packetEntities = new ClipboardEntityChange[entityChanges.size()];
+
+                  for (int i = 0; i < entityChanges.size(); i++) {
+                     PrototypePlayerBuilderToolSettings.EntityChange ec = entityChanges.get(i);
+                     packetEntities[i] = BlockSelection.toClipboardEntityChange(ec.entityHolder(), anchorX, anchorY, anchorZ);
                   }
 
                   if (blocksChange != null && blocksChange.length > 4000000) {
@@ -409,7 +407,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                      return;
                   }
 
-                  playerRef.getPacketHandler().write(new BuilderToolSelectionToolReplyWithClipboard(blocksChange, packetFluids));
+                  playerRef.getPacketHandler().write(new BuilderToolSelectionToolReplyWithClipboard(blocksChange, packetFluids, packetEntities));
                }
             }
          );
@@ -452,102 +450,117 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                   playerComponent.sendMessage(Message.translation("server.builderTools.selection.large.warning"));
                }
 
-               if (prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode() == null) {
-                  s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
-                  List<Ref<EntityStore>> lastTransformRefs = prototypeSettings.getLastTransformEntityRefs();
-                  HashSet<Ref<EntityStore>> skipSet = lastTransformRefs != null ? new HashSet<>(lastTransformRefs) : null;
-                  if (packet.cutOriginal) {
-                     s.copyOrCut(
-                        r,
-                        initialSelectionMin.x,
-                        initialSelectionMin.y,
-                        initialSelectionMin.z,
-                        initialSelectionMax.x,
-                        initialSelectionMax.y,
-                        initialSelectionMax.z,
-                        154,
-                        null,
-                        skipSet,
-                        store
-                     );
-                  } else {
-                     s.copyOrCut(
-                        r,
-                        initialSelectionMin.x,
-                        initialSelectionMin.y,
-                        initialSelectionMin.z,
-                        initialSelectionMax.x,
-                        initialSelectionMax.y,
-                        initialSelectionMax.z,
-                        152,
-                        store
-                     );
-                  }
+               try {
+                  if (prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode() == null) {
+                     s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
+                     List<Ref<EntityStore>> lastTransformRefs = prototypeSettings.getLastTransformEntityRefs();
+                     HashSet<Ref<EntityStore>> skipSet = lastTransformRefs != null ? new HashSet<>(lastTransformRefs) : null;
+                     if (packet.cutOriginal) {
+                        s.copyOrCut(
+                           r,
+                           initialSelectionMin.x,
+                           initialSelectionMin.y,
+                           initialSelectionMin.z,
+                           initialSelectionMax.x,
+                           initialSelectionMax.y,
+                           initialSelectionMax.z,
+                           154,
+                           null,
+                           skipSet,
+                           store
+                        );
+                     } else {
+                        s.copyOrCut(
+                           r,
+                           initialSelectionMin.x,
+                           initialSelectionMin.y,
+                           initialSelectionMin.z,
+                           initialSelectionMax.x,
+                           initialSelectionMax.y,
+                           initialSelectionMax.z,
+                           152,
+                           store
+                        );
+                     }
 
-                  BlockSelection selection = s.getSelection();
-                  BlockChange[] blocksChange = selection.toPacket().blocksChange;
-                  prototypeSettings.setBlockChangesForPlaySelectionToolPasteMode(blocksChange);
-                  ArrayList<PrototypePlayerBuilderToolSettings.FluidChange> fluidChanges = new ArrayList<>();
-                  int anchorX = selection.getAnchorX();
-                  int anchorY = selection.getAnchorY();
-                  int anchorZ = selection.getAnchorZ();
-                  selection.forEachFluid(
-                     (x, y, z, fluidId, fluidLevel) -> fluidChanges.add(
-                        new PrototypePlayerBuilderToolSettings.FluidChange(x - anchorX, y - anchorY, z - anchorZ, fluidId, fluidLevel)
-                     )
-                  );
-                  prototypeSettings.setFluidChangesForPlaySelectionToolPasteMode(fluidChanges.toArray(PrototypePlayerBuilderToolSettings.FluidChange[]::new));
-                  ArrayList<PrototypePlayerBuilderToolSettings.EntityChange> entityChanges = new ArrayList<>();
-                  int selectionX = selection.getX();
-                  int selectionY = selection.getY();
-                  int selectionZ = selection.getZ();
-                  selection.forEachEntity(
-                     holder -> {
+                     BlockSelection selection = s.getSelection();
+                     BlockChange[] blocksChange = selection.toPacket().blocksChange;
+                     prototypeSettings.setBlockChangesForPlaySelectionToolPasteMode(blocksChange);
+                     ArrayList<PrototypePlayerBuilderToolSettings.FluidChange> fluidChanges = new ArrayList<>();
+                     int anchorX = selection.getAnchorX();
+                     int anchorY = selection.getAnchorY();
+                     int anchorZ = selection.getAnchorZ();
+                     selection.forEachFluid(
+                        (x, y, z, fluidId, fluidLevel) -> fluidChanges.add(
+                           new PrototypePlayerBuilderToolSettings.FluidChange(x - anchorX, y - anchorY, z - anchorZ, fluidId, fluidLevel)
+                        )
+                     );
+                     prototypeSettings.setFluidChangesForPlaySelectionToolPasteMode(fluidChanges.toArray(PrototypePlayerBuilderToolSettings.FluidChange[]::new));
+                     ArrayList<PrototypePlayerBuilderToolSettings.EntityChange> entityChanges = new ArrayList<>();
+                     selection.forEachEntity(holder -> {
                         TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
                         if (transform != null && transform.getPosition() != null) {
                            Vector3d pos = transform.getPosition();
-                           entityChanges.add(
-                              new PrototypePlayerBuilderToolSettings.EntityChange(
-                                 pos.getX() + selectionX, pos.getY() + selectionY, pos.getZ() + selectionZ, holder.clone()
-                              )
-                           );
+                           entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.getX(), pos.getY(), pos.getZ(), holder.clone()));
                         }
-                     }
-                  );
-                  prototypeSettings.setEntityChangesForPlaySelectionToolPasteMode(entityChanges.toArray(PrototypePlayerBuilderToolSettings.EntityChange[]::new));
-                  prototypeSettings.setBlockChangeOffsetOrigin(new Vector3i(selection.getX(), selection.getY(), selection.getZ()));
-               }
-
-               Vector3i blockChangeOffsetOrigin = prototypeSettings.getBlockChangeOffsetOrigin();
-               if (packet.initialPastePointForClipboardPaste != null) {
-                  blockChangeOffsetOrigin = new Vector3i(
-                     packet.initialPastePointForClipboardPaste.x, packet.initialPastePointForClipboardPaste.y, packet.initialPastePointForClipboardPaste.z
-                  );
-               }
-
-               if (blockChangeOffsetOrigin == null) {
-                  playerComponent.sendMessage(Message.translation("server.builderTools.selection.noBlockChangeOffsetOrigin"));
-               } else {
-                  s.transformThenPasteClipboard(
-                     prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode(),
-                     prototypeSettings.getFluidChangesForPlaySelectionToolPasteMode(),
-                     prototypeSettings.getEntityChangesForPlaySelectionToolPasteMode(),
-                     rotation,
-                     translationOffset,
-                     rotationOrigin,
-                     blockChangeOffsetOrigin,
-                     finalKeepEmptyBlocks,
-                     prototypeSettings,
-                     componentAccessor
-                  );
-                  s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
-                  s.transformSelectionPoints(rotation, translationOffset, rotationOrigin);
-                  if (large) {
-                     playerComponent.sendMessage(Message.translation("server.builderTools.selection.large.complete"));
+                     });
+                     prototypeSettings.setEntityChangesForPlaySelectionToolPasteMode(
+                        entityChanges.toArray(PrototypePlayerBuilderToolSettings.EntityChange[]::new)
+                     );
+                     prototypeSettings.setBlockChangeOffsetOrigin(new Vector3i(selection.getX(), selection.getY(), selection.getZ()));
                   }
 
+                  BlockChange[] localBlockChanges = prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode();
+                  PrototypePlayerBuilderToolSettings.FluidChange[] localFluidChanges = prototypeSettings.getFluidChangesForPlaySelectionToolPasteMode();
+                  PrototypePlayerBuilderToolSettings.EntityChange[] localEntityChanges = prototypeSettings.getEntityChangesForPlaySelectionToolPasteMode();
+                  Vector3i blockChangeOffsetOrigin = prototypeSettings.getBlockChangeOffsetOrigin();
+                  if (packet.initialPastePointForClipboardPaste != null) {
+                     blockChangeOffsetOrigin = new Vector3i(
+                        packet.initialPastePointForClipboardPaste.x, packet.initialPastePointForClipboardPaste.y, packet.initialPastePointForClipboardPaste.z
+                     );
+                  }
+
+                  if (blockChangeOffsetOrigin != null) {
+                     prototypeSettings.setLastTransformEntityRefs(null);
+                     s.transformThenPasteClipboard(
+                        localBlockChanges,
+                        localFluidChanges,
+                        localEntityChanges,
+                        rotation,
+                        translationOffset,
+                        rotationOrigin,
+                        blockChangeOffsetOrigin,
+                        finalKeepEmptyBlocks,
+                        prototypeSettings,
+                        componentAccessor
+                     );
+                     s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
+                     s.transformSelectionPoints(rotation, translationOffset, rotationOrigin);
+                     if (!packet.isExitingTransformMode) {
+                        prototypeSettings.setBlockChangeOffsetOrigin(
+                           new Vector3i(
+                              blockChangeOffsetOrigin.x + translationOffset.x,
+                              blockChangeOffsetOrigin.y + translationOffset.y,
+                              blockChangeOffsetOrigin.z + translationOffset.z
+                           )
+                        );
+                     }
+
+                     if (large) {
+                        playerComponent.sendMessage(Message.translation("server.builderTools.selection.large.complete"));
+                     }
+
+                     return;
+                  }
+
+                  playerComponent.sendMessage(Message.translation("server.builderTools.selection.noBlockChangeOffsetOrigin"));
+               } catch (Exception e) {
+                  LOGGER.at(Level.WARNING).log("Error during selection transform", e);
+                  return;
+               } finally {
                   if (packet.isExitingTransformMode) {
                      prototypeSettings.setInSelectionTransformationMode(false);
+                     prototypeSettings.setLastTransformEntityRefs(null);
                   }
                }
             }
@@ -688,7 +701,6 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
          if (builderTool != null && builderTool.getId().equals("Line")) {
             BuilderTool.ArgData args = builderTool.getItemArgData(playerComponent.getInventory().getItemInHand());
-            BrushData.Values brushData = args.brush();
             Map<String, Object> tool = args.tool();
             if (tool != null) {
                int lineWidth = (Integer)tool.get("bLineWidth");
@@ -718,7 +730,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                      lineOrigin,
                      lineSpacing,
                      lineDensity,
-                     ToolOperation.combineMasks(brushData, s.getGlobalMask()),
+                     ToolOperation.combineMasks(args, s.getGlobalMask()),
                      componentAccessor
                   )
                );

@@ -21,7 +21,7 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
@@ -54,7 +54,7 @@ public class NPCFlockCommand extends AbstractCommandCollection {
       double y = position.getY();
       double z = position.getZ();
       SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       spatialResource.getSpatialStructure().collect(position, 8.0, results);
       ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
       assert npcComponentType != null;
@@ -91,7 +91,7 @@ public class NPCFlockCommand extends AbstractCommandCollection {
       double y = position.getY();
       double z = position.getZ();
       SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       spatialResource.getSpatialStructure().ordered(position, 8.0, results);
 
       for (Ref<EntityStore> entityRef : results) {

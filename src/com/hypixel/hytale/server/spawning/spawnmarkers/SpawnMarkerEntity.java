@@ -38,7 +38,6 @@ import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
@@ -304,7 +303,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
             return false;
          }
 
-         ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
          SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(EntityModule.get().getPlayerSpatialResourceType());
          spatialResource.getSpatialStructure().collect(position, marker.getExclusionRadius(), results);
          boolean hasPlayersInRange = !results.isEmpty();

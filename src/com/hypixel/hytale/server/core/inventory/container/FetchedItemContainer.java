@@ -82,6 +82,26 @@ public class FetchedItemContainer extends ItemContainer {
    }
 
    @Override
+   protected void lockForRead() {
+      this.fetcher.get().lockForRead();
+   }
+
+   @Override
+   protected void unlockForRead() {
+      this.fetcher.get().unlockForRead();
+   }
+
+   @Override
+   protected void lockForWrite() {
+      this.fetcher.get().lockForWrite();
+   }
+
+   @Override
+   protected void unlockForWrite() {
+      this.fetcher.get().unlockForWrite();
+   }
+
+   @Override
    protected ClearTransaction internal_clear() {
       return this.fetcher.get().internal_clear();
    }

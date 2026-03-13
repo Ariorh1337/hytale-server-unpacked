@@ -127,6 +127,10 @@ public class GridUtils {
       VectorUtil.bitShiftLeft(3, position_voxelGrid);
    }
 
+   public static int toBufferGrid_fromVoxelGrid(int worldPosition_voxelGrid) {
+      return worldPosition_voxelGrid >> 3;
+   }
+
    public static void toBufferGrid_fromVoxelGrid(@Nonnull Vector3i worldPosition_voxelGrid) {
       VectorUtil.bitShiftRight(3, worldPosition_voxelGrid);
    }
@@ -143,6 +147,18 @@ public class GridUtils {
       position.y = Calculator.toIntFloored(worldPosition_decimalGrid.y);
       position.z = Calculator.toIntFloored(worldPosition_decimalGrid.z);
       return position;
+   }
+
+   public static int toXVoxelGridInsideBuffer_fromWorldGrid(int x_voxelGrid) {
+      return Calculator.wrap(x_voxelGrid, VoxelBuffer.SIZE.x);
+   }
+
+   public static int toYVoxelGridInsideBuffer_fromWorldGrid(int y_voxelGrid) {
+      return Calculator.wrap(y_voxelGrid, VoxelBuffer.SIZE.y);
+   }
+
+   public static int toZVoxelGridInsideBuffer_fromWorldGrid(int z_voxelGrid) {
+      return Calculator.wrap(z_voxelGrid, VoxelBuffer.SIZE.z);
    }
 
    public static void toVoxelGridInsideBuffer_fromWorldGrid(@Nonnull Vector3i worldPosition_voxelGrid) {

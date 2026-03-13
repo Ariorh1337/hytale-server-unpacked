@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.universe.world.chunk;
 
-import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.common.collection.Flags;
@@ -13,8 +12,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.protocol.BlockParticleEvent;
-import com.hypixel.hytale.protocol.Opacity;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickManager;
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.TickProcedure;
@@ -23,7 +20,6 @@ import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.block.BlockEntity;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldNotificationHandler;
 import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
 import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.environment.EnvironmentChunk;
@@ -329,31 +325,15 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
             }
 
             short newHeight = oldHeight;
-            if ((settings & 512) == 0 && oldHeight <= y) {
-               if (oldHeight == y && id == 0) {
-                  newHeight = this.blockChunk.updateHeight(x, z, (short)y);
-               } else if (oldHeight < y && id != 0 && blockType.getOpacity() != Opacity.Transparent) {
-                  newHeight = (short)y;
-                  this.blockChunk.setHeight(x, z, newHeight);
-               }
+            if ((settings & 512) == 0) {
+               newHeight = BlockOperations.updateBlockHeight(this.blockChunk, id, blockType, x, y, z, newHeight);
             }
 
-            WorldNotificationHandler notificationHandler = this.getWorld().getNotificationHandler();
             if ((settings & 4) == 0) {
-               if (oldBlock == 0 && id != 0) {
-                  notificationHandler.sendBlockParticle(worldX + 0.5, y + 0.5, worldZ + 0.5, id, BlockParticleEvent.Build);
-               } else if (oldBlock != 0 && id == 0) {
-                  BlockParticleEvent particleType = (settings & 32) != 0 ? BlockParticleEvent.Physics : BlockParticleEvent.Break;
-                  notificationHandler.sendBlockParticle(worldX + 0.5, y + 0.5, worldZ + 0.5, oldBlock, particleType);
-               } else {
-                  notificationHandler.sendBlockParticle(worldX + 0.5, y + 0.5, worldZ + 0.5, oldBlock, BlockParticleEvent.Break);
-                  notificationHandler.sendBlockParticle(worldX + 0.5, y + 0.5, worldZ + 0.5, id, BlockParticleEvent.Build);
-               }
+               BlockOperations.spawnBlockParticles(this.world.getChunkStore(), oldBlock, id, worldX, y, worldZ, (settings & 32) != 0);
             }
 
-            BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = BlockType.getAssetMap();
             IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap = BlockBoundingBoxes.getAssetMap();
-            String blockTypeKey = blockType.getId();
             if ((settings & 2) == 0) {
                Holder<ChunkStore> blockEntity = blockType.getBlockEntity();
                if (blockEntity != null && filler == 0) {
@@ -371,43 +351,18 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
             TickProcedure tickProcedure = BlockTickManager.getBlockTickProvider().getTickProcedure(id);
             this.blockChunk.setTicking(x, y, z, tickProcedure != null);
             if ((settings & 16) == 0) {
-               int settingsWithoutFiller = settings | 8 | 16;
-               BlockType oldBlockType = blockTypeAssetMap.getAsset(oldBlock);
-               String oldBlockKey = oldBlockType.getId();
-               int fx = FillerBlockUtil.unpackX(oldFiller);
-               int fy = FillerBlockUtil.unpackY(oldFiller);
-               int fz = FillerBlockUtil.unpackZ(oldFiller);
-               int baseX = worldX - fx;
-               int baseY = y - fy;
-               int baseZ = worldZ - fz;
-               FillerBlockUtil.forEachFillerBlock(
-                  hitboxAssetMap.getAsset(oldBlockType.getHitboxTypeIndex()).get(oldRotation),
-                  (x1, y1, z1) -> {
-                     if (x1 != fx || y1 != fy || z1 != fz) {
-                        int blockX = baseX + x1;
-                        int blockY = baseY + y1;
-                        int blockZ = baseZ + z1;
-                        if (ChunkUtil.isSameChunk(worldX, worldZ, blockX, blockZ)) {
-                           String blockTypeKey1 = this.getBlockType(blockX, blockY, blockZ).getId();
-                           if (blockTypeKey1.equals(oldBlockKey)) {
-                              this.breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
-                           }
-                        } else {
-                           String blockTypeKey1 = this.getWorld()
-                              .getNonTickingChunk(ChunkUtil.indexChunkFromBlock(blockX, blockZ))
-                              .getBlockType(blockX, blockY, blockZ)
-                              .getId();
-                           if (blockTypeKey1.equals(oldBlockKey)) {
-                              this.getWorld().breakBlock(blockX, blockY, blockZ, settingsWithoutFiller);
-                           }
-                        }
-                     }
-                  }
+               FillerBlockUtil.RemovalType removalType = FillerBlockUtil.RemovalType.NONE;
+               if ((settings & 4) == 0) {
+                  removalType = (settings & 32) != 0 ? FillerBlockUtil.RemovalType.BY_PHYSICS : FillerBlockUtil.RemovalType.NORMAL;
+               }
+
+               FillerBlockUtil.removeFillerBlocksAt(
+                  this.world.getChunkStore().getStore(), blockSection, worldX, y, worldZ, oldBlock, oldFiller, oldRotation, removalType
                );
             }
 
             if ((settings & 8) == 0 && filler == 0) {
-               int settingsWithoutSetFiller = settings | 8;
+               int settingsWithoutSetFiller = (settings | 8) & -257;
                BlockType finalBlockType = blockType;
                int blockId = id;
                int finalRotation = rotation;
@@ -436,10 +391,7 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
             }
 
             if ((settings & 256) != 0) {
-               FillerBlockUtil.forEachFillerBlock(
-                  hitboxAssetMap.getAsset(blockType.getHitboxTypeIndex()).get(rotation),
-                  (x1, y1, z1) -> this.getChunkAccessor().performBlockUpdate(worldX + x1, y + y1, worldZ + z1)
-               );
+               BlockOperations.updateBlockArea(this.world.getChunkStore(), blockSection, blockType, rotation, x, y, z);
             }
 
             if (this.reference != null && this.reference.isValid()) {

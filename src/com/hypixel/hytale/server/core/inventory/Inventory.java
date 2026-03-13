@@ -723,7 +723,9 @@ public class Inventory {
    }
 
    public void setUsingToolsItem(boolean value) {
-      this.tools.setUsingToolsItem(value);
+      if (this.tools != null) {
+         this.tools.setUsingToolsItem(value);
+      }
    }
 
    public boolean usingToolsItem() {

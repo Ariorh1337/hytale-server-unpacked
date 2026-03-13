@@ -273,10 +273,7 @@ public class FarmingUtil {
             farmingBlock.setExecutions(0);
             farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
             farmingBlock.setLastTickGameTime(now);
-            Ref<ChunkStore> sectionRef = world.getChunkStore()
-               .getChunkSectionReference(
-                  ChunkUtil.chunkCoordinate(blockPosition.x), ChunkUtil.chunkCoordinate(blockPosition.y), ChunkUtil.chunkCoordinate(blockPosition.z)
-               );
+            Ref<ChunkStore> sectionRef = world.getChunkStore().getChunkSectionReferenceAtBlock(blockPosition.x, blockPosition.y, blockPosition.z);
             if (sectionRef == null) {
                return false;
             }

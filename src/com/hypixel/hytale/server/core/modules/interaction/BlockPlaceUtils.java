@@ -87,7 +87,8 @@ public class BlockPlaceUtils {
       boolean removeItemInHand,
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
-      @Nonnull ComponentAccessor<EntityStore> entityStore
+      @Nonnull ComponentAccessor<EntityStore> entityStore,
+      boolean quickReplace
    ) {
       if (blockPosition.getY() >= 0 && blockPosition.getY() < 320) {
          Ref<ChunkStore> targetChunkReference = chunkReference;
@@ -165,7 +166,8 @@ public class BlockPlaceUtils {
                      targetBlockChunkComponent,
                      chunkReference,
                      chunkStore,
-                     entityStore
+                     entityStore,
+                     quickReplace
                   );
                   if (success) {
                      onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition, blockTypeAsset, targetRotation);
@@ -308,7 +310,8 @@ public class BlockPlaceUtils {
       @Nonnull BlockChunk blockChunkComponent,
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
-      @Nonnull ComponentAccessor<EntityStore> entityStore
+      @Nonnull ComponentAccessor<EntityStore> entityStore,
+      boolean quickReplace
    ) {
       WorldConfig worldConfig = entityStore.getExternalData().getWorld().getGameplayConfig().getWorldConfig();
       if (!worldConfig.isBlockPlacementAllowed()) {
@@ -332,7 +335,10 @@ public class BlockPlaceUtils {
 
       BlockType blockType = BlockType.getAssetMap().getAsset(blockTypeKey);
       int rotationIndex = rotation.index();
-      if (blockType != null && worldChunkComponent.testPlaceBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockType, rotationIndex)) {
+      if (quickReplace
+         || blockType != null && worldChunkComponent.testPlaceBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockType, rotationIndex)
+         )
+       {
          BlockBoundingBoxes hitBoxType = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
          if (hitBoxType != null) {
             FillerBlockUtil.forEachFillerBlock(

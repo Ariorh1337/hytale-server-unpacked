@@ -10,21 +10,21 @@ import javax.annotation.Nonnull;
 
 public class SandwichAssignments extends Assignments {
    @Nonnull
-   private final List<SandwichAssignments.VerticalDelimiter> verticalDelimiters;
+   private final List<SandwichAssignments.VerticalDelimiter> delimiters;
 
-   public SandwichAssignments(@Nonnull List<SandwichAssignments.VerticalDelimiter> verticalDelimiters) {
-      this.verticalDelimiters = new ArrayList<>(verticalDelimiters);
+   public SandwichAssignments(@Nonnull List<SandwichAssignments.VerticalDelimiter> delimiters) {
+      this.delimiters = new ArrayList<>(delimiters);
    }
 
    @Override
    public Prop propAt(@Nonnull Vector3d position, @Nonnull WorkerIndexer.Id id, double distanceTOBiomeEdge) {
-      if (this.verticalDelimiters.isEmpty()) {
+      if (this.delimiters.isEmpty()) {
          return EmptyProp.INSTANCE;
       }
 
-      for (SandwichAssignments.VerticalDelimiter fd : this.verticalDelimiters) {
-         if (fd.isInside(position.y)) {
-            return fd.assignments.propAt(position, id, distanceTOBiomeEdge);
+      for (SandwichAssignments.VerticalDelimiter delimiter : this.delimiters) {
+         if (delimiter.isInside(position.y)) {
+            return delimiter.assignments.propAt(position, id, distanceTOBiomeEdge);
          }
       }
 
@@ -36,7 +36,7 @@ public class SandwichAssignments extends Assignments {
    public List<Prop> getAllPossibleProps() {
       ArrayList<Prop> list = new ArrayList<>();
 
-      for (SandwichAssignments.VerticalDelimiter f : this.verticalDelimiters) {
+      for (SandwichAssignments.VerticalDelimiter f : this.delimiters) {
          list.addAll(f.assignments.getAllPossibleProps());
       }
 

@@ -91,7 +91,6 @@ import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -417,7 +416,7 @@ public class PlayerSystems {
          if (transform != null) {
             Vector3d position = transform.getPosition();
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(position, 75.0, results);
             results.add(ref);
             if (playerComponent.isFirstSpawn()) {

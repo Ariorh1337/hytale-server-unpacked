@@ -117,6 +117,14 @@ public class BufferBundle implements MemInstrument {
       }
 
       @Nonnull
+      public BufferBundle.Grid.TrackedBuffer getBuffer(int x_bufferGrid, int y_bufferGrid, int z_bufferGrid) {
+         assert !this.isClosed;
+         assert this.bounds_bufferGrid.contains(x_bufferGrid, y_bufferGrid, z_bufferGrid);
+         int index = GridUtils.toIndexFromPositionYXZ(x_bufferGrid, y_bufferGrid, z_bufferGrid, this.bounds_bufferGrid);
+         return this.buffers[index];
+      }
+
+      @Nonnull
       public BufferBundle.Grid.TrackedBuffer getBuffer(@Nonnull Vector3i position_bufferGrid) {
          assert !this.isClosed;
          assert this.bounds_bufferGrid.contains(position_bufferGrid);
@@ -175,6 +183,13 @@ public class BufferBundle implements MemInstrument {
             assert access.bounds_bufferGrid.contains(bounds_bufferGrid);
             this.access = access;
             this.bounds_bufferGrid = bounds_bufferGrid;
+         }
+
+         @Nonnull
+         public BufferBundle.Grid.TrackedBuffer getBuffer(int x_bufferGrid, int y_bufferGrid, int z_bufferGrid) {
+            assert !this.access.isClosed;
+            assert this.bounds_bufferGrid.contains(x_bufferGrid, y_bufferGrid, z_bufferGrid);
+            return this.access.getBuffer(x_bufferGrid, y_bufferGrid, z_bufferGrid);
          }
 
          @Nonnull

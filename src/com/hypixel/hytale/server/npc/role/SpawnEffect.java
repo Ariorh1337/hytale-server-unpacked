@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public interface SpawnEffect {
@@ -45,7 +45,7 @@ public interface SpawnEffect {
 
          spawnPosition.rotateY(rotation.getYaw()).add(position);
          SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
-         ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
          playerSpatialResource.getSpatialStructure().collect(spawnPosition, this.getSpawnViewDistance(), results);
          ParticleUtil.spawnParticleEffect(particles, spawnPosition, results, componentAccessor);
          ModelParticle particle = new ModelParticle();

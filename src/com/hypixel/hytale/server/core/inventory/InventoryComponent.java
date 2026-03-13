@@ -285,14 +285,22 @@ public abstract class InventoryComponent implements Component<EntityStore> {
 
       public Armor(short capacity) {
          super(capacity);
+         this.afterDecode();
       }
 
       public Armor(ItemContainer armor) {
          this.inventory = armor;
          this.registerChangeEvent();
+         this.afterDecode();
       }
 
       private void afterDecode() {
+         this.inventory = ItemContainerUtil.trySetArmorFilters(this.inventory);
+      }
+
+      @Override
+      public void ensureCapacity(short capacity, @Nonnull List<ItemStack> remainder) {
+         super.ensureCapacity(capacity, remainder);
          this.inventory = ItemContainerUtil.trySetArmorFilters(this.inventory);
       }
 
@@ -556,12 +564,14 @@ public abstract class InventoryComponent implements Component<EntityStore> {
 
       public Utility(short capacity) {
          super(capacity);
+         this.afterDecode();
       }
 
       public Utility(ItemContainer utility, byte utilitySlot) {
          this.inventory = utility;
          this.activeSlot = utilitySlot;
          this.registerChangeEvent();
+         this.afterDecode();
       }
 
       @Override
@@ -570,6 +580,10 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          if (this.activeSlot >= this.inventory.getCapacity()) {
             this.activeSlot = -1;
          }
+
+         this.inventory = ItemContainerUtil.trySetSlotFilters(
+            this.inventory, (type, container, slot, itemStack) -> itemStack == null || itemStack.getItem().getUtility().isUsable()
+         );
       }
 
       private void afterDecode() {

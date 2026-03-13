@@ -45,38 +45,102 @@ public class CombinedItemContainer extends ItemContainer {
 
    @Override
    protected <V> V readAction(@Nonnull Supplier<V> action) {
-      return this.readAction0(0, action);
-   }
+      this.lockForRead();
 
-   private <V> V readAction0(int i, @Nonnull Supplier<V> action) {
-      return i >= this.containers.length ? action.get() : this.containers[i].readAction(() -> this.readAction0(i + 1, action));
+      try {
+         return action.get();
+      } finally {
+         this.unlockForRead();
+      }
    }
 
    @Override
    protected <X, V> V readAction(@Nonnull Function<X, V> action, X x) {
-      return this.readAction0(0, action, x);
-   }
+      this.lockForRead();
 
-   private <X, V> V readAction0(int i, @Nonnull Function<X, V> action, X x) {
-      return i >= this.containers.length ? action.apply(x) : this.containers[i].readAction(() -> this.readAction0(i + 1, action, x));
+      try {
+         return action.apply(x);
+      } finally {
+         this.unlockForRead();
+      }
    }
 
    @Override
    protected <V> V writeAction(@Nonnull Supplier<V> action) {
-      return this.writeAction0(0, action);
-   }
+      this.lockForWrite();
 
-   private <V> V writeAction0(int i, @Nonnull Supplier<V> action) {
-      return i >= this.containers.length ? action.get() : this.containers[i].writeAction(() -> this.writeAction0(i + 1, action));
+      try {
+         return action.get();
+      } finally {
+         this.unlockForWrite();
+      }
    }
 
    @Override
    protected <X, V> V writeAction(@Nonnull Function<X, V> action, X x) {
-      return this.writeAction0(0, action, x);
+      this.lockForWrite();
+
+      try {
+         return action.apply(x);
+      } finally {
+         this.unlockForWrite();
+      }
    }
 
-   private <X, V> V writeAction0(int i, @Nonnull Function<X, V> action, X x) {
-      return i >= this.containers.length ? action.apply(x) : this.containers[i].writeAction(() -> this.writeAction0(i + 1, action, x));
+   @Override
+   protected void lockForRead() {
+      for (int i = 0; i < this.containers.length; i++) {
+         try {
+            this.containers[i].lockForRead();
+         } catch (Throwable var6) {
+            Throwable t = var6;
+
+            for (int j = i - 1; j >= 0; j--) {
+               try {
+                  this.containers[j].unlockForRead();
+               } catch (Throwable s) {
+                  t.addSuppressed(s);
+               }
+            }
+
+            throw t;
+         }
+      }
+   }
+
+   @Override
+   protected void unlockForRead() {
+      for (int i = this.containers.length - 1; i >= 0; i--) {
+         this.containers[i].unlockForRead();
+      }
+   }
+
+   @Override
+   protected void lockForWrite() {
+      for (int i = 0; i < this.containers.length; i++) {
+         try {
+            this.containers[i].lockForWrite();
+         } catch (Throwable var6) {
+            Throwable t = var6;
+
+            for (int j = i - 1; j >= 0; j--) {
+               try {
+                  this.containers[j].unlockForWrite();
+               } catch (Throwable s) {
+                  t.addSuppressed(s);
+               }
+            }
+
+            throw t;
+         }
+      }
+   }
+
+   @Override
+   protected void unlockForWrite() {
+      for (int i = this.containers.length - 1; i >= 0; i--) {
+         this.containers[i].unlockForWrite();
+      }
    }
 
    @Nonnull
@@ -89,7 +153,7 @@ public class CombinedItemContainer extends ItemContainer {
          ClearTransaction clear = container.internal_clear();
          ItemStack[] items = clear.getItems();
 
-         for (short slot = 0; slot < itemStacks.length; slot++) {
+         for (short slot = 0; slot < items.length; slot++) {
             itemStacks[(short)(start + slot)] = items[slot];
          }
 

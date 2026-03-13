@@ -56,7 +56,12 @@ public class VoxelBufferView<T> implements VoxelSpace<T> {
 
    @Override
    public void set(T content, int x, int y, int z) {
-      this.set(content, new Vector3i(x, y, z));
+      assert this.bounds_voxelGrid.contains(x, y, z);
+      VoxelBuffer<T> buffer = this.getBuffer_fromVoxelGrid(x, y, z);
+      int x_internal = GridUtils.toXVoxelGridInsideBuffer_fromWorldGrid(x);
+      int y_internal = GridUtils.toYVoxelGridInsideBuffer_fromWorldGrid(y);
+      int z_internal = GridUtils.toZVoxelGridInsideBuffer_fromWorldGrid(z);
+      buffer.setVoxelContent(x_internal, y_internal, z_internal, content);
    }
 
    @Override
@@ -79,7 +84,12 @@ public class VoxelBufferView<T> implements VoxelSpace<T> {
    @Nullable
    @Override
    public T get(int x, int y, int z) {
-      return this.get(new Vector3i(x, y, z));
+      assert this.bounds_voxelGrid.contains(x, y, z);
+      VoxelBuffer<T> buffer = this.getBuffer_fromVoxelGrid(x, y, z);
+      int x_internal = GridUtils.toXVoxelGridInsideBuffer_fromWorldGrid(x);
+      int y_internal = GridUtils.toYVoxelGridInsideBuffer_fromWorldGrid(y);
+      int z_internal = GridUtils.toZVoxelGridInsideBuffer_fromWorldGrid(z);
+      return buffer.getVoxelContent(x_internal, y_internal, z_internal);
    }
 
    @Nullable
@@ -104,10 +114,23 @@ public class VoxelBufferView<T> implements VoxelSpace<T> {
    }
 
    @Nonnull
+   private VoxelBuffer<T> getBuffer_fromVoxelGrid(int x_voxelGrid, int y_voxelGrid, int z_voxelGrid) {
+      int x_bufferGrid = GridUtils.toBufferGrid_fromVoxelGrid(x_voxelGrid);
+      int y_bufferGrid = GridUtils.toBufferGrid_fromVoxelGrid(y_voxelGrid);
+      int z_bufferGrid = GridUtils.toBufferGrid_fromVoxelGrid(z_voxelGrid);
+      return this.getBuffer_fromBufferGrid(x_bufferGrid, y_bufferGrid, z_bufferGrid);
+   }
+
+   @Nonnull
    private VoxelBuffer<T> getBuffer_fromVoxelGrid(@Nonnull Vector3i position_voxelGrid) {
       Vector3i localBufferPosition_bufferGrid = position_voxelGrid.clone();
       GridUtils.toBufferGrid_fromVoxelGrid(localBufferPosition_bufferGrid);
       return this.getBuffer_fromBufferGrid(localBufferPosition_bufferGrid);
+   }
+
+   @Nonnull
+   private VoxelBuffer<T> getBuffer_fromBufferGrid(int x_bufferGrid, int y_bufferGrid, int z_bufferGrid) {
+      return (VoxelBuffer<T>)this.bufferAccess.getBuffer(x_bufferGrid, y_bufferGrid, z_bufferGrid).buffer();
    }
 
    @Nonnull

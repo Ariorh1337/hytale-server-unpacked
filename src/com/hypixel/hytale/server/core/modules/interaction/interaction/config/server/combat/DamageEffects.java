@@ -21,8 +21,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Arrays;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -221,7 +221,7 @@ public class DamageEffects implements NetworkSerializable<com.hypixel.hytale.pro
          Vector3d position = transformComponent.getPosition();
          if (this.worldParticles != null) {
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
-            ObjectList<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(position, this.viewDistance, playerRefs);
             ParticleUtil.spawnParticleEffects(this.worldParticles, position, null, playerRefs, commandBuffer);
          }

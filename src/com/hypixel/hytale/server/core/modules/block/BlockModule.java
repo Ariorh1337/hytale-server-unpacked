@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.modules.block;
 
-import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.event.EventPriority;
+import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
@@ -42,6 +42,11 @@ import com.hypixel.hytale.server.core.universe.world.meta.state.BlockMapMarkersR
 import com.hypixel.hytale.server.core.universe.world.meta.state.LaunchPad;
 import com.hypixel.hytale.server.core.universe.world.meta.state.RespawnBlock;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntConsumer;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -126,32 +131,36 @@ public class BlockModule extends JavaPlugin {
 
    private static void onChunkPreLoadProcessEnsureBlockEntity(@Nonnull ChunkPreLoadProcessEvent event) {
       if (event.isNewlyGenerated()) {
-         BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = BlockType.getAssetMap();
          Holder<ChunkStore> holder = event.getHolder();
-         WorldChunk chunk = event.getChunk();
          ChunkColumn chunkColumnComponent = holder.getComponent(ChunkColumn.getComponentType());
          if (chunkColumnComponent != null) {
             Holder<ChunkStore>[] sectionHolders = chunkColumnComponent.getSectionHolders();
             if (sectionHolders != null) {
                BlockComponentChunk blockComponentModule = holder.getComponent(BlockComponentChunk.getComponentType());
                if (blockComponentModule != null) {
+                  BlockModule.BlockEntityPreprocessor preprocessor = BlockModule.BlockEntityPreprocessor.LOCAL.get();
+
                   for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
                      BlockSection section = sectionHolders[sectionIndex].ensureAndGetComponent(BlockSection.getComponentType());
                      if (!section.isSolidAir()) {
-                        int sectionYBlock = sectionIndex << 5;
+                        preprocessor.clear();
+                        section.forEachValue(preprocessor.typeCollector);
+                        if (!preprocessor.ids.isEmpty()) {
+                           section.find(preprocessor.ids, preprocessor.blockCollector);
+                           assert preprocessor.indices.size() == preprocessor.blockIds.size();
+                           int sectionMinBlockY = ChunkUtil.minBlock(sectionIndex);
 
-                        for (int sectionY = 0; sectionY < 32; sectionY++) {
-                           int y = sectionYBlock | sectionY;
-
-                           for (int z = 0; z < 32; z++) {
-                              for (int x = 0; x < 32; x++) {
-                                 int blockId = section.get(x, y, z);
-                                 BlockType blockType = blockTypeAssetMap.getAsset(blockId);
-                                 if (blockType != null && !blockType.isUnknown() && section.getFiller(x, y, z) == 0) {
-                                    int index = ChunkUtil.indexBlockInColumn(x, y, z);
-                                    if (blockType.getBlockEntity() != null && blockComponentModule.getEntityHolder(index) == null) {
-                                       blockComponentModule.addEntityHolder(index, blockType.getBlockEntity().clone());
-                                    }
+                           for (int i = 0; i < preprocessor.indices.size(); i++) {
+                              int index = preprocessor.indices.getInt(i);
+                              int blockId = preprocessor.blockIds.getInt(i);
+                              Holder<ChunkStore> entity = preprocessor.blockEntities.get(blockId);
+                              if (entity != null) {
+                                 int x = ChunkUtil.xFromIndex(index);
+                                 int z = ChunkUtil.zFromIndex(index);
+                                 int y = ChunkUtil.yFromIndex(index) | sectionMinBlockY;
+                                 int chunkIndex = ChunkUtil.indexBlockInColumn(x, y, z);
+                                 if (section.getFiller(index) == 0 && blockComponentModule.getEntityHolder(chunkIndex) == null) {
+                                    blockComponentModule.addEntityHolder(chunkIndex, entity.clone());
                                  }
                               }
                            }
@@ -233,6 +242,36 @@ public class BlockModule extends JavaPlugin {
          return blockRef != null && blockRef.isValid() ? chunkStore.getComponent(blockRef, componentType) : null;
       } else {
          return null;
+      }
+   }
+
+   public static final class BlockEntityPreprocessor {
+      public static final ThreadLocal<BlockModule.BlockEntityPreprocessor> LOCAL = ThreadLocal.withInitial(BlockModule.BlockEntityPreprocessor::new);
+      public final IntList ids = new IntArrayList();
+      public final Int2ObjectMap<Holder<ChunkStore>> blockEntities = new Int2ObjectOpenHashMap<>();
+      public final IntList indices = new IntArrayList();
+      public final IntList blockIds = new IntArrayList();
+      public final IntConsumer typeCollector = this::collectType;
+      public final BiIntConsumer blockCollector = this::collectBlock;
+
+      public void clear() {
+         this.ids.clear();
+         this.blockEntities.clear();
+         this.indices.clear();
+         this.blockIds.clear();
+      }
+
+      private void collectType(int value) {
+         BlockType type = BlockType.getAssetMap().getAsset(value);
+         if (type != null && !type.isUnknown() && type.getBlockEntity() != null) {
+            this.ids.add(value);
+            this.blockEntities.put(value, type.getBlockEntity());
+         }
+      }
+
+      private void collectBlock(int index, int blockId) {
+         this.indices.add(index);
+         this.blockIds.add(blockId);
       }
    }
 

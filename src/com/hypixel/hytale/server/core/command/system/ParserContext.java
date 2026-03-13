@@ -23,6 +23,8 @@ public class ParserContext {
    @Nonnull
    private final String inputString;
    @Nonnull
+   private final String rawInput;
+   @Nonnull
    private final BooleanArrayList parameterForwardingMap;
    @Nonnull
    private final Int2ObjectMap<String> preOptionalSingleValueTokens;
@@ -36,8 +38,9 @@ public class ParserContext {
    private static final Pattern ARG_NAME_PATTERN = Pattern.compile("--([\\w-]*)");
    private static final Pattern ARG_NAME_AND_VALUE_PATTERN = Pattern.compile("--(\\w+)=\"*(.*)\"*");
 
-   public ParserContext(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
+   public ParserContext(@Nonnull List<String> tokens, @Nonnull String rawInput, @Nonnull ParseResult parseResult) {
       this.inputString = String.join(" ", tokens);
+      this.rawInput = rawInput;
       this.parameterForwardingMap = new BooleanArrayList();
       this.preOptionalSingleValueTokens = new Int2ObjectOpenHashMap<>();
       this.preOptionalListTokens = new Int2ObjectOpenHashMap<>();
@@ -46,8 +49,8 @@ public class ParserContext {
    }
 
    @Nonnull
-   public static ParserContext of(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
-      return new ParserContext(tokens, parseResult);
+   public static ParserContext of(@Nonnull List<String> tokens, @Nonnull String rawInput, @Nonnull ParseResult parseResult) {
+      return new ParserContext(tokens, rawInput, parseResult);
    }
 
    private void contextualizeTokens(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
@@ -169,6 +172,15 @@ public class ParserContext {
    @Nonnull
    public String getInputString() {
       return this.inputString;
+   }
+
+   @Nonnull
+   public String getRawInput() {
+      return this.rawInput;
+   }
+
+   public int getSubCommandIndex() {
+      return this.subCommandIndex;
    }
 
    public boolean isListToken(int index) {

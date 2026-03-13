@@ -1445,8 +1445,8 @@ public final class PacketRegistry {
          117,
          "ClientPlaceBlock",
          ClientPlaceBlock.class,
-         20,
-         20,
+         21,
+         21,
          false,
          ClientPlaceBlock::validateStructure,
          ClientPlaceBlock::deserialize
@@ -2190,7 +2190,7 @@ public final class PacketRegistry {
          "EditorBlocksChange",
          EditorBlocksChange.class,
          31,
-         139264049,
+         1677721600,
          true,
          EditorBlocksChange::validateStructure,
          EditorBlocksChange::deserialize
@@ -3305,8 +3305,8 @@ public final class PacketRegistry {
          400,
          "BuilderToolArgUpdate",
          BuilderToolArgUpdate.class,
-         14,
-         32768032,
+         13,
+         32768031,
          false,
          BuilderToolArgUpdate::validateStructure,
          BuilderToolArgUpdate::deserialize
@@ -3438,7 +3438,7 @@ public final class PacketRegistry {
          "BuilderToolSelectionToolReplyWithClipboard",
          BuilderToolSelectionToolReplyWithClipboard.class,
          1,
-         139264019,
+         1677721600,
          true,
          BuilderToolSelectionToolReplyWithClipboard::validateStructure,
          BuilderToolSelectionToolReplyWithClipboard::deserialize

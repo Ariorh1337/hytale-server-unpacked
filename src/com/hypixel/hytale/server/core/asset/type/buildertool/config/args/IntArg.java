@@ -10,10 +10,13 @@ import com.hypixel.hytale.server.core.Message;
 import javax.annotation.Nonnull;
 
 public class IntArg extends ToolArg<Integer> {
-   public static final BuilderCodec<IntArg> CODEC = BuilderCodec.<ToolArg>builder(IntArg.class, IntArg::new, ToolArg.DEFAULT_CODEC)
-      .addField(new KeyedCodec<>("Default", Codec.INTEGER), (intArg, d) -> intArg.value = d, intArg -> intArg.value)
-      .addField(new KeyedCodec<>("Min", Codec.INTEGER), (intArg, d) -> intArg.min = d, intArg -> intArg.min)
-      .addField(new KeyedCodec<>("Max", Codec.INTEGER), (intArg, d) -> intArg.max = d, intArg -> intArg.max)
+   public static final BuilderCodec<IntArg> CODEC = BuilderCodec.builder(IntArg.class, IntArg::new, ToolArg.DEFAULT_CODEC)
+      .append(new KeyedCodec<>("Default", Codec.INTEGER), (intArg, d) -> intArg.value = d, intArg -> intArg.value)
+      .add()
+      .append(new KeyedCodec<>("Min", Codec.INTEGER), (intArg, d) -> intArg.min = d, intArg -> intArg.min)
+      .add()
+      .append(new KeyedCodec<>("Max", Codec.INTEGER), (intArg, d) -> intArg.max = d, intArg -> intArg.max)
+      .add()
       .build();
    protected int min;
    protected int max;

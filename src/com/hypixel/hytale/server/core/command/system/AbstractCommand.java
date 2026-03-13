@@ -86,6 +86,7 @@ public abstract class AbstractCommand {
    private boolean unavailableInSingleplayer;
    private boolean allowsExtraArguments;
    private boolean hasBeenRegistered;
+   private boolean hasGreedyStringArg;
 
    protected AbstractCommand(@Nullable String name, @Nullable String description, boolean requiresConfirmation) {
       this.name = name == null ? null : name.toLowerCase();
@@ -563,6 +564,12 @@ public abstract class AbstractCommand {
       int currentReqArgIndex = 0;
 
       for (RequiredArg<?> requiredArgument : this.requiredArguments) {
+         if (requiredArgument.getArgumentType().isGreedyString()) {
+            String rawTail = this.extractGreedyRawTail(parserContext);
+            commandContext.appendArgumentData(requiredArgument, new String[]{rawTail}, false, parseResult);
+            return;
+         }
+
          if (requiredArgument.getArgumentType().isListArgument() && parserContext.isListToken(currentReqArgIndex)) {
             ParserContext.PreOptionalListContext preOptionalTokenContext = parserContext.getPreOptionalListToken(currentReqArgIndex);
             currentReqArgIndex++;
@@ -586,6 +593,38 @@ public abstract class AbstractCommand {
             }
          }
       }
+   }
+
+   @Nonnull
+   private String extractGreedyRawTail(@Nonnull ParserContext parserContext) {
+      String raw = parserContext.getRawInput();
+      int numWordsToStrip = parserContext.getSubCommandIndex();
+
+      for (RequiredArg<?> reqArg : this.requiredArguments) {
+         if (reqArg.getArgumentType().isGreedyString()) {
+            break;
+         }
+
+         numWordsToStrip += reqArg.getArgumentType().getNumberOfParameters();
+      }
+
+      int pos = 0;
+
+      for (int i = 0; i < numWordsToStrip && pos < raw.length(); i++) {
+         while (pos < raw.length() && raw.charAt(pos) == ' ') {
+            pos++;
+         }
+
+         while (pos < raw.length() && raw.charAt(pos) != ' ') {
+            pos++;
+         }
+      }
+
+      while (pos < raw.length() && raw.charAt(pos) == ' ') {
+         pos++;
+      }
+
+      return raw.substring(pos);
    }
 
    private void processOptionalArguments(@Nonnull ParserContext parserContext, @Nonnull ParseResult parseResult, @Nonnull CommandContext commandContext) {
@@ -804,13 +843,24 @@ public abstract class AbstractCommand {
    private <R extends RequiredArg<D>, D> R registerRequiredArg(@Nonnull R requiredArgument) {
       if (this.hasBeenRegistered) {
          throw new IllegalStateException("Cannot add new arguments when a command has already completed registration");
-      } else if (requiredArgument.getCommandRegisteredTo().equals(this) && !this.requiredArguments.contains(requiredArgument)) {
-         this.totalNumRequiredParameters = this.totalNumRequiredParameters + requiredArgument.getArgumentType().getNumberOfParameters();
-         this.requiredArguments.add(requiredArgument);
-         return requiredArgument;
-      } else {
+      }
+
+      if (!requiredArgument.getCommandRegisteredTo().equals(this) || this.requiredArguments.contains(requiredArgument)) {
          throw new IllegalArgumentException("Cannot re-use arguments");
       }
+
+      if (this.hasGreedyStringArg) {
+         throw new IllegalStateException("Cannot register additional required arguments after a greedy string argument");
+      }
+
+      if (requiredArgument.getArgumentType().isGreedyString()) {
+         this.hasGreedyStringArg = true;
+         this.allowsExtraArguments = true;
+      }
+
+      this.totalNumRequiredParameters = this.totalNumRequiredParameters + requiredArgument.getArgumentType().getNumberOfParameters();
+      this.requiredArguments.add(requiredArgument);
+      return requiredArgument;
    }
 
    @Nonnull

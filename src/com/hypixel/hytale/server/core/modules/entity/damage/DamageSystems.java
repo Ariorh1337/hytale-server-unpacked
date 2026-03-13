@@ -94,7 +94,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import java.time.Instant;
 import java.util.List;
@@ -221,7 +220,7 @@ public class DamageSystems {
                         SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(
                            EntityModule.get().getPlayerSpatialResourceType()
                         );
-                        ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                        List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                         playerSpatialResource.getSpatialStructure().collect(targetPosition, particlesViewDistance, results);
                         Ref<EntityStore> particleSource = damageCanBePredicted ? sourceRef : null;
 
@@ -245,7 +244,7 @@ public class DamageSystems {
                      SpawnModelParticles packet = new SpawnModelParticles(targetNetworkId, modelParticlesProtocol);
                      SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(PLAYER_SPATIAL_RESOURCE_TYPE);
                      SpatialStructure<Ref<EntityStore>> spatialStructure = spatialResource.getSpatialStructure();
-                     ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                     List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                      spatialStructure.ordered(targetPosition, particlesViewDistance, results);
 
                      for (Ref<EntityStore> targetRef : results) {

@@ -56,7 +56,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
 import java.util.List;
 import java.util.Objects;
@@ -85,7 +84,7 @@ public class BlockHarvestUtils {
          return null;
       }
 
-      if (item == null || item.getWeapon() == null && item.getBuilderToolData() == null) {
+      if (item == null || item.getWeapon() == null && item.getBuilderTool() == null) {
          int requiredQuality = breaking.getQuality();
          if (tool == null) {
             ItemToolSpec defaultSpec = ItemToolSpec.getAssetMap().getAsset(gatherType);
@@ -281,7 +280,7 @@ public class BlockHarvestUtils {
                   if ((setBlockSettings & 4) == 0) {
                      String particleSystemId = unbreakableBlockConfig.getParticleSystemId();
                      if (particleSystemId != null) {
-                        ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                        List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                         playerSpatialResource.getSpatialStructure().collect(targetBlockCenterPos, 75.0, results);
                         ParticleUtil.spawnParticleEffect(particleSystemId, targetBlockCenterPos, results, entityStore);
                      }
@@ -457,7 +456,7 @@ public class BlockHarvestUtils {
                if ((setBlockSettings & 4) == 0) {
                   String particleSystemId = incorrectToolConfig.getParticleSystemId();
                   if (particleSystemId != null) {
-                     ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                     List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                      playerSpatialResource.getSpatialStructure().collect(targetBlockCenterPos, 75.0, results);
                      ParticleUtil.spawnParticleEffect(particleSystemId, targetBlockCenterPos, results, entityStore);
                   }

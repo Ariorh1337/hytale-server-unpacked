@@ -23,7 +23,7 @@ import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.PositionCache;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
@@ -47,7 +47,7 @@ public class ActionBeacon extends ActionBase {
       this.targetToSendSlot = builderActionBeacon.getTargetToSendSlot(support);
       this.expirationTime = builderActionBeacon.getExpirationTime();
       this.sendCount = builderActionBeacon.getSendCount();
-      this.sendList = this.sendCount > 0 ? new ObjectArrayList<>(this.sendCount) : null;
+      this.sendList = this.sendCount > 0 ? new ReferenceArrayList<>(this.sendCount) : null;
    }
 
    @Override

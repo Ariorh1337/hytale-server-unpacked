@@ -48,7 +48,9 @@ public class PondFillerProp extends Prop {
          return true;
       }
 
-      this.rMask.offset(context.position);
+      Bounds3i localMaskBounds = this.rMask.getBounds();
+      localMaskBounds.assign(this.bounds);
+      localMaskBounds.offset(context.position);
       this.rMask.setAll(0);
       int y = this.rLocalBounds.min.y;
 
@@ -67,28 +69,28 @@ public class PondFillerProp extends Prop {
          }
       }
 
-      for (int var13 = this.rLocalBounds.min.y + 1; var13 < this.rLocalBounds.max.y; var13++) {
-         int underY = var13 - 1;
+      for (int var14 = this.rLocalBounds.min.y + 1; var14 < this.rLocalBounds.max.y; var14++) {
+         int underY = var14 - 1;
 
          for (int x = this.rLocalBounds.min.x; x < this.rLocalBounds.max.x; x++) {
             for (int z = this.rLocalBounds.min.z; z < this.rLocalBounds.max.z; z++) {
-               if (!isTraversed(this.rMask.get(x, var13, z))) {
+               if (!isTraversed(this.rMask.get(x, var14, z))) {
                   int maskValueUnder = this.rMask.get(x, underY, z);
-                  Material material = context.materialReadSpace.get(x, var13, z);
+                  Material material = context.materialReadSpace.get(x, var14, z);
                   int contextMaterialHash = material.hashMaterialIds();
                   if (this.solidSet.test(contextMaterialHash)) {
                      int maskValue = 0;
                      maskValue |= 1;
                      maskValue |= 256;
-                     this.rMask.set(maskValue, x, var13, z);
+                     this.rMask.set(maskValue, x, var14, z);
                   } else if (isLeaks(maskValueUnder)
                      || x == this.rLocalBounds.min.x
                      || x == this.rLocalBounds.max.x - 1
                      || z == this.rLocalBounds.min.z
                      || z == this.rLocalBounds.max.z - 1) {
                      ArrayDeque<Vector3i> stack = new ArrayDeque<>();
-                     stack.push(new Vector3i(x, var13, z));
-                     this.rMask.set(4096, x, var13, z);
+                     stack.push(new Vector3i(x, var14, z));
+                     this.rMask.set(4096, x, var14, z);
 
                      while (!stack.isEmpty()) {
                         Vector3i poppedPos = stack.pop();
@@ -126,7 +128,7 @@ public class PondFillerProp extends Prop {
                         if (this.rMask.getBounds().contains(poppedPos.x, poppedPos.y, poppedPos.z)) {
                            int poppedMaskValue = this.rMask.get(poppedPos.x, poppedPos.y, poppedPos.z);
                            if (!isStacked(poppedMaskValue)) {
-                              material = context.materialReadSpace.get(poppedPos.x, var13, poppedPos.z);
+                              material = context.materialReadSpace.get(poppedPos.x, var14, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
                                  stack.push(poppedPos.clone());
@@ -158,20 +160,19 @@ public class PondFillerProp extends Prop {
 
       this.rMaterialProviderContext.distanceToBiomeEdge = context.distanceToBiomeEdge;
 
-      for (int var14 = this.rLocalWriteBounds.min.y; var14 < this.rLocalWriteBounds.max.y; var14++) {
+      for (int var15 = this.rLocalWriteBounds.min.y; var15 < this.rLocalWriteBounds.max.y; var15++) {
          for (int x = this.rLocalWriteBounds.min.x; x < this.rLocalWriteBounds.max.x; x++) {
             for (int z = this.rLocalWriteBounds.min.z; z < this.rLocalWriteBounds.max.z; z++) {
-               int maskValue = this.rMask.get(x, var14, z);
+               int maskValue = this.rMask.get(x, var15, z);
                if (!isSolid(maskValue) && !isLeaks(maskValue)) {
-                  this.rMaterialProviderContext.position.assign(x, var14, z);
+                  this.rMaterialProviderContext.position.assign(x, var15, z);
                   Material material = this.fillerMaterialProvider.getVoxelTypeAt(this.rMaterialProviderContext);
-                  context.materialWriteSpace.set(material, x, var14, z);
+                  context.materialWriteSpace.set(material, x, var15, z);
                }
             }
          }
       }
 
-      this.rMask.offsetOpposite(context.position);
       return true;
    }
 

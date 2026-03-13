@@ -8,9 +8,9 @@ import com.hypixel.hytale.server.npc.instructions.Sensor;
 import com.hypixel.hytale.server.npc.role.RoleDebugDisplay;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -80,7 +80,7 @@ public class DebugSupport {
       return this.debugMotionSteering;
    }
 
-   public void setDisplayCustomString(String displayCustomString) {
+   public void setDisplayCustomString(@Nullable String displayCustomString) {
       this.displayCustomString = displayCustomString;
    }
 
@@ -91,7 +91,7 @@ public class DebugSupport {
       return ret;
    }
 
-   public void setDisplayPathfinderString(String displayPathfinderString) {
+   public void setDisplayPathfinderString(@Nullable String displayPathfinderString) {
       this.displayPathfinderString = displayPathfinderString;
    }
 
@@ -180,7 +180,7 @@ public class DebugSupport {
 
    public void recordEntityCheck(@Nonnull Ref<EntityStore> entityRef, int sensorColorIndex, boolean matched) {
       if (this.entityVisDataMap == null) {
-         this.entityVisDataMap = new HashMap<>();
+         this.entityVisDataMap = new Reference2ObjectOpenHashMap<>();
       }
 
       this.entityVisDataMap.computeIfAbsent(entityRef, k -> new ArrayList<>()).add(new DebugSupport.EntityVisData(sensorColorIndex, matched));

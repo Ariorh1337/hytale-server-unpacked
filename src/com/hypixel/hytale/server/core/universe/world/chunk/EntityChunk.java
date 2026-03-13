@@ -25,9 +25,11 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceSet;
+import it.unimi.dsi.fastutil.objects.ReferenceSets;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -63,7 +65,7 @@ public class EntityChunk implements Component<ChunkStore> {
    @Nonnull
    private final List<Holder<EntityStore>> entityHolders;
    @Nonnull
-   private final Set<Ref<EntityStore>> entityReferences;
+   private final ReferenceSet<Ref<EntityStore>> entityReferences;
    @Nonnull
    private final List<Holder<EntityStore>> entityHoldersUnmodifiable;
    @Nonnull
@@ -77,16 +79,16 @@ public class EntityChunk implements Component<ChunkStore> {
 
    public EntityChunk() {
       this.entityHolders = new ObjectArrayList<>();
-      this.entityReferences = new HashSet<>();
+      this.entityReferences = new ReferenceOpenHashSet<>();
       this.entityHoldersUnmodifiable = Collections.unmodifiableList(this.entityHolders);
-      this.entityReferencesUnmodifiable = Collections.unmodifiableSet(this.entityReferences);
+      this.entityReferencesUnmodifiable = ReferenceSets.unmodifiable(this.entityReferences);
    }
 
-   public EntityChunk(@Nonnull List<Holder<EntityStore>> entityHolders, @Nonnull Set<Ref<EntityStore>> entityReferences) {
+   public EntityChunk(@Nonnull List<Holder<EntityStore>> entityHolders, @Nonnull ReferenceSet<Ref<EntityStore>> entityReferences) {
       this.entityHolders = entityHolders;
       this.entityReferences = entityReferences;
       this.entityHoldersUnmodifiable = Collections.unmodifiableList(entityHolders);
-      this.entityReferencesUnmodifiable = Collections.unmodifiableSet(entityReferences);
+      this.entityReferencesUnmodifiable = ReferenceSets.unmodifiable(entityReferences);
    }
 
    @Nonnull
@@ -102,7 +104,7 @@ public class EntityChunk implements Component<ChunkStore> {
          entityHoldersClone.add(reference.getStore().copyEntity(reference));
       }
 
-      return new EntityChunk(entityHoldersClone, new HashSet<>());
+      return new EntityChunk(entityHoldersClone, new ReferenceOpenHashSet<>());
    }
 
    @Nonnull
@@ -124,7 +126,7 @@ public class EntityChunk implements Component<ChunkStore> {
          }
       }
 
-      return new EntityChunk(entityHoldersClone, new HashSet<>());
+      return new EntityChunk(entityHoldersClone, new ReferenceOpenHashSet<>());
    }
 
    @Nonnull

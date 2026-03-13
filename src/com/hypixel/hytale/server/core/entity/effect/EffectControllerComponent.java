@@ -407,6 +407,10 @@ public class EffectControllerComponent implements Component<EntityStore> {
       return entityEffectIndex == Integer.MIN_VALUE ? false : this.activeEffects.containsKey(entityEffectIndex);
    }
 
+   public boolean hasEffect(int effectIndex) {
+      return this.activeEffects.containsKey(effectIndex);
+   }
+
    @Nonnull
    @Override
    public String toString() {

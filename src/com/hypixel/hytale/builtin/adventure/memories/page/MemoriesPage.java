@@ -34,11 +34,11 @@ import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -250,7 +250,7 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
             MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(store.getExternalData().getWorld().getGameplayConfig());
             if (memoriesGameplayConfig != null) {
                SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = store.getResource(EntityModule.get().getPlayerSpatialResourceType());
-               ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+               List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                playerSpatialResource.getSpatialStructure().collect(this.recordMemoriesParticlesPosition, 75.0, results);
                ParticleUtil.spawnParticleEffect(memoriesGameplayConfig.getMemoriesRecordParticles(), this.recordMemoriesParticlesPosition, results, store);
                String restoreSoundEvent = memoriesGameplayConfig.getMemoriesRestoreSoundEventId();

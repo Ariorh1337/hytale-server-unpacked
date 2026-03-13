@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolState;
 import io.netty.buffer.ByteBuf;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -59,7 +60,7 @@ public class ItemBase {
    @Nullable
    public BlockSelectorToolData blockSelectorTool;
    @Nullable
-   public ItemBuilderToolData builderToolData;
+   public BuilderToolState builderToolData;
    @Nullable
    public ItemEntityConfig itemEntity;
    @Nullable
@@ -126,7 +127,7 @@ public class ItemBase {
       @Nullable ItemGlider gliderConfig,
       @Nullable ItemUtility utility,
       @Nullable BlockSelectorToolData blockSelectorTool,
-      @Nullable ItemBuilderToolData builderToolData,
+      @Nullable BuilderToolState builderToolData,
       @Nullable ItemEntityConfig itemEntity,
       @Nullable String set,
       @Nullable String[] categories,
@@ -420,7 +421,7 @@ public class ItemBase {
 
       if ((nullBits[2] & 2) != 0) {
          int varPos12 = offset + 255 + buf.getIntLE(offset + 195);
-         obj.builderToolData = ItemBuilderToolData.deserialize(buf, varPos12);
+         obj.builderToolData = BuilderToolState.deserialize(buf, varPos12);
       }
 
       if ((nullBits[2] & 4) != 0) {
@@ -878,7 +879,7 @@ public class ItemBase {
       if ((nullBits[2] & 2) != 0) {
          int fieldOffset12 = buf.getIntLE(offset + 195);
          int pos12 = offset + 255 + fieldOffset12;
-         pos12 += ItemBuilderToolData.computeBytesConsumed(buf, pos12);
+         pos12 += BuilderToolState.computeBytesConsumed(buf, pos12);
          if (pos12 - offset > maxEnd) {
             maxEnd = pos12 - offset;
          }
@@ -2057,12 +2058,12 @@ public class ItemBase {
             return ValidationResult.error("Offset out of bounds for BuilderToolData");
          }
 
-         ValidationResult builderToolDataResult = ItemBuilderToolData.validateStructure(buffer, pos);
+         ValidationResult builderToolDataResult = BuilderToolState.validateStructure(buffer, pos);
          if (!builderToolDataResult.isValid()) {
             return ValidationResult.error("Invalid BuilderToolData: " + builderToolDataResult.error());
          }
 
-         pos += ItemBuilderToolData.computeBytesConsumed(buffer, pos);
+         pos += BuilderToolState.computeBytesConsumed(buffer, pos);
       }
 
       if ((nullBits[2] & 4) != 0) {

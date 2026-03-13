@@ -18,12 +18,22 @@ public class LinearScanner extends Scanner {
    private final Scanner childScanner;
    @Nonnull
    private final Bounds3i bounds;
-   @Nonnull
    private final boolean isAscendingOrder;
    @Nonnull
    private final Control rControl;
    @Nonnull
    private final Vector3i rPosition;
+   @Nonnull
+   private Pipe.One<Vector3i> rContextPipe;
+   @Nonnull
+   private final Pipe.One<Vector3i> rChildPipe = new Pipe.One<Vector3i>() {
+      public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
+         LinearScanner.this.rContextPipe.accept(position, control);
+         if (control.stop) {
+            LinearScanner.this.rControl.stop = true;
+         }
+      }
+   };
 
    public LinearScanner(@Nonnull Axis axis, @Nonnull RangeInt range, @Nonnull Scanner childScanner, boolean isAscendingOrder) {
       this.axis = axis;
@@ -47,6 +57,7 @@ public class LinearScanner extends Scanner {
       this.bounds.stack(childScanner.getBounds_voxelGrid());
       this.rControl = new Control();
       this.rPosition = new Vector3i();
+      this.rContextPipe = Pipe.getEmptyOne();
    }
 
    @Override
@@ -55,6 +66,7 @@ public class LinearScanner extends Scanner {
 
    @Override
    public void scan(@NonNullDecl Vector3i anchor, @NonNullDecl Pipe.One<Vector3i> pipe) {
+      this.rContextPipe = pipe;
       this.rPosition.assign(anchor);
       this.rControl.reset();
       if (this.isAscendingOrder) {
@@ -74,12 +86,7 @@ public class LinearScanner extends Scanner {
                   this.rPosition.z = i + anchor.z;
             }
 
-            this.childScanner.scan(this.rPosition, (position, control) -> {
-               pipe.accept(position, control);
-               if (control.stop) {
-                  this.rControl.stop = true;
-               }
-            });
+            this.childScanner.scan(this.rPosition, this.rChildPipe);
          }
       } else {
          for (int i = this.range.getMaxExclusive() - 1; i >= this.range.getMinInclusive(); i--) {
@@ -98,12 +105,7 @@ public class LinearScanner extends Scanner {
                   this.rPosition.z = i + anchor.z;
             }
 
-            this.childScanner.scan(this.rPosition, (position, control) -> {
-               pipe.accept(position, control);
-               if (control.stop) {
-                  this.rControl.stop = true;
-               }
-            });
+            this.childScanner.scan(this.rPosition, this.rChildPipe);
          }
       }
    }

@@ -19,7 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.spawnmarkers.SpawnMarkerEntity;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
@@ -51,7 +51,7 @@ public class KillSpawnMarkerObjectiveTask extends KillObjectiveTask {
       Vector3d objectivePosition = objective.getPosition(store);
       if (objectivePosition != null) {
          KillSpawnMarkerObjectiveTaskAsset asset = this.getAsset();
-         ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
          SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(SpawningPlugin.get().getSpawnMarkerSpatialResource());
          spatialResource.getSpatialStructure().collect(objectivePosition, asset.getRadius(), results);
          String[] spawnMarkerIds = asset.getSpawnMarkerIds();

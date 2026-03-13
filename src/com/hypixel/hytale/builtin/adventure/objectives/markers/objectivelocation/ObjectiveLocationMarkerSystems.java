@@ -44,10 +44,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -290,7 +290,7 @@ public class ObjectiveLocationMarkerSystems {
             this.setupMarker(store, objectiveLocationMarkerComponent, entityReference, position, uuid, commandBuffer);
          } else if (!activeObjective.isCompleted()) {
             SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
-            ObjectList<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
             objectiveLocationMarkerComponent.area.getPlayersInExitArea(spatialResource, playerRefs, position);
             HashSet<UUID> playersInExitArea = new HashSet<>(playerRefs.size());
             PlayerRef[] playersInEntryArea = new PlayerRef[playerRefs.size()];

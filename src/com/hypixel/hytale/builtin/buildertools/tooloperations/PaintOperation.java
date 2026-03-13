@@ -15,7 +15,6 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import javax.annotation.Nonnull;
 
 public class PaintOperation extends ToolOperation {
-   private final int brushDensity;
    private final Transform brushRotation;
    private LongOpenHashSet packedPlacedBlockPositions;
 
@@ -30,7 +29,6 @@ public class PaintOperation extends ToolOperation {
       assert uuidComponent != null;
       PrototypePlayerBuilderToolSettings prototypePlayerBuilderToolSettings = ToolOperation.PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
       this.packedPlacedBlockPositions = prototypePlayerBuilderToolSettings.addIgnoredPaintOperation();
-      this.brushDensity = this.getBrushDensity();
       this.brushRotation = this.getBrushRotation(componentAccessor);
    }
 
@@ -46,7 +44,7 @@ public class PaintOperation extends ToolOperation {
             this.packedPlacedBlockPositions.add(BlockUtil.pack(x, y, z));
          }
 
-         if (this.random.nextInt(100) <= this.brushDensity) {
+         if (this.random.nextInt(100) <= this.density) {
             this.edit.setMaterial(x, y, z, Material.fromPattern(this.pattern, this.random));
          }
 

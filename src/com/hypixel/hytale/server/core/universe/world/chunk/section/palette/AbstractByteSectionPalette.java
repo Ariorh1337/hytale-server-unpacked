@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
+import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.math.util.NumberUtil;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.bytes.Byte2ByteMap;
@@ -8,6 +9,7 @@ import it.unimi.dsi.fastutil.bytes.Byte2IntMap;
 import it.unimi.dsi.fastutil.bytes.Byte2IntOpenHashMap;
 import it.unimi.dsi.fastutil.bytes.Byte2ShortMap;
 import it.unimi.dsi.fastutil.bytes.Byte2ShortOpenHashMap;
+import it.unimi.dsi.fastutil.bytes.ByteSet;
 import it.unimi.dsi.fastutil.ints.Int2ByteMap;
 import it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
@@ -263,19 +265,65 @@ public abstract class AbstractByteSectionPalette implements ISectionPalette {
    }
 
    @Override
-   public void find(@Nonnull IntList ids, @Nonnull IntSet internalIdHolder, @Nonnull IntConsumer indexConsumer) {
+   public void find(@Nonnull IntList ids, @Nonnull IntConsumer indexConsumer) {
+      ByteSet internalIds = this.getThreadLocalInternalIdSet(ids);
+      if (!internalIds.isEmpty()) {
+         int index = 0;
+         byte type = this.get0(index);
+
+         while (index < 32768) {
+            int start = index;
+            byte runType = type;
+
+            do {
+               index++;
+            } while (index < 32768 && (type = this.get0(index)) == runType);
+
+            if (internalIds.contains(runType)) {
+               for (int i = start; i < index; i++) {
+                  indexConsumer.accept(i);
+               }
+            }
+         }
+      }
+   }
+
+   @Override
+   public void find(@Nonnull IntList ids, @Nonnull BiIntConsumer indexBlockConsumer) {
+      ByteSet internalIds = this.getThreadLocalInternalIdSet(ids);
+      if (!internalIds.isEmpty()) {
+         int index = 0;
+         byte type = this.get0(index);
+
+         while (index < 32768) {
+            int start = index;
+            byte runType = type;
+
+            do {
+               index++;
+            } while (index < 32768 && (type = this.get0(index)) == runType);
+
+            if (internalIds.contains(runType)) {
+               int external = this.internalToExternal.get(runType);
+
+               for (int i = start; i < index; i++) {
+                  indexBlockConsumer.accept(i, external);
+               }
+            }
+         }
+      }
+   }
+
+   private ByteSet getThreadLocalInternalIdSet(IntList ids) {
+      ByteSet internalIds = PaletteSetProvider.get().getByteSet(ids.size());
+
       for (int i = 0; i < ids.size(); i++) {
          byte internal = this.externalToInternal.getOrDefault(ids.getInt(i), (byte)-128);
          if (internal != -128) {
-            internalIdHolder.add(internal);
+            internalIds.add(internal);
          }
       }
 
-      for (int i = 0; i < 32768; i++) {
-         byte type = this.get0(i);
-         if (internalIdHolder.contains(type)) {
-            indexConsumer.accept(i);
-         }
-      }
+      return internalIds;
    }
 }

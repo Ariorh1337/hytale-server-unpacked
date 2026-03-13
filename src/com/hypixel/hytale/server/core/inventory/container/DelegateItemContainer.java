@@ -53,6 +53,26 @@ public class DelegateItemContainer<T extends ItemContainer> extends ItemContaine
    }
 
    @Override
+   protected void lockForRead() {
+      this.delegate.lockForRead();
+   }
+
+   @Override
+   protected void unlockForRead() {
+      this.delegate.unlockForRead();
+   }
+
+   @Override
+   protected void lockForWrite() {
+      this.delegate.lockForWrite();
+   }
+
+   @Override
+   protected void unlockForWrite() {
+      this.delegate.unlockForWrite();
+   }
+
+   @Override
    protected ClearTransaction internal_clear() {
       return this.delegate.internal_clear();
    }

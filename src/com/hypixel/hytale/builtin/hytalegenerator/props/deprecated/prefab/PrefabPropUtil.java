@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab;
 
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
+import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import javax.annotation.Nonnull;
 
@@ -23,7 +24,7 @@ public class PrefabPropUtil {
    }
 
    @Nonnull
-   public static Vector3i getMin(@Nonnull PrefabBuffer.PrefabBufferAccessor prefab, @Nonnull PrefabRotation rotation) {
+   public static Vector3i getMin(@Nonnull IPrefabBuffer prefab, @Nonnull PrefabRotation rotation) {
       int minX = prefab.getMinX(rotation);
       int minY = prefab.getMinY();
       int minZ = prefab.getMinZ(rotation);
@@ -31,7 +32,7 @@ public class PrefabPropUtil {
    }
 
    @Nonnull
-   public static Vector3i getMax(@Nonnull PrefabBuffer.PrefabBufferAccessor prefab, @Nonnull PrefabRotation rotation) {
+   public static Vector3i getMax(@Nonnull IPrefabBuffer prefab, @Nonnull PrefabRotation rotation) {
       int maxX = prefab.getMaxX(rotation);
       int maxY = prefab.getMaxY();
       int maxZ = prefab.getMaxZ(rotation);

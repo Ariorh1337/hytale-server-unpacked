@@ -12,8 +12,8 @@ import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.system.tick.TickingSystem;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceList;
 import java.util.Set;
 import javax.annotation.Nonnull;
 
@@ -38,7 +38,7 @@ public class NewSpawnStartTickingSystem extends TickingSystem<EntityStore> {
 
    @Override
    public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
-      ObjectList<Ref<EntityStore>> queue = store.getResource(this.queueResourceType).queue;
+      ReferenceList<Ref<EntityStore>> queue = store.getResource(this.queueResourceType).queue;
       if (!queue.isEmpty()) {
          for (Ref<EntityStore> reference : queue) {
             if (reference.isValid()) {
@@ -57,7 +57,7 @@ public class NewSpawnStartTickingSystem extends TickingSystem<EntityStore> {
 
    public static class QueueResource implements Resource<EntityStore> {
       @Nonnull
-      private final ObjectList<Ref<EntityStore>> queue = new ObjectArrayList<>();
+      private final ReferenceList<Ref<EntityStore>> queue = new ReferenceArrayList<>();
 
       @Nonnull
       public static ResourceType<EntityStore, NewSpawnStartTickingSystem.QueueResource> getResourceType() {

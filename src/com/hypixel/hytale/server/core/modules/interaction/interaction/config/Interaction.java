@@ -58,7 +58,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.UUIDUtil;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.lang.ref.SoftReference;
 import java.util.Collections;
 import java.util.List;
@@ -435,7 +434,7 @@ public abstract class Interaction
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
       SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       playerSpatialResource.getSpatialStructure().collect(position, this.viewDistance, results);
       Ref<EntityStore> owningEntityRef = context.getOwningEntity();
       ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();

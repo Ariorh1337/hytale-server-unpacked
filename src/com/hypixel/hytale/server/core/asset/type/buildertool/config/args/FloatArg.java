@@ -10,10 +10,13 @@ import com.hypixel.hytale.server.core.Message;
 import javax.annotation.Nonnull;
 
 public class FloatArg extends ToolArg<Float> {
-   public static final BuilderCodec<FloatArg> CODEC = BuilderCodec.<ToolArg>builder(FloatArg.class, FloatArg::new, ToolArg.DEFAULT_CODEC)
-      .addField(new KeyedCodec<>("Default", Codec.DOUBLE), (floatArg, o) -> floatArg.value = o.floatValue(), floatArg -> (double)floatArg.value.floatValue())
-      .addField(new KeyedCodec<>("Min", Codec.DOUBLE), (floatArg, o) -> floatArg.min = o.floatValue(), floatArg -> (double)floatArg.min)
-      .addField(new KeyedCodec<>("Max", Codec.DOUBLE), (floatArg, o) -> floatArg.max = o.floatValue(), floatArg -> (double)floatArg.max)
+   public static final BuilderCodec<FloatArg> CODEC = BuilderCodec.builder(FloatArg.class, FloatArg::new, ToolArg.DEFAULT_CODEC)
+      .append(new KeyedCodec<>("Default", Codec.DOUBLE), (floatArg, o) -> floatArg.value = o.floatValue(), floatArg -> (double)floatArg.value.floatValue())
+      .add()
+      .append(new KeyedCodec<>("Min", Codec.DOUBLE), (floatArg, o) -> floatArg.min = o.floatValue(), floatArg -> (double)floatArg.min)
+      .add()
+      .append(new KeyedCodec<>("Max", Codec.DOUBLE), (floatArg, o) -> floatArg.max = o.floatValue(), floatArg -> (double)floatArg.max)
+      .add()
       .build();
    protected float min;
    protected float max;

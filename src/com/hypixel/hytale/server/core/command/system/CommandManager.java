@@ -282,7 +282,7 @@ public class CommandManager implements CommandOwner {
             return;
          }
 
-         ParserContext parserContext = ParserContext.of(tokens, parseResult);
+         ParserContext parserContext = ParserContext.of(tokens, commandInput, parseResult);
          if (parseResult.failed()) {
             parseResult.sendMessages(commandSender);
             future.complete(null);

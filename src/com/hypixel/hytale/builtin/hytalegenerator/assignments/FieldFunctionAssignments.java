@@ -13,27 +13,29 @@ public class FieldFunctionAssignments extends Assignments {
    @Nonnull
    private final Density density;
    @Nonnull
-   private final List<FieldFunctionAssignments.FieldDelimiter> fieldDelimiters;
+   private final List<FieldFunctionAssignments.FieldDelimiter> delimiters;
+   @Nonnull
+   private final Density.Context rDensityContext;
 
-   public FieldFunctionAssignments(@Nonnull Density functionTree, @Nonnull List<FieldFunctionAssignments.FieldDelimiter> fieldDelimiters) {
+   public FieldFunctionAssignments(@Nonnull Density functionTree, @Nonnull List<FieldFunctionAssignments.FieldDelimiter> delimiters) {
       this.density = functionTree;
-      this.fieldDelimiters = new ArrayList<>(fieldDelimiters);
+      this.delimiters = new ArrayList<>(delimiters);
+      this.rDensityContext = new Density.Context();
    }
 
    @Override
-   public Prop propAt(@Nonnull Vector3d position, @Nonnull WorkerIndexer.Id id, double distanceTOBiomeEdge) {
-      if (this.fieldDelimiters.isEmpty()) {
+   public Prop propAt(@Nonnull Vector3d position, @Nonnull WorkerIndexer.Id id, double distanceFromBiomeEdge) {
+      if (this.delimiters.isEmpty()) {
          return EmptyProp.INSTANCE;
       }
 
-      Density.Context context = new Density.Context();
-      context.position = position;
-      context.distanceToBiomeEdge = distanceTOBiomeEdge;
-      double fieldValue = this.density.process(context);
+      this.rDensityContext.position.assign(position);
+      this.rDensityContext.distanceToBiomeEdge = distanceFromBiomeEdge;
+      double fieldValue = this.density.process(this.rDensityContext);
 
-      for (FieldFunctionAssignments.FieldDelimiter fd : this.fieldDelimiters) {
-         if (fd.isInside(fieldValue)) {
-            return fd.assignments.propAt(position, id, distanceTOBiomeEdge);
+      for (FieldFunctionAssignments.FieldDelimiter delimiter : this.delimiters) {
+         if (delimiter.isInside(fieldValue)) {
+            return delimiter.assignments.propAt(position, id, distanceFromBiomeEdge);
          }
       }
 
@@ -45,7 +47,7 @@ public class FieldFunctionAssignments extends Assignments {
    public List<Prop> getAllPossibleProps() {
       ArrayList<Prop> list = new ArrayList<>();
 
-      for (FieldFunctionAssignments.FieldDelimiter f : this.fieldDelimiters) {
+      for (FieldFunctionAssignments.FieldDelimiter f : this.delimiters) {
          list.addAll(f.assignments.getAllPossibleProps());
       }
 

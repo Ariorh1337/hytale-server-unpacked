@@ -34,6 +34,18 @@ public class VoxelBuffer<T> extends Buffer {
    }
 
    @Nullable
+   public T getVoxelContent(int x, int y, int z) {
+      assert bounds.contains(x, y, z);
+
+      return (T)(switch (this.state) {
+         case SINGLE_VALUE -> this.singleValue;
+         case ARRAY -> this.arrayContents.array[index(x, y, z)];
+         case REFERENCE -> this.referenceBuffer.getVoxelContent(x, y, z);
+         default -> null;
+      });
+   }
+
+   @Nullable
    public T getVoxelContent(@Nonnull Vector3i position) {
       assert bounds.contains(position);
 
@@ -50,8 +62,8 @@ public class VoxelBuffer<T> extends Buffer {
       return this.voxelType;
    }
 
-   public void setVoxelContent(@Nonnull Vector3i position, @Nullable T value) {
-      assert bounds.contains(position);
+   public void setVoxelContent(int x, int y, int z, @Nullable T value) {
+      assert bounds.contains(x, y, z);
       switch (this.state) {
          case SINGLE_VALUE:
             if (this.singleValue == value) {
@@ -59,19 +71,23 @@ public class VoxelBuffer<T> extends Buffer {
             }
 
             this.switchFromSingleValueToArray();
-            this.setVoxelContent(position, value);
+            this.setVoxelContent(x, y, z, value);
             break;
          case ARRAY:
-            this.arrayContents.array[index(position)] = value;
+            this.arrayContents.array[index(x, y, z)] = value;
             break;
          case REFERENCE:
             this.dereference();
-            this.setVoxelContent(position, value);
+            this.setVoxelContent(x, y, z, value);
             break;
          default:
             this.state = VoxelBuffer.State.SINGLE_VALUE;
             this.singleValue = value;
       }
+   }
+
+   public void setVoxelContent(@Nonnull Vector3i position, @Nullable T value) {
+      this.setVoxelContent(position.x, position.y, position.z, value);
    }
 
    public void reference(@Nonnull VoxelBuffer<T> sourceBuffer) {
@@ -127,6 +143,10 @@ public class VoxelBuffer<T> extends Buffer {
          default:
             return;
       }
+   }
+
+   private static int index(int x, int y, int z) {
+      return y + x * SIZE.y + z * SIZE.y * SIZE.x;
    }
 
    private static int index(@Nonnull Vector3i position) {

@@ -72,7 +72,7 @@ public enum SortType {
             } else if (item.getTool() != null) {
                return TOOL;
             } else {
-               return item.getBuilderToolData() != null ? SPECIAL : ITEM;
+               return item.getBuilderTool() != null ? SPECIAL : ITEM;
             }
          }
       }

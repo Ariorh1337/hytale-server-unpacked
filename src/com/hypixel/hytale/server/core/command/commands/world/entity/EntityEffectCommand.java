@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTarget
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public class EntityEffectCommand extends AbstractTargetEntityCommand {
@@ -30,9 +30,7 @@ public class EntityEffectCommand extends AbstractTargetEntityCommand {
    }
 
    @Override
-   protected void execute(
-      @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
-   ) {
+   protected void execute(@Nonnull CommandContext context, @Nonnull List<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       EntityEffect entityEffect = this.effectArg.get(context);
       float duration = this.durationArg.get(context);
 

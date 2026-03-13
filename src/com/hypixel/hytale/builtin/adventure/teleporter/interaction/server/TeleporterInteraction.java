@@ -32,7 +32,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -177,7 +177,7 @@ public class TeleporterInteraction extends SimpleBlockInteraction {
          if (this.particle != null) {
             Vector3d particlePosition = transformComponent.getPosition();
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(particlePosition, 75.0, results);
             ParticleUtil.spawnParticleEffect(this.particle, particlePosition, results, commandBuffer);
          }

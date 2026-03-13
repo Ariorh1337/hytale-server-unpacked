@@ -27,7 +27,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -164,7 +164,7 @@ public class NPCRunTestsCommand extends AbstractPlayerCommand {
    private static void cleanupNPC(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
       Ref<EntityStore> flockReference = FlockPlugin.getFlockReference(ref, store);
       if (flockReference != null) {
-         ObjectArrayList<Ref<EntityStore>> members = new ObjectArrayList<>();
+         ReferenceArrayList<Ref<EntityStore>> members = new ReferenceArrayList<>();
          EntityGroup entityGroupComponent = store.getComponent(flockReference, EntityGroup.getComponentType());
          assert entityGroupComponent != null;
          entityGroupComponent.forEachMember((index, memberx, list) -> list.add(memberx), members);

@@ -9,17 +9,18 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.Posit
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkGenerator;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkRequest;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.FallbackGenerator;
 import com.hypixel.hytale.builtin.hytalegenerator.commands.ViewportCommand;
-import com.hypixel.hytale.builtin.hytalegenerator.engine.StagedChunkGenerator;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.CountedPixelBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.EntityBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.SimplePixelBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.VoxelBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.type.BufferType;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.type.ParametrizedBufferType;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.ChunkGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.ChunkRequest;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.FallbackGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.StagedChunkGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.TimeInstrument;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.BiomeDistanceStage;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.BiomeStage;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.EnvironmentStage;
@@ -170,6 +171,7 @@ public class HytaleGenerator extends JavaPlugin {
       MaterialCache materialCache = new MaterialCache();
       WorkerIndexer.Session workerSession = workerIndexer.createSession();
       WorkerIndexer.Data<WorldStructure> worldStructure_workerData = new WorkerIndexer.Data<>(workerIndexer.getWorkerCount(), () -> null);
+      TimeInstrument.Probe assetLoad_timeProbe = new TimeInstrument.Probe("Assets Loading").start();
       List<CompletableFuture<Void>> futures = new ArrayList<>();
 
       while (workerSession.hasNext()) {
@@ -190,6 +192,9 @@ public class HytaleGenerator extends JavaPlugin {
 
       FutureUtils.allOf(futures).join();
       worldStructureAsset.cleanUp();
+      assetLoad_timeProbe.stop();
+      String assetLoadingTime_ms = LoggerUtil.nsToMsDecimal(assetLoad_timeProbe.getTotalTime_ns());
+      LoggerUtil.getLogger().info("Loaded World Structure " + generatorProfile.worldStructureName() + ": " + assetLoadingTime_ms + " ms");
       StagedChunkGenerator.Builder generatorBuilder = new StagedChunkGenerator.Builder();
       WorldStructure worldStructure_worker0 = worldStructure_workerData.get(workerIndexer.createSession().next());
       List<Biome> allBiomes = worldStructure_worker0.getBiomeRegistry().getAllValues();

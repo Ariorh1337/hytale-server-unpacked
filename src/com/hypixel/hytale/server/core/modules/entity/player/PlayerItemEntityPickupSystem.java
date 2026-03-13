@@ -39,7 +39,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 
@@ -144,7 +144,7 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                   }
                }
             } else {
-               ObjectList<Ref<EntityStore>> targetPlayerRefs = SpatialResource.getThreadLocalReferenceList();
+               List<Ref<EntityStore>> targetPlayerRefs = SpatialResource.getThreadLocalReferenceList();
                spatialStructure.ordered(itemEntityPosition, pickupRadius, targetPlayerRefs);
 
                for (Ref<EntityStore> targetPlayerRef : targetPlayerRefs) {

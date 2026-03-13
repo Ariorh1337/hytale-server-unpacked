@@ -94,6 +94,22 @@ public final class ArgTypes {
          return input;
       }
    };
+   public static final SingleArgumentType<String> GREEDY_STRING = new SingleArgumentType<String>(
+      "server.commands.parsing.argtype.greedystring.name",
+      "server.commands.parsing.argtype.greedystring.usage",
+      "Hello world!",
+      "Let's go everyone",
+      "This is a multi-word sentence."
+   ) {
+      public String parse(String input, ParseResult parseResult) {
+         return input;
+      }
+
+      @Override
+      public boolean isGreedyString() {
+         return true;
+      }
+   };
    public static final SingleArgumentType<Float> FLOAT = new SingleArgumentType<Float>(
       "server.commands.parsing.argtype.float.name", "server.commands.parsing.argtype.float.usage", "3.14159", "-2.5", "7"
    ) {

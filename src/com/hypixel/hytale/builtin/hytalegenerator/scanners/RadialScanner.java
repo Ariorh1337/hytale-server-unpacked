@@ -22,6 +22,17 @@ public class RadialScanner extends Scanner {
    private final Control rControl;
    @Nonnull
    private final Vector3i rPosition;
+   @Nonnull
+   private Pipe.One<Vector3i> rContextPipe;
+   @Nonnull
+   private final Pipe.One<Vector3i> rChildPipe = new Pipe.One<Vector3i>() {
+      public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
+         RadialScanner.this.rContextPipe.accept(position, control);
+         if (control.stop) {
+            RadialScanner.this.rControl.stop = true;
+         }
+      }
+   };
 
    public RadialScanner(@Nonnull Bounds3i bounds, @Nonnull Scanner childScanner) {
       this.bounds = bounds.clone();
@@ -51,6 +62,7 @@ public class RadialScanner extends Scanner {
       this.bounds.stack(childScanner.getBounds_voxelGrid());
       this.rControl = new Control();
       this.rPosition = new Vector3i();
+      this.rContextPipe = Pipe.getEmptyOne();
    }
 
    @Override
@@ -59,6 +71,7 @@ public class RadialScanner extends Scanner {
 
    @Override
    public void scan(@NonNullDecl Vector3i anchor, @NonNullDecl Pipe.One<Vector3i> pipe) {
+      this.rContextPipe = pipe;
       this.rControl.reset();
 
       for (int i = 0; i < this.positionsCount; i++) {
@@ -71,12 +84,7 @@ public class RadialScanner extends Scanner {
          int z = this.sortedPositions[indexZ(i)];
          this.rPosition.assign(x, y, z);
          this.rPosition.add(anchor);
-         this.childScanner.scan(this.rPosition, (position, control) -> {
-            pipe.accept(position, control);
-            if (control.stop) {
-               this.rControl.stop = true;
-            }
-         });
+         this.childScanner.scan(this.rPosition, this.rChildPipe);
       }
    }
 

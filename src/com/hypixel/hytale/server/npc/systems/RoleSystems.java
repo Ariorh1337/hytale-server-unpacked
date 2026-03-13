@@ -47,7 +47,7 @@ import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.role.support.EntitySupport;
 import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
-import java.util.ArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,7 +56,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class RoleSystems {
-   private static final ThreadLocal<List<Ref<EntityStore>>> ENTITY_LIST = ThreadLocal.withInitial(ArrayList::new);
+   private static final ThreadLocal<List<Ref<EntityStore>>> ENTITY_LIST = ThreadLocal.withInitial(ReferenceArrayList::new);
 
    public static class BehaviourTickSystem extends TickingSystem<EntityStore> {
       @Nonnull

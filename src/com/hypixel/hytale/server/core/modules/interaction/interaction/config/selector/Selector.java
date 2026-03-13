@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -78,7 +78,7 @@ public interface Selector {
       @Nonnull Consumer<Ref<EntityStore>> consumer,
       @Nullable Predicate<Ref<EntityStore>> filter
    ) {
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
       playerSpatialResource.getSpatialStructure().collect(position, range, results);
       SpatialResource<Ref<EntityStore>, EntityStore> entitySpatialResource = componentAccessor.getResource(EntityModule.get().getEntitySpatialResourceType());

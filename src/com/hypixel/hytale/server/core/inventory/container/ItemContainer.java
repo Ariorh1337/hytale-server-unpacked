@@ -78,6 +78,14 @@ public abstract class ItemContainer {
 
    protected abstract <X, V> V writeAction(Function<X, V> var1, X var2);
 
+   protected abstract void lockForRead();
+
+   protected abstract void unlockForRead();
+
+   protected abstract void lockForWrite();
+
+   protected abstract void unlockForWrite();
+
    protected abstract ClearTransaction internal_clear();
 
    @Nullable

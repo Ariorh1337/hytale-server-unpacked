@@ -6,7 +6,9 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.protocol.packets.serveraccess.Access;
 import com.hypixel.hytale.protocol.packets.stream.StreamType;
+import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -16,6 +18,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
+import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerRequestAccessEvent;
 import com.hypixel.hytale.server.core.modules.voice.commands.VoiceCommand;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -76,6 +79,10 @@ public class VoiceModule extends JavaPlugin {
 
    @Override
    protected void setup() {
+      if (Constants.SINGLEPLAYER) {
+         this.config.get().setVoiceEnabled(false);
+      }
+
       this.voiceRouter = new VoiceRouter(this);
       this.getCommandRegistry().registerCommand(new VoiceCommand());
       ServerManager.get().registerSubPacketHandlers(VoicePacketHandler::new);
@@ -83,6 +90,10 @@ public class VoiceModule extends JavaPlugin {
       this.getLogger().at(Level.INFO).log("[Voice] Registered voice stream handler");
       this.getEventRegistry().register(PlayerConnectEvent.class, this::onPlayerConnect);
       this.getEventRegistry().register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+      if (Constants.SINGLEPLAYER) {
+         this.getEventRegistry().register(SingleplayerRequestAccessEvent.class, this::onServerAccessChanged);
+      }
+
       this.getLogger()
          .at(Level.INFO)
          .log(
@@ -196,6 +207,16 @@ public class VoiceModule extends JavaPlugin {
       this.playerStates.clear();
       this.positionCache.clear();
       this.getLogger().at(Level.INFO).log("[Voice] VoiceModule shutting down");
+   }
+
+   private void onServerAccessChanged(@Nonnull SingleplayerRequestAccessEvent event) {
+      if (event.getAccess() != Access.Private && !this.isVoiceEnabled()) {
+         this.setVoiceEnabled(true);
+         this.getLogger().at(Level.INFO).log("[Voice] Auto-enabled voice for %s play", event.getAccess());
+      } else if (event.getAccess() == Access.Private && this.isVoiceEnabled()) {
+         this.setVoiceEnabled(false);
+         this.getLogger().at(Level.INFO).log("[Voice] Auto-disabled voice — returned to singleplayer");
+      }
    }
 
    private void onPlayerConnect(@Nonnull PlayerConnectEvent event) {

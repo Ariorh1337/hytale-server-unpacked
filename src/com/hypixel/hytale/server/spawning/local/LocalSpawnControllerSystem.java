@@ -29,7 +29,6 @@ import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.Object2ByteMap;
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -81,7 +80,7 @@ public class LocalSpawnControllerSystem extends TickingSystem<EntityStore> {
       if (!controllers.isEmpty()) {
          World world = store.getExternalData().getWorld();
          List<LegacySpawnBeaconEntity> pendingSpawns = localSpawnState.getLocalPendingSpawns();
-         ObjectList<Ref<EntityStore>> existingBeacons = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> existingBeacons = SpatialResource.getThreadLocalReferenceList();
 
          for (int index = 0; index < controllers.size(); index++) {
             Ref<EntityStore> reference = controllers.get(index);

@@ -28,7 +28,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectCollection;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceMaps;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ReferenceCollection;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -51,7 +54,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
             Int2ObjectMap<Holder<ChunkStore>> map = new Int2ObjectOpenHashMap<>(entityChunk.entityHolders.size() + entityChunk.entityReferences.size());
             map.putAll(entityChunk.entityHolders);
 
-            for (Int2ObjectMap.Entry<Ref<ChunkStore>> entry : entityChunk.entityReferences.int2ObjectEntrySet()) {
+            for (Int2ReferenceMap.Entry<Ref<ChunkStore>> entry : entityChunk.entityReferences.int2ReferenceEntrySet()) {
                Ref<ChunkStore> reference = entry.getValue();
                Store<ChunkStore> store = reference.getStore();
                if (store.getArchetype(reference).hasSerializableComponents(store.getRegistry().getData())) {
@@ -66,11 +69,11 @@ public class BlockComponentChunk implements Component<ChunkStore> {
    @Nonnull
    private final Int2ObjectMap<Holder<ChunkStore>> entityHolders;
    @Nonnull
-   private final Int2ObjectMap<Ref<ChunkStore>> entityReferences;
+   private final Int2ReferenceMap<Ref<ChunkStore>> entityReferences;
    @Nonnull
    private final Int2ObjectMap<Holder<ChunkStore>> entityHoldersUnmodifiable;
    @Nonnull
-   private final Int2ObjectMap<Ref<ChunkStore>> entityReferencesUnmodifiable;
+   private final Int2ReferenceMap<Ref<ChunkStore>> entityReferencesUnmodifiable;
    private boolean needsSaving;
 
    public static ComponentType<ChunkStore, BlockComponentChunk> getComponentType() {
@@ -79,16 +82,16 @@ public class BlockComponentChunk implements Component<ChunkStore> {
 
    public BlockComponentChunk() {
       this.entityHolders = new Int2ObjectOpenHashMap<>();
-      this.entityReferences = new Int2ObjectOpenHashMap<>();
+      this.entityReferences = new Int2ReferenceOpenHashMap<>();
       this.entityHoldersUnmodifiable = Int2ObjectMaps.unmodifiable(this.entityHolders);
-      this.entityReferencesUnmodifiable = Int2ObjectMaps.unmodifiable(this.entityReferences);
+      this.entityReferencesUnmodifiable = Int2ReferenceMaps.unmodifiable(this.entityReferences);
    }
 
-   public BlockComponentChunk(@Nonnull Int2ObjectMap<Holder<ChunkStore>> entityHolders, @Nonnull Int2ObjectMap<Ref<ChunkStore>> entityReferences) {
+   public BlockComponentChunk(@Nonnull Int2ObjectMap<Holder<ChunkStore>> entityHolders, @Nonnull Int2ReferenceMap<Ref<ChunkStore>> entityReferences) {
       this.entityHolders = entityHolders;
       this.entityReferences = entityReferences;
       this.entityHoldersUnmodifiable = Int2ObjectMaps.unmodifiable(entityHolders);
-      this.entityReferencesUnmodifiable = Int2ObjectMaps.unmodifiable(entityReferences);
+      this.entityReferencesUnmodifiable = Int2ReferenceMaps.unmodifiable(entityReferences);
    }
 
    @Nonnull
@@ -100,12 +103,12 @@ public class BlockComponentChunk implements Component<ChunkStore> {
          entityHoldersClone.put(entry.getIntKey(), entry.getValue().clone());
       }
 
-      for (Int2ObjectMap.Entry<Ref<ChunkStore>> entry : this.entityReferences.int2ObjectEntrySet()) {
+      for (Int2ReferenceMap.Entry<Ref<ChunkStore>> entry : this.entityReferences.int2ReferenceEntrySet()) {
          Ref<ChunkStore> reference = entry.getValue();
          entityHoldersClone.put(entry.getIntKey(), reference.getStore().copyEntity(reference));
       }
 
-      return new BlockComponentChunk(entityHoldersClone, new Int2ObjectOpenHashMap<>());
+      return new BlockComponentChunk(entityHoldersClone, new Int2ReferenceOpenHashMap<>());
    }
 
    @Nonnull
@@ -121,7 +124,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
          }
       }
 
-      for (Int2ObjectMap.Entry<Ref<ChunkStore>> entry : this.entityReferences.int2ObjectEntrySet()) {
+      for (Int2ReferenceMap.Entry<Ref<ChunkStore>> entry : this.entityReferences.int2ReferenceEntrySet()) {
          Ref<ChunkStore> reference = entry.getValue();
          Store<ChunkStore> store = reference.getStore();
          if (store.getArchetype(reference).hasSerializableComponents(data)) {
@@ -129,7 +132,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
          }
       }
 
-      return new BlockComponentChunk(entityHoldersClone, new Int2ObjectOpenHashMap<>());
+      return new BlockComponentChunk(entityHoldersClone, new Int2ReferenceOpenHashMap<>());
    }
 
    @Nonnull
@@ -171,7 +174,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
    }
 
    @Nonnull
-   public Int2ObjectMap<Ref<ChunkStore>> getEntityReferences() {
+   public Int2ReferenceMap<Ref<ChunkStore>> getEntityReferences() {
       return this.entityReferencesUnmodifiable;
    }
 
@@ -386,7 +389,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
          @Nonnull List<ToClientPacket> results
       ) {
          BlockComponentChunk component = archetypeChunk.getComponent(index, this.componentType);
-         ObjectCollection<Ref<ChunkStore>> references = component.entityReferences.values();
+         ReferenceCollection<Ref<ChunkStore>> references = component.entityReferences.values();
          Store<ChunkStore> componentStore = store.getExternalData().getWorld().getChunkStore().getStore();
          componentStore.fetch(references, ChunkStore.LOAD_PACKETS_DATA_QUERY_SYSTEM_TYPE, player, results);
       }
@@ -413,7 +416,7 @@ public class BlockComponentChunk implements Component<ChunkStore> {
          @Nonnull List<ToClientPacket> results
       ) {
          BlockComponentChunk component = archetypeChunk.getComponent(index, this.componentType);
-         ObjectCollection<Ref<ChunkStore>> references = component.entityReferences.values();
+         ReferenceCollection<Ref<ChunkStore>> references = component.entityReferences.values();
          Store<ChunkStore> componentStore = store.getExternalData().getWorld().getChunkStore().getStore();
          componentStore.fetch(references, ChunkStore.UNLOAD_PACKETS_DATA_QUERY_SYSTEM_TYPE, player, results);
       }

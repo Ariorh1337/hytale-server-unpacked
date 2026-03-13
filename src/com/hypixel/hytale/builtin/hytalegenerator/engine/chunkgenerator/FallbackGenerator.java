@@ -1,4 +1,4 @@
-package com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator;
+package com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator;
 
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;

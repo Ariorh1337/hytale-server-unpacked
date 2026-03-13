@@ -9,6 +9,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.common.util.BitSetUtil;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.function.predicate.ObjectPositionBlockFunction;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.CachedPacket;
@@ -441,11 +442,26 @@ public class BlockSection implements Component<ChunkStore> {
       }
    }
 
-   public void find(IntList ids, IntSet internalIdHolder, IntConsumer indexConsumer) {
+   @Deprecated(since = "2026-02-26", forRemoval = true)
+   public void find(IntList ids, IntSet ignoredInternalIdHolder, IntConsumer indexConsumer) {
+      this.find(ids, indexConsumer);
+   }
+
+   public void find(IntList ids, IntConsumer indexConsumer) {
       long lock = this.chunkSectionLock.readLock();
 
       try {
-         this.chunkSection.find(ids, internalIdHolder, indexConsumer);
+         this.chunkSection.find(ids, indexConsumer);
+      } finally {
+         this.chunkSectionLock.unlockRead(lock);
+      }
+   }
+
+   public void find(IntList ids, BiIntConsumer indexBlockConsumer) {
+      long lock = this.chunkSectionLock.readLock();
+
+      try {
+         this.chunkSection.find(ids, indexBlockConsumer);
       } finally {
          this.chunkSectionLock.unlockRead(lock);
       }
@@ -477,6 +493,32 @@ public class BlockSection implements Component<ChunkStore> {
          } else {
             return false;
          }
+      } finally {
+         this.chunkSectionLock.unlockWrite(writeStamp);
+      }
+   }
+
+   public int setTicking(@Nonnull IntList indices, boolean ticking) {
+      long writeStamp = this.chunkSectionLock.writeLock();
+
+      try {
+         int count = 0;
+
+         for (int i = 0; i < indices.size(); i++) {
+            int blockIdx = indices.getInt(i);
+            if (this.tickingBlocks.get(blockIdx) != ticking) {
+               if (ticking) {
+                  this.tickingBlocksCount++;
+               } else {
+                  this.tickingBlocksCount--;
+               }
+
+               this.tickingBlocks.set(blockIdx, ticking);
+               count++;
+            }
+         }
+
+         return count;
       } finally {
          this.chunkSectionLock.unlockWrite(writeStamp);
       }

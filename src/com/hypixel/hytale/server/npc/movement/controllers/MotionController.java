@@ -74,6 +74,9 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    boolean canAct(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
+   @Nullable
+   String canActFailReason(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
    boolean isInProgress();
 
    boolean isObstructed();
@@ -186,8 +189,6 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
    static boolean isInMovementState(@Nonnull Ref<EntityStore> ref, @Nonnull MovementState state, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       MovementStatesComponent movementStatesComponent = componentAccessor.getComponent(ref, MovementStatesComponent.getComponentType());
       assert movementStatesComponent != null;
-      Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
-      assert velocityComponent != null;
       MovementStates states = movementStatesComponent.getMovementStates();
 
       return switch (state) {
@@ -198,15 +199,21 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
          case JUMPING -> states.jumping;
          case SPRINTING -> states.sprinting;
          case RUNNING -> states.running;
-         case IDLE -> velocityComponent.getVelocity().closeToZero(0.001);
-         case WALKING -> !velocityComponent.getVelocity().closeToZero(0.001)
-            && !states.falling
-            && !states.climbing
-            && !states.flying
-            && !states.running
-            && !states.sprinting
-            && !states.jumping
-            && !states.crouching;
+         case IDLE, WALKING -> {
+            Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
+            assert velocityComponent != null;
+            boolean isIdle = velocityComponent.getVelocity().closeToZero(0.001);
+            yield state == MovementState.IDLE
+               ? isIdle
+               : !isIdle
+                  && !states.falling
+                  && !states.climbing
+                  && !states.flying
+                  && !states.running
+                  && !states.sprinting
+                  && !states.jumping
+                  && !states.crouching;
+         }
          case ANY -> true;
       };
    }

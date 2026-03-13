@@ -43,7 +43,7 @@ public class TimeInstrument {
 
    @Nonnull
    private String toString(int indentation, @Nonnull TimeInstrument.Probe probe) {
-      long ns = probe.getTotalTime() / this.sampleCount;
+      long ns = probe.getTotalTime_ns() / this.sampleCount;
       StringBuilder s = new StringBuilder();
       s.append("\t".repeat(indentation));
       s.append(probe.getName()).append(": ");
@@ -62,7 +62,7 @@ public class TimeInstrument {
       @Nonnull
       private final String name;
       private long startTime;
-      private long totalTime;
+      private long totalTime_ns;
       private TimeInstrument.Probe.State state;
       private List<TimeInstrument.Probe> probes;
 
@@ -83,13 +83,13 @@ public class TimeInstrument {
       public TimeInstrument.Probe stop() {
          assert this.state == TimeInstrument.Probe.State.STARTED;
          this.state = TimeInstrument.Probe.State.COMPLETED;
-         this.totalTime = System.nanoTime() - this.startTime;
+         this.totalTime_ns = System.nanoTime() - this.startTime;
          return this;
       }
 
-      public long getTotalTime() {
+      public long getTotalTime_ns() {
          assert this.state == TimeInstrument.Probe.State.COMPLETED;
-         return this.totalTime;
+         return this.totalTime_ns;
       }
 
       @Nonnull
@@ -126,7 +126,7 @@ public class TimeInstrument {
       public void add(@Nonnull TimeInstrument.Probe probe) {
          assert this.state == TimeInstrument.Probe.State.COMPLETED;
          assert this.isCompatibleForAddition(probe);
-         this.totalTime = this.totalTime + probe.getTotalTime();
+         this.totalTime_ns = this.totalTime_ns + probe.getTotalTime_ns();
 
          for (int i = 0; i < this.probes.size(); i++) {
             this.probes.get(i).add(probe.probes.get(i));

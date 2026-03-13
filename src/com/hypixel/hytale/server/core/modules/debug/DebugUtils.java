@@ -87,7 +87,7 @@ public class DebugUtils {
       }
    }
 
-   public static void addArrow(@Nonnull World world, @Nonnull Matrix4d baseMatrix, @Nonnull Vector3f color, double length, float time, int flags) {
+   public static void addArrow(@Nonnull World world, @Nonnull Matrix4d baseMatrix, @Nonnull Vector3f color, float opacity, double length, float time, int flags) {
       double adjustedLength = length - 0.3;
       if (adjustedLength > 0.0) {
          Matrix4d matrix = new Matrix4d(baseMatrix);
@@ -99,7 +99,11 @@ public class DebugUtils {
       Matrix4d matrix = new Matrix4d(baseMatrix);
       matrix.translate(0.0, adjustedLength + 0.15, 0.0);
       matrix.scale(0.3F, 0.3F, 0.3F);
-      add(world, DebugShape.Cone, matrix, color, time, flags);
+      add(world, DebugShape.Cone, matrix, color, opacity, time, flags);
+   }
+
+   public static void addArrow(@Nonnull World world, @Nonnull Matrix4d baseMatrix, @Nonnull Vector3f color, double length, float time, int flags) {
+      addArrow(world, baseMatrix, color, 0.8F, length, time, flags);
    }
 
    public static void addSphere(@Nonnull World world, @Nonnull Vector3d pos, @Nonnull Vector3f color, double scale, float time) {
@@ -112,6 +116,18 @@ public class DebugUtils {
       matrix.translate(x, y, z);
       matrix.scale(scale, scale, scale);
       add(world, DebugShape.Sphere, matrix, color, time, FLAG_FADE);
+   }
+
+   public static void addSphere(@Nonnull World world, @Nonnull Vector3d pos, @Nonnull Vector3f color, float opacity, double scale, float time) {
+      addSphere(world, pos.x, pos.y, pos.z, color, opacity, scale, time);
+   }
+
+   public static void addSphere(@Nonnull World world, double x, double y, double z, @Nonnull Vector3f color, float opacity, double scale, float time) {
+      Matrix4d matrix = new Matrix4d();
+      matrix.identity();
+      matrix.translate(x, y, z);
+      matrix.scale(scale, scale, scale);
+      add(world, DebugShape.Sphere, matrix, color, opacity, time, FLAG_FADE);
    }
 
    public static void addCone(@Nonnull World world, @Nonnull Vector3d pos, @Nonnull Vector3f color, double scale, float time) {
@@ -299,7 +315,9 @@ public class DebugUtils {
       add(world, DebugShape.Sector, matrix, color, opacity, time, flags, shapeParams);
    }
 
-   public static void addArrow(@Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, float time, int flags) {
+   public static void addArrow(
+      @Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, float opacity, float time, int flags
+   ) {
       Vector3d directionClone = direction.clone();
       Matrix4d tmp = new Matrix4d();
       Matrix4d matrix = new Matrix4d();
@@ -309,7 +327,11 @@ public class DebugUtils {
       matrix.rotateAxis(angleY + (Math.PI / 2), 0.0, 1.0, 0.0, tmp);
       double angleX = Math.atan2(Math.sqrt(directionClone.x * directionClone.x + directionClone.z * directionClone.z), directionClone.y);
       matrix.rotateAxis(angleX, 1.0, 0.0, 0.0, tmp);
-      addArrow(world, matrix, color, directionClone.length(), time, flags);
+      addArrow(world, matrix, color, opacity, directionClone.length(), time, flags);
+   }
+
+   public static void addArrow(World world, Vector3d position, Vector3d direction, Vector3f color, float time, int flags) {
+      addArrow(world, position, direction, color, 0.8F, time, flags);
    }
 
    public static void addForce(@Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d force, @Nullable VelocityConfig velocityConfig) {

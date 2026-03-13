@@ -9,8 +9,9 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolBoolArg;
 import javax.annotation.Nonnull;
 
 public class BoolArg extends ToolArg<Boolean> {
-   public static final BuilderCodec<BoolArg> CODEC = BuilderCodec.<ToolArg>builder(BoolArg.class, BoolArg::new, ToolArg.DEFAULT_CODEC)
-      .addField(new KeyedCodec<>("Default", Codec.BOOLEAN), (boolArg, d) -> boolArg.value = d, boolArg -> boolArg.value)
+   public static final BuilderCodec<BoolArg> CODEC = BuilderCodec.builder(BoolArg.class, BoolArg::new, ToolArg.DEFAULT_CODEC)
+      .append(new KeyedCodec<>("Default", Codec.BOOLEAN), (boolArg, d) -> boolArg.value = d, boolArg -> boolArg.value)
+      .add()
       .build();
 
    public BoolArg() {

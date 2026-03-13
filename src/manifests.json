@@ -89,7 +89,8 @@
   "Dependencies": {
     "Hytale:I18nModule": "*",
     "Hytale:BlockModule": "*",
-    "Hytale:BlockPhysics": "*"
+    "Hytale:BlockPhysics": "*",
+    "Hytale:Teleport": "*"
   }
 }
 ,{

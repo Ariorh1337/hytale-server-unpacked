@@ -868,7 +868,7 @@ public class CraftingManager implements Component<EntityStore> {
       double benchDepth = boundingBox.depth();
       double extraSearchRadius = Math.max(benchWidth, Math.max(benchDepth, benchHeight)) - 1.0;
       SpatialResource<Ref<ChunkStore>, ChunkStore> blockStateSpatialStructure = store.getResource(BlockModule.get().getItemContainerSpatialResourceType());
-      ObjectList<Ref<ChunkStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<ChunkStore>> results = SpatialResource.getThreadLocalReferenceList();
       blockStateSpatialStructure.getSpatialStructure()
          .ordered3DAxis(blockPos, horizontalRadius + extraSearchRadius, verticalRadius + extraSearchRadius, horizontalRadius + extraSearchRadius, results);
       if (!results.isEmpty()) {

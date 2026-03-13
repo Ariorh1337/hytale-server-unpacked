@@ -58,7 +58,7 @@ public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
       CompletableFuture.runAsync(
          () -> {
             long start = System.nanoTime();
-            IntOpenHashSet temp = new IntOpenHashSet();
+            new IntOpenHashSet();
             ChunkStore chunkComponentStore = world.getChunkStore();
             AtomicInteger found = new AtomicInteger();
             SpiralIterator iterator = new SpiralIterator(originChunkX, originChunkZ, radius);
@@ -72,8 +72,7 @@ public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
                for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
                   BlockSection section = blockChunk.getSectionAtIndex(sectionIndex);
                   if (section.containsAny(blockIdList)) {
-                     section.find(blockIdList, temp, blockIndex -> found.getAndIncrement());
-                     temp.clear();
+                     section.find(blockIdList, blockIndex -> found.getAndIncrement());
                   }
                }
             }

@@ -552,7 +552,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                         playerComponent.getGameMode() != GameMode.Creative,
                         chunkReference,
                         chunkStore,
-                        store
+                        store,
+                        packet.quickReplace
                      );
                   }
                }

@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -27,6 +28,6 @@ public class GeneratedBlockStateChunk {
 
    @Nonnull
    public BlockComponentChunk toBlockComponentChunk() {
-      return new BlockComponentChunk(this.mapping, new Int2ObjectOpenHashMap<>());
+      return new BlockComponentChunk(this.mapping, new Int2ReferenceOpenHashMap<>());
    }
 }

@@ -33,9 +33,8 @@ public class ItemUtils {
       LivingEntity entity = (LivingEntity)EntityUtils.getEntity(ref, componentAccessor);
       InteractivelyPickupItemEvent event = new InteractivelyPickupItemEvent(itemStack);
       componentAccessor.invoke(ref, event);
-      if (event.isCancelled()) {
-         dropItem(ref, itemStack, componentAccessor);
-      } else {
+      if (!event.isCancelled()) {
+         itemStack = event.getItemStack();
          Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
          if (playerComponent != null) {
             Holder<EntityStore> pickupItemHolder = null;

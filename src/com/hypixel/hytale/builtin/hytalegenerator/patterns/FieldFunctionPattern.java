@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
+import com.hypixel.hytale.builtin.hytalegenerator.delimiters.RangeDouble;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +12,7 @@ public class FieldFunctionPattern extends Pattern {
    @Nonnull
    private final Density field;
    @Nonnull
-   private final List<FieldFunctionPattern.Delimiter> delimiters;
+   private final List<RangeDouble> delimiters;
    @Nonnull
    private final Density.Context rDensityContext;
 
@@ -26,8 +27,8 @@ public class FieldFunctionPattern extends Pattern {
       this.rDensityContext.assign(context);
       double density = this.field.process(this.rDensityContext);
 
-      for (FieldFunctionPattern.Delimiter d : this.delimiters) {
-         if (d.isInside(density)) {
+      for (RangeDouble delimiter : this.delimiters) {
+         if (delimiter.contains(density)) {
             return true;
          }
       }
@@ -42,18 +43,6 @@ public class FieldFunctionPattern extends Pattern {
    }
 
    public void addDelimiter(double min, double max) {
-      FieldFunctionPattern.Delimiter d = new FieldFunctionPattern.Delimiter();
-      d.min = min;
-      d.max = max;
-      this.delimiters.add(d);
-   }
-
-   private static class Delimiter {
-      double min;
-      double max;
-
-      boolean isInside(double v) {
-         return v >= this.min && v < this.max;
-      }
+      this.delimiters.add(new RangeDouble(min, max));
    }
 }

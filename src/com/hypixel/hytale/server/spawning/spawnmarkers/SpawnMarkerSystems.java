@@ -59,7 +59,6 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -414,7 +413,7 @@ public class SpawnMarkerSystems {
             StoredFlock storedFlock = spawnMarkerEntityComponent.getStoredFlock();
             if (storedFlock != null) {
                SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
-               ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+               List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                spatialResource.getSpatialStructure().collect(transformComponent.getPosition(), cachedMarker.getDeactivationDistance(), results);
                boolean hasPlayersInRange = !results.isEmpty();
                if (!hasPlayersInRange) {
@@ -472,7 +471,7 @@ public class SpawnMarkerSystems {
                      Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                      commandBuffer.run(
                         _store -> {
-                           ObjectList<Ref<EntityStore>> tempStorageList = SpatialResource.getThreadLocalReferenceList();
+                           List<Ref<EntityStore>> tempStorageList = SpatialResource.getThreadLocalReferenceList();
 
                            for (InvalidatablePersistentRef reference : npcReferences) {
                               Ref<EntityStore> npcRef = reference.getEntity(_store);
@@ -498,7 +497,7 @@ public class SpawnMarkerSystems {
 
                if (storedFlock.hasStoredNPCs()) {
                   commandBuffer.run(_store -> {
-                     ObjectList<Ref<EntityStore>> tempStorageList = SpatialResource.getThreadLocalReferenceList();
+                     List<Ref<EntityStore>> tempStorageList = SpatialResource.getThreadLocalReferenceList();
                      storedFlock.restoreNPCs(tempStorageList, _store);
                      spawnMarkerEntityComponent.setSpawnCount(tempStorageList.size());
                      Vector3d position = spawnMarkerEntityComponent.getSpawnPosition();

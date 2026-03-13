@@ -44,7 +44,7 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class PrefabProp extends Prop {
    @Nonnull
-   private final WeightedMap<List<PrefabBuffer>> prefabPool;
+   private final WeightedMap<List<IPrefabBuffer>> prefabPool;
    @Nonnull
    private final Scanner scanner;
    @Nonnull
@@ -64,7 +64,7 @@ public class PrefabProp extends Prop {
    @Nonnull
    private final List<RotatedPosition> childPositions;
    @Nonnull
-   private final Function<String, List<PrefabBuffer>> childPrefabLoader;
+   private final Function<String, List<IPrefabBuffer>> childPrefabLoader;
    private final Scanner moldingScanner;
    private final Pattern moldingPattern;
    private final MoldingDirection moldingDirection;
@@ -73,13 +73,13 @@ public class PrefabProp extends Prop {
    private boolean loadEntities;
 
    public PrefabProp(
-      @Nonnull WeightedMap<List<PrefabBuffer>> prefabPool,
+      @Nonnull WeightedMap<List<IPrefabBuffer>> prefabPool,
       @Nonnull Scanner scanner,
       @Nonnull Directionality directionality,
       @Nonnull MaterialCache materialCache,
       @Nonnull BlockMask materialMask,
       @Nonnull PrefabMoldingConfiguration prefabMoldingConfiguration,
-      @Nullable Function<String, List<PrefabBuffer>> childPrefabLoader,
+      @Nullable Function<String, List<IPrefabBuffer>> childPrefabLoader,
       @Nonnull SeedBox seedBox,
       boolean loadEntities
    ) {
@@ -100,27 +100,26 @@ public class PrefabProp extends Prop {
       this.readBounds_voxelGrid = directionality.getBoundsWith_voxelGrid(scanner);
       this.writeBounds_voxelGrid = new Bounds3i();
 
-      for (List<PrefabBuffer> prefabList : prefabPool.allElements()) {
+      for (List<IPrefabBuffer> prefabList : prefabPool.allElements()) {
          if (prefabList.isEmpty()) {
             throw new IllegalArgumentException("prefab pool contains empty list");
          }
 
-         for (PrefabBuffer prefab : prefabList) {
+         for (IPrefabBuffer prefab : prefabList) {
             if (prefab == null) {
                throw new IllegalArgumentException("prefab pool contains list with null element");
             }
 
-            PrefabBuffer.PrefabBufferAccessor prefabAccess = prefab.newAccess();
-            this.writeBounds_voxelGrid.encompass(this.getWriteBounds_voxelGrid(prefabAccess));
-            PrefabBuffer.ChildPrefab[] childPrefabs = prefabAccess.getChildPrefabs();
+            this.writeBounds_voxelGrid.encompass(this.getWriteBounds_voxelGrid(prefab));
+            PrefabBuffer.ChildPrefab[] childPrefabs = prefab.getChildPrefabs();
             int childId = 0;
 
             for (PrefabBuffer.ChildPrefab child : childPrefabs) {
                RotatedPosition childPosition = new RotatedPosition(child.getX(), child.getY(), child.getZ(), child.getRotation());
                String childPath = child.getPath().replace('.', '/');
                childPath = childPath.replace("*", "");
-               List<PrefabBuffer> childPrefabBuffers = this.childPrefabLoader.apply(childPath);
-               WeightedMap<List<PrefabBuffer>> weightedChildPrefabs = new WeightedMap<>();
+               List<IPrefabBuffer> childPrefabBuffers = this.childPrefabLoader.apply(childPath);
+               WeightedMap<List<IPrefabBuffer>> weightedChildPrefabs = new WeightedMap<>();
                weightedChildPrefabs.add(childPrefabBuffers, 1.0);
                StaticDirectionality childDirectionality = new StaticDirectionality(child.getRotation(), ConstantPattern.INSTANCE_TRUE);
                PrefabProp childProp = new PrefabProp(
@@ -145,8 +144,6 @@ public class PrefabProp extends Prop {
                childWriteBounds_voxelGrid.offset(childPosition_voxelGrid);
                this.writeBounds_voxelGrid.encompass(childWriteBounds_voxelGrid);
             }
-
-            prefabAccess.release();
          }
       }
 
@@ -154,7 +151,7 @@ public class PrefabProp extends Prop {
    }
 
    @Nonnull
-   private Bounds3i getWriteBounds_voxelGrid(@Nonnull PrefabBuffer.PrefabBufferAccessor prefabAccess) {
+   private Bounds3i getWriteBounds_voxelGrid(@Nonnull IPrefabBuffer prefabAccess) {
       Bounds3i bounds_voxelGrid = new Bounds3i();
 
       for (PrefabRotation rotation : this.directionality.getPossibleRotations()) {
@@ -211,8 +208,8 @@ public class PrefabProp extends Prop {
       }
    }
 
-   private PrefabBuffer pickPrefab(@Nonnull Random rand) {
-      List<PrefabBuffer> list = this.prefabPool.pick(rand);
+   private IPrefabBuffer pickPrefab(@Nonnull Random rand) {
+      List<IPrefabBuffer> list = this.prefabPool.pick(rand);
       int randomIndex = rand.nextInt(list.size());
       return list.get(randomIndex);
    }
@@ -220,14 +217,13 @@ public class PrefabProp extends Prop {
    private void place(@Nonnull RotatedPosition position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull EntityFunnel entityBuffer) {
       Random random = new Random(this.rngField.get(position.x, position.y, position.z));
       PrefabBufferCall callInstance = new PrefabBufferCall(random, position.rotation);
-      PrefabBuffer prefab = this.pickPrefab(random);
-      PrefabBuffer.PrefabBufferAccessor prefabAccess = prefab.newAccess();
+      IPrefabBuffer prefab = this.pickPrefab(random);
       VoxelSpace<Integer> moldingOffsets = null;
       if (this.moldingDirection != MoldingDirection.NONE) {
-         int prefabMinX = prefabAccess.getMinX(position.rotation);
-         int prefabMinZ = prefabAccess.getMinZ(position.rotation);
-         int prefabMaxX = prefabAccess.getMaxX(position.rotation);
-         int prefabMaxZ = prefabAccess.getMaxZ(position.rotation);
+         int prefabMinX = prefab.getMinX(position.rotation);
+         int prefabMinZ = prefab.getMinZ(position.rotation);
+         int prefabMaxX = prefab.getMaxX(position.rotation);
+         int prefabMaxZ = prefab.getMaxZ(position.rotation);
          Bounds3i bounds_voxelGrid = new Bounds3i(
             new Vector3i(prefabMinX + position.x, 0, prefabMinZ + position.z), new Vector3i(prefabMaxX + position.x, 1, prefabMaxZ + position.z)
          );
@@ -254,7 +250,7 @@ public class PrefabProp extends Prop {
       try {
          Vector3i prefabPositionVector = position.toVector3i();
          VoxelSpace<Integer> moldingOffsetsFinal = moldingOffsets;
-         prefabAccess.forEach(
+         prefab.forEach(
             IPrefabBuffer.iterateAllColumns(),
             (x, yx, z, blockId, holder, support, rotation, filler, call, fluidId, fluidLevel) -> {
                int worldX = position.x + x;
@@ -330,8 +326,6 @@ public class PrefabProp extends Prop {
          msg = msg + "\n";
          msg = msg + ExceptionUtil.toStringWithStack(e);
          HytaleLogger.getLogger().atWarning().log(msg);
-      } finally {
-         prefabAccess.release();
       }
 
       for (int i = 0; i < this.childProps.size(); i++) {

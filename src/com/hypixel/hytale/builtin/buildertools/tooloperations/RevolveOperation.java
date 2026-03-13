@@ -29,7 +29,7 @@ import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
 import com.hypixel.hytale.server.core.universe.world.accessor.OverridableChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import java.util.ArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -160,11 +160,11 @@ public class RevolveOperation extends ToolOperation {
             }
          }
 
-         List<Ref<EntityStore>> entityRefs = new ArrayList<>();
+         List<Ref<EntityStore>> entityRefs = new ReferenceArrayList<>();
          if (!fullRevolve && copyEntities) {
             World world = componentAccessor.getExternalData().getWorld();
             Store<EntityStore> entityStore = world.getEntityStore().getStore();
-            List<Ref<EntityStore>> entities = new ArrayList<>();
+            List<Ref<EntityStore>> entities = new ReferenceArrayList<>();
             BuilderToolsPlugin.forEachCopyableInSelection(world, xMin, yMin, zMin, xMax - xMin, yMax - yMin, zMax - zMin, entities::add);
             int totalEntities = entities.size() * this.copyCount;
             if (totalEntities <= 1000) {

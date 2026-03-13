@@ -17,24 +17,24 @@ public abstract class PropDistribution {
       public Bounds3d bounds;
       @Nonnull
       public Pipe.Two<Vector3d, Prop> pipe;
-      public double distanceToBiomeEdge;
+      public double distanceFromBiomeEdge;
 
       public Context() {
          this.bounds = new Bounds3d();
          this.pipe = (position, prop, control) -> {};
-         this.distanceToBiomeEdge = Double.MAX_VALUE;
+         this.distanceFromBiomeEdge = Double.MAX_VALUE;
       }
 
-      public Context(@Nonnull Bounds3d bounds, @Nonnull Pipe.Two<Vector3d, Prop> pipe, double distanceToBiomeEdge) {
+      public Context(@Nonnull Bounds3d bounds, @Nonnull Pipe.Two<Vector3d, Prop> pipe, double distanceFromBiomeEdge) {
          this.bounds = bounds;
          this.pipe = pipe;
-         this.distanceToBiomeEdge = distanceToBiomeEdge;
+         this.distanceFromBiomeEdge = distanceFromBiomeEdge;
       }
 
       public void assign(@Nonnull PropDistribution.Context context) {
          this.bounds = context.bounds;
          this.pipe = context.pipe;
-         this.distanceToBiomeEdge = context.distanceToBiomeEdge;
+         this.distanceFromBiomeEdge = context.distanceFromBiomeEdge;
       }
    }
 }

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
+import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
@@ -34,7 +35,14 @@ public interface ISectionPalette {
 
    Int2ShortMap valueCounts();
 
-   void find(IntList var1, IntSet var2, IntConsumer var3);
+   void find(@Nonnull IntList var1, @Nonnull IntConsumer var2);
+
+   void find(@Nonnull IntList var1, @Nonnull BiIntConsumer var2);
+
+   @Deprecated(since = "2026-02-26", forRemoval = true)
+   default void find(@Nonnull IntList ids, @Nonnull IntSet ignoredInternalIdHolder, @Nonnull IntConsumer indexConsumer) {
+      this.find(ids, indexConsumer);
+   }
 
    boolean shouldDemote();
 

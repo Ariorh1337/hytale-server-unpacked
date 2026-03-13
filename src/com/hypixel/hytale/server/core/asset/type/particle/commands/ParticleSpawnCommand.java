@@ -17,7 +17,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -46,7 +46,7 @@ public class ParticleSpawnCommand extends AbstractTargetPlayerCommand {
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
       SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = store.getResource(EntityModule.get().getPlayerSpatialResourceType());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       playerSpatialResource.getSpatialStructure().collect(position, 75.0, results);
       ParticleUtil.spawnParticleEffect(particleSystem.getId(), position, transformComponent.getRotation(), results, store);
    }

@@ -1,26 +1,34 @@
 package com.hypixel.hytale.builtin.buildertools.tooloperations;
 
+import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.block.BlockUtil;
+import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
+import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
+import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.ToolArgException;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import javax.annotation.Nonnull;
 
 public class TintOperation extends ToolOperation {
-   private final int tintColor;
-   private final double opacity;
+   private int tintColor;
+   private double opacity;
    private boolean blendMode = false;
    private int bufferOriginX;
    private int bufferOriginZ;
    private int[][] colorBuffer;
-   private final LongOpenHashSet packedPlacedTinsPositions;
+   private final boolean isHoldingAltModeDown;
+   private LongOpenHashSet packedPlacedTinsPositions;
    private static final int SAMPLE_DISTANCE = 4;
 
    public TintOperation(
@@ -30,42 +38,62 @@ public class TintOperation extends ToolOperation {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       super(ref, packet, componentAccessor);
-      String colorText = (String)this.args.tool().get("bTintColor");
-      if (this.args.tool().get("aMode").equals("blend")) {
+      this.isHoldingAltModeDown = packet.isAltPlaySculptBrushModDown;
+      if (this.interactionType == InteractionType.Primary) {
          this.blendMode = true;
       }
 
-      try {
-         this.tintColor = ColorParseUtil.hexStringToRGBInt(colorText);
-      } catch (NumberFormatException e) {
-         player.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", colorText));
-         throw e;
-      }
+      if (this.blendMode && this.isHoldingAltModeDown) {
+         int sampledTint = this.edit.getTint(this.x, this.z);
+         String hexColor = ColorParseUtil.toHexString(sampledTint & 16777215);
+         InventoryComponent.Hotbar hotbar = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         ItemStack itemStack = hotbar.getActiveItem();
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(player);
 
-      this.opacity = ((Integer)this.args.tool().getOrDefault("cOpacity", 0)).intValue() / 100.0;
-      UUIDComponent uuidComponent = ref.getStore().getComponent(ref, UUIDComponent.getComponentType());
-      PrototypePlayerBuilderToolSettings prototypeSettings = PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
-      if (!packet.isHoldDownInteraction) {
-         prototypeSettings.getIgnoredPaintOperations().clear();
-      }
-
-      this.packedPlacedTinsPositions = prototypeSettings.addIgnoredPaintOperation();
-
-      for (LongOpenHashSet previousSet : prototypeSettings.getIgnoredPaintOperations()) {
-         if (previousSet != this.packedPlacedTinsPositions) {
-            this.packedPlacedTinsPositions.addAll(previousSet);
+         try {
+            ItemStack newItemStack = builderTool.updateArgMetadata(itemStack, "bTintColor", hexColor);
+            hotbar.getInventory().setItemStackForSlot(hotbar.getActiveSlot(), newItemStack);
+            BuilderToolsPlugin.sendFeedback(
+               Message.translation("server.builderTools.pickedColor").param("color", hexColor), player, NotificationStyle.Success, componentAccessor
+            );
+         } catch (ToolArgException e) {
+            player.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", hexColor));
          }
-      }
+      } else {
+         String colorText = (String)this.args.tool().getOrDefault("bTintColor", "ffffff");
 
-      if (this.blendMode) {
-         int bufferSize = (this.shapeRange + 4) * 2 + 1;
-         this.bufferOriginX = this.x - this.shapeRange - 4;
-         this.bufferOriginZ = this.z - this.shapeRange - 4;
-         this.colorBuffer = new int[bufferSize][bufferSize];
+         try {
+            this.tintColor = ColorParseUtil.hexStringToRGBInt(colorText);
+         } catch (NumberFormatException e) {
+            player.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", colorText));
+            throw e;
+         }
 
-         for (int bufferX = 0; bufferX < bufferSize; bufferX++) {
-            for (int bufferZ = 0; bufferZ < bufferSize; bufferZ++) {
-               this.colorBuffer[bufferX][bufferZ] = this.edit.getTint(this.bufferOriginX + bufferX, this.bufferOriginZ + bufferZ);
+         this.opacity = ((Integer)this.args.tool().getOrDefault("cOpacity", 0)).intValue() / 100.0;
+         UUIDComponent uuidComponent = ref.getStore().getComponent(ref, UUIDComponent.getComponentType());
+         PrototypePlayerBuilderToolSettings prototypeSettings = PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
+         if (!packet.isHoldDownInteraction) {
+            prototypeSettings.getIgnoredPaintOperations().clear();
+         }
+
+         this.packedPlacedTinsPositions = prototypeSettings.addIgnoredPaintOperation();
+
+         for (LongOpenHashSet previousSet : prototypeSettings.getIgnoredPaintOperations()) {
+            if (previousSet != this.packedPlacedTinsPositions) {
+               this.packedPlacedTinsPositions.addAll(previousSet);
+            }
+         }
+
+         if (this.blendMode) {
+            int bufferSize = (this.shapeRange + 4) * 2 + 1;
+            this.bufferOriginX = this.x - this.shapeRange - 4;
+            this.bufferOriginZ = this.z - this.shapeRange - 4;
+            this.colorBuffer = new int[bufferSize][bufferSize];
+
+            for (int bufferX = 0; bufferX < bufferSize; bufferX++) {
+               for (int bufferZ = 0; bufferZ < bufferSize; bufferZ++) {
+                  this.colorBuffer[bufferX][bufferZ] = this.edit.getTint(this.bufferOriginX + bufferX, this.bufferOriginZ + bufferZ);
+               }
             }
          }
       }
@@ -73,6 +101,10 @@ public class TintOperation extends ToolOperation {
 
    @Override
    boolean execute0(int x, int y, int z) {
+      if (this.isHoldingAltModeDown && this.blendMode) {
+         return true;
+      }
+
       long packed = BlockUtil.pack(x, 0, z);
       if (this.packedPlacedTinsPositions.contains(packed)) {
          return true;

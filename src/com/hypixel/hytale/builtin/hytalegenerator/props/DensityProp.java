@@ -18,6 +18,8 @@ public class DensityProp extends Prop {
    @Nonnull
    private final Bounds3i writeBounds;
    @Nonnull
+   private final Bounds3i solidityBufferBounds;
+   @Nonnull
    private final Bounds3i rIntersectingWriteBounds;
    @Nonnull
    private final ArrayVoxelSpace<Boolean> rSolidityBuffer;
@@ -27,20 +29,33 @@ public class DensityProp extends Prop {
    private final MaterialProvider.Context rMaterialProviderContext;
    @Nonnull
    private final Vector3i rPosition;
+   @Nonnull
+   private final int[] rDepthIntoCeiling;
+   @Nonnull
+   private final int[] rDepthIntoFloor;
+   @Nonnull
+   private final int[] rSpaceBelowCeiling;
+   @Nonnull
+   private final int[] rSpaceAboveFloor;
 
    public DensityProp(@Nonnull Density density, @Nonnull MaterialProvider<Material> materialProvider, @Nonnull Bounds3i bounds) {
       this.density = density;
       this.materialProvider = materialProvider;
       this.writeBounds = bounds.clone();
-      Bounds3i densityBufferBounds = bounds.clone();
-      densityBufferBounds.min.y--;
-      densityBufferBounds.max.y++;
-      this.rSolidityBuffer = new ArrayVoxelSpace<>(densityBufferBounds);
+      this.solidityBufferBounds = bounds.clone();
+      this.solidityBufferBounds.min.y--;
+      this.solidityBufferBounds.max.y++;
+      this.rSolidityBuffer = new ArrayVoxelSpace<>(this.solidityBufferBounds);
       this.rIntersectingWriteBounds = new Bounds3i();
       this.rDensityContext = new Density.Context();
       this.rDensityContext.densityAnchor = new Vector3d();
       this.rMaterialProviderContext = new MaterialProvider.Context();
       this.rPosition = new Vector3i();
+      int bufferHeight = this.writeBounds.max.y - this.writeBounds.min.y + 2;
+      this.rDepthIntoCeiling = new int[bufferHeight + 1];
+      this.rDepthIntoFloor = new int[bufferHeight + 1];
+      this.rSpaceBelowCeiling = new int[bufferHeight + 1];
+      this.rSpaceAboveFloor = new int[bufferHeight + 1];
    }
 
    @Override
@@ -48,14 +63,17 @@ public class DensityProp extends Prop {
       Bounds3i writeSpaceBounds = context.materialWriteSpace.getBounds();
       this.rIntersectingWriteBounds.assign(this.writeBounds);
       this.rIntersectingWriteBounds.offset(context.position);
+      Bounds3i localSolidityBufferBounds = this.rSolidityBuffer.getBounds();
+      localSolidityBufferBounds.assign(this.solidityBufferBounds);
+      localSolidityBufferBounds.offset(context.position);
       this.rIntersectingWriteBounds.min.x = Math.max(this.rIntersectingWriteBounds.min.x, writeSpaceBounds.min.x);
       this.rIntersectingWriteBounds.min.z = Math.max(this.rIntersectingWriteBounds.min.z, writeSpaceBounds.min.z);
       this.rIntersectingWriteBounds.max.x = Math.min(this.rIntersectingWriteBounds.max.x, writeSpaceBounds.max.x);
       this.rIntersectingWriteBounds.max.z = Math.min(this.rIntersectingWriteBounds.max.z, writeSpaceBounds.max.z);
       this.rIntersectingWriteBounds.min.y--;
       this.rIntersectingWriteBounds.max.y++;
+      assert this.rDensityContext.densityAnchor != null;
       this.rDensityContext.densityAnchor.assign(context.position);
-      this.rSolidityBuffer.offset(context.position);
 
       for (this.rPosition.x = this.rIntersectingWriteBounds.min.x; this.rPosition.x < this.rIntersectingWriteBounds.max.x; this.rPosition.x++) {
          for (this.rPosition.y = this.rIntersectingWriteBounds.min.y; this.rPosition.y < this.rIntersectingWriteBounds.max.y; this.rPosition.y++) {
@@ -67,35 +85,28 @@ public class DensityProp extends Prop {
          }
       }
 
-      int height = this.rIntersectingWriteBounds.max.y - this.rIntersectingWriteBounds.min.y;
-
       for (this.rPosition.x = this.rIntersectingWriteBounds.min.x; this.rPosition.x < this.rIntersectingWriteBounds.max.x; this.rPosition.x++) {
          for (this.rPosition.z = this.rIntersectingWriteBounds.min.z; this.rPosition.z < this.rIntersectingWriteBounds.max.z; this.rPosition.z++) {
-            int[] depthIntoCeiling = new int[height + 1];
-            int[] depthIntoFloor = new int[height + 1];
-            int[] spaceBelowCeiling = new int[height + 1];
-            int[] spaceAboveFloor = new int[height + 1];
-
             for (this.rPosition.y = this.rIntersectingWriteBounds.max.y - 2; this.rPosition.y > this.rIntersectingWriteBounds.min.y; this.rPosition.y--) {
                int i = this.rPosition.y - this.rIntersectingWriteBounds.min.y;
                boolean solidity = this.rSolidityBuffer.get(this.rPosition.x, this.rPosition.y, this.rPosition.z);
                if (this.rPosition.y == this.rIntersectingWriteBounds.max.y - 1) {
                   if (solidity) {
-                     depthIntoFloor[i] = 1;
+                     this.rDepthIntoFloor[i] = 1;
                   } else {
-                     depthIntoFloor[i] = 0;
+                     this.rDepthIntoFloor[i] = 0;
                   }
 
-                  spaceAboveFloor[i] = 1073741823;
+                  this.rSpaceAboveFloor[i] = 1073741823;
                } else if (solidity) {
-                  depthIntoFloor[i] = depthIntoFloor[i + 1] + 1;
-                  spaceAboveFloor[i] = spaceAboveFloor[i + 1];
+                  this.rDepthIntoFloor[i] = this.rDepthIntoFloor[i + 1] + 1;
+                  this.rSpaceAboveFloor[i] = this.rSpaceAboveFloor[i + 1];
                } else {
-                  depthIntoFloor[i] = 0;
+                  this.rDepthIntoFloor[i] = 0;
                   if (this.rSolidityBuffer.get(this.rPosition.x, this.rPosition.y + 1, this.rPosition.z)) {
-                     spaceAboveFloor[i] = 0;
+                     this.rSpaceAboveFloor[i] = 0;
                   } else {
-                     spaceAboveFloor[i] = spaceAboveFloor[i + 1] + 1;
+                     this.rSpaceAboveFloor[i] = this.rSpaceAboveFloor[i + 1] + 1;
                   }
                }
             }
@@ -105,21 +116,21 @@ public class DensityProp extends Prop {
                boolean solidity = this.rSolidityBuffer.get(this.rPosition.x, this.rPosition.y, this.rPosition.z);
                if (this.rPosition.y == this.rIntersectingWriteBounds.min.x) {
                   if (solidity) {
-                     depthIntoCeiling[i] = 1;
+                     this.rDepthIntoCeiling[i] = 1;
                   } else {
-                     depthIntoCeiling[i] = 0;
+                     this.rDepthIntoCeiling[i] = 0;
                   }
 
-                  spaceBelowCeiling[i] = Integer.MAX_VALUE;
+                  this.rSpaceBelowCeiling[i] = Integer.MAX_VALUE;
                } else if (solidity) {
-                  depthIntoCeiling[i] = depthIntoCeiling[i - 1] + 1;
-                  spaceBelowCeiling[i] = spaceBelowCeiling[i - 1];
+                  this.rDepthIntoCeiling[i] = this.rDepthIntoCeiling[i - 1] + 1;
+                  this.rSpaceBelowCeiling[i] = this.rSpaceBelowCeiling[i - 1];
                } else {
-                  depthIntoCeiling[i] = 0;
+                  this.rDepthIntoCeiling[i] = 0;
                   if (this.rSolidityBuffer.get(this.rPosition.x, this.rPosition.y - 1, this.rPosition.z)) {
-                     spaceBelowCeiling[i] = 0;
+                     this.rSpaceBelowCeiling[i] = 0;
                   } else {
-                     spaceBelowCeiling[i] = spaceBelowCeiling[i - 1] + 1;
+                     this.rSpaceBelowCeiling[i] = this.rSpaceBelowCeiling[i - 1] + 1;
                   }
                }
             }
@@ -128,13 +139,13 @@ public class DensityProp extends Prop {
                if (this.rIntersectingWriteBounds.contains(this.rPosition)) {
                   int i = this.rPosition.y - this.rIntersectingWriteBounds.min.y;
                   this.rMaterialProviderContext.position.assign(this.rPosition);
-                  this.rMaterialProviderContext.depthIntoFloor = depthIntoFloor[i];
-                  this.rMaterialProviderContext.depthIntoCeiling = depthIntoCeiling[i];
-                  this.rMaterialProviderContext.spaceAboveFloor = spaceAboveFloor[i];
-                  this.rMaterialProviderContext.spaceBelowCeiling = spaceBelowCeiling[i];
+                  this.rMaterialProviderContext.depthIntoFloor = this.rDepthIntoFloor[i];
+                  this.rMaterialProviderContext.depthIntoCeiling = this.rDepthIntoCeiling[i];
+                  this.rMaterialProviderContext.spaceAboveFloor = this.rSpaceAboveFloor[i];
+                  this.rMaterialProviderContext.spaceBelowCeiling = this.rSpaceBelowCeiling[i];
                   this.rMaterialProviderContext.distanceToBiomeEdge = context.distanceToBiomeEdge;
                   Material material = this.materialProvider.getVoxelTypeAt(this.rMaterialProviderContext);
-                  if (material != null) {
+                  if (material != null && context.materialWriteSpace.getBounds().contains(this.rPosition)) {
                      context.materialWriteSpace.set(material, this.rPosition);
                   }
                }
@@ -142,7 +153,6 @@ public class DensityProp extends Prop {
          }
       }
 
-      this.rSolidityBuffer.offsetOpposite(context.position);
       return true;
    }
 

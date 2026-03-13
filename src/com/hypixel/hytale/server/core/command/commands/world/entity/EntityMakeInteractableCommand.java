@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTarget
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public class EntityMakeInteractableCommand extends AbstractTargetEntityCommand {
@@ -21,9 +21,7 @@ public class EntityMakeInteractableCommand extends AbstractTargetEntityCommand {
    }
 
    @Override
-   protected void execute(
-      @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
-   ) {
+   protected void execute(@Nonnull CommandContext context, @Nonnull List<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       boolean disable = this.disableFlag.provided(context);
 
       for (Ref<EntityStore> entity : entities) {
