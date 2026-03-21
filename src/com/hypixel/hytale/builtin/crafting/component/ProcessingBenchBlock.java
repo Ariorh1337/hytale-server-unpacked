@@ -580,7 +580,6 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
                this.setActive(false, benchBlock, blockStateInfo);
             }
 
-            this.updateFuelValues(benchBlock.getWindows());
             return completions;
          }
       } else {

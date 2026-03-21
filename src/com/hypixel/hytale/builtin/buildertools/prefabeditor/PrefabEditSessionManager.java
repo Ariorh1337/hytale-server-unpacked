@@ -104,32 +104,34 @@ public class PrefabEditSessionManager {
    }
 
    private void onPlayerReady(@Nonnull PlayerReadyEvent event) {
-      Ref<EntityStore> playerRef = event.getPlayer().getReference();
-      if (playerRef != null && playerRef.isValid()) {
-         Store<EntityStore> store = playerRef.getStore();
+      Ref<EntityStore> ref = event.getPlayer().getReference();
+      if (ref != null && ref.isValid()) {
+         Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
          world.execute(() -> {
-            UUIDComponent uuidComponent = store.getComponent(playerRef, UUIDComponent.getComponentType());
+            UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
             assert uuidComponent != null;
             UUID playerUUID = uuidComponent.getUuid();
             if (this.inProgressTeleportations.containsKey(playerUUID)) {
                this.inProgressTeleportations.remove(playerUUID);
-               MovementStatesComponent movementStatesComponent = store.getComponent(playerRef, MovementStatesComponent.getComponentType());
+               MovementStatesComponent movementStatesComponent = store.getComponent(ref, MovementStatesComponent.getComponentType());
                assert movementStatesComponent != null;
                MovementStates movementStates = movementStatesComponent.getMovementStates();
-               Player playerComponent = store.getComponent(playerRef, Player.getComponentType());
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
                assert playerComponent != null;
-               playerComponent.applyMovementStates(playerRef, new SavedMovementStates(true), movementStates, store);
-               PlayerRef playerRefComponent = store.getComponent(playerRef, PlayerRef.getComponentType());
+               playerComponent.applyMovementStates(ref, new SavedMovementStates(true), movementStates, store);
+               PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
                if (playerRefComponent != null) {
-                  this.givePrefabSelectorTool(playerComponent, playerRefComponent);
+                  givePrefabSelectorTool(ref, playerComponent, playerRefComponent, store);
                }
             }
          });
       }
    }
 
-   private void givePrefabSelectorTool(@Nonnull Player playerComponent, @Nonnull PlayerRef playerRef) {
+   private static void givePrefabSelectorTool(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Player playerComponent, @Nonnull PlayerRef playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       Inventory inventory = playerComponent.getInventory();
       ItemContainer hotbar = inventory.getHotbar();
       int hotbarSize = hotbar.getCapacity();
@@ -137,7 +139,7 @@ public class PrefabEditSessionManager {
       for (short slot = 0; slot < hotbarSize; slot++) {
          ItemStack itemStack = hotbar.getItemStack(slot);
          if (itemStack != null && !itemStack.isEmpty() && "EditorTool_PrefabEditing_SelectPrefab".equals(itemStack.getItemId())) {
-            inventory.setActiveHotbarSlot((byte)slot);
+            inventory.setActiveHotbarSlot(ref, (byte)slot, componentAccessor);
             playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
             return;
          }
@@ -158,7 +160,7 @@ public class PrefabEditSessionManager {
       }
 
       hotbar.setItemStackForSlot(emptySlot, new ItemStack("EditorTool_PrefabEditing_SelectPrefab"));
-      inventory.setActiveHotbarSlot((byte)emptySlot);
+      inventory.setActiveHotbarSlot(ref, (byte)emptySlot, componentAccessor);
       playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
    }
 

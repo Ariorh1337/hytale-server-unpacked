@@ -80,6 +80,10 @@ public class PrefabProp extends Prop {
 
    @Override
    public boolean generate(@NonNullDecl Prop.Context context) {
+      if (this.prefabPool.size() == 0) {
+         return true;
+      }
+
       this.random.setSeed(this.rngField.get(context.position.x, context.position.y, context.position.z));
       PrefabBufferCall callInstance = new PrefabBufferCall(this.random, PrefabRotation.ROTATION_0);
       IPrefabBuffer prefab = this.pickPrefab(this.random);

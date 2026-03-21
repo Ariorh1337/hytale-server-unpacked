@@ -5,6 +5,7 @@ import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.ObjectMapCodec;
+import com.hypixel.hytale.codec.codecs.set.SetCodec;
 import com.hypixel.hytale.codec.lookup.MapKeyMapCodec;
 import com.hypixel.hytale.codec.schema.metadata.NoDefaultValue;
 import com.hypixel.hytale.codec.util.RawJsonReader;
@@ -38,7 +39,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -207,6 +210,15 @@ public class WorldConfig {
       .documentation("Instance specific configuration.")
       .addValidator(Validators.deprecated())
       .add()
+      .<Set>append(
+         new KeyedCodec<>("DisabledFluidTickers", new SetCodec<>(Codec.STRING, HashSet::new, false)),
+         (o, i) -> o.disabledFluidTickers = i,
+         o -> o.disabledFluidTickers
+      )
+      .documentation(
+         "A set of fluid tag strings (e.g. \"Fluid=Water\", \"Fire=Fire\") whose tickers should be disabled in this world. Fluids matching any of these tags will not tick."
+      )
+      .add()
       .<IResourceStorageProvider>append(
          new KeyedCodec<>("ResourceStorage", IResourceStorageProvider.CODEC), (o, i) -> o.resourceStorageProvider = i, o -> o.resourceStorageProvider
       )
@@ -225,7 +237,7 @@ public class WorldConfig {
       .add()
       .build();
    @Nonnull
-   private transient AtomicBoolean hasChanged = new AtomicBoolean();
+   private final transient AtomicBoolean hasChanged = new AtomicBoolean();
    private UUID uuid = UUID.randomUUID();
    private String displayName;
    private long seed = System.currentTimeMillis();
@@ -266,6 +278,8 @@ public class WorldConfig {
    private boolean isObjectiveMarkersEnabled = true;
    private boolean deleteOnUniverseStart = false;
    private boolean deleteOnRemove = false;
+   @Nonnull
+   private Set<String> disabledFluidTickers = Collections.emptySet();
    private IResourceStorageProvider resourceStorageProvider = IResourceStorageProvider.CODEC.getDefault();
    protected MapKeyMapCodec.TypeMap<Object> pluginConfig = new MapKeyMapCodec.TypeMap<>(PLUGIN_CODEC);
    @Nullable
@@ -563,6 +577,15 @@ public class WorldConfig {
 
    public void setObjectiveMarkersEnabled(boolean objectiveMarkersEnabled) {
       this.isObjectiveMarkersEnabled = objectiveMarkersEnabled;
+   }
+
+   @Nonnull
+   public Set<String> getDisabledFluidTickers() {
+      return this.disabledFluidTickers;
+   }
+
+   public void setDisabledFluidTickers(@Nonnull Set<String> disabledFluidTickers) {
+      this.disabledFluidTickers = disabledFluidTickers;
    }
 
    public IResourceStorageProvider getResourceStorageProvider() {

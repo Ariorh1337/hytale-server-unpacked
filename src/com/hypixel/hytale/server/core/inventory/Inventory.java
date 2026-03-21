@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.inventory;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -33,6 +34,7 @@ import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction
 import com.hypixel.hytale.server.core.inventory.transaction.ListTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.MoveTransaction;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
@@ -178,7 +180,15 @@ public class Inventory {
       }
    }
 
-   public void smartMoveItem(int fromSectionId, int fromSlotId, int quantity, @Nonnull SmartMoveType moveType, PlayerSettings settings) {
+   public void smartMoveItem(
+      @Nonnull Ref<EntityStore> ref,
+      int fromSectionId,
+      int fromSlotId,
+      int quantity,
+      @Nonnull SmartMoveType moveType,
+      PlayerSettings settings,
+      @Nonnull ComponentAccessor<EntityStore> accessor
+   ) {
       ItemContainer targetContainer = this.getSectionById(fromSectionId);
       if (targetContainer != null) {
          ItemStack itemStack = targetContainer.getItemStack((short)fromSlotId);
@@ -189,15 +199,16 @@ public class Inventory {
                      return;
                   }
 
-                  if (this.entity instanceof Player) {
-                     for (Window window : ((Player)this.entity).getWindowManager().getWindows()) {
-                        if (window instanceof ItemContainerWindow) {
-                           ((ItemContainerWindow)window).getItemContainer().combineItemStacksIntoSlot(targetContainer, (short)fromSlotId);
+                  if (this.entity instanceof Player player) {
+                     for (Window window : player.getWindowManager().getWindows()) {
+                        if (window instanceof ItemContainerWindow itemContainerWindow) {
+                           itemContainerWindow.getItemContainer().combineItemStacksIntoSlot(targetContainer, (short)fromSlotId);
                         }
                      }
                   }
 
-                  this.getCombinedEverything().combineItemStacksIntoSlot(targetContainer, (short)fromSlotId);
+                  CombinedItemContainer everythingInventoryComponent = InventoryComponent.getCombined(accessor, ref, InventoryComponent.EVERYTHING);
+                  everythingInventoryComponent.combineItemStacksIntoSlot(targetContainer, (short)fromSlotId);
                   break;
                case PutInHotbarOrWindow:
                   if (fromSectionId >= 0) {
@@ -374,12 +385,6 @@ public class Inventory {
       return this.backpack != null ? this.backpack.getInventory() : null;
    }
 
-   public void resizeBackpack(short capacity, List<ItemStack> remainder) {
-      if (this.backpack != null) {
-         this.backpack.resize(capacity, remainder);
-      }
-   }
-
    public CombinedItemContainer getCombinedHotbarFirst() {
       if (this.entity == null) {
          return null;
@@ -443,15 +448,6 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.STORAGE_HOTBAR_BACKPACK) : null;
    }
 
-   public CombinedItemContainer getCombinedEverything() {
-      if (this.entity == null) {
-         return null;
-      }
-
-      Ref<EntityStore> ref = this.entity.getReference();
-      return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.EVERYTHING) : null;
-   }
-
    private ItemContainer getItemContainerForPickupLocation(@Nonnull PickupLocation pickupLocation) {
       return switch (pickupLocation) {
          case Hotbar -> this.getCombinedBackpackStorageHotbarFirst();
@@ -494,7 +490,7 @@ public class Inventory {
          : this.getItemContainerForPickupLocation(playerSettings.miscItemsPreferredPickupLocation());
    }
 
-   public void setActiveSlot(int inventorySectionId, byte slot) {
+   public void setActiveSlot(@Nonnull Ref<EntityStore> ref, int inventorySectionId, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       int[] entityStatsToClear = null;
       switch (inventorySectionId) {
          case -8:
@@ -522,11 +518,53 @@ public class Inventory {
             throw new IllegalArgumentException("Inventory section with id " + inventorySectionId + " cannot select an active slot");
       }
 
-      StatModifiersManager statModifiersManager = this.entity.getStatModifiersManager();
       this.entity.invalidateEquipmentNetwork();
-      statModifiersManager.setRecalculate(true);
-      if (entityStatsToClear != null) {
-         statModifiersManager.queueEntityStatsToClear(entityStatsToClear);
+      EntityStatMap entityStatMapComponent = componentAccessor.getComponent(ref, EntityStatMap.getComponentType());
+      if (entityStatMapComponent != null) {
+         StatModifiersManager statModifiersManager = entityStatMapComponent.getStatModifiersManager();
+         statModifiersManager.scheduleRecalculate();
+         if (entityStatsToClear != null) {
+            statModifiersManager.queueEntityStatsToClear(entityStatsToClear);
+         }
+      }
+   }
+
+   public void setActiveSlot(@Nonnull Holder<EntityStore> holder, int inventorySectionId, byte slot) {
+      int[] entityStatsToClear = null;
+      switch (inventorySectionId) {
+         case -8:
+            this.tools.setActiveSlot(slot);
+            break;
+         case -5:
+            this.utility.setActiveSlot(slot);
+            ItemStack itemStack = this.getUtilityItem();
+            if (itemStack != null) {
+               ItemUtility utility = itemStack.getItem().getUtility();
+               entityStatsToClear = utility.getEntityStatsToClear();
+            }
+            break;
+         case -1:
+            this.hotbar.setActiveSlot(slot);
+            ItemStack itemStackx = this.getItemInHand();
+            if (itemStackx != null) {
+               ItemWeapon weapon = itemStackx.getItem().getWeapon();
+               if (weapon != null) {
+                  entityStatsToClear = weapon.getEntityStatsToClear();
+               }
+            }
+            break;
+         default:
+            throw new IllegalArgumentException("Inventory section with id " + inventorySectionId + " cannot select an active slot");
+      }
+
+      this.entity.invalidateEquipmentNetwork();
+      EntityStatMap entityStatMapComponent = holder.getComponent(EntityStatMap.getComponentType());
+      if (entityStatMapComponent != null) {
+         StatModifiersManager statModifiersManager = entityStatMapComponent.getStatModifiersManager();
+         statModifiersManager.scheduleRecalculate();
+         if (entityStatsToClear != null) {
+            statModifiersManager.queueEntityStatsToClear(entityStatsToClear);
+         }
       }
    }
 
@@ -543,9 +581,9 @@ public class Inventory {
       return this.hotbar.getActiveSlot();
    }
 
-   public void setActiveHotbarSlot(byte slot) {
+   public void setActiveHotbarSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.setUsingToolsItem(false);
-      this.setActiveSlot(-1, slot);
+      this.setActiveSlot(ref, -1, slot, componentAccessor);
    }
 
    @Nullable
@@ -567,8 +605,12 @@ public class Inventory {
       return this.utility.getActiveSlot();
    }
 
-   public void setActiveUtilitySlot(byte slot) {
-      this.setActiveSlot(-5, slot);
+   public void setActiveUtilitySlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      this.setActiveSlot(ref, -5, slot, componentAccessor);
+   }
+
+   public void setActiveUtilitySlot(@Nonnull Holder<EntityStore> holder, byte slot) {
+      this.setActiveSlot(holder, -5, slot);
    }
 
    @Nullable
@@ -580,9 +622,9 @@ public class Inventory {
       return this.tools.getActiveSlot();
    }
 
-   public void setActiveToolsSlot(byte slot) {
+   public void setActiveToolsSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.setUsingToolsItem(true);
-      this.setActiveSlot(-8, slot);
+      this.setActiveSlot(ref, -8, slot, componentAccessor);
    }
 
    @Nullable
@@ -623,18 +665,17 @@ public class Inventory {
       this.storage.markChanged();
    }
 
-   public boolean containsBrokenItem() {
-      boolean hasBrokenItem = false;
-      CombinedItemContainer combinedEverything = this.getCombinedEverything();
+   public static boolean containsBrokenItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      CombinedItemContainer everythingInventoryComponent = InventoryComponent.getCombined(accessor, ref, InventoryComponent.EVERYTHING);
 
-      for (short i = 0; i < combinedEverything.getCapacity(); i++) {
-         ItemStack itemStack = combinedEverything.getItemStack(i);
+      for (short i = 0; i < everythingInventoryComponent.getCapacity(); i++) {
+         ItemStack itemStack = everythingInventoryComponent.getItemStack(i);
          if (!ItemStack.isEmpty(itemStack) && itemStack.isBroken()) {
-            hasBrokenItem = true;
+            return true;
          }
       }
 
-      return hasBrokenItem;
+      return false;
    }
 
    public void migrateToComponents(Holder<EntityStore> holder) {

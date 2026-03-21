@@ -9,15 +9,20 @@ import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemUtility;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemWeapon;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.StatModifiersManager;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.HotbarManager;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.SlotTransaction;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -97,7 +102,10 @@ public class InventorySystems {
          ConcurrentLinkedQueue<ItemContainer.ItemContainerChangeEvent> changeEvents = inventory.getChangeEvents();
          if (!changeEvents.isEmpty()) {
             entity.invalidateEquipmentNetwork();
-            entity.getStatModifiersManager().setRecalculate(true);
+            EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+            if (entityStatMapComponent != null) {
+               entityStatMapComponent.getStatModifiersManager().scheduleRecalculate();
+            }
          }
       }
 
@@ -149,16 +157,19 @@ public class InventorySystems {
             }
 
             if (changed) {
-               StatModifiersManager statModifiersManager = entity.getStatModifiersManager();
                entity.invalidateEquipmentNetwork();
-               statModifiersManager.setRecalculate(true);
-               ItemStack itemStack = inventory.getActiveItem();
-               if (itemStack != null) {
-                  ItemWeapon itemWeapon = itemStack.getItem().getWeapon();
-                  if (itemWeapon != null) {
-                     int[] entityStatsToClear = itemWeapon.getEntityStatsToClear();
-                     if (entityStatsToClear != null) {
-                        statModifiersManager.queueEntityStatsToClear(entityStatsToClear);
+               EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+               if (entityStatMapComponent != null) {
+                  StatModifiersManager statModifiersManager = entityStatMapComponent.getStatModifiersManager();
+                  statModifiersManager.scheduleRecalculate();
+                  ItemStack itemStack = inventory.getActiveItem();
+                  if (itemStack != null) {
+                     ItemWeapon itemWeapon = itemStack.getItem().getWeapon();
+                     if (itemWeapon != null) {
+                        int[] entityStatsToClear = itemWeapon.getEntityStatsToClear();
+                        if (entityStatsToClear != null) {
+                           statModifiersManager.queueEntityStatsToClear(entityStatsToClear);
+                        }
                      }
                   }
                }
@@ -214,18 +225,27 @@ public class InventorySystems {
             }
 
             if (changed) {
-               StatModifiersManager statModifiersManager = entity.getStatModifiersManager();
                entity.invalidateEquipmentNetwork();
-               statModifiersManager.setRecalculate(true);
-               ItemStack itemStack = inventory.getActiveItem();
-               if (itemStack != null) {
-                  ItemUtility itemUtility = itemStack.getItem().getUtility();
-                  if (itemUtility != null) {
-                     int[] entityStatsToClear = itemUtility.getEntityStatsToClear();
-                     if (entityStatsToClear != null) {
-                        statModifiersManager.queueEntityStatsToClear(entityStatsToClear);
-                     }
+               EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+               if (entityStatMapComponent != null) {
+                  StatModifiersManager statModifiersManager = entityStatMapComponent.getStatModifiersManager();
+                  statModifiersManager.scheduleRecalculate();
+                  ItemStack itemStack = inventory.getActiveItem();
+                  if (itemStack == null) {
+                     return;
                   }
+
+                  ItemUtility itemUtility = itemStack.getItem().getUtility();
+                  if (itemUtility == null) {
+                     return;
+                  }
+
+                  int[] entityStatsToClear = itemUtility.getEntityStatsToClear();
+                  if (entityStatsToClear == null) {
+                     return;
+                  }
+
+                  statModifiersManager.queueEntityStatsToClear(entityStatsToClear);
                }
             }
          }
@@ -241,6 +261,41 @@ public class InventorySystems {
       @Override
       public Set<Dependency<EntityStore>> getDependencies() {
          return this.dependencies;
+      }
+   }
+
+   public static class PlayerInventoryChangeEventSystem extends EntityEventSystem<EntityStore, InventoryChangeEvent> {
+      public PlayerInventoryChangeEventSystem() {
+         super(InventoryChangeEvent.class);
+      }
+
+      public void handle(
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull InventoryChangeEvent event
+      ) {
+         Player playerComponent = archetypeChunk.getComponent(index, Player.getComponentType());
+         assert playerComponent != null;
+         HotbarManager hotbarManager = playerComponent.getHotbarManager();
+         if (!hotbarManager.getIsCurrentlyLoadingHotbar()) {
+            if (playerComponent.getGameMode().equals(GameMode.Creative)) {
+               InventoryComponent.Hotbar hotbarComponent = archetypeChunk.getComponent(index, InventoryComponent.Hotbar.getComponentType());
+               assert hotbarComponent != null;
+               ItemContainer hotbarInventory = hotbarComponent.getInventory();
+               if (event.getItemContainer().equals(hotbarInventory)) {
+                  Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+                  hotbarManager.saveHotbar(ref, (short)hotbarManager.getCurrentHotbarIndex(), store);
+               }
+            }
+         }
+      }
+
+      @Nullable
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Query.and(Player.getComponentType(), InventoryComponent.Hotbar.getComponentType());
       }
    }
 

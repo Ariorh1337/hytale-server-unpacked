@@ -425,7 +425,6 @@ public class BenchSystems {
                               }
                            }
 
-                           processingBenchBlock.updateFuelValues(windows);
                            if (!processingBenchBlock.isActive() || processingBenchBlock.getFuelTime() <= 0.0F) {
                               processingBenchBlock.setLastConsumedFuelTotal(0);
                               if ("Processing".equals(currentState) || "ProcessCompleted".equals(currentState)) {
@@ -439,6 +438,8 @@ public class BenchSystems {
                               processingBenchBlock.setLastTickGameTime(currentGameTime);
                               return;
                            }
+
+                           processingBenchBlock.updateFuelValues(windows);
                         }
 
                         if (completions > 0) {

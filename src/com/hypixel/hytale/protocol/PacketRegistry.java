@@ -249,6 +249,7 @@ import com.hypixel.hytale.protocol.packets.world.ClearEditorTimeOverride;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent3D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEventEntity;
+import com.hypixel.hytale.protocol.packets.world.PlaySoundEventLocalPlayer;
 import com.hypixel.hytale.protocol.packets.world.ServerSetBlock;
 import com.hypixel.hytale.protocol.packets.world.ServerSetBlocks;
 import com.hypixel.hytale.protocol.packets.world.ServerSetFluid;
@@ -2082,7 +2083,7 @@ public final class PacketRegistry {
          "ChatMessage",
          ChatMessage.class,
          1,
-         16384006,
+         1026,
          false,
          ChatMessage::validateStructure,
          ChatMessage::deserialize
@@ -3298,6 +3299,18 @@ public final class PacketRegistry {
          false,
          UpdatePostFxSettings::validateStructure,
          UpdatePostFxSettings::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         362,
+         "PlaySoundEventLocalPlayer",
+         PlaySoundEventLocalPlayer.class,
+         17,
+         17,
+         false,
+         PlaySoundEventLocalPlayer::validateStructure,
+         PlaySoundEventLocalPlayer::deserialize
       );
       register(
          PacketRegistry.PacketDirection.ToServer,

@@ -226,15 +226,14 @@ public class DamageEffects implements NetworkSerializable<com.hypixel.hytale.pro
             ParticleUtil.spawnParticleEffects(this.worldParticles, position, null, playerRefs, commandBuffer);
          }
 
+         PlayerRef playerRef = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
          if (this.worldSoundEventIndex != 0) {
-            SoundUtil.playSoundEvent3d(ref, this.worldSoundEventIndex, position, commandBuffer);
+            boolean ignoreSource = playerRef != null;
+            SoundUtil.playSoundEvent3d(ref, this.worldSoundEventIndex, position, ignoreSource, commandBuffer);
          }
 
-         if (this.playerSoundEventIndex != 0) {
-            PlayerRef playerRef = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-            if (playerRef != null) {
-               SoundUtil.playSoundEvent2dToPlayer(playerRef, this.playerSoundEventIndex, SoundCategory.SFX);
-            }
+         if (playerRef != null && (this.playerSoundEventIndex != 0 || this.worldSoundEventIndex != 0)) {
+            SoundUtil.playLocalPlayerSoundEvent(playerRef, this.playerSoundEventIndex, this.worldSoundEventIndex, SoundCategory.SFX);
          }
       }
    }

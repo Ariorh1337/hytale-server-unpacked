@@ -188,7 +188,11 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          if (accessor instanceof Store<EntityStore> store) {
             if (store.isProcessing()) {
                InventoryComponent.Combined finalCombined = combined;
-               store.getExternalData().getWorld().execute(() -> store.putComponent(ref, InventoryComponent.Combined.getComponentType(), finalCombined));
+               store.getExternalData().getWorld().execute(() -> {
+                  if (ref.isValid()) {
+                     store.putComponent(ref, InventoryComponent.Combined.getComponentType(), finalCombined);
+                  }
+               });
             } else {
                accessor.putComponent(ref, InventoryComponent.Combined.getComponentType(), combined);
             }
@@ -269,6 +273,17 @@ public abstract class InventoryComponent implements Component<EntityStore> {
       return inv;
    }
 
+   @Nullable
+   public static ItemStack getItemInHand(@Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull Ref<EntityStore> ref) {
+      InventoryComponent.Tool toolComponent = accessor.getComponent(ref, InventoryComponent.Tool.getComponentType());
+      if (toolComponent != null && toolComponent.isUsingToolsItem()) {
+         return toolComponent.getActiveItem();
+      }
+
+      InventoryComponent.Hotbar hotbarComponent = accessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      return hotbarComponent != null ? hotbarComponent.getActiveItem() : null;
+   }
+
    public static class Armor extends InventoryComponent {
       public static final BuilderCodec<InventoryComponent.Armor> CODEC = BuilderCodec.<InventoryComponent>builder(
             InventoryComponent.Armor.class, InventoryComponent.Armor::new, InventoryComponent.CODEC
@@ -335,7 +350,7 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          this.registerChangeEvent();
       }
 
-      public void resize(short capacity, List<ItemStack> remainder) {
+      public void resize(short capacity, @Nullable List<ItemStack> remainder) {
          this.unregisterChangeEvent();
          if (capacity > 0) {
             this.inventory = ItemContainer.ensureContainerCapacity(this.inventory, capacity, SimpleItemContainer::new, remainder);

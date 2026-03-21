@@ -196,7 +196,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
 
                                  if (maxSelectorTool != null) {
                                     BlockSelectorToolData toolData = maxSelectorTool.getItem().getBlockSelectorToolData();
-                                    if (playerComponent.canDecreaseItemStackDurability(ref, store) && !maxSelectorTool.isUnbreakable()) {
+                                    if (ItemUtils.canDecreaseItemStackDurability(ref, store) && !maxSelectorTool.isUnbreakable()) {
                                        playerComponent.updateItemStackDurability(
                                           ref, maxSelectorTool, combinedInventory, maxSlot, -toolData.getDurabilityLossOnUse(), store
                                        );
@@ -262,7 +262,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                               if (ItemStack.isEmpty(remainder) || remainder.getQuantity() != quantity) {
                                  for (ItemStackSlotTransaction slotTransaction : transaction.getSlotTransactions()) {
                                     if (slotTransaction.succeeded()) {
-                                       inventory.setActiveUtilitySlot((byte)slotTransaction.getSlot());
+                                       inventory.setActiveUtilitySlot(ref, (byte)slotTransaction.getSlot(), store);
                                     }
                                  }
                               }
@@ -354,7 +354,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                }
 
                newSlot = event.getNewSlot();
-               inventory.setActiveSlot(inventorySectionId, newSlot);
+               inventory.setActiveSlot(ref, inventorySectionId, newSlot, store);
                playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(inventorySectionId, newSlot));
             }
          });
@@ -376,7 +376,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                settings = PlayerSettings.defaults();
             }
 
-            inventory.smartMoveItem(packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.moveType, settings);
+            inventory.smartMoveItem(ref, packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.moveType, settings, store);
          });
       }
    }
@@ -417,7 +417,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                   }
 
                   if (targetSlot != previousSlot) {
-                     inventory.setActiveSlot(packet.inventorySectionId, targetSlot);
+                     inventory.setActiveSlot(ref, packet.inventorySectionId, targetSlot, store);
                   }
                }
             }

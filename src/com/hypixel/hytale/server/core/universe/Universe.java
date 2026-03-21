@@ -865,8 +865,6 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          return false;
       }
 
-      this.worlds.remove(nameLower);
-      this.worldsByUuid.remove(world.getWorldConfig().getUuid());
       if (world.isAlive()) {
          if (world.isInThread()) {
             world.stopIndividualWorld();
@@ -875,6 +873,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          }
       }
 
+      this.worlds.remove(nameLower);
+      this.worldsByUuid.remove(world.getWorldConfig().getUuid());
       world.validateDeleteOnRemove();
       return true;
    }
@@ -892,8 +892,6 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          .getEventBus()
          .dispatchFor(RemoveWorldEvent.class, name)
          .dispatch(new RemoveWorldEvent(world, RemoveWorldEvent.RemovalReason.EXCEPTIONAL));
-      this.worlds.remove(nameLower);
-      this.worldsByUuid.remove(world.getWorldConfig().getUuid());
       if (world.isAlive()) {
          if (world.isInThread()) {
             world.stopIndividualWorld(players);
@@ -902,6 +900,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          }
       }
 
+      this.worlds.remove(nameLower);
+      this.worldsByUuid.remove(world.getWorldConfig().getUuid());
       world.validateDeleteOnRemove();
    }
 

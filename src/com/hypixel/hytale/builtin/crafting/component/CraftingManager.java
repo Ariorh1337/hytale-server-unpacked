@@ -237,6 +237,12 @@ public class CraftingManager implements Component<EntityStore> {
          return false;
       }
 
+      CraftRecipeEvent.Pre preEvent = new CraftRecipeEvent.Pre(recipe, quantity);
+      componentAccessor.invoke(ref, preEvent);
+      if (preEvent.isCancelled()) {
+         return false;
+      }
+
       float recipeTime = recipe.getTimeSeconds();
       if (recipeTime > 0.0F) {
          int level = this.getBenchTierLevel(componentAccessor);
@@ -330,8 +336,13 @@ public class CraftingManager implements Component<EntityStore> {
                   int currentCompletedItemId = currentJob.quantityCompleted++;
                   currentJob.timeSecondsCompleted = 0.0F;
                   LOGGER.at(Level.FINE).log("Crafted 1 Quantity: %s", currentJob);
+                  CraftRecipeEvent.Post postEvent = new CraftRecipeEvent.Post(currentJob.recipe, currentJob.quantity);
+                  componentAccessor.invoke(ref, postEvent);
                   if (currentJob.quantityCompleted == currentJob.quantity) {
-                     giveOutput(ref, componentAccessor, currentJob, currentCompletedItemId);
+                     if (!postEvent.isCancelled()) {
+                        giveOutput(ref, componentAccessor, currentJob, currentCompletedItemId);
+                     }
+
                      LOGGER.at(Level.FINE).log("Crafting Finished: %s", currentJob);
                      this.queuedCraftingJobs.poll();
                   } else {
@@ -340,7 +351,9 @@ public class CraftingManager implements Component<EntityStore> {
                         throw new RuntimeException("QuantityCompleted is greater than the Quality! " + currentJob);
                      }
 
-                     giveOutput(ref, componentAccessor, currentJob, currentCompletedItemId);
+                     if (!postEvent.isCancelled()) {
+                        giveOutput(ref, componentAccessor, currentJob, currentCompletedItemId);
+                     }
                   }
 
                   currentJob.window.updateQueueSize(this.getRemainingQueueSize());

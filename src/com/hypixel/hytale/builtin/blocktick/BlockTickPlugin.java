@@ -62,7 +62,7 @@ public class BlockTickPlugin extends JavaPlugin implements IBlockTickProvider {
          return 0;
       }
 
-      BlockChunk blockChunkComponent = worldChunk.getBlockChunk();
+      BlockChunk blockChunkComponent = holder.getComponent(BlockChunk.getComponentType());
       if (blockChunkComponent != null && blockChunkComponent.consumeNeedsPhysics()) {
          ChunkColumn chunkColumnComponent = holder.getComponent(ChunkColumn.getComponentType());
          if (chunkColumnComponent == null) {

@@ -40,9 +40,9 @@ public class ClusterPropAsset extends PropAsset {
       .append(new KeyedCodec<>("Seed", Codec.STRING, false), (asset, v) -> asset.seed = v, asset -> asset.seed)
       .add()
       .append(
-         new KeyedCodec<>("WeightedProps", new ArrayCodec<>(ClusterPropAsset.WeightedPropAsset.CODEC, ClusterPropAsset.WeightedPropAsset[]::new), true),
-         (asset, v) -> asset.weightedPropAssets = v,
-         asset -> asset.weightedPropAssets
+         new KeyedCodec<>("WeightedProps", new ArrayCodec<>(ClusterPropAsset.WeightedEntryAsset.CODEC, ClusterPropAsset.WeightedEntryAsset[]::new), true),
+         (asset, v) -> asset.weightedEntryAssets = v,
+         asset -> asset.weightedEntryAssets
       )
       .add()
       .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, false), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
@@ -53,7 +53,7 @@ public class ClusterPropAsset extends PropAsset {
    private int range = 0;
    private CurveAsset distanceCurve = new ConstantCurveAsset();
    private String seed = "A";
-   private ClusterPropAsset.WeightedPropAsset[] weightedPropAssets = new ClusterPropAsset.WeightedPropAsset[0];
+   private ClusterPropAsset.WeightedEntryAsset[] weightedEntryAssets = new ClusterPropAsset.WeightedEntryAsset[0];
    private PatternAsset patternAsset = new ConstantPatternAsset();
    private ScannerAsset scannerAsset = new DirectScannerAsset();
 
@@ -66,7 +66,7 @@ public class ClusterPropAsset extends PropAsset {
 
       WeightedMap<Prop> weightedMap = new WeightedMap<>();
 
-      for (ClusterPropAsset.WeightedPropAsset entry : this.weightedPropAssets) {
+      for (ClusterPropAsset.WeightedEntryAsset entry : this.weightedEntryAssets) {
          Prop columnProp = entry.propAsset.build(argument);
          Vector3i readSize = columnProp.getReadBounds_voxelGrid().getSize();
          Vector3i writeSize = columnProp.getWriteBounds_voxelGrid().getSize();
@@ -89,19 +89,19 @@ public class ClusterPropAsset extends PropAsset {
    public void cleanUp() {
       this.distanceCurve.cleanUp();
 
-      for (ClusterPropAsset.WeightedPropAsset weightedPropAsset : this.weightedPropAssets) {
-         weightedPropAsset.cleanUp();
+      for (ClusterPropAsset.WeightedEntryAsset weightedEntryAsset : this.weightedEntryAssets) {
+         weightedEntryAsset.cleanUp();
       }
 
       this.patternAsset.cleanUp();
       this.scannerAsset.cleanUp();
    }
 
-   public static class WeightedPropAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, ClusterPropAsset.WeightedPropAsset>> {
+   public static class WeightedEntryAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, ClusterPropAsset.WeightedEntryAsset>> {
       @Nonnull
-      public static final AssetBuilderCodec<String, ClusterPropAsset.WeightedPropAsset> CODEC = AssetBuilderCodec.builder(
-            ClusterPropAsset.WeightedPropAsset.class,
-            ClusterPropAsset.WeightedPropAsset::new,
+      public static final AssetBuilderCodec<String, ClusterPropAsset.WeightedEntryAsset> CODEC = AssetBuilderCodec.builder(
+            ClusterPropAsset.WeightedEntryAsset.class,
+            ClusterPropAsset.WeightedEntryAsset::new,
             Codec.STRING,
             (asset, id) -> asset.id = id,
             config -> config.id,

@@ -3,6 +3,8 @@ package com.hypixel.hytale.builtin.buildertools;
 import com.hypixel.fastutil.ints.Int2ObjectConcurrentHashMap;
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetRegistry;
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
@@ -277,7 +279,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -440,6 +441,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       entityStoreRegistry.registerSystem(new BuilderToolsPlugin.PrefabPasteEventSystem(this));
       entityStoreRegistry.registerSystem(new PrefabDirtySystems.BlockBreakDirtySystem());
       entityStoreRegistry.registerSystem(new PrefabDirtySystems.BlockPlaceDirtySystem());
+      this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, event -> ScriptedBrushAsset.invalidateBrushToItemCache());
+      this.getEventRegistry().register(RemovedAssetsEvent.class, Item.class, event -> ScriptedBrushAsset.invalidateBrushToItemCache());
       this.prefabAnchorComponentType = entityStoreRegistry.registerComponent(PrefabAnchor.class, "PrefabAnchor", PrefabAnchor.CODEC);
       Interaction.CODEC.register("PrefabSelectionInteraction", PrefabSelectionInteraction.class, PrefabSelectionInteraction.CODEC);
       Interaction.CODEC.register("PickupItem", PickupItemInteraction.class, PickupItemInteraction.CODEC);
@@ -1385,8 +1388,11 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             if (protoSettings.usePrototypeBrushConfigurations()) {
-               toolOperation.executeAsBrushConfig(protoSettings, packet, componentAccessor);
-               return 0;
+               ItemStack activeItem = this.player.getInventory().getItemInHand();
+               if (activeItem != null && activeItem.getItemId().equals(protoSettings.getPrototypeItemId())) {
+                  toolOperation.executeAsBrushConfig(protoSettings, packet, componentAccessor);
+                  return 0;
+               }
             }
          }
 
@@ -3063,8 +3069,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if (this.selection != null) {
             long start = System.nanoTime();
             this.pushHistory(BuilderToolsPlugin.Action.FLIP, ClipboardContentsSnapshot.copyOf(this.selection));
-            AtomicBoolean sendWarningFlipXZ = new AtomicBoolean(false);
-            this.selection = this.selection.flip(axis, sendWarningFlipXZ);
+            this.selection = this.selection.flip(axis);
             long end = System.nanoTime();
             long diff = end - start;
             BuilderToolsPlugin.get()
@@ -3072,10 +3077,6 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                .at(Level.FINE)
                .log("Took: %dns (%dms) to execute flip of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), this.selection.getBlockCount());
             this.sendUpdate();
-            if (sendWarningFlipXZ.get()) {
-               this.sendFeedback(Message.translation("server.builderTools.flipXZIncorrect"), NotificationStyle.Warning, componentAccessor);
-            }
-
             this.sendFeedback(Message.translation("server.builderTools.clipboardFlipped").param("axis", axis.toString()), componentAccessor);
          } else {
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionClipboardEmpty"), componentAccessor);

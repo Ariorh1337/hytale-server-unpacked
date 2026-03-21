@@ -12,23 +12,6 @@ public enum BlockFlipType {
       return this.flipComponent(rotation, axis, Axis.Y, Axis.Z, rotation.getAxisOfAlignment());
    }
 
-   @Nonnull
-   public Rotation flipAroundAxis(@Nonnull Rotation rotation, @Nonnull Axis flipAxis, @Nonnull Axis symmetryAxis) {
-      Axis negateAxis = switch (symmetryAxis) {
-         case Y -> Axis.Z;
-         case X -> Axis.Y;
-         case Z -> Axis.X;
-      };
-
-      Axis ninetyAxis = switch (symmetryAxis) {
-         case Y -> Axis.X;
-         case X -> Axis.Z;
-         case Z -> Axis.Y;
-      };
-      Axis alignment = rotation.getDegrees() % 180 == 0 ? negateAxis : ninetyAxis;
-      return this.flipComponent(rotation, flipAxis, symmetryAxis, negateAxis, alignment);
-   }
-
    private Rotation flipComponent(@Nonnull Rotation rotation, Axis axis, Axis ownAxis, Axis negateAxis, Axis alignment) {
       switch (this) {
          case ORTHOGONAL:

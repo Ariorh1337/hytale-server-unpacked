@@ -16,8 +16,6 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -138,9 +136,10 @@ public class EntityStatsModule extends JavaPlugin {
       Universe.get().getWorlds().forEach((s, world) -> world.execute(() -> {
          Store<EntityStore> store = world.getEntityStore().getStore();
          store.forEachEntityParallel(AllLegacyLivingEntityTypesQuery.INSTANCE, (index, archetypeChunk, commandBuffer) -> {
-            LivingEntity livingEntity = (LivingEntity)EntityUtils.getEntity(index, archetypeChunk);
-            assert livingEntity != null;
-            livingEntity.getStatModifiersManager().setRecalculate(true);
+            EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+            if (entityStatMapComponent != null) {
+               entityStatMapComponent.getStatModifiersManager().scheduleRecalculate();
+            }
          });
       }));
    }

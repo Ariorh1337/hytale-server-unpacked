@@ -4,8 +4,8 @@ import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
-import java.util.HashMap;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation roll) {
    public static final RotationTuple[] EMPTY_ARRAY = new RotationTuple[0];
@@ -13,7 +13,6 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
    public static final int NONE_INDEX = 0;
    @Nonnull
    public static final RotationTuple[] VALUES;
-   private static final HashMap<Long, RotationTuple> MATRIX_TO_TUPLE;
 
    public static RotationTuple of(@Nonnull Rotation yaw, @Nonnull Rotation pitch, @Nonnull Rotation roll) {
       return VALUES[index(yaw, pitch, roll)];
@@ -43,6 +42,24 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
       }
 
       return rotations[(index + rotation.ordinal()) % Rotation.VALUES.length];
+   }
+
+   public static RotationTuple flip(@Nonnull RotationTuple blockRotation, @Nullable BlockFlipType flipType, @Nonnull Axis axis, int[][][] flipCorrections) {
+      int[][] matrix = eulerToMatrix(blockRotation.yaw, blockRotation.pitch, blockRotation.roll);
+
+      int flipRow = switch (axis) {
+         case X -> 0;
+         case Y -> 1;
+         case Z -> 2;
+      };
+
+      for (int i = 0; i < 3; i++) {
+         matrix[flipRow][i] = -matrix[flipRow][i];
+      }
+
+      int[][] correction = flipCorrections[flipType.ordinal()];
+      int[][] result = multiply3x3(matrix, correction);
+      return matrixToRotationTuple(result);
    }
 
    @Nonnull
@@ -146,149 +163,6 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
    }
 
    @Nonnull
-   public Axis getAxisOfSymmetry() {
-      int[] v = this.traceLocalY();
-      if (v[1] != 0) {
-         return Axis.Y;
-      } else {
-         return v[0] != 0 ? Axis.X : Axis.Z;
-      }
-   }
-
-   public boolean isSymmetryNegative() {
-      int[] v = this.traceLocalY();
-      if (v[1] != 0) {
-         return v[1] < 0;
-      } else {
-         return v[0] != 0 ? v[0] < 0 : v[2] < 0;
-      }
-   }
-
-   private int[] traceLocalY() {
-      int x = 0;
-      int y = 1;
-      int z = 0;
-      switch (this.roll) {
-         case Ninety: {
-            int t = x;
-            x = -y;
-            y = t;
-            break;
-         }
-         case OneEighty:
-            x = -x;
-            y = -y;
-            break;
-         case TwoSeventy: {
-            int t = x;
-            x = y;
-            y = -t;
-         }
-      }
-
-      switch (this.pitch) {
-         case Ninety: {
-            int t = y;
-            y = -z;
-            z = t;
-            break;
-         }
-         case OneEighty:
-            y = -y;
-            z = -z;
-            break;
-         case TwoSeventy: {
-            int t = y;
-            y = z;
-            z = -t;
-         }
-      }
-
-      switch (this.yaw) {
-         case Ninety: {
-            int t = x;
-            x = z;
-            z = -t;
-            break;
-         }
-         case OneEighty:
-            x = -x;
-            z = -z;
-            break;
-         case TwoSeventy: {
-            int t = x;
-            x = -z;
-            z = t;
-         }
-      }
-
-      return new int[]{x, y, z};
-   }
-
-   public int[][] toMatrix() {
-      int[][] m = new int[][]{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-      rightMultiplyRotation(m, this.roll, 2);
-      rightMultiplyRotation(m, this.yaw, 1);
-      rightMultiplyRotation(m, this.pitch, 0);
-      return m;
-   }
-
-   private static void rightMultiplyRotation(int[][] m, Rotation rot, int axisIdx) {
-      if (rot != Rotation.None) {
-         int c;
-         int s;
-         switch (rot) {
-            case Ninety:
-               c = 0;
-               s = 1;
-               break;
-            case OneEighty:
-               c = -1;
-               s = 0;
-               break;
-            case TwoSeventy:
-               c = 0;
-               s = -1;
-               break;
-            default:
-               return;
-         }
-
-         int a = (axisIdx + 1) % 3;
-         int b = (axisIdx + 2) % 3;
-
-         for (int row = 0; row < 3; row++) {
-            int va = m[row][a];
-            int vb = m[row][b];
-            m[row][a] = c * va + s * vb;
-            m[row][b] = -s * va + c * vb;
-         }
-      }
-   }
-
-   private static long matrixKey(int[][] m) {
-      long key = 0L;
-
-      for (int i = 0; i < 3; i++) {
-         for (int j = 0; j < 3; j++) {
-            key = key << 2 | m[i][j] + 1;
-         }
-      }
-
-      return key;
-   }
-
-   @Nonnull
-   public static RotationTuple fromMatrix(int[][] m) {
-      RotationTuple result = MATRIX_TO_TUPLE.get(matrixKey(m));
-      if (result == null) {
-         throw new IllegalArgumentException("Matrix does not correspond to any valid RotationTuple");
-      } else {
-         return result;
-      }
-   }
-
-   @Nonnull
    public RotationTuple add(@Nonnull RotationTuple rotation) {
       return of(rotation.yaw.add(this.yaw), rotation.pitch.add(this.pitch), rotation.roll.add(this.roll));
    }
@@ -338,11 +212,5 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
       }
 
       VALUES = arr;
-      MATRIX_TO_TUPLE = new HashMap<>();
-
-      for (RotationTuple t : VALUES) {
-         long key = matrixKey(t.toMatrix());
-         MATRIX_TO_TUPLE.putIfAbsent(key, t);
-      }
    }
 }

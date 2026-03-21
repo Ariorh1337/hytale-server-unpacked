@@ -664,20 +664,6 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       return Math.min(this.clientViewRadius, HytaleServer.get().getConfig().getMaxViewRadius());
    }
 
-   @Override
-   public boolean canDecreaseItemStackDurability(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      Player playerComponent = componentAccessor.getComponent(ref, getComponentType());
-      assert playerComponent != null;
-      return playerComponent.gameMode != GameMode.Creative;
-   }
-
-   @Override
-   public boolean canApplyItemStackPenalties(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      Player playerComponent = componentAccessor.getComponent(ref, getComponentType());
-      assert playerComponent != null;
-      return playerComponent.gameMode != GameMode.Creative;
-   }
-
    @Nullable
    @Override
    public ItemStackSlotTransaction updateItemStackDurability(
@@ -695,7 +681,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
          assert playerRefComponent != null;
          int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
-         SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.SFX);
+         SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
       }
 
       return transaction;

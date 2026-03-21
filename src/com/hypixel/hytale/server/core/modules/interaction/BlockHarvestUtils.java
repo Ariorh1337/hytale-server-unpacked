@@ -34,8 +34,8 @@ import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.blockhealth.BlockHealth;
 import com.hypixel.hytale.server.core.modules.blockhealth.BlockHealthChunk;
 import com.hypixel.hytale.server.core.modules.blockhealth.BlockHealthModule;
@@ -256,7 +256,7 @@ public class BlockHarvestUtils {
 
       ItemToolSpec itemToolSpec = getSpecPowerDamageBlock(heldItem, targetBlockType, tool);
       float specPower = itemToolSpec != null ? itemToolSpec.getPower() : 0.0F;
-      boolean canApplyItemStackPenalties = entity != null && entity.canApplyItemStackPenalties(ref, entityStore);
+      boolean canApplyItemStackPenalties = ref != null && ItemUtils.canApplyItemStackPenalties(ref, entityStore);
       if (specPower != 0.0F && heldItem != null && heldItem.getTool() != null && itemStack.isBroken() && canApplyItemStackPenalties) {
          BrokenPenalties brokenPenalties = gameplayConfig.getItemDurabilityConfig().getBrokenPenalties();
          specPower *= 1.0F - (float)brokenPenalties.getTool(0.0);
@@ -472,12 +472,11 @@ public class BlockHarvestUtils {
          }
       }
 
-      if (entity != null && ref != null && entity.canDecreaseItemStackDurability(ref, entityStore) && itemStack != null && !itemStack.isUnbreakable()) {
-         byte activeHotbarSlot = entity.getInventory().getActiveHotbarSlot();
-         if (activeHotbarSlot != -1) {
+      if (entity != null && ref != null && ItemUtils.canDecreaseItemStackDurability(ref, entityStore) && itemStack != null && !itemStack.isUnbreakable()) {
+         InventoryComponent.Hotbar hotbarComponent = entityStore.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null && hotbarComponent.getActiveSlot() != -1) {
             double durability = calculateDurabilityUse(heldItem, targetBlockType);
-            ItemContainer hotbar = entity.getInventory().getHotbar();
-            entity.updateItemStackDurability(ref, itemStack, hotbar, activeHotbarSlot, -durability, entityStore);
+            entity.updateItemStackDurability(ref, itemStack, hotbarComponent.getInventory(), hotbarComponent.getActiveSlot(), -durability, entityStore);
          }
       }
 

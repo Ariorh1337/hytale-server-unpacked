@@ -45,6 +45,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.RespawnPage;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -266,17 +267,17 @@ public class DeathSystems {
          assert playerComponent != null;
          if (playerComponent.getGameMode() != GameMode.Creative) {
             component.setDisplayDataOnDeathScreen(true);
-            CombinedItemContainer combinedItemContainer = playerComponent.getInventory().getCombinedEverything();
+            CombinedItemContainer combinedInventoryComponent = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.EVERYTHING);
             if (component.getItemsDurabilityLossPercentage() > 0.0) {
                double durabilityLossRatio = component.getItemsDurabilityLossPercentage() / 100.0;
                boolean hasArmorBroken = false;
 
-               for (short i = 0; i < combinedItemContainer.getCapacity(); i++) {
-                  ItemStack itemStack = combinedItemContainer.getItemStack(i);
+               for (short i = 0; i < combinedInventoryComponent.getCapacity(); i++) {
+                  ItemStack itemStack = combinedInventoryComponent.getItemStack(i);
                   if (!ItemStack.isEmpty(itemStack) && !itemStack.isBroken() && itemStack.getItem().getDurabilityLossOnDeath()) {
                      double durabilityLoss = itemStack.getMaxDurability() * durabilityLossRatio;
                      ItemStack updatedItemStack = itemStack.withIncreasedDurability(-durabilityLoss);
-                     ItemStackSlotTransaction transaction = combinedItemContainer.replaceItemStackInSlot(i, itemStack, updatedItemStack);
+                     ItemStackSlotTransaction transaction = combinedInventoryComponent.replaceItemStackInSlot(i, itemStack, updatedItemStack);
                      if (transaction.getSlotAfter().isBroken() && itemStack.getItem().getArmor() != null) {
                         hasArmorBroken = true;
                      }
@@ -284,7 +285,10 @@ public class DeathSystems {
                }
 
                if (hasArmorBroken) {
-                  playerComponent.getStatModifiersManager().setRecalculate(true);
+                  EntityStatMap entityStatMapComponent = commandBuffer.getComponent(ref, EntityStatMap.getComponentType());
+                  if (entityStatMapComponent != null) {
+                     entityStatMapComponent.getStatModifiersManager().scheduleRecalculate();
+                  }
                }
             }
 
@@ -299,17 +303,17 @@ public class DeathSystems {
                      double itemAmountLossRatio = itemsAmountLossPercentage / 100.0;
                      itemsToDrop = new ObjectArrayList<>();
 
-                     for (short i = 0; i < combinedItemContainer.getCapacity(); i++) {
-                        ItemStack itemStack = combinedItemContainer.getItemStack(i);
+                     for (short i = 0; i < combinedInventoryComponent.getCapacity(); i++) {
+                        ItemStack itemStack = combinedInventoryComponent.getItemStack(i);
                         if (!ItemStack.isEmpty(itemStack) && itemStack.getItem().dropsOnDeath()) {
                            int quantityToLose = Math.max(1, MathUtil.floor(itemStack.getQuantity() * itemAmountLossRatio));
                            itemsToDrop.add(itemStack.withQuantity(quantityToLose));
                            int newQuantity = itemStack.getQuantity() - quantityToLose;
                            if (newQuantity > 0) {
                               ItemStack updatedItemStack = itemStack.withQuantity(newQuantity);
-                              combinedItemContainer.replaceItemStackInSlot(i, itemStack, updatedItemStack);
+                              combinedInventoryComponent.replaceItemStackInSlot(i, itemStack, updatedItemStack);
                            } else {
-                              combinedItemContainer.removeItemStackFromSlot(i);
+                              combinedInventoryComponent.removeItemStackFromSlot(i);
                            }
                         }
                      }

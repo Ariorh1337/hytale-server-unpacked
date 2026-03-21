@@ -67,7 +67,9 @@ public class CreativeHubPlugin extends JavaPlugin {
          }
 
          try {
-            return InstancesPlugin.get().spawnInstance(hubConfig.getStartupInstance(), parentWorld, returnPoint).join();
+            World hub = InstancesPlugin.get().spawnInstance(hubConfig.getStartupInstance(), parentWorld, returnPoint).join();
+            hub.getWorldConfig().setDeleteOnRemove(true);
+            return hub;
          } catch (Exception e) {
             this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to spawn hub instance");
             throw new RuntimeException("Failed to spawn hub instance", e);

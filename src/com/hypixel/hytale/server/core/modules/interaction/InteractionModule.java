@@ -41,7 +41,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
 import com.hypixel.hytale.server.core.event.events.player.PlayerMouseButtonEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerMouseMotionEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
@@ -356,78 +356,81 @@ public class InteractionModule extends JavaPlugin {
       @Nonnull PlayerRef playerRefComponent
    ) {
       if (!this.isDisabled()) {
-         byte activeHotbarSlot = playerComponent.getInventory().getActiveHotbarSlot();
-         if (activeHotbarSlot != packet.activeSlot) {
-            playerComponent.sendMessage(
-               Message.translation("server.modules.interaction.failedGetActiveSlot").param("server", activeHotbarSlot).param("packet", packet.activeSlot)
-            );
-         } else {
-            MouseButtonType mouseButtonType = packet.mouseButton != null ? packet.mouseButton.mouseButtonType : MouseButtonType.Left;
-            Inventory inventory = playerComponent.getInventory();
-            ItemStack itemInHand = inventory.getItemInHand();
-            ItemStack itemInOffHand = inventory.getUtilityItem();
-            Item primaryItem = itemInHand != null && !itemInHand.isEmpty() ? itemInHand.getItem() : null;
-            Item secondaryItem = itemInOffHand != null && !itemInOffHand.isEmpty() ? itemInOffHand.getItem() : null;
-            Item item;
-            if (mouseButtonType == MouseButtonType.Left) {
-               item = primaryItem;
-            } else if (mouseButtonType == MouseButtonType.Right && secondaryItem != null) {
-               item = secondaryItem;
+         InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null) {
+            byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+            if (activeHotbarSlot != packet.activeSlot) {
+               playerComponent.sendMessage(
+                  Message.translation("server.modules.interaction.failedGetActiveSlot").param("server", activeHotbarSlot).param("packet", packet.activeSlot)
+               );
             } else {
-               item = primaryItem;
-            }
-
-            WorldInteraction worldInteraction_ = packet.worldInteraction;
-            BlockPosition blockPositionPacket = worldInteraction_.blockPosition;
-            if (ref.isValid()) {
-               EntityStore entityComponentStore = componentAccessor.getExternalData();
-               Vector3i targetBlock = blockPositionPacket == null ? null : new Vector3i(blockPositionPacket.x, blockPositionPacket.y, blockPositionPacket.z);
-               Entity targetEntity;
-               if (worldInteraction_.entityId < 0) {
-                  targetEntity = null;
+               MouseButtonType mouseButtonType = packet.mouseButton != null ? packet.mouseButton.mouseButtonType : MouseButtonType.Left;
+               ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+               InventoryComponent.Utility utilityComponent = componentAccessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+               ItemStack itemInOffHand = utilityComponent != null ? utilityComponent.getActiveItem() : null;
+               Item primaryItem = itemInHand != null && !itemInHand.isEmpty() ? itemInHand.getItem() : null;
+               Item secondaryItem = itemInOffHand != null && !itemInOffHand.isEmpty() ? itemInOffHand.getItem() : null;
+               Item item;
+               if (mouseButtonType == MouseButtonType.Left) {
+                  item = primaryItem;
+               } else if (mouseButtonType == MouseButtonType.Right && secondaryItem != null) {
+                  item = secondaryItem;
                } else {
-                  Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
-                  targetEntity = EntityUtils.getEntity(entityReference, componentAccessor);
+                  item = primaryItem;
                }
 
-               CameraManager cameraManagerComponent = componentAccessor.getComponent(ref, CameraManager.getComponentType());
-               assert cameraManagerComponent != null;
-               if (packet.mouseButton != null) {
-                  IEventDispatcher<PlayerMouseButtonEvent, PlayerMouseButtonEvent> dispatcher = HytaleServer.get()
-                     .getEventBus()
-                     .dispatchFor(PlayerMouseButtonEvent.class);
-                  if (dispatcher.hasListener()) {
-                     dispatcher.dispatch(
-                        new PlayerMouseButtonEvent(
-                           ref,
-                           playerComponent,
-                           playerRefComponent,
-                           packet.clientTimestamp,
-                           item,
-                           targetBlock,
-                           targetEntity,
-                           packet.screenPoint,
-                           packet.mouseButton
-                        )
-                     );
+               WorldInteraction worldInteraction_ = packet.worldInteraction;
+               BlockPosition blockPositionPacket = worldInteraction_.blockPosition;
+               if (ref.isValid()) {
+                  EntityStore entityComponentStore = componentAccessor.getExternalData();
+                  Vector3i targetBlock = blockPositionPacket == null ? null : new Vector3i(blockPositionPacket.x, blockPositionPacket.y, blockPositionPacket.z);
+                  Entity targetEntity;
+                  if (worldInteraction_.entityId < 0) {
+                     targetEntity = null;
+                  } else {
+                     Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
+                     targetEntity = EntityUtils.getEntity(entityReference, componentAccessor);
                   }
 
-                  cameraManagerComponent.handleMouseButtonState(packet.mouseButton.mouseButtonType, packet.mouseButton.state, targetBlock);
-               } else {
-                  IEventDispatcher<PlayerMouseMotionEvent, PlayerMouseMotionEvent> dispatcher = HytaleServer.get()
-                     .getEventBus()
-                     .dispatchFor(PlayerMouseMotionEvent.class);
-                  if (dispatcher.hasListener()) {
-                     dispatcher.dispatch(
-                        new PlayerMouseMotionEvent(
-                           ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetEntity, packet.screenPoint, packet.mouseMotion
-                        )
-                     );
+                  CameraManager cameraManagerComponent = componentAccessor.getComponent(ref, CameraManager.getComponentType());
+                  assert cameraManagerComponent != null;
+                  if (packet.mouseButton != null) {
+                     IEventDispatcher<PlayerMouseButtonEvent, PlayerMouseButtonEvent> dispatcher = HytaleServer.get()
+                        .getEventBus()
+                        .dispatchFor(PlayerMouseButtonEvent.class);
+                     if (dispatcher.hasListener()) {
+                        dispatcher.dispatch(
+                           new PlayerMouseButtonEvent(
+                              ref,
+                              playerComponent,
+                              playerRefComponent,
+                              packet.clientTimestamp,
+                              item,
+                              targetBlock,
+                              targetEntity,
+                              packet.screenPoint,
+                              packet.mouseButton
+                           )
+                        );
+                     }
+
+                     cameraManagerComponent.handleMouseButtonState(packet.mouseButton.mouseButtonType, packet.mouseButton.state, targetBlock);
+                  } else {
+                     IEventDispatcher<PlayerMouseMotionEvent, PlayerMouseMotionEvent> dispatcher = HytaleServer.get()
+                        .getEventBus()
+                        .dispatchFor(PlayerMouseMotionEvent.class);
+                     if (dispatcher.hasListener()) {
+                        dispatcher.dispatch(
+                           new PlayerMouseMotionEvent(
+                              ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetEntity, packet.screenPoint, packet.mouseMotion
+                           )
+                        );
+                     }
                   }
+
+                  cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x, packet.screenPoint.y));
+                  cameraManagerComponent.setLastBlockPosition(targetBlock);
                }
-
-               cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x, packet.screenPoint.y));
-               cameraManagerComponent.setLastBlockPosition(targetBlock);
             }
          }
       }

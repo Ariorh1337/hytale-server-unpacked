@@ -32,6 +32,10 @@ public class AuthConfig {
       return SERVER_AUDIENCE_OVERRIDE != null ? SERVER_AUDIENCE_OVERRIDE : ServerAuthManager.getInstance().getServerSessionId().toString();
    }
 
+   public static boolean isRejectedStatusCode(int statusCode) {
+      return statusCode >= 400 && statusCode < 500 && statusCode != 429;
+   }
+
    private AuthConfig() {
    }
 }

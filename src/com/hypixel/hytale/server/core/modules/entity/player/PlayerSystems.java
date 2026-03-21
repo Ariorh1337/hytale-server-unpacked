@@ -391,7 +391,7 @@ public class PlayerSystems {
          playerConnection.writeNoCache(new SetActiveSlot(-1, playerInventory.getActiveHotbarSlot()));
          playerConnection.writeNoCache(new SetActiveSlot(-5, playerInventory.getActiveUtilitySlot()));
          playerConnection.writeNoCache(new SetActiveSlot(-8, playerInventory.getActiveToolsSlot()));
-         if (playerInventory.containsBrokenItem()) {
+         if (Inventory.containsBrokenItem(ref, commandBuffer)) {
             playerComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
          }
 

@@ -13,10 +13,12 @@ import it.unimi.dsi.fastutil.bytes.ByteSet;
 import it.unimi.dsi.fastutil.ints.Int2ByteMap;
 import it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
+import it.unimi.dsi.fastutil.ints.Int2ShortMaps;
 import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.BitSet;
 import java.util.function.IntConsumer;
 import java.util.function.ToIntFunction;
@@ -37,22 +39,39 @@ public abstract class AbstractByteSectionPalette implements ISectionPalette {
       this.internalIdCount.put((byte)0, (short)-32768);
    }
 
-   public AbstractByteSectionPalette(byte[] blocks, @Nonnull int[] data, int[] unique, int count) {
-      this(new Int2ByteOpenHashMap(count), new Byte2IntOpenHashMap(count), new BitSet(count), new Byte2ShortOpenHashMap(count), blocks);
+   public AbstractByteSectionPalette(@Nonnull byte[] blocks, @Nonnull int[] data, @Nonnull Int2ShortMap externalIdCounts) {
+      this(
+         new Int2ByteOpenHashMap(externalIdCounts.size()),
+         new Byte2IntOpenHashMap(externalIdCounts.size()),
+         new BitSet(externalIdCounts.size()),
+         new Byte2ShortOpenHashMap(externalIdCounts.size()),
+         blocks
+      );
+      ObjectIterator<Int2ShortMap.Entry> externalIdCountIter = Int2ShortMaps.fastIterator(externalIdCounts);
 
-      for (int internalId = 0; internalId < count; internalId++) {
-         int blockId = unique[internalId];
-         this.internalToExternal.put((byte)internalId, blockId);
-         this.externalToInternal.put(blockId, (byte)internalId);
-         this.internalIdSet.set(this.unsignedInternalId((byte)internalId));
-         this.internalIdCount.put((byte)internalId, (short)0);
+      for (byte internalIdCounter = 0; externalIdCountIter.hasNext(); internalIdCounter++) {
+         Int2ShortMap.Entry entry = externalIdCountIter.next();
+         this.internalToExternal.put(internalIdCounter, entry.getIntKey());
+         this.externalToInternal.put(entry.getIntKey(), internalIdCounter);
+         this.internalIdSet.set(this.unsignedInternalId(internalIdCounter));
+         this.internalIdCount.put(internalIdCounter, entry.getShortValue());
       }
 
-      for (int index = 0; index < data.length; index++) {
-         int id = data[index];
-         byte internalId = this.externalToInternal.get(id);
-         this.incrementBlockCount(internalId);
-         this.set0(index, internalId);
+      int index = 0;
+
+      while (index < data.length) {
+         int externalId = data[index];
+         int start = index;
+
+         do {
+            index++;
+         } while (index < data.length && data[index] == externalId);
+
+         byte internalId = this.externalToInternal.get(externalId);
+
+         for (int i = start; i < index; i++) {
+            this.set0(i, internalId);
+         }
       }
    }
 

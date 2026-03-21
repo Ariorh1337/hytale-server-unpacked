@@ -1377,7 +1377,10 @@ public class Role implements IAnnotatedComponentCollection {
          }
       }
 
-      this.initialiseInventories(npcComponent);
+      this.initialiseItemsAndArmor(npcComponent);
+      if (this.defaultOffHandSlot >= 0) {
+         InventoryHelper.setOffHandSlot(holder, npcComponent.getInventory(), this.defaultOffHandSlot);
+      }
    }
 
    private void initialiseInventories(@Nonnull NPCEntity npcComponent, @Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull Ref<EntityStore> ref) {
@@ -1416,10 +1419,10 @@ public class Role implements IAnnotatedComponentCollection {
          }
       }
 
-      this.initialiseInventories(npcComponent);
+      this.initialiseInventories(ref, npcComponent, accessor);
    }
 
-   private void initialiseInventories(@Nonnull NPCEntity npcComponent) {
+   private void initialiseItemsAndArmor(@Nonnull NPCEntity npcComponent) {
       if (this.hotbarItems != null && this.hotbarItems.length > 0 && npcComponent.getInventory().getHotbar().isEmpty()) {
          Inventory inventory = npcComponent.getInventory();
          ItemContainer hotbar = inventory.getHotbar();
@@ -1444,11 +1447,14 @@ public class Role implements IAnnotatedComponentCollection {
          RoleUtils.setOffHandItems(npcComponent, this.offHandItems);
       }
 
-      if (this.defaultOffHandSlot >= 0) {
-         InventoryHelper.setOffHandSlot(npcComponent.getInventory(), this.defaultOffHandSlot);
-      }
-
       this.setArmor(npcComponent, this.armor);
+   }
+
+   private void initialiseInventories(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      this.initialiseItemsAndArmor(npcComponent);
+      if (this.defaultOffHandSlot >= 0) {
+         InventoryHelper.setOffHandSlot(ref, npcComponent.getInventory(), this.defaultOffHandSlot, componentAccessor);
+      }
    }
 
    public boolean isCorpseStaysInFlock() {

@@ -9,46 +9,33 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockRotationUtil {
+   private static final int[][][] LOCAL_FLIP_CORRECTIONS = new int[][][]{
+      {{0, 0, 1}, {0, 1, 0}, {1, 0, 0}}, {{0, 0, -1}, {0, 1, 0}, {-1, 0, 0}}, {{-1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
+   };
+
    @Nullable
-   public static RotationTuple getFlipped(
-      @Nonnull RotationTuple blockRotation, @Nullable BlockFlipType flipType, @Nonnull Axis axis, @Nonnull VariantRotation variantRotation
-   ) {
-      Rotation yaw = blockRotation.yaw();
-      Rotation pitch = blockRotation.pitch();
-      Rotation roll = blockRotation.roll();
-      switch (axis) {
-         case X:
-            yaw = yaw.toInverse();
-            roll = roll.toInverse();
-            break;
-         case Y:
-            pitch = pitch.add(Rotation.OneEighty);
-            roll = roll.toInverse();
-            break;
-         case Z:
-            yaw = yaw.toInverse();
-            pitch = pitch.toInverse();
-      }
-
+   public static RotationTuple getFlipped(@Nonnull RotationTuple blockRotation, @Nullable BlockFlipType flipType, @Nonnull Axis axis) {
       if (flipType == null) {
-         return RotationTuple.of(yaw, pitch, roll);
-      }
-
-      Axis symAxis = blockRotation.getAxisOfSymmetry();
-      if (symAxis == Axis.Y) {
-         boolean neg = blockRotation.isSymmetryNegative();
-         Rotation original = blockRotation.yaw();
-         Rotation compensated;
-         if (neg) {
-            compensated = flipType.flipAroundAxis(original.toInverse(), axis, symAxis).toInverse();
-         } else {
-            compensated = flipType.flipAroundAxis(original, axis, symAxis);
+         Rotation yaw = blockRotation.yaw();
+         Rotation pitch = blockRotation.pitch();
+         Rotation roll = blockRotation.roll();
+         switch (axis) {
+            case X:
+               yaw = yaw.toInverse();
+               roll = roll.toInverse();
+               break;
+            case Y:
+               pitch = pitch.add(Rotation.OneEighty);
+               roll = roll.toInverse();
+               break;
+            case Z:
+               yaw = yaw.toInverse();
+               pitch = pitch.toInverse();
          }
 
-         yaw = compensated;
          return RotationTuple.of(yaw, pitch, roll);
       } else {
-         return RotationTuple.of(yaw, pitch, roll);
+         return RotationTuple.flip(blockRotation, flipType, axis, LOCAL_FLIP_CORRECTIONS);
       }
    }
 

@@ -38,6 +38,7 @@ import com.hypixel.hytale.builtin.adventure.objectives.markers.objectivelocation
 import com.hypixel.hytale.builtin.adventure.objectives.markers.reachlocation.ReachLocationMarker;
 import com.hypixel.hytale.builtin.adventure.objectives.markers.reachlocation.ReachLocationMarkerAsset;
 import com.hypixel.hytale.builtin.adventure.objectives.markers.reachlocation.ReachLocationMarkerSystems;
+import com.hypixel.hytale.builtin.adventure.objectives.systems.ObjectiveInventoryChangeSystem;
 import com.hypixel.hytale.builtin.adventure.objectives.systems.ObjectiveItemEntityRemovalSystem;
 import com.hypixel.hytale.builtin.adventure.objectives.systems.ObjectivePlayerSetupSystem;
 import com.hypixel.hytale.builtin.adventure.objectives.task.CraftObjectiveTask;
@@ -79,10 +80,7 @@ import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
-import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
-import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
@@ -251,7 +249,6 @@ public class ObjectivePlugin extends JavaPlugin {
       eventRegistry.register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
       eventRegistry.register(LoadedAssetsEvent.class, ObjectiveLocationMarkerAsset.class, ObjectivePlugin::onObjectiveLocationMarkerChange);
       eventRegistry.register(LoadedAssetsEvent.class, ModelAsset.class, this::onModelAssetChange);
-      eventRegistry.registerGlobal(LivingEntityInventoryChangeEvent.class, this::onLivingEntityInventoryChange);
       eventRegistry.registerGlobal(AddWorldEvent.class, this::onWorldAdded);
       this.getCommandRegistry().registerCommand(new ObjectiveCommand());
       EntityModule entityModule = EntityModule.get();
@@ -294,6 +291,7 @@ public class ObjectivePlugin extends JavaPlugin {
       );
       entityStoreRegistry.registerSystem(new ObjectivePlayerSetupSystem(this.objectiveHistoryComponentType, Player.getComponentType()));
       entityStoreRegistry.registerSystem(new ObjectiveItemEntityRemovalSystem());
+      entityStoreRegistry.registerSystem(new ObjectiveInventoryChangeSystem());
       this.getCodecRegistry(Interaction.CODEC).register("StartObjective", StartObjectiveInteraction.class, StartObjectiveInteraction.CODEC);
       this.getCodecRegistry(Interaction.CODEC).register("CanBreakRespawnPoint", CanBreakRespawnPointInteraction.class, CanBreakRespawnPointInteraction.CODEC);
       this.getCodecRegistry(Interaction.CODEC)
@@ -869,54 +867,6 @@ public class ObjectivePlugin extends JavaPlugin {
       ModelAsset modelAsset = modelMap.get("Objective_Location_Marker");
       if (modelAsset != null) {
          this.objectiveLocationMarkerModel = Model.createUnitScaleModel(modelAsset);
-      }
-   }
-
-   private void onLivingEntityInventoryChange(@Nonnull LivingEntityInventoryChangeEvent event) {
-      if (this.objectiveDataStore != null) {
-         if (event.getEntity() instanceof Player player) {
-            Set<UUID> activeObjectiveUUIDs = player.getPlayerConfigData().getActiveObjectiveUUIDs();
-            if (!activeObjectiveUUIDs.isEmpty()) {
-               Set<UUID> inventoryItemObjectiveUUIDs = null;
-               CombinedItemContainer inventory = player.getInventory().getCombinedHotbarFirst();
-
-               for (short i = 0; i < inventory.getCapacity(); i++) {
-                  ItemStack itemStack = inventory.getItemStack(i);
-                  if (!ItemStack.isEmpty(itemStack)) {
-                     UUID objectiveUUID = itemStack.getFromMetadataOrNull(StartObjectiveInteraction.OBJECTIVE_UUID);
-                     if (objectiveUUID != null) {
-                        if (inventoryItemObjectiveUUIDs == null) {
-                           inventoryItemObjectiveUUIDs = new HashSet<>(activeObjectiveUUIDs);
-                        }
-
-                        inventoryItemObjectiveUUIDs.add(objectiveUUID);
-                     }
-                  }
-               }
-
-               Ref<EntityStore> reference = player.getReference();
-               if (reference != null && reference.isValid()) {
-                  Store<EntityStore> store = reference.getStore();
-                  World world = store.getExternalData().getWorld();
-
-                  for (UUID activeObjectiveUUID : activeObjectiveUUIDs) {
-                     if (inventoryItemObjectiveUUIDs == null || !inventoryItemObjectiveUUIDs.contains(activeObjectiveUUID)) {
-                        Objective objective = this.objectiveDataStore.getObjective(activeObjectiveUUID);
-                        if (objective != null) {
-                           ObjectiveAsset objectiveAsset = objective.getObjectiveAsset();
-                           if (objectiveAsset != null && objectiveAsset.isRemoveOnItemDrop()) {
-                              world.execute(() -> {
-                                 UUIDComponent uuidComponent = store.getComponent(reference, UUIDComponent.getComponentType());
-                                 assert uuidComponent != null;
-                                 get().removePlayerFromExistingObjective(store, uuidComponent.getUuid(), activeObjectiveUUID);
-                              });
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-         }
       }
    }
 

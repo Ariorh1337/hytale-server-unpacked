@@ -293,12 +293,9 @@ public class CombinedItemContainer extends ItemContainer {
       for (int i = 0; i < this.containers.length; i++) {
          ItemContainer container = this.containers[i];
          short finalStart = start;
-         containerRegistrations[i] = container.internalChangeEventRegistry
-            .register(
-               priority,
-               null,
-               event -> consumer.accept(new ItemContainer.ItemContainerChangeEvent(this, event.transaction().toParent(this, finalStart, container)))
-            );
+         containerRegistrations[i] = container.registerChangeEvent(
+            priority, event -> consumer.accept(new ItemContainer.ItemContainerChangeEvent(this, event.transaction().toParent(this, finalStart, container)))
+         );
          start += container.getCapacity();
       }
 

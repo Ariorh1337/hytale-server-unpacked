@@ -4,10 +4,12 @@ import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.math.util.NumberUtil;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
+import it.unimi.dsi.fastutil.ints.Int2ShortMaps;
 import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import it.unimi.dsi.fastutil.shorts.Short2IntMap;
 import it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ShortMap;
@@ -33,22 +35,39 @@ public abstract class AbstractShortSectionPalette implements ISectionPalette {
       this.internalIdCount.put((short)0, (short)-32768);
    }
 
-   public AbstractShortSectionPalette(short[] blocks, @Nonnull int[] data, int[] unique, int count) {
-      this(new Int2ShortOpenHashMap(count), new Short2IntOpenHashMap(count), new BitSet(count), new Short2ShortOpenHashMap(count), blocks);
+   public AbstractShortSectionPalette(@Nonnull short[] blocks, @Nonnull int[] data, @Nonnull Int2ShortMap externalIdCounts) {
+      this(
+         new Int2ShortOpenHashMap(externalIdCounts.size()),
+         new Short2IntOpenHashMap(externalIdCounts.size()),
+         new BitSet(externalIdCounts.size()),
+         new Short2ShortOpenHashMap(externalIdCounts.size()),
+         blocks
+      );
+      ObjectIterator<Int2ShortMap.Entry> externalIdCountIter = Int2ShortMaps.fastIterator(externalIdCounts);
 
-      for (int internalId = 0; internalId < count; internalId++) {
-         int blockId = unique[internalId];
-         this.internalToExternal.put((short)internalId, blockId);
-         this.externalToInternal.put(blockId, (short)internalId);
-         this.internalIdSet.set(internalId);
-         this.internalIdCount.put((short)internalId, (short)0);
+      for (short internalIdCounter = 0; externalIdCountIter.hasNext(); internalIdCounter++) {
+         Int2ShortMap.Entry entry = externalIdCountIter.next();
+         this.internalToExternal.put(internalIdCounter, entry.getIntKey());
+         this.externalToInternal.put(entry.getIntKey(), internalIdCounter);
+         this.internalIdSet.set(internalIdCounter);
+         this.internalIdCount.put(internalIdCounter, entry.getShortValue());
       }
 
-      for (int index = 0; index < data.length; index++) {
-         int id = data[index];
-         short internalId = this.externalToInternal.get(id);
-         this.incrementBlockCount(internalId);
-         this.set0(index, internalId);
+      int index = 0;
+
+      while (index < data.length) {
+         int externalId = data[index];
+         int start = index;
+
+         do {
+            index++;
+         } while (index < data.length && data[index] == externalId);
+
+         short internalId = this.externalToInternal.get(externalId);
+
+         for (int i = start; i < index; i++) {
+            this.set0(i, internalId);
+         }
       }
    }
 

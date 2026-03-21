@@ -33,11 +33,17 @@ public class PrefabLoader {
    public static IPrefabBuffer loadPrefabBufferAt(@Nonnull Path filePath) {
       if (!hasJsonExtension(filePath)) {
          return null;
-      } else if (!Files.exists(filePath)) {
+      }
+
+      if (!Files.exists(filePath)) {
          LoggerUtil.getLogger().info("Didn't find a prefab with path: " + filePath);
          return null;
-      } else {
+      }
+
+      try {
          return PrefabBufferUtil.getCached(filePath);
+      } catch (Error e) {
+         return null;
       }
    }
 

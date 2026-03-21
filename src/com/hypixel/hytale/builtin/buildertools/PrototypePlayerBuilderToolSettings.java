@@ -42,6 +42,8 @@ public class PrototypePlayerBuilderToolSettings {
    @Nullable
    private PrototypePlayerBuilderToolSettings.EntityChange[] entityChangesForPlaySelectionToolPasteMode = null;
    @Nullable
+   private String prototypeItemId;
+   @Nullable
    private Vector3i lastBrushPosition = null;
    private int undoGroupSize = 10;
    @Nullable
@@ -56,6 +58,15 @@ public class PrototypePlayerBuilderToolSettings {
 
    public UUID getPlayer() {
       return this.player;
+   }
+
+   @Nullable
+   public String getPrototypeItemId() {
+      return this.prototypeItemId;
+   }
+
+   public void setPrototypeItemId(@Nullable String prototypeItemId) {
+      this.prototypeItemId = prototypeItemId;
    }
 
    public boolean isInSelectionTransformationMode() {

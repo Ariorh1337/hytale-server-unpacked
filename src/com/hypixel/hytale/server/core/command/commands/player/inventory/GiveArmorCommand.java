@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalAr
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -114,9 +114,9 @@ public class GiveArmorCommand extends AbstractAsyncCommand {
             for (Ref<EntityStore> playerRef : worldPlayers) {
                if (playerRef != null && playerRef.isValid()) {
                   Store<EntityStore> storex = playerRef.getStore();
-                  Player targetPlayerComponent = storex.getComponent(playerRef, Player.getComponentType());
-                  if (targetPlayerComponent != null) {
-                     ItemContainer armorInventory = targetPlayerComponent.getInventory().getArmor();
+                  InventoryComponent.Armor armorComponent = storex.getComponent(playerRef, InventoryComponent.Armor.getComponentType());
+                  if (armorComponent != null) {
+                     ItemContainer armorInventory = armorComponent.getInventory();
                      if (shouldClear) {
                         armorInventory.clear();
                      }

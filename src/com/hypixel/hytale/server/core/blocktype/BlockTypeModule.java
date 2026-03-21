@@ -94,7 +94,6 @@ public class BlockTypeModule extends JavaPlugin {
    private static void onChunkPreLoadProcess(@Nonnull ChunkPreLoadProcessEvent event) {
       if (event.isNewlyGenerated()) {
          WorldChunk chunk = event.getChunk();
-         BlockChunk blockChunk = chunk.getBlockChunk();
          Holder<ChunkStore> holder = event.getHolder();
          ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
          if (column != null) {

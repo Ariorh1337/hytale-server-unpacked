@@ -71,11 +71,15 @@ public class ChunkBlockTickSystem {
       @Nonnull
       private static final ComponentType<ChunkStore, WorldChunk> COMPONENT_TYPE_WORLD_CHUNK = WorldChunk.getComponentType();
       @Nonnull
+      private static final ComponentType<ChunkStore, BlockChunk> COMPONENT_TYPE_BLOCK_CHUNK = BlockChunk.getComponentType();
+      @Nonnull
+      private static final Query<ChunkStore> QUERY = Query.and(COMPONENT_TYPE_WORLD_CHUNK, COMPONENT_TYPE_BLOCK_CHUNK);
+      @Nonnull
       private static final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(new SystemDependency<>(Order.AFTER, ChunkBlockTickSystem.PreTick.class));
 
       @Override
       public Query<ChunkStore> getQuery() {
-         return COMPONENT_TYPE_WORLD_CHUNK;
+         return QUERY;
       }
 
       @Nonnull
@@ -95,30 +99,25 @@ public class ChunkBlockTickSystem {
          Ref<ChunkStore> reference = archetypeChunk.getReferenceTo(index);
          WorldChunk worldChunkComponent = archetypeChunk.getComponent(index, COMPONENT_TYPE_WORLD_CHUNK);
          assert worldChunkComponent != null;
+         BlockChunk blockChunk = archetypeChunk.getComponent(index, COMPONENT_TYPE_BLOCK_CHUNK);
+         assert blockChunk != null;
 
          try {
-            tick(reference, worldChunkComponent);
+            tick(reference, blockChunk, worldChunkComponent);
          } catch (Throwable t) {
             ChunkBlockTickSystem.LOGGER.at(Level.SEVERE).withCause(t).log("Failed to tick chunk: %s", worldChunkComponent);
          }
       }
 
-      protected static void tick(@Nonnull Ref<ChunkStore> ref, @Nonnull WorldChunk worldChunk) {
-         BlockChunk blockChunkComponent = worldChunk.getBlockChunk();
-         if (blockChunkComponent == null) {
-            ChunkBlockTickSystem.LOGGER
-               .at(Level.WARNING)
-               .log("World chunk (%d, %d) has no BlockChunk component, skipping block ticking.", (int)worldChunk.getX(), (int)worldChunk.getZ());
-         } else {
-            int ticked = blockChunkComponent.forEachTicking(ref, worldChunk, (r, c, localX, localY, localZ, blockId) -> {
-               World world = c.getWorld();
-               int blockX = c.getX() << 5 | localX;
-               int blockZ = c.getZ() << 5 | localZ;
-               return tickProcedure(world, c, blockX, localY, blockZ, blockId);
-            });
-            if (ticked > 0) {
-               ChunkBlockTickSystem.LOGGER.at(Level.FINER).log("Ticked %d blocks in chunk (%d, %d)", ticked, worldChunk.getX(), worldChunk.getZ());
-            }
+      protected static void tick(@Nonnull Ref<ChunkStore> ref, @Nonnull BlockChunk blockChunkComponent, @Nonnull WorldChunk worldChunk) {
+         int ticked = blockChunkComponent.forEachTicking(ref, worldChunk, (r, c, localX, localY, localZ, blockId) -> {
+            World world = c.getWorld();
+            int blockX = c.getX() << 5 | localX;
+            int blockZ = c.getZ() << 5 | localZ;
+            return tickProcedure(world, c, blockX, localY, blockZ, blockId);
+         });
+         if (ticked > 0) {
+            ChunkBlockTickSystem.LOGGER.at(Level.FINER).log("Ticked %d blocks in chunk (%d, %d)", ticked, worldChunk.getX(), worldChunk.getZ());
          }
       }
 

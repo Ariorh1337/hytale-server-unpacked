@@ -5,6 +5,7 @@ import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.common.util.CompletableFutureUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.function.consumer.TriIntConsumer;
 import com.hypixel.hytale.function.predicate.TriIntPredicate;
@@ -12,11 +13,11 @@ import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.modules.block.BlockEntity;
+import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.concurrent.CompletableFuture;
@@ -270,41 +271,52 @@ public class FillerBlockUtil {
       return result;
    }
 
+   private static void removeBlockEntity(ComponentAccessor<ChunkStore> accessor, BlockComponentChunk blockComponentChunk, int x, int y, int z) {
+      int indexInColumn = ChunkUtil.indexBlockInColumn(x, y, z);
+      if (!(accessor instanceof Store<ChunkStore> store && (!accessor.getExternalData().getWorld().isInThread() || store.isProcessing()))) {
+         Ref<ChunkStore> reference = blockComponentChunk.getEntityReference(indexInColumn);
+         if (reference != null) {
+            accessor.removeEntity(reference, ChunkStore.REGISTRY.newHolder(), RemoveReason.REMOVE);
+         } else {
+            blockComponentChunk.removeEntityHolder(indexInColumn);
+         }
+      } else {
+         CompletableFutureUtil._catch(CompletableFuture.runAsync(() -> {
+            Ref<ChunkStore> referencex = blockComponentChunk.getEntityReference(indexInColumn);
+            if (referencex != null) {
+               accessor.removeEntity(referencex, ChunkStore.REGISTRY.newHolder(), RemoveReason.REMOVE);
+            } else {
+               blockComponentChunk.removeEntityHolder(indexInColumn);
+            }
+         }, accessor.getExternalData().getWorld()));
+      }
+   }
+
    private static void removeFiller(
-      ComponentAccessor<ChunkStore> accessor, BlockSection blockSection, int x, int y, int z, FillerBlockUtil.RemovalType removalType
+      ComponentAccessor<ChunkStore> accessor, BlockSection blockSection, int x, int y, int z, FillerBlockUtil.ChangeReason changeReason
    ) {
       Ref<ChunkStore> column = accessor.getExternalData().getChunkReference(ChunkUtil.indexChunkFromBlock(x, z));
       if (column != null) {
          BlockChunk blockChunk = accessor.getComponent(column, BlockChunk.getComponentType());
          if (blockChunk != null) {
-            WorldChunk wc = accessor.getComponent(column, WorldChunk.getComponentType());
-            if (wc != null) {
-               BlockComponentChunk blockComponentChunk = accessor.getComponent(column, BlockComponentChunk.getComponentType());
-               if (blockComponentChunk != null) {
-                  short oldHeight = blockChunk.getHeight(x, z);
-                  int oldRotation = blockSection.getRotationIndex(x, y, z);
-                  int oldBlock = blockSection.get(x, y, z);
-                  boolean changed = (oldBlock != 0 || 0 != oldRotation) && blockSection.set(x, y, z, 0, 0, 0);
-                  if (changed) {
-                     short newHeight = BlockOperations.updateBlockHeight(blockChunk, 0, BlockType.EMPTY, x, y, z, oldHeight);
-                     if (removalType != FillerBlockUtil.RemovalType.NONE) {
-                        BlockOperations.spawnBlockParticles(
-                           accessor.getExternalData(), oldBlock, 0, x, y, z, removalType == FillerBlockUtil.RemovalType.BY_PHYSICS
-                        );
-                     }
-
-                     if (accessor instanceof Store && !accessor.getExternalData().getWorld().isInThread()) {
-                        CompletableFutureUtil._catch(
-                           CompletableFuture.runAsync(
-                              () -> BlockEntity.setBlockEntity(accessor, column, blockComponentChunk, x, y, z, BlockType.EMPTY, 0, null)
-                           )
-                        );
-                     } else {
-                        BlockEntity.setBlockEntity(accessor, column, blockComponentChunk, x, y, z, BlockType.EMPTY, 0, null);
-                     }
-
-                     accessor.getExternalData().getWorld().getChunkLighting().invalidateLightAtBlock(wc, x, y, z, BlockType.EMPTY, oldHeight, newHeight);
+            BlockComponentChunk blockComponentChunk = accessor.getComponent(column, BlockComponentChunk.getComponentType());
+            if (blockComponentChunk != null) {
+               short oldHeight = blockChunk.getHeight(x, z);
+               int oldBlock = blockSection.get(x, y, z);
+               boolean changed = blockSection.set(x, y, z, 0, 0, 0);
+               if (changed) {
+                  short newHeight = BlockOperations.updateBlockHeight(blockChunk, 0, BlockType.EMPTY, x, y, z, oldHeight);
+                  if (changeReason != FillerBlockUtil.ChangeReason.NONE) {
+                     BlockOperations.spawnBlockParticles(
+                        accessor.getExternalData(), oldBlock, 0, x, y, z, changeReason == FillerBlockUtil.ChangeReason.BY_PHYSICS
+                     );
                   }
+
+                  removeBlockEntity(accessor, blockComponentChunk, x, y, z);
+                  accessor.getExternalData()
+                     .getWorld()
+                     .getChunkLighting()
+                     .invalidateLightAtBlock(accessor.getExternalData(), x, y, z, BlockType.EMPTY, oldHeight, newHeight);
                }
             }
          }
@@ -320,7 +332,7 @@ public class FillerBlockUtil {
       int blockId,
       int filler,
       int rotation,
-      FillerBlockUtil.RemovalType removalType
+      FillerBlockUtil.ChangeReason changeReason
    ) {
       BlockType oldBlockType = BlockType.getAssetMap().getAsset(blockId);
       if (oldBlockType != null) {
@@ -343,7 +355,7 @@ public class FillerBlockUtil {
                if (ChunkUtil.isSameChunkSection(x, y, z, blockX, blockY, blockZ)) {
                   int otherBlockId = blockSection.get(blockX, blockY, blockZ);
                   if (otherBlockId == blockId) {
-                     removeFiller(accessor, blockSection, blockX, blockY, blockZ, removalType);
+                     removeFiller(accessor, blockSection, blockX, blockY, blockZ, changeReason);
                   }
                } else {
                   ChunkStore chunkStore = accessor.getExternalData();
@@ -356,23 +368,166 @@ public class FillerBlockUtil {
 
                      int otherBlockId = otherBlockSection.get(blockX, blockY, blockZ);
                      if (otherBlockId == blockId) {
-                        removeFiller(accessor, otherBlockSection, blockX, blockY, blockZ, removalType);
+                        removeFiller(accessor, otherBlockSection, blockX, blockY, blockZ, changeReason);
                      }
                   } else {
-                     chunkStore.getChunkSectionReferenceAtBlockAsync(blockX, blockY, blockZ).thenAccept(section1 -> {
+                     chunkStore.getChunkSectionReferenceAtBlockAsync(blockX, blockY, blockZ).thenAcceptAsync(section1 -> {
                         BlockSection otherBlockSectionx = section1.getStore().getComponent((Ref<ChunkStore>)section1, BlockSection.getComponentType());
                         if (otherBlockSectionx != null) {
                            int otherBlockIdx = otherBlockSectionx.get(blockX, blockY, blockZ);
                            if (otherBlockIdx == blockId) {
-                              removeFiller(accessor, otherBlockSectionx, blockX, blockY, blockZ, removalType);
+                              removeFiller(accessor, otherBlockSectionx, blockX, blockY, blockZ, changeReason);
                            }
                         }
-                     });
+                     }, accessor.getExternalData().getWorld());
                   }
                }
             }
          });
       }
+   }
+
+   private static void setFiller(
+      @Nonnull ComponentAccessor<ChunkStore> accessor,
+      @Nonnull Ref<ChunkStore> ref,
+      @Nonnull BlockSection blockSection,
+      int x,
+      int y,
+      int z,
+      int blockId,
+      BlockType blockType,
+      int filler,
+      int rotation,
+      FillerBlockUtil.ChangeReason changeReason
+   ) {
+      int oldBlock = blockSection.get(x, y, z);
+      int oldFiller = blockSection.getFiller(x, y, z);
+      int oldRotation = blockSection.getRotationIndex(x, y, z);
+      if (blockSection.set(x, y, z, blockId, rotation, filler)) {
+         if (oldBlock != 0) {
+            removeFillerBlocksAt(accessor, blockSection, x, y, z, oldBlock, oldFiller, oldRotation, changeReason);
+         }
+
+         Ref<ChunkStore> column = accessor.getExternalData().getChunkReference(ChunkUtil.indexChunkFromBlock(x, z));
+         if (column != null) {
+            BlockChunk blockChunk = accessor.getComponent(column, BlockChunk.getComponentType());
+            if (blockChunk != null) {
+               BlockComponentChunk blockComponentChunk = accessor.getComponent(column, BlockComponentChunk.getComponentType());
+               if (blockComponentChunk != null) {
+                  short oldHeight = blockChunk.getHeight(x, z);
+                  short newHeight = BlockOperations.updateBlockHeight(blockChunk, blockId, blockType, x, y, z, oldHeight);
+                  if (changeReason != FillerBlockUtil.ChangeReason.NONE) {
+                     BlockOperations.spawnBlockParticles(
+                        accessor.getExternalData(), oldBlock, blockId, x, y, z, changeReason == FillerBlockUtil.ChangeReason.BY_PHYSICS
+                     );
+                  }
+
+                  accessor.getExternalData()
+                     .getWorld()
+                     .getChunkLighting()
+                     .invalidateLightAtBlock(accessor.getExternalData(), x, y, z, blockType, oldHeight, newHeight);
+                  removeBlockEntity(accessor, blockComponentChunk, x, y, z);
+                  World world = accessor.getExternalData().getWorld();
+                  if (world.isInThread()) {
+                     if (!blockType.hasSupport()) {
+                        BlockPhysics.clear(accessor, ref, x, y, z);
+                     } else {
+                        BlockPhysics.reset(accessor, ref, x, y, z);
+                     }
+                  } else {
+                     world.execute(() -> {
+                        if (!blockType.hasSupport()) {
+                           BlockPhysics.clear(accessor, ref, x, y, z);
+                        } else {
+                           BlockPhysics.reset(accessor, ref, x, y, z);
+                        }
+                     });
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   public static void setFillerBlocksAt(
+      @Nonnull ComponentAccessor<ChunkStore> accessor,
+      @Nonnull Ref<ChunkStore> ref,
+      BlockSection blockSection,
+      int x,
+      int y,
+      int z,
+      int blockId,
+      int filler,
+      int rotation,
+      FillerBlockUtil.ChangeReason changeReason
+   ) {
+      BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+      if (blockType != null) {
+         int fx = unpackX(filler);
+         int fy = unpackY(filler);
+         int fz = unpackZ(filler);
+         int baseX = x - fx;
+         int baseY = y - fy;
+         int baseZ = z - fz;
+         BlockBoundingBoxes hitbox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+         if (hitbox == null) {
+            hitbox = BlockBoundingBoxes.UNIT_BOX;
+         }
+
+         forEachFillerBlock(
+            hitbox.get(rotation),
+            (x1, y1, z1) -> {
+               if (x1 != fx || y1 != fy || z1 != fz) {
+                  int blockX = baseX + x1;
+                  int blockY = baseY + y1;
+                  int blockZ = baseZ + z1;
+                  if (ChunkUtil.isSameChunkSection(x, y, z, blockX, blockY, blockZ)) {
+                     setFiller(accessor, ref, blockSection, blockX, blockY, blockZ, blockId, blockType, pack(x1, y1, z1), rotation, changeReason);
+                  } else {
+                     ChunkStore chunkStore = accessor.getExternalData();
+                     Ref<ChunkStore> section = chunkStore.getWorld().isInThread() ? chunkStore.getChunkSectionReferenceAtBlock(blockX, blockY, blockZ) : null;
+                     if (section != null) {
+                        BlockSection otherBlockSection = accessor.getComponent(section, BlockSection.getComponentType());
+                        if (otherBlockSection == null) {
+                           return;
+                        }
+
+                        setFiller(accessor, section, otherBlockSection, blockX, blockY, blockZ, blockId, blockType, pack(x1, y1, z1), rotation, changeReason);
+                     } else {
+                        chunkStore.getChunkSectionReferenceAtBlockAsync(blockX, blockY, blockZ)
+                           .thenAcceptAsync(
+                              section1 -> {
+                                 BlockSection otherBlockSectionx = section1.getStore().getComponent((Ref<ChunkStore>)section1, BlockSection.getComponentType());
+                                 if (otherBlockSectionx != null) {
+                                    setFiller(
+                                       accessor,
+                                       (Ref<ChunkStore>)section1,
+                                       otherBlockSectionx,
+                                       blockX,
+                                       blockY,
+                                       blockZ,
+                                       blockId,
+                                       blockType,
+                                       pack(x1, y1, z1),
+                                       rotation,
+                                       changeReason
+                                    );
+                                 }
+                              },
+                              accessor.getExternalData().getWorld()
+                           );
+                     }
+                  }
+               }
+            }
+         );
+      }
+   }
+
+   public enum ChangeReason {
+      NONE,
+      NORMAL,
+      BY_PHYSICS;
    }
 
    public interface FillerFetcher<A, B> {
@@ -381,12 +536,6 @@ public class FillerBlockUtil {
       int getFiller(A var1, B var2, int var3, int var4, int var5);
 
       int getRotationIndex(A var1, B var2, int var3, int var4, int var5);
-   }
-
-   public enum RemovalType {
-      NONE,
-      NORMAL,
-      BY_PHYSICS;
    }
 
    public enum ValidationResult {

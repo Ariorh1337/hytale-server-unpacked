@@ -19,9 +19,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.ProcessingBench;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemContainerWindow;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -133,9 +131,11 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
    }
 
    public void setMaxFuel(int maxFuel) {
-      this.maxFuel = maxFuel;
-      this.windowData.addProperty("maxFuel", maxFuel);
-      this.invalidate();
+      if (this.maxFuel != maxFuel) {
+         this.maxFuel = maxFuel;
+         this.windowData.addProperty("maxFuel", maxFuel);
+         this.invalidate();
+      }
    }
 
    public void setProgress(float progress) {
@@ -207,20 +207,6 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
             }
          default:
       }
-   }
-
-   @Override
-   protected boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-      super.onOpen0(ref, store);
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
-      Inventory inventory = playerComponent.getInventory();
-      this.inventoryRegistration = inventory.getCombinedHotbarFirst().registerChangeEvent(event -> {
-         this.windowData.add("inventoryHints", generateInventoryHints(this.bench, inventory.getCombinedHotbarFirst()));
-         this.invalidate();
-      });
-      this.windowData.add("inventoryHints", generateInventoryHints(this.bench, inventory.getCombinedHotbarFirst()));
-      return true;
    }
 
    private void updateOutputSlots(int tierLevel) {

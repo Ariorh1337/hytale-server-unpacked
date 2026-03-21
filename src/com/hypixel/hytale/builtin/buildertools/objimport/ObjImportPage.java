@@ -556,7 +556,7 @@ public class ObjImportPage extends InteractiveCustomUIPage<ObjImportPage.PageDat
                                  .param("depth", result.sizeZ())
                            );
                            playerComponent.getPageManager().setPage(r, store, Page.None);
-                           PasteToolUtil.switchToPasteTool(playerComponent, playerRefComponent);
+                           PasteToolUtil.switchToPasteTool(r, playerComponent, playerRefComponent, componentAccessor);
                         } catch (ObjParser.ObjParseException e) {
                            BuilderToolsPlugin.get().getLogger().at(Level.WARNING).log("OBJ parse error: %s", e.getMessage());
                            this.setError(Message.translation("server.builderTools.objImport.parseError").param("message", e.getMessage()));

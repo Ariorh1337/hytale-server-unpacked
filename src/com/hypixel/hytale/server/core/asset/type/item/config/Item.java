@@ -104,6 +104,14 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       .addValidatorLate(() -> ItemCategory.VALIDATOR_CACHE.getArrayValidator().late())
       .documentation("A list of categories this item will be shown in on the creative library menu.")
       .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("SubCategory", Codec.STRING),
+         (item, s) -> item.subCategory = s,
+         item -> item.subCategory,
+         (item, parent) -> item.subCategory = parent.subCategory
+      )
+      .documentation("Optional sub-category for grouping items with a label header in the creative library menu.")
+      .add()
       .<AssetIconProperties>appendInherited(
          new KeyedCodec<>("IconProperties", AssetIconProperties.CODEC),
          (item, s) -> item.iconProperties = s,
@@ -523,6 +531,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected String texture = "Items/Unknown.png";
    protected String animation;
    protected String[] categories;
+   protected String subCategory;
    protected String set;
    protected String soundEventId;
    protected transient int soundEventIndex;
@@ -601,6 +610,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       this.utility = other.utility;
       this.portalKey = other.portalKey;
       this.categories = other.categories;
+      this.subCategory = other.subCategory;
       this.set = other.set;
       this.soundEventId = other.soundEventId;
       this.soundEventIndex = other.soundEventIndex;
@@ -705,6 +715,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
       if (this.categories != null && this.categories.length > 0) {
          packet.categories = this.categories;
+      }
+
+      if (this.subCategory != null) {
+         packet.subCategory = this.subCategory;
       }
 
       if (this.set != null) {
@@ -959,6 +973,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
    public String[] getCategories() {
       return this.categories;
+   }
+
+   public String getSubCategory() {
+      return this.subCategory;
    }
 
    public String getSoundEventId() {

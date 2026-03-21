@@ -91,7 +91,7 @@ public class PrefabPropAsset extends PropAsset {
 
          for (PrefabPropAsset.WeightedPathAsset pathAsset : this.weightedPrefabPathAssets) {
             List<IPrefabBuffer> pathPrefabs = this.loadPrefabBuffersFrom(pathAsset.path);
-            if (pathPrefabs != null) {
+            if (pathPrefabs != null && !pathPrefabs.isEmpty()) {
                prefabWeightedMap.add(pathPrefabs, pathAsset.weight);
             }
          }
@@ -210,7 +210,7 @@ public class PrefabPropAsset extends PropAsset {
       private String id;
       private AssetExtraInfo.Data data;
       private double weight = 1.0;
-      private String path;
+      private String path = "";
 
       public String getId() {
          return this.id;

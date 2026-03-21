@@ -1410,7 +1410,10 @@ public abstract class ItemContainer {
    }
 
    public static <T extends ItemContainer> T ensureContainerCapacity(
-      @Nullable T inputContainer, short capacity, @Nonnull Short2ObjectConcurrentHashMap.ShortFunction<T> newContainerSupplier, List<ItemStack> remainder
+      @Nullable T inputContainer,
+      short capacity,
+      @Nonnull Short2ObjectConcurrentHashMap.ShortFunction<T> newContainerSupplier,
+      @Nullable List<ItemStack> remainder
    ) {
       if (inputContainer == null) {
          return newContainerSupplier.apply(capacity);

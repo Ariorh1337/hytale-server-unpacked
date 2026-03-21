@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransac
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -42,8 +43,6 @@ public abstract class LivingEntity extends Entity {
       })
       .build();
    public static final int DEFAULT_ITEM_THROW_SPEED = 6;
-   @Nonnull
-   private final StatModifiersManager statModifiersManager = new StatModifiersManager();
    private Inventory inventory;
    protected double currentFallDistance;
    private boolean isEquipmentNetworkOutdated;
@@ -115,49 +114,48 @@ public abstract class LivingEntity extends Entity {
       super.moveTo(ref, locX, locY, locZ, componentAccessor);
    }
 
-   public boolean canDecreaseItemStackDurability(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return false;
-   }
-
-   public boolean canApplyItemStackPenalties(Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor) {
-      return true;
-   }
-
    @Nullable
-   public ItemStackSlotTransaction decreaseItemStackDurability(
+   public static ItemStackSlotTransaction decreaseItemStackDurability(
       @Nonnull Ref<EntityStore> ref, @Nullable ItemStack itemStack, int inventoryId, int slotId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (!this.canDecreaseItemStackDurability(ref, componentAccessor)) {
-         return null;
-      }
-
-      if (itemStack == null || itemStack.isEmpty() || itemStack.getItem() == null) {
-         return null;
-      }
-
-      if (itemStack.isBroken()) {
-         return null;
-      }
-
-      Item item = itemStack.getItem();
-      ItemContainer section = this.inventory.getSectionById(inventoryId);
-      if (section == null) {
-         return null;
-      }
-
-      if (item.getArmor() != null) {
-         ItemStackSlotTransaction transaction = this.updateItemStackDurability(
-            ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor
-         );
-         if (transaction.getSlotAfter().isBroken()) {
-            this.statModifiersManager.setRecalculate(true);
+      if (EntityUtils.getEntity(ref, componentAccessor) instanceof LivingEntity livingEntity) {
+         if (!ItemUtils.canDecreaseItemStackDurability(ref, componentAccessor)) {
+            return null;
          }
 
-         return transaction;
+         if (itemStack == null || itemStack.isEmpty() || itemStack.getItem() == null) {
+            return null;
+         }
+
+         if (itemStack.isBroken()) {
+            return null;
+         }
+
+         Item item = itemStack.getItem();
+         ItemContainer section = livingEntity.getInventory().getSectionById(inventoryId);
+         if (section == null) {
+            return null;
+         }
+
+         if (item.getArmor() != null) {
+            ItemStackSlotTransaction transaction = livingEntity.updateItemStackDurability(
+               ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor
+            );
+            if (transaction.getSlotAfter().isBroken()) {
+               EntityStatMap entityStatMap = componentAccessor.getComponent(ref, EntityStatMap.getComponentType());
+               if (entityStatMap != null) {
+                  entityStatMap.getStatModifiersManager().scheduleRecalculate();
+               }
+            }
+
+            return transaction;
+         } else {
+            return item.getWeapon() != null
+               ? livingEntity.updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor)
+               : null;
+         }
       } else {
-         return item.getWeapon() != null
-            ? this.updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor)
-            : null;
+         return null;
       }
    }
 
@@ -182,11 +180,6 @@ public abstract class LivingEntity extends Entity {
       boolean temp = this.isEquipmentNetworkOutdated;
       this.isEquipmentNetworkOutdated = false;
       return temp;
-   }
-
-   @Nonnull
-   public StatModifiersManager getStatModifiersManager() {
-      return this.statModifiersManager;
    }
 
    public double getCurrentFallDistance() {

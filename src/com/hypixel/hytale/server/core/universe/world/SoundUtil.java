@@ -11,6 +11,7 @@ import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent3D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEventEntity;
+import com.hypixel.hytale.protocol.packets.world.PlaySoundEventLocalPlayer;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -62,6 +63,26 @@ public class SoundUtil {
    ) {
       if (soundEventIndex != 0) {
          playerRefComponent.getPacketHandler().write(new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
+      }
+   }
+
+   public static void playLocalPlayerSoundEvent(
+      @Nonnull PlayerRef playerRefComponent, int localSoundEventIndex, int worldSoundEventIndex, @Nonnull SoundCategory soundCategory
+   ) {
+      playLocalPlayerSoundEvent(playerRefComponent, localSoundEventIndex, worldSoundEventIndex, soundCategory, 1.0F, 1.0F);
+   }
+
+   public static void playLocalPlayerSoundEvent(
+      @Nonnull PlayerRef playerRefComponent,
+      int localSoundEventIndex,
+      int worldSoundEventIndex,
+      @Nonnull SoundCategory soundCategory,
+      float volumeModifier,
+      float pitchModifier
+   ) {
+      if (localSoundEventIndex != 0 || worldSoundEventIndex != 0) {
+         playerRefComponent.getPacketHandler()
+            .write(new PlaySoundEventLocalPlayer(localSoundEventIndex, worldSoundEventIndex, soundCategory, volumeModifier, pitchModifier));
       }
    }
 

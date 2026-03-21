@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthBrowserFlow;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthClient;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthDeviceFlow;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
@@ -18,6 +19,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,6 +34,8 @@ import joptsimple.OptionSet;
 public class ServerAuthManager {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final int REFRESH_BUFFER_SECONDS = 300;
+   private static final int REFRESH_MAX_RETRIES = 3;
+   private static final int REFRESH_RETRY_BASE_DELAY_SECONDS = 30;
    private static volatile ServerAuthManager instance;
    private volatile ServerAuthManager.AuthMode authMode = ServerAuthManager.AuthMode.NONE;
    private volatile Instant tokenExpiry;
@@ -207,11 +211,7 @@ public class ServerAuthManager {
 
    public void shutdown() {
       this.cancelActiveFlow();
-      if (this.refreshTask != null) {
-         this.refreshTask.cancel(false);
-      }
-
-      this.refreshScheduler.shutdown();
+      this.refreshScheduler.shutdownNow();
       if (this.isSingleplayer()) {
          String currentSessionToken = this.getSessionToken();
          if (currentSessionToken != null && !currentSessionToken.isEmpty()) {
@@ -649,25 +649,55 @@ public class ServerAuthManager {
       Instant expiresAt = tokens.accessTokenExpiresAt();
       if (!force && expiresAt != null && !expiresAt.isBefore(Instant.now().plusSeconds(300L))) {
          return true;
-      } else {
-         String refreshToken = tokens.refreshToken();
-         if (refreshToken == null) {
-            LOGGER.at(Level.WARNING).log("No refresh token present to refresh OAuth tokens");
-            return false;
+      }
+
+      String refreshToken = tokens.refreshToken();
+      if (refreshToken == null) {
+         LOGGER.at(Level.WARNING).log("No refresh token present to refresh OAuth tokens");
+         return false;
+      }
+
+      for (int attempt = 1; attempt <= 3; attempt++) {
+         if (attempt > 1) {
+            LOGGER.at(Level.INFO).log("Refreshing OAuth tokens (attempt %d/%d)...", (int)attempt, (int)3);
          } else {
             LOGGER.at(Level.INFO).log("Refreshing OAuth tokens...");
+         }
+
+         try {
             OAuthClient.TokenResponse newTokens = this.oauthClient.refreshTokens(refreshToken);
             if (newTokens != null && newTokens.isSuccess()) {
                store.setTokens(
                   new IAuthCredentialStore.OAuthTokens(newTokens.accessToken(), newTokens.refreshToken(), Instant.now().plusSeconds(newTokens.expiresIn()))
                );
                return true;
+            }
+
+            LOGGER.at(Level.WARNING).log("OAuth token refresh rejected by server");
+            return false;
+         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.at(Level.WARNING).log("OAuth token refresh interrupted");
+            return false;
+         } catch (IOException e) {
+            if (attempt < 3) {
+               long delay = 30L * (1L << attempt - 1);
+               LOGGER.at(Level.WARNING).log("OAuth token refresh IO error (attempt %d/%d), retrying in %d seconds...", attempt, 3, delay);
+
+               try {
+                  Thread.sleep(delay * 1000L);
+               } catch (InterruptedException ie) {
+                  Thread.currentThread().interrupt();
+                  LOGGER.at(Level.WARNING).log("OAuth token refresh retry interrupted");
+                  return false;
+               }
             } else {
-               LOGGER.at(Level.WARNING).log("OAuth token refresh failed");
-               return false;
+               LOGGER.at(Level.WARNING).log("OAuth token refresh failed after %d attempts due to IO errors", (int)3);
             }
          }
       }
+
+      return false;
    }
 
    @Nullable
@@ -811,43 +841,66 @@ public class ServerAuthManager {
       if (secondsUntilExpiry > 300L) {
          long refreshDelay = Math.max(secondsUntilExpiry - 300L, 60L);
          LOGGER.at(Level.INFO).log("Token refresh scheduled in %d seconds", (long)refreshDelay);
-         this.refreshTask = this.refreshScheduler.schedule(this::doRefresh, refreshDelay, TimeUnit.SECONDS);
+         this.refreshTask = this.refreshScheduler.schedule(() -> this.attemptSessionRefresh(1), refreshDelay, TimeUnit.SECONDS);
       }
    }
 
-   private void doRefresh() {
+   private void attemptSessionRefresh(int attempt) {
       String currentSessionToken = this.getSessionToken();
-      if (currentSessionToken == null || !this.refreshGameSession(currentSessionToken)) {
-         LOGGER.at(Level.INFO).log("Game session refresh failed, attempting OAuth refresh...");
-         if (!this.refreshGameSessionViaOAuth()) {
-            LOGGER.at(Level.WARNING).log("All refresh attempts failed. Server may lose authentication.");
+      if (currentSessionToken != null) {
+         if (attempt > 1) {
+            LOGGER.at(Level.INFO).log("Refreshing game session with Session Service (attempt %d/%d)...", (int)attempt, (int)3);
+         } else {
+            LOGGER.at(Level.INFO).log("Refreshing game session with Session Service...");
          }
+
+         try {
+            if (this.refreshGameSession(currentSessionToken)) {
+               return;
+            }
+         } catch (CompletionException e) {
+            if (e.getCause() instanceof IOException && attempt < 3) {
+               long delay = 30L * (1L << attempt - 1);
+               LOGGER.at(Level.WARNING).log("Game session refresh IO error (attempt %d/%d), retrying in %d seconds...", attempt, 3, delay);
+               this.refreshTask = this.refreshScheduler.schedule(() -> this.attemptSessionRefresh(attempt + 1), delay, TimeUnit.SECONDS);
+               return;
+            }
+
+            if (e.getCause() instanceof IOException) {
+               LOGGER.at(Level.WARNING).log("Game session refresh failed after %d attempts due to IO errors", (int)3);
+            } else {
+               LOGGER.at(Level.WARNING).log("Session Service refresh failed: %s", e.getMessage());
+            }
+         } catch (Exception e) {
+            LOGGER.at(Level.WARNING).log("Session Service refresh failed: %s", e.getMessage());
+         }
+      }
+
+      LOGGER.at(Level.INFO).log("Game session refresh failed, attempting OAuth refresh...");
+      if (!this.refreshGameSessionViaOAuth()) {
+         LOGGER.at(Level.WARNING).log("All refresh attempts failed. Server may lose authentication.");
       }
    }
 
    private boolean refreshGameSession(String currentSessionToken) {
-      LOGGER.at(Level.INFO).log("Refreshing game session with Session Service...");
       if (this.sessionServiceClient == null) {
          this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
       }
 
-      try {
-         SessionServiceClient.GameSessionResponse response = this.sessionServiceClient.refreshSessionAsync(currentSessionToken).join();
-         if (response != null) {
-            this.gameSession.set(response);
-            Instant effectiveExpiry = this.getEffectiveExpiry(response);
-            if (effectiveExpiry != null) {
-               this.setExpiryAndScheduleRefresh(effectiveExpiry);
-            }
-
-            LOGGER.at(Level.INFO).log("Game session refresh successful");
-            return true;
-         }
-      } catch (Exception e) {
-         LOGGER.at(Level.WARNING).log("Session Service refresh failed: %s", e.getMessage());
+      SessionServiceClient.GameSessionResponse response = this.sessionServiceClient.refreshSessionAsync(currentSessionToken).join();
+      if (response == null) {
+         LOGGER.at(Level.WARNING).log("Game session refresh rejected by server");
+         return false;
       }
 
-      return false;
+      this.gameSession.set(response);
+      Instant effectiveExpiry = this.getEffectiveExpiry(response);
+      if (effectiveExpiry != null) {
+         this.setExpiryAndScheduleRefresh(effectiveExpiry);
+      }
+
+      LOGGER.at(Level.INFO).log("Game session refresh successful");
+      return true;
    }
 
    private boolean refreshGameSessionViaOAuth() {

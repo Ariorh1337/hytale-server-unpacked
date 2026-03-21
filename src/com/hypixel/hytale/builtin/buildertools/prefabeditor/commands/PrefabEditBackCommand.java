@@ -5,6 +5,7 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSession;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionManager;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncPlayerCommand;
@@ -36,21 +37,27 @@ public class PrefabEditBackCommand extends AbstractAsyncPlayerCommand {
       if (!prefabEditSessionManager.isEditingAPrefab(playerRef.getUuid())) {
          context.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_NOT_IN_EDIT_SESSION);
          return CompletableFuture.completedFuture(null);
-      } else {
-         PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
-         String sessionWorldName = prefabEditSession.getWorldName();
-         String currentWorldName = Universe.get().getWorld(playerRef.getWorldUuid()).getName();
-         if (currentWorldName.equalsIgnoreCase(sessionWorldName)) {
-            World previousWorld = Universe.get().getWorld(prefabEditSession.getWorldArrivedFrom());
-            Teleport teleportComponent = Teleport.createForPlayer(
-               previousWorld,
-               ref.getStore().getComponent(ref, Player.getComponentType()).getPlayerConfigData().getPerWorldData(previousWorld.getName()).getLastPosition()
-            );
-            prefabEditSession.clearSelectedPrefab(ref, store);
-            return CompletableFuture.runAsync(() -> ref.getStore().putComponent(ref, Teleport.getComponentType(), teleportComponent), world);
+      }
+
+      PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
+      String sessionWorldName = prefabEditSession.getWorldName();
+      String currentWorldName = Universe.get().getWorld(playerRef.getWorldUuid()).getName();
+      if (currentWorldName.equalsIgnoreCase(sessionWorldName)) {
+         Player playerComponent = ref.getStore().getComponent(ref, Player.getComponentType());
+         World previousWorld = Universe.get().getWorld(prefabEditSession.getWorldArrivedFrom());
+         Transform previousPosition;
+         if (previousWorld != null) {
+            previousPosition = playerComponent.getPlayerConfigData().getPerWorldData(previousWorld.getName()).getLastPosition();
          } else {
-            return prefabEditSessionManager.sendToEditWorld(ref, world, playerRef);
+            previousWorld = Universe.get().getDefaultWorld();
+            previousPosition = previousWorld.getWorldConfig().getSpawnProvider().getSpawnPoint(previousWorld, playerRef.getUuid());
          }
+
+         Teleport teleportComponent = Teleport.createForPlayer(previousWorld, previousPosition);
+         prefabEditSession.clearSelectedPrefab(ref, store);
+         return CompletableFuture.runAsync(() -> ref.getStore().putComponent(ref, Teleport.getComponentType(), teleportComponent), world);
+      } else {
+         return prefabEditSessionManager.sendToEditWorld(ref, world, playerRef);
       }
    }
 }

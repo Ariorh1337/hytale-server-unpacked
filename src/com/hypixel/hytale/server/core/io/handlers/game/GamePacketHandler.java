@@ -23,6 +23,7 @@ import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
 import com.hypixel.hytale.protocol.packets.entities.MountMovement;
 import com.hypixel.hytale.protocol.packets.entities.PlayEmote;
+import com.hypixel.hytale.protocol.packets.interaction.CancelInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChains;
 import com.hypixel.hytale.protocol.packets.interface_.ChatMessage;
@@ -114,7 +115,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -128,6 +128,7 @@ import javax.annotation.Nonnull;
 
 public class GamePacketHandler extends GenericPacketHandler implements IPacketHandler {
    private static final double RELATIVE_POSITION_DELTA_SCALE = 10000.0;
+   private static final int MAX_INTERACTION_QUEUE_SIZE = 1000;
    private PlayerRef playerRef;
    @Deprecated
    private Player playerComponent;
@@ -728,7 +729,31 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    public void handle(@Nonnull SyncInteractionChains packet) {
-      Collections.addAll(this.interactionPacketQueue, packet.updates);
+      int capacity = 1000 - this.interactionPacketQueue.size();
+      int accepted = Math.clamp(capacity, 0, packet.updates.length);
+
+      for (int i = 0; i < accepted; i++) {
+         this.interactionPacketQueue.add(packet.updates[i]);
+      }
+
+      if (accepted < packet.updates.length) {
+         int dropped = packet.updates.length - accepted;
+         HytaleLogger.getLogger()
+            .at(Level.WARNING)
+            .log(
+               "Dropped %d interaction updates from %s (queue full at %d)",
+               dropped,
+               this.playerRef != null ? this.playerRef.getUuid() : "unknown",
+               this.interactionPacketQueue.size()
+            );
+
+         for (int i = accepted; i < packet.updates.length; i++) {
+            SyncInteractionChain update = packet.updates[i];
+            if (update.initial) {
+               this.write(new CancelInteractionChain(update.chainId, update.forkedId));
+            }
+         }
+      }
    }
 
    public void handleMountMovement(
@@ -736,15 +761,23 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      Ref<EntityStore> entityReference = world.getEntityStore().getRefFromNetworkId(playerComponent.getMountEntityId());
-      if (entityReference != null && entityReference.isValid()) {
-         TransformComponent transformComponent = store.getComponent(entityReference, TransformComponent.getComponentType());
-         assert transformComponent != null;
-         transformComponent.setPosition(PositionUtil.toVector3d(packet.absolutePosition));
-         transformComponent.setRotation(PositionUtil.toRotation(packet.bodyOrientation));
-         MovementStatesComponent movementStatesComponent = store.getComponent(entityReference, MovementStatesComponent.getComponentType());
-         assert movementStatesComponent != null;
-         movementStatesComponent.setMovementStates(packet.movementStates);
+      if (playerComponent != null) {
+         Ref<EntityStore> entityReference = world.getEntityStore().getRefFromNetworkId(playerComponent.getMountEntityId());
+         if (entityReference != null && entityReference.isValid()) {
+            if (packet.absolutePosition != null && packet.bodyOrientation != null && packet.movementStates != null) {
+               TransformComponent transformComponent = store.getComponent(entityReference, TransformComponent.getComponentType());
+               assert transformComponent != null;
+               if (transformComponent != null) {
+                  transformComponent.setPosition(PositionUtil.toVector3d(packet.absolutePosition));
+                  transformComponent.setRotation(PositionUtil.toRotation(packet.bodyOrientation));
+                  MovementStatesComponent movementStatesComponent = store.getComponent(entityReference, MovementStatesComponent.getComponentType());
+                  assert movementStatesComponent != null;
+                  if (movementStatesComponent != null) {
+                     movementStatesComponent.setMovementStates(packet.movementStates);
+                  }
+               }
+            }
+         }
       }
    }
 

@@ -29,7 +29,6 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.ISystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.player.UpdateMovementSettings;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
@@ -46,7 +45,6 @@ import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.ProjectileComponent;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
-import com.hypixel.hytale.server.core.entity.entities.player.HotbarManager;
 import com.hypixel.hytale.server.core.entity.entities.player.data.UniqueItemUsagesComponent;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementConfig;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
@@ -57,7 +55,6 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesSystems;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.entity.nameplate.NameplateSystems;
 import com.hypixel.hytale.server.core.entity.reference.PersistentRefCount;
-import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.InventorySystems;
 import com.hypixel.hytale.server.core.io.PacketHandler;
@@ -306,28 +303,6 @@ public class EntityModule extends JavaPlugin {
 
    @Override
    protected void setup() {
-      this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, event -> {
-         Ref<EntityStore> entityRef = event.getEntity().getReference();
-         if (entityRef != null && entityRef.isValid()) {
-            Store<EntityStore> store = entityRef.getStore();
-            World world = store.getExternalData().getWorld();
-            world.execute(() -> {
-               if (entityRef.isValid()) {
-                  Player playerComponent = store.getComponent(entityRef, Player.getComponentType());
-                  if (playerComponent != null) {
-                     HotbarManager hotbarManager = playerComponent.getHotbarManager();
-                     if (!hotbarManager.getIsCurrentlyLoadingHotbar()) {
-                        if (playerComponent.getGameMode().equals(GameMode.Creative)) {
-                           if (event.getItemContainer().equals(playerComponent.getInventory().getHotbar())) {
-                              hotbarManager.saveHotbar(entityRef, (short)hotbarManager.getCurrentHotbarIndex(), store);
-                           }
-                        }
-                     }
-                  }
-               }
-            });
-         }
-      });
       ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
       this.physicsValuesComponentType = entityStoreRegistry.registerComponent(PhysicsValues.class, PhysicsValues::new);
       this.velocityComponentType = entityStoreRegistry.registerComponent(Velocity.class, "Velocity", Velocity.CODEC);
@@ -648,6 +623,7 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new InventorySystems.LegacyArmorChangeStatSystem());
       entityStoreRegistry.registerSystem(new InventorySystems.LegacyHotbarChangeStatSystem());
       entityStoreRegistry.registerSystem(new InventorySystems.LegacyUtilityChangeStatSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.PlayerInventoryChangeEventSystem());
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerInitSystem());
       Condition.CODEC.register("LogicCondition", LogicCondition.class, LogicCondition.CODEC);
       Condition.CODEC.register("RegenHealth", RegenHealthCondition.class, RegenHealthCondition.CODEC);

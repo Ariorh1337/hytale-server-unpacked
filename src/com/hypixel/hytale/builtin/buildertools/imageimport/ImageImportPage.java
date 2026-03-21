@@ -422,7 +422,7 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
                               .param("depth", sizeZ)
                         );
                         playerComponent.getPageManager().setPage(r, store, Page.None);
-                        PasteToolUtil.switchToPasteTool(playerComponent, playerRefComponent);
+                        PasteToolUtil.switchToPasteTool(r, playerComponent, playerRefComponent, componentAccessor);
                      } catch (Exception e) {
                         BuilderToolsPlugin.get().getLogger().at(Level.WARNING).withCause(e).log("Image import error");
                         this.setError(Message.translation("server.builderTools.imageImport.error").param("message", e.getMessage()));

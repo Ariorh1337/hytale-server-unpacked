@@ -600,5 +600,6 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       OPERATIONS.put("Layers", LayersOperation::new);
       OPERATIONS.put("LaserPointer", LaserPointerOperation::new);
       OPERATIONS.put("Revolve", RevolveOperation::new);
+      OPERATIONS.put("ScriptedBrushTemplate", PaintOperation::new);
    }
 }

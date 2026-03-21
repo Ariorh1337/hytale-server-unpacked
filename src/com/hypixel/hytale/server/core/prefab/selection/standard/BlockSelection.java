@@ -76,7 +76,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
 import java.util.BitSet;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
@@ -828,7 +827,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          this.blocksLock.readLock().unlock();
       }
 
-      dirtyChunks.forEach(value -> outerWorld.getChunkLighting().invalidateLightInChunk(outerWorld.getChunkIfInMemory(value)));
+      dirtyChunks.forEach(
+         value -> outerWorld.getChunkLighting()
+            .invalidateLightInChunk(outerWorld.getChunkStore(), ChunkUtil.xOfChunkIndex(value), ChunkUtil.zOfChunkIndex(value))
+      );
       this.placeEntities(outerWorld, position);
       dirtyChunks.forEach(value -> outerWorld.getNotificationHandler().updateChunk(value));
    }
@@ -1049,7 +1051,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          this.blocksLock.readLock().unlock();
       }
 
-      dirtyChunks.forEach(value -> outerWorld.getChunkLighting().invalidateLightInChunk(outerWorld.getChunkIfInMemory(value)));
+      dirtyChunks.forEach(
+         value -> outerWorld.getChunkLighting()
+            .invalidateLightInChunk(outerWorld.getChunkStore(), ChunkUtil.xOfChunkIndex(value), ChunkUtil.zOfChunkIndex(value))
+      );
       this.placeEntities(outerWorld, position, entityConsumer);
       dirtyChunks.forEach(value -> outerWorld.getNotificationHandler().updateChunk(value));
       return before;
@@ -1549,7 +1554,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
    }
 
    @Nonnull
-   public BlockSelection flip(@Nonnull Axis axis, AtomicBoolean sendFlipWarningXZ) {
+   public BlockSelection flip(@Nonnull Axis axis) {
       BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
       BlockSelection selection = new BlockSelection(this.getBlockCount(), this.getEntityCount());
       selection.copyPropertiesFrom(this);
@@ -1568,11 +1573,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                selection.addBlock0(mutable.getX() + this.anchorX, mutable.getY() + this.anchorY, mutable.getZ() + this.anchorZ, block);
             } else {
                RotationTuple blockRotation = RotationTuple.get(block.rotation);
-               if (!sendFlipWarningXZ.get() && blockRotation.getAxisOfSymmetry() != Axis.Y) {
-                  sendFlipWarningXZ.set(true);
-               }
-
-               RotationTuple rotatedRotation = BlockRotationUtil.getFlipped(blockRotation, blockType.getFlipType(), axis, variantRotation);
+               RotationTuple rotatedRotation = BlockRotationUtil.getFlipped(blockRotation, blockType.getFlipType(), axis);
                if (rotatedRotation == null) {
                   rotatedRotation = blockRotation;
                }
