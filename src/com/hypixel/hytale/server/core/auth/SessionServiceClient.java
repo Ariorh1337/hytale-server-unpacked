@@ -182,7 +182,7 @@ public class SessionServiceClient {
    public SessionServiceClient.GameProfile[] getGameProfiles(@Nonnull String oauthAccessToken) {
       try {
          HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("https://account-data.hytale.com/my-account/get-profiles"))
+            .uri(URI.create("https://account-data.butter.lat/my-account/get-profiles"))
             .header("Accept", "application/json")
             .header("Authorization", "Bearer " + oauthAccessToken)
             .header("User-Agent", AuthConfig.USER_AGENT)

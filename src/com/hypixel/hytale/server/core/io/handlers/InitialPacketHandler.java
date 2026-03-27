@@ -128,7 +128,7 @@ public class InitialPacketHandler extends PacketHandler {
 
                boolean hasIdentityToken = packet.identityToken != null && !packet.identityToken.isEmpty();
                boolean isEditorClient = packet.clientType == ClientType.Editor;
-               Options.AuthMode authMode = Options.getOptionSet().valueOf(Options.AUTH_MODE);
+               Options.AuthMode authMode = Options.AuthMode.OFFLINE;
                if (hasIdentityToken && authMode == Options.AuthMode.AUTHENTICATED) {
                   if (isTcpConnection) {
                      HytaleLogger.getLogger()
@@ -163,46 +163,14 @@ public class InitialPacketHandler extends PacketHandler {
                      )
                   );
                } else {
-                  if (authMode == Options.AuthMode.AUTHENTICATED) {
-                     HytaleLogger.getLogger()
-                        .at(Level.WARNING)
-                        .log(
-                           "Rejecting development connection from %s - server requires authentication (auth-mode=%s)",
-                           NettyUtil.formatRemoteAddress(this.getChannel()),
-                           authMode
-                        );
-                     this.disconnect(Message.translation("client.general.disconnect.serverRequiresAuthentication"));
-                     return;
-                  }
-
-                  if (authMode == Options.AuthMode.OFFLINE) {
-                     if (!Constants.SINGLEPLAYER) {
-                        HytaleLogger.getLogger()
-                           .at(Level.WARNING)
-                           .log("Rejecting connection from %s - offline mode is only valid in singleplayer", NettyUtil.formatRemoteAddress(this.getChannel()));
-                        this.disconnect(Message.translation("client.general.disconnect.offlineModeSingleplayerOnly"));
-                        return;
-                     }
-
-                     if (!SingleplayerModule.isOwner(null, packet.uuid)) {
-                        HytaleLogger.getLogger()
-                           .at(Level.WARNING)
-                           .log(
-                              "Rejecting connection from %s (%s) - offline mode only allows the world owner (%s)",
-                              packet.username,
-                              packet.uuid,
-                              SingleplayerModule.getUuid()
-                           );
-                        this.disconnect(Message.translation("client.general.disconnect.offlineModeOwnerOnly"));
-                        return;
-                     }
-                  }
-
                   HytaleLogger.getLogger()
                      .at(Level.INFO)
                      .log("Starting development flow for %s (%s) from %s", packet.username, packet.uuid, NettyUtil.formatRemoteAddress(this.getChannel()));
                   byte[] passwordChallenge = this.generatePasswordChallengeIfNeeded(packet.uuid);
-                  this.write(new ConnectAccept(passwordChallenge));
+                  if (isEditorClient) {
+                     this.write(new ConnectAccept(passwordChallenge));
+                  }
+
                   PasswordPacketHandler.SetupHandlerSupplier setupSupplier = isEditorClient && EDITOR_PACKET_HANDLER_SUPPLIER != null
                      ? (ch, pv, lang, auth) -> EDITOR_PACKET_HANDLER_SUPPLIER.create(ch, pv, lang, auth)
                      : SetupPacketHandler::new;
@@ -231,11 +199,9 @@ public class InitialPacketHandler extends PacketHandler {
    private byte[] generatePasswordChallengeIfNeeded(UUID playerUuid) {
       String password = HytaleServer.get().getConfig().getPassword();
       if (password != null && !password.isEmpty()) {
-         if (Constants.SINGLEPLAYER) {
-            UUID ownerUuid = SingleplayerModule.getUuid();
-            if (ownerUuid != null && ownerUuid.equals(playerUuid)) {
-               return null;
-            }
+         UUID ownerUuid;
+         if (Constants.SINGLEPLAYER && (ownerUuid = SingleplayerModule.getUuid()) != null && ownerUuid.equals(playerUuid)) {
+            return null;
          }
 
          byte[] challenge = new byte[32];

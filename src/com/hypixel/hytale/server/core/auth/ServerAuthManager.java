@@ -79,7 +79,7 @@ public class ServerAuthManager {
       if (this.profileServiceClient == null) {
          synchronized (this) {
             if (this.profileServiceClient == null) {
-               this.profileServiceClient = new ProfileServiceClient("https://account-data.hytale.com");
+               this.profileServiceClient = new ProfileServiceClient("https://account-data.butter.lat");
             }
          }
       }
@@ -216,7 +216,7 @@ public class ServerAuthManager {
          String currentSessionToken = this.getSessionToken();
          if (currentSessionToken != null && !currentSessionToken.isEmpty()) {
             if (this.sessionServiceClient == null) {
-               this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+               this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
             }
 
             this.sessionServiceClient.terminateSession(currentSessionToken);
@@ -500,10 +500,10 @@ public class ServerAuthManager {
 
    private boolean validateOfflineToken(@Nonnull String offlineToken) {
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
       }
 
-      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.hytale.com", "");
+      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.butter.lat", "");
       JWTValidator.IdentityTokenClaims claims = validator.validateOfflineToken(offlineToken);
       if (claims == null) {
          LOGGER.at(Level.WARNING).log("Offline token validation failed");
@@ -534,10 +534,10 @@ public class ServerAuthManager {
       }
 
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
       }
 
-      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.hytale.com", "");
+      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.butter.lat", "");
       boolean valid = true;
       OptionSet optionSet = Options.getOptionSet();
       UUID expectedOwnerUuid = optionSet != null && optionSet.has(Options.OWNER_UUID) ? optionSet.valueOf(Options.OWNER_UUID) : null;
@@ -607,7 +607,7 @@ public class ServerAuthManager {
       }
 
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
       }
 
       SessionServiceClient.GameProfile[] profiles = this.sessionServiceClient.getGameProfiles(accessToken);
@@ -759,7 +759,7 @@ public class ServerAuthManager {
    @Nullable
    private SessionServiceClient.GameSessionResponse createGameSession(UUID profileUuid) {
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
       }
 
       if (!this.refreshOAuthTokens()) {
@@ -884,7 +884,7 @@ public class ServerAuthManager {
 
    private boolean refreshGameSession(String currentSessionToken) {
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
       }
 
       SessionServiceClient.GameSessionResponse response = this.sessionServiceClient.refreshSessionAsync(currentSessionToken).join();
