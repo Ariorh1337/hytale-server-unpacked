@@ -8,8 +8,6 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.world.UpdateWeather;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -18,6 +16,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class WeatherTracker implements Component<EntityStore> {
    private final UpdateWeather updateWeather = new UpdateWeather(0, 10.0F);
@@ -35,7 +35,7 @@ public class WeatherTracker implements Component<EntityStore> {
    private WeatherTracker(@Nonnull WeatherTracker other) {
       this.environmentId = other.environmentId;
       this.updateWeather.weatherIndex = other.updateWeather.weatherIndex;
-      this.previousBlockPosition.assign(other.previousBlockPosition);
+      this.previousBlockPosition.set(other.previousBlockPosition);
    }
 
    public void updateWeather(
@@ -83,10 +83,10 @@ public class WeatherTracker implements Component<EntityStore> {
 
    public void updateEnvironment(@Nonnull TransformComponent transformComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       Vector3d vector = transformComponent.getPosition();
-      int blockX = MathUtil.floor(vector.getX());
-      int blockY = MathUtil.floor(vector.getY());
-      int blockZ = MathUtil.floor(vector.getZ());
-      if (this.previousBlockPosition.getX() != blockX || this.previousBlockPosition.getY() != blockY || this.previousBlockPosition.getZ() != blockZ) {
+      int blockX = MathUtil.floor(vector.x());
+      int blockY = MathUtil.floor(vector.y());
+      int blockZ = MathUtil.floor(vector.z());
+      if (this.previousBlockPosition.x() != blockX || this.previousBlockPosition.y() != blockY || this.previousBlockPosition.z() != blockZ) {
          Ref<ChunkStore> chunkRef = transformComponent.getChunkRef();
          if (chunkRef == null || !chunkRef.isValid()) {
             return;

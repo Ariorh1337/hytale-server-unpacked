@@ -57,6 +57,10 @@ public class UpdateItemQualities implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateItemQualities deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateItemQualities", 6, buf.readableBytes() - offset);
+      }
+
       UpdateItemQualities obj = new UpdateItemQualities();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateItemQualities implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int itemQualitiesCount = VarInt.peek(buf, pos);
          if (itemQualitiesCount < 0) {
-            throw ProtocolException.negativeLength("ItemQualities", itemQualitiesCount);
+            throw ProtocolException.invalidVarInt("ItemQualities");
          }
 
+         int itemQualitiesVarLen = VarInt.size(itemQualitiesCount);
          if (itemQualitiesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("ItemQualities", itemQualitiesCount, 4096000);
          }
 
-         pos += VarInt.size(itemQualitiesCount);
+         pos += itemQualitiesVarLen;
          obj.itemQualities = new HashMap<>(itemQualitiesCount);
 
          for (int i = 0; i < itemQualitiesCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateItemQualities implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateItemQualities implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int itemQualitiesCount = VarInt.peek(buffer, pos);
+         int itemQualitiesCount = VarInt.peek(buffer, v);
          if (itemQualitiesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for ItemQualities");
          }
@@ -162,15 +172,15 @@ public class UpdateItemQualities implements Packet, ToClientPacket {
             return ValidationResult.error("ItemQualities exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(itemQualitiesCount);
 
          for (int i = 0; i < itemQualitiesCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += ItemQuality.computeBytesConsumed(buffer, pos);
+            v += ItemQuality.computeBytesConsumed(buffer, v);
          }
       }
 

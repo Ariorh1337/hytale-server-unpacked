@@ -1,6 +1,7 @@
 package com.hypixel.hytale.protocol.packets.interface_;
 
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -33,6 +34,10 @@ public class ServerPlayerListUpdate {
 
    @Nonnull
    public static ServerPlayerListUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 32) {
+         throw ProtocolException.bufferTooSmall("ServerPlayerListUpdate", 32, buf.readableBytes() - offset);
+      }
+
       ServerPlayerListUpdate obj = new ServerPlayerListUpdate();
       obj.uuid = PacketIO.readUUID(buf, offset + 0);
       obj.worldUuid = PacketIO.readUUID(buf, offset + 16);

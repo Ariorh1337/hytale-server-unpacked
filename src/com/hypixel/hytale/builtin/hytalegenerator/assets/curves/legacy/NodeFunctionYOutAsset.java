@@ -9,9 +9,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.math.NodeFunction;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.math.vector.Vector2d;
 import java.util.HashSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class NodeFunctionYOutAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, NodeFunctionYOutAsset>>, Cleanable {
    @Nonnull

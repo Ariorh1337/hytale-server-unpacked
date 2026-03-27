@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.entity;
 
-import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
@@ -8,9 +7,7 @@ import com.hypixel.hytale.math.block.BlockSphereUtil;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockGathering;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
@@ -36,6 +33,9 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
 
 public class ExplosionUtils {
    private static final boolean DEBUG_SHAPES = false;
@@ -54,15 +54,15 @@ public class ExplosionUtils {
       @Nonnull Vector3d position,
       @Nonnull ExplosionConfig config,
       @Nullable Ref<EntityStore> ignoreRef,
-      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
       if (config.damageBlocks || config.damageEntities) {
          Set<Ref<EntityStore>> targetRefs = new ReferenceOpenHashSet<>();
          Vector3d blockPosition = new Vector3d(Math.floor(position.x) + 0.5, Math.floor(position.y) + 0.5, Math.floor(position.z) + 0.5);
-         processTargetBlocks(blockPosition, config, ignoreRef, targetRefs, commandBuffer, chunkStore);
+         processTargetBlocks(blockPosition, config, ignoreRef, targetRefs, componentAccessor, chunkStore);
          if (config.damageEntities) {
-            processTargetEntities(config, position, damageSource, ignoreRef, targetRefs, commandBuffer);
+            processTargetEntities(config, position, damageSource, ignoreRef, targetRefs, componentAccessor);
          }
       }
    }
@@ -72,11 +72,11 @@ public class ExplosionUtils {
       @Nonnull ExplosionConfig config,
       @Nullable Ref<EntityStore> ignoreRef,
       @Nonnull Set<Ref<EntityStore>> targetRefs,
-      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
       ThreadLocalRandom random = ThreadLocalRandom.current();
-      World world = commandBuffer.getExternalData().getWorld();
+      World world = componentAccessor.getExternalData().getWorld();
       int explosionBlockRadius = config.blockDamageRadius;
       if (config.damageEntities && config.entityDamageRadius > config.blockDamageRadius) {
          explosionBlockRadius = (int)config.entityDamageRadius;
@@ -85,7 +85,7 @@ public class ExplosionUtils {
       List<Ref<EntityStore>> potentialTargets = new ReferenceArrayList<>();
       if (config.damageEntities) {
          Selector.selectNearbyEntities(
-            commandBuffer, position, config.entityDamageRadius, potentialTargets::add, e -> ignoreRef == null || !e.equals(ignoreRef)
+            componentAccessor, position, config.entityDamageRadius, potentialTargets::add, e -> ignoreRef == null || !e.equals(ignoreRef)
          );
       }
 
@@ -102,15 +102,15 @@ public class ExplosionUtils {
          Set<Vector3i> avoidBlocks = new ObjectOpenHashSet<>();
 
          for (Vector3i targetBlock : targetBlocks) {
-            Vector3d targetBlockPosition = targetBlock.toVector3d().add(0.5, 0.5, 0.5);
+            Vector3d targetBlockPosition = Vector3iUtil.toVector3d(targetBlock).add(0.5, 0.5, 0.5);
             int setBlockSettings = 1028;
             if (random.nextFloat() > config.blockDropChance) {
                setBlockSettings |= 2048;
             }
 
-            double distance = position.distanceTo(targetBlockPosition);
+            double distance = position.distance(targetBlockPosition);
             if (!(distance <= 0.0) && !Double.isNaN(distance)) {
-               Vector3d direction = targetBlockPosition.clone().subtract(position);
+               Vector3d direction = new Vector3d(targetBlockPosition).sub(position);
                Vector3i targetBlockPos = TargetUtil.getTargetBlock(
                   world,
                   (id, fluidId) -> isValidTargetBlock(id, config.damageBlocks),
@@ -124,16 +124,16 @@ public class ExplosionUtils {
                );
                if (targetBlockPos == null) {
                   if (config.damageEntities) {
-                     Vector3d entityHitPos = position.clone().add(direction);
-                     collectPotentialTargets(targetRefs, potentialTargets, entityHitPos, position, commandBuffer);
+                     Vector3d entityHitPos = new Vector3d(position).add(direction);
+                     collectPotentialTargets(targetRefs, potentialTargets, entityHitPos, position, componentAccessor);
                   }
                } else if (!avoidBlocks.contains(targetBlockPos)) {
-                  Vector3d targetBlockPosD = targetBlockPos.toVector3d().add(0.5, 0.5, 0.5);
+                  Vector3d targetBlockPosD = Vector3iUtil.toVector3d(targetBlockPos).add(0.5, 0.5, 0.5);
                   if (config.damageEntities) {
-                     collectPotentialTargets(targetRefs, potentialTargets, targetBlockPosD, position, commandBuffer);
+                     collectPotentialTargets(targetRefs, potentialTargets, targetBlockPosD, position, componentAccessor);
                   }
 
-                  float damageDistance = (float)position.distanceTo(targetBlockPosD);
+                  float damageDistance = (float)position.distance(targetBlockPosD);
                   float damageScale = calculateBlockDamageScale(damageDistance, explosionBlockRadius, config.blockDamageFalloff);
                   long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPos.x, targetBlockPos.z);
                   Ref<ChunkStore> chunkReference = chunkStore.getExternalData().getChunkReference(chunkIndex);
@@ -142,7 +142,7 @@ public class ExplosionUtils {
                      if (!config.damageBlocks
                         || canDamageBlock
                            && !BlockHarvestUtils.performBlockDamage(
-                              targetBlockPos, null, itemTool, damageScale, setBlockSettings, chunkReference, commandBuffer, chunkStore
+                              targetBlockPos, null, itemTool, damageScale, setBlockSettings, chunkReference, componentAccessor, chunkStore
                            )) {
                         avoidBlocks.add(targetBlockPos);
                      }
@@ -176,25 +176,25 @@ public class ExplosionUtils {
       @Nonnull List<Ref<EntityStore>> potentialTargetRefs,
       @Nonnull Vector3d startPosition,
       @Nonnull Vector3d endPosition,
-      @Nonnull CommandBuffer<EntityStore> commandBuffer
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      World world = commandBuffer.getExternalData().getWorld();
+      World world = componentAccessor.getExternalData().getWorld();
 
       for (Ref<EntityStore> potentialTarget : potentialTargetRefs) {
-         if (processPotentialEntity(potentialTarget, startPosition, endPosition, commandBuffer) && targetRefs.add(potentialTarget)) {
+         if (processPotentialEntity(potentialTarget, startPosition, endPosition, componentAccessor) && targetRefs.add(potentialTarget)) {
          }
       }
    }
 
    private static boolean processPotentialEntity(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d startPosition, @Nonnull Vector3d endPosition, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d startPosition, @Nonnull Vector3d endPosition, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      BoundingBox boundingBoxComponent = commandBuffer.getComponent(ref, BoundingBox.getComponentType());
+      BoundingBox boundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
       if (boundingBoxComponent == null) {
          return false;
       }
 
-      TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
+      TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       if (transformComponent == null) {
          return false;
       }
@@ -219,10 +219,10 @@ public class ExplosionUtils {
       @Nonnull Damage.Source damageSource,
       @Nullable Ref<EntityStore> ignoreRef,
       @Nonnull Set<Ref<EntityStore>> targetRefs,
-      @Nonnull CommandBuffer<EntityStore> commandBuffer
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       for (Ref<EntityStore> targetRef : targetRefs) {
-         processTargetEntity(config, targetRef, position, damageSource, commandBuffer);
+         processTargetEntity(config, targetRef, position, damageSource, componentAccessor);
       }
    }
 
@@ -231,33 +231,33 @@ public class ExplosionUtils {
       @Nonnull Ref<EntityStore> targetRef,
       @Nonnull Vector3d position,
       @Nonnull Damage.Source damageSource,
-      @Nonnull CommandBuffer<EntityStore> commandBuffer
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       float entityDamageRadius = config.entityDamageRadius;
       float explosionDamage = config.entityDamage;
       float explosionFalloff = config.entityDamageFalloff;
-      TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
+      TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TransformComponent.getComponentType());
       assert targetTransformComponent != null;
-      Velocity targetVelocityComponent = commandBuffer.getComponent(targetRef, Velocity.getComponentType());
+      Velocity targetVelocityComponent = componentAccessor.getComponent(targetRef, Velocity.getComponentType());
       assert targetVelocityComponent != null;
       Vector3d targetPosition = targetTransformComponent.getPosition();
-      Vector3d diff = targetPosition.clone().subtract(position);
+      Vector3d diff = new Vector3d(targetPosition).sub(position);
       double distance = diff.length();
       float damage = (float)(explosionDamage * Math.pow(1.0 - distance / entityDamageRadius, explosionFalloff));
       if (damage > 0.0F) {
-         DamageSystems.executeDamage(targetRef, commandBuffer, new Damage(damageSource, DamageCause.ENVIRONMENT, damage));
+         DamageSystems.executeDamage(targetRef, componentAccessor, new Damage(damageSource, DamageCause.ENVIRONMENT, damage));
       }
 
       Knockback knockbackConfig = config.knockback;
       if (knockbackConfig != null) {
          ComponentType<EntityStore, KnockbackComponent> knockbackComponentType = KnockbackComponent.getComponentType();
-         KnockbackComponent knockbackComponent = commandBuffer.getComponent(targetRef, knockbackComponentType);
+         KnockbackComponent knockbackComponent = componentAccessor.getComponent(targetRef, knockbackComponentType);
          if (knockbackComponent == null) {
             knockbackComponent = new KnockbackComponent();
-            commandBuffer.putComponent(targetRef, knockbackComponentType, knockbackComponent);
+            componentAccessor.putComponent(targetRef, knockbackComponentType, knockbackComponent);
          }
 
-         Vector3d direction = diff.clone().normalize();
+         Vector3d direction = new Vector3d(diff).normalize();
          knockbackComponent.setVelocity(knockbackConfig.calculateVector(position, (float)direction.y, targetPosition));
          knockbackComponent.setVelocityType(knockbackConfig.getVelocityType());
          knockbackComponent.setVelocityConfig(knockbackConfig.getVelocityConfig());

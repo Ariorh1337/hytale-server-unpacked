@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.npc.role.builders;
 
 import com.google.gson.JsonElement;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -76,6 +75,7 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BuilderRole extends SpawnableWithModelBuilder<Role> implements SpawnEffect {
    protected static final double[] DEFAULT_HEAD_PITCH_RANGE = new double[]{-89.0, 89.0};
@@ -1101,7 +1101,7 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
 
    @Override
    public Vector3d getSpawnParticleOffset(@Nonnull BuilderSupport support) {
-      return createVector3d(this.spawnParticleOffset.get(support.getExecutionContext()), Vector3d.ZERO::clone);
+      return createVector3d(this.spawnParticleOffset.get(support.getExecutionContext()), Vector3d::new);
    }
 
    @Override

@@ -57,6 +57,10 @@ public class UpdateReverbEffects implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateReverbEffects deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateReverbEffects", 6, buf.readableBytes() - offset);
+      }
+
       UpdateReverbEffects obj = new UpdateReverbEffects();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateReverbEffects implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int effectsCount = VarInt.peek(buf, pos);
          if (effectsCount < 0) {
-            throw ProtocolException.negativeLength("Effects", effectsCount);
+            throw ProtocolException.invalidVarInt("Effects");
          }
 
+         int effectsVarLen = VarInt.size(effectsCount);
          if (effectsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Effects", effectsCount, 4096000);
          }
 
-         pos += VarInt.size(effectsCount);
+         pos += effectsVarLen;
          obj.effects = new HashMap<>(effectsCount);
 
          for (int i = 0; i < effectsCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateReverbEffects implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateReverbEffects implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int effectsCount = VarInt.peek(buffer, pos);
+         int effectsCount = VarInt.peek(buffer, v);
          if (effectsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Effects");
          }
@@ -162,15 +172,15 @@ public class UpdateReverbEffects implements Packet, ToClientPacket {
             return ValidationResult.error("Effects exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(effectsCount);
 
          for (int i = 0; i < effectsCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += ReverbEffect.computeBytesConsumed(buffer, pos);
+            v += ReverbEffect.computeBytesConsumed(buffer, v);
          }
       }
 

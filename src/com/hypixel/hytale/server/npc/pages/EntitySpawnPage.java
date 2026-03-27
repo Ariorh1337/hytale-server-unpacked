@@ -10,10 +10,8 @@ import com.hypixel.hytale.component.NonSerialized;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -64,6 +62,8 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.EntitySpawnPageEventData> {
    private static final String COMMON_TEXT_BUTTON_DOCUMENT = "Common/TextButton.ui";
@@ -98,7 +98,7 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
    @Nullable
    private Ref<EntityStore> modelPreview;
    private Vector3d position;
-   private Vector3f rotation;
+   private Rotation3f rotation;
    private float currentRotationOffset = 0.0F;
    private float currentScale = 1.0F;
    private float lastPreviewScale = 1.0F;
@@ -178,10 +178,10 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                this.currentRotationOffset = (float)Math.toRadians(data.rotationOffset);
                if (this.modelPreview != null && this.modelPreview.isValid()) {
                   TransformComponent transform = store.getComponent(this.modelPreview, TransformComponent.getComponentType());
-                  transform.getRotation().setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+                  transform.getRotation().setYaw(this.rotation.yaw() + this.currentRotationOffset);
                   HeadRotation headRotation = store.getComponent(this.modelPreview, HeadRotation.getComponentType());
                   if (headRotation != null) {
-                     headRotation.getRotation().setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+                     headRotation.getRotation().setYaw(this.rotation.yaw() + this.currentRotationOffset);
                   }
                }
                break;
@@ -291,8 +291,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       if (this.selectedNpcRole != null && this.position != null && this.rotation != null) {
          if (count >= 1 && count <= 100) {
             this.clearPreview(store);
-            Vector3f spawnRotation = this.rotation.clone();
-            spawnRotation.setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+            Rotation3f spawnRotation = new Rotation3f(this.rotation);
+            spawnRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
 
             for (int i = 0; i < count; i++) {
                NPCPlugin.get().spawnNPC(store, this.selectedNpcRole, null, this.position, spawnRotation);
@@ -316,8 +316,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
             ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(this.selectedModelId);
             if (modelAsset != null) {
                Model model = Model.createStaticScaledModel(modelAsset, this.currentScale);
-               Vector3f spawnRotation = this.rotation.clone();
-               spawnRotation.setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+               Rotation3f spawnRotation = new Rotation3f(this.rotation);
+               spawnRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
 
                for (int i = 0; i < count; i++) {
                   Holder<EntityStore> holder = store.getRegistry().newHolder();
@@ -542,8 +542,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
             Item item = Item.getAssetMap().getAsset(this.selectedItemId);
             if (item != null) {
                this.clearPreview(store);
-               Vector3f spawnRotation = this.rotation.clone();
-               spawnRotation.setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+               Rotation3f spawnRotation = new Rotation3f(this.rotation);
+               spawnRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
                Model model = this.getItemModel(item);
                if (model != null) {
                   String modelId = this.getItemModelId(item);
@@ -664,14 +664,14 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
       assert headRotationComponent != null;
       Vector3d playerPosition = transformComponent.getPosition();
-      Vector3f headRotation = headRotationComponent.getRotation();
-      Vector3d direction = Transform.getDirection(headRotation.getPitch(), headRotation.getYaw());
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      Vector3d direction = Transform.getDirection(headRotation.pitch(), headRotation.yaw());
       Vector3d lookTarget = TargetUtil.getTargetLocation(ref, 4.0, store);
       Vector3d previewPosition;
       if (lookTarget != null) {
          previewPosition = lookTarget;
       } else {
-         Vector3d aheadPosition = playerPosition.clone().add(direction.clone().scale(4.0));
+         Vector3d aheadPosition = new Vector3d(playerPosition).add(new Vector3d(direction).mul(4.0));
          World world = store.getExternalData().getWorld();
          Vector3i groundTarget = TargetUtil.getTargetBlock(
             world, (blockId, fluidId) -> blockId != 0, aheadPosition.x, aheadPosition.y + 0.5, aheadPosition.z, 0.0, -1.0, 0.0, 3.0
@@ -683,9 +683,9 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
          }
       }
 
-      Vector3d relativePos = playerPosition.clone().subtract(previewPosition);
-      relativePos.setY(0.0);
-      Vector3f previewRotation = Vector3f.lookAt(relativePos);
+      Vector3d relativePos = new Vector3d(playerPosition).sub(previewPosition);
+      relativePos.y = 0.0;
+      Rotation3f previewRotation = Rotation3f.lookAt(relativePos);
       this.position = previewPosition;
       this.rotation = previewRotation;
       this.currentRotationOffset = 0.0F;

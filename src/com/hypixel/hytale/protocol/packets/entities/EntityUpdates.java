@@ -50,20 +50,29 @@ public class EntityUpdates implements Packet, ToClientPacket {
 
    @Nonnull
    public static EntityUpdates deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("EntityUpdates", 9, buf.readableBytes() - offset);
+      }
+
       EntityUpdates obj = new EntityUpdates();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int removedCount = VarInt.peek(buf, varPos0);
-         if (removedCount < 0) {
-            throw ProtocolException.negativeLength("Removed", removedCount);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Removed", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int removedCount = VarInt.peek(buf, varPos0);
+         if (removedCount < 0) {
+            throw ProtocolException.invalidVarInt("Removed");
+         }
+
+         int varIntLen = VarInt.size(removedCount);
          if (removedCount > 4096000) {
             throw ProtocolException.arrayTooLong("Removed", removedCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + removedCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Removed", varPos0 + varIntLen + removedCount * 4, buf.readableBytes());
          }
@@ -76,17 +85,22 @@ public class EntityUpdates implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int updatesCount = VarInt.peek(buf, varPos1);
-         if (updatesCount < 0) {
-            throw ProtocolException.negativeLength("Updates", updatesCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Updates", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int updatesCount = VarInt.peek(buf, varPos1);
+         if (updatesCount < 0) {
+            throw ProtocolException.invalidVarInt("Updates");
+         }
+
+         int varIntLen = VarInt.size(updatesCount);
          if (updatesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Updates", updatesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + updatesCount * 5L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Updates", varPos1 + varIntLen + updatesCount * 5, buf.readableBytes());
          }
@@ -108,9 +122,13 @@ public class EntityUpdates implements Packet, ToClientPacket {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Removed", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 4;
+         pos0 += VarInt.size(arrLen) + arrLen * 4;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -118,9 +136,13 @@ public class EntityUpdates implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Updates", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += EntityUpdate.computeBytesConsumed(buf, pos1);
@@ -211,15 +233,11 @@ public class EntityUpdates implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int removedOffset = buffer.getIntLE(offset + 1);
-         if (removedOffset < 0) {
+         if (removedOffset < 0 || removedOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Removed");
          }
 
          int pos = offset + 9 + removedOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Removed");
-         }
-
          int removedCount = VarInt.peek(buffer, pos);
          if (removedCount < 0) {
             return ValidationResult.error("Invalid array count for Removed");
@@ -229,7 +247,7 @@ public class EntityUpdates implements Packet, ToClientPacket {
             return ValidationResult.error("Removed exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(removedCount);
          pos += removedCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Removed");
@@ -238,15 +256,11 @@ public class EntityUpdates implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int updatesOffset = buffer.getIntLE(offset + 5);
-         if (updatesOffset < 0) {
+         if (updatesOffset < 0 || updatesOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Updates");
          }
 
          int pos = offset + 9 + updatesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Updates");
-         }
-
          int updatesCount = VarInt.peek(buffer, pos);
          if (updatesCount < 0) {
             return ValidationResult.error("Invalid array count for Updates");
@@ -256,7 +270,7 @@ public class EntityUpdates implements Packet, ToClientPacket {
             return ValidationResult.error("Updates exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(updatesCount);
 
          for (int i = 0; i < updatesCount; i++) {
             ValidationResult structResult = EntityUpdate.validateStructure(buffer, pos);

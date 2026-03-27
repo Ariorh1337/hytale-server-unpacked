@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -34,6 +35,10 @@ public class AOECylinderSelector extends Selector {
 
    @Nonnull
    public static AOECylinderSelector deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("AOECylinderSelector", 21, buf.readableBytes() - offset);
+      }
+
       AOECylinderSelector obj = new AOECylinderSelector();
       byte nullBits = buf.getByte(offset);
       obj.range = buf.getFloatLE(offset + 1);
@@ -75,7 +80,12 @@ public class AOECylinderSelector extends Selector {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 21 ? ValidationResult.error("Buffer too small: expected at least 21 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 21) {
+         return ValidationResult.error("Buffer too small: expected at least 21 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public AOECylinderSelector clone() {

@@ -55,7 +55,8 @@
   "Main": "com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin",
   "ServerVersion": "*",
   "Dependencies": {
-    "Hytale:EntityModule": "*"
+    "Hytale:EntityModule": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{
@@ -90,6 +91,7 @@
     "Hytale:I18nModule": "*",
     "Hytale:BlockModule": "*",
     "Hytale:BlockPhysics": "*",
+    "Hytale:InteractionModule": "*",
     "Hytale:Teleport": "*"
   }
 }
@@ -180,7 +182,8 @@
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:Objectives": "*",
-    "Hytale:Shop": "*"
+    "Hytale:Shop": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{
@@ -386,7 +389,10 @@
   "Version": "1.0.0",
   "Website": "https://hypixel.com/",
   "Main": "com.hypixel.hytale.builtin.model.ModelPlugin",
-  "ServerVersion": "*"
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:Universe": "*"
+  }
 }
 ,{
   "Group": "Hytale",
@@ -446,7 +452,8 @@
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:NPC": "*",
-    "Hytale:DamageModule": "*"
+    "Hytale:DamageModule": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{
@@ -466,7 +473,8 @@
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:BlockModule": "*",
-    "Hytale:Teleport": "*"
+    "Hytale:Teleport": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{
@@ -477,7 +485,8 @@
   "Main": "com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin",
   "ServerVersion": "*",
   "Dependencies": {
-    "Hytale:NPC": "*"
+    "Hytale:NPC": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{
@@ -486,7 +495,10 @@
   "Version": "1.0.0",
   "Website": "https://hypixel.com/",
   "Main": "com.hypixel.hytale.builtin.deployables.DeployablesPlugin",
-  "ServerVersion": "*"
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:InteractionModule": "*"
+  }
 }
 ,{
   "Group": "Hytale",
@@ -499,7 +511,8 @@
   "Dependencies": {
     "Hytale:NPC": "*",
     "Hytale:Ambience": "*",
-    "Hytale:Instances": "*"
+    "Hytale:Instances": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{
@@ -511,7 +524,8 @@
   "Main": "com.hypixel.hytale.builtin.beds.BedsPlugin",
   "ServerVersion": "*",
   "Dependencies": {
-    "Hytale:Mounts": "*"
+    "Hytale:Mounts": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{
@@ -535,7 +549,8 @@
   "Dependencies": {
     "Hytale:I18nModule": "*",
     "Hytale:Instances": "*",
-    "Hytale:AnchorActionModule": "*"
+    "Hytale:AnchorActionModule": "*",
+    "Hytale:InteractionModule": "*"
   }
 }
 ,{

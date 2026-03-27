@@ -73,6 +73,10 @@ public class EqualizerEffect {
 
    @Nonnull
    public static EqualizerEffect deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 41) {
+         throw ProtocolException.bufferTooSmall("EqualizerEffect", 41, buf.readableBytes() - offset);
+      }
+
       EqualizerEffect obj = new EqualizerEffect();
       byte nullBits = buf.getByte(offset);
       obj.lowGain = buf.getFloatLE(offset + 1);
@@ -89,14 +93,18 @@ public class EqualizerEffect {
       if ((nullBits & 1) != 0) {
          int idLen = VarInt.peek(buf, pos);
          if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+            throw ProtocolException.invalidVarInt("Id");
          }
 
+         int idVarLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
          }
 
-         int idVarLen = VarInt.length(buf, pos);
+         if (pos + idVarLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", pos + idVarLen + idLen, buf.readableBytes());
+         }
+
          obj.id = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += idVarLen + idLen;
       }
@@ -109,7 +117,7 @@ public class EqualizerEffect {
       int pos = offset + 41;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -163,7 +171,7 @@ public class EqualizerEffect {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");

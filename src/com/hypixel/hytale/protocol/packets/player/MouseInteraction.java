@@ -80,6 +80,10 @@ public class MouseInteraction implements Packet, ToServerPacket {
 
    @Nonnull
    public static MouseInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 52) {
+         throw ProtocolException.bufferTooSmall("MouseInteraction", 52, buf.readableBytes() - offset);
+      }
+
       MouseInteraction obj = new MouseInteraction();
       byte nullBits = buf.getByte(offset);
       obj.clientTimestamp = buf.getLongLE(offset + 1);
@@ -97,21 +101,36 @@ public class MouseInteraction implements Packet, ToServerPacket {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos0 = offset + 52 + buf.getIntLE(offset + 44);
-         int itemInHandIdLen = VarInt.peek(buf, varPos0);
-         if (itemInHandIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemInHandId", itemInHandIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 44);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 52) {
+            throw ProtocolException.invalidOffset("ItemInHandId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 52 + varPosBase0;
+         int itemInHandIdLen = VarInt.peek(buf, varPos0);
+         if (itemInHandIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ItemInHandId");
+         }
+
+         int itemInHandIdVarIntLen = VarInt.size(itemInHandIdLen);
          if (itemInHandIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ItemInHandId", itemInHandIdLen, 4096000);
+         }
+
+         if (varPos0 + itemInHandIdVarIntLen + itemInHandIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemInHandId", varPos0 + itemInHandIdVarIntLen + itemInHandIdLen, buf.readableBytes());
          }
 
          obj.itemInHandId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos1 = offset + 52 + buf.getIntLE(offset + 48);
+         int varPosBase1 = buf.getIntLE(offset + 48);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 52) {
+            throw ProtocolException.invalidOffset("MouseMotion", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 52 + varPosBase1;
          obj.mouseMotion = MouseMotionEvent.deserialize(buf, varPos1);
       }
 
@@ -123,9 +142,13 @@ public class MouseInteraction implements Packet, ToServerPacket {
       int maxEnd = 52;
       if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 44);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 52) {
+            throw ProtocolException.invalidOffset("ItemInHandId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 52 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -133,6 +156,10 @@ public class MouseInteraction implements Packet, ToServerPacket {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 48);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 52) {
+            throw ProtocolException.invalidOffset("MouseMotion", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 52 + fieldOffset1;
          pos1 += MouseMotionEvent.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -230,15 +257,11 @@ public class MouseInteraction implements Packet, ToServerPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 8) != 0) {
          int itemInHandIdOffset = buffer.getIntLE(offset + 44);
-         if (itemInHandIdOffset < 0) {
+         if (itemInHandIdOffset < 0 || itemInHandIdOffset > buffer.writerIndex() - offset - 52) {
             return ValidationResult.error("Invalid offset for ItemInHandId");
          }
 
          int pos = offset + 52 + itemInHandIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemInHandId");
-         }
-
          int itemInHandIdLen = VarInt.peek(buffer, pos);
          if (itemInHandIdLen < 0) {
             return ValidationResult.error("Invalid string length for ItemInHandId");
@@ -248,7 +271,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
             return ValidationResult.error("ItemInHandId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemInHandIdLen);
          pos += itemInHandIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ItemInHandId");
@@ -257,15 +280,11 @@ public class MouseInteraction implements Packet, ToServerPacket {
 
       if ((nullBits & 16) != 0) {
          int mouseMotionOffset = buffer.getIntLE(offset + 48);
-         if (mouseMotionOffset < 0) {
+         if (mouseMotionOffset < 0 || mouseMotionOffset > buffer.writerIndex() - offset - 52) {
             return ValidationResult.error("Invalid offset for MouseMotion");
          }
 
          int pos = offset + 52 + mouseMotionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for MouseMotion");
-         }
-
          ValidationResult mouseMotionResult = MouseMotionEvent.validateStructure(buffer, pos);
          if (!mouseMotionResult.isValid()) {
             return ValidationResult.error("Invalid MouseMotion: " + mouseMotionResult.error());

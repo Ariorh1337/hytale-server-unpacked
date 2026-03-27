@@ -23,8 +23,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.PropDistribu
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +32,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PropStage implements Stage {
    public static final double DEFAULT_BACKGROUND_DENSITY = 0.0;
@@ -132,7 +133,7 @@ public class PropStage implements Stage {
       this.materialInputBounds_voxelGrid.max.y = 320;
       this.materialInputBounds_bufferGrid = GridUtils.createBufferBoundsInclusive_fromVoxelBounds(this.materialInputBounds_voxelGrid);
       if (this.materialInputBounds_bufferGrid.isZeroVolume()) {
-         this.materialInputBounds_bufferGrid.encompass(Vector3i.ZERO);
+         this.materialInputBounds_bufferGrid.encompass(Vector3iUtil.ZERO);
       }
 
       GridUtils.setBoundsYToWorldHeight_bufferGrid(this.materialInputBounds_bufferGrid);
@@ -227,10 +228,10 @@ public class PropStage implements Stage {
                   Integer biomeIdAtPosition = biomeInputSpace.get(positionX_voxelGrid, 0, positionZ_voxelGrid);
                   Biome biomeAtPosition = biomeRegistry.getObject(biomeIdAtPosition);
                   if (biomeAtPosition == biome) {
-                     position2d_voxelGrid.assign(positionX_voxelGrid, 0, positionZ_voxelGrid);
+                     position2d_voxelGrid.set(positionX_voxelGrid, 0, positionZ_voxelGrid);
                      double distanceToBiomeEdge = biomeDistanceSpace.get(position2d_voxelGrid).distanceToClosestOtherBiome(biomeIdAtPosition);
                      propContext.distanceToBiomeEdge = distanceToBiomeEdge;
-                     propContext.position.assign(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
+                     propContext.position.set(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
                      prop.generate(propContext);
                   }
                }

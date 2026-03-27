@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class Size {
 
    @Nonnull
    public static Size deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("Size", 8, buf.readableBytes() - offset);
+      }
+
       Size obj = new Size();
       obj.width = buf.getIntLE(offset + 0);
       obj.height = buf.getIntLE(offset + 4);

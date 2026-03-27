@@ -7,8 +7,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.GameMode;
@@ -39,6 +37,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PlaceBlockInteraction extends SimpleInteraction {
    public static final int TEMP_MAX_ADVENTURE_PLACEMENT_RANGE_SQUARED = 49;
@@ -123,7 +123,7 @@ public class PlaceBlockInteraction extends SimpleInteraction {
             if (transformComponent != null && playerComponent != null && playerComponent.getGameMode() != GameMode.Creative) {
                Vector3d position = transformComponent.getPosition();
                Vector3d blockCenter = new Vector3d(blockPosition.x + 0.5, blockPosition.y + 0.5, blockPosition.z + 0.5);
-               if (position.distanceSquaredTo(blockCenter) > 49.0) {
+               if (position.distanceSquared(blockCenter) > 49.0) {
                   context.getState().state = InteractionState.Failed;
                   return;
                }
@@ -159,7 +159,7 @@ public class PlaceBlockInteraction extends SimpleInteraction {
                heldItemStack,
                clientPlacedBlockTypeKey != null ? clientPlacedBlockTypeKey : this.blockTypeKey,
                heldItemContainer,
-               BlockFace.fromProtocolFace(context.getClientState().blockFace).getDirection(),
+               new Vector3i(BlockFace.fromProtocolFace(context.getClientState().blockFace).getDirection()),
                targetBlockPosition,
                blockRotation,
                inventory,

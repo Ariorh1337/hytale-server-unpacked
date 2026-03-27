@@ -68,13 +68,8 @@ public class PrefabBufferValidator {
             if (Files.isRegularFile(path) && path.toString().endsWith(".prefab.json")) {
                try {
                   IPrefabBuffer prefab = PrefabBufferUtil.getCached(path);
-
-                  try {
-                     String results = validate(prefab, options);
-                     return results != null ? path + "\n" + results : null;
-                  } finally {
-                     prefab.release();
-                  }
+                  String results = validate(prefab, options);
+                  return results != null ? path + "\n" + results : null;
                } catch (Throwable e) {
                   return path + "\n\t" + ExceptionUtil.combineMessages(ex, "\n\t");
                }

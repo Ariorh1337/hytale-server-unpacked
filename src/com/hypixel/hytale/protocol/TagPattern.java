@@ -42,22 +42,31 @@ public class TagPattern {
 
    @Nonnull
    public static TagPattern deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 14) {
+         throw ProtocolException.bufferTooSmall("TagPattern", 14, buf.readableBytes() - offset);
+      }
+
       TagPattern obj = new TagPattern();
       byte nullBits = buf.getByte(offset);
       obj.type = TagPatternType.fromValue(buf.getByte(offset + 1));
       obj.tagIndex = buf.getIntLE(offset + 2);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 14 + buf.getIntLE(offset + 6);
-         int operandsCount = VarInt.peek(buf, varPos0);
-         if (operandsCount < 0) {
-            throw ProtocolException.negativeLength("Operands", operandsCount);
+         int varPosBase0 = buf.getIntLE(offset + 6);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Operands", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 14 + varPosBase0;
+         int operandsCount = VarInt.peek(buf, varPos0);
+         if (operandsCount < 0) {
+            throw ProtocolException.invalidVarInt("Operands");
+         }
+
+         int varIntLen = VarInt.size(operandsCount);
          if (operandsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Operands", operandsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + operandsCount * 6L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Operands", varPos0 + varIntLen + operandsCount * 6, buf.readableBytes());
          }
@@ -72,7 +81,12 @@ public class TagPattern {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 14 + buf.getIntLE(offset + 10);
+         int varPosBase1 = buf.getIntLE(offset + 10);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Not", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 14 + varPosBase1;
          obj.not = deserialize(buf, varPos1);
       }
 
@@ -84,9 +98,13 @@ public class TagPattern {
       int maxEnd = 14;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 6);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Operands", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 14 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += computeBytesConsumed(buf, pos0);
@@ -99,6 +117,10 @@ public class TagPattern {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 10);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Not", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 14 + fieldOffset1;
          pos1 += computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -176,17 +198,18 @@ public class TagPattern {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid TagPatternType value for Type");
+      }
+
       if ((nullBits & 1) != 0) {
-         int operandsOffset = buffer.getIntLE(offset + 6);
-         if (operandsOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for Operands");
          }
 
-         int pos = offset + 14 + operandsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Operands");
-         }
-
+         int pos = offset + 14 + v;
          int operandsCount = VarInt.peek(buffer, pos);
          if (operandsCount < 0) {
             return ValidationResult.error("Invalid array count for Operands");
@@ -196,7 +219,7 @@ public class TagPattern {
             return ValidationResult.error("Operands exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(operandsCount);
 
          for (int i = 0; i < operandsCount; i++) {
             ValidationResult structResult = validateStructure(buffer, pos);
@@ -209,16 +232,12 @@ public class TagPattern {
       }
 
       if ((nullBits & 2) != 0) {
-         int notOffset = buffer.getIntLE(offset + 10);
-         if (notOffset < 0) {
+         v = buffer.getIntLE(offset + 10);
+         if (v < 0 || v > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for Not");
          }
 
-         int pos = offset + 14 + notOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Not");
-         }
-
+         int pos = offset + 14 + v;
          ValidationResult notResult = validateStructure(buffer, pos);
          if (!notResult.isValid()) {
             return ValidationResult.error("Invalid Not: " + notResult.error());

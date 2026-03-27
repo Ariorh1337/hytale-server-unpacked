@@ -16,7 +16,6 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -31,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCol
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BlockMapMarker implements Component<ChunkStore> {
    public static final BuilderCodec<BlockMapMarker> CODEC = BuilderCodec.builder(BlockMapMarker.class, BlockMapMarker::new)

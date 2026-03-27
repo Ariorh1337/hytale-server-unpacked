@@ -8,7 +8,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -26,6 +25,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class UseWateringCanInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -65,8 +65,8 @@ public class UseWateringCanInteraction extends SimpleBlockInteraction {
       HeadRotation headRotation = commandBuffer.getComponent(context.getEntity(), HeadRotation.getComponentType());
       if (headRotation != null) {
          Vector3i facing = headRotation.getHorizontalAxisDirection();
-         facingX = facing.getX();
-         facingZ = facing.getZ();
+         facingX = facing.x();
+         facingZ = facing.z();
       }
 
       if (facingX != 0 && facingZ != 0) {
@@ -83,9 +83,9 @@ public class UseWateringCanInteraction extends SimpleBlockInteraction {
 
       for (int forward = 0; forward < depth; forward++) {
          for (int lateral = -halfLeft; lateral <= halfRight; lateral++) {
-            int bx = targetBlock.getX() + lateral * lateralX + forward * facingX;
-            int bz = targetBlock.getZ() + lateral * lateralZ + forward * facingZ;
-            if (this.waterBlockAt(world, bx, targetBlock.getY(), bz, wateredUntil)) {
+            int bx = targetBlock.x() + lateral * lateralX + forward * facingX;
+            int bz = targetBlock.z() + lateral * lateralZ + forward * facingZ;
+            if (this.waterBlockAt(world, bx, targetBlock.y(), bz, wateredUntil)) {
                anyWatered = true;
             }
          }

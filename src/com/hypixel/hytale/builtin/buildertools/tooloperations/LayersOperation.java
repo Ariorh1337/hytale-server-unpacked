@@ -3,7 +3,7 @@ package com.hypixel.hytale.builtin.buildertools.tooloperations;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -15,9 +15,10 @@ import it.unimi.dsi.fastutil.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class LayersOperation extends ToolOperation {
-   private final Vector3i depthDirection;
+   private final Vector3i depthDirection = new Vector3i();
    private final int layerOneLength;
    private final int layerTwoLength;
    private final boolean enableLayerTwo;
@@ -45,28 +46,28 @@ public class LayersOperation extends ToolOperation {
       assert headRotationComponent != null;
       switch ((String)this.args.tool().get("aDirection")) {
          case "Up":
-            this.depthDirection = Vector3i.UP;
+            this.depthDirection.set(Vector3iUtil.UP);
             break;
          case "Down":
-            this.depthDirection = Vector3i.DOWN;
+            this.depthDirection.set(Vector3iUtil.DOWN);
             break;
          case "North":
-            this.depthDirection = Vector3i.NORTH;
+            this.depthDirection.set(Vector3iUtil.NORTH);
             break;
          case "South":
-            this.depthDirection = Vector3i.SOUTH;
+            this.depthDirection.set(Vector3iUtil.SOUTH);
             break;
          case "East":
-            this.depthDirection = Vector3i.EAST;
+            this.depthDirection.set(Vector3iUtil.EAST);
             break;
          case "West":
-            this.depthDirection = Vector3i.WEST;
+            this.depthDirection.set(Vector3iUtil.WEST);
             break;
          case "Camera":
-            this.depthDirection = headRotationComponent.getAxisDirection();
+            this.depthDirection.set(headRotationComponent.getAxisDirection());
             break;
          default:
-            this.depthDirection = Vector3i.DOWN;
+            this.depthDirection.set(Vector3iUtil.DOWN);
       }
 
       this.brushDensity = (Integer)this.args.tool().get("jBrushDensity");

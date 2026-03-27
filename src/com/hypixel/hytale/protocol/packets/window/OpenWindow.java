@@ -65,31 +65,55 @@ public class OpenWindow implements Packet, ToClientPacket {
 
    @Nonnull
    public static OpenWindow deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 18) {
+         throw ProtocolException.bufferTooSmall("OpenWindow", 18, buf.readableBytes() - offset);
+      }
+
       OpenWindow obj = new OpenWindow();
       byte nullBits = buf.getByte(offset);
       obj.id = buf.getIntLE(offset + 1);
       obj.windowType = WindowType.fromValue(buf.getByte(offset + 5));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 18 + buf.getIntLE(offset + 6);
-         int windowDataLen = VarInt.peek(buf, varPos0);
-         if (windowDataLen < 0) {
-            throw ProtocolException.negativeLength("WindowData", windowDataLen);
+         int varPosBase0 = buf.getIntLE(offset + 6);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("WindowData", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 18 + varPosBase0;
+         int windowDataLen = VarInt.peek(buf, varPos0);
+         if (windowDataLen < 0) {
+            throw ProtocolException.invalidVarInt("WindowData");
+         }
+
+         int windowDataVarIntLen = VarInt.size(windowDataLen);
          if (windowDataLen > 4096000) {
             throw ProtocolException.stringTooLong("WindowData", windowDataLen, 4096000);
+         }
+
+         if (varPos0 + windowDataVarIntLen + windowDataLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("WindowData", varPos0 + windowDataVarIntLen + windowDataLen, buf.readableBytes());
          }
 
          obj.windowData = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 18 + buf.getIntLE(offset + 10);
+         int varPosBase1 = buf.getIntLE(offset + 10);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Inventory", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 18 + varPosBase1;
          obj.inventory = InventorySection.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 18 + buf.getIntLE(offset + 14);
+         int varPosBase2 = buf.getIntLE(offset + 14);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("ExtraResources", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 18 + varPosBase2;
          obj.extraResources = ExtraResources.deserialize(buf, varPos2);
       }
 
@@ -101,9 +125,13 @@ public class OpenWindow implements Packet, ToClientPacket {
       int maxEnd = 18;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 6);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("WindowData", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 18 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -111,6 +139,10 @@ public class OpenWindow implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 10);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Inventory", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 18 + fieldOffset1;
          pos1 += InventorySection.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -120,6 +152,10 @@ public class OpenWindow implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 14);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("ExtraResources", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 18 + fieldOffset2;
          pos2 += ExtraResources.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -202,17 +238,18 @@ public class OpenWindow implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 5) & 255;
+      if (v >= 7) {
+         return ValidationResult.error("Invalid WindowType value for WindowType");
+      }
+
       if ((nullBits & 1) != 0) {
-         int windowDataOffset = buffer.getIntLE(offset + 6);
-         if (windowDataOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for WindowData");
          }
 
-         int pos = offset + 18 + windowDataOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for WindowData");
-         }
-
+         int pos = offset + 18 + v;
          int windowDataLen = VarInt.peek(buffer, pos);
          if (windowDataLen < 0) {
             return ValidationResult.error("Invalid string length for WindowData");
@@ -222,7 +259,7 @@ public class OpenWindow implements Packet, ToClientPacket {
             return ValidationResult.error("WindowData exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(windowDataLen);
          pos += windowDataLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading WindowData");
@@ -230,16 +267,12 @@ public class OpenWindow implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int inventoryOffset = buffer.getIntLE(offset + 10);
-         if (inventoryOffset < 0) {
+         v = buffer.getIntLE(offset + 10);
+         if (v < 0 || v > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Inventory");
          }
 
-         int pos = offset + 18 + inventoryOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Inventory");
-         }
-
+         int pos = offset + 18 + v;
          ValidationResult inventoryResult = InventorySection.validateStructure(buffer, pos);
          if (!inventoryResult.isValid()) {
             return ValidationResult.error("Invalid Inventory: " + inventoryResult.error());
@@ -249,16 +282,12 @@ public class OpenWindow implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int extraResourcesOffset = buffer.getIntLE(offset + 14);
-         if (extraResourcesOffset < 0) {
+         v = buffer.getIntLE(offset + 14);
+         if (v < 0 || v > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for ExtraResources");
          }
 
-         int pos = offset + 18 + extraResourcesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ExtraResources");
-         }
-
+         int pos = offset + 18 + v;
          ValidationResult extraResourcesResult = ExtraResources.validateStructure(buffer, pos);
          if (!extraResourcesResult.isValid()) {
             return ValidationResult.error("Invalid ExtraResources: " + extraResourcesResult.error());

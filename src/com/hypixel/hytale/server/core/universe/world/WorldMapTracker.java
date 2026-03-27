@@ -7,12 +7,12 @@ import com.hypixel.hytale.common.util.CompletableFutureUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.event.EventBus;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.iterator.CircleSpiralIterator;
 import com.hypixel.hytale.math.shape.Box2D;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.SoundCategory;
@@ -22,13 +22,19 @@ import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapSettings;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DiscoverZoneEvent;
+import com.hypixel.hytale.server.core.event.events.permissions.GroupPermissionChangeEvent;
+import com.hypixel.hytale.server.core.event.events.permissions.PlayerGroupEvent;
+import com.hypixel.hytale.server.core.event.events.permissions.PlayerPermissionChangeEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapSettings;
@@ -42,12 +48,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class WorldMapTracker implements Tickable {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -74,15 +82,31 @@ public class WorldMapTracker implements Tickable {
    private String currentBiomeName;
    @Nullable
    private WorldMapTracker.ZoneDiscoveryInfo currentZone;
-   private boolean allowTeleportToCoordinates = true;
-   private boolean allowTeleportToMarkers = true;
-   private boolean clientHasWorldMapVisible;
    @Nullable
    private TransformComponent transformComponent;
+
+   private void handleGroupPermissionsChanged(@Nonnull GroupPermissionChangeEvent event) {
+      String groupName = event.getGroupName();
+      PermissionsModule permissionsModule = PermissionsModule.get();
+
+      for (PlayerRef playerRef : Universe.get().getPlayers()) {
+         Set<String> groups = permissionsModule.getGroupsForUser(playerRef.getUuid());
+         if (groups.contains(groupName)) {
+            this.resendWorldMapSettings(playerRef.getUuid());
+         }
+      }
+   }
 
    public WorldMapTracker(@Nonnull Player player) {
       this.player = player;
       this.markerTracker = new MapMarkerTracker(this);
+      EventBus eventBus = HytaleServer.get().getEventBus();
+      eventBus.register(PlayerGroupEvent.Added.class, event -> this.resendWorldMapSettings(event.getPlayerUuid()));
+      eventBus.register(PlayerGroupEvent.Removed.class, event -> this.resendWorldMapSettings(event.getPlayerUuid()));
+      eventBus.register(PlayerPermissionChangeEvent.PermissionsAdded.class, event -> this.resendWorldMapSettings(event.getPlayerUuid()));
+      eventBus.register(PlayerPermissionChangeEvent.PermissionsRemoved.class, event -> this.resendWorldMapSettings(event.getPlayerUuid()));
+      eventBus.register(GroupPermissionChangeEvent.Added.class, this::handleGroupPermissionsChanged);
+      eventBus.register(GroupPermissionChangeEvent.Removed.class, this::handleGroupPermissionsChanged);
    }
 
    @Override
@@ -111,8 +135,8 @@ public class WorldMapTracker implements Tickable {
          }
 
          Vector3d position = this.transformComponent.getPosition();
-         int playerX = MathUtil.floor(position.getX());
-         int playerZ = MathUtil.floor(position.getZ());
+         int playerX = MathUtil.floor(position.x());
+         int playerZ = MathUtil.floor(position.z());
          int playerChunkX = playerX >> 5;
          int playerChunkZ = playerZ >> 5;
          if (world.isCompassUpdating()) {
@@ -469,6 +493,19 @@ public class WorldMapTracker implements Tickable {
       this.updateTimer = 0.0F;
    }
 
+   private void resendWorldMapSettings(@Nonnull UUID uuid) {
+      PlayerRef playerRef = Universe.get().getPlayer(uuid);
+      if (playerRef != null) {
+         Player player = playerRef.getComponent(Player.getComponentType());
+         if (player != null) {
+            World world = player.getWorld();
+            if (world != null) {
+               player.getWorldMapTracker().sendSettings(world);
+            }
+         }
+      }
+   }
+
    public void sendSettings(@Nonnull World world) {
       UpdateWorldMapSettings worldMapSettingsPacket = new UpdateWorldMapSettings(world.getWorldMapManager().getWorldMapSettings().getSettingsPacket());
       world.execute(() -> {
@@ -479,8 +516,8 @@ public class WorldMapTracker implements Tickable {
             assert playerComponent != null;
             PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
             assert playerRefComponent != null;
-            worldMapSettingsPacket.allowTeleportToCoordinates = this.allowTeleportToCoordinates && playerComponent.getGameMode() != GameMode.Adventure;
-            worldMapSettingsPacket.allowTeleportToMarkers = this.allowTeleportToMarkers && playerComponent.getGameMode() != GameMode.Adventure;
+            worldMapSettingsPacket.allowTeleportToCoordinates = this.isAllowTeleportToCoordinates();
+            worldMapSettingsPacket.allowTeleportToMarkers = this.isAllowTeleportToMarkers();
             WorldMapConfig worldMapConfig = world.getGameplayConfig().getWorldMapConfig();
             worldMapSettingsPacket.allowCreatingMapMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowCreatingMarkers();
             worldMapSettingsPacket.allowShowOnMapToggle = worldMapConfig.canTogglePlayersInMap();
@@ -559,10 +596,6 @@ public class WorldMapTracker implements Tickable {
       this.markerTracker.setPlayerMapFilter(playerMapFilter);
    }
 
-   public void setClientHasWorldMapVisible(boolean visible) {
-      this.clientHasWorldMapVisible = visible;
-   }
-
    @Nullable
    public Integer getViewRadiusOverride() {
       return this.viewRadiusOverride;
@@ -592,8 +625,8 @@ public class WorldMapTracker implements Tickable {
    public boolean shouldBeVisible(int chunkViewRadius, long chunkCoordinates) {
       if (this.player != null && this.transformComponent != null) {
          Vector3d position = this.transformComponent.getPosition();
-         int chunkX = MathUtil.floor(position.getX()) >> 5;
-         int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+         int chunkX = MathUtil.floor(position.x()) >> 5;
+         int chunkZ = MathUtil.floor(position.z()) >> 5;
          int x = ChunkUtil.xOfChunkIndex(chunkCoordinates);
          int z = ChunkUtil.zOfChunkIndex(chunkCoordinates);
          return shouldBeVisible(chunkViewRadius, chunkX, chunkZ, x, z);

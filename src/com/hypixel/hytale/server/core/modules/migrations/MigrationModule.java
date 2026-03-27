@@ -96,8 +96,8 @@ public class MigrationModule extends JavaPlugin {
                IChunkLoader loader = chunkComponentStore.getLoader();
                world.execute(
                   () -> {
+                     world.lockSaving();
                      ChunkSavingSystems.Data data = chunkComponentStore.getStore().getResource(ChunkStore.SAVE_RESOURCE);
-                     data.isSaving = false;
                      data.waitForSavingChunks()
                         .whenComplete(
                            (aVoid, throwable) -> {
@@ -145,7 +145,7 @@ public class MigrationModule extends JavaPlugin {
                               } catch (Throwable t) {
                                  this.getLogger().at(Level.SEVERE).withCause(t).log("Failed to migrate chunks!");
                               } finally {
-                                 data.isSaving = true;
+                                 world.unlockSaving();
                                  this.getLogger().at(Level.INFO).log("%d world(s) left to migrate.", (int)worldsCount.decrementAndGet());
                               }
                            }

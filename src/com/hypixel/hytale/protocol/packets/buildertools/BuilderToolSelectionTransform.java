@@ -6,6 +6,7 @@ import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -86,6 +87,10 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolSelectionTransform deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 80) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSelectionTransform", 80, buf.readableBytes() - offset);
+      }
+
       BuilderToolSelectionTransform obj = new BuilderToolSelectionTransform();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -196,7 +201,12 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 80 ? ValidationResult.error("Buffer too small: expected at least 80 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 80) {
+         return ValidationResult.error("Buffer too small: expected at least 80 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public BuilderToolSelectionTransform clone() {

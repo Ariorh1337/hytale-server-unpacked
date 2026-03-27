@@ -33,14 +33,14 @@ public class EntityEffectsUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int entityEffectUpdatesCount = VarInt.peek(buf, pos);
       if (entityEffectUpdatesCount < 0) {
-         throw ProtocolException.negativeLength("EntityEffectUpdates", entityEffectUpdatesCount);
+         throw ProtocolException.invalidVarInt("EntityEffectUpdates");
       }
 
+      int entityEffectUpdatesVarLen = VarInt.size(entityEffectUpdatesCount);
       if (entityEffectUpdatesCount > 4096000) {
          throw ProtocolException.arrayTooLong("EntityEffectUpdates", entityEffectUpdatesCount, 4096000);
       }
 
-      int entityEffectUpdatesVarLen = VarInt.size(entityEffectUpdatesCount);
       if (pos + entityEffectUpdatesVarLen + entityEffectUpdatesCount * 12L > buf.readableBytes()) {
          throw ProtocolException.bufferTooSmall("EntityEffectUpdates", pos + entityEffectUpdatesVarLen + entityEffectUpdatesCount * 12, buf.readableBytes());
       }
@@ -59,7 +59,7 @@ public class EntityEffectsUpdate extends ComponentUpdate {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(arrLen);
 
       for (int i = 0; i < arrLen; i++) {
          pos += EntityEffectUpdate.computeBytesConsumed(buf, pos);
@@ -111,7 +111,7 @@ public class EntityEffectsUpdate extends ComponentUpdate {
          return ValidationResult.error("EntityEffectUpdates exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(entityEffectUpdatesCount);
 
       for (int i = 0; i < entityEffectUpdatesCount; i++) {
          ValidationResult structResult = EntityEffectUpdate.validateStructure(buffer, pos);

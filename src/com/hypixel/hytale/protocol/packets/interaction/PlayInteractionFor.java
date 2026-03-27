@@ -80,6 +80,10 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
 
    @Nonnull
    public static PlayInteractionFor deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 27) {
+         throw ProtocolException.bufferTooSmall("PlayInteractionFor", 27, buf.readableBytes() - offset);
+      }
+
       PlayInteractionFor obj = new PlayInteractionFor();
       byte nullBits = buf.getByte(offset);
       obj.entityId = buf.getIntLE(offset + 1);
@@ -89,19 +93,34 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
       obj.interactionType = InteractionType.fromValue(buf.getByte(offset + 17));
       obj.cancel = buf.getByte(offset + 18) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 27 + buf.getIntLE(offset + 19);
+         int varPosBase0 = buf.getIntLE(offset + 19);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 27) {
+            throw ProtocolException.invalidOffset("ForkedId", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 27 + varPosBase0;
          obj.forkedId = ForkedChainId.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 27 + buf.getIntLE(offset + 23);
-         int interactedItemIdLen = VarInt.peek(buf, varPos1);
-         if (interactedItemIdLen < 0) {
-            throw ProtocolException.negativeLength("InteractedItemId", interactedItemIdLen);
+         int varPosBase1 = buf.getIntLE(offset + 23);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 27) {
+            throw ProtocolException.invalidOffset("InteractedItemId", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 27 + varPosBase1;
+         int interactedItemIdLen = VarInt.peek(buf, varPos1);
+         if (interactedItemIdLen < 0) {
+            throw ProtocolException.invalidVarInt("InteractedItemId");
+         }
+
+         int interactedItemIdVarIntLen = VarInt.size(interactedItemIdLen);
          if (interactedItemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("InteractedItemId", interactedItemIdLen, 4096000);
+         }
+
+         if (varPos1 + interactedItemIdVarIntLen + interactedItemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("InteractedItemId", varPos1 + interactedItemIdVarIntLen + interactedItemIdLen, buf.readableBytes());
          }
 
          obj.interactedItemId = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -115,6 +134,10 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
       int maxEnd = 27;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 19);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 27) {
+            throw ProtocolException.invalidOffset("ForkedId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 27 + fieldOffset0;
          pos0 += ForkedChainId.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -124,9 +147,13 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 23);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 27) {
+            throw ProtocolException.invalidOffset("InteractedItemId", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 27 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -194,17 +221,18 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 17) & 255;
+      if (v >= 25) {
+         return ValidationResult.error("Invalid InteractionType value for InteractionType");
+      }
+
       if ((nullBits & 1) != 0) {
-         int forkedIdOffset = buffer.getIntLE(offset + 19);
-         if (forkedIdOffset < 0) {
+         v = buffer.getIntLE(offset + 19);
+         if (v < 0 || v > buffer.writerIndex() - offset - 27) {
             return ValidationResult.error("Invalid offset for ForkedId");
          }
 
-         int pos = offset + 27 + forkedIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ForkedId");
-         }
-
+         int pos = offset + 27 + v;
          ValidationResult forkedIdResult = ForkedChainId.validateStructure(buffer, pos);
          if (!forkedIdResult.isValid()) {
             return ValidationResult.error("Invalid ForkedId: " + forkedIdResult.error());
@@ -214,16 +242,12 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int interactedItemIdOffset = buffer.getIntLE(offset + 23);
-         if (interactedItemIdOffset < 0) {
+         v = buffer.getIntLE(offset + 23);
+         if (v < 0 || v > buffer.writerIndex() - offset - 27) {
             return ValidationResult.error("Invalid offset for InteractedItemId");
          }
 
-         int pos = offset + 27 + interactedItemIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for InteractedItemId");
-         }
-
+         int pos = offset + 27 + v;
          int interactedItemIdLen = VarInt.peek(buffer, pos);
          if (interactedItemIdLen < 0) {
             return ValidationResult.error("Invalid string length for InteractedItemId");
@@ -233,7 +257,7 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
             return ValidationResult.error("InteractedItemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(interactedItemIdLen);
          pos += interactedItemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading InteractedItemId");

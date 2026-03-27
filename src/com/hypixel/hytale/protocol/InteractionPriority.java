@@ -33,20 +33,25 @@ public class InteractionPriority {
 
    @Nonnull
    public static InteractionPriority deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("InteractionPriority", 1, buf.readableBytes() - offset);
+      }
+
       InteractionPriority obj = new InteractionPriority();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int valuesCount = VarInt.peek(buf, pos);
          if (valuesCount < 0) {
-            throw ProtocolException.negativeLength("Values", valuesCount);
+            throw ProtocolException.invalidVarInt("Values");
          }
 
+         int valuesVarLen = VarInt.size(valuesCount);
          if (valuesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Values", valuesCount, 4096000);
          }
 
-         pos += VarInt.size(valuesCount);
+         pos += valuesVarLen;
          obj.values = new HashMap<>(valuesCount);
 
          for (int i = 0; i < valuesCount; i++) {
@@ -67,7 +72,7 @@ public class InteractionPriority {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos = ++pos + 4;
@@ -124,9 +129,14 @@ public class InteractionPriority {
             return ValidationResult.error("Values exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(valuesCount);
 
          for (int i = 0; i < valuesCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 3) {
+               return ValidationResult.error("Invalid PrioritySlot value for key");
+            }
+
             pos = ++pos + 4;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");

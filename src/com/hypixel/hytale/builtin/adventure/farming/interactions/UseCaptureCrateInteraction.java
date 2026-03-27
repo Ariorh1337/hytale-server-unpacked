@@ -11,9 +11,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
@@ -38,6 +37,9 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.metadata.CapturedNPCMetadata;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -206,7 +208,7 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                            if (coopBlockComponent.tryPutResident(existingMeta, worldTimeResource)) {
                               world.execute(
                                  () -> coopBlockComponent.ensureSpawnResidentsInWorld(
-                                    world, world.getEntityStore().getStore(), new Vector3d(pos.x, pos.y, pos.z), new Vector3d().assign(Vector3d.FORWARD)
+                                    world, world.getEntityStore().getStore(), new Vector3d(pos.x, pos.y, pos.z), new Vector3d().set(Vector3dUtil.FORWARD)
                                  )
                               );
                               hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
@@ -223,13 +225,14 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                      if (context.getClientState() != null) {
                         BlockFace blockFace = BlockFace.fromProtocolFace(context.getClientState().blockFace);
                         if (blockFace != null) {
-                           spawnPos.add(blockFace.getDirection());
+                           Vector3ic direction = blockFace.getDirection();
+                           spawnPos.add(direction.x(), direction.y(), direction.z());
                         }
                      }
 
                      String roleId = existingMeta.getNpcNameKey();
                      int roleIndex = NPCPlugin.get().getIndex(roleId);
-                     commandBuffer.run(_store -> NPCPlugin.get().spawnEntity(_store, roleIndex, spawnPos, Vector3f.ZERO, null, null));
+                     commandBuffer.run(_store -> NPCPlugin.get().spawnEntity(_store, roleIndex, spawnPos, Rotation3f.IDENTITY, null, null));
                      hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
                   }
                }

@@ -16,8 +16,7 @@ import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.asset.type.gameplay.DeathConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -46,6 +45,7 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class NPCDamageSystems {
    public static class DamageDealtSystem extends DamageEventSystem {
@@ -233,9 +233,9 @@ public class NPCDamageSystems {
                      Vector3d position = transformComponent.getPosition();
                      HeadRotation headRotationComponent = archetypeChunk.getComponent(index, HeadRotation.getComponentType());
                      assert headRotationComponent != null;
-                     Vector3f headRotation = headRotationComponent.getRotation();
-                     Vector3d dropPosition = position.clone().add(0.0, 1.0, 0.0);
-                     Holder<EntityStore>[] drops = ItemComponent.generateItemDrops(store, itemsToDrop, dropPosition, headRotation.clone());
+                     Rotation3f headRotation = headRotationComponent.getRotation();
+                     Vector3d dropPosition = new Vector3d(position).add(0.0, 1.0, 0.0);
+                     Holder<EntityStore>[] drops = ItemComponent.generateItemDrops(store, itemsToDrop, dropPosition, new Rotation3f(headRotation));
                      commandBuffer.addEntities(drops, AddReason.SPAWN);
                   }
                }

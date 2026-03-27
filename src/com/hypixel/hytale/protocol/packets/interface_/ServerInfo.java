@@ -58,39 +58,68 @@ public class ServerInfo implements Packet, ToClientPacket {
 
    @Nonnull
    public static ServerInfo deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("ServerInfo", 17, buf.readableBytes() - offset);
+      }
+
       ServerInfo obj = new ServerInfo();
       byte nullBits = buf.getByte(offset);
       obj.maxPlayers = buf.getIntLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 17 + buf.getIntLE(offset + 5);
-         int serverNameLen = VarInt.peek(buf, varPos0);
-         if (serverNameLen < 0) {
-            throw ProtocolException.negativeLength("ServerName", serverNameLen);
+         int varPosBase0 = buf.getIntLE(offset + 5);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ServerName", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 17 + varPosBase0;
+         int serverNameLen = VarInt.peek(buf, varPos0);
+         if (serverNameLen < 0) {
+            throw ProtocolException.invalidVarInt("ServerName");
+         }
+
+         int serverNameVarIntLen = VarInt.size(serverNameLen);
          if (serverNameLen > 4096000) {
             throw ProtocolException.stringTooLong("ServerName", serverNameLen, 4096000);
+         }
+
+         if (varPos0 + serverNameVarIntLen + serverNameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ServerName", varPos0 + serverNameVarIntLen + serverNameLen, buf.readableBytes());
          }
 
          obj.serverName = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 17 + buf.getIntLE(offset + 9);
-         int motdLen = VarInt.peek(buf, varPos1);
-         if (motdLen < 0) {
-            throw ProtocolException.negativeLength("Motd", motdLen);
+         int varPosBase1 = buf.getIntLE(offset + 9);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Motd", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 17 + varPosBase1;
+         int motdLen = VarInt.peek(buf, varPos1);
+         if (motdLen < 0) {
+            throw ProtocolException.invalidVarInt("Motd");
+         }
+
+         int motdVarIntLen = VarInt.size(motdLen);
          if (motdLen > 4096000) {
             throw ProtocolException.stringTooLong("Motd", motdLen, 4096000);
+         }
+
+         if (varPos1 + motdVarIntLen + motdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Motd", varPos1 + motdVarIntLen + motdLen, buf.readableBytes());
          }
 
          obj.motd = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 17 + buf.getIntLE(offset + 13);
+         int varPosBase2 = buf.getIntLE(offset + 13);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("FallbackServer", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 17 + varPosBase2;
          obj.fallbackServer = HostAddress.deserialize(buf, varPos2);
       }
 
@@ -102,9 +131,13 @@ public class ServerInfo implements Packet, ToClientPacket {
       int maxEnd = 17;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 5);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ServerName", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -112,9 +145,13 @@ public class ServerInfo implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 9);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Motd", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 17 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -122,6 +159,10 @@ public class ServerInfo implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 13);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("FallbackServer", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 17 + fieldOffset2;
          pos2 += HostAddress.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -205,15 +246,11 @@ public class ServerInfo implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int serverNameOffset = buffer.getIntLE(offset + 5);
-         if (serverNameOffset < 0) {
+         if (serverNameOffset < 0 || serverNameOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for ServerName");
          }
 
          int pos = offset + 17 + serverNameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ServerName");
-         }
-
          int serverNameLen = VarInt.peek(buffer, pos);
          if (serverNameLen < 0) {
             return ValidationResult.error("Invalid string length for ServerName");
@@ -223,7 +260,7 @@ public class ServerInfo implements Packet, ToClientPacket {
             return ValidationResult.error("ServerName exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(serverNameLen);
          pos += serverNameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ServerName");
@@ -232,15 +269,11 @@ public class ServerInfo implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int motdOffset = buffer.getIntLE(offset + 9);
-         if (motdOffset < 0) {
+         if (motdOffset < 0 || motdOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for Motd");
          }
 
          int pos = offset + 17 + motdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Motd");
-         }
-
          int motdLen = VarInt.peek(buffer, pos);
          if (motdLen < 0) {
             return ValidationResult.error("Invalid string length for Motd");
@@ -250,7 +283,7 @@ public class ServerInfo implements Packet, ToClientPacket {
             return ValidationResult.error("Motd exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(motdLen);
          pos += motdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Motd");
@@ -259,15 +292,11 @@ public class ServerInfo implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fallbackServerOffset = buffer.getIntLE(offset + 13);
-         if (fallbackServerOffset < 0) {
+         if (fallbackServerOffset < 0 || fallbackServerOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for FallbackServer");
          }
 
          int pos = offset + 17 + fallbackServerOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FallbackServer");
-         }
-
          ValidationResult fallbackServerResult = HostAddress.validateStructure(buffer, pos);
          if (!fallbackServerResult.isValid()) {
             return ValidationResult.error("Invalid FallbackServer: " + fallbackServerResult.error());

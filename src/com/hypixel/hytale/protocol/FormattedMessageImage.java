@@ -36,20 +36,28 @@ public class FormattedMessageImage {
 
    @Nonnull
    public static FormattedMessageImage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("FormattedMessageImage", 8, buf.readableBytes() - offset);
+      }
+
       FormattedMessageImage obj = new FormattedMessageImage();
       obj.width = buf.getIntLE(offset + 0);
       obj.height = buf.getIntLE(offset + 4);
       int pos = offset + 8;
       int filePathLen = VarInt.peek(buf, pos);
       if (filePathLen < 0) {
-         throw ProtocolException.negativeLength("FilePath", filePathLen);
+         throw ProtocolException.invalidVarInt("FilePath");
       }
 
+      int filePathVarLen = VarInt.size(filePathLen);
       if (filePathLen > 4096000) {
          throw ProtocolException.stringTooLong("FilePath", filePathLen, 4096000);
       }
 
-      int filePathVarLen = VarInt.length(buf, pos);
+      if (pos + filePathVarLen + filePathLen > buf.readableBytes()) {
+         throw ProtocolException.bufferTooSmall("FilePath", pos + filePathVarLen + filePathLen, buf.readableBytes());
+      }
+
       obj.filePath = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
       pos += filePathVarLen + filePathLen;
       return obj;
@@ -58,7 +66,7 @@ public class FormattedMessageImage {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 8;
       int sl = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + sl;
+      pos += VarInt.size(sl) + sl;
       return pos - offset;
    }
 
@@ -88,7 +96,7 @@ public class FormattedMessageImage {
          return ValidationResult.error("FilePath exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(filePathLen);
       pos += filePathLen;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading FilePath") : ValidationResult.OK;
    }

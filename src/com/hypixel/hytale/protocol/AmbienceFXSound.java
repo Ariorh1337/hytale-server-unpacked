@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -57,6 +58,10 @@ public class AmbienceFXSound {
 
    @Nonnull
    public static AmbienceFXSound deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 31) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXSound", 31, buf.readableBytes() - offset);
+      }
+
       AmbienceFXSound obj = new AmbienceFXSound();
       byte nullBits = buf.getByte(offset);
       obj.soundEventIndex = buf.getIntLE(offset + 1);
@@ -114,7 +119,18 @@ public class AmbienceFXSound {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 31 ? ValidationResult.error("Buffer too small: expected at least 31 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 31) {
+         return ValidationResult.error("Buffer too small: expected at least 31 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 5) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid AmbienceFXSoundPlay3D value for Play3D");
+      }
+
+      v = buffer.getByte(offset + 10) & 255;
+      return v >= 4 ? ValidationResult.error("Invalid AmbienceFXAltitude value for Altitude") : ValidationResult.OK;
    }
 
    public AmbienceFXSound clone() {

@@ -8,9 +8,8 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.gameplay.BrokenPenalties;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
@@ -36,6 +35,7 @@ import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 @Deprecated(forRemoval = true)
 public class LaunchProjectileInteraction extends SimpleInstantInteraction implements BallisticDataProvider {
@@ -72,7 +72,7 @@ public class LaunchProjectileInteraction extends SimpleInstantInteraction implem
       if (EntityUtils.getEntity(sourceRef, commandBuffer) instanceof LivingEntity attackerLivingEntity) {
          Transform lookVec = TargetUtil.getLook(sourceRef, commandBuffer);
          Vector3d lookPosition = lookVec.getPosition();
-         Vector3f lookRotation = lookVec.getRotation();
+         Rotation3f lookRotation = lookVec.getRotation();
          UUIDComponent sourceUuidComponent = commandBuffer.getComponent(sourceRef, UUIDComponent.getComponentType());
          if (sourceUuidComponent != null) {
             UUID sourceUuid = sourceUuidComponent.getUuid();
@@ -88,9 +88,7 @@ public class LaunchProjectileInteraction extends SimpleInstantInteraction implem
                }
             }
 
-            projectileComponent.shoot(
-               holder, sourceUuid, lookPosition.getX(), lookPosition.getY(), lookPosition.getZ(), lookRotation.getYaw(), lookRotation.getPitch()
-            );
+            projectileComponent.shoot(holder, sourceUuid, lookPosition.x(), lookPosition.y(), lookPosition.z(), lookRotation.yaw(), lookRotation.pitch());
             commandBuffer.addEntity(holder, AddReason.SPAWN);
             ItemStack itemInHand = context.getHeldItem();
             if (itemInHand != null && !itemInHand.isEmpty()) {

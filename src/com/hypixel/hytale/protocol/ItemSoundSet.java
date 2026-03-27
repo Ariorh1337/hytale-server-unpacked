@@ -38,34 +38,53 @@ public class ItemSoundSet {
 
    @Nonnull
    public static ItemSoundSet deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ItemSoundSet", 9, buf.readableBytes() - offset);
+      }
+
       ItemSoundSet obj = new ItemSoundSet();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int soundEventIndicesCount = VarInt.peek(buf, varPos1);
-         if (soundEventIndicesCount < 0) {
-            throw ProtocolException.negativeLength("SoundEventIndices", soundEventIndicesCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("SoundEventIndices", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int soundEventIndicesCount = VarInt.peek(buf, varPos1);
+         if (soundEventIndicesCount < 0) {
+            throw ProtocolException.invalidVarInt("SoundEventIndices");
+         }
+
+         int varIntLen = VarInt.size(soundEventIndicesCount);
          if (soundEventIndicesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SoundEventIndices", soundEventIndicesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.soundEventIndices = new HashMap<>(soundEventIndicesCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -87,9 +106,13 @@ public class ItemSoundSet {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -97,9 +120,13 @@ public class ItemSoundSet {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("SoundEventIndices", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + 4;
@@ -175,15 +202,11 @@ public class ItemSoundSet {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 1);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 9 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -193,7 +216,7 @@ public class ItemSoundSet {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -202,15 +225,11 @@ public class ItemSoundSet {
 
       if ((nullBits & 2) != 0) {
          int soundEventIndicesOffset = buffer.getIntLE(offset + 5);
-         if (soundEventIndicesOffset < 0) {
+         if (soundEventIndicesOffset < 0 || soundEventIndicesOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for SoundEventIndices");
          }
 
          int pos = offset + 9 + soundEventIndicesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SoundEventIndices");
-         }
-
          int soundEventIndicesCount = VarInt.peek(buffer, pos);
          if (soundEventIndicesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SoundEventIndices");
@@ -220,9 +239,14 @@ public class ItemSoundSet {
             return ValidationResult.error("SoundEventIndices exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(soundEventIndicesCount);
 
          for (int i = 0; i < soundEventIndicesCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 2) {
+               return ValidationResult.error("Invalid ItemSoundEvent value for key");
+            }
+
             pos = ++pos + 4;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -64,6 +65,10 @@ public class StabSelector extends Selector {
 
    @Nonnull
    public static StabSelector deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 37) {
+         throw ProtocolException.bufferTooSmall("StabSelector", 37, buf.readableBytes() - offset);
+      }
+
       StabSelector obj = new StabSelector();
       obj.extendTop = buf.getFloatLE(offset + 0);
       obj.extendBottom = buf.getFloatLE(offset + 4);

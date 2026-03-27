@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -50,6 +51,10 @@ public class ClientTeleport implements Packet, ToClientPacket {
 
    @Nonnull
    public static ClientTeleport deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 52) {
+         throw ProtocolException.bufferTooSmall("ClientTeleport", 52, buf.readableBytes() - offset);
+      }
+
       ClientTeleport obj = new ClientTeleport();
       byte nullBits = buf.getByte(offset);
       obj.teleportId = buf.getByte(offset + 1);
@@ -89,7 +94,12 @@ public class ClientTeleport implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 52 ? ValidationResult.error("Buffer too small: expected at least 52 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 52) {
+         return ValidationResult.error("Buffer too small: expected at least 52 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public ClientTeleport clone() {

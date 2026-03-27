@@ -10,9 +10,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.InteractionType;
@@ -89,6 +87,8 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Quaterniond;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BuilderToolsPacketHandler implements SubPacketHandler {
    @Nonnull
@@ -299,7 +299,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
 
                BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
                Vector3d position = transformComponent.getPosition();
-               Vector3i intTriple = new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ()));
+               Vector3i intTriple = new Vector3i(MathUtil.floor(position.x()), MathUtil.floor(position.y()), MathUtil.floor(position.z()));
                BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
                   if (packet.action == BuilderToolAction.SelectionPosition1) {
                      builderState.pos1(intTriple, componentAccessor);
@@ -379,7 +379,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                      TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
                      if (transform != null && transform.getPosition() != null) {
                         Vector3d pos = transform.getPosition();
-                        entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.getX(), pos.getY(), pos.getZ(), holder.clone()));
+                        entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.x(), pos.y(), pos.z(), holder.clone()));
                      }
                   });
                   prototypeSettings.setEntityChangesForPlaySelectionToolPasteMode(entityChanges.toArray(PrototypePlayerBuilderToolSettings.EntityChange[]::new));
@@ -438,7 +438,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          Vector3i translationOffset = new Vector3i(packet.translationOffset.x, packet.translationOffset.y, packet.translationOffset.z);
          Vector3i initialSelectionMin = new Vector3i(packet.initialSelectionMin.x, packet.initialSelectionMin.y, packet.initialSelectionMin.z);
          Vector3i initialSelectionMax = new Vector3i(packet.initialSelectionMax.x, packet.initialSelectionMax.y, packet.initialSelectionMax.z);
-         Vector3f rotationOrigin = new Vector3f(packet.initialRotationOrigin.x, packet.initialRotationOrigin.y, packet.initialRotationOrigin.z);
+         Rotation3f rotationOrigin = new Rotation3f(packet.initialRotationOrigin.x, packet.initialRotationOrigin.y, packet.initialRotationOrigin.z);
          PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerRef.getUuid());
          BuilderToolsPlugin.addToQueue(
             playerComponent,
@@ -501,7 +501,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                         TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
                         if (transform != null && transform.getPosition() != null) {
                            Vector3d pos = transform.getPosition();
-                           entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.getX(), pos.getY(), pos.getZ(), holder.clone()));
+                           entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.x(), pos.y(), pos.z(), holder.clone()));
                         }
                      });
                      prototypeSettings.setEntityChangesForPlaySelectionToolPasteMode(
@@ -771,17 +771,16 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                boolean hasLookOrientation = modelTransform.lookOrientation != null;
                boolean hasBodyOrientation = modelTransform.bodyOrientation != null;
                if (hasPosition) {
-                  transformComponent.getPosition().assign(modelTransform.position.x, modelTransform.position.y, modelTransform.position.z);
+                  transformComponent.getPosition().set(modelTransform.position.x, modelTransform.position.y, modelTransform.position.z);
                }
 
                if (hasLookOrientation && headRotation != null) {
-                  headRotation.getRotation()
-                     .assign(modelTransform.lookOrientation.pitch, modelTransform.lookOrientation.yaw, modelTransform.lookOrientation.roll);
+                  headRotation.getRotation().set(modelTransform.lookOrientation.pitch, modelTransform.lookOrientation.yaw, modelTransform.lookOrientation.roll);
                }
 
                if (hasBodyOrientation) {
                   transformComponent.getRotation()
-                     .assign(modelTransform.bodyOrientation.pitch, modelTransform.bodyOrientation.yaw, modelTransform.bodyOrientation.roll);
+                     .set(modelTransform.bodyOrientation.pitch, modelTransform.bodyOrientation.yaw, modelTransform.bodyOrientation.roll);
                }
 
                if (hasPosition || hasLookOrientation || hasBodyOrientation) {

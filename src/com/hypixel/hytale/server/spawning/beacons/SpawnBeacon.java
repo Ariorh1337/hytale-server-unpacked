@@ -8,8 +8,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -37,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SpawnBeacon extends Entity {
    public static final BuilderCodec<SpawnBeacon> CODEC = BuilderCodec.builder(SpawnBeacon.class, SpawnBeacon::new, Entity.CODEC)
@@ -121,7 +121,7 @@ public class SpawnBeacon extends Entity {
                      this.spawningContext.releaseFull();
                   } else {
                      Vector3d position = this.spawningContext.newPosition();
-                     Vector3f rotation = this.spawningContext.newRotation();
+                     Rotation3f rotation = this.spawningContext.newRotation();
                      FlockAsset flockDefinition = roleSpawnParameters.getFlockDefinition();
                      int flockSize = flockDefinition != null ? flockDefinition.pickFlockSize() : 1;
 

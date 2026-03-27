@@ -5,8 +5,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -32,6 +31,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class NPCRunTestsCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -143,7 +143,7 @@ public class NPCRunTestsCommand extends AbstractPlayerCommand {
          store.removeComponent(reference, NPCRunTestsCommand.NPCTestData.getComponentType());
       } else {
          Vector3d position;
-         Vector3f rotation;
+         Rotation3f rotation;
          if (npcReference != null) {
             TransformComponent npcTransformComponent = store.getComponent(npcReference, TransformComponent.getComponentType());
             assert npcTransformComponent != null;
@@ -182,7 +182,7 @@ public class NPCRunTestsCommand extends AbstractPlayerCommand {
       @Nonnull NPCRunTestsCommand.NPCTestData testData,
       int index,
       @Nonnull Vector3d position,
-      @Nullable Vector3f rotation,
+      @Nullable Rotation3f rotation,
       @Nonnull Store<EntityStore> store
    ) {
       Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get().spawnEntity(store, testData.npcRoles.getInt(index), position, rotation, null, null);

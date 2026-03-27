@@ -48,6 +48,10 @@ public class AssetEditorFetchAssetReply implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorFetchAssetReply deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchAssetReply", 5, buf.readableBytes() - offset);
+      }
+
       AssetEditorFetchAssetReply obj = new AssetEditorFetchAssetReply();
       byte nullBits = buf.getByte(offset);
       obj.token = buf.getIntLE(offset + 1);
@@ -55,14 +59,14 @@ public class AssetEditorFetchAssetReply implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int contentsCount = VarInt.peek(buf, pos);
          if (contentsCount < 0) {
-            throw ProtocolException.negativeLength("Contents", contentsCount);
+            throw ProtocolException.invalidVarInt("Contents");
          }
 
+         int contentsVarLen = VarInt.size(contentsCount);
          if (contentsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Contents", contentsCount, 4096000);
          }
 
-         int contentsVarLen = VarInt.size(contentsCount);
          if (pos + contentsVarLen + contentsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Contents", pos + contentsVarLen + contentsCount * 1, buf.readableBytes());
          }
@@ -85,7 +89,7 @@ public class AssetEditorFetchAssetReply implements Packet, ToClientPacket {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -140,7 +144,7 @@ public class AssetEditorFetchAssetReply implements Packet, ToClientPacket {
             return ValidationResult.error("Contents exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(contentsCount);
          pos += contentsCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Contents");

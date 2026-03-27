@@ -18,6 +18,7 @@ import com.hypixel.hytale.protocol.BenchType;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<String, CraftingRecipe>> {
    public static final String FIELDCRAFT_REQUIREMENT = "Fieldcraft";
@@ -135,12 +136,13 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
       })
       .afterDecode(CraftingRecipe::processConfig)
       .build();
-   private static final MaterialQuantity[] EMPTY_OUTPUT = new MaterialQuantity[0];
+   private static final MaterialQuantity[] EMPTY_OUTPUT = MaterialQuantity.EMPTY_ARRAY;
    private static AssetStore<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> ASSET_STORE;
    private AssetExtraInfo.Data data;
    protected String id;
    protected MaterialQuantity[] input;
    protected MaterialQuantity[] outputs = EMPTY_OUTPUT;
+   @Nullable
    protected MaterialQuantity primaryOutput;
    protected int primaryOutputQuantity = 1;
    protected BenchRequirement[] benchRequirement;
@@ -162,7 +164,7 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
 
    public CraftingRecipe(
       MaterialQuantity[] input,
-      MaterialQuantity primaryOutput,
+      @Nullable MaterialQuantity primaryOutput,
       MaterialQuantity[] outputs,
       int outputQuantity,
       BenchRequirement[] benchRequirement,
@@ -206,7 +208,7 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
          packet.inputs = ArrayUtil.copyAndMutate(this.input, MaterialQuantity::toPacket, com.hypixel.hytale.protocol.MaterialQuantity[]::new);
       }
 
-      packet.primaryOutput = this.primaryOutput.toPacket();
+      packet.primaryOutput = this.primaryOutput != null ? this.primaryOutput.toPacket() : null;
       if (this.outputs != null && this.outputs.length > 0) {
          packet.outputs = ArrayUtil.copyAndMutate(this.outputs, MaterialQuantity::toPacket, com.hypixel.hytale.protocol.MaterialQuantity[]::new);
       }
@@ -251,6 +253,7 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
       return this.requiredMemoriesLevel;
    }
 
+   @Nullable
    public MaterialQuantity getPrimaryOutput() {
       return this.primaryOutput;
    }

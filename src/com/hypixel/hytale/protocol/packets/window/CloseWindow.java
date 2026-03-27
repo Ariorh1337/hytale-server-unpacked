@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -42,6 +43,10 @@ public class CloseWindow implements Packet, ToServerPacket, ToClientPacket {
 
    @Nonnull
    public static CloseWindow deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("CloseWindow", 4, buf.readableBytes() - offset);
+      }
+
       CloseWindow obj = new CloseWindow();
       obj.id = buf.getIntLE(offset + 0);
       return obj;

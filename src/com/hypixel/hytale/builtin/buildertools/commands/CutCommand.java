@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrefabCopyException;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class CutCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -80,7 +80,7 @@ public class CutCommand extends AbstractPlayerCommand {
 
                Vector3i min = selection.getSelectionMin();
                Vector3i max = selection.getSelectionMax();
-               builderState.copyOrCut(r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settingsFinal, componentAccessor);
+               builderState.copyOrCut(r, min.x(), min.y(), min.z(), max.x(), max.y(), max.z(), settingsFinal, componentAccessor);
             } catch (PrefabCopyException e) {
                context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));
             }

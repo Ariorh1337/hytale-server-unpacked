@@ -50,20 +50,24 @@ public class VoiceData implements Packet, ToServerPacket {
 
    @Nonnull
    public static VoiceData deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("VoiceData", 6, buf.readableBytes() - offset);
+      }
+
       VoiceData obj = new VoiceData();
       obj.sequenceNumber = buf.getShortLE(offset + 0);
       obj.timestamp = buf.getIntLE(offset + 2);
       int pos = offset + 6;
       int opusDataCount = VarInt.peek(buf, pos);
       if (opusDataCount < 0) {
-         throw ProtocolException.negativeLength("OpusData", opusDataCount);
+         throw ProtocolException.invalidVarInt("OpusData");
       }
 
+      int opusDataVarLen = VarInt.size(opusDataCount);
       if (opusDataCount > 512) {
          throw ProtocolException.arrayTooLong("OpusData", opusDataCount, 512);
       }
 
-      int opusDataVarLen = VarInt.size(opusDataCount);
       if (pos + opusDataVarLen + opusDataCount * 1L > buf.readableBytes()) {
          throw ProtocolException.bufferTooSmall("OpusData", pos + opusDataVarLen + opusDataCount * 1, buf.readableBytes());
       }
@@ -82,7 +86,7 @@ public class VoiceData implements Packet, ToServerPacket {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 6;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + arrLen * 1;
+      pos += VarInt.size(arrLen) + arrLen * 1;
       return pos - offset;
    }
 
@@ -122,7 +126,7 @@ public class VoiceData implements Packet, ToServerPacket {
          return ValidationResult.error("OpusData exceeds max length 512");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(opusDataCount);
       pos += opusDataCount * 1;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading OpusData") : ValidationResult.OK;
    }

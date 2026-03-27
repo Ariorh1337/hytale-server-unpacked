@@ -43,23 +43,32 @@ public class MapImage {
 
    @Nonnull
    public static MapImage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 18) {
+         throw ProtocolException.bufferTooSmall("MapImage", 18, buf.readableBytes() - offset);
+      }
+
       MapImage obj = new MapImage();
       byte nullBits = buf.getByte(offset);
       obj.width = buf.getIntLE(offset + 1);
       obj.height = buf.getIntLE(offset + 5);
       obj.bitsPerIndex = buf.getByte(offset + 9);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 18 + buf.getIntLE(offset + 10);
-         int paletteCount = VarInt.peek(buf, varPos0);
-         if (paletteCount < 0) {
-            throw ProtocolException.negativeLength("Palette", paletteCount);
+         int varPosBase0 = buf.getIntLE(offset + 10);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Palette", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 18 + varPosBase0;
+         int paletteCount = VarInt.peek(buf, varPos0);
+         if (paletteCount < 0) {
+            throw ProtocolException.invalidVarInt("Palette");
+         }
+
+         int varIntLen = VarInt.size(paletteCount);
          if (paletteCount > 4096000) {
             throw ProtocolException.arrayTooLong("Palette", paletteCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + paletteCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Palette", varPos0 + varIntLen + paletteCount * 4, buf.readableBytes());
          }
@@ -72,17 +81,22 @@ public class MapImage {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 18 + buf.getIntLE(offset + 14);
-         int packedIndicesCount = VarInt.peek(buf, varPos1);
-         if (packedIndicesCount < 0) {
-            throw ProtocolException.negativeLength("PackedIndices", packedIndicesCount);
+         int varPosBase1 = buf.getIntLE(offset + 14);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("PackedIndices", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 18 + varPosBase1;
+         int packedIndicesCount = VarInt.peek(buf, varPos1);
+         if (packedIndicesCount < 0) {
+            throw ProtocolException.invalidVarInt("PackedIndices");
+         }
+
+         int varIntLen = VarInt.size(packedIndicesCount);
          if (packedIndicesCount > 4096000) {
             throw ProtocolException.arrayTooLong("PackedIndices", packedIndicesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + packedIndicesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("PackedIndices", varPos1 + varIntLen + packedIndicesCount * 1, buf.readableBytes());
          }
@@ -102,9 +116,13 @@ public class MapImage {
       int maxEnd = 18;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 10);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Palette", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 18 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 4;
+         pos0 += VarInt.size(arrLen) + arrLen * 4;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -112,9 +130,13 @@ public class MapImage {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 14);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("PackedIndices", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 18 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 1;
+         pos1 += VarInt.size(arrLen) + arrLen * 1;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -195,15 +217,11 @@ public class MapImage {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int paletteOffset = buffer.getIntLE(offset + 10);
-         if (paletteOffset < 0) {
+         if (paletteOffset < 0 || paletteOffset > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Palette");
          }
 
          int pos = offset + 18 + paletteOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Palette");
-         }
-
          int paletteCount = VarInt.peek(buffer, pos);
          if (paletteCount < 0) {
             return ValidationResult.error("Invalid array count for Palette");
@@ -213,7 +231,7 @@ public class MapImage {
             return ValidationResult.error("Palette exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(paletteCount);
          pos += paletteCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Palette");
@@ -222,15 +240,11 @@ public class MapImage {
 
       if ((nullBits & 2) != 0) {
          int packedIndicesOffset = buffer.getIntLE(offset + 14);
-         if (packedIndicesOffset < 0) {
+         if (packedIndicesOffset < 0 || packedIndicesOffset > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for PackedIndices");
          }
 
          int pos = offset + 18 + packedIndicesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for PackedIndices");
-         }
-
          int packedIndicesCount = VarInt.peek(buffer, pos);
          if (packedIndicesCount < 0) {
             return ValidationResult.error("Invalid array count for PackedIndices");
@@ -240,7 +254,7 @@ public class MapImage {
             return ValidationResult.error("PackedIndices exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(packedIndicesCount);
          pos += packedIndicesCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading PackedIndices");

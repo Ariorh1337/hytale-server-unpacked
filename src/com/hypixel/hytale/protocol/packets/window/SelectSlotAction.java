@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.window;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -26,6 +27,10 @@ public class SelectSlotAction extends WindowAction {
 
    @Nonnull
    public static SelectSlotAction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("SelectSlotAction", 4, buf.readableBytes() - offset);
+      }
+
       SelectSlotAction obj = new SelectSlotAction();
       obj.slot = buf.getIntLE(offset + 0);
       return obj;

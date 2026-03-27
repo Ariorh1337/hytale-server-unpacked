@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class Direction {
 
    @Nonnull
    public static Direction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("Direction", 12, buf.readableBytes() - offset);
+      }
+
       Direction obj = new Direction();
       obj.yaw = buf.getFloatLE(offset + 0);
       obj.pitch = buf.getFloatLE(offset + 4);

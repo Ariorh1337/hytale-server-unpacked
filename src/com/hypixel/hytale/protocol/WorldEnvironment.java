@@ -47,6 +47,10 @@ public class WorldEnvironment {
 
    @Nonnull
    public static WorldEnvironment deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("WorldEnvironment", 16, buf.readableBytes() - offset);
+      }
+
       WorldEnvironment obj = new WorldEnvironment();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -54,31 +58,46 @@ public class WorldEnvironment {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 16 + buf.getIntLE(offset + 4);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 4);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 16 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 16 + buf.getIntLE(offset + 8);
-         int fluidParticlesCount = VarInt.peek(buf, varPos1);
-         if (fluidParticlesCount < 0) {
-            throw ProtocolException.negativeLength("FluidParticles", fluidParticlesCount);
+         int varPosBase1 = buf.getIntLE(offset + 8);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("FluidParticles", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 16 + varPosBase1;
+         int fluidParticlesCount = VarInt.peek(buf, varPos1);
+         if (fluidParticlesCount < 0) {
+            throw ProtocolException.invalidVarInt("FluidParticles");
+         }
+
+         int varIntLen = VarInt.size(fluidParticlesCount);
          if (fluidParticlesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("FluidParticles", fluidParticlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.fluidParticles = new HashMap<>(fluidParticlesCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -94,17 +113,22 @@ public class WorldEnvironment {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos2 = offset + 16 + buf.getIntLE(offset + 12);
-         int tagIndexesCount = VarInt.peek(buf, varPos2);
-         if (tagIndexesCount < 0) {
-            throw ProtocolException.negativeLength("TagIndexes", tagIndexesCount);
+         int varPosBase2 = buf.getIntLE(offset + 12);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("TagIndexes", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 16 + varPosBase2;
+         int tagIndexesCount = VarInt.peek(buf, varPos2);
+         if (tagIndexesCount < 0) {
+            throw ProtocolException.invalidVarInt("TagIndexes");
+         }
+
+         int varIntLen = VarInt.size(tagIndexesCount);
          if (tagIndexesCount > 4096000) {
             throw ProtocolException.arrayTooLong("TagIndexes", tagIndexesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + tagIndexesCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("TagIndexes", varPos2 + varIntLen + tagIndexesCount * 4, buf.readableBytes());
          }
@@ -124,9 +148,13 @@ public class WorldEnvironment {
       int maxEnd = 16;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 4);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 16 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -134,9 +162,13 @@ public class WorldEnvironment {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 8);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("FluidParticles", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 16 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 += 4;
@@ -150,9 +182,13 @@ public class WorldEnvironment {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 12);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("TagIndexes", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 16 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + arrLen * 4;
+         pos2 += VarInt.size(arrLen) + arrLen * 4;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -264,15 +300,11 @@ public class WorldEnvironment {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
          int idOffset = buffer.getIntLE(offset + 4);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 16 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -282,7 +314,7 @@ public class WorldEnvironment {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -291,15 +323,11 @@ public class WorldEnvironment {
 
       if ((nullBits & 4) != 0) {
          int fluidParticlesOffset = buffer.getIntLE(offset + 8);
-         if (fluidParticlesOffset < 0) {
+         if (fluidParticlesOffset < 0 || fluidParticlesOffset > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for FluidParticles");
          }
 
          int pos = offset + 16 + fluidParticlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FluidParticles");
-         }
-
          int fluidParticlesCount = VarInt.peek(buffer, pos);
          if (fluidParticlesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for FluidParticles");
@@ -309,7 +337,7 @@ public class WorldEnvironment {
             return ValidationResult.error("FluidParticles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fluidParticlesCount);
 
          for (int i = 0; i < fluidParticlesCount; i++) {
             pos += 4;
@@ -323,15 +351,11 @@ public class WorldEnvironment {
 
       if ((nullBits & 8) != 0) {
          int tagIndexesOffset = buffer.getIntLE(offset + 12);
-         if (tagIndexesOffset < 0) {
+         if (tagIndexesOffset < 0 || tagIndexesOffset > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for TagIndexes");
          }
 
          int pos = offset + 16 + tagIndexesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TagIndexes");
-         }
-
          int tagIndexesCount = VarInt.peek(buffer, pos);
          if (tagIndexesCount < 0) {
             return ValidationResult.error("Invalid array count for TagIndexes");
@@ -341,7 +365,7 @@ public class WorldEnvironment {
             return ValidationResult.error("TagIndexes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagIndexesCount);
          pos += tagIndexesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TagIndexes");

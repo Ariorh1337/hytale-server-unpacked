@@ -10,8 +10,7 @@ import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.spatial.KDTree;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.entity.Entity;
@@ -32,6 +31,8 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class CollisionModule extends JavaPlugin {
    @Nonnull
@@ -170,7 +171,10 @@ public class CollisionModule extends JavaPlugin {
          result.getLogger()
             .at(Level.INFO)
             .log(
-               ">>>>>> Start findBlockCollisionIterative collider=[%s] pos=%s dir=%s", collider, Vector3d.formatShortString(pos), Vector3d.formatShortString(v)
+               ">>>>>> Start findBlockCollisionIterative collider=[%s] pos=%s dir=%s",
+               collider,
+               Vector3dUtil.formatShortString(pos),
+               Vector3dUtil.formatShortString(v)
             );
       }
 
@@ -184,7 +188,7 @@ public class CollisionModule extends JavaPlugin {
       result.acquireCollisionModule();
       collider.forEachBlock(pos, 1.0E-5, result, (x, y, z, aResult) -> aResult.accept(x, y, z));
       if (result.shouldLog()) {
-         result.getLogger().at(Level.INFO).log(">>>> line collider=[%s] dir=%s len=%s", collider, Vector3d.formatShortString(v), v.length());
+         result.getLogger().at(Level.INFO).log(">>>> line collider=[%s] dir=%s len=%s", collider, Vector3dUtil.formatShortString(v), v.length());
       }
 
       result.iterateBlocks(collider, pos, v, v.length(), stopOnCollisionFound);
@@ -216,9 +220,8 @@ public class CollisionModule extends JavaPlugin {
                   if (entityBoundingBoxComponent != null) {
                      Vector3d position = entityTransformComponent.getPosition();
                      Box boundingBox = entityBoundingBoxComponent.getBoundingBox();
-                     if (boundingBox != null
-                        && CollisionMath.intersectVectorAABB(pos, v, position.getX(), position.getY(), position.getZ(), boundingBox, minMax)) {
-                        coll.assign(pos).addScaled(v, minMax.x);
+                     if (boundingBox != null && CollisionMath.intersectVectorAABB(pos, v, position.x(), position.y(), position.z(), boundingBox, minMax)) {
+                        coll.set(pos).fma(minMax.x, v);
                         result.allocCharacterCollision().assign(coll, minMax.x, entity.getReference(), entity instanceof Player);
                      }
                   }
@@ -340,7 +343,7 @@ public class CollisionModule extends JavaPlugin {
                      "++ Short: Sliding block start=%s end=%s normal=%s",
                      boxBlockIntersectionEvaluator.getCollisionStart(),
                      boxBlockIntersectionEvaluator.getCollisionEnd(),
-                     Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                     Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                   );
             }
 
@@ -354,7 +357,7 @@ public class CollisionModule extends JavaPlugin {
                   "?? Short: Sliding block is unwalkable start=%s end=%s normal=%s",
                   boxBlockIntersectionEvaluator.getCollisionStart(),
                   boxBlockIntersectionEvaluator.getCollisionEnd(),
-                  Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                  Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                );
          }
       }
@@ -368,7 +371,7 @@ public class CollisionModule extends JavaPlugin {
                   "++ Short: Collision with block start=%s end=%s normal=%s",
                   boxBlockIntersectionEvaluator.getCollisionStart(),
                   boxBlockIntersectionEvaluator.getCollisionEnd(),
-                  Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                  Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                );
          }
       }
@@ -381,7 +384,7 @@ public class CollisionModule extends JavaPlugin {
                   "++ Short: Trigger block start=%s end=%s normal=%s",
                   boxBlockIntersectionEvaluator.getCollisionStart(),
                   boxBlockIntersectionEvaluator.getCollisionEnd(),
-                  Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                  Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                );
          }
 
@@ -589,7 +592,7 @@ public class CollisionModule extends JavaPlugin {
    }
 
    public static boolean isBelowMovementThreshold(@Nonnull Vector3d v) {
-      return v.squaredLength() < 1.0000000000000002E-10;
+      return v.lengthSquared() < 1.0000000000000002E-10;
    }
 
    private static void logOverlap(
@@ -604,7 +607,7 @@ public class CollisionModule extends JavaPlugin {
             (intersectType & 16) != 0 ? "Y" : "",
             (intersectType & 32) != 0 ? "Z" : "",
             index,
-            Vector3d.formatShortString(pos),
+            Vector3dUtil.formatShortString(pos),
             x + config.getBoundingBoxOffsetX(),
             y + config.getBoundingBoxOffsetY(),
             z + config.getBoundingBoxOffsetZ(),
@@ -612,8 +615,8 @@ public class CollisionModule extends JavaPlugin {
             config.blockMaterial != null ? config.blockMaterial.name() : "none",
             config.blockType != null ? config.blockType.getId() : "none",
             collider,
-            Vector3d.formatShortString(hitBox.min),
-            Vector3d.formatShortString(hitBox.max)
+            Vector3dUtil.formatShortString(hitBox.min),
+            Vector3dUtil.formatShortString(hitBox.max)
          );
    }
 }

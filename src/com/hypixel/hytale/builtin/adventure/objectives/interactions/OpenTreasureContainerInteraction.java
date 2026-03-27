@@ -6,8 +6,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
@@ -30,6 +28,8 @@ import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class OpenTreasureContainerInteraction extends SimpleBlockInteraction {
    public static final BuilderCodec<OpenTreasureContainerInteraction> CODEC = BuilderCodec.builder(
@@ -88,7 +88,7 @@ public class OpenTreasureContainerInteraction extends SimpleBlockInteraction {
                                        int rotationIndexx = chunk.getRotationIndex(pos.x, pos.y, pos.z);
                                        Vector3d soundPosx = new Vector3d();
                                        blockType.getBlockCenter(rotationIndexx, soundPosx);
-                                       soundPosx.add(pos);
+                                       soundPosx.add(pos.x, pos.y, pos.z);
                                        SoundUtil.playSoundEvent3d(ref, soundEventIndexx, soundPosx, commandBuffer);
                                     }
                                  }
@@ -110,7 +110,7 @@ public class OpenTreasureContainerInteraction extends SimpleBlockInteraction {
                               int rotationIndex = chunk.getRotationIndex(pos.x, pos.y, pos.z);
                               Vector3d soundPos = new Vector3d();
                               blockType.getBlockCenter(rotationIndex, soundPos);
-                              soundPos.add(pos);
+                              soundPos.add(pos.x, pos.y, pos.z);
                               SoundUtil.playSoundEvent3d(ref, soundEventIndex, soundPos, commandBuffer);
                            } else {
                               windows.remove(uuid, window);

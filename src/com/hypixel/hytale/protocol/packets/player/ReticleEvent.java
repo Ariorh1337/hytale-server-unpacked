@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.player;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -41,6 +42,10 @@ public class ReticleEvent implements Packet, ToClientPacket {
 
    @Nonnull
    public static ReticleEvent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("ReticleEvent", 4, buf.readableBytes() - offset);
+      }
+
       ReticleEvent obj = new ReticleEvent();
       obj.eventIndex = buf.getIntLE(offset + 0);
       return obj;

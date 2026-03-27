@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -45,6 +46,10 @@ public class SetActiveSlot implements Packet, ToServerPacket, ToClientPacket {
 
    @Nonnull
    public static SetActiveSlot deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("SetActiveSlot", 8, buf.readableBytes() - offset);
+      }
+
       SetActiveSlot obj = new SetActiveSlot();
       obj.inventorySectionId = buf.getIntLE(offset + 0);
       obj.activeSlot = buf.getIntLE(offset + 4);

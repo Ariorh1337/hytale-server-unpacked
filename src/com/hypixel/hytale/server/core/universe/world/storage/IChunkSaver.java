@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.universe.world.storage;
 
 import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.Closeable;
 import java.io.IOException;
@@ -18,4 +19,10 @@ public interface IChunkSaver extends Closeable {
    LongSet getIndexes() throws IOException;
 
    void flush() throws IOException;
+
+   default void pauseBackgroundSaving(ChunkSavingSystems.Data data) {
+   }
+
+   default void resumeBackgroundSaving() {
+   }
 }

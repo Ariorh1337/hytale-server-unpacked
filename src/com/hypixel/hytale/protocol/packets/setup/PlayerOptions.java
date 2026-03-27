@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class PlayerOptions implements Packet, ToServerPacket {
 
    @Nonnull
    public static PlayerOptions deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("PlayerOptions", 1, buf.readableBytes() - offset);
+      }
+
       PlayerOptions obj = new PlayerOptions();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -26,6 +27,10 @@ public class TeleportAck {
 
    @Nonnull
    public static TeleportAck deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("TeleportAck", 1, buf.readableBytes() - offset);
+      }
+
       TeleportAck obj = new TeleportAck();
       obj.teleportId = buf.getByte(offset + 0);
       return obj;

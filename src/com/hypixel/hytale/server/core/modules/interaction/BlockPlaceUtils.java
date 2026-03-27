@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.GameMode;
@@ -55,6 +54,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
+import org.joml.Vector3i;
 
 public class BlockPlaceUtils {
    @Nonnull
@@ -90,18 +90,18 @@ public class BlockPlaceUtils {
       @Nonnull ComponentAccessor<EntityStore> entityStore,
       boolean quickReplace
    ) {
-      if (blockPosition.getY() >= 0 && blockPosition.getY() < 320) {
+      if (blockPosition.y() >= 0 && blockPosition.y() < 320) {
          Ref<ChunkStore> targetChunkReference = chunkReference;
          RotationTuple targetRotation = RotationTuple.of(
             Rotation.valueOf(blockRotation.rotationYaw), Rotation.valueOf(blockRotation.rotationPitch), Rotation.valueOf(blockRotation.rotationRoll)
          );
          BlockChunk targetBlockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
          assert targetBlockChunkComponent != null;
-         BlockSection targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(blockPosition.getY());
+         BlockSection targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(blockPosition.y());
          PlaceBlockEvent event = new PlaceBlockEvent(itemStack, blockPosition, targetRotation);
          entityStore.invoke(ref, event);
          if (event.isCancelled()) {
-            targetBlockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+            targetBlockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
          } else {
             Vector3i targetBlockPosition = event.getTargetBlock();
             targetRotation = event.getRotation();
@@ -115,13 +115,13 @@ public class BlockPlaceUtils {
             }
 
             if (positionIsDifferent) {
-               targetBlockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+               targetBlockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
             }
 
             if (!targetChunkReference.equals(chunkReference) || targetBlockPosition.y != blockPosition.y) {
                targetBlockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
                assert targetBlockChunkComponent != null;
-               targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(targetBlockPosition.getY());
+               targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(targetBlockPosition.y());
             }
 
             PlayerRef playerRefComponent = entityStore.getComponent(ref, PlayerRef.getComponentType());
@@ -202,7 +202,7 @@ public class BlockPlaceUtils {
          }
       }
 
-      blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+      blockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
    }
 
    private static void onPlaceBlockSuccess(
@@ -221,9 +221,7 @@ public class BlockPlaceUtils {
                   BsonDocument document = bsonValue.asDocument();
                   Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.getEntityCodec().decode(document, EmptyExtraInfo.EMPTY);
                   if (blockEntity != null) {
-                     worldChunkComponent.setState(
-                        blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockTypeAsset, targetRotation.index(), blockEntity
-                     );
+                     worldChunkComponent.setState(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockTypeAsset, targetRotation.index(), blockEntity);
                   } else {
                      LOGGER.at(Level.WARNING).log("Failed to set Block Entity from item metadata: %s, %s", itemStack.getItemId(), document);
                   }
@@ -293,7 +291,6 @@ public class BlockPlaceUtils {
                Store<EntityStore> store = world.getEntityStore().getStore();
                PrefabBuffer.PrefabBufferAccessor prefabBufferAccessor = prefabBuffer.newAccess();
                PrefabUtil.paste(prefabBufferAccessor, world, blockPosition, Rotation.None, true, new Random(), store);
-               prefabBufferAccessor.release();
             });
             return true;
          }
@@ -336,15 +333,13 @@ public class BlockPlaceUtils {
       BlockType blockType = BlockType.getAssetMap().getAsset(blockTypeKey);
       int rotationIndex = rotation.index();
       if (quickReplace
-         || blockType != null && worldChunkComponent.testPlaceBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockType, rotationIndex)
-         )
-       {
+         || blockType != null && worldChunkComponent.testPlaceBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockType, rotationIndex)) {
          BlockBoundingBoxes hitBoxType = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
          if (hitBoxType != null) {
             FillerBlockUtil.forEachFillerBlock(
                hitBoxType.get(rotationIndex),
                (x1, y1, z1) -> breakAndDropReplacedBlock(
-                  blockPosition.clone().add(x1, y1, z1), worldChunkComponent, chunkReference, ref, chunkStore, entityStore
+                  new Vector3i(blockPosition).add(x1, y1, z1), worldChunkComponent, chunkReference, ref, chunkStore, entityStore
                )
             );
          } else {
@@ -352,7 +347,7 @@ public class BlockPlaceUtils {
          }
 
          int placeBlockSettings = 10;
-         if (!worldChunkComponent.placeBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockTypeKey, rotation, 10, false)) {
+         if (!worldChunkComponent.placeBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockTypeKey, rotation, 10, false)) {
             return false;
          }
 

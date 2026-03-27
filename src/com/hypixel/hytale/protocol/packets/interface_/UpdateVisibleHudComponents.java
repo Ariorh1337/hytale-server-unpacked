@@ -45,20 +45,24 @@ public class UpdateVisibleHudComponents implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateVisibleHudComponents deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateVisibleHudComponents", 1, buf.readableBytes() - offset);
+      }
+
       UpdateVisibleHudComponents obj = new UpdateVisibleHudComponents();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int visibleComponentsCount = VarInt.peek(buf, pos);
          if (visibleComponentsCount < 0) {
-            throw ProtocolException.negativeLength("VisibleComponents", visibleComponentsCount);
+            throw ProtocolException.invalidVarInt("VisibleComponents");
          }
 
+         int visibleComponentsVarLen = VarInt.size(visibleComponentsCount);
          if (visibleComponentsCount > 4096000) {
             throw ProtocolException.arrayTooLong("VisibleComponents", visibleComponentsCount, 4096000);
          }
 
-         int visibleComponentsVarLen = VarInt.size(visibleComponentsCount);
          if (pos + visibleComponentsVarLen + visibleComponentsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("VisibleComponents", pos + visibleComponentsVarLen + visibleComponentsCount * 1, buf.readableBytes());
          }
@@ -80,7 +84,7 @@ public class UpdateVisibleHudComponents implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -134,10 +138,18 @@ public class UpdateVisibleHudComponents implements Packet, ToClientPacket {
             return ValidationResult.error("VisibleComponents exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += visibleComponentsCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(visibleComponentsCount);
+         if (pos + visibleComponentsCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading VisibleComponents");
+         }
+
+         for (int i = 0; i < visibleComponentsCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 24) {
+               return ValidationResult.error("Invalid HudComponent value for VisibleComponents[i]");
+            }
+
+            pos++;
          }
       }
 

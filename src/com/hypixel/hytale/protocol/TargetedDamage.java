@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -34,6 +35,10 @@ public class TargetedDamage {
 
    @Nonnull
    public static TargetedDamage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("TargetedDamage", 9, buf.readableBytes() - offset);
+      }
+
       TargetedDamage obj = new TargetedDamage();
       byte nullBits = buf.getByte(offset);
       obj.index = buf.getIntLE(offset + 1);

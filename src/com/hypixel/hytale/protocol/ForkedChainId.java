@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -34,6 +35,10 @@ public class ForkedChainId {
 
    @Nonnull
    public static ForkedChainId deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ForkedChainId", 9, buf.readableBytes() - offset);
+      }
+
       ForkedChainId obj = new ForkedChainId();
       byte nullBits = buf.getByte(offset);
       obj.entryIndex = buf.getIntLE(offset + 1);

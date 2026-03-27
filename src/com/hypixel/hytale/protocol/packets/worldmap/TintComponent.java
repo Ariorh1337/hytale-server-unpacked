@@ -1,6 +1,7 @@
 package com.hypixel.hytale.protocol.packets.worldmap;
 
 import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -28,6 +29,10 @@ public class TintComponent extends MapMarkerComponent {
 
    @Nonnull
    public static TintComponent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 3) {
+         throw ProtocolException.bufferTooSmall("TintComponent", 3, buf.readableBytes() - offset);
+      }
+
       TintComponent obj = new TintComponent();
       obj.color = Color.deserialize(buf, offset + 0);
       return obj;

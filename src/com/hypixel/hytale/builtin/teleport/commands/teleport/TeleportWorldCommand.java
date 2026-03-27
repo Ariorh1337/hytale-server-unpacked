@@ -3,9 +3,8 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TeleportWorldCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -47,8 +47,8 @@ public class TeleportWorldCommand extends AbstractPlayerCommand {
             TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
             HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
             if (transformComponent != null && headRotationComponent != null) {
-               Vector3d previousPos = transformComponent.getPosition().clone();
-               Vector3f previousRotation = headRotationComponent.getRotation().clone();
+               Vector3d previousPos = new Vector3d(transformComponent.getPosition());
+               Rotation3f previousRotation = new Rotation3f(headRotationComponent.getRotation());
                TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
                teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + targetWorld.getName());
             }
@@ -59,9 +59,9 @@ public class TeleportWorldCommand extends AbstractPlayerCommand {
             context.sendMessage(
                Message.translation("server.commands.teleport.teleportedToWorld")
                   .param("worldName", worldName)
-                  .param("x", spawnPos.getX())
-                  .param("y", spawnPos.getY())
-                  .param("z", spawnPos.getZ())
+                  .param("x", spawnPos.x())
+                  .param("y", spawnPos.y())
+                  .param("z", spawnPos.z())
             );
          }
       }

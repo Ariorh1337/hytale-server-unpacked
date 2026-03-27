@@ -55,6 +55,10 @@ public class UpdateTrails implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateTrails deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateTrails", 2, buf.readableBytes() - offset);
+      }
+
       UpdateTrails obj = new UpdateTrails();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -62,27 +66,32 @@ public class UpdateTrails implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int trailsCount = VarInt.peek(buf, pos);
          if (trailsCount < 0) {
-            throw ProtocolException.negativeLength("Trails", trailsCount);
+            throw ProtocolException.invalidVarInt("Trails");
          }
 
+         int trailsVarLen = VarInt.size(trailsCount);
          if (trailsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Trails", trailsCount, 4096000);
          }
 
-         pos += VarInt.size(trailsCount);
+         pos += trailsVarLen;
          obj.trails = new HashMap<>(trailsCount);
 
          for (int i = 0; i < trailsCount; i++) {
             int keyLen = VarInt.peek(buf, pos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, pos);
+            if (pos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", pos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, pos);
             pos += keyVarLen + keyLen;
             Trail val = Trail.deserialize(buf, pos);
@@ -101,11 +110,11 @@ public class UpdateTrails implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
             pos += Trail.computeBytesConsumed(buf, pos);
          }
       }
@@ -158,9 +167,14 @@ public class UpdateTrails implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int trailsCount = VarInt.peek(buffer, pos);
+         int trailsCount = VarInt.peek(buffer, v);
          if (trailsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Trails");
          }
@@ -169,10 +183,10 @@ public class UpdateTrails implements Packet, ToClientPacket {
             return ValidationResult.error("Trails exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(trailsCount);
 
          for (int i = 0; i < trailsCount; i++) {
-            int keyLen = VarInt.peek(buffer, pos);
+            int keyLen = VarInt.peek(buffer, v);
             if (keyLen < 0) {
                return ValidationResult.error("Invalid string length for key");
             }
@@ -181,13 +195,13 @@ public class UpdateTrails implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
-            pos += keyLen;
-            if (pos > buffer.writerIndex()) {
+            v += VarInt.size(keyLen);
+            v += keyLen;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += Trail.computeBytesConsumed(buffer, pos);
+            v += Trail.computeBytesConsumed(buffer, v);
          }
       }
 

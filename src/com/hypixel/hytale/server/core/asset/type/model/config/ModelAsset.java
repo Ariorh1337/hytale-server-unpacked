@@ -33,7 +33,6 @@ import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.common.util.MapUtil;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.EntityPart;
 import com.hypixel.hytale.protocol.ModelTrail;
@@ -59,6 +58,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ModelAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, ModelAsset>> {
    public static final BuilderCodec<ModelTrail> MODEL_TRAIL_CODEC = BuilderCodec.builder(ModelTrail.class, ModelTrail::new)

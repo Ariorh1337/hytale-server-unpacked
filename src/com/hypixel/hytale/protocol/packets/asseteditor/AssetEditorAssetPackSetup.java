@@ -49,33 +49,42 @@ public class AssetEditorAssetPackSetup implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorAssetPackSetup deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetPackSetup", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorAssetPackSetup obj = new AssetEditorAssetPackSetup();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int packsCount = VarInt.peek(buf, pos);
          if (packsCount < 0) {
-            throw ProtocolException.negativeLength("Packs", packsCount);
+            throw ProtocolException.invalidVarInt("Packs");
          }
 
+         int packsVarLen = VarInt.size(packsCount);
          if (packsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Packs", packsCount, 4096000);
          }
 
-         pos += VarInt.size(packsCount);
+         pos += packsVarLen;
          obj.packs = new HashMap<>(packsCount);
 
          for (int i = 0; i < packsCount; i++) {
             int keyLen = VarInt.peek(buf, pos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, pos);
+            if (pos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", pos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, pos);
             pos += keyVarLen + keyLen;
             AssetPackManifest val = AssetPackManifest.deserialize(buf, pos);
@@ -94,11 +103,11 @@ public class AssetEditorAssetPackSetup implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
             pos += AssetPackManifest.computeBytesConsumed(buf, pos);
          }
       }
@@ -161,7 +170,7 @@ public class AssetEditorAssetPackSetup implements Packet, ToClientPacket {
             return ValidationResult.error("Packs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(packsCount);
 
          for (int i = 0; i < packsCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -173,7 +182,7 @@ public class AssetEditorAssetPackSetup implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");

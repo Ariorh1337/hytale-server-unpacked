@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -163,6 +164,10 @@ public class ServerCameraSettings {
 
    @Nonnull
    public static ServerCameraSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 154) {
+         throw ProtocolException.bufferTooSmall("ServerCameraSettings", 154, buf.readableBytes() - offset);
+      }
+
       ServerCameraSettings obj = new ServerCameraSettings();
       byte nullBits = buf.getByte(offset);
       obj.positionLerpSpeed = buf.getFloatLE(offset + 1);
@@ -337,7 +342,58 @@ public class ServerCameraSettings {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 154 ? ValidationResult.error("Buffer too small: expected at least 154 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 154) {
+         return ValidationResult.error("Buffer too small: expected at least 154 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 20) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid MouseInputTargetType value for MouseInputTargetType");
+      }
+
+      v = buffer.getByte(offset + 24) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid MovementForceRotationType value for MovementForceRotationType");
+      }
+
+      v = buffer.getByte(offset + 37) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid AttachedToType value for AttachedToType");
+      }
+
+      v = buffer.getByte(offset + 43) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid PositionDistanceOffsetType value for PositionDistanceOffsetType");
+      }
+
+      v = buffer.getByte(offset + 80) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid PositionType value for PositionType");
+      }
+
+      v = buffer.getByte(offset + 105) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid RotationType value for RotationType");
+      }
+
+      v = buffer.getByte(offset + 118) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid CanMoveType value for CanMoveType");
+      }
+
+      v = buffer.getByte(offset + 119) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid ApplyMovementType value for ApplyMovementType");
+      }
+
+      v = buffer.getByte(offset + 132) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid ApplyLookType value for ApplyLookType");
+      }
+
+      v = buffer.getByte(offset + 141) & 255;
+      return v >= 4 ? ValidationResult.error("Invalid MouseInputType value for MouseInputType") : ValidationResult.OK;
    }
 
    public ServerCameraSettings clone() {

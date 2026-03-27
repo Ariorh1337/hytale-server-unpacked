@@ -8,7 +8,6 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -17,6 +16,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class CircleOffsetFromArgOperation extends SequenceBrushOperation {
    public static final int MAX_REPETITIONS = 100;
@@ -55,9 +55,9 @@ public class CircleOffsetFromArgOperation extends SequenceBrushOperation {
    @Nonnull
    private List<Vector3i> offsetsInCircle = new ObjectArrayList<>();
    @Nonnull
-   private Vector3i offsetWhenFirstReachedOperation = Vector3i.ZERO;
+   private final Vector3i offsetWhenFirstReachedOperation = new Vector3i();
    @Nonnull
-   private Vector3i previousCircleOffset = Vector3i.ZERO;
+   private final Vector3i previousCircleOffset = new Vector3i();
 
    public CircleOffsetFromArgOperation() {
       super(
@@ -71,8 +71,8 @@ public class CircleOffsetFromArgOperation extends SequenceBrushOperation {
    public void resetInternalState() {
       this.repetitionsRemaining = -1;
       this.offsetsInCircle.clear();
-      this.offsetWhenFirstReachedOperation = Vector3i.ZERO;
-      this.previousCircleOffset = Vector3i.ZERO;
+      this.offsetWhenFirstReachedOperation.zero();
+      this.previousCircleOffset.zero();
       int numPointsOnCircle = this.numCirclePointsArgVal;
       int circleRadius = this.circleRadiusArgVal;
       double theta = (Math.PI * 2) / numPointsOnCircle;
@@ -159,7 +159,7 @@ public class CircleOffsetFromArgOperation extends SequenceBrushOperation {
          this.previousCirclePointsVal = this.numCirclePointsArgVal;
          this.previousCircleRadiusVal = this.circleRadiusArgVal;
          this.resetInternalState();
-         this.offsetWhenFirstReachedOperation = brushConfig.getOriginOffset();
+         this.offsetWhenFirstReachedOperation.set(brushConfig.getOriginOffset());
          if (this.numCirclePointsArgVal > 100) {
             brushConfig.setErrorFlag("Cannot have more than 100 repetitions");
             return;
@@ -173,9 +173,9 @@ public class CircleOffsetFromArgOperation extends SequenceBrushOperation {
          brushConfig.setOriginOffset(this.offsetWhenFirstReachedOperation);
       } else {
          Vector3i offsetVector = brushConfig.getOriginOffset()
-            .subtract(this.previousCircleOffset)
-            .add(this.offsetsInCircle.get(this.repetitionsRemaining - 1).clone());
-         this.previousCircleOffset = this.offsetsInCircle.get(this.repetitionsRemaining - 1).clone();
+            .sub(this.previousCircleOffset)
+            .add(new Vector3i(this.offsetsInCircle.get(this.repetitionsRemaining - 1)));
+         this.previousCircleOffset.set(this.offsetsInCircle.get(this.repetitionsRemaining - 1));
          brushConfig.setOriginOffset(offsetVector);
          brushConfigCommandExecutor.loadOperatingIndex(this.indexNameArg, false);
          this.repetitionsRemaining--;

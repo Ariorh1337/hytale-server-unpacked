@@ -98,7 +98,7 @@ public class WorldPathBuilderCommand extends AbstractCommandCollection {
       ) {
          TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
          assert transformComponent != null;
-         Transform transform = transformComponent.getTransform().clone();
+         Transform transform = new Transform(transformComponent.getTransform());
          WorldPathBuilderCommand.getOrCreateBuilder(ref, store).getPath().getWaypoints().add(transform);
          context.sendMessage(MESSAGE_UNIVERSE_WORLD_PATH_POINT_ADDED);
       }
@@ -241,7 +241,7 @@ public class WorldPathBuilderCommand extends AbstractCommandCollection {
             assert transformComponent != null;
             WorldPath worldPath = builder.getPath();
             int index = this.indexArg.provided(context) ? this.indexArg.get(context) : worldPath.getWaypoints().size() - 1;
-            worldPath.getWaypoints().set(index, transformComponent.getTransform().clone());
+            worldPath.getWaypoints().set(index, new Transform(transformComponent.getTransform()));
             context.sendMessage(MESSAGE_UNIVERSE_WORLD_PATH_POINT_SET);
          }
       }

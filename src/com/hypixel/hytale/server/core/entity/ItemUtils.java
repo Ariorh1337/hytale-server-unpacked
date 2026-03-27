@@ -5,9 +5,8 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
@@ -25,6 +24,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ItemUtils {
    @Nonnull
@@ -83,8 +83,8 @@ public class ItemUtils {
          itemStack = event.getItemStack();
          if (!itemStack.isEmpty() && itemStack.isValid()) {
             HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
-            Vector3f rotation = headRotationComponent != null ? headRotationComponent.getRotation() : new Vector3f(0.0F, 0.0F, 0.0F);
-            Vector3d direction = Transform.getDirection(rotation.getPitch(), rotation.getYaw());
+            Rotation3f rotation = headRotationComponent != null ? headRotationComponent.getRotation() : new Rotation3f(0.0F, 0.0F, 0.0F);
+            Vector3d direction = Transform.getDirection(rotation.pitch(), rotation.yaw());
             return throwItem(ref, componentAccessor, itemStack, direction, throwSpeed);
          } else {
             LOGGER.at(Level.WARNING).log("Attempted to throw invalid item %s at %s by %s", itemStack, throwSpeed, ref.getIndex());
@@ -118,13 +118,13 @@ public class ItemUtils {
          eyeHeight = modelComponent.getModel().getEyeHeight(ref, store);
       }
 
-      Vector3d throwPosition = transformComponent.getPosition().clone();
+      Vector3d throwPosition = new Vector3d(transformComponent.getPosition());
       throwPosition.add(0.0, eyeHeight, 0.0).add(throwDirection);
       Holder<EntityStore> itemEntityHolder = ItemComponent.generateItemDrop(
          store,
          itemStack,
          throwPosition,
-         Vector3f.ZERO,
+         Rotation3f.IDENTITY,
          (float)throwDirection.x * throwSpeed,
          (float)throwDirection.y * throwSpeed,
          (float)throwDirection.z * throwSpeed

@@ -55,34 +55,53 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorAssetListUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetListUpdate", 13, buf.readableBytes() - offset);
+      }
+
       AssetEditorAssetListUpdate obj = new AssetEditorAssetListUpdate();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         int packLen = VarInt.peek(buf, varPos0);
-         if (packLen < 0) {
-            throw ProtocolException.negativeLength("Pack", packLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Pack", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int packLen = VarInt.peek(buf, varPos0);
+         if (packLen < 0) {
+            throw ProtocolException.invalidVarInt("Pack");
+         }
+
+         int packVarIntLen = VarInt.size(packLen);
          if (packLen > 4096000) {
             throw ProtocolException.stringTooLong("Pack", packLen, 4096000);
+         }
+
+         if (varPos0 + packVarIntLen + packLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Pack", varPos0 + packVarIntLen + packLen, buf.readableBytes());
          }
 
          obj.pack = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int additionsCount = VarInt.peek(buf, varPos1);
-         if (additionsCount < 0) {
-            throw ProtocolException.negativeLength("Additions", additionsCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Additions", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int additionsCount = VarInt.peek(buf, varPos1);
+         if (additionsCount < 0) {
+            throw ProtocolException.invalidVarInt("Additions");
+         }
+
+         int varIntLen = VarInt.size(additionsCount);
          if (additionsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Additions", additionsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + additionsCount * 2L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Additions", varPos1 + varIntLen + additionsCount * 2, buf.readableBytes());
          }
@@ -97,17 +116,22 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int deletionsCount = VarInt.peek(buf, varPos2);
-         if (deletionsCount < 0) {
-            throw ProtocolException.negativeLength("Deletions", deletionsCount);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Deletions", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 13 + varPosBase2;
+         int deletionsCount = VarInt.peek(buf, varPos2);
+         if (deletionsCount < 0) {
+            throw ProtocolException.invalidVarInt("Deletions");
+         }
+
+         int varIntLen = VarInt.size(deletionsCount);
          if (deletionsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Deletions", deletionsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + deletionsCount * 2L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Deletions", varPos2 + varIntLen + deletionsCount * 2, buf.readableBytes());
          }
@@ -129,9 +153,13 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Pack", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -139,9 +167,13 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Additions", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += AssetEditorFileEntry.computeBytesConsumed(buf, pos1);
@@ -154,9 +186,13 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Deletions", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += AssetEditorFileEntry.computeBytesConsumed(buf, pos2);
@@ -270,15 +306,11 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int packOffset = buffer.getIntLE(offset + 1);
-         if (packOffset < 0) {
+         if (packOffset < 0 || packOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Pack");
          }
 
          int pos = offset + 13 + packOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Pack");
-         }
-
          int packLen = VarInt.peek(buffer, pos);
          if (packLen < 0) {
             return ValidationResult.error("Invalid string length for Pack");
@@ -288,7 +320,7 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
             return ValidationResult.error("Pack exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(packLen);
          pos += packLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Pack");
@@ -297,15 +329,11 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int additionsOffset = buffer.getIntLE(offset + 5);
-         if (additionsOffset < 0) {
+         if (additionsOffset < 0 || additionsOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Additions");
          }
 
          int pos = offset + 13 + additionsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Additions");
-         }
-
          int additionsCount = VarInt.peek(buffer, pos);
          if (additionsCount < 0) {
             return ValidationResult.error("Invalid array count for Additions");
@@ -315,7 +343,7 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
             return ValidationResult.error("Additions exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(additionsCount);
 
          for (int i = 0; i < additionsCount; i++) {
             ValidationResult structResult = AssetEditorFileEntry.validateStructure(buffer, pos);
@@ -329,15 +357,11 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int deletionsOffset = buffer.getIntLE(offset + 9);
-         if (deletionsOffset < 0) {
+         if (deletionsOffset < 0 || deletionsOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Deletions");
          }
 
          int pos = offset + 13 + deletionsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Deletions");
-         }
-
          int deletionsCount = VarInt.peek(buffer, pos);
          if (deletionsCount < 0) {
             return ValidationResult.error("Invalid array count for Deletions");
@@ -347,7 +371,7 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
             return ValidationResult.error("Deletions exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(deletionsCount);
 
          for (int i = 0; i < deletionsCount; i++) {
             ValidationResult structResult = AssetEditorFileEntry.validateStructure(buffer, pos);

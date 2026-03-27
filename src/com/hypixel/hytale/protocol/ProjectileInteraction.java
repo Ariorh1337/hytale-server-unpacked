@@ -70,6 +70,10 @@ public class ProjectileInteraction extends SimpleInteraction {
 
    @Nonnull
    public static ProjectileInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 43) {
+         throw ProtocolException.bufferTooSmall("ProjectileInteraction", 43, buf.readableBytes() - offset);
+      }
+
       ProjectileInteraction obj = new ProjectileInteraction();
       byte nullBits = buf.getByte(offset);
       obj.waitForDataFrom = WaitForDataFrom.fromValue(buf.getByte(offset + 1));
@@ -79,22 +83,32 @@ public class ProjectileInteraction extends SimpleInteraction {
       obj.next = buf.getIntLE(offset + 11);
       obj.failed = buf.getIntLE(offset + 15);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 43 + buf.getIntLE(offset + 19);
+         int varPosBase0 = buf.getIntLE(offset + 19);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Effects", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 43 + varPosBase0;
          obj.effects = InteractionEffects.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 43 + buf.getIntLE(offset + 23);
-         int settingsCount = VarInt.peek(buf, varPos1);
-         if (settingsCount < 0) {
-            throw ProtocolException.negativeLength("Settings", settingsCount);
+         int varPosBase1 = buf.getIntLE(offset + 23);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Settings", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 43 + varPosBase1;
+         int settingsCount = VarInt.peek(buf, varPos1);
+         if (settingsCount < 0) {
+            throw ProtocolException.invalidVarInt("Settings");
+         }
+
+         int varIntLen = VarInt.size(settingsCount);
          if (settingsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Settings", settingsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.settings = new HashMap<>(settingsCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -109,22 +123,32 @@ public class ProjectileInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 43 + buf.getIntLE(offset + 27);
+         int varPosBase2 = buf.getIntLE(offset + 27);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Rules", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 43 + varPosBase2;
          obj.rules = InteractionRules.deserialize(buf, varPos2);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 43 + buf.getIntLE(offset + 31);
-         int tagsCount = VarInt.peek(buf, varPos3);
-         if (tagsCount < 0) {
-            throw ProtocolException.negativeLength("Tags", tagsCount);
+         int varPosBase3 = buf.getIntLE(offset + 31);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Tags", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 43 + varPosBase3;
+         int tagsCount = VarInt.peek(buf, varPos3);
+         if (tagsCount < 0) {
+            throw ProtocolException.invalidVarInt("Tags");
+         }
+
+         int varIntLen = VarInt.size(tagsCount);
          if (tagsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tags", tagsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + tagsCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tags", varPos3 + varIntLen + tagsCount * 4, buf.readableBytes());
          }
@@ -137,19 +161,34 @@ public class ProjectileInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 43 + buf.getIntLE(offset + 35);
+         int varPosBase4 = buf.getIntLE(offset + 35);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Camera", varPosBase4, buf.readableBytes());
+         }
+
+         int varPos4 = offset + 43 + varPosBase4;
          obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos5 = offset + 43 + buf.getIntLE(offset + 39);
-         int configIdLen = VarInt.peek(buf, varPos5);
-         if (configIdLen < 0) {
-            throw ProtocolException.negativeLength("ConfigId", configIdLen);
+         int varPosBase5 = buf.getIntLE(offset + 39);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("ConfigId", varPosBase5, buf.readableBytes());
          }
 
+         int varPos5 = offset + 43 + varPosBase5;
+         int configIdLen = VarInt.peek(buf, varPos5);
+         if (configIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ConfigId");
+         }
+
+         int configIdVarIntLen = VarInt.size(configIdLen);
          if (configIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ConfigId", configIdLen, 4096000);
+         }
+
+         if (varPos5 + configIdVarIntLen + configIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ConfigId", varPos5 + configIdVarIntLen + configIdLen, buf.readableBytes());
          }
 
          obj.configId = PacketIO.readVarString(buf, varPos5, PacketIO.UTF8);
@@ -163,6 +202,10 @@ public class ProjectileInteraction extends SimpleInteraction {
       int maxEnd = 43;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 19);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Effects", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 43 + fieldOffset0;
          pos0 += InteractionEffects.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -172,9 +215,13 @@ public class ProjectileInteraction extends SimpleInteraction {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 23);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Settings", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 43 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + InteractionSettings.computeBytesConsumed(buf, pos1);
@@ -187,6 +234,10 @@ public class ProjectileInteraction extends SimpleInteraction {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 27);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Rules", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 43 + fieldOffset2;
          pos2 += InteractionRules.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -196,9 +247,13 @@ public class ProjectileInteraction extends SimpleInteraction {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 31);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Tags", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 43 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + arrLen * 4;
+         pos3 += VarInt.size(arrLen) + arrLen * 4;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -206,6 +261,10 @@ public class ProjectileInteraction extends SimpleInteraction {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 35);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("Camera", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 43 + fieldOffset4;
          pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
@@ -215,9 +274,13 @@ public class ProjectileInteraction extends SimpleInteraction {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 39);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("ConfigId", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 43 + fieldOffset5;
          int sl = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5) + sl;
+         pos5 += VarInt.size(sl) + sl;
          if (pos5 - offset > maxEnd) {
             maxEnd = pos5 - offset;
          }
@@ -372,17 +435,18 @@ public class ProjectileInteraction extends SimpleInteraction {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid WaitForDataFrom value for WaitForDataFrom");
+      }
+
       if ((nullBits & 1) != 0) {
-         int effectsOffset = buffer.getIntLE(offset + 19);
-         if (effectsOffset < 0) {
+         v = buffer.getIntLE(offset + 19);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for Effects");
          }
 
-         int pos = offset + 43 + effectsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Effects");
-         }
-
+         int pos = offset + 43 + v;
          ValidationResult effectsResult = InteractionEffects.validateStructure(buffer, pos);
          if (!effectsResult.isValid()) {
             return ValidationResult.error("Invalid Effects: " + effectsResult.error());
@@ -392,16 +456,12 @@ public class ProjectileInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 2) != 0) {
-         int settingsOffset = buffer.getIntLE(offset + 23);
-         if (settingsOffset < 0) {
+         v = buffer.getIntLE(offset + 23);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for Settings");
          }
 
-         int pos = offset + 43 + settingsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Settings");
-         }
-
+         int pos = offset + 43 + v;
          int settingsCount = VarInt.peek(buffer, pos);
          if (settingsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Settings");
@@ -411,25 +471,26 @@ public class ProjectileInteraction extends SimpleInteraction {
             return ValidationResult.error("Settings exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(settingsCount);
 
          for (int i = 0; i < settingsCount; i++) {
+            int vx = buffer.getByte(pos) & 255;
+            if (vx >= 2) {
+               return ValidationResult.error("Invalid GameMode value for key");
+            }
+
             pos++;
             pos++;
          }
       }
 
       if ((nullBits & 4) != 0) {
-         int rulesOffset = buffer.getIntLE(offset + 27);
-         if (rulesOffset < 0) {
+         v = buffer.getIntLE(offset + 27);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for Rules");
          }
 
-         int pos = offset + 43 + rulesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Rules");
-         }
-
+         int pos = offset + 43 + v;
          ValidationResult rulesResult = InteractionRules.validateStructure(buffer, pos);
          if (!rulesResult.isValid()) {
             return ValidationResult.error("Invalid Rules: " + rulesResult.error());
@@ -439,16 +500,12 @@ public class ProjectileInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 8) != 0) {
-         int tagsOffset = buffer.getIntLE(offset + 31);
-         if (tagsOffset < 0) {
+         v = buffer.getIntLE(offset + 31);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for Tags");
          }
 
-         int pos = offset + 43 + tagsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Tags");
-         }
-
+         int pos = offset + 43 + v;
          int tagsCount = VarInt.peek(buffer, pos);
          if (tagsCount < 0) {
             return ValidationResult.error("Invalid array count for Tags");
@@ -458,7 +515,7 @@ public class ProjectileInteraction extends SimpleInteraction {
             return ValidationResult.error("Tags exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagsCount);
          pos += tagsCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Tags");
@@ -466,16 +523,12 @@ public class ProjectileInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 16) != 0) {
-         int cameraOffset = buffer.getIntLE(offset + 35);
-         if (cameraOffset < 0) {
+         v = buffer.getIntLE(offset + 35);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for Camera");
          }
 
-         int pos = offset + 43 + cameraOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Camera");
-         }
-
+         int pos = offset + 43 + v;
          ValidationResult cameraResult = InteractionCameraSettings.validateStructure(buffer, pos);
          if (!cameraResult.isValid()) {
             return ValidationResult.error("Invalid Camera: " + cameraResult.error());
@@ -485,16 +538,12 @@ public class ProjectileInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 32) != 0) {
-         int configIdOffset = buffer.getIntLE(offset + 39);
-         if (configIdOffset < 0) {
+         v = buffer.getIntLE(offset + 39);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for ConfigId");
          }
 
-         int pos = offset + 43 + configIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ConfigId");
-         }
-
+         int pos = offset + 43 + v;
          int configIdLen = VarInt.peek(buffer, pos);
          if (configIdLen < 0) {
             return ValidationResult.error("Invalid string length for ConfigId");
@@ -504,7 +553,7 @@ public class ProjectileInteraction extends SimpleInteraction {
             return ValidationResult.error("ConfigId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(configIdLen);
          pos += configIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ConfigId");

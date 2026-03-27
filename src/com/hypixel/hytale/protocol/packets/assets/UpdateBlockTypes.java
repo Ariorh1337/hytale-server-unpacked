@@ -77,6 +77,10 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateBlockTypes deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockTypes", 10, buf.readableBytes() - offset);
+      }
+
       UpdateBlockTypes obj = new UpdateBlockTypes();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -89,14 +93,15 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int blockTypesCount = VarInt.peek(buf, pos);
          if (blockTypesCount < 0) {
-            throw ProtocolException.negativeLength("BlockTypes", blockTypesCount);
+            throw ProtocolException.invalidVarInt("BlockTypes");
          }
 
+         int blockTypesVarLen = VarInt.size(blockTypesCount);
          if (blockTypesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("BlockTypes", blockTypesCount, 4096000);
          }
 
-         pos += VarInt.size(blockTypesCount);
+         pos += blockTypesVarLen;
          obj.blockTypes = new HashMap<>(blockTypesCount);
 
          for (int i = 0; i < blockTypesCount; i++) {
@@ -118,7 +123,7 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
       int pos = offset + 10;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -179,9 +184,14 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 10;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 10;
       if ((nullBits & 1) != 0) {
-         int blockTypesCount = VarInt.peek(buffer, pos);
+         int blockTypesCount = VarInt.peek(buffer, v);
          if (blockTypesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for BlockTypes");
          }
@@ -190,15 +200,15 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
             return ValidationResult.error("BlockTypes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(blockTypesCount);
 
          for (int i = 0; i < blockTypesCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += BlockType.computeBytesConsumed(buffer, pos);
+            v += BlockType.computeBytesConsumed(buffer, v);
          }
       }
 

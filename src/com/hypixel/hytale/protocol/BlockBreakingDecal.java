@@ -31,20 +31,24 @@ public class BlockBreakingDecal {
 
    @Nonnull
    public static BlockBreakingDecal deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("BlockBreakingDecal", 1, buf.readableBytes() - offset);
+      }
+
       BlockBreakingDecal obj = new BlockBreakingDecal();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int stageTexturesCount = VarInt.peek(buf, pos);
          if (stageTexturesCount < 0) {
-            throw ProtocolException.negativeLength("StageTextures", stageTexturesCount);
+            throw ProtocolException.invalidVarInt("StageTextures");
          }
 
+         int stageTexturesVarLen = VarInt.size(stageTexturesCount);
          if (stageTexturesCount > 4096000) {
             throw ProtocolException.arrayTooLong("StageTextures", stageTexturesCount, 4096000);
          }
 
-         int stageTexturesVarLen = VarInt.size(stageTexturesCount);
          if (pos + stageTexturesVarLen + stageTexturesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("StageTextures", pos + stageTexturesVarLen + stageTexturesCount * 1, buf.readableBytes());
          }
@@ -55,14 +59,18 @@ public class BlockBreakingDecal {
          for (int i = 0; i < stageTexturesCount; i++) {
             int strLen = VarInt.peek(buf, pos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("stageTextures[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("stageTextures[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("stageTextures[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
+            if (pos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("stageTextures[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.stageTextures[i] = PacketIO.readVarString(buf, pos);
             pos += strVarLen + strLen;
          }
@@ -76,11 +84,11 @@ public class BlockBreakingDecal {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -139,7 +147,7 @@ public class BlockBreakingDecal {
             return ValidationResult.error("StageTextures exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(stageTexturesCount);
 
          for (int i = 0; i < stageTexturesCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -147,7 +155,7 @@ public class BlockBreakingDecal {
                return ValidationResult.error("Invalid string length in StageTextures");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in StageTextures");

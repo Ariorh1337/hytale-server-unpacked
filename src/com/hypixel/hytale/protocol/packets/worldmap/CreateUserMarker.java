@@ -64,6 +64,10 @@ public class CreateUserMarker implements Packet, ToServerPacket {
 
    @Nonnull
    public static CreateUserMarker deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("CreateUserMarker", 21, buf.readableBytes() - offset);
+      }
+
       CreateUserMarker obj = new CreateUserMarker();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getFloatLE(offset + 1);
@@ -74,28 +78,48 @@ public class CreateUserMarker implements Packet, ToServerPacket {
 
       obj.shared = buf.getByte(offset + 12) != 0;
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 21 + buf.getIntLE(offset + 13);
-         int nameLen = VarInt.peek(buf, varPos0);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase0 = buf.getIntLE(offset + 13);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Name", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 21 + varPosBase0;
+         int nameLen = VarInt.peek(buf, varPos0);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos0 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos0 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 21 + buf.getIntLE(offset + 17);
-         int markerImageLen = VarInt.peek(buf, varPos1);
-         if (markerImageLen < 0) {
-            throw ProtocolException.negativeLength("MarkerImage", markerImageLen);
+         int varPosBase1 = buf.getIntLE(offset + 17);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("MarkerImage", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 21 + varPosBase1;
+         int markerImageLen = VarInt.peek(buf, varPos1);
+         if (markerImageLen < 0) {
+            throw ProtocolException.invalidVarInt("MarkerImage");
+         }
+
+         int markerImageVarIntLen = VarInt.size(markerImageLen);
          if (markerImageLen > 4096000) {
             throw ProtocolException.stringTooLong("MarkerImage", markerImageLen, 4096000);
+         }
+
+         if (varPos1 + markerImageVarIntLen + markerImageLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("MarkerImage", varPos1 + markerImageVarIntLen + markerImageLen, buf.readableBytes());
          }
 
          obj.markerImage = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -109,9 +133,13 @@ public class CreateUserMarker implements Packet, ToServerPacket {
       int maxEnd = 21;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 13);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 21 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -119,9 +147,13 @@ public class CreateUserMarker implements Packet, ToServerPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 17);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("MarkerImage", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 21 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -198,15 +230,11 @@ public class CreateUserMarker implements Packet, ToServerPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
          int nameOffset = buffer.getIntLE(offset + 13);
-         if (nameOffset < 0) {
+         if (nameOffset < 0 || nameOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
          int pos = offset + 21 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -216,7 +244,7 @@ public class CreateUserMarker implements Packet, ToServerPacket {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -225,15 +253,11 @@ public class CreateUserMarker implements Packet, ToServerPacket {
 
       if ((nullBits & 4) != 0) {
          int markerImageOffset = buffer.getIntLE(offset + 17);
-         if (markerImageOffset < 0) {
+         if (markerImageOffset < 0 || markerImageOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for MarkerImage");
          }
 
          int pos = offset + 21 + markerImageOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for MarkerImage");
-         }
-
          int markerImageLen = VarInt.peek(buffer, pos);
          if (markerImageLen < 0) {
             return ValidationResult.error("Invalid string length for MarkerImage");
@@ -243,7 +267,7 @@ public class CreateUserMarker implements Packet, ToServerPacket {
             return ValidationResult.error("MarkerImage exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(markerImageLen);
          pos += markerImageLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading MarkerImage");

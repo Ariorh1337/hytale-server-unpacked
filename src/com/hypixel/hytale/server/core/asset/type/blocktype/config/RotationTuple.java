@@ -1,11 +1,12 @@
 package com.hypixel.hytale.server.core.asset.type.blocktype.config;
 
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
 
 public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation roll) {
    public static final RotationTuple[] EMPTY_ARRAY = new RotationTuple[0];
@@ -178,6 +179,10 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
 
    public void applyRotationTo(@Nonnull Vector3f vector) {
       Rotation.applyRotationTo(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void applyRotationTo(@Nonnull Rotation3f rotation) {
+      Rotation.applyRotationTo(rotation, this.yaw, this.pitch, this.roll);
    }
 
    public void applyRotationTo(@Nonnull Vector3d vector) {

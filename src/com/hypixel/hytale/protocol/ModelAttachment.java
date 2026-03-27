@@ -43,59 +43,103 @@ public class ModelAttachment {
 
    @Nonnull
    public static ModelAttachment deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("ModelAttachment", 17, buf.readableBytes() - offset);
+      }
+
       ModelAttachment obj = new ModelAttachment();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 17 + buf.getIntLE(offset + 1);
-         int modelLen = VarInt.peek(buf, varPos0);
-         if (modelLen < 0) {
-            throw ProtocolException.negativeLength("Model", modelLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Model", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 17 + varPosBase0;
+         int modelLen = VarInt.peek(buf, varPos0);
+         if (modelLen < 0) {
+            throw ProtocolException.invalidVarInt("Model");
+         }
+
+         int modelVarIntLen = VarInt.size(modelLen);
          if (modelLen > 4096000) {
             throw ProtocolException.stringTooLong("Model", modelLen, 4096000);
+         }
+
+         if (varPos0 + modelVarIntLen + modelLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Model", varPos0 + modelVarIntLen + modelLen, buf.readableBytes());
          }
 
          obj.model = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 17 + buf.getIntLE(offset + 5);
-         int textureLen = VarInt.peek(buf, varPos1);
-         if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Texture", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 17 + varPosBase1;
+         int textureLen = VarInt.peek(buf, varPos1);
+         if (textureLen < 0) {
+            throw ProtocolException.invalidVarInt("Texture");
+         }
+
+         int textureVarIntLen = VarInt.size(textureLen);
          if (textureLen > 4096000) {
             throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
+         }
+
+         if (varPos1 + textureVarIntLen + textureLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Texture", varPos1 + textureVarIntLen + textureLen, buf.readableBytes());
          }
 
          obj.texture = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 17 + buf.getIntLE(offset + 9);
-         int gradientSetLen = VarInt.peek(buf, varPos2);
-         if (gradientSetLen < 0) {
-            throw ProtocolException.negativeLength("GradientSet", gradientSetLen);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("GradientSet", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 17 + varPosBase2;
+         int gradientSetLen = VarInt.peek(buf, varPos2);
+         if (gradientSetLen < 0) {
+            throw ProtocolException.invalidVarInt("GradientSet");
+         }
+
+         int gradientSetVarIntLen = VarInt.size(gradientSetLen);
          if (gradientSetLen > 4096000) {
             throw ProtocolException.stringTooLong("GradientSet", gradientSetLen, 4096000);
+         }
+
+         if (varPos2 + gradientSetVarIntLen + gradientSetLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("GradientSet", varPos2 + gradientSetVarIntLen + gradientSetLen, buf.readableBytes());
          }
 
          obj.gradientSet = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 17 + buf.getIntLE(offset + 13);
-         int gradientIdLen = VarInt.peek(buf, varPos3);
-         if (gradientIdLen < 0) {
-            throw ProtocolException.negativeLength("GradientId", gradientIdLen);
+         int varPosBase3 = buf.getIntLE(offset + 13);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("GradientId", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 17 + varPosBase3;
+         int gradientIdLen = VarInt.peek(buf, varPos3);
+         if (gradientIdLen < 0) {
+            throw ProtocolException.invalidVarInt("GradientId");
+         }
+
+         int gradientIdVarIntLen = VarInt.size(gradientIdLen);
          if (gradientIdLen > 4096000) {
             throw ProtocolException.stringTooLong("GradientId", gradientIdLen, 4096000);
+         }
+
+         if (varPos3 + gradientIdVarIntLen + gradientIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("GradientId", varPos3 + gradientIdVarIntLen + gradientIdLen, buf.readableBytes());
          }
 
          obj.gradientId = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
@@ -109,9 +153,13 @@ public class ModelAttachment {
       int maxEnd = 17;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -119,9 +167,13 @@ public class ModelAttachment {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Texture", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 17 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -129,9 +181,13 @@ public class ModelAttachment {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("GradientSet", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 17 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -139,9 +195,13 @@ public class ModelAttachment {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 13);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("GradientId", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 17 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -237,15 +297,11 @@ public class ModelAttachment {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int modelOffset = buffer.getIntLE(offset + 1);
-         if (modelOffset < 0) {
+         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
          int pos = offset + 17 + modelOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Model");
-         }
-
          int modelLen = VarInt.peek(buffer, pos);
          if (modelLen < 0) {
             return ValidationResult.error("Invalid string length for Model");
@@ -255,7 +311,7 @@ public class ModelAttachment {
             return ValidationResult.error("Model exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modelLen);
          pos += modelLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Model");
@@ -264,15 +320,11 @@ public class ModelAttachment {
 
       if ((nullBits & 2) != 0) {
          int textureOffset = buffer.getIntLE(offset + 5);
-         if (textureOffset < 0) {
+         if (textureOffset < 0 || textureOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for Texture");
          }
 
          int pos = offset + 17 + textureOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Texture");
-         }
-
          int textureLen = VarInt.peek(buffer, pos);
          if (textureLen < 0) {
             return ValidationResult.error("Invalid string length for Texture");
@@ -282,7 +334,7 @@ public class ModelAttachment {
             return ValidationResult.error("Texture exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(textureLen);
          pos += textureLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Texture");
@@ -291,15 +343,11 @@ public class ModelAttachment {
 
       if ((nullBits & 4) != 0) {
          int gradientSetOffset = buffer.getIntLE(offset + 9);
-         if (gradientSetOffset < 0) {
+         if (gradientSetOffset < 0 || gradientSetOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for GradientSet");
          }
 
          int pos = offset + 17 + gradientSetOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for GradientSet");
-         }
-
          int gradientSetLen = VarInt.peek(buffer, pos);
          if (gradientSetLen < 0) {
             return ValidationResult.error("Invalid string length for GradientSet");
@@ -309,7 +357,7 @@ public class ModelAttachment {
             return ValidationResult.error("GradientSet exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(gradientSetLen);
          pos += gradientSetLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading GradientSet");
@@ -318,15 +366,11 @@ public class ModelAttachment {
 
       if ((nullBits & 8) != 0) {
          int gradientIdOffset = buffer.getIntLE(offset + 13);
-         if (gradientIdOffset < 0) {
+         if (gradientIdOffset < 0 || gradientIdOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for GradientId");
          }
 
          int pos = offset + 17 + gradientIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for GradientId");
-         }
-
          int gradientIdLen = VarInt.peek(buffer, pos);
          if (gradientIdLen < 0) {
             return ValidationResult.error("Invalid string length for GradientId");
@@ -336,7 +380,7 @@ public class ModelAttachment {
             return ValidationResult.error("GradientId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(gradientIdLen);
          pos += gradientIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading GradientId");

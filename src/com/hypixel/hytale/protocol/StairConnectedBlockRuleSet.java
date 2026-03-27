@@ -53,6 +53,10 @@ public class StairConnectedBlockRuleSet {
 
    @Nonnull
    public static StairConnectedBlockRuleSet deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("StairConnectedBlockRuleSet", 21, buf.readableBytes() - offset);
+      }
+
       StairConnectedBlockRuleSet obj = new StairConnectedBlockRuleSet();
       byte nullBits = buf.getByte(offset);
       obj.straightBlockId = buf.getIntLE(offset + 1);
@@ -64,14 +68,18 @@ public class StairConnectedBlockRuleSet {
       if ((nullBits & 1) != 0) {
          int materialNameLen = VarInt.peek(buf, pos);
          if (materialNameLen < 0) {
-            throw ProtocolException.negativeLength("MaterialName", materialNameLen);
+            throw ProtocolException.invalidVarInt("MaterialName");
          }
 
+         int materialNameVarLen = VarInt.size(materialNameLen);
          if (materialNameLen > 4096000) {
             throw ProtocolException.stringTooLong("MaterialName", materialNameLen, 4096000);
          }
 
-         int materialNameVarLen = VarInt.length(buf, pos);
+         if (pos + materialNameVarLen + materialNameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("MaterialName", pos + materialNameVarLen + materialNameLen, buf.readableBytes());
+         }
+
          obj.materialName = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += materialNameVarLen + materialNameLen;
       }
@@ -84,7 +92,7 @@ public class StairConnectedBlockRuleSet {
       int pos = offset + 21;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -133,7 +141,7 @@ public class StairConnectedBlockRuleSet {
             return ValidationResult.error("MaterialName exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(materialNameLen);
          pos += materialNameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading MaterialName");

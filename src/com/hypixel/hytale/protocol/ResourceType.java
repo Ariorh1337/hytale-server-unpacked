@@ -35,31 +35,55 @@ public class ResourceType {
 
    @Nonnull
    public static ResourceType deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ResourceType", 9, buf.readableBytes() - offset);
+      }
+
       ResourceType obj = new ResourceType();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int iconLen = VarInt.peek(buf, varPos1);
-         if (iconLen < 0) {
-            throw ProtocolException.negativeLength("Icon", iconLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Icon", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int iconLen = VarInt.peek(buf, varPos1);
+         if (iconLen < 0) {
+            throw ProtocolException.invalidVarInt("Icon");
+         }
+
+         int iconVarIntLen = VarInt.size(iconLen);
          if (iconLen > 4096000) {
             throw ProtocolException.stringTooLong("Icon", iconLen, 4096000);
+         }
+
+         if (varPos1 + iconVarIntLen + iconLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Icon", varPos1 + iconVarIntLen + iconLen, buf.readableBytes());
          }
 
          obj.icon = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -73,9 +97,13 @@ public class ResourceType {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -83,9 +111,13 @@ public class ResourceType {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Icon", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -147,15 +179,11 @@ public class ResourceType {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 1);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 9 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -165,7 +193,7 @@ public class ResourceType {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -174,15 +202,11 @@ public class ResourceType {
 
       if ((nullBits & 2) != 0) {
          int iconOffset = buffer.getIntLE(offset + 5);
-         if (iconOffset < 0) {
+         if (iconOffset < 0 || iconOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Icon");
          }
 
          int pos = offset + 9 + iconOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Icon");
-         }
-
          int iconLen = VarInt.peek(buffer, pos);
          if (iconLen < 0) {
             return ValidationResult.error("Invalid string length for Icon");
@@ -192,7 +216,7 @@ public class ResourceType {
             return ValidationResult.error("Icon exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(iconLen);
          pos += iconLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Icon");

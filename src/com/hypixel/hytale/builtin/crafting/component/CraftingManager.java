@@ -15,7 +15,6 @@ import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.BenchType;
 import com.hypixel.hytale.protocol.GameMode;
@@ -38,6 +37,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialExt
 import com.hypixel.hytale.server.core.event.events.ecs.CraftRecipeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerCraftEvent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
@@ -76,6 +76,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
+import org.joml.Vector3d;
 
 public class CraftingManager implements Component<EntityStore> {
    @Nonnull
@@ -209,7 +210,12 @@ public class CraftingManager implements Component<EntityStore> {
 
    @Nullable
    private static String getRecipeOutputTranslationKey(@Nonnull CraftingRecipe recipe) {
-      String itemId = recipe.getPrimaryOutput().getItemId();
+      MaterialQuantity primaryOutput = recipe.getPrimaryOutput();
+      if (primaryOutput == null) {
+         return null;
+      }
+
+      String itemId = primaryOutput.getItemId();
       if (itemId == null) {
          return null;
       }
@@ -386,7 +392,8 @@ public class CraftingManager implements Component<EntityStore> {
       Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       PlayerConfigData playerConfigData = playerComponent.getPlayerConfigData();
-      String primaryOutputItemId = recipe.getPrimaryOutput() != null ? recipe.getPrimaryOutput().getItemId() : null;
+      MaterialQuantity primaryOutput = recipe.getPrimaryOutput();
+      String primaryOutputItemId = primaryOutput != null ? primaryOutput.getItemId() : null;
       if (!recipe.isKnowledgeRequired() || primaryOutputItemId != null && playerConfigData.getKnownRecipes().contains(primaryOutputItemId)) {
          World world = componentAccessor.getExternalData().getWorld();
          if (recipe.getRequiredMemoriesLevel() > 1 && MemoriesPlugin.get().getMemoriesLevel(world.getGameplayConfig()) < recipe.getRequiredMemoriesLevel()) {
@@ -445,7 +452,6 @@ public class CraftingManager implements Component<EntityStore> {
          LOGGER.at(Level.WARNING).log("Attempted to give output to a non-player entity: %s", ref);
       } else {
          List<ItemStack> itemStacks = getOutputItemStacks(craftingRecipe, quantity);
-         Inventory inventory = playerComponent.getInventory();
          PlayerSettings playerSettings = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
          if (playerSettings == null) {
             playerSettings = PlayerSettings.defaults();
@@ -453,9 +459,8 @@ public class CraftingManager implements Component<EntityStore> {
 
          for (ItemStack itemStack : itemStacks) {
             if (!ItemStack.isEmpty(itemStack)) {
-               SimpleItemContainer.addOrDropItemStack(
-                  componentAccessor, ref, inventory.getContainerForItemPickup(itemStack.getItem(), playerSettings), itemStack
-               );
+               ItemContainer containerForItemPickup = Inventory.getContainerForItemPickup(ref, itemStack.getItem(), playerSettings, componentAccessor);
+               SimpleItemContainer.addOrDropItemStack(componentAccessor, ref, containerForItemPickup, itemStack);
             }
          }
       }
@@ -522,9 +527,8 @@ public class CraftingManager implements Component<EntityStore> {
       Objects.requireNonNull(job, "Job can't be null!");
       List<ItemStack> itemStacks = job.removedItems.get(currentItemId);
       if (itemStacks != null) {
-         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-         assert playerComponent != null;
-         SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
+         CombinedItemContainer combinedInventory = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
+         SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, combinedInventory, itemStacks);
       }
    }
 
@@ -673,9 +677,10 @@ public class CraftingManager implements Component<EntityStore> {
       Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
       if (playerComponent.getGameMode() != GameMode.Creative) {
-         CombinedItemContainer combined = new CombinedItemContainer(
-            playerComponent.getInventory().getCombinedBackpackStorageHotbar(), window.getExtraResourcesSection().getItemContainer()
+         CombinedItemContainer combinedBackpackStorageHotbar = InventoryComponent.getCombined(
+            componentAccessor, ref, InventoryComponent.BACKPACK_STORAGE_HOTBAR
          );
+         CombinedItemContainer combined = new CombinedItemContainer(combinedBackpackStorageHotbar, window.getExtraResourcesSection().getItemContainer());
          if (!combined.canRemoveMaterials(input)) {
             return false;
          }
@@ -722,8 +727,11 @@ public class CraftingManager implements Component<EntityStore> {
                assert playerComponent != null;
                boolean canUpgrade = playerComponent.getGameMode() == GameMode.Creative;
                if (!canUpgrade) {
+                  CombinedItemContainer combinedBackpackStorageHotbar = InventoryComponent.getCombined(
+                     componentAccessor, ref, InventoryComponent.BACKPACK_STORAGE_HOTBAR
+                  );
                   CombinedItemContainer combined = new CombinedItemContainer(
-                     playerComponent.getInventory().getCombinedBackpackStorageHotbar(), this.upgradingJob.window.getExtraResourcesSection().getItemContainer()
+                     combinedBackpackStorageHotbar, this.upgradingJob.window.getExtraResourcesSection().getItemContainer()
                   );
                   combined = new CombinedItemContainer(combined, this.upgradingJob.window.getExtraResourcesSection().getItemContainer());
                   ListTransaction<MaterialTransaction> materialTransactions = combined.removeMaterials(input);

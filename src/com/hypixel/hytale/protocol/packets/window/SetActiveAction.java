@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.window;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -26,6 +27,10 @@ public class SetActiveAction extends WindowAction {
 
    @Nonnull
    public static SetActiveAction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("SetActiveAction", 1, buf.readableBytes() - offset);
+      }
+
       SetActiveAction obj = new SetActiveAction();
       obj.state = buf.getByte(offset + 0) != 0;
       return obj;

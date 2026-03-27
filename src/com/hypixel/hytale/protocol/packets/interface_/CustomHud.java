@@ -48,6 +48,10 @@ public class CustomHud implements Packet, ToClientPacket {
 
    @Nonnull
    public static CustomHud deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("CustomHud", 2, buf.readableBytes() - offset);
+      }
+
       CustomHud obj = new CustomHud();
       byte nullBits = buf.getByte(offset);
       obj.clear = buf.getByte(offset + 1) != 0;
@@ -55,14 +59,14 @@ public class CustomHud implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int commandsCount = VarInt.peek(buf, pos);
          if (commandsCount < 0) {
-            throw ProtocolException.negativeLength("Commands", commandsCount);
+            throw ProtocolException.invalidVarInt("Commands");
          }
 
+         int commandsVarLen = VarInt.size(commandsCount);
          if (commandsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Commands", commandsCount, 4096000);
          }
 
-         int commandsVarLen = VarInt.size(commandsCount);
          if (pos + commandsVarLen + commandsCount * 2L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Commands", pos + commandsVarLen + commandsCount * 2, buf.readableBytes());
          }
@@ -84,7 +88,7 @@ public class CustomHud implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += CustomUICommand.computeBytesConsumed(buf, pos);
@@ -149,7 +153,7 @@ public class CustomHud implements Packet, ToClientPacket {
             return ValidationResult.error("Commands exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(commandsCount);
 
          for (int i = 0; i < commandsCount; i++) {
             ValidationResult structResult = CustomUICommand.validateStructure(buffer, pos);

@@ -146,6 +146,10 @@ public class InteractionSyncData {
 
    @Nonnull
    public static InteractionSyncData deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 165) {
+         throw ProtocolException.bufferTooSmall("InteractionSyncData", 165, buf.readableBytes() - offset);
+      }
+
       InteractionSyncData obj = new InteractionSyncData();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       obj.state = InteractionState.fromValue(buf.getByte(offset + 2));
@@ -193,17 +197,22 @@ public class InteractionSyncData {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos0 = offset + 165 + buf.getIntLE(offset + 157);
-         int forkCountsCount = VarInt.peek(buf, varPos0);
-         if (forkCountsCount < 0) {
-            throw ProtocolException.negativeLength("ForkCounts", forkCountsCount);
+         int varPosBase0 = buf.getIntLE(offset + 157);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 165) {
+            throw ProtocolException.invalidOffset("ForkCounts", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 165 + varPosBase0;
+         int forkCountsCount = VarInt.peek(buf, varPos0);
+         if (forkCountsCount < 0) {
+            throw ProtocolException.invalidVarInt("ForkCounts");
+         }
+
+         int varIntLen = VarInt.size(forkCountsCount);
          if (forkCountsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("ForkCounts", forkCountsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          obj.forkCounts = new HashMap<>(forkCountsCount);
          int dictPos = varPos0 + varIntLen;
 
@@ -218,17 +227,22 @@ public class InteractionSyncData {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos1 = offset + 165 + buf.getIntLE(offset + 161);
-         int hitEntitiesCount = VarInt.peek(buf, varPos1);
-         if (hitEntitiesCount < 0) {
-            throw ProtocolException.negativeLength("HitEntities", hitEntitiesCount);
+         int varPosBase1 = buf.getIntLE(offset + 161);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 165) {
+            throw ProtocolException.invalidOffset("HitEntities", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 165 + varPosBase1;
+         int hitEntitiesCount = VarInt.peek(buf, varPos1);
+         if (hitEntitiesCount < 0) {
+            throw ProtocolException.invalidVarInt("HitEntities");
+         }
+
+         int varIntLen = VarInt.size(hitEntitiesCount);
          if (hitEntitiesCount > 4096000) {
             throw ProtocolException.arrayTooLong("HitEntities", hitEntitiesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + hitEntitiesCount * 53L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("HitEntities", varPos1 + varIntLen + hitEntitiesCount * 53, buf.readableBytes());
          }
@@ -250,9 +264,13 @@ public class InteractionSyncData {
       int maxEnd = 165;
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 157);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 165) {
+            throw ProtocolException.invalidOffset("ForkCounts", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 165 + fieldOffset0;
          int dictLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos0 = ++pos0 + 4;
@@ -265,9 +283,13 @@ public class InteractionSyncData {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 161);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 165) {
+            throw ProtocolException.invalidOffset("HitEntities", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 165 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += SelectedHitEntity.computeBytesConsumed(buf, pos1);
@@ -435,17 +457,33 @@ public class InteractionSyncData {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
+      int v = buffer.getByte(offset + 2) & 255;
+      if (v >= 5) {
+         return ValidationResult.error("Invalid InteractionState value for State");
+      }
+
+      v = buffer.getByte(offset + 39) & 255;
+      if (v >= 7) {
+         return ValidationResult.error("Invalid BlockFace value for BlockFace");
+      }
+
+      v = buffer.getByte(offset + 135) & 255;
+      if (v >= 9) {
+         return ValidationResult.error("Invalid MovementDirection value for MovementDirection");
+      }
+
+      v = buffer.getByte(offset + 136) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid ApplyForceState value for ApplyForceState");
+      }
+
       if ((nullBits[0] & 128) != 0) {
-         int forkCountsOffset = buffer.getIntLE(offset + 157);
-         if (forkCountsOffset < 0) {
+         v = buffer.getIntLE(offset + 157);
+         if (v < 0 || v > buffer.writerIndex() - offset - 165) {
             return ValidationResult.error("Invalid offset for ForkCounts");
          }
 
-         int pos = offset + 165 + forkCountsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ForkCounts");
-         }
-
+         int pos = offset + 165 + v;
          int forkCountsCount = VarInt.peek(buffer, pos);
          if (forkCountsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for ForkCounts");
@@ -455,9 +493,14 @@ public class InteractionSyncData {
             return ValidationResult.error("ForkCounts exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(forkCountsCount);
 
          for (int i = 0; i < forkCountsCount; i++) {
+            int vx = buffer.getByte(pos) & 255;
+            if (vx >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for key");
+            }
+
             pos = ++pos + 4;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");
@@ -466,16 +509,12 @@ public class InteractionSyncData {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int hitEntitiesOffset = buffer.getIntLE(offset + 161);
-         if (hitEntitiesOffset < 0) {
+         v = buffer.getIntLE(offset + 161);
+         if (v < 0 || v > buffer.writerIndex() - offset - 165) {
             return ValidationResult.error("Invalid offset for HitEntities");
          }
 
-         int pos = offset + 165 + hitEntitiesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for HitEntities");
-         }
-
+         int pos = offset + 165 + v;
          int hitEntitiesCount = VarInt.peek(buffer, pos);
          if (hitEntitiesCount < 0) {
             return ValidationResult.error("Invalid array count for HitEntities");
@@ -485,7 +524,7 @@ public class InteractionSyncData {
             return ValidationResult.error("HitEntities exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(hitEntitiesCount);
          pos += hitEntitiesCount * 53;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading HitEntities");

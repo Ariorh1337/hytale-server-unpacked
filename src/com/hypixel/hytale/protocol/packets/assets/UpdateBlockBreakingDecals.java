@@ -55,6 +55,10 @@ public class UpdateBlockBreakingDecals implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateBlockBreakingDecals deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockBreakingDecals", 2, buf.readableBytes() - offset);
+      }
+
       UpdateBlockBreakingDecals obj = new UpdateBlockBreakingDecals();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -62,27 +66,32 @@ public class UpdateBlockBreakingDecals implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int blockBreakingDecalsCount = VarInt.peek(buf, pos);
          if (blockBreakingDecalsCount < 0) {
-            throw ProtocolException.negativeLength("BlockBreakingDecals", blockBreakingDecalsCount);
+            throw ProtocolException.invalidVarInt("BlockBreakingDecals");
          }
 
+         int blockBreakingDecalsVarLen = VarInt.size(blockBreakingDecalsCount);
          if (blockBreakingDecalsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("BlockBreakingDecals", blockBreakingDecalsCount, 4096000);
          }
 
-         pos += VarInt.size(blockBreakingDecalsCount);
+         pos += blockBreakingDecalsVarLen;
          obj.blockBreakingDecals = new HashMap<>(blockBreakingDecalsCount);
 
          for (int i = 0; i < blockBreakingDecalsCount; i++) {
             int keyLen = VarInt.peek(buf, pos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, pos);
+            if (pos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", pos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, pos);
             pos += keyVarLen + keyLen;
             BlockBreakingDecal val = BlockBreakingDecal.deserialize(buf, pos);
@@ -101,11 +110,11 @@ public class UpdateBlockBreakingDecals implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
             pos += BlockBreakingDecal.computeBytesConsumed(buf, pos);
          }
       }
@@ -158,9 +167,14 @@ public class UpdateBlockBreakingDecals implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int blockBreakingDecalsCount = VarInt.peek(buffer, pos);
+         int blockBreakingDecalsCount = VarInt.peek(buffer, v);
          if (blockBreakingDecalsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for BlockBreakingDecals");
          }
@@ -169,10 +183,10 @@ public class UpdateBlockBreakingDecals implements Packet, ToClientPacket {
             return ValidationResult.error("BlockBreakingDecals exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(blockBreakingDecalsCount);
 
          for (int i = 0; i < blockBreakingDecalsCount; i++) {
-            int keyLen = VarInt.peek(buffer, pos);
+            int keyLen = VarInt.peek(buffer, v);
             if (keyLen < 0) {
                return ValidationResult.error("Invalid string length for key");
             }
@@ -181,13 +195,13 @@ public class UpdateBlockBreakingDecals implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
-            pos += keyLen;
-            if (pos > buffer.writerIndex()) {
+            v += VarInt.size(keyLen);
+            v += keyLen;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += BlockBreakingDecal.computeBytesConsumed(buffer, pos);
+            v += BlockBreakingDecal.computeBytesConsumed(buffer, v);
          }
       }
 

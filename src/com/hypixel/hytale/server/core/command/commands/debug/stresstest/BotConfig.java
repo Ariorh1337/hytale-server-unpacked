@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.core.command.commands.debug.stresstest;
 
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector2d;
+import org.joml.Vector2d;
 
 public class BotConfig {
    public final double radius;

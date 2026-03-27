@@ -51,6 +51,10 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetChunkEnvironments deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("SetChunkEnvironments", 9, buf.readableBytes() - offset);
+      }
+
       SetChunkEnvironments obj = new SetChunkEnvironments();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getIntLE(offset + 1);
@@ -59,14 +63,14 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int environmentsCount = VarInt.peek(buf, pos);
          if (environmentsCount < 0) {
-            throw ProtocolException.negativeLength("Environments", environmentsCount);
+            throw ProtocolException.invalidVarInt("Environments");
          }
 
+         int environmentsVarLen = VarInt.size(environmentsCount);
          if (environmentsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Environments", environmentsCount, 4096000);
          }
 
-         int environmentsVarLen = VarInt.size(environmentsCount);
          if (pos + environmentsVarLen + environmentsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Environments", pos + environmentsVarLen + environmentsCount * 1, buf.readableBytes());
          }
@@ -89,7 +93,7 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -145,7 +149,7 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
             return ValidationResult.error("Environments exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(environmentsCount);
          pos += environmentsCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Environments");

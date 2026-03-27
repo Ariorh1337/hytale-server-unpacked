@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.prefab.selection.mask;
 
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.function.FunctionCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -10,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BlockMask {
    public static final BlockMask EMPTY = new BlockMask(BlockFilter.EMPTY_ARRAY);

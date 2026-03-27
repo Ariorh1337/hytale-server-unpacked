@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
@@ -26,6 +25,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class LivingEntity extends Entity {
    @Nonnull
@@ -101,8 +101,8 @@ public abstract class LivingEntity extends Entity {
       if (fallDamageActive) {
          Vector3d position = transformComponent.getPosition();
          if (!movementStates.onGround) {
-            if (position.getY() > locY) {
-               this.currentFallDistance = this.currentFallDistance + (position.getY() - locY);
+            if (position.y() > locY) {
+               this.currentFallDistance = this.currentFallDistance + (position.y() - locY);
             }
          } else {
             this.currentFallDistance = 0.0;

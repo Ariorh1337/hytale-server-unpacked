@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.interface_;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -41,6 +42,10 @@ public class HideEventTitle implements Packet, ToClientPacket {
 
    @Nonnull
    public static HideEventTitle deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("HideEventTitle", 4, buf.readableBytes() - offset);
+      }
+
       HideEventTitle obj = new HideEventTitle();
       obj.fadeOutDuration = buf.getFloatLE(offset + 0);
       return obj;

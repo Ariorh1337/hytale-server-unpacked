@@ -72,37 +72,56 @@ public class CustomPage implements Packet, ToClientPacket {
 
    @Nonnull
    public static CustomPage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("CustomPage", 16, buf.readableBytes() - offset);
+      }
+
       CustomPage obj = new CustomPage();
       byte nullBits = buf.getByte(offset);
       obj.isInitial = buf.getByte(offset + 1) != 0;
       obj.clear = buf.getByte(offset + 2) != 0;
       obj.lifetime = CustomPageLifetime.fromValue(buf.getByte(offset + 3));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 16 + buf.getIntLE(offset + 4);
-         int keyLen = VarInt.peek(buf, varPos0);
-         if (keyLen < 0) {
-            throw ProtocolException.negativeLength("Key", keyLen);
+         int varPosBase0 = buf.getIntLE(offset + 4);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("Key", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 16 + varPosBase0;
+         int keyLen = VarInt.peek(buf, varPos0);
+         if (keyLen < 0) {
+            throw ProtocolException.invalidVarInt("Key");
+         }
+
+         int keyVarIntLen = VarInt.size(keyLen);
          if (keyLen > 4096000) {
             throw ProtocolException.stringTooLong("Key", keyLen, 4096000);
+         }
+
+         if (varPos0 + keyVarIntLen + keyLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Key", varPos0 + keyVarIntLen + keyLen, buf.readableBytes());
          }
 
          obj.key = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 16 + buf.getIntLE(offset + 8);
-         int commandsCount = VarInt.peek(buf, varPos1);
-         if (commandsCount < 0) {
-            throw ProtocolException.negativeLength("Commands", commandsCount);
+         int varPosBase1 = buf.getIntLE(offset + 8);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("Commands", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 16 + varPosBase1;
+         int commandsCount = VarInt.peek(buf, varPos1);
+         if (commandsCount < 0) {
+            throw ProtocolException.invalidVarInt("Commands");
+         }
+
+         int varIntLen = VarInt.size(commandsCount);
          if (commandsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Commands", commandsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + commandsCount * 2L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Commands", varPos1 + varIntLen + commandsCount * 2, buf.readableBytes());
          }
@@ -117,17 +136,22 @@ public class CustomPage implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 16 + buf.getIntLE(offset + 12);
-         int eventBindingsCount = VarInt.peek(buf, varPos2);
-         if (eventBindingsCount < 0) {
-            throw ProtocolException.negativeLength("EventBindings", eventBindingsCount);
+         int varPosBase2 = buf.getIntLE(offset + 12);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("EventBindings", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 16 + varPosBase2;
+         int eventBindingsCount = VarInt.peek(buf, varPos2);
+         if (eventBindingsCount < 0) {
+            throw ProtocolException.invalidVarInt("EventBindings");
+         }
+
+         int varIntLen = VarInt.size(eventBindingsCount);
          if (eventBindingsCount > 4096000) {
             throw ProtocolException.arrayTooLong("EventBindings", eventBindingsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + eventBindingsCount * 3L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EventBindings", varPos2 + varIntLen + eventBindingsCount * 3, buf.readableBytes());
          }
@@ -149,9 +173,13 @@ public class CustomPage implements Packet, ToClientPacket {
       int maxEnd = 16;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 4);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("Key", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 16 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -159,9 +187,13 @@ public class CustomPage implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 8);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("Commands", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 16 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += CustomUICommand.computeBytesConsumed(buf, pos1);
@@ -174,9 +206,13 @@ public class CustomPage implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 12);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("EventBindings", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 16 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += CustomUIEventBinding.computeBytesConsumed(buf, pos2);
@@ -291,17 +327,18 @@ public class CustomPage implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 3) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid CustomPageLifetime value for Lifetime");
+      }
+
       if ((nullBits & 1) != 0) {
-         int keyOffset = buffer.getIntLE(offset + 4);
-         if (keyOffset < 0) {
+         v = buffer.getIntLE(offset + 4);
+         if (v < 0 || v > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for Key");
          }
 
-         int pos = offset + 16 + keyOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Key");
-         }
-
+         int pos = offset + 16 + v;
          int keyLen = VarInt.peek(buffer, pos);
          if (keyLen < 0) {
             return ValidationResult.error("Invalid string length for Key");
@@ -311,7 +348,7 @@ public class CustomPage implements Packet, ToClientPacket {
             return ValidationResult.error("Key exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(keyLen);
          pos += keyLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Key");
@@ -319,16 +356,12 @@ public class CustomPage implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int commandsOffset = buffer.getIntLE(offset + 8);
-         if (commandsOffset < 0) {
+         v = buffer.getIntLE(offset + 8);
+         if (v < 0 || v > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for Commands");
          }
 
-         int pos = offset + 16 + commandsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Commands");
-         }
-
+         int pos = offset + 16 + v;
          int commandsCount = VarInt.peek(buffer, pos);
          if (commandsCount < 0) {
             return ValidationResult.error("Invalid array count for Commands");
@@ -338,7 +371,7 @@ public class CustomPage implements Packet, ToClientPacket {
             return ValidationResult.error("Commands exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(commandsCount);
 
          for (int i = 0; i < commandsCount; i++) {
             ValidationResult structResult = CustomUICommand.validateStructure(buffer, pos);
@@ -351,16 +384,12 @@ public class CustomPage implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int eventBindingsOffset = buffer.getIntLE(offset + 12);
-         if (eventBindingsOffset < 0) {
+         v = buffer.getIntLE(offset + 12);
+         if (v < 0 || v > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for EventBindings");
          }
 
-         int pos = offset + 16 + eventBindingsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for EventBindings");
-         }
-
+         int pos = offset + 16 + v;
          int eventBindingsCount = VarInt.peek(buffer, pos);
          if (eventBindingsCount < 0) {
             return ValidationResult.error("Invalid array count for EventBindings");
@@ -370,7 +399,7 @@ public class CustomPage implements Packet, ToClientPacket {
             return ValidationResult.error("EventBindings exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(eventBindingsCount);
 
          for (int i = 0; i < eventBindingsCount; i++) {
             ValidationResult structResult = CustomUIEventBinding.validateStructure(buffer, pos);

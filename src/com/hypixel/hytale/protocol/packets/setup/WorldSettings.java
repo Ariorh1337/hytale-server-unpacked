@@ -49,6 +49,10 @@ public class WorldSettings implements Packet, ToClientPacket {
 
    @Nonnull
    public static WorldSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("WorldSettings", 5, buf.readableBytes() - offset);
+      }
+
       WorldSettings obj = new WorldSettings();
       byte nullBits = buf.getByte(offset);
       obj.worldHeight = buf.getIntLE(offset + 1);
@@ -56,14 +60,14 @@ public class WorldSettings implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int requiredAssetsCount = VarInt.peek(buf, pos);
          if (requiredAssetsCount < 0) {
-            throw ProtocolException.negativeLength("RequiredAssets", requiredAssetsCount);
+            throw ProtocolException.invalidVarInt("RequiredAssets");
          }
 
+         int requiredAssetsVarLen = VarInt.size(requiredAssetsCount);
          if (requiredAssetsCount > 4096000) {
             throw ProtocolException.arrayTooLong("RequiredAssets", requiredAssetsCount, 4096000);
          }
 
-         int requiredAssetsVarLen = VarInt.size(requiredAssetsCount);
          if (pos + requiredAssetsVarLen + requiredAssetsCount * 64L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("RequiredAssets", pos + requiredAssetsVarLen + requiredAssetsCount * 64, buf.readableBytes());
          }
@@ -85,7 +89,7 @@ public class WorldSettings implements Packet, ToClientPacket {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += Asset.computeBytesConsumed(buf, pos);
@@ -150,7 +154,7 @@ public class WorldSettings implements Packet, ToClientPacket {
             return ValidationResult.error("RequiredAssets exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(requiredAssetsCount);
 
          for (int i = 0; i < requiredAssetsCount; i++) {
             ValidationResult structResult = Asset.validateStructure(buffer, pos);

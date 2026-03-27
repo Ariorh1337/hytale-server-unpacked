@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.worldmap;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -41,6 +42,10 @@ public class UpdateWorldMapVisible implements Packet, ToServerPacket {
 
    @Nonnull
    public static UpdateWorldMapVisible deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateWorldMapVisible", 1, buf.readableBytes() - offset);
+      }
+
       UpdateWorldMapVisible obj = new UpdateWorldMapVisible();
       obj.visible = buf.getByte(offset + 0) != 0;
       return obj;

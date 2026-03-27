@@ -38,75 +38,102 @@ public class InteractionsUpdate extends ComponentUpdate {
 
    @Nonnull
    public static InteractionsUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("InteractionsUpdate", 9, buf.readableBytes() - offset);
+      }
+
       InteractionsUpdate obj = new InteractionsUpdate();
       byte nullBits = buf.getByte(offset);
-      int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-      int interactionsCount = VarInt.peek(buf, varPos0);
-      if (interactionsCount < 0) {
-         throw ProtocolException.negativeLength("Interactions", interactionsCount);
-      }
-
-      if (interactionsCount > 4096000) {
-         throw ProtocolException.dictionaryTooLarge("Interactions", interactionsCount, 4096000);
-      }
-
-      int varIntLen = VarInt.length(buf, varPos0);
-      obj.interactions = new HashMap<>(interactionsCount);
-      int dictPos = varPos0 + varIntLen;
-
-      for (int i = 0; i < interactionsCount; i++) {
-         InteractionType key = InteractionType.fromValue(buf.getByte(dictPos));
-         int val = buf.getIntLE(++dictPos);
-         dictPos += 4;
-         if (obj.interactions.put(key, val) != null) {
-            throw ProtocolException.duplicateKey("interactions", key);
-         }
-      }
-
-      if ((nullBits & 1) != 0) {
-         varPos0 = offset + 9 + buf.getIntLE(offset + 5);
-         interactionsCount = VarInt.peek(buf, varPos0);
+      int varPosBase0 = buf.getIntLE(offset + 1);
+      if (varPosBase0 >= 0 && varPosBase0 <= buf.writerIndex() - offset - 9) {
+         int varPos0 = offset + 9 + varPosBase0;
+         int interactionsCount = VarInt.peek(buf, varPos0);
          if (interactionsCount < 0) {
-            throw ProtocolException.negativeLength("InteractionHint", interactionsCount);
+            throw ProtocolException.invalidVarInt("Interactions");
          }
 
+         int varIntLen = VarInt.size(interactionsCount);
          if (interactionsCount > 4096000) {
-            throw ProtocolException.stringTooLong("InteractionHint", interactionsCount, 4096000);
+            throw ProtocolException.dictionaryTooLarge("Interactions", interactionsCount, 4096000);
          }
 
-         obj.interactionHint = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-      }
+         obj.interactions = new HashMap<>(interactionsCount);
+         int dictPos = varPos0 + varIntLen;
 
-      return obj;
+         for (int i = 0; i < interactionsCount; i++) {
+            InteractionType key = InteractionType.fromValue(buf.getByte(dictPos));
+            int val = buf.getIntLE(++dictPos);
+            dictPos += 4;
+            if (obj.interactions.put(key, val) != null) {
+               throw ProtocolException.duplicateKey("interactions", key);
+            }
+         }
+
+         if ((nullBits & 1) != 0) {
+            varPosBase0 = buf.getIntLE(offset + 5);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+               throw ProtocolException.invalidOffset("InteractionHint", varPosBase0, buf.readableBytes());
+            }
+
+            varPos0 = offset + 9 + varPosBase0;
+            interactionsCount = VarInt.peek(buf, varPos0);
+            if (interactionsCount < 0) {
+               throw ProtocolException.invalidVarInt("InteractionHint");
+            }
+
+            varIntLen = VarInt.size(interactionsCount);
+            if (interactionsCount > 4096000) {
+               throw ProtocolException.stringTooLong("InteractionHint", interactionsCount, 4096000);
+            }
+
+            if (varPos0 + varIntLen + interactionsCount > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("InteractionHint", varPos0 + varIntLen + interactionsCount, buf.readableBytes());
+            }
+
+            obj.interactionHint = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+         }
+
+         return obj;
+      } else {
+         throw ProtocolException.invalidOffset("Interactions", varPosBase0, buf.readableBytes());
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 9;
       int fieldOffset0 = buf.getIntLE(offset + 1);
-      int pos0 = offset + 9 + fieldOffset0;
-      int dictLen = VarInt.peek(buf, pos0);
-      pos0 += VarInt.length(buf, pos0);
+      if (fieldOffset0 >= 0 && fieldOffset0 <= buf.writerIndex() - offset - 9) {
+         int pos0 = offset + 9 + fieldOffset0;
+         int dictLen = VarInt.peek(buf, pos0);
+         pos0 += VarInt.size(dictLen);
 
-      for (int i = 0; i < dictLen; i++) {
-         pos0 = ++pos0 + 4;
-      }
+         for (int i = 0; i < dictLen; i++) {
+            pos0 = ++pos0 + 4;
+         }
 
-      if (pos0 - offset > maxEnd) {
-         maxEnd = pos0 - offset;
-      }
-
-      if ((nullBits & 1) != 0) {
-         fieldOffset0 = buf.getIntLE(offset + 5);
-         pos0 = offset + 9 + fieldOffset0;
-         dictLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + dictLen;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
-      }
 
-      return maxEnd;
+         if ((nullBits & 1) != 0) {
+            fieldOffset0 = buf.getIntLE(offset + 5);
+            if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+               throw ProtocolException.invalidOffset("InteractionHint", fieldOffset0, maxEnd);
+            }
+
+            pos0 = offset + 9 + fieldOffset0;
+            dictLen = VarInt.peek(buf, pos0);
+            pos0 += VarInt.size(dictLen) + dictLen;
+            if (pos0 - offset > maxEnd) {
+               maxEnd = pos0 - offset;
+            }
+         }
+
+         return maxEnd;
+      } else {
+         throw ProtocolException.invalidOffset("Interactions", fieldOffset0, maxEnd);
+      }
    }
 
    @Override
@@ -163,61 +190,58 @@ public class InteractionsUpdate extends ComponentUpdate {
 
       byte nullBits = buffer.getByte(offset);
       int interactionsOffset = buffer.getIntLE(offset + 1);
-      if (interactionsOffset < 0) {
-         return ValidationResult.error("Invalid offset for Interactions");
-      }
-
-      int pos = offset + 9 + interactionsOffset;
-      if (pos >= buffer.writerIndex()) {
-         return ValidationResult.error("Offset out of bounds for Interactions");
-      }
-
-      int interactionsCount = VarInt.peek(buffer, pos);
-      if (interactionsCount < 0) {
-         return ValidationResult.error("Invalid dictionary count for Interactions");
-      }
-
-      if (interactionsCount > 4096000) {
-         return ValidationResult.error("Interactions exceeds max length 4096000");
-      }
-
-      pos += VarInt.length(buffer, pos);
-
-      for (int i = 0; i < interactionsCount; i++) {
-         pos = ++pos + 4;
-         if (pos > buffer.writerIndex()) {
-            return ValidationResult.error("Buffer overflow reading value");
-         }
-      }
-
-      if ((nullBits & 1) != 0) {
-         interactionsOffset = buffer.getIntLE(offset + 5);
-         if (interactionsOffset < 0) {
-            return ValidationResult.error("Invalid offset for InteractionHint");
-         }
-
-         pos = offset + 9 + interactionsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for InteractionHint");
-         }
-
-         interactionsCount = VarInt.peek(buffer, pos);
+      if (interactionsOffset >= 0 && interactionsOffset <= buffer.writerIndex() - offset - 9) {
+         int pos = offset + 9 + interactionsOffset;
+         int interactionsCount = VarInt.peek(buffer, pos);
          if (interactionsCount < 0) {
-            return ValidationResult.error("Invalid string length for InteractionHint");
+            return ValidationResult.error("Invalid dictionary count for Interactions");
          }
 
          if (interactionsCount > 4096000) {
-            return ValidationResult.error("InteractionHint exceeds max length 4096000");
+            return ValidationResult.error("Interactions exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += interactionsCount;
-         if (pos > buffer.writerIndex()) {
-            return ValidationResult.error("Buffer overflow reading InteractionHint");
+         pos += VarInt.size(interactionsCount);
+
+         for (int i = 0; i < interactionsCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for key");
+            }
+
+            pos = ++pos + 4;
+            if (pos > buffer.writerIndex()) {
+               return ValidationResult.error("Buffer overflow reading value");
+            }
          }
+
+         if ((nullBits & 1) != 0) {
+            interactionsOffset = buffer.getIntLE(offset + 5);
+            if (interactionsOffset < 0 || interactionsOffset > buffer.writerIndex() - offset - 9) {
+               return ValidationResult.error("Invalid offset for InteractionHint");
+            }
+
+            pos = offset + 9 + interactionsOffset;
+            interactionsCount = VarInt.peek(buffer, pos);
+            if (interactionsCount < 0) {
+               return ValidationResult.error("Invalid string length for InteractionHint");
+            }
+
+            if (interactionsCount > 4096000) {
+               return ValidationResult.error("InteractionHint exceeds max length 4096000");
+            }
+
+            pos += VarInt.size(interactionsCount);
+            pos += interactionsCount;
+            if (pos > buffer.writerIndex()) {
+               return ValidationResult.error("Buffer overflow reading InteractionHint");
+            }
+         }
+
+         return ValidationResult.OK;
+      } else {
+         return ValidationResult.error("Invalid offset for Interactions");
       }
-
-      return ValidationResult.OK;
    }
 
    public InteractionsUpdate clone() {

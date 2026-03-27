@@ -1,12 +1,13 @@
 package com.hypixel.hytale.assetstore;
 
+import com.hypixel.hytale.common.plugin.Mod;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class AssetPack {
+public class AssetPack implements Mod {
    @Nonnull
    private final String name;
    @Nonnull
@@ -41,6 +42,7 @@ public class AssetPack {
       return this.fileSystem;
    }
 
+   @Override
    public PluginManifest getManifest() {
       return this.manifest;
    }
@@ -51,6 +53,11 @@ public class AssetPack {
 
    public Path getPackLocation() {
       return this.packLocation;
+   }
+
+   @Override
+   public boolean isCoreMod() {
+      return "Hytale:Hytale".equals(this.name);
    }
 
    @Override

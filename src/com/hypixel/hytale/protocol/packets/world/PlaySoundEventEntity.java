@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -50,6 +51,10 @@ public class PlaySoundEventEntity implements Packet, ToClientPacket {
 
    @Nonnull
    public static PlaySoundEventEntity deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("PlaySoundEventEntity", 16, buf.readableBytes() - offset);
+      }
+
       PlaySoundEventEntity obj = new PlaySoundEventEntity();
       obj.soundEventIndex = buf.getIntLE(offset + 0);
       obj.networkId = buf.getIntLE(offset + 4);

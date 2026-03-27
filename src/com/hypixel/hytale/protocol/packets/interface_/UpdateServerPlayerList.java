@@ -45,20 +45,24 @@ public class UpdateServerPlayerList implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateServerPlayerList deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateServerPlayerList", 1, buf.readableBytes() - offset);
+      }
+
       UpdateServerPlayerList obj = new UpdateServerPlayerList();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int playersCount = VarInt.peek(buf, pos);
          if (playersCount < 0) {
-            throw ProtocolException.negativeLength("Players", playersCount);
+            throw ProtocolException.invalidVarInt("Players");
          }
 
+         int playersVarLen = VarInt.size(playersCount);
          if (playersCount > 4096000) {
             throw ProtocolException.arrayTooLong("Players", playersCount, 4096000);
          }
 
-         int playersVarLen = VarInt.size(playersCount);
          if (pos + playersVarLen + playersCount * 32L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Players", pos + playersVarLen + playersCount * 32, buf.readableBytes());
          }
@@ -80,7 +84,7 @@ public class UpdateServerPlayerList implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ServerPlayerListUpdate.computeBytesConsumed(buf, pos);
@@ -138,7 +142,7 @@ public class UpdateServerPlayerList implements Packet, ToClientPacket {
             return ValidationResult.error("Players exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(playersCount);
          pos += playersCount * 32;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Players");

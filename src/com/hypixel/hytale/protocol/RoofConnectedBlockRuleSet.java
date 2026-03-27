@@ -47,29 +47,53 @@ public class RoofConnectedBlockRuleSet {
 
    @Nonnull
    public static RoofConnectedBlockRuleSet deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("RoofConnectedBlockRuleSet", 21, buf.readableBytes() - offset);
+      }
+
       RoofConnectedBlockRuleSet obj = new RoofConnectedBlockRuleSet();
       byte nullBits = buf.getByte(offset);
       obj.topperBlockId = buf.getIntLE(offset + 1);
       obj.width = buf.getIntLE(offset + 5);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 21 + buf.getIntLE(offset + 9);
+         int varPosBase0 = buf.getIntLE(offset + 9);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Regular", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 21 + varPosBase0;
          obj.regular = StairConnectedBlockRuleSet.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 21 + buf.getIntLE(offset + 13);
+         int varPosBase1 = buf.getIntLE(offset + 13);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Hollow", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 21 + varPosBase1;
          obj.hollow = StairConnectedBlockRuleSet.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 21 + buf.getIntLE(offset + 17);
-         int materialNameLen = VarInt.peek(buf, varPos2);
-         if (materialNameLen < 0) {
-            throw ProtocolException.negativeLength("MaterialName", materialNameLen);
+         int varPosBase2 = buf.getIntLE(offset + 17);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("MaterialName", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 21 + varPosBase2;
+         int materialNameLen = VarInt.peek(buf, varPos2);
+         if (materialNameLen < 0) {
+            throw ProtocolException.invalidVarInt("MaterialName");
+         }
+
+         int materialNameVarIntLen = VarInt.size(materialNameLen);
          if (materialNameLen > 4096000) {
             throw ProtocolException.stringTooLong("MaterialName", materialNameLen, 4096000);
+         }
+
+         if (varPos2 + materialNameVarIntLen + materialNameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("MaterialName", varPos2 + materialNameVarIntLen + materialNameLen, buf.readableBytes());
          }
 
          obj.materialName = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
@@ -83,6 +107,10 @@ public class RoofConnectedBlockRuleSet {
       int maxEnd = 21;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 9);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Regular", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 21 + fieldOffset0;
          pos0 += StairConnectedBlockRuleSet.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -92,6 +120,10 @@ public class RoofConnectedBlockRuleSet {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 13);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Hollow", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 21 + fieldOffset1;
          pos1 += StairConnectedBlockRuleSet.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -101,9 +133,13 @@ public class RoofConnectedBlockRuleSet {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 17);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("MaterialName", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 21 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -184,15 +220,11 @@ public class RoofConnectedBlockRuleSet {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int regularOffset = buffer.getIntLE(offset + 9);
-         if (regularOffset < 0) {
+         if (regularOffset < 0 || regularOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Regular");
          }
 
          int pos = offset + 21 + regularOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Regular");
-         }
-
          ValidationResult regularResult = StairConnectedBlockRuleSet.validateStructure(buffer, pos);
          if (!regularResult.isValid()) {
             return ValidationResult.error("Invalid Regular: " + regularResult.error());
@@ -203,15 +235,11 @@ public class RoofConnectedBlockRuleSet {
 
       if ((nullBits & 2) != 0) {
          int hollowOffset = buffer.getIntLE(offset + 13);
-         if (hollowOffset < 0) {
+         if (hollowOffset < 0 || hollowOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Hollow");
          }
 
          int pos = offset + 21 + hollowOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Hollow");
-         }
-
          ValidationResult hollowResult = StairConnectedBlockRuleSet.validateStructure(buffer, pos);
          if (!hollowResult.isValid()) {
             return ValidationResult.error("Invalid Hollow: " + hollowResult.error());
@@ -222,15 +250,11 @@ public class RoofConnectedBlockRuleSet {
 
       if ((nullBits & 4) != 0) {
          int materialNameOffset = buffer.getIntLE(offset + 17);
-         if (materialNameOffset < 0) {
+         if (materialNameOffset < 0 || materialNameOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for MaterialName");
          }
 
          int pos = offset + 21 + materialNameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for MaterialName");
-         }
-
          int materialNameLen = VarInt.peek(buffer, pos);
          if (materialNameLen < 0) {
             return ValidationResult.error("Invalid string length for MaterialName");
@@ -240,7 +264,7 @@ public class RoofConnectedBlockRuleSet {
             return ValidationResult.error("MaterialName exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(materialNameLen);
          pos += materialNameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading MaterialName");

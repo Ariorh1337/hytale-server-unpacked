@@ -8,7 +8,6 @@ import com.hypixel.hytale.event.EventRegistration;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector2d;
 import com.hypixel.hytale.metrics.MetricsRegistry;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -47,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
 
 public class StressTestStartCommand extends AbstractAsyncWorldCommand {
    @Nonnull

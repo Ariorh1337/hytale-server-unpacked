@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -31,6 +32,10 @@ public class AOECircleSelector extends Selector {
 
    @Nonnull
    public static AOECircleSelector deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("AOECircleSelector", 17, buf.readableBytes() - offset);
+      }
+
       AOECircleSelector obj = new AOECircleSelector();
       byte nullBits = buf.getByte(offset);
       obj.range = buf.getFloatLE(offset + 1);
@@ -70,7 +75,12 @@ public class AOECircleSelector extends Selector {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 17 ? ValidationResult.error("Buffer too small: expected at least 17 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 17) {
+         return ValidationResult.error("Buffer too small: expected at least 17 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public AOECircleSelector clone() {

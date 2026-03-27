@@ -42,34 +42,53 @@ public class Cloud {
 
    @Nonnull
    public static Cloud deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("Cloud", 13, buf.readableBytes() - offset);
+      }
+
       Cloud obj = new Cloud();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         int textureLen = VarInt.peek(buf, varPos0);
-         if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Texture", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int textureLen = VarInt.peek(buf, varPos0);
+         if (textureLen < 0) {
+            throw ProtocolException.invalidVarInt("Texture");
+         }
+
+         int textureVarIntLen = VarInt.size(textureLen);
          if (textureLen > 4096000) {
             throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
+         }
+
+         if (varPos0 + textureVarIntLen + textureLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Texture", varPos0 + textureVarIntLen + textureLen, buf.readableBytes());
          }
 
          obj.texture = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int speedsCount = VarInt.peek(buf, varPos1);
-         if (speedsCount < 0) {
-            throw ProtocolException.negativeLength("Speeds", speedsCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Speeds", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int speedsCount = VarInt.peek(buf, varPos1);
+         if (speedsCount < 0) {
+            throw ProtocolException.invalidVarInt("Speeds");
+         }
+
+         int varIntLen = VarInt.size(speedsCount);
          if (speedsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Speeds", speedsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.speeds = new HashMap<>(speedsCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -85,17 +104,22 @@ public class Cloud {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int colorsCount = VarInt.peek(buf, varPos2);
-         if (colorsCount < 0) {
-            throw ProtocolException.negativeLength("Colors", colorsCount);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Colors", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 13 + varPosBase2;
+         int colorsCount = VarInt.peek(buf, varPos2);
+         if (colorsCount < 0) {
+            throw ProtocolException.invalidVarInt("Colors");
+         }
+
+         int varIntLen = VarInt.size(colorsCount);
          if (colorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Colors", colorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          obj.colors = new HashMap<>(colorsCount);
          int dictPos = varPos2 + varIntLen;
 
@@ -118,9 +142,13 @@ public class Cloud {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Texture", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -128,9 +156,13 @@ public class Cloud {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Speeds", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 += 4;
@@ -144,9 +176,13 @@ public class Cloud {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Colors", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int dictLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos2 += 4;
@@ -249,15 +285,11 @@ public class Cloud {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int textureOffset = buffer.getIntLE(offset + 1);
-         if (textureOffset < 0) {
+         if (textureOffset < 0 || textureOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Texture");
          }
 
          int pos = offset + 13 + textureOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Texture");
-         }
-
          int textureLen = VarInt.peek(buffer, pos);
          if (textureLen < 0) {
             return ValidationResult.error("Invalid string length for Texture");
@@ -267,7 +299,7 @@ public class Cloud {
             return ValidationResult.error("Texture exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(textureLen);
          pos += textureLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Texture");
@@ -276,15 +308,11 @@ public class Cloud {
 
       if ((nullBits & 2) != 0) {
          int speedsOffset = buffer.getIntLE(offset + 5);
-         if (speedsOffset < 0) {
+         if (speedsOffset < 0 || speedsOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Speeds");
          }
 
          int pos = offset + 13 + speedsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Speeds");
-         }
-
          int speedsCount = VarInt.peek(buffer, pos);
          if (speedsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Speeds");
@@ -294,7 +322,7 @@ public class Cloud {
             return ValidationResult.error("Speeds exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(speedsCount);
 
          for (int i = 0; i < speedsCount; i++) {
             pos += 4;
@@ -311,15 +339,11 @@ public class Cloud {
 
       if ((nullBits & 4) != 0) {
          int colorsOffset = buffer.getIntLE(offset + 9);
-         if (colorsOffset < 0) {
+         if (colorsOffset < 0 || colorsOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Colors");
          }
 
          int pos = offset + 13 + colorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Colors");
-         }
-
          int colorsCount = VarInt.peek(buffer, pos);
          if (colorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Colors");
@@ -329,7 +353,7 @@ public class Cloud {
             return ValidationResult.error("Colors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(colorsCount);
 
          for (int i = 0; i < colorsCount; i++) {
             pos += 4;

@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -50,6 +51,10 @@ public class UpdateTimeSettings implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateTimeSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("UpdateTimeSettings", 10, buf.readableBytes() - offset);
+      }
+
       UpdateTimeSettings obj = new UpdateTimeSettings();
       obj.daytimeDurationSeconds = buf.getIntLE(offset + 0);
       obj.nighttimeDurationSeconds = buf.getIntLE(offset + 4);

@@ -31,20 +31,24 @@ public class BlockGroup {
 
    @Nonnull
    public static BlockGroup deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("BlockGroup", 1, buf.readableBytes() - offset);
+      }
+
       BlockGroup obj = new BlockGroup();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int namesCount = VarInt.peek(buf, pos);
          if (namesCount < 0) {
-            throw ProtocolException.negativeLength("Names", namesCount);
+            throw ProtocolException.invalidVarInt("Names");
          }
 
+         int namesVarLen = VarInt.size(namesCount);
          if (namesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Names", namesCount, 4096000);
          }
 
-         int namesVarLen = VarInt.size(namesCount);
          if (pos + namesVarLen + namesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Names", pos + namesVarLen + namesCount * 1, buf.readableBytes());
          }
@@ -55,14 +59,18 @@ public class BlockGroup {
          for (int i = 0; i < namesCount; i++) {
             int strLen = VarInt.peek(buf, pos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("names[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("names[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("names[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
+            if (pos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("names[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.names[i] = PacketIO.readVarString(buf, pos);
             pos += strVarLen + strLen;
          }
@@ -76,11 +84,11 @@ public class BlockGroup {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -139,7 +147,7 @@ public class BlockGroup {
             return ValidationResult.error("Names exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(namesCount);
 
          for (int i = 0; i < namesCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -147,7 +155,7 @@ public class BlockGroup {
                return ValidationResult.error("Invalid string length in Names");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Names");

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -27,6 +28,10 @@ public class DynamicLightUpdate extends ComponentUpdate {
 
    @Nonnull
    public static DynamicLightUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("DynamicLightUpdate", 4, buf.readableBytes() - offset);
+      }
+
       DynamicLightUpdate obj = new DynamicLightUpdate();
       obj.dynamicLight = ColorLight.deserialize(buf, offset + 0);
       return obj;

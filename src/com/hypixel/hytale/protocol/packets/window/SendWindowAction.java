@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.window;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -45,6 +46,10 @@ public class SendWindowAction implements Packet, ToServerPacket {
 
    @Nonnull
    public static SendWindowAction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("SendWindowAction", 4, buf.readableBytes() - offset);
+      }
+
       SendWindowAction obj = new SendWindowAction();
       obj.id = buf.getIntLE(offset + 0);
       int pos = offset + 4;

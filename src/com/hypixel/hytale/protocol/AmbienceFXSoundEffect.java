@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class AmbienceFXSoundEffect {
 
    @Nonnull
    public static AmbienceFXSoundEffect deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXSoundEffect", 9, buf.readableBytes() - offset);
+      }
+
       AmbienceFXSoundEffect obj = new AmbienceFXSoundEffect();
       obj.reverbEffectIndex = buf.getIntLE(offset + 0);
       obj.equalizerEffectIndex = buf.getIntLE(offset + 4);

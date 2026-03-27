@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -50,6 +51,10 @@ public class JoinWorld implements Packet, ToClientPacket {
 
    @Nonnull
    public static JoinWorld deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 18) {
+         throw ProtocolException.bufferTooSmall("JoinWorld", 18, buf.readableBytes() - offset);
+      }
+
       JoinWorld obj = new JoinWorld();
       obj.clearWorld = buf.getByte(offset + 0) != 0;
       obj.fadeInOut = buf.getByte(offset + 1) != 0;

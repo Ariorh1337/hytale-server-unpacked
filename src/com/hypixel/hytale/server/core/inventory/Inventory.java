@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemUtility;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemWeapon;
+import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
@@ -212,14 +213,14 @@ public class Inventory {
                   break;
                case PutInHotbarOrWindow:
                   if (fromSectionId >= 0) {
-                     this.moveItemFromCheckToInventory(itemStack, targetContainer, (short)fromSlotId, quantity, settings);
+                     moveItemFromCheckToInventory(ref, itemStack, targetContainer, (short)fromSlotId, quantity, settings, accessor);
                      return;
                   }
 
-                  if (this.entity instanceof Player) {
-                     for (Window window : ((Player)this.entity).getWindowManager().getWindows()) {
-                        if (window instanceof ItemContainerWindow) {
-                           ItemContainer itemContainer = ((ItemContainerWindow)window).getItemContainer();
+                  if (this.entity instanceof Player player) {
+                     for (Window window : player.getWindowManager().getWindows()) {
+                        if (window instanceof ItemContainerWindow itemContainerWindow) {
+                           ItemContainer itemContainer = itemContainerWindow.getItemContainer();
                            MoveTransaction<ItemStackTransaction> transaction = targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, itemContainer);
                            ItemStack remainder = transaction.getAddTransaction().getRemainder();
                            if (ItemStack.isEmpty(remainder) || remainder.getQuantity() != quantity) {
@@ -241,15 +242,15 @@ public class Inventory {
                         targetContainer.moveItemStackFromSlot((short)fromSlotId, quantity, this.storage.getInventory());
                         return;
                      default:
-                        this.moveItemFromCheckToInventory(itemStack, targetContainer, (short)fromSlotId, quantity, settings);
+                        moveItemFromCheckToInventory(ref, itemStack, targetContainer, (short)fromSlotId, quantity, settings, accessor);
                         return;
                   }
                case PutInHotbarOrBackpack:
                   if (fromSectionId == -9) {
-                     this.moveItemFromCheckToInventory(itemStack, targetContainer, (short)fromSlotId, quantity, settings);
+                     moveItemFromCheckToInventory(ref, itemStack, targetContainer, (short)fromSlotId, quantity, settings, accessor);
                   } else {
                      targetContainer.moveItemStackFromSlot(
-                        (short)fromSlotId, quantity, this.getContainerForItemPickup(itemStack.getItem(), settings, PickupLocation.Backpack)
+                        (short)fromSlotId, quantity, getContainerForItemPickup(ref, itemStack.getItem(), settings, PickupLocation.Backpack, accessor)
                      );
                   }
             }
@@ -270,25 +271,35 @@ public class Inventory {
       return true;
    }
 
-   private MoveTransaction<ItemStackTransaction> moveItemFromCheckToInventory(
-      @Nonnull ItemStack itemStack, @Nonnull ItemContainer targetContainer, short fromSlotId, int quantity, PlayerSettings settings
+   private static MoveTransaction<ItemStackTransaction> moveItemFromCheckToInventory(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ItemStack itemStack,
+      @Nonnull ItemContainer targetContainer,
+      short fromSlotId,
+      int quantity,
+      PlayerSettings settings,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      return targetContainer.moveItemStackFromSlot(fromSlotId, quantity, this.getContainerForItemPickup(itemStack.getItem(), settings));
+      return targetContainer.moveItemStackFromSlot(fromSlotId, quantity, getContainerForItemPickup(ref, itemStack.getItem(), settings, componentAccessor));
    }
 
    @Nullable
-   public ListTransaction<MoveTransaction<ItemStackTransaction>> takeAll(int inventorySectionId, PlayerSettings settings) {
+   public ListTransaction<MoveTransaction<ItemStackTransaction>> takeAll(
+      @Nonnull Ref<EntityStore> ref, int inventorySectionId, PlayerSettings settings, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       ItemContainer container = this.getSectionById(inventorySectionId);
-      return container == null ? null : this.takeAllWithPriority(container, settings);
+      return container == null ? null : takeAllWithPriority(ref, container, settings, componentAccessor);
    }
 
-   public ListTransaction<MoveTransaction<ItemStackTransaction>> takeAllWithPriority(ItemContainer fromContainer, PlayerSettings settings) {
+   public static ListTransaction<MoveTransaction<ItemStackTransaction>> takeAllWithPriority(
+      @Nonnull Ref<EntityStore> ref, ItemContainer fromContainer, PlayerSettings settings, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       List<MoveTransaction<ItemStackTransaction>> transactions = new ObjectArrayList<>();
 
       for (int slot = 0; slot < fromContainer.getCapacity(); slot++) {
          ItemStack stack = fromContainer.getItemStack((short)slot);
          if (!ItemStack.isEmpty(stack)) {
-            transactions.add(this.moveItemFromCheckToInventory(stack, fromContainer, (short)slot, stack.getQuantity(), settings));
+            transactions.add(moveItemFromCheckToInventory(ref, stack, fromContainer, (short)slot, stack.getQuantity(), settings, componentAccessor));
          }
       }
 
@@ -302,9 +313,11 @@ public class Inventory {
    }
 
    @Nullable
-   public ListTransaction<MoveTransaction<ItemStackTransaction>> quickStack(int inventorySectionId) {
+   public ListTransaction<MoveTransaction<ItemStackTransaction>> quickStack(
+      @Nonnull Ref<EntityStore> ref, int inventorySectionId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       ItemContainer sectionById = this.getSectionById(inventorySectionId);
-      return sectionById != null ? this.getCombinedHotbarFirst().quickStackTo(sectionById) : null;
+      return sectionById != null ? InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST).quickStackTo(sectionById) : null;
    }
 
    @Nonnull
@@ -385,6 +398,8 @@ public class Inventory {
       return this.backpack != null ? this.backpack.getInventory() : null;
    }
 
+   @Deprecated(forRemoval = true)
+   @Nullable
    public CombinedItemContainer getCombinedHotbarFirst() {
       if (this.entity == null) {
          return null;
@@ -394,6 +409,8 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.HOTBAR_FIRST) : null;
    }
 
+   /** @deprecated */
+   @Nullable
    public CombinedItemContainer getCombinedStorageFirst() {
       if (this.entity == null) {
          return null;
@@ -403,6 +420,8 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.STORAGE_FIRST) : null;
    }
 
+   /** @deprecated */
+   @Nullable
    public CombinedItemContainer getCombinedBackpackStorageHotbar() {
       if (this.entity == null) {
          return null;
@@ -412,6 +431,8 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.BACKPACK_STORAGE_HOTBAR) : null;
    }
 
+   /** @deprecated */
+   @Nullable
    public CombinedItemContainer getCombinedBackpackStorageHotbarFirst() {
       if (this.entity == null) {
          return null;
@@ -421,6 +442,8 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK) : null;
    }
 
+   /** @deprecated */
+   @Nullable
    public CombinedItemContainer getCombinedArmorHotbarUtilityStorage() {
       if (this.entity == null) {
          return null;
@@ -430,6 +453,8 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.ARMOR_HOTBAR_UTILITY_STORAGE) : null;
    }
 
+   /** @deprecated */
+   @Nullable
    public CombinedItemContainer getCombinedHotbarUtilityConsumableStorage() {
       if (this.entity == null) {
          return null;
@@ -439,6 +464,8 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.HOTBAR_UTILITY_CONSUMABLE_STORAGE) : null;
    }
 
+   /** @deprecated */
+   @Nullable
    public CombinedItemContainer getCombinedStorageHotbarBackpack() {
       if (this.entity == null) {
          return null;
@@ -448,36 +475,47 @@ public class Inventory {
       return ref != null && ref.isValid() ? InventoryComponent.getCombined(ref.getStore(), ref, InventoryComponent.STORAGE_HOTBAR_BACKPACK) : null;
    }
 
-   private ItemContainer getItemContainerForPickupLocation(@Nonnull PickupLocation pickupLocation) {
+   @Nonnull
+   private static ItemContainer getItemContainerForPickupLocation(
+      @Nonnull PickupLocation pickupLocation, @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       return switch (pickupLocation) {
-         case Hotbar -> this.getCombinedBackpackStorageHotbarFirst();
-         case Storage -> this.getCombinedStorageHotbarBackpack();
-         case Backpack -> this.getCombinedBackpackStorageHotbar();
-         default -> this.getCombinedBackpackStorageHotbarFirst();
+         case Hotbar -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
+         case Storage -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.STORAGE_HOTBAR_BACKPACK);
+         case Backpack -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.BACKPACK_STORAGE_HOTBAR);
+         default -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
       };
    }
 
    @Nonnull
-   public ItemContainer getContainerForItemPickup(@Nonnull Item item, PlayerSettings playerSettings) {
-      return this.getContainerForItemPickup(item, playerSettings, null);
+   public static ItemContainer getContainerForItemPickup(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Item item, PlayerSettings playerSettings, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      return getContainerForItemPickup(ref, item, playerSettings, null, componentAccessor);
    }
 
    @Nonnull
-   public ItemContainer getContainerForItemPickup(@Nonnull Item item, PlayerSettings playerSettings, @Nullable PickupLocation overridePickupLocation) {
+   public static ItemContainer getContainerForItemPickup(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Item item,
+      PlayerSettings playerSettings,
+      @Nullable PickupLocation overridePickupLocation,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       if (overridePickupLocation != null) {
-         return this.getItemContainerForPickupLocation(overridePickupLocation);
+         return getItemContainerForPickupLocation(overridePickupLocation, ref, componentAccessor);
       }
 
       if (item.getArmor() != null) {
-         return this.getItemContainerForPickupLocation(playerSettings.armorItemsPreferredPickupLocation());
+         return getItemContainerForPickupLocation(playerSettings.armorItemsPreferredPickupLocation(), ref, componentAccessor);
       }
 
       if (item.getWeapon() != null || item.getTool() != null) {
-         return this.getItemContainerForPickupLocation(playerSettings.weaponAndToolItemsPreferredPickupLocation());
+         return getItemContainerForPickupLocation(playerSettings.weaponAndToolItemsPreferredPickupLocation(), ref, componentAccessor);
       }
 
       if (item.getUtility().isUsable()) {
-         return this.getItemContainerForPickupLocation(playerSettings.usableItemsItemsPreferredPickupLocation());
+         return getItemContainerForPickupLocation(playerSettings.usableItemsItemsPreferredPickupLocation(), ref, componentAccessor);
       }
 
       BlockType blockType = item.hasBlockType() ? BlockType.getAssetMap().getAsset(item.getBlockId()) : BlockType.EMPTY;
@@ -486,29 +524,39 @@ public class Inventory {
       }
 
       return blockType.getMaterial() == BlockMaterial.Solid
-         ? this.getItemContainerForPickupLocation(playerSettings.solidBlockItemsPreferredPickupLocation())
-         : this.getItemContainerForPickupLocation(playerSettings.miscItemsPreferredPickupLocation());
+         ? getItemContainerForPickupLocation(playerSettings.solidBlockItemsPreferredPickupLocation(), ref, componentAccessor)
+         : getItemContainerForPickupLocation(playerSettings.miscItemsPreferredPickupLocation(), ref, componentAccessor);
    }
 
-   public void setActiveSlot(@Nonnull Ref<EntityStore> ref, int inventorySectionId, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public static void setActiveSlot(@Nonnull Ref<EntityStore> ref, int inventorySectionId, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       int[] entityStatsToClear = null;
       switch (inventorySectionId) {
          case -8:
-            this.tools.setActiveSlot(slot);
+            InventoryComponent.Tool toolsComponent = componentAccessor.getComponent(ref, InventoryComponent.Tool.getComponentType());
+            if (toolsComponent != null) {
+               toolsComponent.setActiveSlot(slot);
+            }
             break;
          case -5:
-            this.utility.setActiveSlot(slot);
-            ItemStack itemStack = this.getUtilityItem();
-            if (itemStack != null) {
-               ItemUtility utility = itemStack.getItem().getUtility();
-               entityStatsToClear = utility.getEntityStatsToClear();
+            InventoryComponent.Utility utilityComponent = componentAccessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+            if (utilityComponent != null) {
+               utilityComponent.setActiveSlot(slot);
+               ItemStack itemStack = utilityComponent.getActiveItem();
+               if (itemStack != null) {
+                  ItemUtility utility = itemStack.getItem().getUtility();
+                  entityStatsToClear = utility.getEntityStatsToClear();
+               }
             }
             break;
          case -1:
-            this.hotbar.setActiveSlot(slot);
-            ItemStack itemStackx = this.getItemInHand();
-            if (itemStackx != null) {
-               ItemWeapon weapon = itemStackx.getItem().getWeapon();
+            InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            if (hotbarComponent != null) {
+               hotbarComponent.setActiveSlot(slot);
+            }
+
+            ItemStack itemStack = InventoryComponent.getItemInHand(componentAccessor, ref);
+            if (itemStack != null) {
+               ItemWeapon weapon = itemStack.getItem().getWeapon();
                if (weapon != null) {
                   entityStatsToClear = weapon.getEntityStatsToClear();
                }
@@ -518,7 +566,10 @@ public class Inventory {
             throw new IllegalArgumentException("Inventory section with id " + inventorySectionId + " cannot select an active slot");
       }
 
-      this.entity.invalidateEquipmentNetwork();
+      if (EntityUtils.getEntity(ref, componentAccessor) instanceof LivingEntity livingEntity) {
+         livingEntity.invalidateEquipmentNetwork();
+      }
+
       EntityStatMap entityStatMapComponent = componentAccessor.getComponent(ref, EntityStatMap.getComponentType());
       if (entityStatMapComponent != null) {
          StatModifiersManager statModifiersManager = entityStatMapComponent.getStatModifiersManager();
@@ -583,7 +634,7 @@ public class Inventory {
 
    public void setActiveHotbarSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.setUsingToolsItem(false);
-      this.setActiveSlot(ref, -1, slot, componentAccessor);
+      setActiveSlot(ref, -1, slot, componentAccessor);
    }
 
    @Nullable
@@ -606,7 +657,7 @@ public class Inventory {
    }
 
    public void setActiveUtilitySlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.setActiveSlot(ref, -5, slot, componentAccessor);
+      setActiveSlot(ref, -5, slot, componentAccessor);
    }
 
    public void setActiveUtilitySlot(@Nonnull Holder<EntityStore> holder, byte slot) {
@@ -624,7 +675,7 @@ public class Inventory {
 
    public void setActiveToolsSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.setUsingToolsItem(true);
-      this.setActiveSlot(ref, -8, slot, componentAccessor);
+      setActiveSlot(ref, -8, slot, componentAccessor);
    }
 
    @Nullable
@@ -635,25 +686,20 @@ public class Inventory {
    @Nullable
    public ItemContainer getSectionById(int id) {
       if (id >= 0) {
-         if (this.entity instanceof Player) {
-            Window window = ((Player)this.entity).getWindowManager().getWindow(id);
-            if (window instanceof ItemContainerWindow) {
-               return ((ItemContainerWindow)window).getItemContainer();
-            }
-         }
-
-         return null;
-      } else {
-         return switch (id) {
-            case -9 -> this.backpack.getInventory();
-            case -8 -> this.tools.getInventory();
-            default -> null;
-            case -5 -> this.utility.getInventory();
-            case -3 -> this.armor.getInventory();
-            case -2 -> this.storage.getInventory();
-            case -1 -> this.hotbar.getInventory();
-         };
+         return this.entity instanceof Player player && player.getWindowManager().getWindow(id) instanceof ItemContainerWindow itemContainerWindow
+            ? itemContainerWindow.getItemContainer()
+            : null;
       }
+
+      return switch (id) {
+         case -9 -> this.backpack.getInventory();
+         case -8 -> this.tools.getInventory();
+         default -> null;
+         case -5 -> this.utility.getInventory();
+         case -3 -> this.armor.getInventory();
+         case -2 -> this.storage.getInventory();
+         case -1 -> this.hotbar.getInventory();
+      };
    }
 
    public void setEntity(LivingEntity entity) {

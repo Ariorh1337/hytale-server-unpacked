@@ -4,8 +4,7 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -21,6 +20,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ClearBlocksCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -62,8 +63,8 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
                   RelativeIntPosition relativeIntPositionTwo = this.positionTwoArg.get(context);
                   Vector3i posOne = relativeIntPositionOne.getBlockPosition(position, chunkStore);
                   Vector3i posTwo = relativeIntPositionTwo.getBlockPosition(position, chunkStore);
-                  Vector3i min = Vector3i.min(posOne, posTwo);
-                  Vector3i max = Vector3i.max(posOne, posTwo);
+                  Vector3i min = Vector3iUtil.min(posOne, posTwo);
+                  Vector3i max = Vector3iUtil.max(posOne, posTwo);
                   BuilderToolsPlugin.addToQueue(
                      playerComponent, playerRef, (r, s, componentAccessor) -> s.clear(min.x, min.y, min.z, max.x, max.y, max.z, componentAccessor)
                   );

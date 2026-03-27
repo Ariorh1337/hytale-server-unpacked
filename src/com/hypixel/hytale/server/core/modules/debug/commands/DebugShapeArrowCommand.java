@@ -3,8 +3,7 @@ package com.hypixel.hytale.server.core.modules.debug.commands;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.matrix.Matrix4d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -20,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class DebugShapeArrowCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -49,9 +50,9 @@ public class DebugShapeArrowCommand extends AbstractPlayerCommand {
       Model model = modelComponent.getModel();
       HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
       assert headRotationComponent != null;
-      Vector3f headRotation = headRotationComponent.getRotation();
-      float lookYaw = headRotation.getYaw();
-      float lookPitch = headRotation.getPitch();
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      float lookYaw = headRotation.yaw();
+      float lookPitch = headRotation.pitch();
       Matrix4d tmp = new Matrix4d();
       float eyeHeight = model != null ? model.getEyeHeight(ref, store) : 0.0F;
       ThreadLocalRandom random = ThreadLocalRandom.current();

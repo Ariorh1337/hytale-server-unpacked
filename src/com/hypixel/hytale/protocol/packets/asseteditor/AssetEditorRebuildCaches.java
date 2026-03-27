@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.asseteditor;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -38,6 +39,10 @@ public class AssetEditorRebuildCaches {
 
    @Nonnull
    public static AssetEditorRebuildCaches deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRebuildCaches", 5, buf.readableBytes() - offset);
+      }
+
       AssetEditorRebuildCaches obj = new AssetEditorRebuildCaches();
       obj.blockTextures = buf.getByte(offset + 0) != 0;
       obj.models = buf.getByte(offset + 1) != 0;

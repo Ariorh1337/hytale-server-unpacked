@@ -144,7 +144,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
       if (transformComponent == null) {
          LOGGER.at(Level.SEVERE).log("Cannot teleport player %s to permanent world - missing TransformComponent", playerRef);
       } else {
-         Transform originalPosition = transformComponent.getTransform().clone();
+         Transform originalPosition = new Transform(transformComponent.getTransform());
          PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
          if (playerRefComponent == null) {
             LOGGER.at(Level.SEVERE).log("Cannot teleport player %s to permanent world - missing PlayerRef component", playerRef);

@@ -97,9 +97,10 @@ public class WaterContainerJsonLoader extends JsonLoader<SeedStringResource, Wat
          ModifyEvent.dispatch(
             ModifyEvents.BiomeFluids.class,
             new ModifyEvents.BiomeFluids(
+               this.seed,
                this.biomeContext,
                entries,
-               content -> new WaterContainerJsonLoader.WaterContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+               path -> new WaterContainerJsonLoader.WaterContainerEntryJsonLoader(seed.next(), this.dataFolder, this.loadFile(path)).load()
             )
          );
          return new WaterContainer(entries.toArray());

@@ -60,6 +60,10 @@ public class BlockParticleSet {
 
    @Nonnull
    public static BlockParticleSet deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 40) {
+         throw ProtocolException.bufferTooSmall("BlockParticleSet", 40, buf.readableBytes() - offset);
+      }
+
       BlockParticleSet obj = new BlockParticleSet();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -76,31 +80,46 @@ public class BlockParticleSet {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos0 = offset + 40 + buf.getIntLE(offset + 32);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 32);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 40 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos1 = offset + 40 + buf.getIntLE(offset + 36);
-         int particleSystemIdsCount = VarInt.peek(buf, varPos1);
-         if (particleSystemIdsCount < 0) {
-            throw ProtocolException.negativeLength("ParticleSystemIds", particleSystemIdsCount);
+         int varPosBase1 = buf.getIntLE(offset + 36);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("ParticleSystemIds", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 40 + varPosBase1;
+         int particleSystemIdsCount = VarInt.peek(buf, varPos1);
+         if (particleSystemIdsCount < 0) {
+            throw ProtocolException.invalidVarInt("ParticleSystemIds");
+         }
+
+         int varIntLen = VarInt.size(particleSystemIdsCount);
          if (particleSystemIdsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("ParticleSystemIds", particleSystemIdsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.particleSystemIds = new HashMap<>(particleSystemIdsCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -108,14 +127,18 @@ public class BlockParticleSet {
             BlockParticleEvent key = BlockParticleEvent.fromValue(buf.getByte(dictPos));
             int valLen = VarInt.peek(buf, ++dictPos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 4096000) {
                throw ProtocolException.stringTooLong("val", valLen, 4096000);
             }
 
-            int valVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + valVarLen + valLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen, buf.readableBytes());
+            }
+
             String val = PacketIO.readVarString(buf, dictPos);
             dictPos += valVarLen + valLen;
             if (obj.particleSystemIds.put(key, val) != null) {
@@ -132,9 +155,13 @@ public class BlockParticleSet {
       int maxEnd = 40;
       if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 32);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 40 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -142,13 +169,17 @@ public class BlockParticleSet {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 36);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("ParticleSystemIds", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 40 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, ++pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
          }
 
          if (pos1 - offset > maxEnd) {
@@ -258,15 +289,11 @@ public class BlockParticleSet {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 8) != 0) {
          int idOffset = buffer.getIntLE(offset + 32);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 40) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 40 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -276,7 +303,7 @@ public class BlockParticleSet {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -285,15 +312,11 @@ public class BlockParticleSet {
 
       if ((nullBits & 16) != 0) {
          int particleSystemIdsOffset = buffer.getIntLE(offset + 36);
-         if (particleSystemIdsOffset < 0) {
+         if (particleSystemIdsOffset < 0 || particleSystemIdsOffset > buffer.writerIndex() - offset - 40) {
             return ValidationResult.error("Invalid offset for ParticleSystemIds");
          }
 
          int pos = offset + 40 + particleSystemIdsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ParticleSystemIds");
-         }
-
          int particleSystemIdsCount = VarInt.peek(buffer, pos);
          if (particleSystemIdsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for ParticleSystemIds");
@@ -303,20 +326,25 @@ public class BlockParticleSet {
             return ValidationResult.error("ParticleSystemIds exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(particleSystemIdsCount);
 
          for (int i = 0; i < particleSystemIdsCount; i++) {
-            int valueLen = VarInt.peek(buffer, ++pos);
-            if (valueLen < 0) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 10) {
+               return ValidationResult.error("Invalid BlockParticleEvent value for key");
+            }
+
+            v = VarInt.peek(buffer, ++pos);
+            if (v < 0) {
                return ValidationResult.error("Invalid string length for value");
             }
 
-            if (valueLen > 4096000) {
+            if (v > 4096000) {
                return ValidationResult.error("value exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
-            pos += valueLen;
+            pos += VarInt.size(v);
+            pos += v;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");
             }

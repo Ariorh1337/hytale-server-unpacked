@@ -46,20 +46,28 @@ public class AssetEditorActivateButton implements Packet, ToServerPacket {
 
    @Nonnull
    public static AssetEditorActivateButton deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorActivateButton", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorActivateButton obj = new AssetEditorActivateButton();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int buttonIdLen = VarInt.peek(buf, pos);
          if (buttonIdLen < 0) {
-            throw ProtocolException.negativeLength("ButtonId", buttonIdLen);
+            throw ProtocolException.invalidVarInt("ButtonId");
          }
 
+         int buttonIdVarLen = VarInt.size(buttonIdLen);
          if (buttonIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ButtonId", buttonIdLen, 4096000);
          }
 
-         int buttonIdVarLen = VarInt.length(buf, pos);
+         if (pos + buttonIdVarLen + buttonIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ButtonId", pos + buttonIdVarLen + buttonIdLen, buf.readableBytes());
+         }
+
          obj.buttonId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += buttonIdVarLen + buttonIdLen;
       }
@@ -72,7 +80,7 @@ public class AssetEditorActivateButton implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,7 +126,7 @@ public class AssetEditorActivateButton implements Packet, ToServerPacket {
             return ValidationResult.error("ButtonId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(buttonIdLen);
          pos += buttonIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ButtonId");

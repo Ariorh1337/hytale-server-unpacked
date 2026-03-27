@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class Vector2f {
 
    @Nonnull
    public static Vector2f deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("Vector2f", 8, buf.readableBytes() - offset);
+      }
+
       Vector2f obj = new Vector2f();
       obj.x = buf.getFloatLE(offset + 0);
       obj.y = buf.getFloatLE(offset + 4);

@@ -66,37 +66,56 @@ public class CraftingRecipe {
 
    @Nonnull
    public static CraftingRecipe deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 30) {
+         throw ProtocolException.bufferTooSmall("CraftingRecipe", 30, buf.readableBytes() - offset);
+      }
+
       CraftingRecipe obj = new CraftingRecipe();
       byte nullBits = buf.getByte(offset);
       obj.knowledgeRequired = buf.getByte(offset + 1) != 0;
       obj.timeSeconds = buf.getFloatLE(offset + 2);
       obj.requiredMemoriesLevel = buf.getIntLE(offset + 6);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 30 + buf.getIntLE(offset + 10);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 10);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 30 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 30 + buf.getIntLE(offset + 14);
-         int inputsCount = VarInt.peek(buf, varPos1);
-         if (inputsCount < 0) {
-            throw ProtocolException.negativeLength("Inputs", inputsCount);
+         int varPosBase1 = buf.getIntLE(offset + 14);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Inputs", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 30 + varPosBase1;
+         int inputsCount = VarInt.peek(buf, varPos1);
+         if (inputsCount < 0) {
+            throw ProtocolException.invalidVarInt("Inputs");
+         }
+
+         int varIntLen = VarInt.size(inputsCount);
          if (inputsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Inputs", inputsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + inputsCount * 9L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Inputs", varPos1 + varIntLen + inputsCount * 9, buf.readableBytes());
          }
@@ -111,17 +130,22 @@ public class CraftingRecipe {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 30 + buf.getIntLE(offset + 18);
-         int outputsCount = VarInt.peek(buf, varPos2);
-         if (outputsCount < 0) {
-            throw ProtocolException.negativeLength("Outputs", outputsCount);
+         int varPosBase2 = buf.getIntLE(offset + 18);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Outputs", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 30 + varPosBase2;
+         int outputsCount = VarInt.peek(buf, varPos2);
+         if (outputsCount < 0) {
+            throw ProtocolException.invalidVarInt("Outputs");
+         }
+
+         int varIntLen = VarInt.size(outputsCount);
          if (outputsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Outputs", outputsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + outputsCount * 9L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Outputs", varPos2 + varIntLen + outputsCount * 9, buf.readableBytes());
          }
@@ -136,22 +160,32 @@ public class CraftingRecipe {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 30 + buf.getIntLE(offset + 22);
+         int varPosBase3 = buf.getIntLE(offset + 22);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("PrimaryOutput", varPosBase3, buf.readableBytes());
+         }
+
+         int varPos3 = offset + 30 + varPosBase3;
          obj.primaryOutput = MaterialQuantity.deserialize(buf, varPos3);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 30 + buf.getIntLE(offset + 26);
-         int benchRequirementCount = VarInt.peek(buf, varPos4);
-         if (benchRequirementCount < 0) {
-            throw ProtocolException.negativeLength("BenchRequirement", benchRequirementCount);
+         int varPosBase4 = buf.getIntLE(offset + 26);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("BenchRequirement", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 30 + varPosBase4;
+         int benchRequirementCount = VarInt.peek(buf, varPos4);
+         if (benchRequirementCount < 0) {
+            throw ProtocolException.invalidVarInt("BenchRequirement");
+         }
+
+         int varIntLen = VarInt.size(benchRequirementCount);
          if (benchRequirementCount > 4096000) {
             throw ProtocolException.arrayTooLong("BenchRequirement", benchRequirementCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos4);
          if (varPos4 + varIntLen + benchRequirementCount * 6L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("BenchRequirement", varPos4 + varIntLen + benchRequirementCount * 6, buf.readableBytes());
          }
@@ -173,9 +207,13 @@ public class CraftingRecipe {
       int maxEnd = 30;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 10);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 30 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -183,9 +221,13 @@ public class CraftingRecipe {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 14);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Inputs", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 30 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += MaterialQuantity.computeBytesConsumed(buf, pos1);
@@ -198,9 +240,13 @@ public class CraftingRecipe {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 18);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Outputs", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 30 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += MaterialQuantity.computeBytesConsumed(buf, pos2);
@@ -213,6 +259,10 @@ public class CraftingRecipe {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 22);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("PrimaryOutput", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 30 + fieldOffset3;
          pos3 += MaterialQuantity.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
@@ -222,9 +272,13 @@ public class CraftingRecipe {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 26);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("BenchRequirement", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 30 + fieldOffset4;
          int arrLen = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4);
+         pos4 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos4 += BenchRequirement.computeBytesConsumed(buf, pos4);
@@ -387,15 +441,11 @@ public class CraftingRecipe {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 10);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 30 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -405,7 +455,7 @@ public class CraftingRecipe {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -414,15 +464,11 @@ public class CraftingRecipe {
 
       if ((nullBits & 2) != 0) {
          int inputsOffset = buffer.getIntLE(offset + 14);
-         if (inputsOffset < 0) {
+         if (inputsOffset < 0 || inputsOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Inputs");
          }
 
          int pos = offset + 30 + inputsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Inputs");
-         }
-
          int inputsCount = VarInt.peek(buffer, pos);
          if (inputsCount < 0) {
             return ValidationResult.error("Invalid array count for Inputs");
@@ -432,7 +478,7 @@ public class CraftingRecipe {
             return ValidationResult.error("Inputs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(inputsCount);
 
          for (int i = 0; i < inputsCount; i++) {
             ValidationResult structResult = MaterialQuantity.validateStructure(buffer, pos);
@@ -446,15 +492,11 @@ public class CraftingRecipe {
 
       if ((nullBits & 4) != 0) {
          int outputsOffset = buffer.getIntLE(offset + 18);
-         if (outputsOffset < 0) {
+         if (outputsOffset < 0 || outputsOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Outputs");
          }
 
          int pos = offset + 30 + outputsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Outputs");
-         }
-
          int outputsCount = VarInt.peek(buffer, pos);
          if (outputsCount < 0) {
             return ValidationResult.error("Invalid array count for Outputs");
@@ -464,7 +506,7 @@ public class CraftingRecipe {
             return ValidationResult.error("Outputs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(outputsCount);
 
          for (int i = 0; i < outputsCount; i++) {
             ValidationResult structResult = MaterialQuantity.validateStructure(buffer, pos);
@@ -478,15 +520,11 @@ public class CraftingRecipe {
 
       if ((nullBits & 8) != 0) {
          int primaryOutputOffset = buffer.getIntLE(offset + 22);
-         if (primaryOutputOffset < 0) {
+         if (primaryOutputOffset < 0 || primaryOutputOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for PrimaryOutput");
          }
 
          int pos = offset + 30 + primaryOutputOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for PrimaryOutput");
-         }
-
          ValidationResult primaryOutputResult = MaterialQuantity.validateStructure(buffer, pos);
          if (!primaryOutputResult.isValid()) {
             return ValidationResult.error("Invalid PrimaryOutput: " + primaryOutputResult.error());
@@ -497,15 +535,11 @@ public class CraftingRecipe {
 
       if ((nullBits & 16) != 0) {
          int benchRequirementOffset = buffer.getIntLE(offset + 26);
-         if (benchRequirementOffset < 0) {
+         if (benchRequirementOffset < 0 || benchRequirementOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for BenchRequirement");
          }
 
          int pos = offset + 30 + benchRequirementOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BenchRequirement");
-         }
-
          int benchRequirementCount = VarInt.peek(buffer, pos);
          if (benchRequirementCount < 0) {
             return ValidationResult.error("Invalid array count for BenchRequirement");
@@ -515,7 +549,7 @@ public class CraftingRecipe {
             return ValidationResult.error("BenchRequirement exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(benchRequirementCount);
 
          for (int i = 0; i < benchRequirementCount; i++) {
             ValidationResult structResult = BenchRequirement.validateStructure(buffer, pos);

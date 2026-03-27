@@ -13,10 +13,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -44,6 +42,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -239,11 +239,13 @@ public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
          position.x = position.x + (hitbox.middleX() + targetBlock.x);
          position.y = position.y + (hitbox.middleY() + targetBlock.y);
          position.z = position.z + (hitbox.middleZ() + targetBlock.z);
-         Vector3f rotationOutput = Vector3f.NaN;
+         Rotation3f rotationOutput;
          if (state.getRotation() != null) {
-            rotationOutput = state.getRotation().clone();
+            rotationOutput = new Rotation3f(state.getRotation());
             rotationOutput.addRotationOnAxis(Axis.Y, rotation.yaw().getDegrees());
             rotationOutput.addRotationOnAxis(Axis.X, rotation.pitch().getDegrees());
+         } else {
+            rotationOutput = new Rotation3f(Rotation3f.NaN);
          }
 
          return new Transform(position, rotationOutput);

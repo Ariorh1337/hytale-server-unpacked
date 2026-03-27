@@ -54,6 +54,10 @@ public class SetFluids implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetFluids deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("SetFluids", 13, buf.readableBytes() - offset);
+      }
+
       SetFluids obj = new SetFluids();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getIntLE(offset + 1);
@@ -63,14 +67,14 @@ public class SetFluids implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int dataCount = VarInt.peek(buf, pos);
          if (dataCount < 0) {
-            throw ProtocolException.negativeLength("Data", dataCount);
+            throw ProtocolException.invalidVarInt("Data");
          }
 
+         int dataVarLen = VarInt.size(dataCount);
          if (dataCount > 4096000) {
             throw ProtocolException.arrayTooLong("Data", dataCount, 4096000);
          }
 
-         int dataVarLen = VarInt.size(dataCount);
          if (pos + dataVarLen + dataCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Data", pos + dataVarLen + dataCount * 1, buf.readableBytes());
          }
@@ -93,7 +97,7 @@ public class SetFluids implements Packet, ToClientPacket {
       int pos = offset + 13;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -150,7 +154,7 @@ public class SetFluids implements Packet, ToClientPacket {
             return ValidationResult.error("Data exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dataCount);
          pos += dataCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Data");

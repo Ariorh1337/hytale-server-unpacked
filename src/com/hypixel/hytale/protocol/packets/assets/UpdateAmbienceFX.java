@@ -57,6 +57,10 @@ public class UpdateAmbienceFX implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateAmbienceFX deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateAmbienceFX", 6, buf.readableBytes() - offset);
+      }
+
       UpdateAmbienceFX obj = new UpdateAmbienceFX();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateAmbienceFX implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int ambienceFXCount = VarInt.peek(buf, pos);
          if (ambienceFXCount < 0) {
-            throw ProtocolException.negativeLength("AmbienceFX", ambienceFXCount);
+            throw ProtocolException.invalidVarInt("AmbienceFX");
          }
 
+         int ambienceFXVarLen = VarInt.size(ambienceFXCount);
          if (ambienceFXCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("AmbienceFX", ambienceFXCount, 4096000);
          }
 
-         pos += VarInt.size(ambienceFXCount);
+         pos += ambienceFXVarLen;
          obj.ambienceFX = new HashMap<>(ambienceFXCount);
 
          for (int i = 0; i < ambienceFXCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateAmbienceFX implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateAmbienceFX implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int ambienceFXCount = VarInt.peek(buffer, pos);
+         int ambienceFXCount = VarInt.peek(buffer, v);
          if (ambienceFXCount < 0) {
             return ValidationResult.error("Invalid dictionary count for AmbienceFX");
          }
@@ -162,15 +172,15 @@ public class UpdateAmbienceFX implements Packet, ToClientPacket {
             return ValidationResult.error("AmbienceFX exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(ambienceFXCount);
 
          for (int i = 0; i < ambienceFXCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += AmbienceFX.computeBytesConsumed(buffer, pos);
+            v += AmbienceFX.computeBytesConsumed(buffer, v);
          }
       }
 

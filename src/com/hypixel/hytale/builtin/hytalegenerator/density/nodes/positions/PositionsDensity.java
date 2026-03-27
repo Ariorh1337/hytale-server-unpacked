@@ -5,9 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.distan
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PositionsDensity extends Density {
    @Nonnull
@@ -61,15 +61,15 @@ public class PositionsDensity extends Density {
 
    @Override
    public double process(@Nonnull Density.Context context) {
-      this.rMin.assign(context.position).subtract(this.maxDistance);
-      this.rMax.assign(context.position).add(this.maxDistance);
+      this.rMin.set(context.position).sub(this.maxDistance, this.maxDistance, this.maxDistance);
+      this.rMax.set(context.position).add(this.maxDistance, this.maxDistance, this.maxDistance);
       this.rDistance[0] = Double.MAX_VALUE;
       this.rDistance[1] = Double.MAX_VALUE;
       this.rHasClosestPoint[0] = false;
       this.rHasClosestPoint[1] = false;
-      this.rClosestPoint.assign(0.0, 0.0, 0.0);
-      this.rPreviousClosestPoint.assign(0.0, 0.0, 0.0);
-      this.rLocalPoint.assign(0.0, 0.0, 0.0);
+      this.rClosestPoint.set(0.0, 0.0, 0.0);
+      this.rPreviousClosestPoint.set(0.0, 0.0, 0.0);
+      this.rLocalPoint.set(0.0, 0.0, 0.0);
       Pipe.One<Vector3d> positionsPipe = (providedPoint, control) -> {
          this.rLocalPoint.x = providedPoint.x - context.position.x;
          this.rLocalPoint.y = providedPoint.y - context.position.y;
@@ -79,16 +79,16 @@ public class PositionsDensity extends Density {
             this.rDistance[1] = Math.max(Math.min(this.rDistance[1], newDistance), this.rDistance[0]);
             if (newDistance < this.rDistance[0]) {
                this.rDistance[0] = newDistance;
-               this.rPreviousClosestPoint.assign(this.rClosestPoint);
-               this.rClosestPoint.assign(providedPoint);
+               this.rPreviousClosestPoint.set(this.rClosestPoint);
+               this.rClosestPoint.set(providedPoint);
                this.rHasClosestPoint[1] = this.rHasClosestPoint[0];
                this.rHasClosestPoint[0] = true;
             }
          }
       };
       PositionProvider.Context positionsContext = new PositionProvider.Context();
-      positionsContext.bounds.min.assign(this.rMin);
-      positionsContext.bounds.max.assign(this.rMax);
+      positionsContext.bounds.min.set(this.rMin);
+      positionsContext.bounds.max.set(this.rMax);
       positionsContext.pipe = positionsPipe;
       this.positionProvider.generate(positionsContext);
       this.rDistance[0] = Math.sqrt(this.rDistance[0]);
@@ -97,7 +97,7 @@ public class PositionsDensity extends Density {
          .get(
             this.rDistance[0],
             this.rDistance[1],
-            context.position.clone(),
+            new Vector3d(context.position),
             this.rHasClosestPoint[0] ? this.rClosestPoint : null,
             this.rHasClosestPoint[1] ? this.rPreviousClosestPoint : null,
             context

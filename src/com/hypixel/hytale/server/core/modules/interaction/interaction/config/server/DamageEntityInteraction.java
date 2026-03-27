@@ -12,9 +12,8 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -61,6 +60,9 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector4d;
 
 public class DamageEntityInteraction extends Interaction {
    @Nonnull
@@ -366,7 +368,7 @@ public class DamageEntityInteraction extends Interaction {
       float angleBetween = TrigMathUtil.atan2(attackerPos.x - targetPos.x, attackerPos.z - targetPos.z);
       int nextLabel = 1;
       if (this.angledDamage != null) {
-         float angleBetweenRotation = MathUtil.wrapAngle(angleBetween + (float) Math.PI - targetSnapshot.getBodyRotation().getYaw());
+         float angleBetweenRotation = MathUtil.wrapAngle(angleBetween + (float) Math.PI - targetSnapshot.getBodyRotation().yaw());
 
          for (int i = 0; i < this.angledDamage.length; i++) {
             DamageEntityInteraction.AngledDamage angledDamage = this.angledDamage[i];
@@ -397,11 +399,11 @@ public class DamageEntityInteraction extends Interaction {
             : metaStore.getMetaObject(SEQUENTIAL_HITS);
          Object2FloatMap<DamageCause> damage = damageCalculator.calculateDamage(this.getRunTime());
          HeadRotation attackerHeadRotationComponent = commandBuffer.getComponent(attackerRef, HeadRotation.getComponentType());
-         Vector3f attackerDirection;
+         Rotation3fc attackerDirection;
          if (attackerHeadRotationComponent != null) {
             attackerDirection = attackerHeadRotationComponent.getRotation();
          } else {
-            attackerDirection = Vector3f.ZERO;
+            attackerDirection = Rotation3f.IDENTITY;
          }
 
          if (damage != null && !damage.isEmpty()) {
@@ -419,7 +421,7 @@ public class DamageEntityInteraction extends Interaction {
                }
 
                Knockback knockback = damageEffects.getKnockback();
-               knockbackComponent.setVelocity(knockback.calculateVector(attackerPos, attackerDirection.getYaw(), targetPos).scale(knockbackMultiplier[0]));
+               knockbackComponent.setVelocity(knockback.calculateVector(attackerPos, attackerDirection.yaw(), targetPos).mul(knockbackMultiplier[0]));
                knockbackComponent.setVelocityType(knockback.getVelocityType());
                knockbackComponent.setVelocityConfig(knockback.getVelocityConfig());
                knockbackComponent.setDuration(knockback.getDuration());
@@ -449,7 +451,7 @@ public class DamageEntityInteraction extends Interaction {
                   if (hit != null) {
                      damageEvent.putMetaObject(Damage.HIT_LOCATION, hit);
                      float hitAngleRad = TrigMathUtil.atan2(attackerPos.x - hit.x, attackerPos.z - hit.z);
-                     hitAngleRad = MathUtil.wrapAngle(hitAngleRad - attackerDirection.getYaw());
+                     hitAngleRad = MathUtil.wrapAngle(hitAngleRad - attackerDirection.yaw());
                      float hitAngleDeg = hitAngleRad * (180.0F / (float)Math.PI);
                      damageEvent.putMetaObject(Damage.HIT_ANGLE, hitAngleDeg);
                   }

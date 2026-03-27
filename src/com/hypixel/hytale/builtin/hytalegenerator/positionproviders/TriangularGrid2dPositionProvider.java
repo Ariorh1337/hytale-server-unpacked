@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class TriangularGrid2dPositionProvider extends PositionProvider {
    private static final double Y = 0.0;
@@ -22,8 +22,8 @@ public class TriangularGrid2dPositionProvider extends PositionProvider {
    @Override
    public void generate(@NonNullDecl PositionProvider.Context context) {
       if (!(context.bounds.min.y > 0.0) && !(context.bounds.max.y <= 0.0)) {
-         this.rGridBounds.min.assign(Math.floor(context.bounds.min.x), 0.0, Math.floor(context.bounds.min.z));
-         this.rGridBounds.max.assign(Math.ceil(context.bounds.max.x), 1.0, Math.ceil(context.bounds.max.z));
+         this.rGridBounds.min.set(Math.floor(context.bounds.min.x), 0.0, Math.floor(context.bounds.min.z));
+         this.rGridBounds.max.set(Math.ceil(context.bounds.max.x), 1.0, Math.ceil(context.bounds.max.z));
          if (this.rGridBounds.min.x < context.bounds.min.x) {
             this.rGridBounds.min.x++;
          }
@@ -40,7 +40,7 @@ public class TriangularGrid2dPositionProvider extends PositionProvider {
             double zOffset = x % 2 == 0 ? 0.5 : 0.0;
 
             for (double z = this.rGridBounds.min.z - zOffset; z < this.rGridBounds.max.z; z++) {
-               this.rPosition.assign(x * X_HEIGHT, 0.0, z);
+               this.rPosition.set(x * X_HEIGHT, 0.0, z);
                if (context.bounds.contains(this.rPosition)) {
                   if (this.rControl.stop) {
                      return;

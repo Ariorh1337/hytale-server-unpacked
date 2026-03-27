@@ -77,6 +77,10 @@ public class RelayedVoiceData implements Packet, ToClientPacket {
 
    @Nonnull
    public static RelayedVoiceData deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 52) {
+         throw ProtocolException.bufferTooSmall("RelayedVoiceData", 52, buf.readableBytes() - offset);
+      }
+
       RelayedVoiceData obj = new RelayedVoiceData();
       byte nullBits = buf.getByte(offset);
       obj.speakerId = PacketIO.readUUID(buf, offset + 1);
@@ -91,14 +95,14 @@ public class RelayedVoiceData implements Packet, ToClientPacket {
       int pos = offset + 52;
       int opusDataCount = VarInt.peek(buf, pos);
       if (opusDataCount < 0) {
-         throw ProtocolException.negativeLength("OpusData", opusDataCount);
+         throw ProtocolException.invalidVarInt("OpusData");
       }
 
+      int opusDataVarLen = VarInt.size(opusDataCount);
       if (opusDataCount > 512) {
          throw ProtocolException.arrayTooLong("OpusData", opusDataCount, 512);
       }
 
-      int opusDataVarLen = VarInt.size(opusDataCount);
       if (pos + opusDataVarLen + opusDataCount * 1L > buf.readableBytes()) {
          throw ProtocolException.bufferTooSmall("OpusData", pos + opusDataVarLen + opusDataCount * 1, buf.readableBytes());
       }
@@ -118,7 +122,7 @@ public class RelayedVoiceData implements Packet, ToClientPacket {
       byte nullBits = buf.getByte(offset);
       int pos = offset + 52;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + arrLen * 1;
+      pos += VarInt.size(arrLen) + arrLen * 1;
       return pos - offset;
    }
 
@@ -174,7 +178,7 @@ public class RelayedVoiceData implements Packet, ToClientPacket {
          return ValidationResult.error("OpusData exceeds max length 512");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(opusDataCount);
       pos += opusDataCount * 1;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading OpusData") : ValidationResult.OK;
    }

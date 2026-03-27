@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MountController;
@@ -25,7 +26,7 @@ public class MountInteraction extends SimpleInstantInteraction {
       )
       .appendInherited(
          new KeyedCodec<>("AttachmentOffset", ProtocolCodecs.VECTOR3F),
-         (o, v) -> o.attachmentOffset.assign(v.x, v.y, v.z),
+         (o, v) -> o.attachmentOffset.set(v.x, v.y, v.z),
          o -> new Vector3f(o.attachmentOffset.x, o.attachmentOffset.y, o.attachmentOffset.z),
          (o, p) -> o.attachmentOffset = p.attachmentOffset
       )
@@ -39,7 +40,7 @@ public class MountInteraction extends SimpleInstantInteraction {
       .addValidator(Validators.nonNull())
       .add()
       .build();
-   private com.hypixel.hytale.math.vector.Vector3f attachmentOffset = new com.hypixel.hytale.math.vector.Vector3f(0.0F, 0.0F, 0.0F);
+   private Rotation3f attachmentOffset = new Rotation3f(0.0F, 0.0F, 0.0F);
    private MountController controller;
 
    @Override

@@ -3,12 +3,12 @@ package com.hypixel.hytale.builtin.hytalegenerator.scanners;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class RadialScanner extends Scanner {
    @Nonnull
@@ -41,10 +41,10 @@ public class RadialScanner extends Scanner {
       this.positionsCount = size.x * size.y * size.z;
       List<Vector3i> sortedPositions = new ArrayList<>(this.positionsCount);
 
-      for (Vector3i position = bounds.min.clone(); position.x < bounds.max.x; position.x++) {
+      for (Vector3i position = new Vector3i(bounds.min); position.x < bounds.max.x; position.x++) {
          for (position.y = bounds.min.y; position.y < bounds.max.y; position.y++) {
             for (position.z = bounds.min.z; position.z < bounds.max.z; position.z++) {
-               sortedPositions.add(position.clone());
+               sortedPositions.add(new Vector3i(position));
             }
          }
       }
@@ -82,7 +82,7 @@ public class RadialScanner extends Scanner {
          int x = this.sortedPositions[indexX(i)];
          int y = this.sortedPositions[indexY(i)];
          int z = this.sortedPositions[indexZ(i)];
-         this.rPosition.assign(x, y, z);
+         this.rPosition.set(x, y, z);
          this.rPosition.add(anchor);
          this.childScanner.scan(this.rPosition, this.rChildPipe);
       }

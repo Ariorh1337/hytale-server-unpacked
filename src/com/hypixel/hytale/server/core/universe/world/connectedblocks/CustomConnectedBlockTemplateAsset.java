@@ -11,7 +11,6 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -21,6 +20,7 @@ import java.util.Optional;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
+import org.joml.Vector3ic;
 
 public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, CustomConnectedBlockTemplateAsset>> {
    public static final AssetBuilderCodec<String, CustomConnectedBlockTemplateAsset> CODEC = AssetBuilderCodec.builder(
@@ -83,11 +83,11 @@ public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<Strin
    @Nonnull
    public Optional<ConnectedBlocksUtil.ConnectedBlockResult> getConnectedBlockType(
       World world,
-      Vector3i coordinate,
+      Vector3ic coordinate,
       CustomTemplateConnectedBlockRuleSet ruleSet,
       BlockType blockType,
       int rotation,
-      Vector3i placementNormal,
+      Vector3ic placementNormal,
       boolean useDefaultShapeIfNoMatch,
       boolean isPlacement
    ) {

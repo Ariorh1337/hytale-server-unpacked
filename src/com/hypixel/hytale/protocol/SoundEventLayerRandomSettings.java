@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -38,6 +39,10 @@ public class SoundEventLayerRandomSettings {
 
    @Nonnull
    public static SoundEventLayerRandomSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 20) {
+         throw ProtocolException.bufferTooSmall("SoundEventLayerRandomSettings", 20, buf.readableBytes() - offset);
+      }
+
       SoundEventLayerRandomSettings obj = new SoundEventLayerRandomSettings();
       obj.minVolume = buf.getFloatLE(offset + 0);
       obj.maxVolume = buf.getFloatLE(offset + 4);

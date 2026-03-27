@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -56,6 +57,10 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolExtrudeAction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("BuilderToolExtrudeAction", 24, buf.readableBytes() - offset);
+      }
+
       BuilderToolExtrudeAction obj = new BuilderToolExtrudeAction();
       obj.x = buf.getIntLE(offset + 0);
       obj.y = buf.getIntLE(offset + 4);

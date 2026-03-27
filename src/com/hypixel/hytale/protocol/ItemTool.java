@@ -33,6 +33,10 @@ public class ItemTool {
 
    @Nonnull
    public static ItemTool deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("ItemTool", 5, buf.readableBytes() - offset);
+      }
+
       ItemTool obj = new ItemTool();
       byte nullBits = buf.getByte(offset);
       obj.speed = buf.getFloatLE(offset + 1);
@@ -40,14 +44,14 @@ public class ItemTool {
       if ((nullBits & 1) != 0) {
          int specsCount = VarInt.peek(buf, pos);
          if (specsCount < 0) {
-            throw ProtocolException.negativeLength("Specs", specsCount);
+            throw ProtocolException.invalidVarInt("Specs");
          }
 
+         int specsVarLen = VarInt.size(specsCount);
          if (specsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Specs", specsCount, 4096000);
          }
 
-         int specsVarLen = VarInt.size(specsCount);
          if (pos + specsVarLen + specsCount * 9L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Specs", pos + specsVarLen + specsCount * 9, buf.readableBytes());
          }
@@ -69,7 +73,7 @@ public class ItemTool {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ItemToolSpec.computeBytesConsumed(buf, pos);
@@ -132,7 +136,7 @@ public class ItemTool {
             return ValidationResult.error("Specs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(specsCount);
 
          for (int i = 0; i < specsCount; i++) {
             ValidationResult structResult = ItemToolSpec.validateStructure(buffer, pos);

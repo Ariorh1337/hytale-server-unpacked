@@ -9,8 +9,7 @@ import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
@@ -33,6 +32,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class DoorInteraction extends SimpleBlockInteraction {
    private static final String OPEN_DOOR_IN = "OpenDoorIn";
@@ -104,7 +105,7 @@ public class DoorInteraction extends SimpleBlockInteraction {
                   pos.add(hitbox.middleX(), hitbox.middleY(), hitbox.middleZ());
                }
 
-               pos.add(targetBlock);
+               pos.add(targetBlock.x, targetBlock.y, targetBlock.z);
                SoundUtil.playSoundEvent3d(ref, interactionBlockState.getInteractionSoundEventIndex(), pos, commandBuffer);
             }
          }
@@ -262,7 +263,7 @@ public class DoorInteraction extends SimpleBlockInteraction {
       BlockBoundingBoxes.RotatedVariantBoxes baseBoxes = blockBoundingBoxes.get(Rotation.None, Rotation.None, Rotation.None);
       Vector3i offset = new Vector3i((int)baseBoxes.getBoundingBox().getMax().x * 2 - 1, 0, 0);
       Rotation rotationToCheck = RotationTuple.get(rotation).yaw();
-      Vector3i blockPosition = worldPosition.clone().add(MathUtil.rotateVectorYAxis(offset, rotationToCheck.getDegrees(), false));
+      Vector3i blockPosition = new Vector3i(worldPosition).add(MathUtil.rotateVectorYAxis(offset, rotationToCheck.getDegrees(), false));
       DoorInteraction.DoorInfo matchingDoor = getDoorAtPosition(chunkAccessor, blockPosition.x, blockPosition.y, blockPosition.z, rotationToCheck.flip());
       if (matchingDoor != null && matchingDoor.doorState == doorStateToCheck) {
          BlockType matchingBlockType = matchingDoor.blockType;
@@ -333,7 +334,7 @@ public class DoorInteraction extends SimpleBlockInteraction {
    private static boolean isInFrontOfDoor(@Nonnull Vector3i blockPosition, @Nullable Rotation doorRotationYaw, @Nonnull Vector3d playerPosition) {
       double doorRotationRad = Math.toRadians(doorRotationYaw != null ? doorRotationYaw.getDegrees() : 0.0);
       Vector3d doorRotationVector = new Vector3d(TrigMathUtil.sin(doorRotationRad), 0.0, TrigMathUtil.cos(doorRotationRad));
-      Vector3d direction = Vector3d.directionTo(blockPosition, playerPosition);
+      Vector3d direction = Vector3dUtil.directionTo(new Vector3d(blockPosition).add(0.5, 0.5, 0.5), playerPosition);
       return direction.dot(doorRotationVector) < 0.0;
    }
 

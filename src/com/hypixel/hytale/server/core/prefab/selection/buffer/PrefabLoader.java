@@ -4,8 +4,10 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -59,19 +61,31 @@ public class PrefabLoader {
             throw new NotDirectoryException(directoryPath.toString());
          }
 
-         Files.walkFileTree(directoryPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-            @Nonnull
-            public FileVisitResult visitFile(@Nonnull Path file, BasicFileAttributes attrs) {
-               String fileName = file.getFileName().toString();
-               Matcher matcher = PrefabBufferUtil.FILE_SUFFIX_PATTERN.matcher(fileName);
-               if (matcher.find()) {
-                  String fileNameNoExtension = matcher.replaceAll("");
-                  pathConsumer.accept(file.resolveSibling(fileNameNoExtension));
+         Files.walkFileTree(
+            directoryPath,
+            FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET,
+            Integer.MAX_VALUE,
+            new SimpleFileVisitor<Path>() {
+               @Nonnull
+               public FileVisitResult visitFile(@Nonnull Path file, BasicFileAttributes attrs) {
+                  String fileName = file.getFileName().toString();
+                  Matcher matcher = PrefabBufferUtil.FILE_SUFFIX_PATTERN.matcher(fileName);
+                  if (matcher.find()) {
+                     String fileNameNoExtension = matcher.replaceAll("");
+                     pathConsumer.accept(file.resolveSibling(fileNameNoExtension));
+                  }
+
+                  return FileVisitResult.CONTINUE;
                }
 
-               return FileVisitResult.CONTINUE;
+               @Nonnull
+               public FileVisitResult visitFileFailed(@Nonnull Path file, @Nonnull IOException exc) throws IOException {
+                  return !(exc instanceof NoSuchFileException) && !(exc instanceof AccessDeniedException)
+                     ? super.visitFileFailed(file, exc)
+                     : FileVisitResult.CONTINUE;
+               }
             }
-         });
+         );
       }
    }
 

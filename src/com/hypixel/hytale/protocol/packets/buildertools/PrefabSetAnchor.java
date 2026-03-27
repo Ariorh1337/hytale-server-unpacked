@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -47,6 +48,10 @@ public class PrefabSetAnchor implements Packet, ToServerPacket {
 
    @Nonnull
    public static PrefabSetAnchor deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("PrefabSetAnchor", 12, buf.readableBytes() - offset);
+      }
+
       PrefabSetAnchor obj = new PrefabSetAnchor();
       obj.x = buf.getIntLE(offset + 0);
       obj.y = buf.getIntLE(offset + 4);

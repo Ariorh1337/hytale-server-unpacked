@@ -25,8 +25,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.Entity;
@@ -66,6 +65,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
+import org.joml.Vector3d;
 
 public class SpawnMarkerSystems {
    @Nonnull
@@ -501,7 +501,7 @@ public class SpawnMarkerSystems {
                      storedFlock.restoreNPCs(tempStorageList, _store);
                      spawnMarkerEntityComponent.setSpawnCount(tempStorageList.size());
                      Vector3d position = spawnMarkerEntityComponent.getSpawnPosition();
-                     Vector3f rotation = transformComponent.getRotation();
+                     Rotation3f rotation = transformComponent.getRotation();
                      InvalidatablePersistentRef[] npcReferencesx = new InvalidatablePersistentRef[tempStorageList.size()];
                      int i = 0;
 
@@ -516,8 +516,8 @@ public class SpawnMarkerSystems {
                         InvalidatablePersistentRef reference = new InvalidatablePersistentRef();
                         reference.setEntity(refx, _store);
                         npcReferencesx[i] = reference;
-                        npcTransform.getPosition().assign(position);
-                        npcTransform.getRotation().assign(rotation);
+                        npcTransform.getPosition().set(position);
+                        npcTransform.getRotation().set(rotation);
                         npcHeadRotation.setRotation(rotation);
                         npcComponentx.playAnimation(refx, AnimationSlot.Status, null, commandBuffer);
                      }

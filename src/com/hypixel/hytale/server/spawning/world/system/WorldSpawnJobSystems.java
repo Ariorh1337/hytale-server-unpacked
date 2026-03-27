@@ -17,8 +17,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -50,6 +49,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class WorldSpawnJobSystems {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -239,7 +239,7 @@ public class WorldSpawnJobSystems {
       NPCPlugin npcModule = NPCPlugin.get();
       SpawningContext spawningContext = spawnJobData.getSpawningContext();
       Vector3d position = spawningContext.newPosition();
-      Vector3f rotation = spawningContext.newRotation();
+      Rotation3f rotation = spawningContext.newRotation();
       int roleIndex = spawnJobData.getRoleIndex();
 
       try {

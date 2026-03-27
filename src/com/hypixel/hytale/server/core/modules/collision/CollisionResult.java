@@ -7,7 +7,7 @@ import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.iterator.BoxBlockIterator;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -32,6 +32,7 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
    public static final Comparator<BlockCollisionData> BLOCK_COLLISION_DATA_COMPARATOR = Comparator.<BlockCollisionData>comparingDouble(a -> a.collisionStart)
@@ -407,7 +408,7 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
                         "++ Sliding block start=%s end=%s normal=%s",
                         this.movingBoxBoxCollision.getCollisionStart(),
                         this.movingBoxBoxCollision.getCollisionEnd(),
-                        Vector3d.formatShortString(this.movingBoxBoxCollision.getCollisionNormal())
+                        Vector3dUtil.formatShortString(this.movingBoxBoxCollision.getCollisionNormal())
                      );
                }
 
@@ -422,7 +423,7 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
                      "?? Sliding block is unwalkable start=%s end=%s normal=%s",
                      this.movingBoxBoxCollision.getCollisionStart(),
                      this.movingBoxBoxCollision.getCollisionEnd(),
-                     Vector3d.formatShortString(this.movingBoxBoxCollision.getCollisionNormal())
+                     Vector3dUtil.formatShortString(this.movingBoxBoxCollision.getCollisionNormal())
                   );
             }
          }
@@ -440,7 +441,7 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
                      "++ Collision with block start=%s end=%s normal=%s",
                      this.movingBoxBoxCollision.collisionStart,
                      this.movingBoxBoxCollision.collisionEnd,
-                     Vector3d.formatShortString(this.movingBoxBoxCollision.collisionNormal)
+                     Vector3dUtil.formatShortString(this.movingBoxBoxCollision.collisionNormal)
                   );
             }
          }
@@ -454,7 +455,7 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
                   "++ Trigger block start=%s end=%s normal=%s",
                   this.movingBoxBoxCollision.getCollisionStart(),
                   this.movingBoxBoxCollision.getCollisionEnd(),
-                  Vector3d.formatShortString(this.movingBoxBoxCollision.getCollisionNormal())
+                  Vector3dUtil.formatShortString(this.movingBoxBoxCollision.getCollisionNormal())
                );
          }
 

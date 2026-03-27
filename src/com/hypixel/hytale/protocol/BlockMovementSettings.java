@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -72,6 +73,10 @@ public class BlockMovementSettings {
 
    @Nonnull
    public static BlockMovementSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 42) {
+         throw ProtocolException.bufferTooSmall("BlockMovementSettings", 42, buf.readableBytes() - offset);
+      }
+
       BlockMovementSettings obj = new BlockMovementSettings();
       obj.isClimbable = buf.getByte(offset + 0) != 0;
       obj.climbUpSpeedMultiplier = buf.getFloatLE(offset + 1);

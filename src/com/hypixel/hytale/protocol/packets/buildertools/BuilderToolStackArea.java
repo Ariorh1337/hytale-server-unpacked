@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -60,6 +61,10 @@ public class BuilderToolStackArea implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolStackArea deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 41) {
+         throw ProtocolException.bufferTooSmall("BuilderToolStackArea", 41, buf.readableBytes() - offset);
+      }
+
       BuilderToolStackArea obj = new BuilderToolStackArea();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -117,7 +122,12 @@ public class BuilderToolStackArea implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 41 ? ValidationResult.error("Buffer too small: expected at least 41 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 41) {
+         return ValidationResult.error("Buffer too small: expected at least 41 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public BuilderToolStackArea clone() {

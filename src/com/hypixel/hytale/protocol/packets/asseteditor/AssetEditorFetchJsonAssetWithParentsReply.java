@@ -52,6 +52,10 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
 
    @Nonnull
    public static AssetEditorFetchJsonAssetWithParentsReply deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchJsonAssetWithParentsReply", 5, buf.readableBytes() - offset);
+      }
+
       AssetEditorFetchJsonAssetWithParentsReply obj = new AssetEditorFetchJsonAssetWithParentsReply();
       byte nullBits = buf.getByte(offset);
       obj.token = buf.getIntLE(offset + 1);
@@ -59,14 +63,15 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
       if ((nullBits & 1) != 0) {
          int assetsCount = VarInt.peek(buf, pos);
          if (assetsCount < 0) {
-            throw ProtocolException.negativeLength("Assets", assetsCount);
+            throw ProtocolException.invalidVarInt("Assets");
          }
 
+         int assetsVarLen = VarInt.size(assetsCount);
          if (assetsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Assets", assetsCount, 4096000);
          }
 
-         pos += VarInt.size(assetsCount);
+         pos += assetsVarLen;
          obj.assets = new HashMap<>(assetsCount);
 
          for (int i = 0; i < assetsCount; i++) {
@@ -74,14 +79,18 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
             pos += AssetPath.computeBytesConsumed(buf, pos);
             int valLen = VarInt.peek(buf, pos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 4096000) {
                throw ProtocolException.stringTooLong("val", valLen, 4096000);
             }
 
-            int valVarLen = VarInt.length(buf, pos);
+            if (pos + valVarLen + valLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("val", pos + valVarLen + valLen, buf.readableBytes());
+            }
+
             String val = PacketIO.readVarString(buf, pos);
             pos += valVarLen + valLen;
             if (obj.assets.put(key, val) != null) {
@@ -98,12 +107,12 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += AssetPath.computeBytesConsumed(buf, pos);
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -166,7 +175,7 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
             return ValidationResult.error("Assets exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(assetsCount);
 
          for (int i = 0; i < assetsCount; i++) {
             pos += AssetPath.computeBytesConsumed(buffer, pos);
@@ -179,7 +188,7 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
                return ValidationResult.error("value exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(valueLen);
             pos += valueLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");

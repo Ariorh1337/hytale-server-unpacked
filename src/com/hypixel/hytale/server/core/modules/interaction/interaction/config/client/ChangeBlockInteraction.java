@@ -8,8 +8,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.Interaction;
@@ -33,6 +31,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ChangeBlockInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -99,9 +99,9 @@ public class ChangeBlockInteraction extends SimpleBlockInteraction {
       if (this.requireNotBroken && itemInHand != null && itemInHand.isBroken()) {
          context.getState().state = InteractionState.Failed;
       } else {
-         int x = targetBlock.getX();
-         int y = targetBlock.getY();
-         int z = targetBlock.getZ();
+         int x = targetBlock.x();
+         int y = targetBlock.y();
+         int z = targetBlock.z();
          WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
          int current = chunk.getBlock(x, y, z);
          int to = this.getChangeMapIds().get(current);

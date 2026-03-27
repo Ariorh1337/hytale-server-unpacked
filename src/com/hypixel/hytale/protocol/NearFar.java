@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class NearFar {
 
    @Nonnull
    public static NearFar deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("NearFar", 8, buf.readableBytes() - offset);
+      }
+
       NearFar obj = new NearFar();
       obj.near = buf.getFloatLE(offset + 0);
       obj.far = buf.getFloatLE(offset + 4);

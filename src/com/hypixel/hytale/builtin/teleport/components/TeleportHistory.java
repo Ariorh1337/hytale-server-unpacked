@@ -5,8 +5,7 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TeleportHistory implements Component<EntityStore> {
    private static final int MAX_TELEPORT_HISTORY = 100;
@@ -98,7 +98,7 @@ public class TeleportHistory implements Component<EntityStore> {
             to.push(
                new TeleportHistory.Waypoint(
                   currentWorld.getName(),
-                  currentTransform.getPosition().clone(),
+                  new Vector3d(currentTransform.getPosition()),
                   currentHeadRotation.getRotation().clone(),
                   point.message != null ? point.message : ""
                )
@@ -116,9 +116,9 @@ public class TeleportHistory implements Component<EntityStore> {
                      ? Message.translation("server.commands.teleport.teleportedForwardToWaypoint")
                      : Message.translation("server.commands.teleport.teleportedBackToWaypoint"))
                   .param("name", point.message)
-                  .param("x", pos.getX())
-                  .param("y", pos.getY())
-                  .param("z", pos.getZ())
+                  .param("x", pos.x())
+                  .param("y", pos.y())
+                  .param("z", pos.z())
                   .param("remaining", remainingInDirection)
                   .param("otherDirection", totalInOtherDirection)
             );
@@ -127,9 +127,9 @@ public class TeleportHistory implements Component<EntityStore> {
                (isForward
                      ? Message.translation("server.commands.teleport.teleportedForwardToCoordinates")
                      : Message.translation("server.commands.teleport.teleportedBackToCoordinates"))
-                  .param("x", pos.getX())
-                  .param("y", pos.getY())
-                  .param("z", pos.getZ())
+                  .param("x", pos.x())
+                  .param("y", pos.y())
+                  .param("z", pos.z())
                   .param("remaining", remainingInDirection)
                   .param("otherDirection", totalInOtherDirection)
             );
@@ -137,7 +137,7 @@ public class TeleportHistory implements Component<EntityStore> {
       }
    }
 
-   public void append(@Nonnull World world, @Nonnull Vector3d pos, @Nonnull Vector3f rotation, @Nonnull String key) {
+   public void append(@Nonnull World world, @Nonnull Vector3d pos, @Nonnull Rotation3f rotation, @Nonnull String key) {
       this.back.push(new TeleportHistory.Waypoint(world.getName(), pos, rotation, key));
       this.forward.clear();
 
@@ -164,10 +164,10 @@ public class TeleportHistory implements Component<EntityStore> {
    public static class Waypoint {
       private final String world;
       private final Vector3d position;
-      private final Vector3f rotation;
+      private final Rotation3f rotation;
       private final String message;
 
-      public Waypoint(@Nonnull String world, @Nonnull Vector3d position, @Nonnull Vector3f rotation, @Nonnull String message) {
+      public Waypoint(@Nonnull String world, @Nonnull Vector3d position, @Nonnull Rotation3f rotation, @Nonnull String message) {
          this.world = world;
          this.position = position;
          this.rotation = rotation;

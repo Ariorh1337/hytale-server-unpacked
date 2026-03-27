@@ -17,9 +17,6 @@ import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.HorizontalSelectorDirection;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
@@ -37,6 +34,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector4d;
 
 public class HorizontalSelector extends SelectorType {
    @Nonnull
@@ -197,9 +197,9 @@ public class HorizontalSelector extends SelectorType {
          Vector3d position = transformComponent.getPosition();
          HeadRotation headRotationComponent = commandBuffer.getComponent(attacker, HeadRotation.getComponentType());
          assert headRotationComponent != null;
-         double posX = position.getX();
-         double posY = position.getY() + yOffset;
-         double posZ = position.getZ();
+         double posX = position.x();
+         double posY = position.y() + yOffset;
+         double posZ = position.z();
          float delta = time - this.lastTime;
          this.lastTime = time;
          float runTimeDeltaPercentage = delta / runTime;
@@ -217,9 +217,7 @@ public class HorizontalSelector extends SelectorType {
             .setBottom(HorizontalSelector.this.extendBottom * stretchFactor)
             .setRotation(yawOffset, HorizontalSelector.this.pitchOffset, HorizontalSelector.this.rollOffset)
             .setTop(HorizontalSelector.this.extendTop * stretchFactor);
-         this.viewProvider
-            .setPosition(posX, posY, posZ)
-            .setDirection(headRotationComponent.getRotation().getYaw(), headRotationComponent.getRotation().getPitch());
+         this.viewProvider.setPosition(posX, posY, posZ).setDirection(headRotationComponent.getRotation().yaw(), headRotationComponent.getRotation().pitch());
          this.executor.setOrigin(posX, posY, posZ).setProjectionProvider(this.projectionProvider).setViewProvider(this.viewProvider);
          if (HorizontalSelector.this.testLineOfSight) {
             World world = commandBuffer.getStore().getExternalData().getWorld();
@@ -271,8 +269,8 @@ public class HorizontalSelector extends SelectorType {
             Matrix4d matrix = new Matrix4d();
             matrix.identity()
                .translate(posX, posY, posZ)
-               .rotateAxis(-headRotationComponent.getRotation().getYaw(), 0.0, 1.0, 0.0, tmp)
-               .rotateAxis(-headRotationComponent.getRotation().getPitch(), 1.0, 0.0, 0.0, tmp);
+               .rotateAxis(-headRotationComponent.getRotation().yaw(), 0.0, 1.0, 0.0, tmp)
+               .rotateAxis(-headRotationComponent.getRotation().pitch(), 1.0, 0.0, 0.0, tmp);
             Vector3f color = new Vector3f(
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 11L),

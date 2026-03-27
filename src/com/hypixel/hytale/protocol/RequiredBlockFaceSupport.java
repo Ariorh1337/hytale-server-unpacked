@@ -79,6 +79,10 @@ public class RequiredBlockFaceSupport {
 
    @Nonnull
    public static RequiredBlockFaceSupport deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 33) {
+         throw ProtocolException.bufferTooSmall("RequiredBlockFaceSupport", 33, buf.readableBytes() - offset);
+      }
+
       RequiredBlockFaceSupport obj = new RequiredBlockFaceSupport();
       byte nullBits = buf.getByte(offset);
       obj.blockTypeId = buf.getIntLE(offset + 1);
@@ -89,59 +93,94 @@ public class RequiredBlockFaceSupport {
       obj.allowSupportPropagation = buf.getByte(offset + 15) != 0;
       obj.rotate = buf.getByte(offset + 16) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 33 + buf.getIntLE(offset + 17);
-         int faceTypeLen = VarInt.peek(buf, varPos0);
-         if (faceTypeLen < 0) {
-            throw ProtocolException.negativeLength("FaceType", faceTypeLen);
+         int varPosBase0 = buf.getIntLE(offset + 17);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("FaceType", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 33 + varPosBase0;
+         int faceTypeLen = VarInt.peek(buf, varPos0);
+         if (faceTypeLen < 0) {
+            throw ProtocolException.invalidVarInt("FaceType");
+         }
+
+         int faceTypeVarIntLen = VarInt.size(faceTypeLen);
          if (faceTypeLen > 4096000) {
             throw ProtocolException.stringTooLong("FaceType", faceTypeLen, 4096000);
+         }
+
+         if (varPos0 + faceTypeVarIntLen + faceTypeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("FaceType", varPos0 + faceTypeVarIntLen + faceTypeLen, buf.readableBytes());
          }
 
          obj.faceType = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 33 + buf.getIntLE(offset + 21);
-         int selfFaceTypeLen = VarInt.peek(buf, varPos1);
-         if (selfFaceTypeLen < 0) {
-            throw ProtocolException.negativeLength("SelfFaceType", selfFaceTypeLen);
+         int varPosBase1 = buf.getIntLE(offset + 21);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("SelfFaceType", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 33 + varPosBase1;
+         int selfFaceTypeLen = VarInt.peek(buf, varPos1);
+         if (selfFaceTypeLen < 0) {
+            throw ProtocolException.invalidVarInt("SelfFaceType");
+         }
+
+         int selfFaceTypeVarIntLen = VarInt.size(selfFaceTypeLen);
          if (selfFaceTypeLen > 4096000) {
             throw ProtocolException.stringTooLong("SelfFaceType", selfFaceTypeLen, 4096000);
+         }
+
+         if (varPos1 + selfFaceTypeVarIntLen + selfFaceTypeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("SelfFaceType", varPos1 + selfFaceTypeVarIntLen + selfFaceTypeLen, buf.readableBytes());
          }
 
          obj.selfFaceType = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 33 + buf.getIntLE(offset + 25);
-         int blockSetIdLen = VarInt.peek(buf, varPos2);
-         if (blockSetIdLen < 0) {
-            throw ProtocolException.negativeLength("BlockSetId", blockSetIdLen);
+         int varPosBase2 = buf.getIntLE(offset + 25);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("BlockSetId", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 33 + varPosBase2;
+         int blockSetIdLen = VarInt.peek(buf, varPos2);
+         if (blockSetIdLen < 0) {
+            throw ProtocolException.invalidVarInt("BlockSetId");
+         }
+
+         int blockSetIdVarIntLen = VarInt.size(blockSetIdLen);
          if (blockSetIdLen > 4096000) {
             throw ProtocolException.stringTooLong("BlockSetId", blockSetIdLen, 4096000);
+         }
+
+         if (varPos2 + blockSetIdVarIntLen + blockSetIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("BlockSetId", varPos2 + blockSetIdVarIntLen + blockSetIdLen, buf.readableBytes());
          }
 
          obj.blockSetId = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 33 + buf.getIntLE(offset + 29);
-         int fillerCount = VarInt.peek(buf, varPos3);
-         if (fillerCount < 0) {
-            throw ProtocolException.negativeLength("Filler", fillerCount);
+         int varPosBase3 = buf.getIntLE(offset + 29);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Filler", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 33 + varPosBase3;
+         int fillerCount = VarInt.peek(buf, varPos3);
+         if (fillerCount < 0) {
+            throw ProtocolException.invalidVarInt("Filler");
+         }
+
+         int varIntLen = VarInt.size(fillerCount);
          if (fillerCount > 4096000) {
             throw ProtocolException.arrayTooLong("Filler", fillerCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + fillerCount * 12L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Filler", varPos3 + varIntLen + fillerCount * 12, buf.readableBytes());
          }
@@ -163,9 +202,13 @@ public class RequiredBlockFaceSupport {
       int maxEnd = 33;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 17);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("FaceType", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 33 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -173,9 +216,13 @@ public class RequiredBlockFaceSupport {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 21);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("SelfFaceType", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 33 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -183,9 +230,13 @@ public class RequiredBlockFaceSupport {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 25);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("BlockSetId", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 33 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -193,9 +244,13 @@ public class RequiredBlockFaceSupport {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 29);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Filler", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 33 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos3 += Vector3i.computeBytesConsumed(buf, pos3);
@@ -309,17 +364,23 @@ public class RequiredBlockFaceSupport {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 13) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid SupportMatch value for Support");
+      }
+
+      v = buffer.getByte(offset + 14) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid SupportMatch value for MatchSelf");
+      }
+
       if ((nullBits & 1) != 0) {
-         int faceTypeOffset = buffer.getIntLE(offset + 17);
-         if (faceTypeOffset < 0) {
+         v = buffer.getIntLE(offset + 17);
+         if (v < 0 || v > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for FaceType");
          }
 
-         int pos = offset + 33 + faceTypeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FaceType");
-         }
-
+         int pos = offset + 33 + v;
          int faceTypeLen = VarInt.peek(buffer, pos);
          if (faceTypeLen < 0) {
             return ValidationResult.error("Invalid string length for FaceType");
@@ -329,7 +390,7 @@ public class RequiredBlockFaceSupport {
             return ValidationResult.error("FaceType exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(faceTypeLen);
          pos += faceTypeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FaceType");
@@ -337,16 +398,12 @@ public class RequiredBlockFaceSupport {
       }
 
       if ((nullBits & 2) != 0) {
-         int selfFaceTypeOffset = buffer.getIntLE(offset + 21);
-         if (selfFaceTypeOffset < 0) {
+         v = buffer.getIntLE(offset + 21);
+         if (v < 0 || v > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for SelfFaceType");
          }
 
-         int pos = offset + 33 + selfFaceTypeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SelfFaceType");
-         }
-
+         int pos = offset + 33 + v;
          int selfFaceTypeLen = VarInt.peek(buffer, pos);
          if (selfFaceTypeLen < 0) {
             return ValidationResult.error("Invalid string length for SelfFaceType");
@@ -356,7 +413,7 @@ public class RequiredBlockFaceSupport {
             return ValidationResult.error("SelfFaceType exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(selfFaceTypeLen);
          pos += selfFaceTypeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading SelfFaceType");
@@ -364,16 +421,12 @@ public class RequiredBlockFaceSupport {
       }
 
       if ((nullBits & 4) != 0) {
-         int blockSetIdOffset = buffer.getIntLE(offset + 25);
-         if (blockSetIdOffset < 0) {
+         v = buffer.getIntLE(offset + 25);
+         if (v < 0 || v > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for BlockSetId");
          }
 
-         int pos = offset + 33 + blockSetIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BlockSetId");
-         }
-
+         int pos = offset + 33 + v;
          int blockSetIdLen = VarInt.peek(buffer, pos);
          if (blockSetIdLen < 0) {
             return ValidationResult.error("Invalid string length for BlockSetId");
@@ -383,7 +436,7 @@ public class RequiredBlockFaceSupport {
             return ValidationResult.error("BlockSetId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(blockSetIdLen);
          pos += blockSetIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BlockSetId");
@@ -391,16 +444,12 @@ public class RequiredBlockFaceSupport {
       }
 
       if ((nullBits & 8) != 0) {
-         int fillerOffset = buffer.getIntLE(offset + 29);
-         if (fillerOffset < 0) {
+         v = buffer.getIntLE(offset + 29);
+         if (v < 0 || v > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for Filler");
          }
 
-         int pos = offset + 33 + fillerOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Filler");
-         }
-
+         int pos = offset + 33 + v;
          int fillerCount = VarInt.peek(buffer, pos);
          if (fillerCount < 0) {
             return ValidationResult.error("Invalid array count for Filler");
@@ -410,7 +459,7 @@ public class RequiredBlockFaceSupport {
             return ValidationResult.error("Filler exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fillerCount);
          pos += fillerCount * 12;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Filler");

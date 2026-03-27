@@ -34,6 +34,10 @@ public class AmbienceFXMusic {
 
    @Nonnull
    public static AmbienceFXMusic deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXMusic", 5, buf.readableBytes() - offset);
+      }
+
       AmbienceFXMusic obj = new AmbienceFXMusic();
       byte nullBits = buf.getByte(offset);
       obj.volume = buf.getFloatLE(offset + 1);
@@ -41,14 +45,14 @@ public class AmbienceFXMusic {
       if ((nullBits & 1) != 0) {
          int tracksCount = VarInt.peek(buf, pos);
          if (tracksCount < 0) {
-            throw ProtocolException.negativeLength("Tracks", tracksCount);
+            throw ProtocolException.invalidVarInt("Tracks");
          }
 
+         int tracksVarLen = VarInt.size(tracksCount);
          if (tracksCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tracks", tracksCount, 4096000);
          }
 
-         int tracksVarLen = VarInt.size(tracksCount);
          if (pos + tracksVarLen + tracksCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tracks", pos + tracksVarLen + tracksCount * 1, buf.readableBytes());
          }
@@ -59,14 +63,18 @@ public class AmbienceFXMusic {
          for (int i = 0; i < tracksCount; i++) {
             int strLen = VarInt.peek(buf, pos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("tracks[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("tracks[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("tracks[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
+            if (pos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("tracks[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.tracks[i] = PacketIO.readVarString(buf, pos);
             pos += strVarLen + strLen;
          }
@@ -80,11 +88,11 @@ public class AmbienceFXMusic {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -144,7 +152,7 @@ public class AmbienceFXMusic {
             return ValidationResult.error("Tracks exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tracksCount);
 
          for (int i = 0; i < tracksCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -152,7 +160,7 @@ public class AmbienceFXMusic {
                return ValidationResult.error("Invalid string length in Tracks");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Tracks");

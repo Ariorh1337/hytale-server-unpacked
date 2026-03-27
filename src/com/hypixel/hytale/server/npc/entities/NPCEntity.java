@@ -8,8 +8,8 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.ApplicationEffects;
@@ -62,6 +62,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    public static final BuilderCodec<NPCEntity> CODEC = BuilderCodec.<LivingEntity>builder(NPCEntity.class, NPCEntity::new, LivingEntity.CODEC)
@@ -90,8 +92,8 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
       .addField(new KeyedCodec<>("WorldgenId", Codec.INTEGER), (npcEntity, i) -> npcEntity.worldgenId = i, npcEntity -> npcEntity.worldgenId)
       .append(new KeyedCodec<>("PathManager", PathManager.CODEC), (npcEntity, manager) -> npcEntity.pathManager = manager, npcEntity -> npcEntity.pathManager)
       .add()
-      .addField(new KeyedCodec<>("LeashPos", Vector3d.CODEC), (npcEntity, v) -> {
-         npcEntity.leashPoint.assign(v);
+      .addField(new KeyedCodec<>("LeashPos", Vector3dUtil.CODEC), (npcEntity, v) -> {
+         npcEntity.leashPoint.set(v);
          npcEntity.hasLeashPosition = true;
       }, npcEntity -> npcEntity.requiresLeashPosition() ? npcEntity.leashPoint : null)
       .addField(
@@ -182,7 +184,7 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    }
 
    public void storeTickStartPosition(@Nonnull Vector3d position) {
-      this.oldPosition.assign(position);
+      this.oldPosition.set(position);
    }
 
    public boolean tickDespawnAnimationRemainingSeconds(float dt) {
@@ -297,10 +299,10 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
       this.role.setMarkedTarget(targetSlot, target);
    }
 
-   public void saveLeashInformation(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
-      this.leashPoint.assign(position);
-      this.leashHeading = rotation.getYaw();
-      this.leashPitch = rotation.getPitch();
+   public void saveLeashInformation(@Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
+      this.leashPoint.set(position);
+      this.leashHeading = rotation.yaw();
+      this.leashPitch = rotation.pitch();
       this.saveLeashBlockType();
    }
 
@@ -316,7 +318,7 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    }
 
    public void setLeashPoint(@Nonnull Vector3d leashPoint) {
-      this.leashPoint.assign(leashPoint);
+      this.leashPoint.set(leashPoint);
    }
 
    public float getLeashHeading() {

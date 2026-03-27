@@ -34,8 +34,8 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.asset.AssetModule;
@@ -323,6 +323,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3dc;
 
 public class NPCPlugin extends JavaPlugin {
    @Nonnull
@@ -365,7 +366,7 @@ public class NPCPlugin extends JavaPlugin {
    protected boolean autoReload;
    private AttitudeMap attitudeMap;
    private ItemAttitudeMap itemAttitudeMap;
-   private static final Vector3f NULL_ROTATION = new Vector3f(0.0F, 0.0F, 0.0F);
+   private static final Rotation3f NULL_ROTATION = new Rotation3f(0.0F, 0.0F, 0.0F);
    public static final short PRIORITY_LOAD_NPC = -8;
    public static final short PRIORITY_SPAWN_VALIDATION = -7;
    private final Config<NPCPlugin.NPCConfig> config = this.withConfig("NPCModule", NPCPlugin.NPCConfig.CODEC);
@@ -861,7 +862,7 @@ public class NPCPlugin extends JavaPlugin {
 
    @Nullable
    public Pair<Ref<EntityStore>, INonPlayerCharacter> spawnNPC(
-      @Nonnull Store<EntityStore> store, @Nonnull String npcType, @Nullable String groupType, @Nonnull Vector3d position, @Nonnull Vector3f rotation
+      @Nonnull Store<EntityStore> store, @Nonnull String npcType, @Nullable String groupType, @Nonnull Vector3dc position, @Nonnull Rotation3fc rotation
    ) {
       int roleIndex = this.getIndex(npcType);
       if (roleIndex < 0) {
@@ -1091,8 +1092,8 @@ public class NPCPlugin extends JavaPlugin {
    public Pair<Ref<EntityStore>, NPCEntity> spawnEntity(
       @Nonnull Store<EntityStore> store,
       int roleIndex,
-      @Nonnull Vector3d position,
-      @Nullable Vector3f rotation,
+      @Nonnull Vector3dc position,
+      @Nullable Rotation3fc rotation,
       @Nullable Model spawnModel,
       @Nullable TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn
    ) {
@@ -1103,8 +1104,8 @@ public class NPCPlugin extends JavaPlugin {
    public Pair<Ref<EntityStore>, NPCEntity> spawnEntity(
       @Nonnull Store<EntityStore> store,
       int roleIndex,
-      @Nonnull Vector3d position,
-      @Nullable Vector3f rotation,
+      @Nonnull Vector3dc position,
+      @Nullable Rotation3fc rotation,
       @Nullable Model spawnModel,
       @Nullable TriConsumer<NPCEntity, Holder<EntityStore>, Store<EntityStore>> preAddToWorld,
       @Nullable TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn

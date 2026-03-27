@@ -37,21 +37,30 @@ public class DamageEffects {
 
    @Nonnull
    public static DamageEffects deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("DamageEffects", 13, buf.readableBytes() - offset);
+      }
+
       DamageEffects obj = new DamageEffects();
       byte nullBits = buf.getByte(offset);
       obj.soundEventIndex = buf.getIntLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 5);
-         int modelParticlesCount = VarInt.peek(buf, varPos0);
-         if (modelParticlesCount < 0) {
-            throw ProtocolException.negativeLength("ModelParticles", modelParticlesCount);
+         int varPosBase0 = buf.getIntLE(offset + 5);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("ModelParticles", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int modelParticlesCount = VarInt.peek(buf, varPos0);
+         if (modelParticlesCount < 0) {
+            throw ProtocolException.invalidVarInt("ModelParticles");
+         }
+
+         int varIntLen = VarInt.size(modelParticlesCount);
          if (modelParticlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("ModelParticles", modelParticlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + modelParticlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("ModelParticles", varPos0 + varIntLen + modelParticlesCount * 34, buf.readableBytes());
          }
@@ -66,17 +75,22 @@ public class DamageEffects {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 9);
-         int worldParticlesCount = VarInt.peek(buf, varPos1);
-         if (worldParticlesCount < 0) {
-            throw ProtocolException.negativeLength("WorldParticles", worldParticlesCount);
+         int varPosBase1 = buf.getIntLE(offset + 9);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("WorldParticles", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int worldParticlesCount = VarInt.peek(buf, varPos1);
+         if (worldParticlesCount < 0) {
+            throw ProtocolException.invalidVarInt("WorldParticles");
+         }
+
+         int varIntLen = VarInt.size(worldParticlesCount);
          if (worldParticlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("WorldParticles", worldParticlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + worldParticlesCount * 32L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("WorldParticles", varPos1 + varIntLen + worldParticlesCount * 32, buf.readableBytes());
          }
@@ -98,9 +112,13 @@ public class DamageEffects {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 5);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("ModelParticles", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += ModelParticle.computeBytesConsumed(buf, pos0);
@@ -113,9 +131,13 @@ public class DamageEffects {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 9);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("WorldParticles", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += WorldParticle.computeBytesConsumed(buf, pos1);
@@ -211,15 +233,11 @@ public class DamageEffects {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int modelParticlesOffset = buffer.getIntLE(offset + 5);
-         if (modelParticlesOffset < 0) {
+         if (modelParticlesOffset < 0 || modelParticlesOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for ModelParticles");
          }
 
          int pos = offset + 13 + modelParticlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ModelParticles");
-         }
-
          int modelParticlesCount = VarInt.peek(buffer, pos);
          if (modelParticlesCount < 0) {
             return ValidationResult.error("Invalid array count for ModelParticles");
@@ -229,7 +247,7 @@ public class DamageEffects {
             return ValidationResult.error("ModelParticles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modelParticlesCount);
 
          for (int i = 0; i < modelParticlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);
@@ -243,15 +261,11 @@ public class DamageEffects {
 
       if ((nullBits & 2) != 0) {
          int worldParticlesOffset = buffer.getIntLE(offset + 9);
-         if (worldParticlesOffset < 0) {
+         if (worldParticlesOffset < 0 || worldParticlesOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for WorldParticles");
          }
 
          int pos = offset + 13 + worldParticlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for WorldParticles");
-         }
-
          int worldParticlesCount = VarInt.peek(buffer, pos);
          if (worldParticlesCount < 0) {
             return ValidationResult.error("Invalid array count for WorldParticles");
@@ -261,7 +275,7 @@ public class DamageEffects {
             return ValidationResult.error("WorldParticles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(worldParticlesCount);
 
          for (int i = 0; i < worldParticlesCount; i++) {
             ValidationResult structResult = WorldParticle.validateStructure(buffer, pos);

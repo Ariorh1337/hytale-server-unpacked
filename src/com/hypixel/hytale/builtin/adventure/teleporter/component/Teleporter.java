@@ -8,10 +8,8 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.wordlist.WordList;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -20,6 +18,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class Teleporter implements Component<ChunkStore> {
    @Nonnull
@@ -158,7 +158,7 @@ public class Teleporter implements Component<ChunkStore> {
    }
 
    @Nullable
-   public Teleport toTeleport(@Nonnull Vector3d currentPosition, @Nonnull Vector3f currentRotation, @Nonnull Vector3i blockPosition) {
+   public Teleport toTeleport(@Nonnull Vector3d currentPosition, @Nonnull Rotation3f currentRotation, @Nonnull Vector3i blockPosition) {
       if (this.warp != null && !this.warp.isEmpty()) {
          Warp targetWarp = TeleportPlugin.get().getWarps().get(this.warp.toLowerCase());
          return targetWarp != null ? targetWarp.toTeleport() : null;
@@ -169,7 +169,7 @@ public class Teleporter implements Component<ChunkStore> {
             World world = Universe.get().getWorld(this.worldUuid);
             if (world != null) {
                if (this.relativeMask != 0) {
-                  Transform teleportTransform = this.transform.clone();
+                  Transform teleportTransform = new Transform(this.transform);
                   Transform.applyMaskedRelativeTransform(teleportTransform, this.relativeMask, currentPosition, currentRotation, blockPosition);
                   return Teleport.createForPlayer(world, teleportTransform);
                }
@@ -179,7 +179,7 @@ public class Teleporter implements Component<ChunkStore> {
          }
 
          if (this.relativeMask != 0) {
-            Transform teleportTransform = this.transform.clone();
+            Transform teleportTransform = new Transform(this.transform);
             Transform.applyMaskedRelativeTransform(teleportTransform, this.relativeMask, currentPosition, currentRotation, blockPosition);
             return Teleport.createForPlayer(teleportTransform);
          } else {

@@ -38,6 +38,10 @@ public class SleepMultiplayer {
 
    @Nonnull
    public static SleepMultiplayer deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("SleepMultiplayer", 9, buf.readableBytes() - offset);
+      }
+
       SleepMultiplayer obj = new SleepMultiplayer();
       byte nullBits = buf.getByte(offset);
       obj.sleepersCount = buf.getIntLE(offset + 1);
@@ -46,14 +50,14 @@ public class SleepMultiplayer {
       if ((nullBits & 1) != 0) {
          int awakeSampleCount = VarInt.peek(buf, pos);
          if (awakeSampleCount < 0) {
-            throw ProtocolException.negativeLength("AwakeSample", awakeSampleCount);
+            throw ProtocolException.invalidVarInt("AwakeSample");
          }
 
+         int awakeSampleVarLen = VarInt.size(awakeSampleCount);
          if (awakeSampleCount > 4096000) {
             throw ProtocolException.arrayTooLong("AwakeSample", awakeSampleCount, 4096000);
          }
 
-         int awakeSampleVarLen = VarInt.size(awakeSampleCount);
          if (pos + awakeSampleVarLen + awakeSampleCount * 16L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("AwakeSample", pos + awakeSampleVarLen + awakeSampleCount * 16, buf.readableBytes());
          }
@@ -76,7 +80,7 @@ public class SleepMultiplayer {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 16;
+         pos += VarInt.size(arrLen) + arrLen * 16;
       }
 
       return pos - offset;
@@ -130,7 +134,7 @@ public class SleepMultiplayer {
             return ValidationResult.error("AwakeSample exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(awakeSampleCount);
          pos += awakeSampleCount * 16;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading AwakeSample");

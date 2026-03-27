@@ -10,8 +10,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -63,6 +63,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Role implements IAnnotatedComponentCollection {
    public static final boolean DEBUG_APPLIED_FORCES = false;
@@ -754,15 +755,15 @@ public class Role implements IAnnotatedComponentCollection {
    public void blendSeparation(
       @Nonnull Ref<EntityStore> selfRef,
       @Nonnull Vector3d position,
-      @Nonnull Vector3f rotation,
+      @Nonnull Rotation3f rotation,
       @Nonnull Steering steering,
       @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      this.lastSeparationSteering.assign(Vector3d.ZERO);
+      this.lastSeparationSteering.zero();
       Ref<EntityStore> targetRef = this.markedEntitySupport.getTargetReferenceToIgnoreForAvoidance();
       Ref<EntityStore> ignoredTargetRef = targetRef != null && targetRef.isValid() ? targetRef : null;
-      this.separationSummedDistances.assign(Vector3d.ZERO);
+      this.separationSummedDistances.zero();
       this.separationSummedCount = 0;
       switch (this.separationMode) {
          case Legacy:
@@ -782,7 +783,7 @@ public class Role implements IAnnotatedComponentCollection {
       }
 
       if (this.separationSummedCount != 0) {
-         if (!(this.separationSummedDistances.squaredLength() < 0.010000000000000002)) {
+         if (!(this.separationSummedDistances.lengthSquared() < 0.010000000000000002)) {
             switch (this.separationMode) {
                case Legacy:
                   this.scaleSummedDistanceLegacy(rotation, steering);
@@ -812,7 +813,7 @@ public class Role implements IAnnotatedComponentCollection {
       if (ignoredTargetRef != null && ignoredTargetRef.isValid()) {
          TransformComponent targetTransformComponent = commandBuffer.getComponent(ignoredTargetRef, transformComponentType);
          assert targetTransformComponent != null;
-         double distance = targetTransformComponent.getPosition().distanceSquaredTo(position);
+         double distance = targetTransformComponent.getPosition().distanceSquared(position);
          if (distance <= this.separationNearRadiusTarget * this.separationNearRadiusTarget) {
             maxRange = this.separationDistanceTarget;
          } else if (distance < this.separationFarRadiusTarget * this.separationFarRadiusTarget) {
@@ -835,21 +836,21 @@ public class Role implements IAnnotatedComponentCollection {
             commandBuffer
          );
       this.groupSteeringAccumulator.end();
-      this.separationSummedDistances.assign(this.groupSteeringAccumulator.getSumOfDistances());
+      this.separationSummedDistances.set(this.groupSteeringAccumulator.getSumOfDistances());
       this.separationSummedCount = this.groupSteeringAccumulator.getCount();
    }
 
-   private void scaleSummedDistanceLegacy(@Nonnull Vector3f rotation, @Nonnull Steering steering) {
+   private void scaleSummedDistanceLegacy(@Nonnull Rotation3f rotation, @Nonnull Steering steering) {
       double speed = steering.getSpeed();
-      this.separationTempDistanceVector.assign(this.separationSummedDistances).setLength(-this.separationLegacySteeringStrength);
+      this.separationTempDistanceVector.set(this.separationSummedDistances).normalize(-this.separationLegacySteeringStrength);
       if (speed > 0.0) {
          this.separationTempDistanceVector.add(steering.getTranslation());
-         this.separationTempDistanceVector.setLength(speed);
+         this.separationTempDistanceVector.normalize(speed);
       } else if (this.alwaysApplySeparation) {
          this.separationTempDistanceVector.add(steering.getTranslation());
       }
 
-      this.lastSeparationSteering.assign(this.separationTempDistanceVector).subtract(steering.getTranslation());
+      this.lastSeparationSteering.set(this.separationTempDistanceVector).sub(steering.getTranslation());
       steering.setTranslation(this.separationTempDistanceVector);
    }
 
@@ -860,9 +861,9 @@ public class Role implements IAnnotatedComponentCollection {
       @Nonnull CommandBuffer<EntityStore> commandBuffer,
       @Nullable Ref<EntityStore> ignoredTargetRef
    ) {
-      double x = position.getX();
-      double y = position.getY();
-      double z = position.getZ();
+      double x = position.x();
+      double y = position.y();
+      double z = position.z();
       BodyMotion bodyMotion = this.getLastBodySteeringMotion();
       Ref<EntityStore> desiredTargetEntity = bodyMotion != null ? bodyMotion.getDesiredTargetEntity() : null;
       Ref<EntityStore> motionTarget = desiredTargetEntity != null && desiredTargetEntity.isValid() ? desiredTargetEntity : null;
@@ -904,9 +905,9 @@ public class Role implements IAnnotatedComponentCollection {
                         }
                      }
 
-                     double dx = (otherPosition.getX() - x) * componentSelector.x;
-                     double dy = (otherPosition.getY() - y) * componentSelector.y;
-                     double dz = (otherPosition.getZ() - z) * componentSelector.z;
+                     double dx = (otherPosition.x() - x) * componentSelector.x;
+                     double dy = (otherPosition.y() - y) * componentSelector.y;
+                     double dz = (otherPosition.z() - z) * componentSelector.z;
                      double d = NPCPhysicsMath.dotProduct(dx, dy, dz);
                      if (!(d > maxRange * maxRange)) {
                         double distance;
@@ -957,34 +958,34 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    private void scaleSummedDistancesPush(
-      @Nonnull Vector3d position, @Nonnull Vector3f rotation, @Nonnull Steering steering, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      @Nonnull Vector3d position, @Nonnull Rotation3f rotation, @Nonnull Steering steering, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      this.separationTempDistanceVector.assign(this.separationSummedDistances).scale(this.activeMotionController.getComponentSelector());
-      double separationSquaredLength = this.separationTempDistanceVector.squaredLength();
+      this.separationTempDistanceVector.set(this.separationSummedDistances).mul(this.activeMotionController.getComponentSelector());
+      double separationSquaredLength = this.separationTempDistanceVector.lengthSquared();
       if (separationSquaredLength > 1.0) {
          this.separationTempDistanceVector.normalize();
       }
 
-      this.separationTempDistanceVector.scale(-this.separationPushSteeringStrength);
-      this.separationTempSteeringVector.assign(steering.getTranslation()).scale(this.activeMotionController.getComponentSelector());
-      double speedSquared = this.separationTempSteeringVector.squaredLength();
+      this.separationTempDistanceVector.mul(-this.separationPushSteeringStrength);
+      this.separationTempSteeringVector.set(steering.getTranslation()).mul(this.activeMotionController.getComponentSelector());
+      double speedSquared = this.separationTempSteeringVector.lengthSquared();
       if (speedSquared < 1.0000000000000002E-10) {
          if (!this.alwaysApplySeparation) {
             return;
          }
 
          steering.setTranslation(this.separationTempDistanceVector);
-         this.lastSeparationSteering.assign(this.separationTempDistanceVector);
+         this.lastSeparationSteering.set(this.separationTempDistanceVector);
       } else {
          double speed = Math.pow(speedSquared, this.separationPushSpeedScale * 0.5);
-         this.separationTempDistanceVector.add(this.separationTempSteeringVector).setLength(speed).subtract(this.separationTempSteeringVector);
-         this.separationTempSteeringVector.assign(steering.getTranslation()).add(this.separationTempDistanceVector);
-         if (this.separationTempSteeringVector.squaredLength() > 1.0) {
+         this.separationTempDistanceVector.add(this.separationTempSteeringVector).normalize(speed).sub(this.separationTempSteeringVector);
+         this.separationTempSteeringVector.set(steering.getTranslation()).add(this.separationTempDistanceVector);
+         if (this.separationTempSteeringVector.lengthSquared() > 1.0) {
             this.separationTempSteeringVector.normalize();
          }
 
          steering.setTranslation(this.separationTempSteeringVector);
-         this.lastSeparationSteering.assign(this.separationTempDistanceVector);
+         this.lastSeparationSteering.set(this.separationTempDistanceVector);
       }
    }
 
@@ -996,7 +997,7 @@ public class Role implements IAnnotatedComponentCollection {
    public void blendAvoidance(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Vector3d position,
-      @Nonnull Vector3f rotation,
+      @Nonnull Rotation3f rotation,
       @Nonnull Steering steering,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
@@ -1105,7 +1106,7 @@ public class Role implements IAnnotatedComponentCollection {
 
    public void processSetVelocityInstruction(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
       if (this.activeMotionController != null) {
-         this.activeMotionController.forceVelocity(Vector3d.ZERO, null, false);
+         this.activeMotionController.forceVelocity(Vector3dUtil.ZERO, null, false);
          this.activeMotionController.addForce(velocity, velocityConfig);
       }
    }

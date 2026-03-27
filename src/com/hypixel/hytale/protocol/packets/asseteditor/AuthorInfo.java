@@ -39,45 +39,79 @@ public class AuthorInfo {
 
    @Nonnull
    public static AuthorInfo deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("AuthorInfo", 13, buf.readableBytes() - offset);
+      }
+
       AuthorInfo obj = new AuthorInfo();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         int nameLen = VarInt.peek(buf, varPos0);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Name", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int nameLen = VarInt.peek(buf, varPos0);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos0 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos0 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int emailLen = VarInt.peek(buf, varPos1);
-         if (emailLen < 0) {
-            throw ProtocolException.negativeLength("Email", emailLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Email", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int emailLen = VarInt.peek(buf, varPos1);
+         if (emailLen < 0) {
+            throw ProtocolException.invalidVarInt("Email");
+         }
+
+         int emailVarIntLen = VarInt.size(emailLen);
          if (emailLen > 4096000) {
             throw ProtocolException.stringTooLong("Email", emailLen, 4096000);
+         }
+
+         if (varPos1 + emailVarIntLen + emailLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Email", varPos1 + emailVarIntLen + emailLen, buf.readableBytes());
          }
 
          obj.email = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int urlLen = VarInt.peek(buf, varPos2);
-         if (urlLen < 0) {
-            throw ProtocolException.negativeLength("Url", urlLen);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Url", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 13 + varPosBase2;
+         int urlLen = VarInt.peek(buf, varPos2);
+         if (urlLen < 0) {
+            throw ProtocolException.invalidVarInt("Url");
+         }
+
+         int urlVarIntLen = VarInt.size(urlLen);
          if (urlLen > 4096000) {
             throw ProtocolException.stringTooLong("Url", urlLen, 4096000);
+         }
+
+         if (varPos2 + urlVarIntLen + urlLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Url", varPos2 + urlVarIntLen + urlLen, buf.readableBytes());
          }
 
          obj.url = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
@@ -91,9 +125,13 @@ public class AuthorInfo {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -101,9 +139,13 @@ public class AuthorInfo {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Email", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -111,9 +153,13 @@ public class AuthorInfo {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Url", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -192,15 +238,11 @@ public class AuthorInfo {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int nameOffset = buffer.getIntLE(offset + 1);
-         if (nameOffset < 0) {
+         if (nameOffset < 0 || nameOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
          int pos = offset + 13 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -210,7 +252,7 @@ public class AuthorInfo {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -219,15 +261,11 @@ public class AuthorInfo {
 
       if ((nullBits & 2) != 0) {
          int emailOffset = buffer.getIntLE(offset + 5);
-         if (emailOffset < 0) {
+         if (emailOffset < 0 || emailOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Email");
          }
 
          int pos = offset + 13 + emailOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Email");
-         }
-
          int emailLen = VarInt.peek(buffer, pos);
          if (emailLen < 0) {
             return ValidationResult.error("Invalid string length for Email");
@@ -237,7 +275,7 @@ public class AuthorInfo {
             return ValidationResult.error("Email exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(emailLen);
          pos += emailLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Email");
@@ -246,15 +284,11 @@ public class AuthorInfo {
 
       if ((nullBits & 4) != 0) {
          int urlOffset = buffer.getIntLE(offset + 9);
-         if (urlOffset < 0) {
+         if (urlOffset < 0 || urlOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Url");
          }
 
          int pos = offset + 13 + urlOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Url");
-         }
-
          int urlLen = VarInt.peek(buffer, pos);
          if (urlLen < 0) {
             return ValidationResult.error("Invalid string length for Url");
@@ -264,7 +298,7 @@ public class AuthorInfo {
             return ValidationResult.error("Url exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(urlLen);
          pos += urlLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Url");

@@ -34,19 +34,27 @@ public class Asset {
 
    @Nonnull
    public static Asset deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 64) {
+         throw ProtocolException.bufferTooSmall("Asset", 64, buf.readableBytes() - offset);
+      }
+
       Asset obj = new Asset();
       obj.hash = PacketIO.readFixedAsciiString(buf, offset + 0, 64);
       int pos = offset + 64;
       int nameLen = VarInt.peek(buf, pos);
       if (nameLen < 0) {
-         throw ProtocolException.negativeLength("Name", nameLen);
+         throw ProtocolException.invalidVarInt("Name");
       }
 
+      int nameVarLen = VarInt.size(nameLen);
       if (nameLen > 512) {
          throw ProtocolException.stringTooLong("Name", nameLen, 512);
       }
 
-      int nameVarLen = VarInt.length(buf, pos);
+      if (pos + nameVarLen + nameLen > buf.readableBytes()) {
+         throw ProtocolException.bufferTooSmall("Name", pos + nameVarLen + nameLen, buf.readableBytes());
+      }
+
       obj.name = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
       pos += nameVarLen + nameLen;
       return obj;
@@ -55,7 +63,7 @@ public class Asset {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 64;
       int sl = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + sl;
+      pos += VarInt.size(sl) + sl;
       return pos - offset;
    }
 
@@ -84,7 +92,7 @@ public class Asset {
          return ValidationResult.error("Name exceeds max length 512");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(nameLen);
       pos += nameLen;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading Name") : ValidationResult.OK;
    }

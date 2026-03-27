@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.window;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -26,6 +27,10 @@ public class ChangeBlockAction extends WindowAction {
 
    @Nonnull
    public static ChangeBlockAction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("ChangeBlockAction", 1, buf.readableBytes() - offset);
+      }
+
       ChangeBlockAction obj = new ChangeBlockAction();
       obj.down = buf.getByte(offset + 0) != 0;
       return obj;

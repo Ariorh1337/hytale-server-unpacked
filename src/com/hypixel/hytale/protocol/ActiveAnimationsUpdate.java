@@ -34,15 +34,20 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int activeAnimationsCount = VarInt.peek(buf, pos);
       if (activeAnimationsCount < 0) {
-         throw ProtocolException.negativeLength("ActiveAnimations", activeAnimationsCount);
+         throw ProtocolException.invalidVarInt("ActiveAnimations");
       }
 
+      int activeAnimationsVarLen = VarInt.size(activeAnimationsCount);
       if (activeAnimationsCount > 4096000) {
          throw ProtocolException.arrayTooLong("ActiveAnimations", activeAnimationsCount, 4096000);
       }
 
-      pos += VarInt.size(activeAnimationsCount);
+      pos += activeAnimationsVarLen;
       int activeAnimationsBitfieldSize = (activeAnimationsCount + 7) / 8;
+      if (pos + activeAnimationsBitfieldSize > buf.readableBytes()) {
+         throw ProtocolException.bufferTooSmall("ActiveAnimations", pos + activeAnimationsBitfieldSize, buf.readableBytes());
+      }
+
       byte[] activeAnimationsBitfield = PacketIO.readBytes(buf, pos, activeAnimationsBitfieldSize);
       pos += activeAnimationsBitfieldSize;
       obj.activeAnimations = new String[activeAnimationsCount];
@@ -51,14 +56,18 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
          if ((activeAnimationsBitfield[i / 8] & 1 << i % 8) != 0) {
             int strLen = VarInt.peek(buf, pos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("activeAnimations[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("activeAnimations[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("activeAnimations[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
+            if (pos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("activeAnimations[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.activeAnimations[i] = PacketIO.readVarString(buf, pos);
             pos += strVarLen + strLen;
          }
@@ -70,7 +79,7 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(arrLen);
       int bitfieldSize = (arrLen + 7) / 8;
       byte[] bitfield = PacketIO.readBytes(buf, pos, bitfieldSize);
       pos += bitfieldSize;
@@ -78,7 +87,7 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
       for (int i = 0; i < arrLen; i++) {
          if ((bitfield[i / 8] & 1 << i % 8) != 0) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -142,18 +151,27 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
          return ValidationResult.error("ActiveAnimations exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(activeAnimationsCount);
+      int activeAnimationsBitfieldSize = (activeAnimationsCount + 7) / 8;
+      if (pos + activeAnimationsBitfieldSize > buffer.writerIndex()) {
+         return ValidationResult.error("Buffer overflow reading bitfield for ActiveAnimations");
+      }
+
+      byte[] activeAnimationsBitfield = PacketIO.readBytes(buffer, pos, activeAnimationsBitfieldSize);
+      pos += activeAnimationsBitfieldSize;
 
       for (int i = 0; i < activeAnimationsCount; i++) {
-         int strLen = VarInt.peek(buffer, pos);
-         if (strLen < 0) {
-            return ValidationResult.error("Invalid string length in ActiveAnimations");
-         }
+         if ((activeAnimationsBitfield[i / 8] & 1 << i % 8) != 0) {
+            int strLen = VarInt.peek(buffer, pos);
+            if (strLen < 0) {
+               return ValidationResult.error("Invalid string length in activeAnimations");
+            }
 
-         pos += VarInt.length(buffer, pos);
-         pos += strLen;
-         if (pos > buffer.writerIndex()) {
-            return ValidationResult.error("Buffer overflow reading string in ActiveAnimations");
+            pos += VarInt.size(strLen);
+            pos += strLen;
+            if (pos > buffer.writerIndex()) {
+               return ValidationResult.error("Buffer overflow reading string in activeAnimations");
+            }
          }
       }
 

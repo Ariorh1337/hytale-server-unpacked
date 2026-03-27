@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class Rangeb {
 
    @Nonnull
    public static Rangeb deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("Rangeb", 2, buf.readableBytes() - offset);
+      }
+
       Rangeb obj = new Rangeb();
       obj.min = buf.getByte(offset + 0);
       obj.max = buf.getByte(offset + 1);

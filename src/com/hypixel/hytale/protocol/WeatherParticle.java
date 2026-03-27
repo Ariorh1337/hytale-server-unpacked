@@ -44,6 +44,10 @@ public class WeatherParticle {
 
    @Nonnull
    public static WeatherParticle deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("WeatherParticle", 13, buf.readableBytes() - offset);
+      }
+
       WeatherParticle obj = new WeatherParticle();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -57,14 +61,18 @@ public class WeatherParticle {
       if ((nullBits & 2) != 0) {
          int systemIdLen = VarInt.peek(buf, pos);
          if (systemIdLen < 0) {
-            throw ProtocolException.negativeLength("SystemId", systemIdLen);
+            throw ProtocolException.invalidVarInt("SystemId");
          }
 
+         int systemIdVarLen = VarInt.size(systemIdLen);
          if (systemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("SystemId", systemIdLen, 4096000);
          }
 
-         int systemIdVarLen = VarInt.length(buf, pos);
+         if (pos + systemIdVarLen + systemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("SystemId", pos + systemIdVarLen + systemIdLen, buf.readableBytes());
+         }
+
          obj.systemId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += systemIdVarLen + systemIdLen;
       }
@@ -77,7 +85,7 @@ public class WeatherParticle {
       int pos = offset + 13;
       if ((nullBits & 2) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -134,7 +142,7 @@ public class WeatherParticle {
             return ValidationResult.error("SystemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(systemIdLen);
          pos += systemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading SystemId");

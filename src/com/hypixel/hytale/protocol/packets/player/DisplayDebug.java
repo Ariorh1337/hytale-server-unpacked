@@ -71,6 +71,10 @@ public class DisplayDebug implements Packet, ToClientPacket {
 
    @Nonnull
    public static DisplayDebug deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 31) {
+         throw ProtocolException.bufferTooSmall("DisplayDebug", 31, buf.readableBytes() - offset);
+      }
+
       DisplayDebug obj = new DisplayDebug();
       byte nullBits = buf.getByte(offset);
       obj.shape = DebugShape.fromValue(buf.getByte(offset + 1));
@@ -82,17 +86,22 @@ public class DisplayDebug implements Packet, ToClientPacket {
       obj.flags = buf.getByte(offset + 18);
       obj.opacity = buf.getFloatLE(offset + 19);
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 31 + buf.getIntLE(offset + 23);
-         int matrixCount = VarInt.peek(buf, varPos0);
-         if (matrixCount < 0) {
-            throw ProtocolException.negativeLength("Matrix", matrixCount);
+         int varPosBase0 = buf.getIntLE(offset + 23);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 31) {
+            throw ProtocolException.invalidOffset("Matrix", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 31 + varPosBase0;
+         int matrixCount = VarInt.peek(buf, varPos0);
+         if (matrixCount < 0) {
+            throw ProtocolException.invalidVarInt("Matrix");
+         }
+
+         int varIntLen = VarInt.size(matrixCount);
          if (matrixCount > 4096000) {
             throw ProtocolException.arrayTooLong("Matrix", matrixCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + matrixCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Matrix", varPos0 + varIntLen + matrixCount * 4, buf.readableBytes());
          }
@@ -105,17 +114,22 @@ public class DisplayDebug implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 31 + buf.getIntLE(offset + 27);
-         int frustumProjectionCount = VarInt.peek(buf, varPos1);
-         if (frustumProjectionCount < 0) {
-            throw ProtocolException.negativeLength("FrustumProjection", frustumProjectionCount);
+         int varPosBase1 = buf.getIntLE(offset + 27);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 31) {
+            throw ProtocolException.invalidOffset("FrustumProjection", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 31 + varPosBase1;
+         int frustumProjectionCount = VarInt.peek(buf, varPos1);
+         if (frustumProjectionCount < 0) {
+            throw ProtocolException.invalidVarInt("FrustumProjection");
+         }
+
+         int varIntLen = VarInt.size(frustumProjectionCount);
          if (frustumProjectionCount > 4096000) {
             throw ProtocolException.arrayTooLong("FrustumProjection", frustumProjectionCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + frustumProjectionCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FrustumProjection", varPos1 + varIntLen + frustumProjectionCount * 4, buf.readableBytes());
          }
@@ -135,9 +149,13 @@ public class DisplayDebug implements Packet, ToClientPacket {
       int maxEnd = 31;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 23);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 31) {
+            throw ProtocolException.invalidOffset("Matrix", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 31 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 4;
+         pos0 += VarInt.size(arrLen) + arrLen * 4;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -145,9 +163,13 @@ public class DisplayDebug implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 27);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 31) {
+            throw ProtocolException.invalidOffset("FrustumProjection", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 31 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 4;
+         pos1 += VarInt.size(arrLen) + arrLen * 4;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -239,17 +261,18 @@ public class DisplayDebug implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 7) {
+         return ValidationResult.error("Invalid DebugShape value for Shape");
+      }
+
       if ((nullBits & 2) != 0) {
-         int matrixOffset = buffer.getIntLE(offset + 23);
-         if (matrixOffset < 0) {
+         v = buffer.getIntLE(offset + 23);
+         if (v < 0 || v > buffer.writerIndex() - offset - 31) {
             return ValidationResult.error("Invalid offset for Matrix");
          }
 
-         int pos = offset + 31 + matrixOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Matrix");
-         }
-
+         int pos = offset + 31 + v;
          int matrixCount = VarInt.peek(buffer, pos);
          if (matrixCount < 0) {
             return ValidationResult.error("Invalid array count for Matrix");
@@ -259,7 +282,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
             return ValidationResult.error("Matrix exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(matrixCount);
          pos += matrixCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Matrix");
@@ -267,16 +290,12 @@ public class DisplayDebug implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int frustumProjectionOffset = buffer.getIntLE(offset + 27);
-         if (frustumProjectionOffset < 0) {
+         v = buffer.getIntLE(offset + 27);
+         if (v < 0 || v > buffer.writerIndex() - offset - 31) {
             return ValidationResult.error("Invalid offset for FrustumProjection");
          }
 
-         int pos = offset + 31 + frustumProjectionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FrustumProjection");
-         }
-
+         int pos = offset + 31 + v;
          int frustumProjectionCount = VarInt.peek(buffer, pos);
          if (frustumProjectionCount < 0) {
             return ValidationResult.error("Invalid array count for FrustumProjection");
@@ -286,7 +305,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
             return ValidationResult.error("FrustumProjection exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(frustumProjectionCount);
          pos += frustumProjectionCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FrustumProjection");

@@ -69,6 +69,10 @@ public class RemoveEntityInteraction extends SimpleInteraction {
 
    @Nonnull
    public static RemoveEntityInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 40) {
+         throw ProtocolException.bufferTooSmall("RemoveEntityInteraction", 40, buf.readableBytes() - offset);
+      }
+
       RemoveEntityInteraction obj = new RemoveEntityInteraction();
       byte nullBits = buf.getByte(offset);
       obj.waitForDataFrom = WaitForDataFrom.fromValue(buf.getByte(offset + 1));
@@ -79,22 +83,32 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       obj.failed = buf.getIntLE(offset + 15);
       obj.entityTarget = InteractionTarget.fromValue(buf.getByte(offset + 19));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 40 + buf.getIntLE(offset + 20);
+         int varPosBase0 = buf.getIntLE(offset + 20);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Effects", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 40 + varPosBase0;
          obj.effects = InteractionEffects.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 40 + buf.getIntLE(offset + 24);
-         int settingsCount = VarInt.peek(buf, varPos1);
-         if (settingsCount < 0) {
-            throw ProtocolException.negativeLength("Settings", settingsCount);
+         int varPosBase1 = buf.getIntLE(offset + 24);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Settings", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 40 + varPosBase1;
+         int settingsCount = VarInt.peek(buf, varPos1);
+         if (settingsCount < 0) {
+            throw ProtocolException.invalidVarInt("Settings");
+         }
+
+         int varIntLen = VarInt.size(settingsCount);
          if (settingsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Settings", settingsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.settings = new HashMap<>(settingsCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -109,22 +123,32 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 40 + buf.getIntLE(offset + 28);
+         int varPosBase2 = buf.getIntLE(offset + 28);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Rules", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 40 + varPosBase2;
          obj.rules = InteractionRules.deserialize(buf, varPos2);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 40 + buf.getIntLE(offset + 32);
-         int tagsCount = VarInt.peek(buf, varPos3);
-         if (tagsCount < 0) {
-            throw ProtocolException.negativeLength("Tags", tagsCount);
+         int varPosBase3 = buf.getIntLE(offset + 32);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Tags", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 40 + varPosBase3;
+         int tagsCount = VarInt.peek(buf, varPos3);
+         if (tagsCount < 0) {
+            throw ProtocolException.invalidVarInt("Tags");
+         }
+
+         int varIntLen = VarInt.size(tagsCount);
          if (tagsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tags", tagsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + tagsCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tags", varPos3 + varIntLen + tagsCount * 4, buf.readableBytes());
          }
@@ -137,7 +161,12 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 40 + buf.getIntLE(offset + 36);
+         int varPosBase4 = buf.getIntLE(offset + 36);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Camera", varPosBase4, buf.readableBytes());
+         }
+
+         int varPos4 = offset + 40 + varPosBase4;
          obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
       }
 
@@ -149,6 +178,10 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       int maxEnd = 40;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 20);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Effects", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 40 + fieldOffset0;
          pos0 += InteractionEffects.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -158,9 +191,13 @@ public class RemoveEntityInteraction extends SimpleInteraction {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 24);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Settings", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 40 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + InteractionSettings.computeBytesConsumed(buf, pos1);
@@ -173,6 +210,10 @@ public class RemoveEntityInteraction extends SimpleInteraction {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 28);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Rules", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 40 + fieldOffset2;
          pos2 += InteractionRules.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -182,9 +223,13 @@ public class RemoveEntityInteraction extends SimpleInteraction {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 32);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Tags", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 40 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + arrLen * 4;
+         pos3 += VarInt.size(arrLen) + arrLen * 4;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -192,6 +237,10 @@ public class RemoveEntityInteraction extends SimpleInteraction {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 36);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 40) {
+            throw ProtocolException.invalidOffset("Camera", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 40 + fieldOffset4;
          pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
@@ -332,17 +381,23 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid WaitForDataFrom value for WaitForDataFrom");
+      }
+
+      v = buffer.getByte(offset + 19) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid InteractionTarget value for EntityTarget");
+      }
+
       if ((nullBits & 1) != 0) {
-         int effectsOffset = buffer.getIntLE(offset + 20);
-         if (effectsOffset < 0) {
+         v = buffer.getIntLE(offset + 20);
+         if (v < 0 || v > buffer.writerIndex() - offset - 40) {
             return ValidationResult.error("Invalid offset for Effects");
          }
 
-         int pos = offset + 40 + effectsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Effects");
-         }
-
+         int pos = offset + 40 + v;
          ValidationResult effectsResult = InteractionEffects.validateStructure(buffer, pos);
          if (!effectsResult.isValid()) {
             return ValidationResult.error("Invalid Effects: " + effectsResult.error());
@@ -352,16 +407,12 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 2) != 0) {
-         int settingsOffset = buffer.getIntLE(offset + 24);
-         if (settingsOffset < 0) {
+         v = buffer.getIntLE(offset + 24);
+         if (v < 0 || v > buffer.writerIndex() - offset - 40) {
             return ValidationResult.error("Invalid offset for Settings");
          }
 
-         int pos = offset + 40 + settingsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Settings");
-         }
-
+         int pos = offset + 40 + v;
          int settingsCount = VarInt.peek(buffer, pos);
          if (settingsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Settings");
@@ -371,25 +422,26 @@ public class RemoveEntityInteraction extends SimpleInteraction {
             return ValidationResult.error("Settings exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(settingsCount);
 
          for (int i = 0; i < settingsCount; i++) {
+            int vx = buffer.getByte(pos) & 255;
+            if (vx >= 2) {
+               return ValidationResult.error("Invalid GameMode value for key");
+            }
+
             pos++;
             pos++;
          }
       }
 
       if ((nullBits & 4) != 0) {
-         int rulesOffset = buffer.getIntLE(offset + 28);
-         if (rulesOffset < 0) {
+         v = buffer.getIntLE(offset + 28);
+         if (v < 0 || v > buffer.writerIndex() - offset - 40) {
             return ValidationResult.error("Invalid offset for Rules");
          }
 
-         int pos = offset + 40 + rulesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Rules");
-         }
-
+         int pos = offset + 40 + v;
          ValidationResult rulesResult = InteractionRules.validateStructure(buffer, pos);
          if (!rulesResult.isValid()) {
             return ValidationResult.error("Invalid Rules: " + rulesResult.error());
@@ -399,16 +451,12 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 8) != 0) {
-         int tagsOffset = buffer.getIntLE(offset + 32);
-         if (tagsOffset < 0) {
+         v = buffer.getIntLE(offset + 32);
+         if (v < 0 || v > buffer.writerIndex() - offset - 40) {
             return ValidationResult.error("Invalid offset for Tags");
          }
 
-         int pos = offset + 40 + tagsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Tags");
-         }
-
+         int pos = offset + 40 + v;
          int tagsCount = VarInt.peek(buffer, pos);
          if (tagsCount < 0) {
             return ValidationResult.error("Invalid array count for Tags");
@@ -418,7 +466,7 @@ public class RemoveEntityInteraction extends SimpleInteraction {
             return ValidationResult.error("Tags exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagsCount);
          pos += tagsCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Tags");
@@ -426,16 +474,12 @@ public class RemoveEntityInteraction extends SimpleInteraction {
       }
 
       if ((nullBits & 16) != 0) {
-         int cameraOffset = buffer.getIntLE(offset + 36);
-         if (cameraOffset < 0) {
+         v = buffer.getIntLE(offset + 36);
+         if (v < 0 || v > buffer.writerIndex() - offset - 40) {
             return ValidationResult.error("Invalid offset for Camera");
          }
 
-         int pos = offset + 40 + cameraOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Camera");
-         }
-
+         int pos = offset + 40 + v;
          ValidationResult cameraResult = InteractionCameraSettings.validateStructure(buffer, pos);
          if (!cameraResult.isValid()) {
             return ValidationResult.error("Invalid Camera: " + cameraResult.error());

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class ConditionalBlockSound {
 
    @Nonnull
    public static ConditionalBlockSound deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("ConditionalBlockSound", 8, buf.readableBytes() - offset);
+      }
+
       ConditionalBlockSound obj = new ConditionalBlockSound();
       obj.soundEventIndex = buf.getIntLE(offset + 0);
       obj.ambienceFXIndex = buf.getIntLE(offset + 4);

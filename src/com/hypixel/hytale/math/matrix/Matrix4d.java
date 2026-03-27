@@ -2,10 +2,10 @@ package com.hypixel.hytale.math.matrix;
 
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector4d;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector4d;
 
 public class Matrix4d {
    public static final int M00 = 0;
@@ -35,7 +35,7 @@ public class Matrix4d {
 
    public Matrix4d(@Nonnull Matrix4d other) {
       this();
-      this.assign(other);
+      this.set(other);
    }
 
    public Matrix4d(double[] m) {
@@ -84,13 +84,13 @@ public class Matrix4d {
    }
 
    @Nonnull
-   public Matrix4d assign(@Nonnull Matrix4d other) {
+   public Matrix4d set(@Nonnull Matrix4d other) {
       System.arraycopy(other.m, 0, this.m, 0, 16);
       return this;
    }
 
    @Nonnull
-   public Matrix4d assign(
+   public Matrix4d set(
       double m00,
       double m10,
       double m20,
@@ -164,7 +164,7 @@ public class Matrix4d {
       double z = this.m[2] * vec.x + this.m[6] * vec.y + this.m[10] * vec.z + this.m[14];
       double w = this.m[3] * vec.x + this.m[7] * vec.y + this.m[11] * vec.z + this.m[15];
       double invW = 1.0 / w;
-      result.assign(x * invW, y * invW, z * invW);
+      result.set(x * invW, y * invW, z * invW);
       return result;
    }
 
@@ -173,7 +173,7 @@ public class Matrix4d {
       double x = this.m[0] * vec.x + this.m[4] * vec.y + this.m[8] * vec.z;
       double y = this.m[1] * vec.x + this.m[5] * vec.y + this.m[9] * vec.z;
       double z = this.m[2] * vec.x + this.m[6] * vec.y + this.m[10] * vec.z;
-      vec.assign(x, y, z);
+      vec.set(x, y, z);
       return vec;
    }
 
@@ -188,7 +188,7 @@ public class Matrix4d {
       double y = this.m[1] * vec.x + this.m[5] * vec.y + this.m[9] * vec.z + this.m[13] * vec.w;
       double z = this.m[2] * vec.x + this.m[6] * vec.y + this.m[10] * vec.z + this.m[14] * vec.w;
       double w = this.m[3] * vec.x + this.m[7] * vec.y + this.m[11] * vec.z + this.m[15] * vec.w;
-      result.assign(x, y, z, w);
+      result.set(x, y, z, w);
       return result;
    }
 

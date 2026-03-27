@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -41,6 +42,10 @@ public class AssetEditorAuthorization implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorAuthorization deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAuthorization", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorAuthorization obj = new AssetEditorAuthorization();
       obj.canUse = buf.getByte(offset + 0) != 0;
       return obj;

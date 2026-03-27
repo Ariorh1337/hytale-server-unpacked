@@ -44,22 +44,31 @@ public class ItemUtility {
 
    @Nonnull
    public static ItemUtility deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 11) {
+         throw ProtocolException.bufferTooSmall("ItemUtility", 11, buf.readableBytes() - offset);
+      }
+
       ItemUtility obj = new ItemUtility();
       byte nullBits = buf.getByte(offset);
       obj.usable = buf.getByte(offset + 1) != 0;
       obj.compatible = buf.getByte(offset + 2) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 11 + buf.getIntLE(offset + 3);
-         int entityStatsToClearCount = VarInt.peek(buf, varPos0);
-         if (entityStatsToClearCount < 0) {
-            throw ProtocolException.negativeLength("EntityStatsToClear", entityStatsToClearCount);
+         int varPosBase0 = buf.getIntLE(offset + 3);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("EntityStatsToClear", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 11 + varPosBase0;
+         int entityStatsToClearCount = VarInt.peek(buf, varPos0);
+         if (entityStatsToClearCount < 0) {
+            throw ProtocolException.invalidVarInt("EntityStatsToClear");
+         }
+
+         int varIntLen = VarInt.size(entityStatsToClearCount);
          if (entityStatsToClearCount > 4096000) {
             throw ProtocolException.arrayTooLong("EntityStatsToClear", entityStatsToClearCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + entityStatsToClearCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EntityStatsToClear", varPos0 + varIntLen + entityStatsToClearCount * 4, buf.readableBytes());
          }
@@ -72,17 +81,22 @@ public class ItemUtility {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 11 + buf.getIntLE(offset + 7);
-         int statModifiersCount = VarInt.peek(buf, varPos1);
-         if (statModifiersCount < 0) {
-            throw ProtocolException.negativeLength("StatModifiers", statModifiersCount);
+         int varPosBase1 = buf.getIntLE(offset + 7);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("StatModifiers", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 11 + varPosBase1;
+         int statModifiersCount = VarInt.peek(buf, varPos1);
+         if (statModifiersCount < 0) {
+            throw ProtocolException.invalidVarInt("StatModifiers");
+         }
+
+         int varIntLen = VarInt.size(statModifiersCount);
          if (statModifiersCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("StatModifiers", statModifiersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.statModifiers = new HashMap<>(statModifiersCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -91,14 +105,14 @@ public class ItemUtility {
             dictPos += 4;
             int valLen = VarInt.peek(buf, dictPos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 64) {
                throw ProtocolException.arrayTooLong("val", valLen, 64);
             }
 
-            int valVarLen = VarInt.length(buf, dictPos);
             if (dictPos + valVarLen + valLen * 6L > buf.readableBytes()) {
                throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 6, buf.readableBytes());
             }
@@ -125,9 +139,13 @@ public class ItemUtility {
       int maxEnd = 11;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 3);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("EntityStatsToClear", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 11 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 4;
+         pos0 += VarInt.size(arrLen) + arrLen * 4;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -135,14 +153,18 @@ public class ItemUtility {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 7);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("StatModifiers", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 11 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 += 4;
             int al = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1);
+            pos1 += VarInt.size(al);
 
             for (int j = 0; j < al; j++) {
                pos1 += Modifier.computeBytesConsumed(buf, pos1);
@@ -239,15 +261,11 @@ public class ItemUtility {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int entityStatsToClearOffset = buffer.getIntLE(offset + 3);
-         if (entityStatsToClearOffset < 0) {
+         if (entityStatsToClearOffset < 0 || entityStatsToClearOffset > buffer.writerIndex() - offset - 11) {
             return ValidationResult.error("Invalid offset for EntityStatsToClear");
          }
 
          int pos = offset + 11 + entityStatsToClearOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for EntityStatsToClear");
-         }
-
          int entityStatsToClearCount = VarInt.peek(buffer, pos);
          if (entityStatsToClearCount < 0) {
             return ValidationResult.error("Invalid array count for EntityStatsToClear");
@@ -257,7 +275,7 @@ public class ItemUtility {
             return ValidationResult.error("EntityStatsToClear exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(entityStatsToClearCount);
          pos += entityStatsToClearCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading EntityStatsToClear");
@@ -266,15 +284,11 @@ public class ItemUtility {
 
       if ((nullBits & 2) != 0) {
          int statModifiersOffset = buffer.getIntLE(offset + 7);
-         if (statModifiersOffset < 0) {
+         if (statModifiersOffset < 0 || statModifiersOffset > buffer.writerIndex() - offset - 11) {
             return ValidationResult.error("Invalid offset for StatModifiers");
          }
 
          int pos = offset + 11 + statModifiersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for StatModifiers");
-         }
-
          int statModifiersCount = VarInt.peek(buffer, pos);
          if (statModifiersCount < 0) {
             return ValidationResult.error("Invalid dictionary count for StatModifiers");
@@ -284,7 +298,7 @@ public class ItemUtility {
             return ValidationResult.error("StatModifiers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(statModifiersCount);
 
          for (int i = 0; i < statModifiersCount; i++) {
             pos += 4;
@@ -297,7 +311,7 @@ public class ItemUtility {
                return ValidationResult.error("Invalid array count for value");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(valueArrCount);
 
             for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
                pos += 6;

@@ -5,9 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.delimiters.RangeInt;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class LinearScanner extends Scanner {
    @Nonnull
@@ -67,7 +67,7 @@ public class LinearScanner extends Scanner {
    @Override
    public void scan(@NonNullDecl Vector3i anchor, @NonNullDecl Pipe.One<Vector3i> pipe) {
       this.rContextPipe = pipe;
-      this.rPosition.assign(anchor);
+      this.rPosition.set(anchor);
       this.rControl.reset();
       if (this.isAscendingOrder) {
          for (int i = this.range.getMinInclusive(); i < this.range.getMaxExclusive(); i++) {

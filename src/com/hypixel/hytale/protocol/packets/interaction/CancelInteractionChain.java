@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.ForkedChainId;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -47,6 +48,10 @@ public class CancelInteractionChain implements Packet, ToClientPacket {
 
    @Nonnull
    public static CancelInteractionChain deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("CancelInteractionChain", 5, buf.readableBytes() - offset);
+      }
+
       CancelInteractionChain obj = new CancelInteractionChain();
       byte nullBits = buf.getByte(offset);
       obj.chainId = buf.getIntLE(offset + 1);

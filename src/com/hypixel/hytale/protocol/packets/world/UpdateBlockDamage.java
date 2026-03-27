@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -50,6 +51,10 @@ public class UpdateBlockDamage implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateBlockDamage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockDamage", 21, buf.readableBytes() - offset);
+      }
+
       UpdateBlockDamage obj = new UpdateBlockDamage();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -89,7 +94,12 @@ public class UpdateBlockDamage implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 21 ? ValidationResult.error("Buffer too small: expected at least 21 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 21) {
+         return ValidationResult.error("Buffer too small: expected at least 21 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public UpdateBlockDamage clone() {

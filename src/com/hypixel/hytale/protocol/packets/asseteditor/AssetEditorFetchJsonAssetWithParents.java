@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -49,6 +50,10 @@ public class AssetEditorFetchJsonAssetWithParents implements Packet, ToServerPac
 
    @Nonnull
    public static AssetEditorFetchJsonAssetWithParents deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchJsonAssetWithParents", 6, buf.readableBytes() - offset);
+      }
+
       AssetEditorFetchJsonAssetWithParents obj = new AssetEditorFetchJsonAssetWithParents();
       byte nullBits = buf.getByte(offset);
       obj.token = buf.getIntLE(offset + 1);

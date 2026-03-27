@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -30,6 +31,10 @@ public class HitboxCollisionConfig {
 
    @Nonnull
    public static HitboxCollisionConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("HitboxCollisionConfig", 5, buf.readableBytes() - offset);
+      }
+
       HitboxCollisionConfig obj = new HitboxCollisionConfig();
       obj.collisionType = CollisionType.fromValue(buf.getByte(offset + 0));
       obj.softCollisionOffsetRatio = buf.getFloatLE(offset + 1);
@@ -50,7 +55,12 @@ public class HitboxCollisionConfig {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 5 ? ValidationResult.error("Buffer too small: expected at least 5 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 5) {
+         return ValidationResult.error("Buffer too small: expected at least 5 bytes");
+      }
+
+      int v = buffer.getByte(offset + 0) & 255;
+      return v >= 2 ? ValidationResult.error("Invalid CollisionType value for CollisionType") : ValidationResult.OK;
    }
 
    public HitboxCollisionConfig clone() {

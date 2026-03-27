@@ -5,10 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.ArrayVoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayDeque;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class PondFillerProp extends Prop {
    private static final int TRAVERSED = 1;
@@ -104,7 +104,7 @@ public class PondFillerProp extends Prop {
                               material = context.materialReadSpace.get(poppedPos.x, poppedPos.y, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  this.rMask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -117,7 +117,7 @@ public class PondFillerProp extends Prop {
                               material = context.materialReadSpace.get(poppedPos.x, poppedPos.y, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  this.rMask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -131,7 +131,7 @@ public class PondFillerProp extends Prop {
                               material = context.materialReadSpace.get(poppedPos.x, var14, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  this.rMask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -144,7 +144,7 @@ public class PondFillerProp extends Prop {
                               material = context.materialReadSpace.get(poppedPos.x, poppedPos.y, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  this.rMask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -165,7 +165,7 @@ public class PondFillerProp extends Prop {
             for (int z = this.rLocalWriteBounds.min.z; z < this.rLocalWriteBounds.max.z; z++) {
                int maskValue = this.rMask.get(x, var15, z);
                if (!isSolid(maskValue) && !isLeaks(maskValue)) {
-                  this.rMaterialProviderContext.position.assign(x, var15, z);
+                  this.rMaterialProviderContext.position.set(x, var15, z);
                   Material material = this.fillerMaterialProvider.getVoxelTypeAt(this.rMaterialProviderContext);
                   context.materialWriteSpace.set(material, x, var15, z);
                }

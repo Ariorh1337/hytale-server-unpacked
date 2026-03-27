@@ -97,8 +97,6 @@ public interface IPrefabBuffer {
       @Nullable T var5
    );
 
-   void release();
-
    default <T extends PrefabBufferCall> boolean compare(@Nonnull IPrefabBuffer.BlockComparingPredicate<T> blockComparingPredicate, @Nonnull T t) {
       return this.forEachRaw(
          iterateAllColumns(),

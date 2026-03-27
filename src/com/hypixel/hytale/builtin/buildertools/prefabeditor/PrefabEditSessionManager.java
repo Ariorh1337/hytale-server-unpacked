@@ -13,7 +13,6 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.MovementStates;
@@ -66,6 +65,7 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabEditSessionManager {
    @Nonnull
@@ -400,7 +400,7 @@ public class PrefabEditSessionManager {
 
          TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
          assert transformComponent != null;
-         Transform transform = transformComponent.getTransform().clone();
+         Transform transform = new Transform(transformComponent.getTransform());
          PrefabEditSession prefabEditSession = new PrefabEditSession(worldName, playerUUID, sourceWorld.getWorldConfig().getUuid(), transform);
          CompletableFuture<World> future;
          if (createNewPrefab) {
@@ -569,7 +569,7 @@ public class PrefabEditSessionManager {
             world -> CompletableFuture.supplyAsync(
                () -> {
                   Vector3i pastePosition = new Vector3i(0, context.getPasteLevelGoal(), 0);
-                  Vector3i anchorPosition = pastePosition.clone();
+                  Vector3i anchorPosition = new Vector3i(pastePosition);
                   editSession.addPrefab(
                      context.getPrefabPaths().getFirst(),
                      new Vector3i(-1, context.getPasteLevelGoal() - 1, -1),
@@ -739,7 +739,7 @@ public class PrefabEditSessionManager {
                            Vector3i pastePosition;
                            if (context.getAlignment().equals(PrefabAlignment.ZERO)) {
                               pastePosition = new Vector3i(0, yLevelToPastePrefabsAt, 0);
-                              pastePosition.subtract(Math.min(prefabAccessor.getMinX(), 0), prefabAccessor.getMinY(), Math.min(prefabAccessor.getMinZ(), 0));
+                              pastePosition.sub(Math.min(prefabAccessor.getMinX(), 0), prefabAccessor.getMinY(), Math.min(prefabAccessor.getMinZ(), 0));
                               if (context.getStackingAxis().equals(PrefabStackingAxis.X)) {
                                  pastePosition.add(lineOffset, 0, rowOffset);
                                  lineOffset += prefabXSize + context.getBlocksBetweenEachPrefab() + 1;
@@ -792,7 +792,7 @@ public class PrefabEditSessionManager {
                                  context.shouldLoadEntities(),
                                  store
                               );
-                              editSession.addPrefab(prefabPathx, minPoint, maxPoint, anchorPosition, pastePosition.clone());
+                              editSession.addPrefab(prefabPathx, minPoint, maxPoint, anchorPosition, new Vector3i(pastePosition));
                               if (loadingState != null) {
                                  loadingState.onPrefabPasted(prefabPathx);
                                  this.notifyProgress(progressCallback, loadingState);

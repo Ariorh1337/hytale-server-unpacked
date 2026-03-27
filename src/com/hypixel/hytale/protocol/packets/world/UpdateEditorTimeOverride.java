@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -47,6 +48,10 @@ public class UpdateEditorTimeOverride implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateEditorTimeOverride deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 14) {
+         throw ProtocolException.bufferTooSmall("UpdateEditorTimeOverride", 14, buf.readableBytes() - offset);
+      }
+
       UpdateEditorTimeOverride obj = new UpdateEditorTimeOverride();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -84,7 +89,12 @@ public class UpdateEditorTimeOverride implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 14 ? ValidationResult.error("Buffer too small: expected at least 14 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 14) {
+         return ValidationResult.error("Buffer too small: expected at least 14 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public UpdateEditorTimeOverride clone() {

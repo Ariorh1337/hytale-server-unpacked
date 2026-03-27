@@ -13,9 +13,8 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
@@ -34,6 +33,8 @@ import com.hypixel.hytale.server.npc.validators.NPCRoleValidator;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class SpawnNPCInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -57,8 +58,8 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
       .documentation("A weighted list of entity IDs from which an entity will be selected for spawning. Supersedes any provided EntityId.")
       .add()
       .<Vector3d>append(
-         new KeyedCodec<>("SpawnOffset", Vector3d.CODEC),
-         (spawnNPCInteraction, s) -> spawnNPCInteraction.spawnOffset.assign(s),
+         new KeyedCodec<>("SpawnOffset", Vector3dUtil.CODEC),
+         (spawnNPCInteraction, s) -> spawnNPCInteraction.spawnOffset.set(s),
          spawnNPCInteraction -> spawnNPCInteraction.spawnOffset
       )
       .documentation("The offset to apply to the spawn position of the NPC, relative to the block's rotation and center.")
@@ -120,12 +121,16 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
          assert worldChunkComponent != null;
          BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
          if (blockType == null) {
-            return new SpawnNPCInteraction.SpawnData(this.spawnOffset.clone().add(targetBlock).add(0.5, 0.5, 0.5), Vector3f.ZERO);
+            return new SpawnNPCInteraction.SpawnData(
+               new Vector3d(this.spawnOffset).add(targetBlock.x, targetBlock.y, targetBlock.z).add(0.5, 0.5, 0.5), new Rotation3f(Rotation3f.IDENTITY)
+            );
          }
 
          BlockChunk blockChunkComponent = chunkStore.getStore().getComponent(chunkRef, BlockChunk.getComponentType());
          if (blockChunkComponent == null) {
-            return new SpawnNPCInteraction.SpawnData(this.spawnOffset.clone().add(targetBlock).add(0.5, 0.5, 0.5), Vector3f.ZERO);
+            return new SpawnNPCInteraction.SpawnData(
+               new Vector3d(this.spawnOffset).add(targetBlock.x, targetBlock.y, targetBlock.z).add(0.5, 0.5, 0.5), new Rotation3f(Rotation3f.IDENTITY)
+            );
          }
 
          BlockSection section = blockChunkComponent.getSectionAtBlockY(targetBlock.y);
@@ -134,11 +139,13 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
          Vector3d position = rotationTuple.rotatedVector(this.spawnOffset);
          Vector3d blockCenter = new Vector3d();
          blockType.getBlockCenter(rotationIndex, blockCenter);
-         position.add(blockCenter).add(targetBlock);
-         Vector3f rotation = new Vector3f(0.0F, (float)(rotationTuple.yaw().getRadians() + Math.toRadians(this.spawnYawOffset)), 0.0F);
+         position.add(blockCenter).add(targetBlock.x, targetBlock.y, targetBlock.z);
+         Rotation3f rotation = new Rotation3f(0.0F, (float)(rotationTuple.yaw().getRadians() + Math.toRadians(this.spawnYawOffset)), 0.0F);
          return new SpawnNPCInteraction.SpawnData(position, rotation);
       } else {
-         return new SpawnNPCInteraction.SpawnData(this.spawnOffset.clone().add(targetBlock).add(0.5, 0.5, 0.5), Vector3f.ZERO);
+         return new SpawnNPCInteraction.SpawnData(
+            new Vector3d(this.spawnOffset).add(targetBlock.x, targetBlock.y, targetBlock.z).add(0.5, 0.5, 0.5), new Rotation3f(Rotation3f.IDENTITY)
+         );
       }
    }
 
@@ -168,7 +175,7 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
       }
    }
 
-   private record SpawnData(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   private record SpawnData(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
    }
 
    protected static class WeightedNPCSpawn implements IWeightedElement {

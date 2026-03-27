@@ -4,8 +4,6 @@ import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockMigration;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
@@ -30,8 +28,10 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonValue;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
-public class BsonPrefabBufferDeserializer implements PrefabBufferDeserializer<BsonDocument> {
+public class BsonPrefabBufferDeserializer {
    public static final BsonPrefabBufferDeserializer INSTANCE = new BsonPrefabBufferDeserializer();
    public static final BsonInt32 LEGACY_BLOCK_ID_VERSION = new BsonInt32(8);
    private static final BsonInt32 DEFAULT_SUPPORT_VALUE = new BsonInt32(0);
@@ -272,8 +272,8 @@ public class BsonPrefabBufferDeserializer implements PrefabBufferDeserializer<Bs
             assert transformComponent != null;
             Vector3d position = transformComponent.getPosition();
             position.add(-anchor.x, -anchor.y, -anchor.z);
-            int x = MathUtil.floor(position.getX()) & 65535;
-            int z = MathUtil.floor(position.getZ()) & 65535;
+            int x = MathUtil.floor(position.x()) & 65535;
+            int z = MathUtil.floor(position.z()) & 65535;
             int columnIndex = MathUtil.packInt(x, z);
             List<Holder<EntityStore>> entityColumn = entityMap.get(columnIndex);
             if (entityColumn == null) {

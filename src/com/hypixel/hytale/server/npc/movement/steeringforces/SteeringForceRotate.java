@@ -37,7 +37,7 @@ public class SteeringForceRotate implements SteeringForce {
    public void setHeading(Ref<EntityStore> ref, @Nonnull Entity entity, ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      this.heading = transformComponent.getRotation().getYaw();
+      this.heading = transformComponent.getRotation().yaw();
    }
 
    public void setTolerance(double tolerance) {

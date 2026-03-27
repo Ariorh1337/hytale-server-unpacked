@@ -36,6 +36,10 @@ public class InventorySection {
 
    @Nonnull
    public static InventorySection deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 3) {
+         throw ProtocolException.bufferTooSmall("InventorySection", 3, buf.readableBytes() - offset);
+      }
+
       InventorySection obj = new InventorySection();
       byte nullBits = buf.getByte(offset);
       obj.capacity = buf.getShortLE(offset + 1);
@@ -43,14 +47,15 @@ public class InventorySection {
       if ((nullBits & 1) != 0) {
          int itemsCount = VarInt.peek(buf, pos);
          if (itemsCount < 0) {
-            throw ProtocolException.negativeLength("Items", itemsCount);
+            throw ProtocolException.invalidVarInt("Items");
          }
 
+         int itemsVarLen = VarInt.size(itemsCount);
          if (itemsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Items", itemsCount, 4096000);
          }
 
-         pos += VarInt.size(itemsCount);
+         pos += itemsVarLen;
          obj.items = new HashMap<>(itemsCount);
 
          for (int i = 0; i < itemsCount; i++) {
@@ -72,7 +77,7 @@ public class InventorySection {
       int pos = offset + 3;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -137,7 +142,7 @@ public class InventorySection {
             return ValidationResult.error("Items exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemsCount);
 
          for (int i = 0; i < itemsCount; i++) {
             pos += 4;

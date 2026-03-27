@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class PrefabPropUtil {
    @Nonnull
@@ -43,7 +43,7 @@ public class PrefabPropUtil {
    public static Vector3i getSize(@Nonnull PrefabBuffer.PrefabBufferAccessor prefab) {
       Vector3i min = getMin(prefab);
       Vector3i max = getMax(prefab);
-      return max.addScaled(min, -1);
+      return max.sub(min);
    }
 
    @Nonnull

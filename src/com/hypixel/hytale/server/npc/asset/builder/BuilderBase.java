@@ -18,7 +18,6 @@ import com.hypixel.hytale.function.consumer.BooleanConsumer;
 import com.hypixel.hytale.function.consumer.FloatConsumer;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.expression.BuilderExpressionDynamic;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
@@ -110,6 +109,7 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class BuilderBase<T> implements Builder<T> {
    private static final Pattern PATTERN = Pattern.compile("\\s*,\\s*");

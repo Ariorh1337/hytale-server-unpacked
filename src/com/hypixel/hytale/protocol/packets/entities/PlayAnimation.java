@@ -58,33 +58,57 @@ public class PlayAnimation implements Packet, ToClientPacket {
 
    @Nonnull
    public static PlayAnimation deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 14) {
+         throw ProtocolException.bufferTooSmall("PlayAnimation", 14, buf.readableBytes() - offset);
+      }
+
       PlayAnimation obj = new PlayAnimation();
       byte nullBits = buf.getByte(offset);
       obj.entityId = buf.getIntLE(offset + 1);
       obj.slot = AnimationSlot.fromValue(buf.getByte(offset + 5));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 14 + buf.getIntLE(offset + 6);
-         int itemAnimationsIdLen = VarInt.peek(buf, varPos0);
-         if (itemAnimationsIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemAnimationsId", itemAnimationsIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 6);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("ItemAnimationsId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 14 + varPosBase0;
+         int itemAnimationsIdLen = VarInt.peek(buf, varPos0);
+         if (itemAnimationsIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ItemAnimationsId");
+         }
+
+         int itemAnimationsIdVarIntLen = VarInt.size(itemAnimationsIdLen);
          if (itemAnimationsIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ItemAnimationsId", itemAnimationsIdLen, 4096000);
+         }
+
+         if (varPos0 + itemAnimationsIdVarIntLen + itemAnimationsIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemAnimationsId", varPos0 + itemAnimationsIdVarIntLen + itemAnimationsIdLen, buf.readableBytes());
          }
 
          obj.itemAnimationsId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 14 + buf.getIntLE(offset + 10);
-         int animationIdLen = VarInt.peek(buf, varPos1);
-         if (animationIdLen < 0) {
-            throw ProtocolException.negativeLength("AnimationId", animationIdLen);
+         int varPosBase1 = buf.getIntLE(offset + 10);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("AnimationId", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 14 + varPosBase1;
+         int animationIdLen = VarInt.peek(buf, varPos1);
+         if (animationIdLen < 0) {
+            throw ProtocolException.invalidVarInt("AnimationId");
+         }
+
+         int animationIdVarIntLen = VarInt.size(animationIdLen);
          if (animationIdLen > 4096000) {
             throw ProtocolException.stringTooLong("AnimationId", animationIdLen, 4096000);
+         }
+
+         if (varPos1 + animationIdVarIntLen + animationIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("AnimationId", varPos1 + animationIdVarIntLen + animationIdLen, buf.readableBytes());
          }
 
          obj.animationId = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -98,9 +122,13 @@ public class PlayAnimation implements Packet, ToClientPacket {
       int maxEnd = 14;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 6);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("ItemAnimationsId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 14 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -108,9 +136,13 @@ public class PlayAnimation implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 10);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("AnimationId", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 14 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -174,17 +206,18 @@ public class PlayAnimation implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 5) & 255;
+      if (v >= 5) {
+         return ValidationResult.error("Invalid AnimationSlot value for Slot");
+      }
+
       if ((nullBits & 1) != 0) {
-         int itemAnimationsIdOffset = buffer.getIntLE(offset + 6);
-         if (itemAnimationsIdOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for ItemAnimationsId");
          }
 
-         int pos = offset + 14 + itemAnimationsIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemAnimationsId");
-         }
-
+         int pos = offset + 14 + v;
          int itemAnimationsIdLen = VarInt.peek(buffer, pos);
          if (itemAnimationsIdLen < 0) {
             return ValidationResult.error("Invalid string length for ItemAnimationsId");
@@ -194,7 +227,7 @@ public class PlayAnimation implements Packet, ToClientPacket {
             return ValidationResult.error("ItemAnimationsId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemAnimationsIdLen);
          pos += itemAnimationsIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ItemAnimationsId");
@@ -202,16 +235,12 @@ public class PlayAnimation implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int animationIdOffset = buffer.getIntLE(offset + 10);
-         if (animationIdOffset < 0) {
+         v = buffer.getIntLE(offset + 10);
+         if (v < 0 || v > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for AnimationId");
          }
 
-         int pos = offset + 14 + animationIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AnimationId");
-         }
-
+         int pos = offset + 14 + v;
          int animationIdLen = VarInt.peek(buffer, pos);
          if (animationIdLen < 0) {
             return ValidationResult.error("Invalid string length for AnimationId");
@@ -221,7 +250,7 @@ public class PlayAnimation implements Packet, ToClientPacket {
             return ValidationResult.error("AnimationId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(animationIdLen);
          pos += animationIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading AnimationId");

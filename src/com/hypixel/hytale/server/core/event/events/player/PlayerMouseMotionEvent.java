@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.event.events.player;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.ICancellable;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.MouseMotionEvent;
 import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
@@ -10,6 +9,7 @@ import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancellable {
    private final long clientUseTime;

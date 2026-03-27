@@ -62,23 +62,32 @@ public class SetChunk implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetChunk deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 25) {
+         throw ProtocolException.bufferTooSmall("SetChunk", 25, buf.readableBytes() - offset);
+      }
+
       SetChunk obj = new SetChunk();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getIntLE(offset + 1);
       obj.y = buf.getIntLE(offset + 5);
       obj.z = buf.getIntLE(offset + 9);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 25 + buf.getIntLE(offset + 13);
-         int localLightCount = VarInt.peek(buf, varPos0);
-         if (localLightCount < 0) {
-            throw ProtocolException.negativeLength("LocalLight", localLightCount);
+         int varPosBase0 = buf.getIntLE(offset + 13);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("LocalLight", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 25 + varPosBase0;
+         int localLightCount = VarInt.peek(buf, varPos0);
+         if (localLightCount < 0) {
+            throw ProtocolException.invalidVarInt("LocalLight");
+         }
+
+         int varIntLen = VarInt.size(localLightCount);
          if (localLightCount > 4096000) {
             throw ProtocolException.arrayTooLong("LocalLight", localLightCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + localLightCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("LocalLight", varPos0 + varIntLen + localLightCount * 1, buf.readableBytes());
          }
@@ -91,17 +100,22 @@ public class SetChunk implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 25 + buf.getIntLE(offset + 17);
-         int globalLightCount = VarInt.peek(buf, varPos1);
-         if (globalLightCount < 0) {
-            throw ProtocolException.negativeLength("GlobalLight", globalLightCount);
+         int varPosBase1 = buf.getIntLE(offset + 17);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("GlobalLight", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 25 + varPosBase1;
+         int globalLightCount = VarInt.peek(buf, varPos1);
+         if (globalLightCount < 0) {
+            throw ProtocolException.invalidVarInt("GlobalLight");
+         }
+
+         int varIntLen = VarInt.size(globalLightCount);
          if (globalLightCount > 4096000) {
             throw ProtocolException.arrayTooLong("GlobalLight", globalLightCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + globalLightCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("GlobalLight", varPos1 + varIntLen + globalLightCount * 1, buf.readableBytes());
          }
@@ -114,17 +128,22 @@ public class SetChunk implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 25 + buf.getIntLE(offset + 21);
-         int dataCount = VarInt.peek(buf, varPos2);
-         if (dataCount < 0) {
-            throw ProtocolException.negativeLength("Data", dataCount);
+         int varPosBase2 = buf.getIntLE(offset + 21);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("Data", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 25 + varPosBase2;
+         int dataCount = VarInt.peek(buf, varPos2);
+         if (dataCount < 0) {
+            throw ProtocolException.invalidVarInt("Data");
+         }
+
+         int varIntLen = VarInt.size(dataCount);
          if (dataCount > 4096000) {
             throw ProtocolException.arrayTooLong("Data", dataCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + dataCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Data", varPos2 + varIntLen + dataCount * 1, buf.readableBytes());
          }
@@ -144,9 +163,13 @@ public class SetChunk implements Packet, ToClientPacket {
       int maxEnd = 25;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 13);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("LocalLight", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 25 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 1;
+         pos0 += VarInt.size(arrLen) + arrLen * 1;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -154,9 +177,13 @@ public class SetChunk implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 17);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("GlobalLight", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 25 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 1;
+         pos1 += VarInt.size(arrLen) + arrLen * 1;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -164,9 +191,13 @@ public class SetChunk implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 21);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("Data", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 25 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + arrLen * 1;
+         pos2 += VarInt.size(arrLen) + arrLen * 1;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -274,15 +305,11 @@ public class SetChunk implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int localLightOffset = buffer.getIntLE(offset + 13);
-         if (localLightOffset < 0) {
+         if (localLightOffset < 0 || localLightOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for LocalLight");
          }
 
          int pos = offset + 25 + localLightOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for LocalLight");
-         }
-
          int localLightCount = VarInt.peek(buffer, pos);
          if (localLightCount < 0) {
             return ValidationResult.error("Invalid array count for LocalLight");
@@ -292,7 +319,7 @@ public class SetChunk implements Packet, ToClientPacket {
             return ValidationResult.error("LocalLight exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(localLightCount);
          pos += localLightCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading LocalLight");
@@ -301,15 +328,11 @@ public class SetChunk implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int globalLightOffset = buffer.getIntLE(offset + 17);
-         if (globalLightOffset < 0) {
+         if (globalLightOffset < 0 || globalLightOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for GlobalLight");
          }
 
          int pos = offset + 25 + globalLightOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for GlobalLight");
-         }
-
          int globalLightCount = VarInt.peek(buffer, pos);
          if (globalLightCount < 0) {
             return ValidationResult.error("Invalid array count for GlobalLight");
@@ -319,7 +342,7 @@ public class SetChunk implements Packet, ToClientPacket {
             return ValidationResult.error("GlobalLight exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(globalLightCount);
          pos += globalLightCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading GlobalLight");
@@ -328,15 +351,11 @@ public class SetChunk implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int dataOffset = buffer.getIntLE(offset + 21);
-         if (dataOffset < 0) {
+         if (dataOffset < 0 || dataOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for Data");
          }
 
          int pos = offset + 25 + dataOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Data");
-         }
-
          int dataCount = VarInt.peek(buffer, pos);
          if (dataCount < 0) {
             return ValidationResult.error("Invalid array count for Data");
@@ -346,7 +365,7 @@ public class SetChunk implements Packet, ToClientPacket {
             return ValidationResult.error("Data exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dataCount);
          pos += dataCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Data");

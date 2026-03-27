@@ -36,6 +36,10 @@ public class EntityStatEffects {
 
    @Nonnull
    public static EntityStatEffects deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("EntityStatEffects", 6, buf.readableBytes() - offset);
+      }
+
       EntityStatEffects obj = new EntityStatEffects();
       byte nullBits = buf.getByte(offset);
       obj.triggerAtZero = buf.getByte(offset + 1) != 0;
@@ -44,14 +48,14 @@ public class EntityStatEffects {
       if ((nullBits & 1) != 0) {
          int particlesCount = VarInt.peek(buf, pos);
          if (particlesCount < 0) {
-            throw ProtocolException.negativeLength("Particles", particlesCount);
+            throw ProtocolException.invalidVarInt("Particles");
          }
 
+         int particlesVarLen = VarInt.size(particlesCount);
          if (particlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         int particlesVarLen = VarInt.size(particlesCount);
          if (pos + particlesVarLen + particlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Particles", pos + particlesVarLen + particlesCount * 34, buf.readableBytes());
          }
@@ -73,7 +77,7 @@ public class EntityStatEffects {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ModelParticle.computeBytesConsumed(buf, pos);
@@ -137,7 +141,7 @@ public class EntityStatEffects {
             return ValidationResult.error("Particles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(particlesCount);
 
          for (int i = 0; i < particlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);

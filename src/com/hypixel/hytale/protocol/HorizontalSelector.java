@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -65,6 +66,10 @@ public class HorizontalSelector extends Selector {
 
    @Nonnull
    public static HorizontalSelector deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 34) {
+         throw ProtocolException.bufferTooSmall("HorizontalSelector", 34, buf.readableBytes() - offset);
+      }
+
       HorizontalSelector obj = new HorizontalSelector();
       obj.extendTop = buf.getFloatLE(offset + 0);
       obj.extendBottom = buf.getFloatLE(offset + 4);
@@ -105,7 +110,12 @@ public class HorizontalSelector extends Selector {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 34 ? ValidationResult.error("Buffer too small: expected at least 34 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 34) {
+         return ValidationResult.error("Buffer too small: expected at least 34 bytes");
+      }
+
+      int v = buffer.getByte(offset + 32) & 255;
+      return v >= 2 ? ValidationResult.error("Invalid HorizontalSelectorDirection value for Direction") : ValidationResult.OK;
    }
 
    public HorizontalSelector clone() {

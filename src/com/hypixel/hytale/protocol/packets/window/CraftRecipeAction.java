@@ -34,6 +34,10 @@ public class CraftRecipeAction extends WindowAction {
 
    @Nonnull
    public static CraftRecipeAction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("CraftRecipeAction", 5, buf.readableBytes() - offset);
+      }
+
       CraftRecipeAction obj = new CraftRecipeAction();
       byte nullBits = buf.getByte(offset);
       obj.quantity = buf.getIntLE(offset + 1);
@@ -41,14 +45,18 @@ public class CraftRecipeAction extends WindowAction {
       if ((nullBits & 1) != 0) {
          int recipeIdLen = VarInt.peek(buf, pos);
          if (recipeIdLen < 0) {
-            throw ProtocolException.negativeLength("RecipeId", recipeIdLen);
+            throw ProtocolException.invalidVarInt("RecipeId");
          }
 
+         int recipeIdVarLen = VarInt.size(recipeIdLen);
          if (recipeIdLen > 4096000) {
             throw ProtocolException.stringTooLong("RecipeId", recipeIdLen, 4096000);
          }
 
-         int recipeIdVarLen = VarInt.length(buf, pos);
+         if (pos + recipeIdVarLen + recipeIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("RecipeId", pos + recipeIdVarLen + recipeIdLen, buf.readableBytes());
+         }
+
          obj.recipeId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += recipeIdVarLen + recipeIdLen;
       }
@@ -61,7 +69,7 @@ public class CraftRecipeAction extends WindowAction {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -111,7 +119,7 @@ public class CraftRecipeAction extends WindowAction {
             return ValidationResult.error("RecipeId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(recipeIdLen);
          pos += recipeIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading RecipeId");

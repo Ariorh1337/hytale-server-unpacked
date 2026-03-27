@@ -37,6 +37,10 @@ public class PortalDef {
 
    @Nonnull
    public static PortalDef deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("PortalDef", 9, buf.readableBytes() - offset);
+      }
+
       PortalDef obj = new PortalDef();
       byte nullBits = buf.getByte(offset);
       obj.explorationSeconds = buf.getIntLE(offset + 1);
@@ -45,14 +49,18 @@ public class PortalDef {
       if ((nullBits & 1) != 0) {
          int nameKeyLen = VarInt.peek(buf, pos);
          if (nameKeyLen < 0) {
-            throw ProtocolException.negativeLength("NameKey", nameKeyLen);
+            throw ProtocolException.invalidVarInt("NameKey");
          }
 
+         int nameKeyVarLen = VarInt.size(nameKeyLen);
          if (nameKeyLen > 4096000) {
             throw ProtocolException.stringTooLong("NameKey", nameKeyLen, 4096000);
          }
 
-         int nameKeyVarLen = VarInt.length(buf, pos);
+         if (pos + nameKeyVarLen + nameKeyLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("NameKey", pos + nameKeyVarLen + nameKeyLen, buf.readableBytes());
+         }
+
          obj.nameKey = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += nameKeyVarLen + nameKeyLen;
       }
@@ -65,7 +73,7 @@ public class PortalDef {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -111,7 +119,7 @@ public class PortalDef {
             return ValidationResult.error("NameKey exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameKeyLen);
          pos += nameKeyLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading NameKey");

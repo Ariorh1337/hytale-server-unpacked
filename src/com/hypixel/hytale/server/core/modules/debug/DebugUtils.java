@@ -1,8 +1,6 @@
 package com.hypixel.hytale.server.core.modules.debug;
 
 import com.hypixel.hytale.math.matrix.Matrix4d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.DebugFlags;
 import com.hypixel.hytale.protocol.DebugShape;
 import com.hypixel.hytale.protocol.packets.player.ClearDebugShapes;
@@ -15,6 +13,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class DebugUtils {
    public static final Vector3f COLOR_BLACK = new Vector3f(0.0F, 0.0F, 0.0F);
@@ -318,7 +318,7 @@ public class DebugUtils {
    public static void addArrow(
       @Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, float opacity, float time, int flags
    ) {
-      Vector3d directionClone = direction.clone();
+      Vector3d directionClone = new Vector3d(direction);
       Matrix4d tmp = new Matrix4d();
       Matrix4d matrix = new Matrix4d();
       matrix.identity();
@@ -336,7 +336,7 @@ public class DebugUtils {
 
    public static void addForce(@Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d force, @Nullable VelocityConfig velocityConfig) {
       if (DISPLAY_FORCES) {
-         Vector3d forceClone = force.clone();
+         Vector3d forceClone = new Vector3d(force);
          if (velocityConfig == null || SplitVelocity.SHOULD_MODIFY_VELOCITY) {
             forceClone.x = forceClone.x / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
             forceClone.z = forceClone.z / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;

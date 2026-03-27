@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -36,6 +37,10 @@ public class CameraSettings {
 
    @Nonnull
    public static CameraSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("CameraSettings", 21, buf.readableBytes() - offset);
+      }
+
       CameraSettings obj = new CameraSettings();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -43,12 +48,22 @@ public class CameraSettings {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 21 + buf.getIntLE(offset + 13);
+         int varPosBase0 = buf.getIntLE(offset + 13);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Yaw", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 21 + varPosBase0;
          obj.yaw = CameraAxis.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 21 + buf.getIntLE(offset + 17);
+         int varPosBase1 = buf.getIntLE(offset + 17);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Pitch", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 21 + varPosBase1;
          obj.pitch = CameraAxis.deserialize(buf, varPos1);
       }
 
@@ -60,6 +75,10 @@ public class CameraSettings {
       int maxEnd = 21;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 13);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Yaw", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 21 + fieldOffset0;
          pos0 += CameraAxis.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -69,6 +88,10 @@ public class CameraSettings {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 17);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Pitch", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 21 + fieldOffset1;
          pos1 += CameraAxis.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -142,15 +165,11 @@ public class CameraSettings {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
          int yawOffset = buffer.getIntLE(offset + 13);
-         if (yawOffset < 0) {
+         if (yawOffset < 0 || yawOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Yaw");
          }
 
          int pos = offset + 21 + yawOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Yaw");
-         }
-
          ValidationResult yawResult = CameraAxis.validateStructure(buffer, pos);
          if (!yawResult.isValid()) {
             return ValidationResult.error("Invalid Yaw: " + yawResult.error());
@@ -161,15 +180,11 @@ public class CameraSettings {
 
       if ((nullBits & 4) != 0) {
          int pitchOffset = buffer.getIntLE(offset + 17);
-         if (pitchOffset < 0) {
+         if (pitchOffset < 0 || pitchOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Pitch");
          }
 
          int pos = offset + 21 + pitchOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Pitch");
-         }
-
          ValidationResult pitchResult = CameraAxis.validateStructure(buffer, pos);
          if (!pitchResult.isValid()) {
             return ValidationResult.error("Invalid Pitch: " + pitchResult.error());

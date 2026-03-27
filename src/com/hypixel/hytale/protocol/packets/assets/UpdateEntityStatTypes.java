@@ -57,6 +57,10 @@ public class UpdateEntityStatTypes implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateEntityStatTypes deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateEntityStatTypes", 6, buf.readableBytes() - offset);
+      }
+
       UpdateEntityStatTypes obj = new UpdateEntityStatTypes();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateEntityStatTypes implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int typesCount = VarInt.peek(buf, pos);
          if (typesCount < 0) {
-            throw ProtocolException.negativeLength("Types", typesCount);
+            throw ProtocolException.invalidVarInt("Types");
          }
 
+         int typesVarLen = VarInt.size(typesCount);
          if (typesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Types", typesCount, 4096000);
          }
 
-         pos += VarInt.size(typesCount);
+         pos += typesVarLen;
          obj.types = new HashMap<>(typesCount);
 
          for (int i = 0; i < typesCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateEntityStatTypes implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateEntityStatTypes implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int typesCount = VarInt.peek(buffer, pos);
+         int typesCount = VarInt.peek(buffer, v);
          if (typesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Types");
          }
@@ -162,15 +172,15 @@ public class UpdateEntityStatTypes implements Packet, ToClientPacket {
             return ValidationResult.error("Types exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(typesCount);
 
          for (int i = 0; i < typesCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += EntityStatType.computeBytesConsumed(buffer, pos);
+            v += EntityStatType.computeBytesConsumed(buffer, v);
          }
       }
 

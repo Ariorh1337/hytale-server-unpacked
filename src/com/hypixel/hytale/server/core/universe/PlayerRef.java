@@ -11,8 +11,8 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -109,7 +109,7 @@ public class PlayerRef implements Component<EntityStore>, MetricProvider, IMessa
    @Nullable
    private UUID worldUuid;
    private Transform transform = new Transform(0.0, 0.0, 0.0, 0.0F, 0.0F, 0.0F);
-   private Vector3f headRotation = new Vector3f(0.0F, 0.0F, 0.0F);
+   private Rotation3f headRotation = new Rotation3f(0.0F, 0.0F, 0.0F);
 
    @Nonnull
    public static ComponentType<EntityStore, PlayerRef> getComponentType() {
@@ -236,14 +236,14 @@ public class PlayerRef implements Component<EntityStore>, MetricProvider, IMessa
    }
 
    @Nonnull
-   public Vector3f getHeadRotation() {
+   public Rotation3f getHeadRotation() {
       return this.headRotation;
    }
 
-   public void updatePosition(@Nonnull World world, @Nonnull Transform transform, @Nonnull Vector3f headRotation) {
+   public void updatePosition(@Nonnull World world, @Nonnull Transform transform, @Nonnull Rotation3f headRotation) {
       this.worldUuid = world.getWorldConfig().getUuid();
-      this.transform.assign(transform);
-      this.headRotation.assign(headRotation);
+      this.transform.set(transform);
+      this.headRotation.set(headRotation);
    }
 
    @Deprecated

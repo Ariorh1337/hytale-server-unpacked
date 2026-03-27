@@ -10,8 +10,11 @@ import com.hypixel.hytale.assetstore.event.RemoveAssetStoreEvent;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.common.plugin.Mod;
+import com.hypixel.hytale.common.plugin.ModLoadOrderException;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
@@ -55,6 +58,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
@@ -67,7 +71,7 @@ public class AssetModule extends JavaPlugin {
    @Nullable
    private AssetMonitor assetMonitor;
    @Nonnull
-   private final List<AssetPack> assetPacks = new CopyOnWriteArrayList<>();
+   private List<AssetPack> assetPacks = new CopyOnWriteArrayList<>();
    private final List<ObjectBooleanPair<AssetPack>> pendingAssetPacks = new ArrayList<>();
    private boolean hasSetup = false;
    private boolean hasLoaded = false;
@@ -186,24 +190,7 @@ public class AssetModule extends JavaPlugin {
                );
          }
 
-         this.getEventRegistry().register((short)-16, LoadAssetEvent.class, event -> {
-            if (this.hasLoaded) {
-               throw new IllegalStateException("LoadAssetEvent has already been dispatched");
-            }
-
-            AssetRegistry.ASSET_LOCK.writeLock().lock();
-
-            try {
-               this.hasLoaded = true;
-               AssetRegistryLoader.preLoadAssets(event);
-
-               for (AssetPack packx : this.assetPacks) {
-                  AssetRegistryLoader.loadAssets(event, packx);
-               }
-            } finally {
-               AssetRegistry.ASSET_LOCK.writeLock().unlock();
-            }
-         });
+         this.getEventRegistry().register((short)-16, LoadAssetEvent.class, this::loadAllAssetPacks);
          this.getEventRegistry().register((short)-16, AssetPackRegisterEvent.class, event -> AssetRegistryLoader.loadAssets(null, event.getAssetPack()));
          this.getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {
             for (AssetStore<?, ?, ?> assetStore : AssetRegistry.getStoreMap().values()) {
@@ -448,6 +435,40 @@ public class AssetModule extends JavaPlugin {
          } finally {
             AssetRegistry.ASSET_LOCK.writeLock().unlock();
          }
+      }
+   }
+
+   private void loadAllAssetPacks(LoadAssetEvent event) {
+      if (this.hasLoaded) {
+         throw new IllegalStateException("LoadAssetEvent has already been dispatched");
+      }
+
+      AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+      try {
+         this.hasLoaded = true;
+         AssetRegistryLoader.preLoadAssets(event);
+         HashMap<PluginIdentifier, AssetPack> pendingPacks = new HashMap<>();
+
+         for (AssetPack assetPack : this.assetPacks) {
+            pendingPacks.put(PluginIdentifier.fromString(assetPack.getName()), assetPack);
+         }
+
+         List<PluginIdentifier> modOrder = List.of(HytaleServer.get().getConfig().getModLoadOrder());
+
+         try {
+            this.assetPacks = new CopyOnWriteArrayList<>(
+               Mod.calculateLoadOrder(pendingPacks, pluginIdentifier -> PluginManager.get().hasPlugin(pluginIdentifier, SemverRange.WILDCARD), modOrder)
+            );
+         } catch (ModLoadOrderException e) {
+            throw new IllegalStateException("Failed to calculate asset pack load order", e);
+         }
+
+         for (AssetPack pack : this.assetPacks) {
+            AssetRegistryLoader.loadAssets(event, pack);
+         }
+      } finally {
+         AssetRegistry.ASSET_LOCK.writeLock().unlock();
       }
    }
 

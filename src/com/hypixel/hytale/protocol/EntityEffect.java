@@ -95,6 +95,10 @@ public class EntityEffect {
 
    @Nonnull
    public static EntityEffect deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 49) {
+         throw ProtocolException.bufferTooSmall("EntityEffect", 49, buf.readableBytes() - offset);
+      }
+
       EntityEffect obj = new EntityEffect();
       byte nullBits = buf.getByte(offset);
       obj.worldRemovalSoundEventIndex = buf.getIntLE(offset + 1);
@@ -106,69 +110,114 @@ public class EntityEffect {
       obj.damageCalculatorCooldown = buf.getDoubleLE(offset + 16);
       obj.valueType = ValueType.fromValue(buf.getByte(offset + 24));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 49 + buf.getIntLE(offset + 25);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 25);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 49 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 49 + buf.getIntLE(offset + 29);
-         int nameLen = VarInt.peek(buf, varPos1);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase1 = buf.getIntLE(offset + 29);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("Name", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 49 + varPosBase1;
+         int nameLen = VarInt.peek(buf, varPos1);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos1 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos1 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 49 + buf.getIntLE(offset + 33);
+         int varPosBase2 = buf.getIntLE(offset + 33);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("ApplicationEffects", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 49 + varPosBase2;
          obj.applicationEffects = ApplicationEffects.deserialize(buf, varPos2);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 49 + buf.getIntLE(offset + 37);
+         int varPosBase3 = buf.getIntLE(offset + 37);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("ModelOverride", varPosBase3, buf.readableBytes());
+         }
+
+         int varPos3 = offset + 49 + varPosBase3;
          obj.modelOverride = ModelOverride.deserialize(buf, varPos3);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 49 + buf.getIntLE(offset + 41);
-         int statusEffectIconLen = VarInt.peek(buf, varPos4);
-         if (statusEffectIconLen < 0) {
-            throw ProtocolException.negativeLength("StatusEffectIcon", statusEffectIconLen);
+         int varPosBase4 = buf.getIntLE(offset + 41);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("StatusEffectIcon", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 49 + varPosBase4;
+         int statusEffectIconLen = VarInt.peek(buf, varPos4);
+         if (statusEffectIconLen < 0) {
+            throw ProtocolException.invalidVarInt("StatusEffectIcon");
+         }
+
+         int statusEffectIconVarIntLen = VarInt.size(statusEffectIconLen);
          if (statusEffectIconLen > 4096000) {
             throw ProtocolException.stringTooLong("StatusEffectIcon", statusEffectIconLen, 4096000);
+         }
+
+         if (varPos4 + statusEffectIconVarIntLen + statusEffectIconLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("StatusEffectIcon", varPos4 + statusEffectIconVarIntLen + statusEffectIconLen, buf.readableBytes());
          }
 
          obj.statusEffectIcon = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos5 = offset + 49 + buf.getIntLE(offset + 45);
-         int statModifiersCount = VarInt.peek(buf, varPos5);
-         if (statModifiersCount < 0) {
-            throw ProtocolException.negativeLength("StatModifiers", statModifiersCount);
+         int varPosBase5 = buf.getIntLE(offset + 45);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("StatModifiers", varPosBase5, buf.readableBytes());
          }
 
+         int varPos5 = offset + 49 + varPosBase5;
+         int statModifiersCount = VarInt.peek(buf, varPos5);
+         if (statModifiersCount < 0) {
+            throw ProtocolException.invalidVarInt("StatModifiers");
+         }
+
+         int varIntLen = VarInt.size(statModifiersCount);
          if (statModifiersCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("StatModifiers", statModifiersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos5);
          obj.statModifiers = new HashMap<>(statModifiersCount);
          int dictPos = varPos5 + varIntLen;
 
@@ -191,9 +240,13 @@ public class EntityEffect {
       int maxEnd = 49;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 25);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 49 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -201,9 +254,13 @@ public class EntityEffect {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 29);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 49 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -211,6 +268,10 @@ public class EntityEffect {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 33);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("ApplicationEffects", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 49 + fieldOffset2;
          pos2 += ApplicationEffects.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -220,6 +281,10 @@ public class EntityEffect {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 37);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("ModelOverride", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 49 + fieldOffset3;
          pos3 += ModelOverride.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
@@ -229,9 +294,13 @@ public class EntityEffect {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 41);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("StatusEffectIcon", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 49 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -239,9 +308,13 @@ public class EntityEffect {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 45);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 49) {
+            throw ProtocolException.invalidOffset("StatModifiers", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 49 + fieldOffset5;
          int dictLen = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5);
+         pos5 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos5 += 4;
@@ -392,17 +465,23 @@ public class EntityEffect {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 15) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid OverlapBehavior value for OverlapBehavior");
+      }
+
+      v = buffer.getByte(offset + 24) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid ValueType value for ValueType");
+      }
+
       if ((nullBits & 1) != 0) {
-         int idOffset = buffer.getIntLE(offset + 25);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 25);
+         if (v < 0 || v > buffer.writerIndex() - offset - 49) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 49 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 49 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -412,7 +491,7 @@ public class EntityEffect {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -420,16 +499,12 @@ public class EntityEffect {
       }
 
       if ((nullBits & 2) != 0) {
-         int nameOffset = buffer.getIntLE(offset + 29);
-         if (nameOffset < 0) {
+         v = buffer.getIntLE(offset + 29);
+         if (v < 0 || v > buffer.writerIndex() - offset - 49) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
-         int pos = offset + 49 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
+         int pos = offset + 49 + v;
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -439,7 +514,7 @@ public class EntityEffect {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -447,16 +522,12 @@ public class EntityEffect {
       }
 
       if ((nullBits & 4) != 0) {
-         int applicationEffectsOffset = buffer.getIntLE(offset + 33);
-         if (applicationEffectsOffset < 0) {
+         v = buffer.getIntLE(offset + 33);
+         if (v < 0 || v > buffer.writerIndex() - offset - 49) {
             return ValidationResult.error("Invalid offset for ApplicationEffects");
          }
 
-         int pos = offset + 49 + applicationEffectsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ApplicationEffects");
-         }
-
+         int pos = offset + 49 + v;
          ValidationResult applicationEffectsResult = ApplicationEffects.validateStructure(buffer, pos);
          if (!applicationEffectsResult.isValid()) {
             return ValidationResult.error("Invalid ApplicationEffects: " + applicationEffectsResult.error());
@@ -466,16 +537,12 @@ public class EntityEffect {
       }
 
       if ((nullBits & 8) != 0) {
-         int modelOverrideOffset = buffer.getIntLE(offset + 37);
-         if (modelOverrideOffset < 0) {
+         v = buffer.getIntLE(offset + 37);
+         if (v < 0 || v > buffer.writerIndex() - offset - 49) {
             return ValidationResult.error("Invalid offset for ModelOverride");
          }
 
-         int pos = offset + 49 + modelOverrideOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ModelOverride");
-         }
-
+         int pos = offset + 49 + v;
          ValidationResult modelOverrideResult = ModelOverride.validateStructure(buffer, pos);
          if (!modelOverrideResult.isValid()) {
             return ValidationResult.error("Invalid ModelOverride: " + modelOverrideResult.error());
@@ -485,16 +552,12 @@ public class EntityEffect {
       }
 
       if ((nullBits & 16) != 0) {
-         int statusEffectIconOffset = buffer.getIntLE(offset + 41);
-         if (statusEffectIconOffset < 0) {
+         v = buffer.getIntLE(offset + 41);
+         if (v < 0 || v > buffer.writerIndex() - offset - 49) {
             return ValidationResult.error("Invalid offset for StatusEffectIcon");
          }
 
-         int pos = offset + 49 + statusEffectIconOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for StatusEffectIcon");
-         }
-
+         int pos = offset + 49 + v;
          int statusEffectIconLen = VarInt.peek(buffer, pos);
          if (statusEffectIconLen < 0) {
             return ValidationResult.error("Invalid string length for StatusEffectIcon");
@@ -504,7 +567,7 @@ public class EntityEffect {
             return ValidationResult.error("StatusEffectIcon exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(statusEffectIconLen);
          pos += statusEffectIconLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading StatusEffectIcon");
@@ -512,16 +575,12 @@ public class EntityEffect {
       }
 
       if ((nullBits & 32) != 0) {
-         int statModifiersOffset = buffer.getIntLE(offset + 45);
-         if (statModifiersOffset < 0) {
+         v = buffer.getIntLE(offset + 45);
+         if (v < 0 || v > buffer.writerIndex() - offset - 49) {
             return ValidationResult.error("Invalid offset for StatModifiers");
          }
 
-         int pos = offset + 49 + statModifiersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for StatModifiers");
-         }
-
+         int pos = offset + 49 + v;
          int statModifiersCount = VarInt.peek(buffer, pos);
          if (statModifiersCount < 0) {
             return ValidationResult.error("Invalid dictionary count for StatModifiers");
@@ -531,7 +590,7 @@ public class EntityEffect {
             return ValidationResult.error("StatModifiers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(statModifiersCount);
 
          for (int i = 0; i < statModifiersCount; i++) {
             pos += 4;

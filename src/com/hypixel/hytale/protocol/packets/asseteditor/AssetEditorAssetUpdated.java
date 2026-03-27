@@ -50,25 +50,39 @@ public class AssetEditorAssetUpdated implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorAssetUpdated deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetUpdated", 9, buf.readableBytes() - offset);
+      }
+
       AssetEditorAssetUpdated obj = new AssetEditorAssetUpdated();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 9 + varPosBase0;
          obj.path = AssetPath.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int dataCount = VarInt.peek(buf, varPos1);
-         if (dataCount < 0) {
-            throw ProtocolException.negativeLength("Data", dataCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Data", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int dataCount = VarInt.peek(buf, varPos1);
+         if (dataCount < 0) {
+            throw ProtocolException.invalidVarInt("Data");
+         }
+
+         int varIntLen = VarInt.size(dataCount);
          if (dataCount > 4096000) {
             throw ProtocolException.arrayTooLong("Data", dataCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + dataCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Data", varPos1 + varIntLen + dataCount * 1, buf.readableBytes());
          }
@@ -88,6 +102,10 @@ public class AssetEditorAssetUpdated implements Packet, ToClientPacket {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -97,9 +115,13 @@ public class AssetEditorAssetUpdated implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Data", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 1;
+         pos1 += VarInt.size(arrLen) + arrLen * 1;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -171,15 +193,11 @@ public class AssetEditorAssetUpdated implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int pathOffset = buffer.getIntLE(offset + 1);
-         if (pathOffset < 0) {
+         if (pathOffset < 0 || pathOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
          int pos = offset + 9 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
          ValidationResult pathResult = AssetPath.validateStructure(buffer, pos);
          if (!pathResult.isValid()) {
             return ValidationResult.error("Invalid Path: " + pathResult.error());
@@ -190,15 +208,11 @@ public class AssetEditorAssetUpdated implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int dataOffset = buffer.getIntLE(offset + 5);
-         if (dataOffset < 0) {
+         if (dataOffset < 0 || dataOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Data");
          }
 
          int pos = offset + 9 + dataOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Data");
-         }
-
          int dataCount = VarInt.peek(buffer, pos);
          if (dataCount < 0) {
             return ValidationResult.error("Invalid array count for Data");
@@ -208,7 +222,7 @@ public class AssetEditorAssetUpdated implements Packet, ToClientPacket {
             return ValidationResult.error("Data exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dataCount);
          pos += dataCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Data");

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -30,6 +31,10 @@ public class EasingConfig {
 
    @Nonnull
    public static EasingConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("EasingConfig", 5, buf.readableBytes() - offset);
+      }
+
       EasingConfig obj = new EasingConfig();
       obj.time = buf.getFloatLE(offset + 0);
       obj.type = EasingType.fromValue(buf.getByte(offset + 4));
@@ -50,7 +55,12 @@ public class EasingConfig {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 5 ? ValidationResult.error("Buffer too small: expected at least 5 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 5) {
+         return ValidationResult.error("Buffer too small: expected at least 5 bytes");
+      }
+
+      int v = buffer.getByte(offset + 4) & 255;
+      return v >= 31 ? ValidationResult.error("Invalid EasingType value for Type") : ValidationResult.OK;
    }
 
    public EasingConfig clone() {

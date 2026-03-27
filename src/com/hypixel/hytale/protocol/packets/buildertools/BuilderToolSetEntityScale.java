@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class BuilderToolSetEntityScale implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolSetEntityScale deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityScale", 8, buf.readableBytes() - offset);
+      }
+
       BuilderToolSetEntityScale obj = new BuilderToolSetEntityScale();
       obj.entityId = buf.getIntLE(offset + 0);
       obj.scale = buf.getFloatLE(offset + 4);

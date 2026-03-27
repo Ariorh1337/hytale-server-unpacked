@@ -11,7 +11,7 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.codec.LayerEntryCodec;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -78,7 +78,7 @@ public class LayerOperation extends SequenceBrushOperation {
       }
 
       BlockAccessor chunk = edit.getAccessor().getChunk(ChunkUtil.indexChunkFromBlock(x, z));
-      builderState.layer(x, y, z, layers, maxDepth, Vector3i.DOWN, (WorldChunk)chunk, edit.getBefore(), edit.getAfter());
+      builderState.layer(x, y, z, layers, maxDepth, Vector3iUtil.DOWN, (WorldChunk)chunk, edit.getBefore(), edit.getAfter());
       return true;
    }
 

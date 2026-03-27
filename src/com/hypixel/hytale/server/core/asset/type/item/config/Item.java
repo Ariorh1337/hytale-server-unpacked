@@ -397,6 +397,16 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .documentation("Whether this item should loose durability on death, if so configured in DeathConfig.")
       .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("Repairable", Codec.BOOLEAN),
+         (item, s) -> item.repairable = s,
+         item -> item.repairable,
+         (item, parent) -> item.repairable = parent.repairable
+      )
+      .documentation(
+         "Whether this item can be repaired with a repair kit. Defaults to true. Set to false for items that use durability as a consumable resource (e.g. watering cans, fertilizer)."
+      )
+      .add()
       .<String>appendInherited(
          new KeyedCodec<>("BlockType", new ContainedAssetCodec<>(BlockType.class, BlockType.CODEC, ContainedAssetCodec.Mode.INHERIT_ID_AND_PARENT)),
          (item, s) -> item.hasBlockType = true,
@@ -562,6 +572,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected ItemHudUI[] hudUI;
    protected boolean dropOnDeath;
    protected boolean durabilityLossOnDeath = true;
+   protected boolean repairable = true;
    private transient SoftReference<ItemBase> cachedPacket;
 
    public static AssetStore<String, Item, DefaultAssetMap<String, Item>> getAssetStore() {
@@ -634,6 +645,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       this.clipsGeometry = other.clipsGeometry;
       this.renderDeployablePreview = other.renderDeployablePreview;
       this.dropOnDeath = other.dropOnDeath;
+      this.repairable = other.repairable;
    }
 
    @Nonnull
@@ -1029,6 +1041,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
    public boolean getDurabilityLossOnDeath() {
       return this.durabilityLossOnDeath;
+   }
+
+   public boolean isRepairable() {
+      return this.repairable;
    }
 
    public int[] getDisplayEntityStatsHUD() {

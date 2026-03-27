@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.connection;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -46,6 +47,10 @@ public class ClientDisconnect implements Packet, ToServerPacket {
 
    @Nonnull
    public static ClientDisconnect deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("ClientDisconnect", 2, buf.readableBytes() - offset);
+      }
+
       ClientDisconnect obj = new ClientDisconnect();
       obj.reason = ClientDisconnectReason.fromValue(buf.getByte(offset + 0));
       obj.type = DisconnectType.fromValue(buf.getByte(offset + 1));
@@ -68,7 +73,17 @@ public class ClientDisconnect implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 2 ? ValidationResult.error("Buffer too small: expected at least 2 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 2) {
+         return ValidationResult.error("Buffer too small: expected at least 2 bytes");
+      }
+
+      int v = buffer.getByte(offset + 0) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid ClientDisconnectReason value for Reason");
+      }
+
+      v = buffer.getByte(offset + 1) & 255;
+      return v >= 2 ? ValidationResult.error("Invalid DisconnectType value for Type") : ValidationResult.OK;
    }
 
    public ClientDisconnect clone() {

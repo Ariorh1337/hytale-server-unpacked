@@ -38,20 +38,29 @@ public class RotationNoise {
 
    @Nonnull
    public static RotationNoise deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("RotationNoise", 13, buf.readableBytes() - offset);
+      }
+
       RotationNoise obj = new RotationNoise();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         int pitchCount = VarInt.peek(buf, varPos0);
-         if (pitchCount < 0) {
-            throw ProtocolException.negativeLength("Pitch", pitchCount);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Pitch", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int pitchCount = VarInt.peek(buf, varPos0);
+         if (pitchCount < 0) {
+            throw ProtocolException.invalidVarInt("Pitch");
+         }
+
+         int varIntLen = VarInt.size(pitchCount);
          if (pitchCount > 4096000) {
             throw ProtocolException.arrayTooLong("Pitch", pitchCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + pitchCount * 23L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Pitch", varPos0 + varIntLen + pitchCount * 23, buf.readableBytes());
          }
@@ -66,17 +75,22 @@ public class RotationNoise {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int yawCount = VarInt.peek(buf, varPos1);
-         if (yawCount < 0) {
-            throw ProtocolException.negativeLength("Yaw", yawCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Yaw", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int yawCount = VarInt.peek(buf, varPos1);
+         if (yawCount < 0) {
+            throw ProtocolException.invalidVarInt("Yaw");
+         }
+
+         int varIntLen = VarInt.size(yawCount);
          if (yawCount > 4096000) {
             throw ProtocolException.arrayTooLong("Yaw", yawCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + yawCount * 23L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Yaw", varPos1 + varIntLen + yawCount * 23, buf.readableBytes());
          }
@@ -91,17 +105,22 @@ public class RotationNoise {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int rollCount = VarInt.peek(buf, varPos2);
-         if (rollCount < 0) {
-            throw ProtocolException.negativeLength("Roll", rollCount);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Roll", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 13 + varPosBase2;
+         int rollCount = VarInt.peek(buf, varPos2);
+         if (rollCount < 0) {
+            throw ProtocolException.invalidVarInt("Roll");
+         }
+
+         int varIntLen = VarInt.size(rollCount);
          if (rollCount > 4096000) {
             throw ProtocolException.arrayTooLong("Roll", rollCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + rollCount * 23L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Roll", varPos2 + varIntLen + rollCount * 23, buf.readableBytes());
          }
@@ -123,9 +142,13 @@ public class RotationNoise {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Pitch", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += NoiseConfig.computeBytesConsumed(buf, pos0);
@@ -138,9 +161,13 @@ public class RotationNoise {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Yaw", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += NoiseConfig.computeBytesConsumed(buf, pos1);
@@ -153,9 +180,13 @@ public class RotationNoise {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Roll", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += NoiseConfig.computeBytesConsumed(buf, pos2);
@@ -263,15 +294,11 @@ public class RotationNoise {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int pitchOffset = buffer.getIntLE(offset + 1);
-         if (pitchOffset < 0) {
+         if (pitchOffset < 0 || pitchOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Pitch");
          }
 
          int pos = offset + 13 + pitchOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Pitch");
-         }
-
          int pitchCount = VarInt.peek(buffer, pos);
          if (pitchCount < 0) {
             return ValidationResult.error("Invalid array count for Pitch");
@@ -281,7 +308,7 @@ public class RotationNoise {
             return ValidationResult.error("Pitch exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(pitchCount);
          pos += pitchCount * 23;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Pitch");
@@ -290,15 +317,11 @@ public class RotationNoise {
 
       if ((nullBits & 2) != 0) {
          int yawOffset = buffer.getIntLE(offset + 5);
-         if (yawOffset < 0) {
+         if (yawOffset < 0 || yawOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Yaw");
          }
 
          int pos = offset + 13 + yawOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Yaw");
-         }
-
          int yawCount = VarInt.peek(buffer, pos);
          if (yawCount < 0) {
             return ValidationResult.error("Invalid array count for Yaw");
@@ -308,7 +331,7 @@ public class RotationNoise {
             return ValidationResult.error("Yaw exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(yawCount);
          pos += yawCount * 23;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Yaw");
@@ -317,15 +340,11 @@ public class RotationNoise {
 
       if ((nullBits & 4) != 0) {
          int rollOffset = buffer.getIntLE(offset + 9);
-         if (rollOffset < 0) {
+         if (rollOffset < 0 || rollOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Roll");
          }
 
          int pos = offset + 13 + rollOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Roll");
-         }
-
          int rollCount = VarInt.peek(buffer, pos);
          if (rollCount < 0) {
             return ValidationResult.error("Invalid array count for Roll");
@@ -335,7 +354,7 @@ public class RotationNoise {
             return ValidationResult.error("Roll exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(rollCount);
          pos += rollCount * 23;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Roll");

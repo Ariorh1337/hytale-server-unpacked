@@ -70,35 +70,64 @@ public class Notification implements Packet, ToClientPacket {
 
    @Nonnull
    public static Notification deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 18) {
+         throw ProtocolException.bufferTooSmall("Notification", 18, buf.readableBytes() - offset);
+      }
+
       Notification obj = new Notification();
       byte nullBits = buf.getByte(offset);
       obj.style = NotificationStyle.fromValue(buf.getByte(offset + 1));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 18 + buf.getIntLE(offset + 2);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Message", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 18 + varPosBase0;
          obj.message = FormattedMessage.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 18 + buf.getIntLE(offset + 6);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("SecondaryMessage", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 18 + varPosBase1;
          obj.secondaryMessage = FormattedMessage.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 18 + buf.getIntLE(offset + 10);
-         int iconLen = VarInt.peek(buf, varPos2);
-         if (iconLen < 0) {
-            throw ProtocolException.negativeLength("Icon", iconLen);
+         int varPosBase2 = buf.getIntLE(offset + 10);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Icon", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 18 + varPosBase2;
+         int iconLen = VarInt.peek(buf, varPos2);
+         if (iconLen < 0) {
+            throw ProtocolException.invalidVarInt("Icon");
+         }
+
+         int iconVarIntLen = VarInt.size(iconLen);
          if (iconLen > 4096000) {
             throw ProtocolException.stringTooLong("Icon", iconLen, 4096000);
+         }
+
+         if (varPos2 + iconVarIntLen + iconLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Icon", varPos2 + iconVarIntLen + iconLen, buf.readableBytes());
          }
 
          obj.icon = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 18 + buf.getIntLE(offset + 14);
+         int varPosBase3 = buf.getIntLE(offset + 14);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Item", varPosBase3, buf.readableBytes());
+         }
+
+         int varPos3 = offset + 18 + varPosBase3;
          obj.item = ItemWithAllMetadata.deserialize(buf, varPos3);
       }
 
@@ -110,6 +139,10 @@ public class Notification implements Packet, ToClientPacket {
       int maxEnd = 18;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Message", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 18 + fieldOffset0;
          pos0 += FormattedMessage.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -119,6 +152,10 @@ public class Notification implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("SecondaryMessage", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 18 + fieldOffset1;
          pos1 += FormattedMessage.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -128,9 +165,13 @@ public class Notification implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 10);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Icon", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 18 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -138,6 +179,10 @@ public class Notification implements Packet, ToClientPacket {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 14);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Item", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 18 + fieldOffset3;
          pos3 += ItemWithAllMetadata.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
@@ -236,17 +281,18 @@ public class Notification implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid NotificationStyle value for Style");
+      }
+
       if ((nullBits & 1) != 0) {
-         int messageOffset = buffer.getIntLE(offset + 2);
-         if (messageOffset < 0) {
+         v = buffer.getIntLE(offset + 2);
+         if (v < 0 || v > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Message");
          }
 
-         int pos = offset + 18 + messageOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Message");
-         }
-
+         int pos = offset + 18 + v;
          ValidationResult messageResult = FormattedMessage.validateStructure(buffer, pos);
          if (!messageResult.isValid()) {
             return ValidationResult.error("Invalid Message: " + messageResult.error());
@@ -256,16 +302,12 @@ public class Notification implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int secondaryMessageOffset = buffer.getIntLE(offset + 6);
-         if (secondaryMessageOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for SecondaryMessage");
          }
 
-         int pos = offset + 18 + secondaryMessageOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SecondaryMessage");
-         }
-
+         int pos = offset + 18 + v;
          ValidationResult secondaryMessageResult = FormattedMessage.validateStructure(buffer, pos);
          if (!secondaryMessageResult.isValid()) {
             return ValidationResult.error("Invalid SecondaryMessage: " + secondaryMessageResult.error());
@@ -275,16 +317,12 @@ public class Notification implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int iconOffset = buffer.getIntLE(offset + 10);
-         if (iconOffset < 0) {
+         v = buffer.getIntLE(offset + 10);
+         if (v < 0 || v > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Icon");
          }
 
-         int pos = offset + 18 + iconOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Icon");
-         }
-
+         int pos = offset + 18 + v;
          int iconLen = VarInt.peek(buffer, pos);
          if (iconLen < 0) {
             return ValidationResult.error("Invalid string length for Icon");
@@ -294,7 +332,7 @@ public class Notification implements Packet, ToClientPacket {
             return ValidationResult.error("Icon exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(iconLen);
          pos += iconLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Icon");
@@ -302,16 +340,12 @@ public class Notification implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 8) != 0) {
-         int itemOffset = buffer.getIntLE(offset + 14);
-         if (itemOffset < 0) {
+         v = buffer.getIntLE(offset + 14);
+         if (v < 0 || v > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Item");
          }
 
-         int pos = offset + 18 + itemOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Item");
-         }
-
+         int pos = offset + 18 + v;
          ValidationResult itemResult = ItemWithAllMetadata.validateStructure(buffer, pos);
          if (!itemResult.isValid()) {
             return ValidationResult.error("Invalid Item: " + itemResult.error());

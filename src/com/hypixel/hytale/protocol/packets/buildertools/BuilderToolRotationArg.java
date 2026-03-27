@@ -1,6 +1,7 @@
 package com.hypixel.hytale.protocol.packets.buildertools;
 
 import com.hypixel.hytale.protocol.Rotation;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -28,6 +29,10 @@ public class BuilderToolRotationArg {
 
    @Nonnull
    public static BuilderToolRotationArg deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("BuilderToolRotationArg", 1, buf.readableBytes() - offset);
+      }
+
       BuilderToolRotationArg obj = new BuilderToolRotationArg();
       obj.defaultValue = Rotation.fromValue(buf.getByte(offset + 0));
       return obj;
@@ -46,7 +51,12 @@ public class BuilderToolRotationArg {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 1 ? ValidationResult.error("Buffer too small: expected at least 1 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 1) {
+         return ValidationResult.error("Buffer too small: expected at least 1 bytes");
+      }
+
+      int v = buffer.getByte(offset + 0) & 255;
+      return v >= 4 ? ValidationResult.error("Invalid Rotation value for Default") : ValidationResult.OK;
    }
 
    public BuilderToolRotationArg clone() {

@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -48,6 +49,10 @@ public class ServerMessage implements Packet, ToClientPacket {
 
    @Nonnull
    public static ServerMessage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("ServerMessage", 2, buf.readableBytes() - offset);
+      }
+
       ServerMessage obj = new ServerMessage();
       byte nullBits = buf.getByte(offset);
       obj.type = ChatType.fromValue(buf.getByte(offset + 1));
@@ -100,14 +105,19 @@ public class ServerMessage implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 1) {
+         return ValidationResult.error("Invalid ChatType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         ValidationResult messageResult = FormattedMessage.validateStructure(buffer, pos);
+         ValidationResult messageResult = FormattedMessage.validateStructure(buffer, v);
          if (!messageResult.isValid()) {
             return ValidationResult.error("Invalid Message: " + messageResult.error());
          }
 
-         pos += FormattedMessage.computeBytesConsumed(buffer, pos);
+         v += FormattedMessage.computeBytesConsumed(buffer, v);
       }
 
       return ValidationResult.OK;

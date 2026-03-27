@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.universe.world.commands;
 
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box2D;
-import com.hypixel.hytale.math.vector.Vector2d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -24,6 +23,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class WorldSettingsCommand extends AbstractCommandCollection {
    @Nonnull
@@ -143,7 +143,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
       );
       this.generateSubCommand(
          "chunksaving",
-         "server.commands.world.settings.chunksaving.desc",
+         "server.commands.world.settings.chunkSaving.desc",
          "enabled",
          ArgTypes.BOOLEAN,
          "server.commands.world.settings.chunksaving.name",
@@ -152,7 +152,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
       );
       this.generateSubCommand(
          "chunkunloading",
-         "server.commands.world.settings.chunkunload.desc",
+         "server.commands.world.settings.chunkUnload.desc",
          "enabled",
          ArgTypes.BOOLEAN,
          "server.commands.world.settings.chunkunloading.name",

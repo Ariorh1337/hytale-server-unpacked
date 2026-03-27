@@ -57,6 +57,10 @@ public class UpdateFluidFX implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateFluidFX deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateFluidFX", 6, buf.readableBytes() - offset);
+      }
+
       UpdateFluidFX obj = new UpdateFluidFX();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateFluidFX implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int fluidFXCount = VarInt.peek(buf, pos);
          if (fluidFXCount < 0) {
-            throw ProtocolException.negativeLength("FluidFX", fluidFXCount);
+            throw ProtocolException.invalidVarInt("FluidFX");
          }
 
+         int fluidFXVarLen = VarInt.size(fluidFXCount);
          if (fluidFXCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("FluidFX", fluidFXCount, 4096000);
          }
 
-         pos += VarInt.size(fluidFXCount);
+         pos += fluidFXVarLen;
          obj.fluidFX = new HashMap<>(fluidFXCount);
 
          for (int i = 0; i < fluidFXCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateFluidFX implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateFluidFX implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int fluidFXCount = VarInt.peek(buffer, pos);
+         int fluidFXCount = VarInt.peek(buffer, v);
          if (fluidFXCount < 0) {
             return ValidationResult.error("Invalid dictionary count for FluidFX");
          }
@@ -162,15 +172,15 @@ public class UpdateFluidFX implements Packet, ToClientPacket {
             return ValidationResult.error("FluidFX exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(fluidFXCount);
 
          for (int i = 0; i < fluidFXCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += FluidFX.computeBytesConsumed(buffer, pos);
+            v += FluidFX.computeBytesConsumed(buffer, v);
          }
       }
 

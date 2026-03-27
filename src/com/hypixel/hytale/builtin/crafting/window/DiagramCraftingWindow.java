@@ -24,7 +24,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.DiagramC
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemContainerWindow;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -96,13 +96,11 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
    @Override
    public boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
       boolean result = super.onOpen0(ref, store);
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
-      Inventory inventory = playerComponent.getInventory();
+      CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
       this.updateInput(null, ref, store);
-      this.inventoryRegistration = inventory.getCombinedHotbarFirst().registerChangeEvent(event -> {
+      this.inventoryRegistration = combinedInventory.registerChangeEvent(event -> {
          ObjectList<CraftingRecipe> recipes = new ObjectArrayList<>();
-         this.windowData.add("slots", this.generateSlots(inventory.getCombinedHotbarFirst(), recipes));
+         this.windowData.add("slots", this.generateSlots(combinedInventory, recipes));
          this.invalidate();
       });
       return result;
@@ -110,10 +108,9 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
 
    @Override
    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
       List<ItemStack> itemStacks = this.combinedInputItemContainer.dropAllItemStacks();
-      SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
+      CombinedItemContainer combinedInventory = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
+      SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, combinedInventory, itemStacks);
       CraftingManager craftingManagerComponent = componentAccessor.getComponent(ref, CraftingManager.getComponentType());
       assert craftingManagerComponent != null;
       craftingManagerComponent.cancelAllCrafting(ref, componentAccessor);
@@ -211,10 +208,9 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
       @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull CraftingBench.BenchItemCategory benchItemCategory
    ) {
       if (this.combinedInputItemContainer != null) {
-         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-         assert playerComponent != null;
          List<ItemStack> itemStacks = this.combinedInputItemContainer.dropAllItemStacks();
-         SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
+         CombinedItemContainer combinedInventory = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
+         SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, combinedInventory, itemStacks);
       }
 
       this.inputPrimaryContainer = new SimpleItemContainer((short)1);
@@ -241,8 +237,8 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
    private void updateInput(@Nullable ItemContainer container, @Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
+      CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
       ItemStack primaryItemStack = this.inputPrimaryContainer.getItemStack((short)0);
-      CombinedItemContainer combinedStorage = playerComponent.getInventory().getCombinedHotbarFirst();
       if (primaryItemStack != null && !primaryItemStack.isEmpty()) {
          this.inputSecondaryContainer.setGlobalFilter(FilterType.ALLOW_ALL);
          boolean needsDropSlot = true;
@@ -262,13 +258,13 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
          this.inputSecondaryContainer.setGlobalFilter(FilterType.ALLOW_OUTPUT_ONLY);
          if (container != this.inputSecondaryContainer && !this.inputSecondaryContainer.isEmpty()) {
             List<ItemStack> itemStacks = this.inputSecondaryContainer.dropAllItemStacks();
-            SimpleItemContainer.addOrDropItemStacks(store, ref, combinedStorage, itemStacks);
+            SimpleItemContainer.addOrDropItemStacks(store, ref, combinedInventory, itemStacks);
          }
       }
 
       List<CraftingRecipe> recipes = new ObjectArrayList<>();
       boolean allSlotsFull = this.collectRecipes(ref, recipes, store);
-      this.windowData.add("slots", this.generateSlots(combinedStorage, recipes));
+      this.windowData.add("slots", this.generateSlots(combinedInventory, recipes));
       if (recipes.size() == 1 && allSlotsFull) {
          CraftingRecipe recipe = recipes.getFirst();
          ItemStack output = CraftingManager.getOutputItemStacks(recipe).getFirst();

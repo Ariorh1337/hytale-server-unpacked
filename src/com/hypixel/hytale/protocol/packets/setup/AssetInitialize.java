@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.Asset;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -46,6 +47,10 @@ public class AssetInitialize implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetInitialize deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("AssetInitialize", 4, buf.readableBytes() - offset);
+      }
+
       AssetInitialize obj = new AssetInitialize();
       obj.size = buf.getIntLE(offset + 0);
       int pos = offset + 4;

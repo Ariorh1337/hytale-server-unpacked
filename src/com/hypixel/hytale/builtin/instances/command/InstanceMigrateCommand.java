@@ -105,7 +105,7 @@ public class InstanceMigrateCommand extends AbstractAsyncCommand {
          return CompletableFuture.<CompletableFuture<Void>>supplyAsync(() -> {
             ChunkStore chunkStore = world.getChunkStore();
             ChunkSavingSystems.Data data = chunkStore.getStore().getResource(ChunkStore.SAVE_RESOURCE);
-            data.isSaving = false;
+            world.lockSaving();
             return data.waitForSavingChunks();
          }, world).thenCompose(val -> (CompletionStage<Void>)val).thenComposeAsync(SneakyThrow.sneakyFunction(_void -> {
             LongSet chunks = loader.getIndexes();
@@ -251,6 +251,7 @@ public class InstanceMigrateCommand extends AbstractAsyncCommand {
             }
 
             return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).whenCompleteAsync((result, throwable) -> {
+               world.unlockSaving();
                context.sendMessage(Message.translation("server.commands.instances.migrate.worldDone").param("asset", asset));
                Universe.get().removeWorld(worldName);
             });

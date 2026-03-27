@@ -52,23 +52,32 @@ public class InteractionConfiguration {
 
    @Nonnull
    public static InteractionConfiguration deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("InteractionConfiguration", 12, buf.readableBytes() - offset);
+      }
+
       InteractionConfiguration obj = new InteractionConfiguration();
       byte nullBits = buf.getByte(offset);
       obj.displayOutlines = buf.getByte(offset + 1) != 0;
       obj.debugOutlines = buf.getByte(offset + 2) != 0;
       obj.allEntities = buf.getByte(offset + 3) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 12 + buf.getIntLE(offset + 4);
-         int useDistanceCount = VarInt.peek(buf, varPos0);
-         if (useDistanceCount < 0) {
-            throw ProtocolException.negativeLength("UseDistance", useDistanceCount);
+         int varPosBase0 = buf.getIntLE(offset + 4);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("UseDistance", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 12 + varPosBase0;
+         int useDistanceCount = VarInt.peek(buf, varPos0);
+         if (useDistanceCount < 0) {
+            throw ProtocolException.invalidVarInt("UseDistance");
+         }
+
+         int varIntLen = VarInt.size(useDistanceCount);
          if (useDistanceCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("UseDistance", useDistanceCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          obj.useDistance = new HashMap<>(useDistanceCount);
          int dictPos = varPos0 + varIntLen;
 
@@ -83,17 +92,22 @@ public class InteractionConfiguration {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 12 + buf.getIntLE(offset + 8);
-         int prioritiesCount = VarInt.peek(buf, varPos1);
-         if (prioritiesCount < 0) {
-            throw ProtocolException.negativeLength("Priorities", prioritiesCount);
+         int varPosBase1 = buf.getIntLE(offset + 8);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("Priorities", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 12 + varPosBase1;
+         int prioritiesCount = VarInt.peek(buf, varPos1);
+         if (prioritiesCount < 0) {
+            throw ProtocolException.invalidVarInt("Priorities");
+         }
+
+         int varIntLen = VarInt.size(prioritiesCount);
          if (prioritiesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Priorities", prioritiesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.priorities = new HashMap<>(prioritiesCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -115,9 +129,13 @@ public class InteractionConfiguration {
       int maxEnd = 12;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 4);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("UseDistance", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 12 + fieldOffset0;
          int dictLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos0 = ++pos0 + 4;
@@ -130,9 +148,13 @@ public class InteractionConfiguration {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 8);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("Priorities", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 12 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + InteractionPriority.computeBytesConsumed(buf, pos1);
@@ -226,15 +248,11 @@ public class InteractionConfiguration {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int useDistanceOffset = buffer.getIntLE(offset + 4);
-         if (useDistanceOffset < 0) {
+         if (useDistanceOffset < 0 || useDistanceOffset > buffer.writerIndex() - offset - 12) {
             return ValidationResult.error("Invalid offset for UseDistance");
          }
 
          int pos = offset + 12 + useDistanceOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for UseDistance");
-         }
-
          int useDistanceCount = VarInt.peek(buffer, pos);
          if (useDistanceCount < 0) {
             return ValidationResult.error("Invalid dictionary count for UseDistance");
@@ -244,9 +262,14 @@ public class InteractionConfiguration {
             return ValidationResult.error("UseDistance exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(useDistanceCount);
 
          for (int i = 0; i < useDistanceCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 2) {
+               return ValidationResult.error("Invalid GameMode value for key");
+            }
+
             pos = ++pos + 4;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");
@@ -256,15 +279,11 @@ public class InteractionConfiguration {
 
       if ((nullBits & 2) != 0) {
          int prioritiesOffset = buffer.getIntLE(offset + 8);
-         if (prioritiesOffset < 0) {
+         if (prioritiesOffset < 0 || prioritiesOffset > buffer.writerIndex() - offset - 12) {
             return ValidationResult.error("Invalid offset for Priorities");
          }
 
          int pos = offset + 12 + prioritiesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Priorities");
-         }
-
          int prioritiesCount = VarInt.peek(buffer, pos);
          if (prioritiesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Priorities");
@@ -274,9 +293,14 @@ public class InteractionConfiguration {
             return ValidationResult.error("Priorities exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(prioritiesCount);
 
          for (int i = 0; i < prioritiesCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for key");
+            }
+
             pos = ++pos + InteractionPriority.computeBytesConsumed(buffer, pos);
          }
       }

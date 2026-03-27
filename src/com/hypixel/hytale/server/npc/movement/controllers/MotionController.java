@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.npc.movement.controllers;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
@@ -21,6 +21,8 @@ import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public interface MotionController extends DebugSupport.DebugFlagsChangeListener {
    String getType();
@@ -97,9 +99,9 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    double getCurrentTurnRadius();
 
-   double waypointDistance(Vector3d var1, Vector3d var2);
+   double waypointDistance(Vector3dc var1, Vector3dc var2);
 
-   double waypointDistanceSquared(Vector3d var1, Vector3d var2);
+   double waypointDistanceSquared(Vector3dc var1, Vector3dc var2);
 
    double waypointDistance(@Nonnull Ref<EntityStore> var1, Vector3d var2, @Nonnull ComponentAccessor<EntityStore> var3);
 
@@ -119,15 +121,15 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    boolean is2D();
 
-   Vector3d getWorldNormal();
+   Vector3dc getWorldNormal();
 
-   Vector3d getWorldAntiNormal();
+   Vector3dc getWorldAntiNormal();
 
    void addForce(@Nonnull Vector3d var1, @Nullable VelocityConfig var2);
 
    Vector3d getForce();
 
-   void forceVelocity(@Nonnull Vector3d var1, @Nullable VelocityConfig var2, boolean var3);
+   void forceVelocity(@Nonnull Vector3dc var1, @Nullable VelocityConfig var2, boolean var3);
 
    MotionController.VerticalRange getDesiredVerticalRange(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
@@ -181,7 +183,7 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
    }
 
    default double getSquaredDistance(@Nonnull Vector3d p1, @Nonnull Vector3d p2, boolean useProjectedDistance) {
-      return useProjectedDistance ? this.waypointDistanceSquared(p1, p2) : p1.distanceSquaredTo(p2);
+      return useProjectedDistance ? this.waypointDistanceSquared(p1, p2) : p1.distanceSquared(p2);
    }
 
    void updatePhysicsValues(PhysicsValues var1);
@@ -202,7 +204,7 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
          case IDLE, WALKING -> {
             Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
             assert velocityComponent != null;
-            boolean isIdle = velocityComponent.getVelocity().closeToZero(0.001);
+            boolean isIdle = Vector3dUtil.closeToZero(velocityComponent.getVelocity(), 0.001);
             yield state == MovementState.IDLE
                ? isIdle
                : !isIdle

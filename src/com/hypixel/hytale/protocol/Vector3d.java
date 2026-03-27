@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class Vector3d {
 
    @Nonnull
    public static Vector3d deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("Vector3d", 24, buf.readableBytes() - offset);
+      }
+
       Vector3d obj = new Vector3d();
       obj.x = buf.getDoubleLE(offset + 0);
       obj.y = buf.getDoubleLE(offset + 8);

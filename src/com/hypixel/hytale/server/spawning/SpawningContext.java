@@ -5,8 +5,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
@@ -26,6 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SpawningContext {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -527,7 +527,7 @@ public class SpawningContext {
          return false;
       }
 
-      this.position.assign(this.xSpawn, this.ySpawn, this.zSpawn);
+      this.position.set(this.xSpawn, this.ySpawn, this.zSpawn);
       return CollisionModule.get()
             .validatePosition(
                this.world,
@@ -576,8 +576,8 @@ public class SpawningContext {
    }
 
    @Nonnull
-   public Vector3f newRotation() {
-      return new Vector3f((float)this.pitch, (float)this.yaw, (float)this.roll);
+   public Rotation3f newRotation() {
+      return new Rotation3f((float)this.pitch, (float)this.yaw, (float)this.roll);
    }
 
    @Nonnull

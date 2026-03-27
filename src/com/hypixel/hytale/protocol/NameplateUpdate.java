@@ -34,14 +34,18 @@ public class NameplateUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int textLen = VarInt.peek(buf, pos);
       if (textLen < 0) {
-         throw ProtocolException.negativeLength("Text", textLen);
+         throw ProtocolException.invalidVarInt("Text");
       }
 
+      int textVarLen = VarInt.size(textLen);
       if (textLen > 4096000) {
          throw ProtocolException.stringTooLong("Text", textLen, 4096000);
       }
 
-      int textVarLen = VarInt.length(buf, pos);
+      if (pos + textVarLen + textLen > buf.readableBytes()) {
+         throw ProtocolException.bufferTooSmall("Text", pos + textVarLen + textLen, buf.readableBytes());
+      }
+
       obj.text = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
       pos += textVarLen + textLen;
       return obj;
@@ -50,7 +54,7 @@ public class NameplateUpdate extends ComponentUpdate {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int sl = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + sl;
+      pos += VarInt.size(sl) + sl;
       return pos - offset;
    }
 
@@ -82,7 +86,7 @@ public class NameplateUpdate extends ComponentUpdate {
          return ValidationResult.error("Text exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(textLen);
       pos += textLen;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading Text") : ValidationResult.OK;
    }

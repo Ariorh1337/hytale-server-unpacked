@@ -57,6 +57,10 @@ public class UpdateTagPatterns implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateTagPatterns deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateTagPatterns", 6, buf.readableBytes() - offset);
+      }
+
       UpdateTagPatterns obj = new UpdateTagPatterns();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateTagPatterns implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int patternsCount = VarInt.peek(buf, pos);
          if (patternsCount < 0) {
-            throw ProtocolException.negativeLength("Patterns", patternsCount);
+            throw ProtocolException.invalidVarInt("Patterns");
          }
 
+         int patternsVarLen = VarInt.size(patternsCount);
          if (patternsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Patterns", patternsCount, 4096000);
          }
 
-         pos += VarInt.size(patternsCount);
+         pos += patternsVarLen;
          obj.patterns = new HashMap<>(patternsCount);
 
          for (int i = 0; i < patternsCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateTagPatterns implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateTagPatterns implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int patternsCount = VarInt.peek(buffer, pos);
+         int patternsCount = VarInt.peek(buffer, v);
          if (patternsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Patterns");
          }
@@ -162,15 +172,15 @@ public class UpdateTagPatterns implements Packet, ToClientPacket {
             return ValidationResult.error("Patterns exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(patternsCount);
 
          for (int i = 0; i < patternsCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += TagPattern.computeBytesConsumed(buffer, pos);
+            v += TagPattern.computeBytesConsumed(buffer, v);
          }
       }
 

@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.PickupLocation;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -93,6 +94,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
 
    @Nonnull
    public static SyncPlayerPreferences deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("SyncPlayerPreferences", 12, buf.readableBytes() - offset);
+      }
+
       SyncPlayerPreferences obj = new SyncPlayerPreferences();
       obj.showEntityMarkers = buf.getByte(offset + 0) != 0;
       obj.armorItemsPreferredPickupLocation = PickupLocation.fromValue(buf.getByte(offset + 1));
@@ -135,7 +140,32 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 12 ? ValidationResult.error("Buffer too small: expected at least 12 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 12) {
+         return ValidationResult.error("Buffer too small: expected at least 12 bytes");
+      }
+
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid PickupLocation value for ArmorItemsPreferredPickupLocation");
+      }
+
+      v = buffer.getByte(offset + 2) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid PickupLocation value for WeaponAndToolItemsPreferredPickupLocation");
+      }
+
+      v = buffer.getByte(offset + 3) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid PickupLocation value for UsableItemsItemsPreferredPickupLocation");
+      }
+
+      v = buffer.getByte(offset + 4) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid PickupLocation value for SolidBlockItemsPreferredPickupLocation");
+      }
+
+      v = buffer.getByte(offset + 5) & 255;
+      return v >= 3 ? ValidationResult.error("Invalid PickupLocation value for MiscItemsPreferredPickupLocation") : ValidationResult.OK;
    }
 
    public SyncPlayerPreferences clone() {

@@ -130,6 +130,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
@@ -171,7 +172,9 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    private final Path worldsPath = this.path.resolve("worlds");
    private final Path worldsDeletedPath = this.worldsPath.resolveSibling("worlds-deleted");
    @Nonnull
-   private final Map<UUID, PlayerRef> players = new ConcurrentHashMap<>();
+   private final Map<UUID, PlayerRef> playersByUuid = new ConcurrentHashMap<>();
+   @Nonnull
+   private final Collection<PlayerRef> players = Collections.unmodifiableCollection(this.playersByUuid.values());
    @Nonnull
    private final Map<String, World> worlds = new ConcurrentHashMap<>();
    @Nonnull
@@ -183,6 +186,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    private ResourceType<ChunkStore, WorldMarkersResource> worldMarkersResourceType;
    private CompletableFuture<Void> universeReady;
    private final AtomicBoolean isBackingUp = new AtomicBoolean(false);
+   private final StorageManager storageManager = new StorageManager(this::isSavingLocked);
+   private final AtomicInteger savingLocks = new AtomicInteger(0);
 
    public static Universe get() {
       return instance;
@@ -229,20 +234,44 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    @Nonnull
    public CompletableFuture<Void> runBackup() {
       Path backupDir = HytaleServer.get().getConfig().getBackupConfig().getDirectory();
-      return backupDir == null
-         ? CompletableFuture.failedFuture(new IllegalStateException("Backup directory not configured"))
-         : CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.<ChunkSavingSystems.Data>supplyAsync(() -> {
-               Store<ChunkStore> componentStore = world.getChunkStore().getStore();
-               ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
-               data.isSaving = false;
-               return data;
-            }, world).thenCompose(ChunkSavingSystems.Data::waitForSavingChunks)).toArray(CompletableFuture[]::new))
-            .thenCompose(aVoid -> BackupTask.start(this.path, backupDir))
-            .thenCompose(success -> CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.runAsync(() -> {
-               Store<ChunkStore> componentStore = world.getChunkStore().getStore();
-               ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
-               data.isSaving = true;
-            }, world)).toArray(CompletableFuture[]::new)).thenApply(aVoid -> success));
+      if (backupDir == null) {
+         return CompletableFuture.failedFuture(new IllegalStateException("Backup directory not configured"));
+      }
+
+      this.lockSaving();
+      return this.storageManager
+         .pendingOperations()
+         .thenCompose(
+            v -> CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.<ChunkSavingSystems.Data>supplyAsync(() -> {
+                  Store<ChunkStore> componentStore = world.getChunkStore().getStore();
+                  ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
+                  world.getChunkStore().pauseBackgroundSaving(data);
+                  world.lockSaving();
+                  return data;
+               }, world).thenCompose(ChunkSavingSystems.Data::waitForSavingChunks)).toArray(CompletableFuture[]::new))
+               .thenCompose(aVoid -> BackupTask.start(this.path, backupDir))
+               .thenCompose(success -> CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.runAsync(() -> {
+                  world.getChunkStore().resumeBackgroundSaving();
+                  world.unlockSaving();
+               }, world)).toArray(CompletableFuture[]::new)).thenApply(aVoid -> success))
+         )
+         .whenComplete((u, throwable) -> this.unlockSaving());
+   }
+
+   public boolean isSavingLocked() {
+      return this.savingLocks.get() > 0;
+   }
+
+   public void lockSaving() {
+      this.savingLocks.incrementAndGet();
+   }
+
+   public void unlockSaving() {
+      int result = this.savingLocks.decrementAndGet();
+      assert result >= 0 : "savingLocks underflow";
+      if (result == 0) {
+         this.storageManager.onSavingRelease();
+      }
    }
 
    @Override
@@ -637,7 +666,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       FormattedMessage message = reason != null && reason.getFormattedMessage() != null
          ? reason.getFormattedMessage()
          : Message.translation("server.general.disconnect.stoppingServer").getFormattedMessage();
-      this.players.values().forEach(player -> player.getPacketHandler().disconnect(message));
+      this.playersByUuid.values().forEach(player -> player.getPacketHandler().disconnect(message));
    }
 
    public void shutdownAllWorlds() {
@@ -924,37 +953,37 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    }
 
    @Nonnull
-   public List<PlayerRef> getPlayers() {
-      return new ObjectArrayList<>(this.players.values());
+   public Collection<PlayerRef> getPlayers() {
+      return this.players;
    }
 
    @Nullable
    public PlayerRef getPlayer(@Nonnull UUID uuid) {
-      return this.players.get(uuid);
+      return this.playersByUuid.get(uuid);
    }
 
    @Nullable
    public PlayerRef getPlayer(@Nonnull String value, @Nonnull NameMatching matching) {
-      return matching.find(this.players.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername());
+      return matching.find(this.playersByUuid.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername());
    }
 
    @Nullable
    public PlayerRef getPlayer(@Nonnull String value, @Nonnull Comparator<String> comparator, @Nonnull BiPredicate<String, String> equality) {
-      return NameMatching.find(this.players.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername(), comparator, equality);
+      return NameMatching.find(this.playersByUuid.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername(), comparator, equality);
    }
 
    @Nullable
    public PlayerRef getPlayerByUsername(@Nonnull String value, @Nonnull NameMatching matching) {
-      return matching.find(this.players.values(), value, PlayerRef::getUsername);
+      return matching.find(this.playersByUuid.values(), value, PlayerRef::getUsername);
    }
 
    @Nullable
    public PlayerRef getPlayerByUsername(@Nonnull String value, @Nonnull Comparator<String> comparator, @Nonnull BiPredicate<String, String> equality) {
-      return NameMatching.find(this.players.values(), value, PlayerRef::getUsername, comparator, equality);
+      return NameMatching.find(this.playersByUuid.values(), value, PlayerRef::getUsername, comparator, equality);
    }
 
    public int getPlayerCount() {
-      return this.players.size();
+      return this.playersByUuid.size();
    }
 
    @Nonnull
@@ -1028,7 +1057,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                   holder.addComponent(EntityTrackerSystems.EntityViewer.getComponentType(), entityViewerComponent);
                }
 
-               PlayerRef existingPlayer = this.players.putIfAbsent(uuid, playerRefComponent);
+               PlayerRef existingPlayer = this.playersByUuid.putIfAbsent(uuid, playerRefComponent);
                if (existingPlayer != null) {
                   this.getLogger().at(Level.WARNING).log("Player '%s' (%s) already joining from another connection, rejecting duplicate", username, uuid);
                   playerConnection.disconnect(Message.translation("client.general.disconnect.accountAlreadyConnecting"));
@@ -1042,14 +1071,14 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                   .<Void, PlayerConnectEvent>dispatchFor(PlayerConnectEvent.class)
                   .dispatch(new PlayerConnectEvent((Holder<EntityStore>)holder, playerRefComponent, lastWorld != null ? lastWorld : this.getDefaultWorld()));
                if (!channel.isActive()) {
-                  this.players.remove(uuid, playerRefComponent);
+                  this.playersByUuid.remove(uuid, playerRefComponent);
                   this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected during PlayerConnectEvent, cleaned up", username, uuid);
                   return CompletableFuture.completedFuture(null);
                }
 
                World world = event.getWorld() != null ? event.getWorld() : this.getDefaultWorld();
                if (world == null) {
-                  this.players.remove(uuid, playerRefComponent);
+                  this.playersByUuid.remove(uuid, playerRefComponent);
                   playerConnection.disconnect(Message.translation("client.general.disconnect.noWorldAvailable"));
                   this.getLogger().at(Level.SEVERE).log("Player '%s' (%s) could not join - no default world configured", username, uuid);
                   return CompletableFuture.completedFuture(null);
@@ -1065,7 +1094,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                playerRefComponent.getPacketHandler().write(new ServerTags(AssetRegistry.getClientTags()));
                CompletableFuture<PlayerRef> addPlayerFuture = world.addPlayer(playerRefComponent, null, false, false);
                if (addPlayerFuture == null) {
-                  this.players.remove(uuid, playerRefComponent);
+                  this.playersByUuid.remove(uuid, playerRefComponent);
                   this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected before world addition, cleaned up", username, uuid);
                   return CompletableFuture.completedFuture(null);
                } else {
@@ -1076,17 +1105,17 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                            playerComponent.remove();
                         }
 
-                        this.players.remove(uuid, playerRefComponent);
+                        this.playersByUuid.remove(uuid, playerRefComponent);
                         this.getLogger().at(Level.WARNING).log("Player '%s' (%s) disconnected during world join, cleaned up from universe", username, uuid);
                         return null;
                      } else if (playerComponent.wasRemoved()) {
-                        this.players.remove(uuid, playerRefComponent);
+                        this.playersByUuid.remove(uuid, playerRefComponent);
                         return null;
                      } else {
                         return (PlayerRef)p;
                      }
                   }).exceptionally(throwable -> {
-                     this.players.remove(uuid, playerRefComponent);
+                     this.playersByUuid.remove(uuid, playerRefComponent);
                      playerComponent.remove();
                      throw new RuntimeException("Exception when adding player to universe:", throwable);
                   });
@@ -1148,9 +1177,9 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    }
 
    private void finalizePlayerRemoval(@Nonnull PlayerRef playerRef) {
-      this.players.remove(playerRef.getUuid());
+      this.playersByUuid.remove(playerRef.getUuid());
       if (Constants.SINGLEPLAYER) {
-         if (this.players.isEmpty()) {
+         if (this.playersByUuid.isEmpty()) {
             this.getLogger().at(Level.INFO).log("No players left on singleplayer server shutting down!");
             HytaleServer.get().shutdownServer();
          } else if (SingleplayerModule.isOwner(playerRef)) {
@@ -1231,27 +1260,31 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
 
    @Override
    public void sendMessage(@Nonnull Message message) {
-      for (PlayerRef ref : this.players.values()) {
+      for (PlayerRef ref : this.playersByUuid.values()) {
          ref.sendMessage(message);
       }
    }
 
    public void broadcastPacket(@Nonnull ToClientPacket packet) {
-      for (PlayerRef player : this.players.values()) {
+      for (PlayerRef player : this.playersByUuid.values()) {
          player.getPacketHandler().write(packet);
       }
    }
 
    public void broadcastPacketNoCache(@Nonnull ToClientPacket packet) {
-      for (PlayerRef player : this.players.values()) {
+      for (PlayerRef player : this.playersByUuid.values()) {
          player.getPacketHandler().writeNoCache(packet);
       }
    }
 
    public void broadcastPacket(@Nonnull ToClientPacket... packets) {
-      for (PlayerRef player : this.players.values()) {
+      for (PlayerRef player : this.playersByUuid.values()) {
          player.getPacketHandler().write(packets);
       }
+   }
+
+   public StorageManager getStorageManager() {
+      return this.storageManager;
    }
 
    public PlayerStorage getPlayerStorage() {

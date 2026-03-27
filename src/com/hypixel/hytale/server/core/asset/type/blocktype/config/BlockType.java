@@ -28,8 +28,6 @@ import com.hypixel.hytale.common.util.MapUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.BlockFlags;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.BlockNeighbor;
@@ -87,6 +85,8 @@ import java.util.function.ToIntFunction;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<String, BlockType>>, NetworkSerializable<com.hypixel.hytale.protocol.BlockType> {
    public static final AssetBuilderCodec<String, BlockType> CODEC = AssetBuilderCodec.<String, BlockType>builder(
@@ -1907,7 +1907,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
       BlockBoundingBoxes.RotatedVariantBoxes rotatedHitbox = hitboxAsset.get(rotationIndex);
       Box boundingBox = rotatedHitbox.getBoundingBox();
-      outCenter.assign(boundingBox.middleX(), boundingBox.middleY(), boundingBox.middleZ());
+      outCenter.set(boundingBox.middleX(), boundingBox.middleY(), boundingBox.middleZ());
    }
 
    @Nonnull

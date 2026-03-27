@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
@@ -38,6 +37,7 @@ import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ChunkTintCommand extends AbstractPlayerCommand {
    private static final int BLUR_RADIUS = 5;
@@ -70,8 +70,8 @@ public class ChunkTintCommand extends AbstractPlayerCommand {
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
-      int chunkX = MathUtil.floor(position.getX()) >> 5;
-      int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+      int chunkX = MathUtil.floor(position.x()) >> 5;
+      int chunkZ = MathUtil.floor(position.z()) >> 5;
       ChunkStore chunkStore = world.getChunkStore();
       Store<ChunkStore> chunkStoreStore = chunkStore.getStore();
       LongOpenHashSet updateChunks = new LongOpenHashSet();

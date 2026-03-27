@@ -35,22 +35,41 @@ public class TimestampedAssetReference {
 
    @Nonnull
    public static TimestampedAssetReference deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("TimestampedAssetReference", 9, buf.readableBytes() - offset);
+      }
+
       TimestampedAssetReference obj = new TimestampedAssetReference();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 9 + varPosBase0;
          obj.path = AssetPath.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int timestampLen = VarInt.peek(buf, varPos1);
-         if (timestampLen < 0) {
-            throw ProtocolException.negativeLength("Timestamp", timestampLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Timestamp", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int timestampLen = VarInt.peek(buf, varPos1);
+         if (timestampLen < 0) {
+            throw ProtocolException.invalidVarInt("Timestamp");
+         }
+
+         int timestampVarIntLen = VarInt.size(timestampLen);
          if (timestampLen > 4096000) {
             throw ProtocolException.stringTooLong("Timestamp", timestampLen, 4096000);
+         }
+
+         if (varPos1 + timestampVarIntLen + timestampLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Timestamp", varPos1 + timestampVarIntLen + timestampLen, buf.readableBytes());
          }
 
          obj.timestamp = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -64,6 +83,10 @@ public class TimestampedAssetReference {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -73,9 +96,13 @@ public class TimestampedAssetReference {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Timestamp", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -137,15 +164,11 @@ public class TimestampedAssetReference {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int pathOffset = buffer.getIntLE(offset + 1);
-         if (pathOffset < 0) {
+         if (pathOffset < 0 || pathOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
          int pos = offset + 9 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
          ValidationResult pathResult = AssetPath.validateStructure(buffer, pos);
          if (!pathResult.isValid()) {
             return ValidationResult.error("Invalid Path: " + pathResult.error());
@@ -156,15 +179,11 @@ public class TimestampedAssetReference {
 
       if ((nullBits & 2) != 0) {
          int timestampOffset = buffer.getIntLE(offset + 5);
-         if (timestampOffset < 0) {
+         if (timestampOffset < 0 || timestampOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Timestamp");
          }
 
          int pos = offset + 9 + timestampOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Timestamp");
-         }
-
          int timestampLen = VarInt.peek(buffer, pos);
          if (timestampLen < 0) {
             return ValidationResult.error("Invalid string length for Timestamp");
@@ -174,7 +193,7 @@ public class TimestampedAssetReference {
             return ValidationResult.error("Timestamp exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(timestampLen);
          pos += timestampLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Timestamp");

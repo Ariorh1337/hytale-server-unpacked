@@ -68,37 +68,50 @@ public class UpdateItems implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateItems deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("UpdateItems", 12, buf.readableBytes() - offset);
+      }
+
       UpdateItems obj = new UpdateItems();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
       obj.updateModels = buf.getByte(offset + 2) != 0;
       obj.updateIcons = buf.getByte(offset + 3) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 12 + buf.getIntLE(offset + 4);
-         int itemsCount = VarInt.peek(buf, varPos0);
-         if (itemsCount < 0) {
-            throw ProtocolException.negativeLength("Items", itemsCount);
+         int varPosBase0 = buf.getIntLE(offset + 4);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("Items", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 12 + varPosBase0;
+         int itemsCount = VarInt.peek(buf, varPos0);
+         if (itemsCount < 0) {
+            throw ProtocolException.invalidVarInt("Items");
+         }
+
+         int varIntLen = VarInt.size(itemsCount);
          if (itemsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Items", itemsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          obj.items = new HashMap<>(itemsCount);
          int dictPos = varPos0 + varIntLen;
 
          for (int i = 0; i < itemsCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             ItemBase val = ItemBase.deserialize(buf, dictPos);
@@ -110,17 +123,22 @@ public class UpdateItems implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 12 + buf.getIntLE(offset + 8);
-         int removedItemsCount = VarInt.peek(buf, varPos1);
-         if (removedItemsCount < 0) {
-            throw ProtocolException.negativeLength("RemovedItems", removedItemsCount);
+         int varPosBase1 = buf.getIntLE(offset + 8);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("RemovedItems", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 12 + varPosBase1;
+         int removedItemsCount = VarInt.peek(buf, varPos1);
+         if (removedItemsCount < 0) {
+            throw ProtocolException.invalidVarInt("RemovedItems");
+         }
+
+         int varIntLen = VarInt.size(removedItemsCount);
          if (removedItemsCount > 4096000) {
             throw ProtocolException.arrayTooLong("RemovedItems", removedItemsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + removedItemsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("RemovedItems", varPos1 + varIntLen + removedItemsCount * 1, buf.readableBytes());
          }
@@ -131,14 +149,18 @@ public class UpdateItems implements Packet, ToClientPacket {
          for (int i = 0; i < removedItemsCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("removedItems[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("removedItems[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("removedItems[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("removedItems[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.removedItems[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
@@ -152,13 +174,17 @@ public class UpdateItems implements Packet, ToClientPacket {
       int maxEnd = 12;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 4);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("Items", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 12 + fieldOffset0;
          int dictLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos0);
-            pos0 += VarInt.length(buf, pos0) + sl;
+            pos0 += VarInt.size(sl) + sl;
             pos0 += ItemBase.computeBytesConsumed(buf, pos0);
          }
 
@@ -169,13 +195,17 @@ public class UpdateItems implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 8);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 12) {
+            throw ProtocolException.invalidOffset("RemovedItems", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 12 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
          }
 
          if (pos1 - offset > maxEnd) {
@@ -271,17 +301,18 @@ public class UpdateItems implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
       if ((nullBits & 1) != 0) {
-         int itemsOffset = buffer.getIntLE(offset + 4);
-         if (itemsOffset < 0) {
+         v = buffer.getIntLE(offset + 4);
+         if (v < 0 || v > buffer.writerIndex() - offset - 12) {
             return ValidationResult.error("Invalid offset for Items");
          }
 
-         int pos = offset + 12 + itemsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Items");
-         }
-
+         int pos = offset + 12 + v;
          int itemsCount = VarInt.peek(buffer, pos);
          if (itemsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Items");
@@ -291,7 +322,7 @@ public class UpdateItems implements Packet, ToClientPacket {
             return ValidationResult.error("Items exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemsCount);
 
          for (int i = 0; i < itemsCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -303,7 +334,7 @@ public class UpdateItems implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -314,16 +345,12 @@ public class UpdateItems implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int removedItemsOffset = buffer.getIntLE(offset + 8);
-         if (removedItemsOffset < 0) {
+         v = buffer.getIntLE(offset + 8);
+         if (v < 0 || v > buffer.writerIndex() - offset - 12) {
             return ValidationResult.error("Invalid offset for RemovedItems");
          }
 
-         int pos = offset + 12 + removedItemsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for RemovedItems");
-         }
-
+         int pos = offset + 12 + v;
          int removedItemsCount = VarInt.peek(buffer, pos);
          if (removedItemsCount < 0) {
             return ValidationResult.error("Invalid array count for RemovedItems");
@@ -333,7 +360,7 @@ public class UpdateItems implements Packet, ToClientPacket {
             return ValidationResult.error("RemovedItems exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(removedItemsCount);
 
          for (int i = 0; i < removedItemsCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -341,7 +368,7 @@ public class UpdateItems implements Packet, ToClientPacket {
                return ValidationResult.error("Invalid string length in RemovedItems");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in RemovedItems");

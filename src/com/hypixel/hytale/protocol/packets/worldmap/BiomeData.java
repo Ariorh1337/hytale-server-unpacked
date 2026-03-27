@@ -41,33 +41,57 @@ public class BiomeData {
 
    @Nonnull
    public static BiomeData deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("BiomeData", 17, buf.readableBytes() - offset);
+      }
+
       BiomeData obj = new BiomeData();
       byte nullBits = buf.getByte(offset);
       obj.zoneId = buf.getIntLE(offset + 1);
       obj.biomeColor = buf.getIntLE(offset + 5);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 17 + buf.getIntLE(offset + 9);
-         int zoneNameLen = VarInt.peek(buf, varPos0);
-         if (zoneNameLen < 0) {
-            throw ProtocolException.negativeLength("ZoneName", zoneNameLen);
+         int varPosBase0 = buf.getIntLE(offset + 9);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ZoneName", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 17 + varPosBase0;
+         int zoneNameLen = VarInt.peek(buf, varPos0);
+         if (zoneNameLen < 0) {
+            throw ProtocolException.invalidVarInt("ZoneName");
+         }
+
+         int zoneNameVarIntLen = VarInt.size(zoneNameLen);
          if (zoneNameLen > 4096000) {
             throw ProtocolException.stringTooLong("ZoneName", zoneNameLen, 4096000);
+         }
+
+         if (varPos0 + zoneNameVarIntLen + zoneNameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ZoneName", varPos0 + zoneNameVarIntLen + zoneNameLen, buf.readableBytes());
          }
 
          obj.zoneName = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 17 + buf.getIntLE(offset + 13);
-         int biomeNameLen = VarInt.peek(buf, varPos1);
-         if (biomeNameLen < 0) {
-            throw ProtocolException.negativeLength("BiomeName", biomeNameLen);
+         int varPosBase1 = buf.getIntLE(offset + 13);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("BiomeName", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 17 + varPosBase1;
+         int biomeNameLen = VarInt.peek(buf, varPos1);
+         if (biomeNameLen < 0) {
+            throw ProtocolException.invalidVarInt("BiomeName");
+         }
+
+         int biomeNameVarIntLen = VarInt.size(biomeNameLen);
          if (biomeNameLen > 4096000) {
             throw ProtocolException.stringTooLong("BiomeName", biomeNameLen, 4096000);
+         }
+
+         if (varPos1 + biomeNameVarIntLen + biomeNameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("BiomeName", varPos1 + biomeNameVarIntLen + biomeNameLen, buf.readableBytes());
          }
 
          obj.biomeName = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -81,9 +105,13 @@ public class BiomeData {
       int maxEnd = 17;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 9);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ZoneName", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -91,9 +119,13 @@ public class BiomeData {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 13);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("BiomeName", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 17 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -157,15 +189,11 @@ public class BiomeData {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int zoneNameOffset = buffer.getIntLE(offset + 9);
-         if (zoneNameOffset < 0) {
+         if (zoneNameOffset < 0 || zoneNameOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for ZoneName");
          }
 
          int pos = offset + 17 + zoneNameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ZoneName");
-         }
-
          int zoneNameLen = VarInt.peek(buffer, pos);
          if (zoneNameLen < 0) {
             return ValidationResult.error("Invalid string length for ZoneName");
@@ -175,7 +203,7 @@ public class BiomeData {
             return ValidationResult.error("ZoneName exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(zoneNameLen);
          pos += zoneNameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ZoneName");
@@ -184,15 +212,11 @@ public class BiomeData {
 
       if ((nullBits & 2) != 0) {
          int biomeNameOffset = buffer.getIntLE(offset + 13);
-         if (biomeNameOffset < 0) {
+         if (biomeNameOffset < 0 || biomeNameOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for BiomeName");
          }
 
          int pos = offset + 17 + biomeNameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BiomeName");
-         }
-
          int biomeNameLen = VarInt.peek(buffer, pos);
          if (biomeNameLen < 0) {
             return ValidationResult.error("Invalid string length for BiomeName");
@@ -202,7 +226,7 @@ public class BiomeData {
             return ValidationResult.error("BiomeName exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(biomeNameLen);
          pos += biomeNameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BiomeName");

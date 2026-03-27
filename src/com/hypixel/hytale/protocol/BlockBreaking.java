@@ -48,48 +48,82 @@ public class BlockBreaking {
 
    @Nonnull
    public static BlockBreaking deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 25) {
+         throw ProtocolException.bufferTooSmall("BlockBreaking", 25, buf.readableBytes() - offset);
+      }
+
       BlockBreaking obj = new BlockBreaking();
       byte nullBits = buf.getByte(offset);
       obj.health = buf.getFloatLE(offset + 1);
       obj.quantity = buf.getIntLE(offset + 5);
       obj.quality = buf.getIntLE(offset + 9);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 25 + buf.getIntLE(offset + 13);
-         int gatherTypeLen = VarInt.peek(buf, varPos0);
-         if (gatherTypeLen < 0) {
-            throw ProtocolException.negativeLength("GatherType", gatherTypeLen);
+         int varPosBase0 = buf.getIntLE(offset + 13);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("GatherType", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 25 + varPosBase0;
+         int gatherTypeLen = VarInt.peek(buf, varPos0);
+         if (gatherTypeLen < 0) {
+            throw ProtocolException.invalidVarInt("GatherType");
+         }
+
+         int gatherTypeVarIntLen = VarInt.size(gatherTypeLen);
          if (gatherTypeLen > 4096000) {
             throw ProtocolException.stringTooLong("GatherType", gatherTypeLen, 4096000);
+         }
+
+         if (varPos0 + gatherTypeVarIntLen + gatherTypeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("GatherType", varPos0 + gatherTypeVarIntLen + gatherTypeLen, buf.readableBytes());
          }
 
          obj.gatherType = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 25 + buf.getIntLE(offset + 17);
-         int itemIdLen = VarInt.peek(buf, varPos1);
-         if (itemIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemId", itemIdLen);
+         int varPosBase1 = buf.getIntLE(offset + 17);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("ItemId", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 25 + varPosBase1;
+         int itemIdLen = VarInt.peek(buf, varPos1);
+         if (itemIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ItemId");
+         }
+
+         int itemIdVarIntLen = VarInt.size(itemIdLen);
          if (itemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
+         }
+
+         if (varPos1 + itemIdVarIntLen + itemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemId", varPos1 + itemIdVarIntLen + itemIdLen, buf.readableBytes());
          }
 
          obj.itemId = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 25 + buf.getIntLE(offset + 21);
-         int dropListIdLen = VarInt.peek(buf, varPos2);
-         if (dropListIdLen < 0) {
-            throw ProtocolException.negativeLength("DropListId", dropListIdLen);
+         int varPosBase2 = buf.getIntLE(offset + 21);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("DropListId", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 25 + varPosBase2;
+         int dropListIdLen = VarInt.peek(buf, varPos2);
+         if (dropListIdLen < 0) {
+            throw ProtocolException.invalidVarInt("DropListId");
+         }
+
+         int dropListIdVarIntLen = VarInt.size(dropListIdLen);
          if (dropListIdLen > 4096000) {
             throw ProtocolException.stringTooLong("DropListId", dropListIdLen, 4096000);
+         }
+
+         if (varPos2 + dropListIdVarIntLen + dropListIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("DropListId", varPos2 + dropListIdVarIntLen + dropListIdLen, buf.readableBytes());
          }
 
          obj.dropListId = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
@@ -103,9 +137,13 @@ public class BlockBreaking {
       int maxEnd = 25;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 13);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("GatherType", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 25 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -113,9 +151,13 @@ public class BlockBreaking {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 17);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("ItemId", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 25 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -123,9 +165,13 @@ public class BlockBreaking {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 21);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("DropListId", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 25 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -207,15 +253,11 @@ public class BlockBreaking {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int gatherTypeOffset = buffer.getIntLE(offset + 13);
-         if (gatherTypeOffset < 0) {
+         if (gatherTypeOffset < 0 || gatherTypeOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for GatherType");
          }
 
          int pos = offset + 25 + gatherTypeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for GatherType");
-         }
-
          int gatherTypeLen = VarInt.peek(buffer, pos);
          if (gatherTypeLen < 0) {
             return ValidationResult.error("Invalid string length for GatherType");
@@ -225,7 +267,7 @@ public class BlockBreaking {
             return ValidationResult.error("GatherType exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(gatherTypeLen);
          pos += gatherTypeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading GatherType");
@@ -234,15 +276,11 @@ public class BlockBreaking {
 
       if ((nullBits & 2) != 0) {
          int itemIdOffset = buffer.getIntLE(offset + 17);
-         if (itemIdOffset < 0) {
+         if (itemIdOffset < 0 || itemIdOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for ItemId");
          }
 
          int pos = offset + 25 + itemIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemId");
-         }
-
          int itemIdLen = VarInt.peek(buffer, pos);
          if (itemIdLen < 0) {
             return ValidationResult.error("Invalid string length for ItemId");
@@ -252,7 +290,7 @@ public class BlockBreaking {
             return ValidationResult.error("ItemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemIdLen);
          pos += itemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ItemId");
@@ -261,15 +299,11 @@ public class BlockBreaking {
 
       if ((nullBits & 4) != 0) {
          int dropListIdOffset = buffer.getIntLE(offset + 21);
-         if (dropListIdOffset < 0) {
+         if (dropListIdOffset < 0 || dropListIdOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for DropListId");
          }
 
          int pos = offset + 25 + dropListIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DropListId");
-         }
-
          int dropListIdLen = VarInt.peek(buffer, pos);
          if (dropListIdLen < 0) {
             return ValidationResult.error("Invalid string length for DropListId");
@@ -279,7 +313,7 @@ public class BlockBreaking {
             return ValidationResult.error("DropListId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dropListIdLen);
          pos += dropListIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading DropListId");

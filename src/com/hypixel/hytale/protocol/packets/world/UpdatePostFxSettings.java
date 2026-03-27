@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -53,6 +54,10 @@ public class UpdatePostFxSettings implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdatePostFxSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 20) {
+         throw ProtocolException.bufferTooSmall("UpdatePostFxSettings", 20, buf.readableBytes() - offset);
+      }
+
       UpdatePostFxSettings obj = new UpdatePostFxSettings();
       obj.globalIntensity = buf.getFloatLE(offset + 0);
       obj.power = buf.getFloatLE(offset + 4);

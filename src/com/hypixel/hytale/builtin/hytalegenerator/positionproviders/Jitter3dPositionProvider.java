@@ -5,9 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class Jitter3dPositionProvider extends PositionProvider {
    private static final float PI = (float) Math.PI;
@@ -35,7 +35,7 @@ public class Jitter3dPositionProvider extends PositionProvider {
          float rotationX = Jitter3dPositionProvider.this.random.nextFloat() * 2.0F * (float) Math.PI;
          float rotationY = Jitter3dPositionProvider.this.random.nextFloat() * 2.0F * (float) Math.PI;
          float rotationZ = Jitter3dPositionProvider.this.random.nextFloat() * 2.0F * (float) Math.PI;
-         Jitter3dPositionProvider.this.rVector.assign(radius, 0.0, 0.0);
+         Jitter3dPositionProvider.this.rVector.set(radius, 0.0, 0.0);
          Jitter3dPositionProvider.this.rVector.rotateX(rotationX);
          Jitter3dPositionProvider.this.rVector.rotateY(rotationY);
          Jitter3dPositionProvider.this.rVector.rotateZ(rotationZ);
@@ -61,8 +61,8 @@ public class Jitter3dPositionProvider extends PositionProvider {
    public void generate(@Nonnull PositionProvider.Context context) {
       this.rContext = context;
       this.rBounds.assign(context.bounds);
-      this.rBounds.min.add(-this.magnitude);
-      this.rBounds.max.add(this.magnitude);
+      this.rBounds.min.add(-this.magnitude, -this.magnitude, -this.magnitude);
+      this.rBounds.max.add(this.magnitude, this.magnitude, this.magnitude);
       this.rChildContext.assign(context);
       this.rChildContext.bounds = this.rBounds;
       this.rChildContext.pipe = this.rChildPipe;

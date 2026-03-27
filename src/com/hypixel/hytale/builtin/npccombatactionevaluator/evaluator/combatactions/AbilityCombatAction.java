@@ -14,7 +14,6 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -35,6 +34,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class AbilityCombatAction extends CombatActionOption {
    @Nonnull
@@ -323,7 +323,7 @@ public class AbilityCombatAction extends CombatActionOption {
          TransformComponent selfTransformComponent = archetypeChunk.getComponent(selfIndex, TRANSFORM_COMPONENT_TYPE);
          assert selfTransformComponent != null;
          Vector3d selfPos = selfTransformComponent.getPosition();
-         double distance = selfPos.distanceSquaredTo(targetPos);
+         double distance = selfPos.distanceSquared(targetPos);
          return distance > this.maxRangeSquared;
       } else {
          return true;

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -35,6 +36,10 @@ public class AssetIconProperties {
 
    @Nonnull
    public static AssetIconProperties deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 25) {
+         throw ProtocolException.bufferTooSmall("AssetIconProperties", 25, buf.readableBytes() - offset);
+      }
+
       AssetIconProperties obj = new AssetIconProperties();
       byte nullBits = buf.getByte(offset);
       obj.scale = buf.getFloatLE(offset + 1);
@@ -83,7 +88,12 @@ public class AssetIconProperties {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 25 ? ValidationResult.error("Buffer too small: expected at least 25 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 25) {
+         return ValidationResult.error("Buffer too small: expected at least 25 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public AssetIconProperties clone() {

@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class UpdateWeather implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateWeather deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("UpdateWeather", 8, buf.readableBytes() - offset);
+      }
+
       UpdateWeather obj = new UpdateWeather();
       obj.weatherIndex = buf.getIntLE(offset + 0);
       obj.transitionSeconds = buf.getFloatLE(offset + 4);

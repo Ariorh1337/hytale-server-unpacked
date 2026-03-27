@@ -54,6 +54,10 @@ public class UpdateTranslations implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateTranslations deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateTranslations", 2, buf.readableBytes() - offset);
+      }
+
       UpdateTranslations obj = new UpdateTranslations();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -61,39 +65,48 @@ public class UpdateTranslations implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int translationsCount = VarInt.peek(buf, pos);
          if (translationsCount < 0) {
-            throw ProtocolException.negativeLength("Translations", translationsCount);
+            throw ProtocolException.invalidVarInt("Translations");
          }
 
+         int translationsVarLen = VarInt.size(translationsCount);
          if (translationsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Translations", translationsCount, 4096000);
          }
 
-         pos += VarInt.size(translationsCount);
+         pos += translationsVarLen;
          obj.translations = new HashMap<>(translationsCount);
 
          for (int i = 0; i < translationsCount; i++) {
             int keyLen = VarInt.peek(buf, pos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, pos);
+            if (pos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", pos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, pos);
             pos += keyVarLen + keyLen;
             int valLen = VarInt.peek(buf, pos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 4096000) {
                throw ProtocolException.stringTooLong("val", valLen, 4096000);
             }
 
-            int valVarLen = VarInt.length(buf, pos);
+            if (pos + valVarLen + valLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("val", pos + valVarLen + valLen, buf.readableBytes());
+            }
+
             String val = PacketIO.readVarString(buf, pos);
             pos += valVarLen + valLen;
             if (obj.translations.put(key, val) != null) {
@@ -110,13 +123,13 @@ public class UpdateTranslations implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
             sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -168,9 +181,14 @@ public class UpdateTranslations implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int translationsCount = VarInt.peek(buffer, pos);
+         int translationsCount = VarInt.peek(buffer, v);
          if (translationsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Translations");
          }
@@ -179,10 +197,10 @@ public class UpdateTranslations implements Packet, ToClientPacket {
             return ValidationResult.error("Translations exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(translationsCount);
 
          for (int i = 0; i < translationsCount; i++) {
-            int keyLen = VarInt.peek(buffer, pos);
+            int keyLen = VarInt.peek(buffer, v);
             if (keyLen < 0) {
                return ValidationResult.error("Invalid string length for key");
             }
@@ -191,13 +209,13 @@ public class UpdateTranslations implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
-            pos += keyLen;
-            if (pos > buffer.writerIndex()) {
+            v += VarInt.size(keyLen);
+            v += keyLen;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            int valueLen = VarInt.peek(buffer, pos);
+            int valueLen = VarInt.peek(buffer, v);
             if (valueLen < 0) {
                return ValidationResult.error("Invalid string length for value");
             }
@@ -206,9 +224,9 @@ public class UpdateTranslations implements Packet, ToClientPacket {
                return ValidationResult.error("value exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
-            pos += valueLen;
-            if (pos > buffer.writerIndex()) {
+            v += VarInt.size(valueLen);
+            v += valueLen;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");
             }
          }

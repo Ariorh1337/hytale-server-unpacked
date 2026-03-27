@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.interface_;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -41,6 +42,10 @@ public class EditorSelection {
 
    @Nonnull
    public static EditorSelection deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("EditorSelection", 24, buf.readableBytes() - offset);
+      }
+
       EditorSelection obj = new EditorSelection();
       obj.minX = buf.getIntLE(offset + 0);
       obj.minY = buf.getIntLE(offset + 4);

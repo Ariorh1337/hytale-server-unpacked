@@ -8,8 +8,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -31,6 +29,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public abstract class RespawnPointPage extends InteractiveCustomUIPage<RespawnPointPage.RespawnPointEventData> {
    @Nonnull
@@ -70,7 +70,7 @@ public abstract class RespawnPointPage extends InteractiveCustomUIPage<RespawnPo
             WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
             if (chunk != null) {
                chunk.markNeedsSaving();
-               BlockType blockType = chunk.getBlockType(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+               BlockType blockType = chunk.getBlockType(blockPosition.x(), blockPosition.y(), blockPosition.z());
                if (blockType != null) {
                   int rotationIndex = chunk.getRotationIndex(blockPosition.x, blockPosition.y, blockPosition.z);
                   BlockBoundingBoxes blockBoundingBoxAsset = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
@@ -79,7 +79,7 @@ public abstract class RespawnPointPage extends InteractiveCustomUIPage<RespawnPo
                      double blockCenterWidthOffset = hitbox.min.x + hitbox.width() / 2.0;
                      double blockCenterDepthOffset = hitbox.min.z + hitbox.depth() / 2.0;
                      Vector3d respawnPosition = new Vector3d(
-                        blockPosition.getX() + blockCenterWidthOffset, blockPosition.getY() + hitbox.height(), blockPosition.getZ() + blockCenterDepthOffset
+                        blockPosition.x() + blockCenterWidthOffset, blockPosition.y() + hitbox.height(), blockPosition.z() + blockCenterDepthOffset
                      );
                      PlayerRespawnPointData respawnPointData = new PlayerRespawnPointData(blockPosition, respawnPosition, respawnPointName);
                      PlayerWorldData perWorldData = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());

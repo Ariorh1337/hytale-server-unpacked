@@ -46,20 +46,24 @@ public class AssetEditorModsDirectories implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorModsDirectories deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorModsDirectories", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorModsDirectories obj = new AssetEditorModsDirectories();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int directoriesCount = VarInt.peek(buf, pos);
          if (directoriesCount < 0) {
-            throw ProtocolException.negativeLength("Directories", directoriesCount);
+            throw ProtocolException.invalidVarInt("Directories");
          }
 
+         int directoriesVarLen = VarInt.size(directoriesCount);
          if (directoriesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Directories", directoriesCount, 4096000);
          }
 
-         int directoriesVarLen = VarInt.size(directoriesCount);
          if (pos + directoriesVarLen + directoriesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Directories", pos + directoriesVarLen + directoriesCount * 1, buf.readableBytes());
          }
@@ -70,14 +74,18 @@ public class AssetEditorModsDirectories implements Packet, ToClientPacket {
          for (int i = 0; i < directoriesCount; i++) {
             int strLen = VarInt.peek(buf, pos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("directories[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("directories[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("directories[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
+            if (pos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("directories[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.directories[i] = PacketIO.readVarString(buf, pos);
             pos += strVarLen + strLen;
          }
@@ -91,11 +99,11 @@ public class AssetEditorModsDirectories implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -156,7 +164,7 @@ public class AssetEditorModsDirectories implements Packet, ToClientPacket {
             return ValidationResult.error("Directories exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(directoriesCount);
 
          for (int i = 0; i < directoriesCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -164,7 +172,7 @@ public class AssetEditorModsDirectories implements Packet, ToClientPacket {
                return ValidationResult.error("Invalid string length in Directories");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Directories");

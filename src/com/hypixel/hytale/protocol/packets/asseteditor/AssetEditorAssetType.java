@@ -57,61 +57,105 @@ public class AssetEditorAssetType {
 
    @Nonnull
    public static AssetEditorAssetType deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 19) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetType", 19, buf.readableBytes() - offset);
+      }
+
       AssetEditorAssetType obj = new AssetEditorAssetType();
       byte nullBits = buf.getByte(offset);
       obj.isColoredIcon = buf.getByte(offset + 1) != 0;
       obj.editorType = AssetEditorEditorType.fromValue(buf.getByte(offset + 2));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 19 + buf.getIntLE(offset + 3);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 3);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 19 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 19 + buf.getIntLE(offset + 7);
-         int iconLen = VarInt.peek(buf, varPos1);
-         if (iconLen < 0) {
-            throw ProtocolException.negativeLength("Icon", iconLen);
+         int varPosBase1 = buf.getIntLE(offset + 7);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("Icon", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 19 + varPosBase1;
+         int iconLen = VarInt.peek(buf, varPos1);
+         if (iconLen < 0) {
+            throw ProtocolException.invalidVarInt("Icon");
+         }
+
+         int iconVarIntLen = VarInt.size(iconLen);
          if (iconLen > 4096000) {
             throw ProtocolException.stringTooLong("Icon", iconLen, 4096000);
+         }
+
+         if (varPos1 + iconVarIntLen + iconLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Icon", varPos1 + iconVarIntLen + iconLen, buf.readableBytes());
          }
 
          obj.icon = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 19 + buf.getIntLE(offset + 11);
-         int pathLen = VarInt.peek(buf, varPos2);
-         if (pathLen < 0) {
-            throw ProtocolException.negativeLength("Path", pathLen);
+         int varPosBase2 = buf.getIntLE(offset + 11);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("Path", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 19 + varPosBase2;
+         int pathLen = VarInt.peek(buf, varPos2);
+         if (pathLen < 0) {
+            throw ProtocolException.invalidVarInt("Path");
+         }
+
+         int pathVarIntLen = VarInt.size(pathLen);
          if (pathLen > 4096000) {
             throw ProtocolException.stringTooLong("Path", pathLen, 4096000);
+         }
+
+         if (varPos2 + pathVarIntLen + pathLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Path", varPos2 + pathVarIntLen + pathLen, buf.readableBytes());
          }
 
          obj.path = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 19 + buf.getIntLE(offset + 15);
-         int fileExtensionLen = VarInt.peek(buf, varPos3);
-         if (fileExtensionLen < 0) {
-            throw ProtocolException.negativeLength("FileExtension", fileExtensionLen);
+         int varPosBase3 = buf.getIntLE(offset + 15);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("FileExtension", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 19 + varPosBase3;
+         int fileExtensionLen = VarInt.peek(buf, varPos3);
+         if (fileExtensionLen < 0) {
+            throw ProtocolException.invalidVarInt("FileExtension");
+         }
+
+         int fileExtensionVarIntLen = VarInt.size(fileExtensionLen);
          if (fileExtensionLen > 4096000) {
             throw ProtocolException.stringTooLong("FileExtension", fileExtensionLen, 4096000);
+         }
+
+         if (varPos3 + fileExtensionVarIntLen + fileExtensionLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("FileExtension", varPos3 + fileExtensionVarIntLen + fileExtensionLen, buf.readableBytes());
          }
 
          obj.fileExtension = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
@@ -125,9 +169,13 @@ public class AssetEditorAssetType {
       int maxEnd = 19;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 3);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 19 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -135,9 +183,13 @@ public class AssetEditorAssetType {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 7);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("Icon", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 19 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -145,9 +197,13 @@ public class AssetEditorAssetType {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 11);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 19 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -155,9 +211,13 @@ public class AssetEditorAssetType {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 15);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 19) {
+            throw ProtocolException.invalidOffset("FileExtension", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 19 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -253,17 +313,18 @@ public class AssetEditorAssetType {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 2) & 255;
+      if (v >= 7) {
+         return ValidationResult.error("Invalid AssetEditorEditorType value for EditorType");
+      }
+
       if ((nullBits & 1) != 0) {
-         int idOffset = buffer.getIntLE(offset + 3);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 3);
+         if (v < 0 || v > buffer.writerIndex() - offset - 19) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 19 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 19 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -273,7 +334,7 @@ public class AssetEditorAssetType {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -281,16 +342,12 @@ public class AssetEditorAssetType {
       }
 
       if ((nullBits & 2) != 0) {
-         int iconOffset = buffer.getIntLE(offset + 7);
-         if (iconOffset < 0) {
+         v = buffer.getIntLE(offset + 7);
+         if (v < 0 || v > buffer.writerIndex() - offset - 19) {
             return ValidationResult.error("Invalid offset for Icon");
          }
 
-         int pos = offset + 19 + iconOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Icon");
-         }
-
+         int pos = offset + 19 + v;
          int iconLen = VarInt.peek(buffer, pos);
          if (iconLen < 0) {
             return ValidationResult.error("Invalid string length for Icon");
@@ -300,7 +357,7 @@ public class AssetEditorAssetType {
             return ValidationResult.error("Icon exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(iconLen);
          pos += iconLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Icon");
@@ -308,16 +365,12 @@ public class AssetEditorAssetType {
       }
 
       if ((nullBits & 4) != 0) {
-         int pathOffset = buffer.getIntLE(offset + 11);
-         if (pathOffset < 0) {
+         v = buffer.getIntLE(offset + 11);
+         if (v < 0 || v > buffer.writerIndex() - offset - 19) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
-         int pos = offset + 19 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
+         int pos = offset + 19 + v;
          int pathLen = VarInt.peek(buffer, pos);
          if (pathLen < 0) {
             return ValidationResult.error("Invalid string length for Path");
@@ -327,7 +380,7 @@ public class AssetEditorAssetType {
             return ValidationResult.error("Path exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(pathLen);
          pos += pathLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Path");
@@ -335,16 +388,12 @@ public class AssetEditorAssetType {
       }
 
       if ((nullBits & 8) != 0) {
-         int fileExtensionOffset = buffer.getIntLE(offset + 15);
-         if (fileExtensionOffset < 0) {
+         v = buffer.getIntLE(offset + 15);
+         if (v < 0 || v > buffer.writerIndex() - offset - 19) {
             return ValidationResult.error("Invalid offset for FileExtension");
          }
 
-         int pos = offset + 19 + fileExtensionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FileExtension");
-         }
-
+         int pos = offset + 19 + v;
          int fileExtensionLen = VarInt.peek(buffer, pos);
          if (fileExtensionLen < 0) {
             return ValidationResult.error("Invalid string length for FileExtension");
@@ -354,7 +403,7 @@ public class AssetEditorAssetType {
             return ValidationResult.error("FileExtension exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fileExtensionLen);
          pos += fileExtensionLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FileExtension");

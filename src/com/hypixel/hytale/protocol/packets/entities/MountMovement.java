@@ -6,6 +6,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -54,6 +55,10 @@ public class MountMovement implements Packet, ToServerPacket {
 
    @Nonnull
    public static MountMovement deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 60) {
+         throw ProtocolException.bufferTooSmall("MountMovement", 60, buf.readableBytes() - offset);
+      }
+
       MountMovement obj = new MountMovement();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -116,7 +121,12 @@ public class MountMovement implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 60 ? ValidationResult.error("Buffer too small: expected at least 60 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 60) {
+         return ValidationResult.error("Buffer too small: expected at least 60 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public MountMovement clone() {

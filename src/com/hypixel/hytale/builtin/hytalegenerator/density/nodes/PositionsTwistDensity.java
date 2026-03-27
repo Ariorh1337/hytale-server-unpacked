@@ -5,10 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PositionsTwistDensity extends Density {
    @Nullable
@@ -78,10 +78,10 @@ public class PositionsTwistDensity extends Density {
    }
 
    public void consumer(@Nonnull Vector3d p, @Nonnull Control control) {
-      double distance = p.distanceTo(this.rQueryPosition);
+      double distance = p.distance(this.rQueryPosition);
       if (!(distance > this.maxDistance)) {
          double normalizedDistance = distance / this.maxDistance;
-         this.rWarpVector.assign(this.rSamplePoint);
+         this.rWarpVector.set(this.rSamplePoint);
          double twistAngle;
          if (this.distanceNormalized) {
             twistAngle = this.twistCurve.applyAsDouble(normalizedDistance);
@@ -91,14 +91,14 @@ public class PositionsTwistDensity extends Density {
 
          twistAngle /= 180.0;
          twistAngle *= Math.PI;
-         this.rWarpVector.subtract(p);
+         this.rWarpVector.sub(p);
          VectorUtil.rotateAroundAxis(this.rWarpVector, this.twistAxis, twistAngle);
          this.rWarpVector.add(p);
-         this.rWarpVector.subtract(this.rSamplePoint);
+         this.rWarpVector.sub(this.rSamplePoint);
          if (this.rWarpVectors.isAtHardCapacity()) {
-            this.rWarpVectors.expandAndSet(this.rWarpVector.clone());
+            this.rWarpVectors.expandAndSet(new Vector3d(this.rWarpVector));
          } else {
-            this.rWarpVectors.expandAndGet().assign(this.rWarpVector);
+            this.rWarpVectors.expandAndGet().set(this.rWarpVector);
          }
 
          if (this.distanceNormalized) {
@@ -119,10 +119,10 @@ public class PositionsTwistDensity extends Density {
          return this.input.process(context);
       }
 
-      this.rMin.assign(context.position.x - this.maxDistance, context.position.y - this.maxDistance, context.position.z - this.maxDistance);
-      this.rMax.assign(context.position.x + this.maxDistance, context.position.y + this.maxDistance, context.position.z + this.maxDistance);
-      this.rSamplePoint.assign(context.position);
-      this.rQueryPosition.assign(context.position);
+      this.rMin.set(context.position.x - this.maxDistance, context.position.y - this.maxDistance, context.position.z - this.maxDistance);
+      this.rMax.set(context.position.x + this.maxDistance, context.position.y + this.maxDistance, context.position.z + this.maxDistance);
+      this.rSamplePoint.set(context.position);
+      this.rQueryPosition.set(context.position);
       if (this.zeroPositionsY) {
          this.rQueryPosition.y = 0.0;
          this.rMin.y = -1.0;
@@ -131,8 +131,8 @@ public class PositionsTwistDensity extends Density {
 
       this.rWarpVectors.clear();
       this.rWarpDistances.clear();
-      this.rPositionsContext.bounds.min.assign(this.rMin);
-      this.rPositionsContext.bounds.max.assign(this.rMax);
+      this.rPositionsContext.bounds.min.set(this.rMin);
+      this.rPositionsContext.bounds.max.set(this.rMax);
       this.rPositionsContext.pipe = this::consumer;
       this.positions.generate(this.rPositionsContext);
       if (this.rWarpVectors.getSoftSize() == 0) {
@@ -161,7 +161,7 @@ public class PositionsTwistDensity extends Density {
       for (int i = 0; i < possiblePointsSize; i++) {
          double weight = this.rWeights.get(i) / totalWeight;
          Vector3d warpVector = this.rWarpVectors.get(i);
-         warpVector.scale(weight);
+         warpVector.mul(weight);
          this.rSamplePoint.add(warpVector);
       }
 

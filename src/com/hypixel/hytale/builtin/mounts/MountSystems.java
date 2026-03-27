@@ -23,7 +23,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockMount;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
@@ -31,6 +31,7 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.MountController;
 import com.hypixel.hytale.protocol.MountedUpdate;
 import com.hypixel.hytale.protocol.MovementStates;
+import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.mountpoints.BlockMountPoint;
 import com.hypixel.hytale.server.core.entity.AnimationUtils;
@@ -63,6 +64,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class MountSystems {
    private static void handleMountedRemoval(
@@ -207,7 +209,7 @@ public class MountSystems {
                   absolute.apply(commandBuffer, archetypeChunk, index);
                   TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
                   if (transform != null) {
-                     transform.getPosition().assign(absolute.getX(), absolute.getY(), absolute.getZ());
+                     transform.getPosition().set(absolute.getX(), absolute.getY(), absolute.getZ());
                   }
                } else if (inputUpdate instanceof PlayerInput.SetMovementStates s) {
                   MovementStates states = s.movementStates();
@@ -219,7 +221,7 @@ public class MountSystems {
                   body.apply(commandBuffer, archetypeChunk, index);
                   TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
                   if (transform != null) {
-                     transform.getRotation().assign(body.direction().pitch, body.direction().yaw, body.direction().roll);
+                     transform.getRotation().set(body.direction().pitch, body.direction().yaw, body.direction().roll);
                   }
                } else if (inputUpdate instanceof PlayerInput.SetHead head) {
                   head.apply(commandBuffer, archetypeChunk, index);
@@ -834,8 +836,8 @@ public class MountSystems {
       ) {
          Ref<EntityStore> mountedToEntity = component.getMountedToEntity();
          Ref<ChunkStore> mountedToBlock = component.getMountedToBlock();
-         Vector3f offset = component.getAttachmentOffset();
-         com.hypixel.hytale.protocol.Vector3f netOffset = new com.hypixel.hytale.protocol.Vector3f(offset.x, offset.y, offset.z);
+         Rotation3f offset = component.getAttachmentOffset();
+         Vector3f netOffset = new Vector3f(offset.x, offset.y, offset.z);
          MountedUpdate mountedUpdate;
          if (mountedToEntity != null) {
             NetworkId mountedToNetworkIdComponent = ref.getStore().getComponent(mountedToEntity, NetworkId.getComponentType());
@@ -861,12 +863,12 @@ public class MountSystems {
             }
 
             BlockType blockType = blockMountComponent.getExpectedBlockType();
-            Vector3f position = occupiedSeat.computeWorldSpacePosition(blockMountComponent.getBlockPos());
-            Vector3f rotationEuler = occupiedSeat.computeRotationEuler(blockMountComponent.getExpectedRotation());
+            Vector3d position = occupiedSeat.computeWorldSpacePosition(blockMountComponent.getBlockPos());
+            Rotation3f rotationEuler = occupiedSeat.computeRotationEuler(blockMountComponent.getExpectedRotation());
             BlockMount blockMount = new BlockMount(
                blockMountComponent.getType(),
-               new com.hypixel.hytale.protocol.Vector3f(position.x, position.y, position.z),
-               new com.hypixel.hytale.protocol.Vector3f(rotationEuler.x, rotationEuler.y, rotationEuler.z),
+               new com.hypixel.hytale.protocol.Vector3d(position.x, position.y, position.z),
+               new Vector3f(rotationEuler.x, rotationEuler.y, rotationEuler.z),
                BlockType.getAssetMap().getIndex(blockType.getId())
             );
             mountedUpdate = new MountedUpdate(0, netOffset, component.getControllerType(), blockMount);

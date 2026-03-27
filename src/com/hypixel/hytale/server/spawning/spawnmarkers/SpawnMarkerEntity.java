@@ -12,8 +12,8 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.function.consumer.TriConsumer;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -48,6 +48,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SpawnMarkerEntity implements Component<EntityStore> {
    private static final double SPAWN_LOST_TIMEOUT = 35.0;
@@ -94,8 +95,8 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
          spawnMarkerEntity -> spawnMarkerEntity.storedFlock
       )
       .addField(
-         new KeyedCodec<>("SpawnPosition", Vector3d.CODEC),
-         (spawnMarkerEntity, v) -> spawnMarkerEntity.spawnPosition.assign(v),
+         new KeyedCodec<>("SpawnPosition", Vector3dUtil.CODEC),
+         (spawnMarkerEntity, v) -> spawnMarkerEntity.spawnPosition.set(v),
          spawnMarkerEntity -> spawnMarkerEntity.storedFlock == null ? null : spawnMarkerEntity.spawnPosition
       )
       .build();
@@ -329,8 +330,8 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
             return false;
          }
 
-         this.spawnPosition.assign(this.context.xSpawn, this.context.ySpawn, this.context.zSpawn);
-         if (this.spawnPosition.distanceSquaredTo(position) > marker.getMaxDropHeightSquared()) {
+         this.spawnPosition.set(this.context.xSpawn, this.context.ySpawn, this.context.zSpawn);
+         if (this.spawnPosition.distanceSquared(position) > marker.getMaxDropHeightSquared()) {
             SpawningPlugin.get()
                .getLogger()
                .at(Level.FINE)
@@ -347,7 +348,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
             int worldGenId = worldGenIdComponent != null ? worldGenIdComponent.getWorldGenId() : 0;
             _store.putComponent(_ref, WorldGenId.getComponentType(), new WorldGenId(worldGenId));
          };
-         Vector3f rotation = transformComponent.getRotation();
+         Rotation3f rotation = transformComponent.getRotation();
          Pair<Ref<EntityStore>, NPCEntity> npcPair = npcModule.spawnEntity(store, roleIndex, this.spawnPosition, rotation, null, postSpawn);
          if (npcPair == null) {
             SpawningPlugin.get().getLogger().at(Level.SEVERE).log("Marker %s failed to spawn NPC role '%s' due to an internal error", uuid, roleName);
@@ -475,7 +476,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       spawnMarker.spawnCount = this.spawnCount;
       spawnMarker.suppressedBy = this.suppressedBy != null ? new HashSet<>(this.suppressedBy) : null;
       spawnMarker.failedSpawns = this.failedSpawns;
-      spawnMarker.spawnPosition.assign(this.spawnPosition);
+      spawnMarker.spawnPosition.set(this.spawnPosition);
       spawnMarker.npcReferences = this.npcReferences;
       spawnMarker.storedFlock = this.storedFlock != null ? this.storedFlock.clone() : null;
       spawnMarker.timeToDeactivation = this.timeToDeactivation;
@@ -495,7 +496,7 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       spawnMarker.spawnAfter = this.spawnAfter;
       spawnMarker.npcReferences = this.npcReferences;
       spawnMarker.storedFlock = this.storedFlock != null ? this.storedFlock.cloneSerializable() : null;
-      spawnMarker.spawnPosition.assign(this.spawnPosition);
+      spawnMarker.spawnPosition.set(this.spawnPosition);
       return spawnMarker;
    }
 

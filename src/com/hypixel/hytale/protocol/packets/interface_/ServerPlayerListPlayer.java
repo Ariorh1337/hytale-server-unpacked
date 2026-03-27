@@ -43,6 +43,10 @@ public class ServerPlayerListPlayer {
 
    @Nonnull
    public static ServerPlayerListPlayer deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 37) {
+         throw ProtocolException.bufferTooSmall("ServerPlayerListPlayer", 37, buf.readableBytes() - offset);
+      }
+
       ServerPlayerListPlayer obj = new ServerPlayerListPlayer();
       byte nullBits = buf.getByte(offset);
       obj.uuid = PacketIO.readUUID(buf, offset + 1);
@@ -55,14 +59,18 @@ public class ServerPlayerListPlayer {
       if ((nullBits & 2) != 0) {
          int usernameLen = VarInt.peek(buf, pos);
          if (usernameLen < 0) {
-            throw ProtocolException.negativeLength("Username", usernameLen);
+            throw ProtocolException.invalidVarInt("Username");
          }
 
+         int usernameVarLen = VarInt.size(usernameLen);
          if (usernameLen > 4096000) {
             throw ProtocolException.stringTooLong("Username", usernameLen, 4096000);
          }
 
-         int usernameVarLen = VarInt.length(buf, pos);
+         if (pos + usernameVarLen + usernameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Username", pos + usernameVarLen + usernameLen, buf.readableBytes());
+         }
+
          obj.username = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += usernameVarLen + usernameLen;
       }
@@ -75,7 +83,7 @@ public class ServerPlayerListPlayer {
       int pos = offset + 37;
       if ((nullBits & 2) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -131,7 +139,7 @@ public class ServerPlayerListPlayer {
             return ValidationResult.error("Username exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(usernameLen);
          pos += usernameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Username");

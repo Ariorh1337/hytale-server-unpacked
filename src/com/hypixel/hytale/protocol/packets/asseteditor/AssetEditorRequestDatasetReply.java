@@ -51,34 +51,53 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorRequestDatasetReply deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRequestDatasetReply", 9, buf.readableBytes() - offset);
+      }
+
       AssetEditorRequestDatasetReply obj = new AssetEditorRequestDatasetReply();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int nameLen = VarInt.peek(buf, varPos0);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Name", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int nameLen = VarInt.peek(buf, varPos0);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos0 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos0 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int idsCount = VarInt.peek(buf, varPos1);
-         if (idsCount < 0) {
-            throw ProtocolException.negativeLength("Ids", idsCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Ids", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int idsCount = VarInt.peek(buf, varPos1);
+         if (idsCount < 0) {
+            throw ProtocolException.invalidVarInt("Ids");
+         }
+
+         int varIntLen = VarInt.size(idsCount);
          if (idsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Ids", idsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + idsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Ids", varPos1 + varIntLen + idsCount * 1, buf.readableBytes());
          }
@@ -89,14 +108,18 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
          for (int i = 0; i < idsCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("ids[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("ids[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("ids[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("ids[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.ids[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
@@ -110,9 +133,13 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -120,13 +147,17 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Ids", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
          }
 
          if (pos1 - offset > maxEnd) {
@@ -206,15 +237,11 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int nameOffset = buffer.getIntLE(offset + 1);
-         if (nameOffset < 0) {
+         if (nameOffset < 0 || nameOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
          int pos = offset + 9 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -224,7 +251,7 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -233,15 +260,11 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int idsOffset = buffer.getIntLE(offset + 5);
-         if (idsOffset < 0) {
+         if (idsOffset < 0 || idsOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Ids");
          }
 
          int pos = offset + 9 + idsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Ids");
-         }
-
          int idsCount = VarInt.peek(buffer, pos);
          if (idsCount < 0) {
             return ValidationResult.error("Invalid array count for Ids");
@@ -251,7 +274,7 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
             return ValidationResult.error("Ids exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idsCount);
 
          for (int i = 0; i < idsCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -259,7 +282,7 @@ public class AssetEditorRequestDatasetReply implements Packet, ToClientPacket {
                return ValidationResult.error("Invalid string length in Ids");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Ids");

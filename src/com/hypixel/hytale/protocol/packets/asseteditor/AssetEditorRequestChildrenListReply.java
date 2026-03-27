@@ -51,25 +51,39 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
 
    @Nonnull
    public static AssetEditorRequestChildrenListReply deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRequestChildrenListReply", 9, buf.readableBytes() - offset);
+      }
+
       AssetEditorRequestChildrenListReply obj = new AssetEditorRequestChildrenListReply();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 9 + varPosBase0;
          obj.path = AssetPath.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int childrenIdsCount = VarInt.peek(buf, varPos1);
-         if (childrenIdsCount < 0) {
-            throw ProtocolException.negativeLength("ChildrenIds", childrenIdsCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ChildrenIds", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int childrenIdsCount = VarInt.peek(buf, varPos1);
+         if (childrenIdsCount < 0) {
+            throw ProtocolException.invalidVarInt("ChildrenIds");
+         }
+
+         int varIntLen = VarInt.size(childrenIdsCount);
          if (childrenIdsCount > 4096000) {
             throw ProtocolException.arrayTooLong("ChildrenIds", childrenIdsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + childrenIdsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("ChildrenIds", varPos1 + varIntLen + childrenIdsCount * 1, buf.readableBytes());
          }
@@ -80,14 +94,18 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
          for (int i = 0; i < childrenIdsCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("childrenIds[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("childrenIds[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("childrenIds[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("childrenIds[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.childrenIds[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
@@ -101,6 +119,10 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -110,13 +132,17 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ChildrenIds", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
          }
 
          if (pos1 - offset > maxEnd) {
@@ -196,15 +222,11 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int pathOffset = buffer.getIntLE(offset + 1);
-         if (pathOffset < 0) {
+         if (pathOffset < 0 || pathOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
          int pos = offset + 9 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
          ValidationResult pathResult = AssetPath.validateStructure(buffer, pos);
          if (!pathResult.isValid()) {
             return ValidationResult.error("Invalid Path: " + pathResult.error());
@@ -215,15 +237,11 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
 
       if ((nullBits & 2) != 0) {
          int childrenIdsOffset = buffer.getIntLE(offset + 5);
-         if (childrenIdsOffset < 0) {
+         if (childrenIdsOffset < 0 || childrenIdsOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for ChildrenIds");
          }
 
          int pos = offset + 9 + childrenIdsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ChildrenIds");
-         }
-
          int childrenIdsCount = VarInt.peek(buffer, pos);
          if (childrenIdsCount < 0) {
             return ValidationResult.error("Invalid array count for ChildrenIds");
@@ -233,7 +251,7 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
             return ValidationResult.error("ChildrenIds exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(childrenIdsCount);
 
          for (int i = 0; i < childrenIdsCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -241,7 +259,7 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
                return ValidationResult.error("Invalid string length in ChildrenIds");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in ChildrenIds");

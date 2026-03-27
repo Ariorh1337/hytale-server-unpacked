@@ -22,9 +22,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.CombatTextUpdate;
@@ -107,6 +105,8 @@ import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bouncycastle.util.Arrays;
+import org.joml.Vector3d;
+import org.joml.Vector4d;
 
 public class DamageSystems {
    public static final float DEFAULT_DAMAGE_DELAY = 1.0F;
@@ -873,7 +873,7 @@ public class DamageSystems {
          if (movementStates.onGround && entity.getCurrentFallDistance() > 0.0) {
             Velocity velocityComponent = archetypeChunk.getComponent(index, Velocity.getComponentType());
             assert velocityComponent != null;
-            double yVelocity = Math.abs(velocityComponent.getVelocity().getY());
+            double yVelocity = Math.abs(velocityComponent.getVelocity().y());
             World world = commandBuffer.getExternalData().getWorld();
             int movementConfigIndex = world.getGameplayConfig().getPlayerConfig().getMovementConfigIndex();
             MovementConfig movementConfig = MovementConfig.getAssetMap().getAsset(movementConfigIndex);
@@ -964,7 +964,7 @@ public class DamageSystems {
          assert playerInputComponent != null;
          Velocity velocityComponent = archetypeChunk.getComponent(index, Velocity.getComponentType());
          assert velocityComponent != null;
-         double yVelocity = Math.abs(velocityComponent.getClientVelocity().getY());
+         double yVelocity = Math.abs(velocityComponent.getClientVelocity().y());
          World world = commandBuffer.getExternalData().getWorld();
          PlayerConfig worldPlayerConfig = world.getGameplayConfig().getPlayerConfig();
          List<PlayerInput.InputUpdate> queue = playerInputComponent.getMovementUpdateQueue();
@@ -1231,7 +1231,7 @@ public class DamageSystems {
       ) {
          TransformComponent transformComponent = archetypeChunk.getComponent(index, TRANSFORM_COMPONENT_TYPE);
          assert transformComponent != null;
-         double posY = transformComponent.getPosition().getY();
+         double posY = transformComponent.getPosition().y();
          if (!(posY >= 0.0)) {
             boolean belowMinimum = posY < -32.0;
             Damage damage = new Damage(Damage.NULL_SOURCE, DamageCause.OUT_OF_WORLD, belowMinimum ? 2.1474836E9F : 50.0F);
@@ -1325,9 +1325,7 @@ public class DamageSystems {
                      playerRefComponent.getPacketHandler()
                         .writeNoCache(
                            new DamageInfo(
-                              new com.hypixel.hytale.protocol.Vector3d(position.getX(), position.getY(), position.getZ()),
-                              damage.getAmount(),
-                              damageCause.toPacket()
+                              new com.hypixel.hytale.protocol.Vector3d(position.x(), position.y(), position.z()), damage.getAmount(), damageCause.toPacket()
                            )
                         );
                   }
@@ -1495,7 +1493,7 @@ public class DamageSystems {
             TransformComponent transformComponent = archetypeChunk.getComponent(index, TRANSFORM_COMPONENT_TYPE);
             assert transformComponent != null;
             Vector3d targetPosition = transformComponent.getPosition();
-            Vector3f targetRotation = transformComponent.getRotation();
+            Rotation3f targetRotation = transformComponent.getRotation();
             if (damage.getSource() instanceof Damage.EntitySource entitySource) {
                Ref<EntityStore> sourceRef = entitySource.getRef();
                if (sourceRef.isValid()) {
@@ -1526,7 +1524,7 @@ public class DamageSystems {
                         if (angledWieldingDamageModifiers.containsKey(damageCauseIndex)) {
                            Vector3d sourcePosition = sourceTransformComponent.getPosition();
                            float angleBetween = TrigMathUtil.atan2(sourcePosition.x - targetPosition.x, sourcePosition.z - targetPosition.z);
-                           angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - targetRotation.getYaw());
+                           angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - targetRotation.yaw());
                            if (Math.abs(MathUtil.compareAngle(angleBetween, angledWielding.getAngleRad())) < angledWielding.getAngleDistanceRad()) {
                               angledWieldingModifier = angledWieldingDamageModifiers.getOrDefault(damageCauseIndex, 1.0F);
                               DamageEffects wieldingBlockedEffects = wielding.getBlockedEffects();
@@ -1627,7 +1625,7 @@ public class DamageSystems {
                               Vector3d targetPos = transformComponent.getPosition();
                               Vector3d attackerPos = sourceTransformComponent.getPosition();
                               float angleBetween = TrigMathUtil.atan2(attackerPos.x - targetPos.x, attackerPos.z - targetPos.z);
-                              angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - transformComponent.getRotation().getYaw());
+                              angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - transformComponent.getRotation().yaw());
                               if (Math.abs(MathUtil.compareAngle(angleBetween, angledWielding.getAngleRad())) < angledWielding.getAngleDistanceRad()) {
                                  angledWieldingModifier = angledWieldingKnockbackModifiers.getOrDefault(damageCauseIndex, 1.0);
                               }

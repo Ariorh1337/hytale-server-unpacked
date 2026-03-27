@@ -5,8 +5,6 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
@@ -45,6 +43,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class FloodFillPositionSelector implements Component<EntityStore> {
    private static final int MAX_SPAWN_POSITIONS_HINT = 30;
@@ -152,7 +152,7 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
 
       for (int i = 0; i < positions.size(); i++) {
          FloodFillPositionSelector.WeightedPosition entry = positions.get(i);
-         double distance = playerPosition.distanceSquaredTo(entry.position);
+         double distance = playerPosition.distanceSquared(entry.position.x, entry.position.y, entry.position.z);
          entry.weight = distance < minDistanceFromPlayerSquared
             ? 0.0
             : Math.max(0.0, targetDistanceFromPlayerSquared - Math.abs(distance - targetDistanceFromPlayerSquared));
@@ -239,9 +239,9 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
 
    public void buildPositionCache(@Nonnull Vector3d origin, @Nonnull FloodFillEntryPoolSimple pool) {
       int sizeHalf = this.size / 2;
-      int worldX = MathUtil.floor(origin.getX());
-      int worldY = MathUtil.floor(origin.getY());
-      int worldZ = MathUtil.floor(origin.getZ());
+      int worldX = MathUtil.floor(origin.x());
+      int worldY = MathUtil.floor(origin.y());
+      int worldZ = MathUtil.floor(origin.z());
       this.chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(this.world, worldX, worldZ, sizeHalf);
       this.chunk = this.chunkAccessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
       if (this.chunk != null) {

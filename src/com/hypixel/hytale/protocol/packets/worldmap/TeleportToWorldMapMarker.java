@@ -46,20 +46,28 @@ public class TeleportToWorldMapMarker implements Packet, ToServerPacket {
 
    @Nonnull
    public static TeleportToWorldMapMarker deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("TeleportToWorldMapMarker", 1, buf.readableBytes() - offset);
+      }
+
       TeleportToWorldMapMarker obj = new TeleportToWorldMapMarker();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int idLen = VarInt.peek(buf, pos);
          if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+            throw ProtocolException.invalidVarInt("Id");
          }
 
+         int idVarLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
          }
 
-         int idVarLen = VarInt.length(buf, pos);
+         if (pos + idVarLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", pos + idVarLen + idLen, buf.readableBytes());
+         }
+
          obj.id = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += idVarLen + idLen;
       }
@@ -72,7 +80,7 @@ public class TeleportToWorldMapMarker implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,7 +126,7 @@ public class TeleportToWorldMapMarker implements Packet, ToServerPacket {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");

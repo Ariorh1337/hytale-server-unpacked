@@ -12,7 +12,7 @@ public abstract class ParamValue {
    @Nonnull
    public static ParamValue deserialize(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> StringParamValue.deserialize(buf, offset + typeIdLen);
@@ -26,7 +26,7 @@ public abstract class ParamValue {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return typeIdLen + switch (typeId) {
          case 0 -> StringParamValue.computeBytesConsumed(buf, offset + typeIdLen);
@@ -71,7 +71,7 @@ public abstract class ParamValue {
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
       int typeId = VarInt.peek(buffer, offset);
-      int typeIdLen = VarInt.length(buffer, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> StringParamValue.validateStructure(buffer, offset + typeIdLen);

@@ -45,20 +45,24 @@ public class AddToServerPlayerList implements Packet, ToClientPacket {
 
    @Nonnull
    public static AddToServerPlayerList deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AddToServerPlayerList", 1, buf.readableBytes() - offset);
+      }
+
       AddToServerPlayerList obj = new AddToServerPlayerList();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int playersCount = VarInt.peek(buf, pos);
          if (playersCount < 0) {
-            throw ProtocolException.negativeLength("Players", playersCount);
+            throw ProtocolException.invalidVarInt("Players");
          }
 
+         int playersVarLen = VarInt.size(playersCount);
          if (playersCount > 4096000) {
             throw ProtocolException.arrayTooLong("Players", playersCount, 4096000);
          }
 
-         int playersVarLen = VarInt.size(playersCount);
          if (pos + playersVarLen + playersCount * 37L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Players", pos + playersVarLen + playersCount * 37, buf.readableBytes());
          }
@@ -80,7 +84,7 @@ public class AddToServerPlayerList implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ServerPlayerListPlayer.computeBytesConsumed(buf, pos);
@@ -144,7 +148,7 @@ public class AddToServerPlayerList implements Packet, ToClientPacket {
             return ValidationResult.error("Players exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(playersCount);
 
          for (int i = 0; i < playersCount; i++) {
             ValidationResult structResult = ServerPlayerListPlayer.validateStructure(buffer, pos);

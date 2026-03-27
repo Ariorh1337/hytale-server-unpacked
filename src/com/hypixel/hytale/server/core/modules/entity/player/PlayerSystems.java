@@ -22,9 +22,8 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.component.system.tick.RunWhenPausedSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.EntityEffectsUpdate;
 import com.hypixel.hytale.protocol.EntityStatsUpdate;
@@ -97,6 +96,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlayerSystems {
    @Nonnull
@@ -127,12 +127,12 @@ public class PlayerSystems {
             for (PlayerInput.InputUpdate entry : movementUpdateQueue) {
                switch (entry) {
                   case PlayerInput.AbsoluteMovement abs:
-                     shouldTeleport = transformComponent.getPosition().distanceSquaredTo(abs.getX(), abs.getY(), abs.getZ()) > 0.01F;
+                     shouldTeleport = transformComponent.getPosition().distanceSquared(abs.getX(), abs.getY(), abs.getZ()) > 0.01F;
                      break;
                   case PlayerInput.RelativeMovement rel:
                      Vector3d position = transformComponent.getPosition();
                      shouldTeleport = transformComponent.getPosition()
-                           .distanceSquaredTo(position.x + rel.getX(), position.y + rel.getY(), position.z + rel.getZ())
+                           .distanceSquared(position.x + rel.getX(), position.y + rel.getY(), position.z + rel.getZ())
                         > 0.01F;
                      break;
                   case PlayerInput.SetHead head:
@@ -520,7 +520,7 @@ public class PlayerSystems {
             );
          playerComponent.getPlayerConfigData()
             .getPerWorldData(world.getName())
-            .setLastPosition(new Transform(transformComponent.getPosition().clone(), headRotationComponent.getRotation().clone()));
+            .setLastPosition(new Transform(new Vector3d(transformComponent.getPosition()), new Rotation3f(headRotationComponent.getRotation())));
          playerRefComponent.getPacketHandler().setQueuePackets(false);
          playerRefComponent.getPacketHandler().tryFlush();
          WorldConfig worldConfig = world.getWorldConfig();
@@ -730,7 +730,7 @@ public class PlayerSystems {
          Transform transform = transformComponent.getTransform();
          HeadRotation headRotationComponent = archetypeChunk.getComponent(index, HeadRotation.getComponentType());
          assert headRotationComponent != null;
-         Vector3f headRotation = headRotationComponent.getRotation();
+         Rotation3f headRotation = headRotationComponent.getRotation();
          PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
          assert playerRefComponent != null;
          playerRefComponent.updatePosition(world, transform, headRotation);

@@ -70,36 +70,55 @@ public class RootInteraction {
 
    @Nonnull
    public static RootInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 30) {
+         throw ProtocolException.bufferTooSmall("RootInteraction", 30, buf.readableBytes() - offset);
+      }
+
       RootInteraction obj = new RootInteraction();
       byte nullBits = buf.getByte(offset);
       obj.clickQueuingTimeout = buf.getFloatLE(offset + 1);
       obj.requireNewClick = buf.getByte(offset + 5) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 30 + buf.getIntLE(offset + 6);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 6);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 30 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 30 + buf.getIntLE(offset + 10);
-         int interactionsCount = VarInt.peek(buf, varPos1);
-         if (interactionsCount < 0) {
-            throw ProtocolException.negativeLength("Interactions", interactionsCount);
+         int varPosBase1 = buf.getIntLE(offset + 10);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Interactions", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 30 + varPosBase1;
+         int interactionsCount = VarInt.peek(buf, varPos1);
+         if (interactionsCount < 0) {
+            throw ProtocolException.invalidVarInt("Interactions");
+         }
+
+         int varIntLen = VarInt.size(interactionsCount);
          if (interactionsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Interactions", interactionsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + interactionsCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Interactions", varPos1 + varIntLen + interactionsCount * 4, buf.readableBytes());
          }
@@ -112,22 +131,32 @@ public class RootInteraction {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 30 + buf.getIntLE(offset + 14);
+         int varPosBase2 = buf.getIntLE(offset + 14);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Cooldown", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 30 + varPosBase2;
          obj.cooldown = InteractionCooldown.deserialize(buf, varPos2);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 30 + buf.getIntLE(offset + 18);
-         int settingsCount = VarInt.peek(buf, varPos3);
-         if (settingsCount < 0) {
-            throw ProtocolException.negativeLength("Settings", settingsCount);
+         int varPosBase3 = buf.getIntLE(offset + 18);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Settings", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 30 + varPosBase3;
+         int settingsCount = VarInt.peek(buf, varPos3);
+         if (settingsCount < 0) {
+            throw ProtocolException.invalidVarInt("Settings");
+         }
+
+         int varIntLen = VarInt.size(settingsCount);
          if (settingsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Settings", settingsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          obj.settings = new HashMap<>(settingsCount);
          int dictPos = varPos3 + varIntLen;
 
@@ -142,22 +171,32 @@ public class RootInteraction {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 30 + buf.getIntLE(offset + 22);
+         int varPosBase4 = buf.getIntLE(offset + 22);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Rules", varPosBase4, buf.readableBytes());
+         }
+
+         int varPos4 = offset + 30 + varPosBase4;
          obj.rules = InteractionRules.deserialize(buf, varPos4);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos5 = offset + 30 + buf.getIntLE(offset + 26);
-         int tagsCount = VarInt.peek(buf, varPos5);
-         if (tagsCount < 0) {
-            throw ProtocolException.negativeLength("Tags", tagsCount);
+         int varPosBase5 = buf.getIntLE(offset + 26);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Tags", varPosBase5, buf.readableBytes());
          }
 
+         int varPos5 = offset + 30 + varPosBase5;
+         int tagsCount = VarInt.peek(buf, varPos5);
+         if (tagsCount < 0) {
+            throw ProtocolException.invalidVarInt("Tags");
+         }
+
+         int varIntLen = VarInt.size(tagsCount);
          if (tagsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tags", tagsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos5);
          if (varPos5 + varIntLen + tagsCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tags", varPos5 + varIntLen + tagsCount * 4, buf.readableBytes());
          }
@@ -177,9 +216,13 @@ public class RootInteraction {
       int maxEnd = 30;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 6);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 30 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -187,9 +230,13 @@ public class RootInteraction {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 10);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Interactions", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 30 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 4;
+         pos1 += VarInt.size(arrLen) + arrLen * 4;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -197,6 +244,10 @@ public class RootInteraction {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 14);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Cooldown", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 30 + fieldOffset2;
          pos2 += InteractionCooldown.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -206,9 +257,13 @@ public class RootInteraction {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 18);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Settings", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 30 + fieldOffset3;
          int dictLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos3 = ++pos3 + RootInteractionSettings.computeBytesConsumed(buf, pos3);
@@ -221,6 +276,10 @@ public class RootInteraction {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 22);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Rules", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 30 + fieldOffset4;
          pos4 += InteractionRules.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
@@ -230,9 +289,13 @@ public class RootInteraction {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 26);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Tags", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 30 + fieldOffset5;
          int arrLen = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5) + arrLen * 4;
+         pos5 += VarInt.size(arrLen) + arrLen * 4;
          if (pos5 - offset > maxEnd) {
             maxEnd = pos5 - offset;
          }
@@ -395,15 +458,11 @@ public class RootInteraction {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 6);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 30 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -413,7 +472,7 @@ public class RootInteraction {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -422,15 +481,11 @@ public class RootInteraction {
 
       if ((nullBits & 2) != 0) {
          int interactionsOffset = buffer.getIntLE(offset + 10);
-         if (interactionsOffset < 0) {
+         if (interactionsOffset < 0 || interactionsOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Interactions");
          }
 
          int pos = offset + 30 + interactionsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Interactions");
-         }
-
          int interactionsCount = VarInt.peek(buffer, pos);
          if (interactionsCount < 0) {
             return ValidationResult.error("Invalid array count for Interactions");
@@ -440,7 +495,7 @@ public class RootInteraction {
             return ValidationResult.error("Interactions exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(interactionsCount);
          pos += interactionsCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Interactions");
@@ -449,15 +504,11 @@ public class RootInteraction {
 
       if ((nullBits & 4) != 0) {
          int cooldownOffset = buffer.getIntLE(offset + 14);
-         if (cooldownOffset < 0) {
+         if (cooldownOffset < 0 || cooldownOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Cooldown");
          }
 
          int pos = offset + 30 + cooldownOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Cooldown");
-         }
-
          ValidationResult cooldownResult = InteractionCooldown.validateStructure(buffer, pos);
          if (!cooldownResult.isValid()) {
             return ValidationResult.error("Invalid Cooldown: " + cooldownResult.error());
@@ -468,15 +519,11 @@ public class RootInteraction {
 
       if ((nullBits & 8) != 0) {
          int settingsOffset = buffer.getIntLE(offset + 18);
-         if (settingsOffset < 0) {
+         if (settingsOffset < 0 || settingsOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Settings");
          }
 
          int pos = offset + 30 + settingsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Settings");
-         }
-
          int settingsCount = VarInt.peek(buffer, pos);
          if (settingsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Settings");
@@ -486,24 +533,25 @@ public class RootInteraction {
             return ValidationResult.error("Settings exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(settingsCount);
 
          for (int i = 0; i < settingsCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 2) {
+               return ValidationResult.error("Invalid GameMode value for key");
+            }
+
             pos = ++pos + RootInteractionSettings.computeBytesConsumed(buffer, pos);
          }
       }
 
       if ((nullBits & 16) != 0) {
          int rulesOffset = buffer.getIntLE(offset + 22);
-         if (rulesOffset < 0) {
+         if (rulesOffset < 0 || rulesOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Rules");
          }
 
          int pos = offset + 30 + rulesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Rules");
-         }
-
          ValidationResult rulesResult = InteractionRules.validateStructure(buffer, pos);
          if (!rulesResult.isValid()) {
             return ValidationResult.error("Invalid Rules: " + rulesResult.error());
@@ -514,15 +562,11 @@ public class RootInteraction {
 
       if ((nullBits & 32) != 0) {
          int tagsOffset = buffer.getIntLE(offset + 26);
-         if (tagsOffset < 0) {
+         if (tagsOffset < 0 || tagsOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Tags");
          }
 
          int pos = offset + 30 + tagsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Tags");
-         }
-
          int tagsCount = VarInt.peek(buffer, pos);
          if (tagsCount < 0) {
             return ValidationResult.error("Invalid array count for Tags");
@@ -532,7 +576,7 @@ public class RootInteraction {
             return ValidationResult.error("Tags exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagsCount);
          pos += tagsCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Tags");

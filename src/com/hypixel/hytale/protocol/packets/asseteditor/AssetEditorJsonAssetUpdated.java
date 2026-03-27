@@ -50,25 +50,39 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorJsonAssetUpdated deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AssetEditorJsonAssetUpdated", 9, buf.readableBytes() - offset);
+      }
+
       AssetEditorJsonAssetUpdated obj = new AssetEditorJsonAssetUpdated();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 9 + varPosBase0;
          obj.path = AssetPath.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int commandsCount = VarInt.peek(buf, varPos1);
-         if (commandsCount < 0) {
-            throw ProtocolException.negativeLength("Commands", commandsCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Commands", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int commandsCount = VarInt.peek(buf, varPos1);
+         if (commandsCount < 0) {
+            throw ProtocolException.invalidVarInt("Commands");
+         }
+
+         int varIntLen = VarInt.size(commandsCount);
          if (commandsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Commands", commandsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + commandsCount * 7L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Commands", varPos1 + varIntLen + commandsCount * 7, buf.readableBytes());
          }
@@ -90,6 +104,10 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -99,9 +117,13 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Commands", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += JsonUpdateCommand.computeBytesConsumed(buf, pos1);
@@ -184,15 +206,11 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int pathOffset = buffer.getIntLE(offset + 1);
-         if (pathOffset < 0) {
+         if (pathOffset < 0 || pathOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
          int pos = offset + 9 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
          ValidationResult pathResult = AssetPath.validateStructure(buffer, pos);
          if (!pathResult.isValid()) {
             return ValidationResult.error("Invalid Path: " + pathResult.error());
@@ -203,15 +221,11 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int commandsOffset = buffer.getIntLE(offset + 5);
-         if (commandsOffset < 0) {
+         if (commandsOffset < 0 || commandsOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Commands");
          }
 
          int pos = offset + 9 + commandsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Commands");
-         }
-
          int commandsCount = VarInt.peek(buffer, pos);
          if (commandsCount < 0) {
             return ValidationResult.error("Invalid array count for Commands");
@@ -221,7 +235,7 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
             return ValidationResult.error("Commands exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(commandsCount);
 
          for (int i = 0; i < commandsCount; i++) {
             ValidationResult structResult = JsonUpdateCommand.validateStructure(buffer, pos);

@@ -215,7 +215,7 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
          ModifyEvent.dispatch(
             ModifyEvents.CaveCovers.class,
             new ModifyEvents.CaveCovers(
-               this.caveContext, entries, content -> new CaveNodeCoverEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+               this.seed, this.caveContext, entries, path -> new CaveNodeCoverEntryJsonLoader(seed.next(), this.dataFolder, this.loadFile(path)).load()
             )
          );
          return entries.toArray();

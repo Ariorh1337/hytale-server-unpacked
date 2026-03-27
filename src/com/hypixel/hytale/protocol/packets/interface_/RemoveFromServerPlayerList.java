@@ -47,20 +47,24 @@ public class RemoveFromServerPlayerList implements Packet, ToClientPacket {
 
    @Nonnull
    public static RemoveFromServerPlayerList deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("RemoveFromServerPlayerList", 1, buf.readableBytes() - offset);
+      }
+
       RemoveFromServerPlayerList obj = new RemoveFromServerPlayerList();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int playersCount = VarInt.peek(buf, pos);
          if (playersCount < 0) {
-            throw ProtocolException.negativeLength("Players", playersCount);
+            throw ProtocolException.invalidVarInt("Players");
          }
 
+         int playersVarLen = VarInt.size(playersCount);
          if (playersCount > 4096000) {
             throw ProtocolException.arrayTooLong("Players", playersCount, 4096000);
          }
 
-         int playersVarLen = VarInt.size(playersCount);
          if (pos + playersVarLen + playersCount * 16L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Players", pos + playersVarLen + playersCount * 16, buf.readableBytes());
          }
@@ -83,7 +87,7 @@ public class RemoveFromServerPlayerList implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 16;
+         pos += VarInt.size(arrLen) + arrLen * 16;
       }
 
       return pos - offset;
@@ -137,7 +141,7 @@ public class RemoveFromServerPlayerList implements Packet, ToClientPacket {
             return ValidationResult.error("Players exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(playersCount);
          pos += playersCount * 16;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Players");

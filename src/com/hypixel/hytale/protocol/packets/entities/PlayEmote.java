@@ -46,20 +46,28 @@ public class PlayEmote implements Packet, ToServerPacket {
 
    @Nonnull
    public static PlayEmote deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("PlayEmote", 1, buf.readableBytes() - offset);
+      }
+
       PlayEmote obj = new PlayEmote();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int emoteIdLen = VarInt.peek(buf, pos);
          if (emoteIdLen < 0) {
-            throw ProtocolException.negativeLength("EmoteId", emoteIdLen);
+            throw ProtocolException.invalidVarInt("EmoteId");
          }
 
+         int emoteIdVarLen = VarInt.size(emoteIdLen);
          if (emoteIdLen > 4096000) {
             throw ProtocolException.stringTooLong("EmoteId", emoteIdLen, 4096000);
          }
 
-         int emoteIdVarLen = VarInt.length(buf, pos);
+         if (pos + emoteIdVarLen + emoteIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("EmoteId", pos + emoteIdVarLen + emoteIdLen, buf.readableBytes());
+         }
+
          obj.emoteId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += emoteIdVarLen + emoteIdLen;
       }
@@ -72,7 +80,7 @@ public class PlayEmote implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,7 +126,7 @@ public class PlayEmote implements Packet, ToServerPacket {
             return ValidationResult.error("EmoteId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(emoteIdLen);
          pos += emoteIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading EmoteId");

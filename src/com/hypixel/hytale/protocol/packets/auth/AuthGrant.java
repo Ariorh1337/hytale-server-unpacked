@@ -50,31 +50,55 @@ public class AuthGrant implements Packet, ToClientPacket {
 
    @Nonnull
    public static AuthGrant deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AuthGrant", 9, buf.readableBytes() - offset);
+      }
+
       AuthGrant obj = new AuthGrant();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int authorizationGrantLen = VarInt.peek(buf, varPos0);
-         if (authorizationGrantLen < 0) {
-            throw ProtocolException.negativeLength("AuthorizationGrant", authorizationGrantLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("AuthorizationGrant", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int authorizationGrantLen = VarInt.peek(buf, varPos0);
+         if (authorizationGrantLen < 0) {
+            throw ProtocolException.invalidVarInt("AuthorizationGrant");
+         }
+
+         int authorizationGrantVarIntLen = VarInt.size(authorizationGrantLen);
          if (authorizationGrantLen > 4096) {
             throw ProtocolException.stringTooLong("AuthorizationGrant", authorizationGrantLen, 4096);
+         }
+
+         if (varPos0 + authorizationGrantVarIntLen + authorizationGrantLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("AuthorizationGrant", varPos0 + authorizationGrantVarIntLen + authorizationGrantLen, buf.readableBytes());
          }
 
          obj.authorizationGrant = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int serverIdentityTokenLen = VarInt.peek(buf, varPos1);
-         if (serverIdentityTokenLen < 0) {
-            throw ProtocolException.negativeLength("ServerIdentityToken", serverIdentityTokenLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ServerIdentityToken", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int serverIdentityTokenLen = VarInt.peek(buf, varPos1);
+         if (serverIdentityTokenLen < 0) {
+            throw ProtocolException.invalidVarInt("ServerIdentityToken");
+         }
+
+         int serverIdentityTokenVarIntLen = VarInt.size(serverIdentityTokenLen);
          if (serverIdentityTokenLen > 8192) {
             throw ProtocolException.stringTooLong("ServerIdentityToken", serverIdentityTokenLen, 8192);
+         }
+
+         if (varPos1 + serverIdentityTokenVarIntLen + serverIdentityTokenLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ServerIdentityToken", varPos1 + serverIdentityTokenVarIntLen + serverIdentityTokenLen, buf.readableBytes());
          }
 
          obj.serverIdentityToken = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -88,9 +112,13 @@ public class AuthGrant implements Packet, ToClientPacket {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("AuthorizationGrant", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -98,9 +126,13 @@ public class AuthGrant implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ServerIdentityToken", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -164,15 +196,11 @@ public class AuthGrant implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int authorizationGrantOffset = buffer.getIntLE(offset + 1);
-         if (authorizationGrantOffset < 0) {
+         if (authorizationGrantOffset < 0 || authorizationGrantOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for AuthorizationGrant");
          }
 
          int pos = offset + 9 + authorizationGrantOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AuthorizationGrant");
-         }
-
          int authorizationGrantLen = VarInt.peek(buffer, pos);
          if (authorizationGrantLen < 0) {
             return ValidationResult.error("Invalid string length for AuthorizationGrant");
@@ -182,7 +210,7 @@ public class AuthGrant implements Packet, ToClientPacket {
             return ValidationResult.error("AuthorizationGrant exceeds max length 4096");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(authorizationGrantLen);
          pos += authorizationGrantLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading AuthorizationGrant");
@@ -191,15 +219,11 @@ public class AuthGrant implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int serverIdentityTokenOffset = buffer.getIntLE(offset + 5);
-         if (serverIdentityTokenOffset < 0) {
+         if (serverIdentityTokenOffset < 0 || serverIdentityTokenOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for ServerIdentityToken");
          }
 
          int pos = offset + 9 + serverIdentityTokenOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ServerIdentityToken");
-         }
-
          int serverIdentityTokenLen = VarInt.peek(buffer, pos);
          if (serverIdentityTokenLen < 0) {
             return ValidationResult.error("Invalid string length for ServerIdentityToken");
@@ -209,7 +233,7 @@ public class AuthGrant implements Packet, ToClientPacket {
             return ValidationResult.error("ServerIdentityToken exceeds max length 8192");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(serverIdentityTokenLen);
          pos += serverIdentityTokenLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ServerIdentityToken");

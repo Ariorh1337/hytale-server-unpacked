@@ -64,90 +64,149 @@ public class AssetPackManifest {
 
    @Nonnull
    public static AssetPackManifest deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 29) {
+         throw ProtocolException.bufferTooSmall("AssetPackManifest", 29, buf.readableBytes() - offset);
+      }
+
       AssetPackManifest obj = new AssetPackManifest();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 29 + buf.getIntLE(offset + 1);
-         int nameLen = VarInt.peek(buf, varPos0);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Name", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 29 + varPosBase0;
+         int nameLen = VarInt.peek(buf, varPos0);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos0 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos0 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 29 + buf.getIntLE(offset + 5);
-         int groupLen = VarInt.peek(buf, varPos1);
-         if (groupLen < 0) {
-            throw ProtocolException.negativeLength("Group", groupLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Group", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 29 + varPosBase1;
+         int groupLen = VarInt.peek(buf, varPos1);
+         if (groupLen < 0) {
+            throw ProtocolException.invalidVarInt("Group");
+         }
+
+         int groupVarIntLen = VarInt.size(groupLen);
          if (groupLen > 4096000) {
             throw ProtocolException.stringTooLong("Group", groupLen, 4096000);
+         }
+
+         if (varPos1 + groupVarIntLen + groupLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Group", varPos1 + groupVarIntLen + groupLen, buf.readableBytes());
          }
 
          obj.group = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 29 + buf.getIntLE(offset + 9);
-         int websiteLen = VarInt.peek(buf, varPos2);
-         if (websiteLen < 0) {
-            throw ProtocolException.negativeLength("Website", websiteLen);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Website", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 29 + varPosBase2;
+         int websiteLen = VarInt.peek(buf, varPos2);
+         if (websiteLen < 0) {
+            throw ProtocolException.invalidVarInt("Website");
+         }
+
+         int websiteVarIntLen = VarInt.size(websiteLen);
          if (websiteLen > 4096000) {
             throw ProtocolException.stringTooLong("Website", websiteLen, 4096000);
+         }
+
+         if (varPos2 + websiteVarIntLen + websiteLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Website", varPos2 + websiteVarIntLen + websiteLen, buf.readableBytes());
          }
 
          obj.website = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 29 + buf.getIntLE(offset + 13);
-         int descriptionLen = VarInt.peek(buf, varPos3);
-         if (descriptionLen < 0) {
-            throw ProtocolException.negativeLength("Description", descriptionLen);
+         int varPosBase3 = buf.getIntLE(offset + 13);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Description", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 29 + varPosBase3;
+         int descriptionLen = VarInt.peek(buf, varPos3);
+         if (descriptionLen < 0) {
+            throw ProtocolException.invalidVarInt("Description");
+         }
+
+         int descriptionVarIntLen = VarInt.size(descriptionLen);
          if (descriptionLen > 4096000) {
             throw ProtocolException.stringTooLong("Description", descriptionLen, 4096000);
+         }
+
+         if (varPos3 + descriptionVarIntLen + descriptionLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Description", varPos3 + descriptionVarIntLen + descriptionLen, buf.readableBytes());
          }
 
          obj.description = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 29 + buf.getIntLE(offset + 17);
-         int versionLen = VarInt.peek(buf, varPos4);
-         if (versionLen < 0) {
-            throw ProtocolException.negativeLength("Version", versionLen);
+         int varPosBase4 = buf.getIntLE(offset + 17);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Version", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 29 + varPosBase4;
+         int versionLen = VarInt.peek(buf, varPos4);
+         if (versionLen < 0) {
+            throw ProtocolException.invalidVarInt("Version");
+         }
+
+         int versionVarIntLen = VarInt.size(versionLen);
          if (versionLen > 4096000) {
             throw ProtocolException.stringTooLong("Version", versionLen, 4096000);
+         }
+
+         if (varPos4 + versionVarIntLen + versionLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Version", varPos4 + versionVarIntLen + versionLen, buf.readableBytes());
          }
 
          obj.version = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos5 = offset + 29 + buf.getIntLE(offset + 21);
-         int authorsCount = VarInt.peek(buf, varPos5);
-         if (authorsCount < 0) {
-            throw ProtocolException.negativeLength("Authors", authorsCount);
+         int varPosBase5 = buf.getIntLE(offset + 21);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Authors", varPosBase5, buf.readableBytes());
          }
 
+         int varPos5 = offset + 29 + varPosBase5;
+         int authorsCount = VarInt.peek(buf, varPos5);
+         if (authorsCount < 0) {
+            throw ProtocolException.invalidVarInt("Authors");
+         }
+
+         int varIntLen = VarInt.size(authorsCount);
          if (authorsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Authors", authorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos5);
          if (varPos5 + varIntLen + authorsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Authors", varPos5 + varIntLen + authorsCount * 1, buf.readableBytes());
          }
@@ -162,14 +221,24 @@ public class AssetPackManifest {
       }
 
       if ((nullBits & 64) != 0) {
-         int varPos6 = offset + 29 + buf.getIntLE(offset + 25);
-         int serverVersionLen = VarInt.peek(buf, varPos6);
-         if (serverVersionLen < 0) {
-            throw ProtocolException.negativeLength("ServerVersion", serverVersionLen);
+         int varPosBase6 = buf.getIntLE(offset + 25);
+         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("ServerVersion", varPosBase6, buf.readableBytes());
          }
 
+         int varPos6 = offset + 29 + varPosBase6;
+         int serverVersionLen = VarInt.peek(buf, varPos6);
+         if (serverVersionLen < 0) {
+            throw ProtocolException.invalidVarInt("ServerVersion");
+         }
+
+         int serverVersionVarIntLen = VarInt.size(serverVersionLen);
          if (serverVersionLen > 4096000) {
             throw ProtocolException.stringTooLong("ServerVersion", serverVersionLen, 4096000);
+         }
+
+         if (varPos6 + serverVersionVarIntLen + serverVersionLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ServerVersion", varPos6 + serverVersionVarIntLen + serverVersionLen, buf.readableBytes());
          }
 
          obj.serverVersion = PacketIO.readVarString(buf, varPos6, PacketIO.UTF8);
@@ -183,9 +252,13 @@ public class AssetPackManifest {
       int maxEnd = 29;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 29 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -193,9 +266,13 @@ public class AssetPackManifest {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Group", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 29 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -203,9 +280,13 @@ public class AssetPackManifest {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Website", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 29 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -213,9 +294,13 @@ public class AssetPackManifest {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 13);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Description", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 29 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -223,9 +308,13 @@ public class AssetPackManifest {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 17);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Version", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 29 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -233,9 +322,13 @@ public class AssetPackManifest {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 21);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Authors", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 29 + fieldOffset5;
          int arrLen = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5);
+         pos5 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos5 += AuthorInfo.computeBytesConsumed(buf, pos5);
@@ -248,9 +341,13 @@ public class AssetPackManifest {
 
       if ((nullBits & 64) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 25);
+         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("ServerVersion", fieldOffset6, maxEnd);
+         }
+
          int pos6 = offset + 29 + fieldOffset6;
          int sl = VarInt.peek(buf, pos6);
-         pos6 += VarInt.length(buf, pos6) + sl;
+         pos6 += VarInt.size(sl) + sl;
          if (pos6 - offset > maxEnd) {
             maxEnd = pos6 - offset;
          }
@@ -411,15 +508,11 @@ public class AssetPackManifest {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int nameOffset = buffer.getIntLE(offset + 1);
-         if (nameOffset < 0) {
+         if (nameOffset < 0 || nameOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
          int pos = offset + 29 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -429,7 +522,7 @@ public class AssetPackManifest {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -438,15 +531,11 @@ public class AssetPackManifest {
 
       if ((nullBits & 2) != 0) {
          int groupOffset = buffer.getIntLE(offset + 5);
-         if (groupOffset < 0) {
+         if (groupOffset < 0 || groupOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Group");
          }
 
          int pos = offset + 29 + groupOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Group");
-         }
-
          int groupLen = VarInt.peek(buffer, pos);
          if (groupLen < 0) {
             return ValidationResult.error("Invalid string length for Group");
@@ -456,7 +545,7 @@ public class AssetPackManifest {
             return ValidationResult.error("Group exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(groupLen);
          pos += groupLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Group");
@@ -465,15 +554,11 @@ public class AssetPackManifest {
 
       if ((nullBits & 4) != 0) {
          int websiteOffset = buffer.getIntLE(offset + 9);
-         if (websiteOffset < 0) {
+         if (websiteOffset < 0 || websiteOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Website");
          }
 
          int pos = offset + 29 + websiteOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Website");
-         }
-
          int websiteLen = VarInt.peek(buffer, pos);
          if (websiteLen < 0) {
             return ValidationResult.error("Invalid string length for Website");
@@ -483,7 +568,7 @@ public class AssetPackManifest {
             return ValidationResult.error("Website exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(websiteLen);
          pos += websiteLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Website");
@@ -492,15 +577,11 @@ public class AssetPackManifest {
 
       if ((nullBits & 8) != 0) {
          int descriptionOffset = buffer.getIntLE(offset + 13);
-         if (descriptionOffset < 0) {
+         if (descriptionOffset < 0 || descriptionOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Description");
          }
 
          int pos = offset + 29 + descriptionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Description");
-         }
-
          int descriptionLen = VarInt.peek(buffer, pos);
          if (descriptionLen < 0) {
             return ValidationResult.error("Invalid string length for Description");
@@ -510,7 +591,7 @@ public class AssetPackManifest {
             return ValidationResult.error("Description exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(descriptionLen);
          pos += descriptionLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Description");
@@ -519,15 +600,11 @@ public class AssetPackManifest {
 
       if ((nullBits & 16) != 0) {
          int versionOffset = buffer.getIntLE(offset + 17);
-         if (versionOffset < 0) {
+         if (versionOffset < 0 || versionOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Version");
          }
 
          int pos = offset + 29 + versionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Version");
-         }
-
          int versionLen = VarInt.peek(buffer, pos);
          if (versionLen < 0) {
             return ValidationResult.error("Invalid string length for Version");
@@ -537,7 +614,7 @@ public class AssetPackManifest {
             return ValidationResult.error("Version exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(versionLen);
          pos += versionLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Version");
@@ -546,15 +623,11 @@ public class AssetPackManifest {
 
       if ((nullBits & 32) != 0) {
          int authorsOffset = buffer.getIntLE(offset + 21);
-         if (authorsOffset < 0) {
+         if (authorsOffset < 0 || authorsOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Authors");
          }
 
          int pos = offset + 29 + authorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Authors");
-         }
-
          int authorsCount = VarInt.peek(buffer, pos);
          if (authorsCount < 0) {
             return ValidationResult.error("Invalid array count for Authors");
@@ -564,7 +637,7 @@ public class AssetPackManifest {
             return ValidationResult.error("Authors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(authorsCount);
 
          for (int i = 0; i < authorsCount; i++) {
             ValidationResult structResult = AuthorInfo.validateStructure(buffer, pos);
@@ -578,15 +651,11 @@ public class AssetPackManifest {
 
       if ((nullBits & 64) != 0) {
          int serverVersionOffset = buffer.getIntLE(offset + 25);
-         if (serverVersionOffset < 0) {
+         if (serverVersionOffset < 0 || serverVersionOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for ServerVersion");
          }
 
          int pos = offset + 29 + serverVersionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ServerVersion");
-         }
-
          int serverVersionLen = VarInt.peek(buffer, pos);
          if (serverVersionLen < 0) {
             return ValidationResult.error("Invalid string length for ServerVersion");
@@ -596,7 +665,7 @@ public class AssetPackManifest {
             return ValidationResult.error("ServerVersion exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(serverVersionLen);
          pos += serverVersionLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ServerVersion");

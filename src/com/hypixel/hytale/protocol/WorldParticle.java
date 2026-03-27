@@ -46,6 +46,10 @@ public class WorldParticle {
 
    @Nonnull
    public static WorldParticle deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 32) {
+         throw ProtocolException.bufferTooSmall("WorldParticle", 32, buf.readableBytes() - offset);
+      }
+
       WorldParticle obj = new WorldParticle();
       byte nullBits = buf.getByte(offset);
       obj.scale = buf.getFloatLE(offset + 1);
@@ -65,14 +69,18 @@ public class WorldParticle {
       if ((nullBits & 8) != 0) {
          int systemIdLen = VarInt.peek(buf, pos);
          if (systemIdLen < 0) {
-            throw ProtocolException.negativeLength("SystemId", systemIdLen);
+            throw ProtocolException.invalidVarInt("SystemId");
          }
 
+         int systemIdVarLen = VarInt.size(systemIdLen);
          if (systemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("SystemId", systemIdLen, 4096000);
          }
 
-         int systemIdVarLen = VarInt.length(buf, pos);
+         if (pos + systemIdVarLen + systemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("SystemId", pos + systemIdVarLen + systemIdLen, buf.readableBytes());
+         }
+
          obj.systemId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += systemIdVarLen + systemIdLen;
       }
@@ -85,7 +93,7 @@ public class WorldParticle {
       int pos = offset + 32;
       if ((nullBits & 8) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -160,7 +168,7 @@ public class WorldParticle {
             return ValidationResult.error("SystemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(systemIdLen);
          pos += systemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading SystemId");

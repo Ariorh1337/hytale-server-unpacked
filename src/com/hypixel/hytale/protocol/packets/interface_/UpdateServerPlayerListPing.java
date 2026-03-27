@@ -50,20 +50,25 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateServerPlayerListPing deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateServerPlayerListPing", 1, buf.readableBytes() - offset);
+      }
+
       UpdateServerPlayerListPing obj = new UpdateServerPlayerListPing();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int playersCount = VarInt.peek(buf, pos);
          if (playersCount < 0) {
-            throw ProtocolException.negativeLength("Players", playersCount);
+            throw ProtocolException.invalidVarInt("Players");
          }
 
+         int playersVarLen = VarInt.size(playersCount);
          if (playersCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Players", playersCount, 4096000);
          }
 
-         pos += VarInt.size(playersCount);
+         pos += playersVarLen;
          obj.players = new HashMap<>(playersCount);
 
          for (int i = 0; i < playersCount; i++) {
@@ -85,7 +90,7 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 16;
@@ -145,7 +150,7 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
             return ValidationResult.error("Players exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(playersCount);
 
          for (int i = 0; i < playersCount; i++) {
             pos += 16;

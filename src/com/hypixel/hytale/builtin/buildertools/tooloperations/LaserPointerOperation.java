@@ -3,7 +3,6 @@ package com.hypixel.hytale.builtin.buildertools.tooloperations;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.Message;
@@ -14,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.PlayerUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class LaserPointerOperation extends ToolOperation {
    private static final double MAX_DISTANCE = 128.0;
@@ -57,7 +57,7 @@ public class LaserPointerOperation extends ToolOperation {
       Vector3d lookVecPosition = lookVec.getPosition();
       Vector3d lookVecDirection = lookVec.getDirection();
       Vector3d hitLocation = TargetUtil.getTargetLocation(ref, blockId -> blockId != 0, 128.0, componentAccessor);
-      Vector3d endLocation = hitLocation != null ? hitLocation : lookVecPosition.clone().add(lookVecDirection.clone().scale(128.0));
+      Vector3d endLocation = hitLocation != null ? hitLocation : new Vector3d(lookVecPosition).add(new Vector3d(lookVecDirection).mul(128.0));
       BuilderToolLaserPointer laserPacket = new BuilderToolLaserPointer();
       laserPacket.playerNetworkId = playerNetworkId;
       laserPacket.startX = (float)lookVecPosition.x;

@@ -70,6 +70,10 @@ public class ClipboardEntityChange {
 
    @Nonnull
    public static ClipboardEntityChange deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 53) {
+         throw ProtocolException.bufferTooSmall("ClipboardEntityChange", 53, buf.readableBytes() - offset);
+      }
+
       ClipboardEntityChange obj = new ClipboardEntityChange();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getFloatLE(offset + 1);
@@ -86,19 +90,34 @@ public class ClipboardEntityChange {
 
       obj.scale = buf.getFloatLE(offset + 41);
       if ((nullBits & 4) != 0) {
-         int varPos0 = offset + 53 + buf.getIntLE(offset + 45);
+         int varPosBase0 = buf.getIntLE(offset + 45);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("Model", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 53 + varPosBase0;
          obj.model = Model.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos1 = offset + 53 + buf.getIntLE(offset + 49);
-         int itemIdLen = VarInt.peek(buf, varPos1);
-         if (itemIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemId", itemIdLen);
+         int varPosBase1 = buf.getIntLE(offset + 49);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("ItemId", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 53 + varPosBase1;
+         int itemIdLen = VarInt.peek(buf, varPos1);
+         if (itemIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ItemId");
+         }
+
+         int itemIdVarIntLen = VarInt.size(itemIdLen);
          if (itemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
+         }
+
+         if (varPos1 + itemIdVarIntLen + itemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemId", varPos1 + itemIdVarIntLen + itemIdLen, buf.readableBytes());
          }
 
          obj.itemId = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -112,6 +131,10 @@ public class ClipboardEntityChange {
       int maxEnd = 53;
       if ((nullBits & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 45);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 53 + fieldOffset0;
          pos0 += Model.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -121,9 +144,13 @@ public class ClipboardEntityChange {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 49);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("ItemId", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 53 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -210,15 +237,11 @@ public class ClipboardEntityChange {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 4) != 0) {
          int modelOffset = buffer.getIntLE(offset + 45);
-         if (modelOffset < 0) {
+         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 53) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
          int pos = offset + 53 + modelOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Model");
-         }
-
          ValidationResult modelResult = Model.validateStructure(buffer, pos);
          if (!modelResult.isValid()) {
             return ValidationResult.error("Invalid Model: " + modelResult.error());
@@ -229,15 +252,11 @@ public class ClipboardEntityChange {
 
       if ((nullBits & 8) != 0) {
          int itemIdOffset = buffer.getIntLE(offset + 49);
-         if (itemIdOffset < 0) {
+         if (itemIdOffset < 0 || itemIdOffset > buffer.writerIndex() - offset - 53) {
             return ValidationResult.error("Invalid offset for ItemId");
          }
 
          int pos = offset + 53 + itemIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemId");
-         }
-
          int itemIdLen = VarInt.peek(buffer, pos);
          if (itemIdLen < 0) {
             return ValidationResult.error("Invalid string length for ItemId");
@@ -247,7 +266,7 @@ public class ClipboardEntityChange {
             return ValidationResult.error("ItemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemIdLen);
          pos += itemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ItemId");

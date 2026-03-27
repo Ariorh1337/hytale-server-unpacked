@@ -71,6 +71,10 @@ public class ProjectileConfig {
 
    @Nonnull
    public static ProjectileConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 175) {
+         throw ProtocolException.bufferTooSmall("ProjectileConfig", 175, buf.readableBytes() - offset);
+      }
+
       ProjectileConfig obj = new ProjectileConfig();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -90,22 +94,32 @@ public class ProjectileConfig {
       obj.launchWorldSoundEventIndex = buf.getIntLE(offset + 159);
       obj.projectileSoundEventIndex = buf.getIntLE(offset + 163);
       if ((nullBits & 8) != 0) {
-         int varPos0 = offset + 175 + buf.getIntLE(offset + 167);
+         int varPosBase0 = buf.getIntLE(offset + 167);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 175) {
+            throw ProtocolException.invalidOffset("Model", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 175 + varPosBase0;
          obj.model = Model.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos1 = offset + 175 + buf.getIntLE(offset + 171);
-         int interactionsCount = VarInt.peek(buf, varPos1);
-         if (interactionsCount < 0) {
-            throw ProtocolException.negativeLength("Interactions", interactionsCount);
+         int varPosBase1 = buf.getIntLE(offset + 171);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 175) {
+            throw ProtocolException.invalidOffset("Interactions", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 175 + varPosBase1;
+         int interactionsCount = VarInt.peek(buf, varPos1);
+         if (interactionsCount < 0) {
+            throw ProtocolException.invalidVarInt("Interactions");
+         }
+
+         int varIntLen = VarInt.size(interactionsCount);
          if (interactionsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Interactions", interactionsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.interactions = new HashMap<>(interactionsCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -127,6 +141,10 @@ public class ProjectileConfig {
       int maxEnd = 175;
       if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 167);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 175) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 175 + fieldOffset0;
          pos0 += Model.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -136,9 +154,13 @@ public class ProjectileConfig {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 171);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 175) {
+            throw ProtocolException.invalidOffset("Interactions", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 175 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + 4;
@@ -248,15 +270,11 @@ public class ProjectileConfig {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 8) != 0) {
          int modelOffset = buffer.getIntLE(offset + 167);
-         if (modelOffset < 0) {
+         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 175) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
          int pos = offset + 175 + modelOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Model");
-         }
-
          ValidationResult modelResult = Model.validateStructure(buffer, pos);
          if (!modelResult.isValid()) {
             return ValidationResult.error("Invalid Model: " + modelResult.error());
@@ -267,15 +285,11 @@ public class ProjectileConfig {
 
       if ((nullBits & 16) != 0) {
          int interactionsOffset = buffer.getIntLE(offset + 171);
-         if (interactionsOffset < 0) {
+         if (interactionsOffset < 0 || interactionsOffset > buffer.writerIndex() - offset - 175) {
             return ValidationResult.error("Invalid offset for Interactions");
          }
 
          int pos = offset + 175 + interactionsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Interactions");
-         }
-
          int interactionsCount = VarInt.peek(buffer, pos);
          if (interactionsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Interactions");
@@ -285,9 +299,14 @@ public class ProjectileConfig {
             return ValidationResult.error("Interactions exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(interactionsCount);
 
          for (int i = 0; i < interactionsCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for key");
+            }
+
             pos = ++pos + 4;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");

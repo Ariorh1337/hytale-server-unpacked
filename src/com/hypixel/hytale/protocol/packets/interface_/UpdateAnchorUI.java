@@ -58,35 +58,54 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateAnchorUI deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 14) {
+         throw ProtocolException.bufferTooSmall("UpdateAnchorUI", 14, buf.readableBytes() - offset);
+      }
+
       UpdateAnchorUI obj = new UpdateAnchorUI();
       byte nullBits = buf.getByte(offset);
       obj.clear = buf.getByte(offset + 1) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 14 + buf.getIntLE(offset + 2);
-         int anchorIdLen = VarInt.peek(buf, varPos0);
-         if (anchorIdLen < 0) {
-            throw ProtocolException.negativeLength("AnchorId", anchorIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("AnchorId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 14 + varPosBase0;
+         int anchorIdLen = VarInt.peek(buf, varPos0);
+         if (anchorIdLen < 0) {
+            throw ProtocolException.invalidVarInt("AnchorId");
+         }
+
+         int anchorIdVarIntLen = VarInt.size(anchorIdLen);
          if (anchorIdLen > 4096000) {
             throw ProtocolException.stringTooLong("AnchorId", anchorIdLen, 4096000);
+         }
+
+         if (varPos0 + anchorIdVarIntLen + anchorIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("AnchorId", varPos0 + anchorIdVarIntLen + anchorIdLen, buf.readableBytes());
          }
 
          obj.anchorId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 14 + buf.getIntLE(offset + 6);
-         int commandsCount = VarInt.peek(buf, varPos1);
-         if (commandsCount < 0) {
-            throw ProtocolException.negativeLength("Commands", commandsCount);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Commands", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 14 + varPosBase1;
+         int commandsCount = VarInt.peek(buf, varPos1);
+         if (commandsCount < 0) {
+            throw ProtocolException.invalidVarInt("Commands");
+         }
+
+         int varIntLen = VarInt.size(commandsCount);
          if (commandsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Commands", commandsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + commandsCount * 2L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Commands", varPos1 + varIntLen + commandsCount * 2, buf.readableBytes());
          }
@@ -101,17 +120,22 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 14 + buf.getIntLE(offset + 10);
-         int eventBindingsCount = VarInt.peek(buf, varPos2);
-         if (eventBindingsCount < 0) {
-            throw ProtocolException.negativeLength("EventBindings", eventBindingsCount);
+         int varPosBase2 = buf.getIntLE(offset + 10);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("EventBindings", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 14 + varPosBase2;
+         int eventBindingsCount = VarInt.peek(buf, varPos2);
+         if (eventBindingsCount < 0) {
+            throw ProtocolException.invalidVarInt("EventBindings");
+         }
+
+         int varIntLen = VarInt.size(eventBindingsCount);
          if (eventBindingsCount > 4096000) {
             throw ProtocolException.arrayTooLong("EventBindings", eventBindingsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + eventBindingsCount * 3L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EventBindings", varPos2 + varIntLen + eventBindingsCount * 3, buf.readableBytes());
          }
@@ -133,9 +157,13 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
       int maxEnd = 14;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("AnchorId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 14 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -143,9 +171,13 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Commands", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 14 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += CustomUICommand.computeBytesConsumed(buf, pos1);
@@ -158,9 +190,13 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 10);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("EventBindings", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 14 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += CustomUIEventBinding.computeBytesConsumed(buf, pos2);
@@ -275,15 +311,11 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int anchorIdOffset = buffer.getIntLE(offset + 2);
-         if (anchorIdOffset < 0) {
+         if (anchorIdOffset < 0 || anchorIdOffset > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for AnchorId");
          }
 
          int pos = offset + 14 + anchorIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AnchorId");
-         }
-
          int anchorIdLen = VarInt.peek(buffer, pos);
          if (anchorIdLen < 0) {
             return ValidationResult.error("Invalid string length for AnchorId");
@@ -293,7 +325,7 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
             return ValidationResult.error("AnchorId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(anchorIdLen);
          pos += anchorIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading AnchorId");
@@ -302,15 +334,11 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int commandsOffset = buffer.getIntLE(offset + 6);
-         if (commandsOffset < 0) {
+         if (commandsOffset < 0 || commandsOffset > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for Commands");
          }
 
          int pos = offset + 14 + commandsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Commands");
-         }
-
          int commandsCount = VarInt.peek(buffer, pos);
          if (commandsCount < 0) {
             return ValidationResult.error("Invalid array count for Commands");
@@ -320,7 +348,7 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
             return ValidationResult.error("Commands exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(commandsCount);
 
          for (int i = 0; i < commandsCount; i++) {
             ValidationResult structResult = CustomUICommand.validateStructure(buffer, pos);
@@ -334,15 +362,11 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int eventBindingsOffset = buffer.getIntLE(offset + 10);
-         if (eventBindingsOffset < 0) {
+         if (eventBindingsOffset < 0 || eventBindingsOffset > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for EventBindings");
          }
 
          int pos = offset + 14 + eventBindingsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for EventBindings");
-         }
-
          int eventBindingsCount = VarInt.peek(buffer, pos);
          if (eventBindingsCount < 0) {
             return ValidationResult.error("Invalid array count for EventBindings");
@@ -352,7 +376,7 @@ public class UpdateAnchorUI implements Packet, ToClientPacket {
             return ValidationResult.error("EventBindings exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(eventBindingsCount);
 
          for (int i = 0; i < eventBindingsCount; i++) {
             ValidationResult structResult = CustomUIEventBinding.validateStructure(buffer, pos);

@@ -66,6 +66,10 @@ public class ModelParticle {
 
    @Nonnull
    public static ModelParticle deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 42) {
+         throw ProtocolException.bufferTooSmall("ModelParticle", 42, buf.readableBytes() - offset);
+      }
+
       ModelParticle obj = new ModelParticle();
       byte nullBits = buf.getByte(offset);
       obj.scale = buf.getFloatLE(offset + 1);
@@ -84,28 +88,48 @@ public class ModelParticle {
 
       obj.detachedFromModel = buf.getByte(offset + 33) != 0;
       if ((nullBits & 8) != 0) {
-         int varPos0 = offset + 42 + buf.getIntLE(offset + 34);
-         int systemIdLen = VarInt.peek(buf, varPos0);
-         if (systemIdLen < 0) {
-            throw ProtocolException.negativeLength("SystemId", systemIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 34);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("SystemId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 42 + varPosBase0;
+         int systemIdLen = VarInt.peek(buf, varPos0);
+         if (systemIdLen < 0) {
+            throw ProtocolException.invalidVarInt("SystemId");
+         }
+
+         int systemIdVarIntLen = VarInt.size(systemIdLen);
          if (systemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("SystemId", systemIdLen, 4096000);
+         }
+
+         if (varPos0 + systemIdVarIntLen + systemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("SystemId", varPos0 + systemIdVarIntLen + systemIdLen, buf.readableBytes());
          }
 
          obj.systemId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos1 = offset + 42 + buf.getIntLE(offset + 38);
-         int targetNodeNameLen = VarInt.peek(buf, varPos1);
-         if (targetNodeNameLen < 0) {
-            throw ProtocolException.negativeLength("TargetNodeName", targetNodeNameLen);
+         int varPosBase1 = buf.getIntLE(offset + 38);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("TargetNodeName", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 42 + varPosBase1;
+         int targetNodeNameLen = VarInt.peek(buf, varPos1);
+         if (targetNodeNameLen < 0) {
+            throw ProtocolException.invalidVarInt("TargetNodeName");
+         }
+
+         int targetNodeNameVarIntLen = VarInt.size(targetNodeNameLen);
          if (targetNodeNameLen > 4096000) {
             throw ProtocolException.stringTooLong("TargetNodeName", targetNodeNameLen, 4096000);
+         }
+
+         if (varPos1 + targetNodeNameVarIntLen + targetNodeNameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("TargetNodeName", varPos1 + targetNodeNameVarIntLen + targetNodeNameLen, buf.readableBytes());
          }
 
          obj.targetNodeName = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -119,9 +143,13 @@ public class ModelParticle {
       int maxEnd = 42;
       if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 34);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("SystemId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 42 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -129,9 +157,13 @@ public class ModelParticle {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 38);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("TargetNodeName", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 42 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -224,17 +256,18 @@ public class ModelParticle {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 8) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid EntityPart value for TargetEntityPart");
+      }
+
       if ((nullBits & 8) != 0) {
-         int systemIdOffset = buffer.getIntLE(offset + 34);
-         if (systemIdOffset < 0) {
+         v = buffer.getIntLE(offset + 34);
+         if (v < 0 || v > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for SystemId");
          }
 
-         int pos = offset + 42 + systemIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SystemId");
-         }
-
+         int pos = offset + 42 + v;
          int systemIdLen = VarInt.peek(buffer, pos);
          if (systemIdLen < 0) {
             return ValidationResult.error("Invalid string length for SystemId");
@@ -244,7 +277,7 @@ public class ModelParticle {
             return ValidationResult.error("SystemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(systemIdLen);
          pos += systemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading SystemId");
@@ -252,16 +285,12 @@ public class ModelParticle {
       }
 
       if ((nullBits & 16) != 0) {
-         int targetNodeNameOffset = buffer.getIntLE(offset + 38);
-         if (targetNodeNameOffset < 0) {
+         v = buffer.getIntLE(offset + 38);
+         if (v < 0 || v > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for TargetNodeName");
          }
 
-         int pos = offset + 42 + targetNodeNameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TargetNodeName");
-         }
-
+         int pos = offset + 42 + v;
          int targetNodeNameLen = VarInt.peek(buffer, pos);
          if (targetNodeNameLen < 0) {
             return ValidationResult.error("Invalid string length for TargetNodeName");
@@ -271,7 +300,7 @@ public class ModelParticle {
             return ValidationResult.error("TargetNodeName exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(targetNodeNameLen);
          pos += targetNodeNameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TargetNodeName");

@@ -53,6 +53,10 @@ public class StreamOpenResponse implements Packet, ToClientPacket {
 
    @Nonnull
    public static StreamOpenResponse deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 3) {
+         throw ProtocolException.bufferTooSmall("StreamOpenResponse", 3, buf.readableBytes() - offset);
+      }
+
       StreamOpenResponse obj = new StreamOpenResponse();
       byte nullBits = buf.getByte(offset);
       obj.type = StreamType.fromValue(buf.getByte(offset + 1));
@@ -61,14 +65,18 @@ public class StreamOpenResponse implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int rejectionReasonLen = VarInt.peek(buf, pos);
          if (rejectionReasonLen < 0) {
-            throw ProtocolException.negativeLength("RejectionReason", rejectionReasonLen);
+            throw ProtocolException.invalidVarInt("RejectionReason");
          }
 
+         int rejectionReasonVarLen = VarInt.size(rejectionReasonLen);
          if (rejectionReasonLen > 4096000) {
             throw ProtocolException.stringTooLong("RejectionReason", rejectionReasonLen, 4096000);
          }
 
-         int rejectionReasonVarLen = VarInt.length(buf, pos);
+         if (pos + rejectionReasonVarLen + rejectionReasonLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("RejectionReason", pos + rejectionReasonVarLen + rejectionReasonLen, buf.readableBytes());
+         }
+
          obj.rejectionReason = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += rejectionReasonVarLen + rejectionReasonLen;
       }
@@ -81,7 +89,7 @@ public class StreamOpenResponse implements Packet, ToClientPacket {
       int pos = offset + 3;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,9 +126,14 @@ public class StreamOpenResponse implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 3;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid StreamType value for Type");
+      }
+
+      v = offset + 3;
       if ((nullBits & 1) != 0) {
-         int rejectionReasonLen = VarInt.peek(buffer, pos);
+         int rejectionReasonLen = VarInt.peek(buffer, v);
          if (rejectionReasonLen < 0) {
             return ValidationResult.error("Invalid string length for RejectionReason");
          }
@@ -129,9 +142,9 @@ public class StreamOpenResponse implements Packet, ToClientPacket {
             return ValidationResult.error("RejectionReason exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += rejectionReasonLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(rejectionReasonLen);
+         v += rejectionReasonLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading RejectionReason");
          }
       }

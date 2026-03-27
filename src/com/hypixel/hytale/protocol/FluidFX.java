@@ -88,6 +88,10 @@ public class FluidFX {
 
    @Nonnull
    public static FluidFX deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 69) {
+         throw ProtocolException.bufferTooSmall("FluidFX", 69, buf.readableBytes() - offset);
+      }
+
       FluidFX obj = new FluidFX();
       byte nullBits = buf.getByte(offset);
       obj.shader = ShaderType.fromValue(buf.getByte(offset + 1));
@@ -114,21 +118,36 @@ public class FluidFX {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos0 = offset + 69 + buf.getIntLE(offset + 61);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 61);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 69 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos1 = offset + 69 + buf.getIntLE(offset + 65);
+         int varPosBase1 = buf.getIntLE(offset + 65);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Particle", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 69 + varPosBase1;
          obj.particle = FluidParticle.deserialize(buf, varPos1);
       }
 
@@ -140,9 +159,13 @@ public class FluidFX {
       int maxEnd = 69;
       if ((nullBits & 16) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 61);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 69 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -150,6 +173,10 @@ public class FluidFX {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 65);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Particle", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 69 + fieldOffset1;
          pos1 += FluidParticle.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -258,17 +285,23 @@ public class FluidFX {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 10) {
+         return ValidationResult.error("Invalid ShaderType value for Shader");
+      }
+
+      v = buffer.getByte(offset + 2) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid FluidFog value for FogMode");
+      }
+
       if ((nullBits & 16) != 0) {
-         int idOffset = buffer.getIntLE(offset + 61);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 61);
+         if (v < 0 || v > buffer.writerIndex() - offset - 69) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 69 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 69 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -278,7 +311,7 @@ public class FluidFX {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -286,16 +319,12 @@ public class FluidFX {
       }
 
       if ((nullBits & 32) != 0) {
-         int particleOffset = buffer.getIntLE(offset + 65);
-         if (particleOffset < 0) {
+         v = buffer.getIntLE(offset + 65);
+         if (v < 0 || v > buffer.writerIndex() - offset - 69) {
             return ValidationResult.error("Invalid offset for Particle");
          }
 
-         int pos = offset + 69 + particleOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Particle");
-         }
-
+         int pos = offset + 69 + v;
          ValidationResult particleResult = FluidParticle.validateStructure(buffer, pos);
          if (!particleResult.isValid()) {
             return ValidationResult.error("Invalid Particle: " + particleResult.error());

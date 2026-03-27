@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class BlockFlags {
 
    @Nonnull
    public static BlockFlags deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("BlockFlags", 2, buf.readableBytes() - offset);
+      }
+
       BlockFlags obj = new BlockFlags();
       obj.isUsable = buf.getByte(offset + 0) != 0;
       obj.isStackable = buf.getByte(offset + 1) != 0;

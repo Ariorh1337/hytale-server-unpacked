@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.world;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class SetFluidCmd {
 
    @Nonnull
    public static SetFluidCmd deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 7) {
+         throw ProtocolException.bufferTooSmall("SetFluidCmd", 7, buf.readableBytes() - offset);
+      }
+
       SetFluidCmd obj = new SetFluidCmd();
       obj.index = buf.getShortLE(offset + 0);
       obj.fluidId = buf.getIntLE(offset + 2);

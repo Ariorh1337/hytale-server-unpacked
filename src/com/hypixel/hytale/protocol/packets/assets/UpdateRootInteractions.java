@@ -57,6 +57,10 @@ public class UpdateRootInteractions implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateRootInteractions deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateRootInteractions", 6, buf.readableBytes() - offset);
+      }
+
       UpdateRootInteractions obj = new UpdateRootInteractions();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateRootInteractions implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int interactionsCount = VarInt.peek(buf, pos);
          if (interactionsCount < 0) {
-            throw ProtocolException.negativeLength("Interactions", interactionsCount);
+            throw ProtocolException.invalidVarInt("Interactions");
          }
 
+         int interactionsVarLen = VarInt.size(interactionsCount);
          if (interactionsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Interactions", interactionsCount, 4096000);
          }
 
-         pos += VarInt.size(interactionsCount);
+         pos += interactionsVarLen;
          obj.interactions = new HashMap<>(interactionsCount);
 
          for (int i = 0; i < interactionsCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateRootInteractions implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateRootInteractions implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int interactionsCount = VarInt.peek(buffer, pos);
+         int interactionsCount = VarInt.peek(buffer, v);
          if (interactionsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Interactions");
          }
@@ -162,15 +172,15 @@ public class UpdateRootInteractions implements Packet, ToClientPacket {
             return ValidationResult.error("Interactions exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(interactionsCount);
 
          for (int i = 0; i < interactionsCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += RootInteraction.computeBytesConsumed(buffer, pos);
+            v += RootInteraction.computeBytesConsumed(buffer, v);
          }
       }
 

@@ -41,33 +41,57 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
 
    @Nonnull
    public static HeightDeltaIconComponent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("HeightDeltaIconComponent", 17, buf.readableBytes() - offset);
+      }
+
       HeightDeltaIconComponent obj = new HeightDeltaIconComponent();
       byte nullBits = buf.getByte(offset);
       obj.upDelta = buf.getIntLE(offset + 1);
       obj.downDelta = buf.getIntLE(offset + 5);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 17 + buf.getIntLE(offset + 9);
-         int upImageLen = VarInt.peek(buf, varPos0);
-         if (upImageLen < 0) {
-            throw ProtocolException.negativeLength("UpImage", upImageLen);
+         int varPosBase0 = buf.getIntLE(offset + 9);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("UpImage", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 17 + varPosBase0;
+         int upImageLen = VarInt.peek(buf, varPos0);
+         if (upImageLen < 0) {
+            throw ProtocolException.invalidVarInt("UpImage");
+         }
+
+         int upImageVarIntLen = VarInt.size(upImageLen);
          if (upImageLen > 4096000) {
             throw ProtocolException.stringTooLong("UpImage", upImageLen, 4096000);
+         }
+
+         if (varPos0 + upImageVarIntLen + upImageLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("UpImage", varPos0 + upImageVarIntLen + upImageLen, buf.readableBytes());
          }
 
          obj.upImage = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 17 + buf.getIntLE(offset + 13);
-         int downImageLen = VarInt.peek(buf, varPos1);
-         if (downImageLen < 0) {
-            throw ProtocolException.negativeLength("DownImage", downImageLen);
+         int varPosBase1 = buf.getIntLE(offset + 13);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("DownImage", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 17 + varPosBase1;
+         int downImageLen = VarInt.peek(buf, varPos1);
+         if (downImageLen < 0) {
+            throw ProtocolException.invalidVarInt("DownImage");
+         }
+
+         int downImageVarIntLen = VarInt.size(downImageLen);
          if (downImageLen > 4096000) {
             throw ProtocolException.stringTooLong("DownImage", downImageLen, 4096000);
+         }
+
+         if (varPos1 + downImageVarIntLen + downImageLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("DownImage", varPos1 + downImageVarIntLen + downImageLen, buf.readableBytes());
          }
 
          obj.downImage = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -81,9 +105,13 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
       int maxEnd = 17;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 9);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("UpImage", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -91,9 +119,13 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 13);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("DownImage", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 17 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -161,15 +193,11 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int upImageOffset = buffer.getIntLE(offset + 9);
-         if (upImageOffset < 0) {
+         if (upImageOffset < 0 || upImageOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for UpImage");
          }
 
          int pos = offset + 17 + upImageOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for UpImage");
-         }
-
          int upImageLen = VarInt.peek(buffer, pos);
          if (upImageLen < 0) {
             return ValidationResult.error("Invalid string length for UpImage");
@@ -179,7 +207,7 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
             return ValidationResult.error("UpImage exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(upImageLen);
          pos += upImageLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading UpImage");
@@ -188,15 +216,11 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
 
       if ((nullBits & 2) != 0) {
          int downImageOffset = buffer.getIntLE(offset + 13);
-         if (downImageOffset < 0) {
+         if (downImageOffset < 0 || downImageOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for DownImage");
          }
 
          int pos = offset + 17 + downImageOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DownImage");
-         }
-
          int downImageLen = VarInt.peek(buffer, pos);
          if (downImageLen < 0) {
             return ValidationResult.error("Invalid string length for DownImage");
@@ -206,7 +230,7 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
             return ValidationResult.error("DownImage exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(downImageLen);
          pos += downImageLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading DownImage");

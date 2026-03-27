@@ -20,8 +20,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -47,6 +46,8 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class FarmingSystems {
    private static boolean hasCropAbove(@Nonnull BlockChunk blockChunk, int x, int y, int z) {
@@ -695,13 +696,13 @@ public class FarmingSystems {
             long chunkIndex = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
             WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
             double blockRotation = chunk.getRotation(worldX, worldY, worldZ).yaw().getRadians();
-            Vector3d spawnOffset = new Vector3d().assign(coopAsset.getResidentSpawnOffset()).rotateY((float)blockRotation);
+            Vector3d spawnOffset = new Vector3d().set(coopAsset.getResidentSpawnOffset()).rotateY((float)blockRotation);
             Vector3i coopLocation = new Vector3i(worldX, worldY, worldZ);
             boolean tryCapture = coopAsset.getCaptureWildNPCsInRange();
             float captureRange = coopAsset.getWildCaptureRadius();
             if (tryCapture && captureRange >= 0.0F) {
                world.execute(() -> {
-                  for (Ref<EntityStore> entity : TargetUtil.getAllEntitiesInSphere(coopLocation.toVector3d(), captureRange, store)) {
+                  for (Ref<EntityStore> entity : TargetUtil.getAllEntitiesInSphere(Vector3iUtil.toVector3d(coopLocation), captureRange, store)) {
                      coopBlock.tryPutWildResidentFromWild(store, entity, worldTimeResource, coopLocation);
                   }
                });
@@ -711,7 +712,7 @@ public class FarmingSystems {
                world.execute(() -> coopBlock.ensureNoResidentsInWorld(store));
             } else {
                world.execute(() -> {
-                  coopBlock.ensureSpawnResidentsInWorld(world, store, coopLocation.toVector3d(), spawnOffset);
+                  coopBlock.ensureSpawnResidentsInWorld(world, store, Vector3iUtil.toVector3d(coopLocation), spawnOffset);
                   coopBlock.generateProduceToInventory(worldTimeResource);
                   Vector3i blockPos = new Vector3i(worldX, worldY, worldZ);
                   BlockType currentBlockType = world.getBlockType(blockPos);

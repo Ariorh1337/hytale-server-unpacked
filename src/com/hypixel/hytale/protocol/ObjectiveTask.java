@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -34,6 +35,10 @@ public class ObjectiveTask {
 
    @Nonnull
    public static ObjectiveTask deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ObjectiveTask", 9, buf.readableBytes() - offset);
+      }
+
       ObjectiveTask obj = new ObjectiveTask();
       byte nullBits = buf.getByte(offset);
       obj.currentCompletion = buf.getIntLE(offset + 1);

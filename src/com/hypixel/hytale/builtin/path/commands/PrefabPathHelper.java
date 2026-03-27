@@ -4,8 +4,7 @@ import com.hypixel.hytale.builtin.path.PathPlugin;
 import com.hypixel.hytale.builtin.path.entities.PatrolPathMarkerEntity;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
@@ -16,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public final class PrefabPathHelper {
    private PrefabPathHelper() {
@@ -36,15 +36,15 @@ public final class PrefabPathHelper {
       waypoint.initialise(pathId, pathName, targetIndex, pauseTime, obsvAngleDegrees * (float) (Math.PI / 180.0), worldgenId, store);
       TransformComponent transformComponent = store.getComponent(playerRef, TransformComponent.getComponentType());
       assert transformComponent != null;
-      Vector3d playerPosition = transformComponent.getPosition().clone();
-      Vector3f playerBodyRotation = transformComponent.getRotation().clone();
+      Vector3d playerPosition = new Vector3d(transformComponent.getPosition());
+      Rotation3f playerBodyRotation = new Rotation3f(transformComponent.getRotation());
       PatrolPathMarkerEntity waypointEntity = world.spawnEntity(waypoint, playerPosition, playerBodyRotation);
       if (waypointEntity != null) {
          Ref<EntityStore> waypointRef = waypointEntity.getReference();
          if (waypointRef != null && waypointRef.isValid()) {
             TransformComponent waypointTransformComponent = store.getComponent(waypointRef, TransformComponent.getComponentType());
-            Vector3f waypointRotation = waypointTransformComponent.getRotation();
-            waypointRotation.assign(playerBodyRotation);
+            Rotation3f waypointRotation = waypointTransformComponent.getRotation();
+            waypointRotation.set(playerBodyRotation);
             Model model = PathPlugin.get().getPathMarkerModel();
             store.putComponent(waypointRef, ModelComponent.getComponentType(), new ModelComponent(model));
             String displayName = PatrolPathMarkerEntity.generateDisplayName(worldgenId, waypointEntity);

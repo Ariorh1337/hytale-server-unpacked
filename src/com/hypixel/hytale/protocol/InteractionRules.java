@@ -63,6 +63,10 @@ public class InteractionRules {
 
    @Nonnull
    public static InteractionRules deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 33) {
+         throw ProtocolException.bufferTooSmall("InteractionRules", 33, buf.readableBytes() - offset);
+      }
+
       InteractionRules obj = new InteractionRules();
       byte nullBits = buf.getByte(offset);
       obj.blockedByBypassIndex = buf.getIntLE(offset + 1);
@@ -70,17 +74,22 @@ public class InteractionRules {
       obj.interruptedByBypassIndex = buf.getIntLE(offset + 9);
       obj.interruptingBypassIndex = buf.getIntLE(offset + 13);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 33 + buf.getIntLE(offset + 17);
-         int blockedByCount = VarInt.peek(buf, varPos0);
-         if (blockedByCount < 0) {
-            throw ProtocolException.negativeLength("BlockedBy", blockedByCount);
+         int varPosBase0 = buf.getIntLE(offset + 17);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("BlockedBy", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 33 + varPosBase0;
+         int blockedByCount = VarInt.peek(buf, varPos0);
+         if (blockedByCount < 0) {
+            throw ProtocolException.invalidVarInt("BlockedBy");
+         }
+
+         int varIntLen = VarInt.size(blockedByCount);
          if (blockedByCount > 4096000) {
             throw ProtocolException.arrayTooLong("BlockedBy", blockedByCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + blockedByCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("BlockedBy", varPos0 + varIntLen + blockedByCount * 1, buf.readableBytes());
          }
@@ -95,17 +104,22 @@ public class InteractionRules {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 33 + buf.getIntLE(offset + 21);
-         int blockingCount = VarInt.peek(buf, varPos1);
-         if (blockingCount < 0) {
-            throw ProtocolException.negativeLength("Blocking", blockingCount);
+         int varPosBase1 = buf.getIntLE(offset + 21);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Blocking", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 33 + varPosBase1;
+         int blockingCount = VarInt.peek(buf, varPos1);
+         if (blockingCount < 0) {
+            throw ProtocolException.invalidVarInt("Blocking");
+         }
+
+         int varIntLen = VarInt.size(blockingCount);
          if (blockingCount > 4096000) {
             throw ProtocolException.arrayTooLong("Blocking", blockingCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + blockingCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Blocking", varPos1 + varIntLen + blockingCount * 1, buf.readableBytes());
          }
@@ -120,17 +134,22 @@ public class InteractionRules {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 33 + buf.getIntLE(offset + 25);
-         int interruptedByCount = VarInt.peek(buf, varPos2);
-         if (interruptedByCount < 0) {
-            throw ProtocolException.negativeLength("InterruptedBy", interruptedByCount);
+         int varPosBase2 = buf.getIntLE(offset + 25);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("InterruptedBy", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 33 + varPosBase2;
+         int interruptedByCount = VarInt.peek(buf, varPos2);
+         if (interruptedByCount < 0) {
+            throw ProtocolException.invalidVarInt("InterruptedBy");
+         }
+
+         int varIntLen = VarInt.size(interruptedByCount);
          if (interruptedByCount > 4096000) {
             throw ProtocolException.arrayTooLong("InterruptedBy", interruptedByCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + interruptedByCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("InterruptedBy", varPos2 + varIntLen + interruptedByCount * 1, buf.readableBytes());
          }
@@ -145,17 +164,22 @@ public class InteractionRules {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 33 + buf.getIntLE(offset + 29);
-         int interruptingCount = VarInt.peek(buf, varPos3);
-         if (interruptingCount < 0) {
-            throw ProtocolException.negativeLength("Interrupting", interruptingCount);
+         int varPosBase3 = buf.getIntLE(offset + 29);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Interrupting", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 33 + varPosBase3;
+         int interruptingCount = VarInt.peek(buf, varPos3);
+         if (interruptingCount < 0) {
+            throw ProtocolException.invalidVarInt("Interrupting");
+         }
+
+         int varIntLen = VarInt.size(interruptingCount);
          if (interruptingCount > 4096000) {
             throw ProtocolException.arrayTooLong("Interrupting", interruptingCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + interruptingCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Interrupting", varPos3 + varIntLen + interruptingCount * 1, buf.readableBytes());
          }
@@ -177,9 +201,13 @@ public class InteractionRules {
       int maxEnd = 33;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 17);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("BlockedBy", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 33 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 1;
+         pos0 += VarInt.size(arrLen) + arrLen * 1;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -187,9 +215,13 @@ public class InteractionRules {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 21);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Blocking", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 33 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 1;
+         pos1 += VarInt.size(arrLen) + arrLen * 1;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -197,9 +229,13 @@ public class InteractionRules {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 25);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("InterruptedBy", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 33 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + arrLen * 1;
+         pos2 += VarInt.size(arrLen) + arrLen * 1;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -207,9 +243,13 @@ public class InteractionRules {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 29);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Interrupting", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 33 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + arrLen * 1;
+         pos3 += VarInt.size(arrLen) + arrLen * 1;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -341,15 +381,11 @@ public class InteractionRules {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int blockedByOffset = buffer.getIntLE(offset + 17);
-         if (blockedByOffset < 0) {
+         if (blockedByOffset < 0 || blockedByOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for BlockedBy");
          }
 
          int pos = offset + 33 + blockedByOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BlockedBy");
-         }
-
          int blockedByCount = VarInt.peek(buffer, pos);
          if (blockedByCount < 0) {
             return ValidationResult.error("Invalid array count for BlockedBy");
@@ -359,24 +395,28 @@ public class InteractionRules {
             return ValidationResult.error("BlockedBy exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += blockedByCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(blockedByCount);
+         if (pos + blockedByCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BlockedBy");
+         }
+
+         for (int i = 0; i < blockedByCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for BlockedBy[i]");
+            }
+
+            pos++;
          }
       }
 
       if ((nullBits & 2) != 0) {
          int blockingOffset = buffer.getIntLE(offset + 21);
-         if (blockingOffset < 0) {
+         if (blockingOffset < 0 || blockingOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for Blocking");
          }
 
          int pos = offset + 33 + blockingOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Blocking");
-         }
-
          int blockingCount = VarInt.peek(buffer, pos);
          if (blockingCount < 0) {
             return ValidationResult.error("Invalid array count for Blocking");
@@ -386,24 +426,28 @@ public class InteractionRules {
             return ValidationResult.error("Blocking exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += blockingCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(blockingCount);
+         if (pos + blockingCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Blocking");
+         }
+
+         for (int i = 0; i < blockingCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for Blocking[i]");
+            }
+
+            pos++;
          }
       }
 
       if ((nullBits & 4) != 0) {
          int interruptedByOffset = buffer.getIntLE(offset + 25);
-         if (interruptedByOffset < 0) {
+         if (interruptedByOffset < 0 || interruptedByOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for InterruptedBy");
          }
 
          int pos = offset + 33 + interruptedByOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for InterruptedBy");
-         }
-
          int interruptedByCount = VarInt.peek(buffer, pos);
          if (interruptedByCount < 0) {
             return ValidationResult.error("Invalid array count for InterruptedBy");
@@ -413,24 +457,28 @@ public class InteractionRules {
             return ValidationResult.error("InterruptedBy exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += interruptedByCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(interruptedByCount);
+         if (pos + interruptedByCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading InterruptedBy");
+         }
+
+         for (int i = 0; i < interruptedByCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for InterruptedBy[i]");
+            }
+
+            pos++;
          }
       }
 
       if ((nullBits & 8) != 0) {
          int interruptingOffset = buffer.getIntLE(offset + 29);
-         if (interruptingOffset < 0) {
+         if (interruptingOffset < 0 || interruptingOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for Interrupting");
          }
 
          int pos = offset + 33 + interruptingOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Interrupting");
-         }
-
          int interruptingCount = VarInt.peek(buffer, pos);
          if (interruptingCount < 0) {
             return ValidationResult.error("Invalid array count for Interrupting");
@@ -440,10 +488,18 @@ public class InteractionRules {
             return ValidationResult.error("Interrupting exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += interruptingCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(interruptingCount);
+         if (pos + interruptingCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Interrupting");
+         }
+
+         for (int i = 0; i < interruptingCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for Interrupting[i]");
+            }
+
+            pos++;
          }
       }
 

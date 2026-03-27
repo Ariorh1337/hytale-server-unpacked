@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.buildertools;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class BuilderToolIntArg {
 
    @Nonnull
    public static BuilderToolIntArg deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("BuilderToolIntArg", 12, buf.readableBytes() - offset);
+      }
+
       BuilderToolIntArg obj = new BuilderToolIntArg();
       obj.defaultValue = buf.getIntLE(offset + 0);
       obj.min = buf.getIntLE(offset + 4);

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SmartMoveType;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -53,6 +54,10 @@ public class SmartMoveItemStack implements Packet, ToServerPacket, ToClientPacke
 
    @Nonnull
    public static SmartMoveItemStack deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("SmartMoveItemStack", 13, buf.readableBytes() - offset);
+      }
+
       SmartMoveItemStack obj = new SmartMoveItemStack();
       obj.fromSectionId = buf.getIntLE(offset + 0);
       obj.fromSlotId = buf.getIntLE(offset + 4);
@@ -79,7 +84,12 @@ public class SmartMoveItemStack implements Packet, ToServerPacket, ToClientPacke
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 13 ? ValidationResult.error("Buffer too small: expected at least 13 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 13) {
+         return ValidationResult.error("Buffer too small: expected at least 13 bytes");
+      }
+
+      int v = buffer.getByte(offset + 12) & 255;
+      return v >= 3 ? ValidationResult.error("Invalid SmartMoveType value for MoveType") : ValidationResult.OK;
    }
 
    public SmartMoveItemStack clone() {

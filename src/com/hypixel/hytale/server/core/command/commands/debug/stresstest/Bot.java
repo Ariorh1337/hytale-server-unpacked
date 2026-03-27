@@ -1,8 +1,7 @@
 package com.hypixel.hytale.server.core.command.commands.debug.stresstest;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.Asset;
 import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.Direction;
@@ -66,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Bot extends SimpleChannelInboundHandler<Packet> {
    private static final ScheduledExecutorService EXECUTOR = Executors.newScheduledThreadPool(8);
@@ -84,17 +84,17 @@ public class Bot extends SimpleChannelInboundHandler<Packet> {
    private SocketChannel channel;
    private int id = -1;
    private Vector3d pos;
-   private final Vector3f rotation = new Vector3f();
+   private final Rotation3f rotation = new Rotation3f();
    private final Vector3d destination = new Vector3d();
    private final Vector3d temp = new Vector3d();
-   private final Vector3f targetRotation = new Vector3f();
+   private final Rotation3f targetRotation = new Rotation3f();
 
    public Bot(String name, @Nonnull BotConfig config, int tickStepNanos) throws InterruptedException, SocketException {
       this.logger = HytaleLogger.get(name);
       this.name = name;
       this.config = config;
-      this.destination.assign(config.spawn.getPosition());
-      this.destination.y = ThreadLocalRandom.current().nextDouble(config.flyYHeight.getX(), config.flyYHeight.getY());
+      this.destination.set(config.spawn.getPosition());
+      this.destination.y = ThreadLocalRandom.current().nextDouble(config.flyYHeight.x(), config.flyYHeight.y());
       InetSocketAddress address = ServerManager.get().getLocalOrPublicAddress();
       this.logger.at(Level.INFO).log("Booting Bot! Connecting to %s", address);
       new Bootstrap()
@@ -149,21 +149,21 @@ public class Bot extends SimpleChannelInboundHandler<Packet> {
          this.channel.flush();
       } else {
          double movementDistance = this.config.flySpeed * dt;
-         if (this.pos.distanceSquaredTo(this.destination) <= movementDistance * movementDistance) {
+         if (this.pos.distanceSquared(this.destination) <= movementDistance * movementDistance) {
             ThreadLocalRandom random = ThreadLocalRandom.current();
             double randX = random.nextDouble(-this.config.radius, this.config.radius);
-            double randY = random.nextDouble(this.config.flyYHeight.getX(), this.config.flyYHeight.getY());
+            double randY = random.nextDouble(this.config.flyYHeight.x(), this.config.flyYHeight.y());
             double randZ = random.nextDouble(-this.config.radius, this.config.radius);
-            this.destination.assign(this.config.spawn.getPosition());
+            this.destination.set(this.config.spawn.getPosition());
             this.destination.y = randY;
             this.destination.add(randX, 0.0, randZ);
          }
 
-         this.temp.assign(this.destination).subtract(this.pos);
-         Vector3f.lookAt(this.temp, this.targetRotation);
-         Vector3f.lerpAngle(this.rotation, this.targetRotation, 0.3F, this.rotation);
+         this.temp.set(this.destination).sub(this.pos);
+         Rotation3f.lookAt(this.temp, this.targetRotation);
+         Rotation3f.lerpAngle(this.rotation, this.targetRotation, 0.3F, this.rotation);
          this.temp.normalize();
-         this.temp.scale(movementDistance);
+         this.temp.mul(movementDistance);
          this.pos.add(this.temp);
          this.movementStates.flying = true;
          this.channel.writeAndFlush(this.createMovementPacket());
@@ -173,7 +173,7 @@ public class Bot extends SimpleChannelInboundHandler<Packet> {
    @Override
    public void channelActive(@Nonnull ChannelHandlerContext ctx) {
       UUID uuid = UUID.nameUUIDFromBytes(("BOT|" + this.name).getBytes(StandardCharsets.UTF_8));
-      ctx.writeAndFlush(new Connect(1080406952, 51, "bot", ClientType.Game, uuid, this.name, null, "en", null, null));
+      ctx.writeAndFlush(new Connect(1230336123, 53, "bot", ClientType.Game, uuid, this.name, null, "en", null, null));
       this.logger.at(Level.INFO).log("Connected!");
    }
 
@@ -260,7 +260,7 @@ public class Bot extends SimpleChannelInboundHandler<Packet> {
             this.pos = new Vector3d();
          }
 
-         this.pos.assign(position.x, position.y, position.z);
+         this.pos.set(position.x, position.y, position.z);
       }
 
       Direction lookOrientation = modelTransform.lookOrientation;

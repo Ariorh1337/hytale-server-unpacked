@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -114,6 +115,10 @@ public class PhysicsConfig {
 
    @Nonnull
    public static PhysicsConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 122) {
+         throw ProtocolException.bufferTooSmall("PhysicsConfig", 122, buf.readableBytes() - offset);
+      }
+
       PhysicsConfig obj = new PhysicsConfig();
       obj.type = PhysicsType.fromValue(buf.getByte(offset + 0));
       obj.density = buf.getDoubleLE(offset + 1);
@@ -174,7 +179,17 @@ public class PhysicsConfig {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 122 ? ValidationResult.error("Buffer too small: expected at least 122 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 122) {
+         return ValidationResult.error("Buffer too small: expected at least 122 bytes");
+      }
+
+      int v = buffer.getByte(offset + 0) & 255;
+      if (v >= 1) {
+         return ValidationResult.error("Invalid PhysicsType value for Type");
+      }
+
+      v = buffer.getByte(offset + 40) & 255;
+      return v >= 4 ? ValidationResult.error("Invalid RotationMode value for RotationMode") : ValidationResult.OK;
    }
 
    public PhysicsConfig clone() {

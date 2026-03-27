@@ -49,62 +49,94 @@ public class ItemWithAllMetadata {
 
    @Nonnull
    public static ItemWithAllMetadata deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 30) {
+         throw ProtocolException.bufferTooSmall("ItemWithAllMetadata", 30, buf.readableBytes() - offset);
+      }
+
       ItemWithAllMetadata obj = new ItemWithAllMetadata();
       byte nullBits = buf.getByte(offset);
       obj.quantity = buf.getIntLE(offset + 1);
       obj.durability = buf.getDoubleLE(offset + 5);
       obj.maxDurability = buf.getDoubleLE(offset + 13);
       obj.overrideDroppedItemAnimation = buf.getByte(offset + 21) != 0;
-      int varPos0 = offset + 30 + buf.getIntLE(offset + 22);
-      int itemIdLen = VarInt.peek(buf, varPos0);
-      if (itemIdLen < 0) {
-         throw ProtocolException.negativeLength("ItemId", itemIdLen);
-      }
-
-      if (itemIdLen > 4096000) {
-         throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
-      }
-
-      obj.itemId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-      if ((nullBits & 1) != 0) {
-         varPos0 = offset + 30 + buf.getIntLE(offset + 26);
-         itemIdLen = VarInt.peek(buf, varPos0);
+      int varPosBase0 = buf.getIntLE(offset + 22);
+      if (varPosBase0 >= 0 && varPosBase0 <= buf.writerIndex() - offset - 30) {
+         int varPos0 = offset + 30 + varPosBase0;
+         int itemIdLen = VarInt.peek(buf, varPos0);
          if (itemIdLen < 0) {
-            throw ProtocolException.negativeLength("Metadata", itemIdLen);
+            throw ProtocolException.invalidVarInt("ItemId");
          }
 
+         int itemIdVarIntLen = VarInt.size(itemIdLen);
          if (itemIdLen > 4096000) {
-            throw ProtocolException.stringTooLong("Metadata", itemIdLen, 4096000);
+            throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
          }
 
-         obj.metadata = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-      }
+         if (varPos0 + itemIdVarIntLen + itemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemId", varPos0 + itemIdVarIntLen + itemIdLen, buf.readableBytes());
+         }
 
-      return obj;
+         obj.itemId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+         if ((nullBits & 1) != 0) {
+            varPosBase0 = buf.getIntLE(offset + 26);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 30) {
+               throw ProtocolException.invalidOffset("Metadata", varPosBase0, buf.readableBytes());
+            }
+
+            varPos0 = offset + 30 + varPosBase0;
+            itemIdLen = VarInt.peek(buf, varPos0);
+            if (itemIdLen < 0) {
+               throw ProtocolException.invalidVarInt("Metadata");
+            }
+
+            itemIdVarIntLen = VarInt.size(itemIdLen);
+            if (itemIdLen > 4096000) {
+               throw ProtocolException.stringTooLong("Metadata", itemIdLen, 4096000);
+            }
+
+            if (varPos0 + itemIdVarIntLen + itemIdLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Metadata", varPos0 + itemIdVarIntLen + itemIdLen, buf.readableBytes());
+            }
+
+            obj.metadata = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+         }
+
+         return obj;
+      } else {
+         throw ProtocolException.invalidOffset("ItemId", varPosBase0, buf.readableBytes());
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 30;
       int fieldOffset0 = buf.getIntLE(offset + 22);
-      int pos0 = offset + 30 + fieldOffset0;
-      int sl = VarInt.peek(buf, pos0);
-      pos0 += VarInt.length(buf, pos0) + sl;
-      if (pos0 - offset > maxEnd) {
-         maxEnd = pos0 - offset;
-      }
-
-      if ((nullBits & 1) != 0) {
-         fieldOffset0 = buf.getIntLE(offset + 26);
-         pos0 = offset + 30 + fieldOffset0;
-         sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+      if (fieldOffset0 >= 0 && fieldOffset0 <= buf.writerIndex() - offset - 30) {
+         int pos0 = offset + 30 + fieldOffset0;
+         int sl = VarInt.peek(buf, pos0);
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
-      }
 
-      return maxEnd;
+         if ((nullBits & 1) != 0) {
+            fieldOffset0 = buf.getIntLE(offset + 26);
+            if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 30) {
+               throw ProtocolException.invalidOffset("Metadata", fieldOffset0, maxEnd);
+            }
+
+            pos0 = offset + 30 + fieldOffset0;
+            sl = VarInt.peek(buf, pos0);
+            pos0 += VarInt.size(sl) + sl;
+            if (pos0 - offset > maxEnd) {
+               maxEnd = pos0 - offset;
+            }
+         }
+
+         return maxEnd;
+      } else {
+         throw ProtocolException.invalidOffset("ItemId", fieldOffset0, maxEnd);
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -151,58 +183,50 @@ public class ItemWithAllMetadata {
 
       byte nullBits = buffer.getByte(offset);
       int itemIdOffset = buffer.getIntLE(offset + 22);
-      if (itemIdOffset < 0) {
-         return ValidationResult.error("Invalid offset for ItemId");
-      }
-
-      int pos = offset + 30 + itemIdOffset;
-      if (pos >= buffer.writerIndex()) {
-         return ValidationResult.error("Offset out of bounds for ItemId");
-      }
-
-      int itemIdLen = VarInt.peek(buffer, pos);
-      if (itemIdLen < 0) {
-         return ValidationResult.error("Invalid string length for ItemId");
-      }
-
-      if (itemIdLen > 4096000) {
-         return ValidationResult.error("ItemId exceeds max length 4096000");
-      }
-
-      pos += VarInt.length(buffer, pos);
-      pos += itemIdLen;
-      if (pos > buffer.writerIndex()) {
-         return ValidationResult.error("Buffer overflow reading ItemId");
-      }
-
-      if ((nullBits & 1) != 0) {
-         itemIdOffset = buffer.getIntLE(offset + 26);
-         if (itemIdOffset < 0) {
-            return ValidationResult.error("Invalid offset for Metadata");
-         }
-
-         pos = offset + 30 + itemIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Metadata");
-         }
-
-         itemIdLen = VarInt.peek(buffer, pos);
+      if (itemIdOffset >= 0 && itemIdOffset <= buffer.writerIndex() - offset - 30) {
+         int pos = offset + 30 + itemIdOffset;
+         int itemIdLen = VarInt.peek(buffer, pos);
          if (itemIdLen < 0) {
-            return ValidationResult.error("Invalid string length for Metadata");
+            return ValidationResult.error("Invalid string length for ItemId");
          }
 
          if (itemIdLen > 4096000) {
-            return ValidationResult.error("Metadata exceeds max length 4096000");
+            return ValidationResult.error("ItemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemIdLen);
          pos += itemIdLen;
          if (pos > buffer.writerIndex()) {
-            return ValidationResult.error("Buffer overflow reading Metadata");
+            return ValidationResult.error("Buffer overflow reading ItemId");
          }
-      }
 
-      return ValidationResult.OK;
+         if ((nullBits & 1) != 0) {
+            itemIdOffset = buffer.getIntLE(offset + 26);
+            if (itemIdOffset < 0 || itemIdOffset > buffer.writerIndex() - offset - 30) {
+               return ValidationResult.error("Invalid offset for Metadata");
+            }
+
+            pos = offset + 30 + itemIdOffset;
+            itemIdLen = VarInt.peek(buffer, pos);
+            if (itemIdLen < 0) {
+               return ValidationResult.error("Invalid string length for Metadata");
+            }
+
+            if (itemIdLen > 4096000) {
+               return ValidationResult.error("Metadata exceeds max length 4096000");
+            }
+
+            pos += VarInt.size(itemIdLen);
+            pos += itemIdLen;
+            if (pos > buffer.writerIndex()) {
+               return ValidationResult.error("Buffer overflow reading Metadata");
+            }
+         }
+
+         return ValidationResult.OK;
+      } else {
+         return ValidationResult.error("Invalid offset for ItemId");
+      }
    }
 
    public ItemWithAllMetadata clone() {

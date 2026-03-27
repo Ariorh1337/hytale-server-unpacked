@@ -1,6 +1,7 @@
 package com.hypixel.hytale.protocol;
 
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class PredictionUpdate extends ComponentUpdate {
 
    @Nonnull
    public static PredictionUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("PredictionUpdate", 16, buf.readableBytes() - offset);
+      }
+
       PredictionUpdate obj = new PredictionUpdate();
       obj.predictionId = PacketIO.readUUID(buf, offset + 0);
       return obj;

@@ -18,8 +18,6 @@ import com.hypixel.hytale.component.system.tick.TickingSystem;
 import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -54,6 +52,8 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class RoleSystems {
    private static final ThreadLocal<List<Ref<EntityStore>>> ENTITY_LIST = ThreadLocal.withInitial(ReferenceArrayList::new);
@@ -461,7 +461,7 @@ public class RoleSystems {
             Vector3d npcPosition = transformComponent.getPosition();
             double npcMidHeight = boundingBoxComponent.getBoundingBox().max.y / 2.0;
             HeadRotation headRotation = commandBuffer.getComponent(npcRef, HeadRotation.getComponentType());
-            double heading = headRotation != null ? headRotation.getRotation().getYaw() : transformComponent.getRotation().getYaw();
+            double heading = headRotation != null ? headRotation.getRotation().yaw() : transformComponent.getRotation().yaw();
             sensorDataList.sort((a, b) -> Double.compare(b.range(), a.range()));
             double discStackOffset = 0.1;
 

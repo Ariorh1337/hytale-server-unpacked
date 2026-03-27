@@ -239,7 +239,7 @@ public final class ProtocolCodecs {
       .add()
       .afterDecode(o -> {
          if (o.normal != null) {
-            com.hypixel.hytale.math.vector.Vector3f v = new com.hypixel.hytale.math.vector.Vector3f(o.normal.x, o.normal.y, o.normal.z);
+            org.joml.Vector3f v = new org.joml.Vector3f(o.normal.x, o.normal.y, o.normal.z);
             v = v.normalize();
             o.normal.x = v.x;
             o.normal.y = v.y;

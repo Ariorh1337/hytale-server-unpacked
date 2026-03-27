@@ -4,7 +4,6 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Component;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
@@ -22,6 +21,7 @@ import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BlockHealthChunk implements Component<ChunkStore> {
    private static final byte SERIALIZATION_VERSION = 2;
@@ -68,7 +68,7 @@ public class BlockHealthChunk implements Component<ChunkStore> {
       });
       if (blockHealth != null && !blockHealth.isDestroyed()) {
          Predicate<PlayerRef> filter = player -> true;
-         world.getNotificationHandler().updateBlockDamage(block.getX(), block.getY(), block.getZ(), blockHealth.getHealth(), -health, filter);
+         world.getNotificationHandler().updateBlockDamage(block.x(), block.y(), block.z(), blockHealth.getHealth(), -health, filter);
       }
 
       return Objects.requireNonNullElse(blockHealth, BlockHealth.NO_DAMAGE_INSTANCE);
@@ -80,13 +80,13 @@ public class BlockHealthChunk implements Component<ChunkStore> {
          value.setHealth(value.getHealth() + progress);
          return (BlockHealth)(value.getHealth() > 1.0 ? value : null);
       }), BlockHealth.NO_DAMAGE_INSTANCE);
-      world.getNotificationHandler().updateBlockDamage(block.getX(), block.getY(), block.getZ(), blockHealth.getHealth(), progress);
+      world.getNotificationHandler().updateBlockDamage(block.x(), block.y(), block.z(), blockHealth.getHealth(), progress);
       return blockHealth;
    }
 
    public void removeBlock(@Nonnull World world, @Nonnull Vector3i block) {
       if (this.blockHealthMap.remove(block) != null) {
-         world.getNotificationHandler().updateBlockDamage(block.getX(), block.getY(), block.getZ(), BlockHealth.NO_DAMAGE_INSTANCE.getHealth(), 0.0F);
+         world.getNotificationHandler().updateBlockDamage(block.x(), block.y(), block.z(), BlockHealth.NO_DAMAGE_INSTANCE.getHealth(), 0.0F);
       }
    }
 
@@ -112,7 +112,7 @@ public class BlockHealthChunk implements Component<ChunkStore> {
    public void createBlockDamagePackets(@Nonnull List<ToClientPacket> list) {
       for (Entry<Vector3i, BlockHealth> entry : this.blockHealthMap.entrySet()) {
          Vector3i block = entry.getKey();
-         BlockPosition blockPosition = new BlockPosition(block.getX(), block.getY(), block.getZ());
+         BlockPosition blockPosition = new BlockPosition(block.x(), block.y(), block.z());
          list.add(new UpdateBlockDamage(blockPosition, entry.getValue().getHealth(), 0.0F));
       }
    }

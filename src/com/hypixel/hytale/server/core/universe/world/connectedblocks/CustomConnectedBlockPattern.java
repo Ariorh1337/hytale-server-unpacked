@@ -8,7 +8,6 @@ import com.hypixel.hytale.codec.codecs.simple.BooleanCodec;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFlipType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
@@ -26,6 +25,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPattern {
    public static final BuilderCodec<CustomConnectedBlockPattern> CODEC = BuilderCodec.builder(
@@ -115,11 +116,11 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
             if (template.connectsToOtherMaterials
                || placedRuleset.getShapeNameToBlockPatternMap().equals(checkingConnectedBlockRuleSet.getShapeNameToBlockPatternMap())) {
                ConnectedBlockShape blockToCheckConnectedBlockShape = checkingTemplateAsset.connectedBlockShapes.get(shapeName);
-               Map<Vector3i, HashSet<String>> ruleFaceTags = rule.getFaceTags().getBlockFaceTags();
+               Map<Vector3ic, HashSet<String>> ruleFaceTags = rule.getFaceTags().getBlockFaceTags();
 
-               for (Entry<Vector3i, HashSet<String>> ruleFaceTag : ruleFaceTags.entrySet()) {
+               for (Entry<Vector3ic, HashSet<String>> ruleFaceTag : ruleFaceTags.entrySet()) {
                   Vector3i adjustedDirectionOfPattern = Rotation.rotate(
-                     ruleFaceTag.getKey().clone(), Rotation.None.subtract(rotationToCheckUnrotated.yaw()), Rotation.None
+                     new Vector3i(ruleFaceTag.getKey()), Rotation.None.subtract(rotationToCheckUnrotated.yaw()), Rotation.None
                   );
 
                   for (String faceTag : ruleFaceTag.getValue()) {
@@ -173,11 +174,11 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
    public Optional<ConnectedBlocksUtil.ConnectedBlockResult> getConnectedBlockTypeKey(
       String shapeName,
       @Nonnull World world,
-      @Nonnull Vector3i coordinate,
+      @Nonnull Vector3ic coordinate,
       @Nonnull CustomTemplateConnectedBlockRuleSet connectedBlockRuleset,
       @Nonnull BlockType blockType,
       int rotation,
-      @Nonnull Vector3i placementNormal,
+      @Nonnull Vector3ic placementNormal,
       boolean isPlacement
    ) {
       if ((!isPlacement || !this.onlyOnUpdate) && (isPlacement || !this.onlyOnPlacement)) {
@@ -203,13 +204,13 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
 
             label96:
             for (ConnectedBlockPatternRule ruleToMatch : this.rulesToMatch) {
-               coordinateToTest.assign(ruleToMatch.getRelativePosition());
+               coordinateToTest.set(ruleToMatch.getRelativePosition());
                switch ((PatternRotationDefinition.MirrorAxis)patternTransform.second()) {
                   case X:
-                     coordinateToTest.setX(-coordinateToTest.getX());
+                     coordinateToTest.x = -coordinateToTest.x();
                      break;
                   case Z:
-                     coordinateToTest.setZ(-coordinateToTest.getZ());
+                     coordinateToTest.z = -coordinateToTest.z();
                }
 
                if (ruleToMatch.getPlacementNormals() != null) {

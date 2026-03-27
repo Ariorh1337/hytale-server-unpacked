@@ -6,7 +6,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.ConnectedBlockRuleSetType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
@@ -23,6 +23,8 @@ import it.unimi.dsi.fastutil.objects.ObjectIntImmutablePair;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class StairConnectedBlockRuleSet extends ConnectedBlockRuleSet implements StairLikeConnectedBlockRuleSet {
    public static final String DEFAULT_MATERIAL_NAME = "Stair";
@@ -103,7 +105,7 @@ public class StairConnectedBlockRuleSet extends ConnectedBlockRuleSet implements
    protected static StairConnectedBlockRuleSet.StairConnection getCornerConnection(
       World world,
       StairLikeConnectedBlockRuleSet currentRuleSet,
-      Vector3i coordinate,
+      Vector3ic coordinate,
       Vector3i mutablePos,
       int rotation,
       Rotation currentYaw,
@@ -111,14 +113,14 @@ public class StairConnectedBlockRuleSet extends ConnectedBlockRuleSet implements
       int width
    ) {
       StairConnectedBlockRuleSet.StairConnection backConnection = null;
-      mutablePos.assign(Vector3i.NORTH).scale(width);
+      mutablePos.set(Vector3iUtil.NORTH).mul(width);
       currentYaw.rotateY(mutablePos, mutablePos);
-      mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
+      mutablePos.add(coordinate.x(), coordinate.y(), coordinate.z());
       ObjectIntPair<StairConnectedBlockRuleSet.StairType> backStair = getStairData(world, mutablePos, currentRuleSet.getMaterialName());
       if (backStair == null && width > 1) {
-         mutablePos.assign(Vector3i.NORTH).scale(width + 1);
+         mutablePos.set(Vector3iUtil.NORTH).mul(width + 1);
          currentYaw.rotateY(mutablePos, mutablePos);
-         mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
+         mutablePos.add(coordinate.x(), coordinate.y(), coordinate.z());
          backStair = getStairData(world, mutablePos, currentRuleSet.getMaterialName());
          if (backStair != null && backStair.first() == StairConnectedBlockRuleSet.StairType.STRAIGHT) {
             backStair = null;
@@ -135,9 +137,9 @@ public class StairConnectedBlockRuleSet extends ConnectedBlockRuleSet implements
          }
 
          if (canConnectTo(currentYaw, otherYaw, upsideDown, otherUpsideDown)) {
-            mutablePos.assign(Vector3i.SOUTH);
+            mutablePos.set(Vector3iUtil.SOUTH);
             otherYaw.rotateY(mutablePos, mutablePos);
-            mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
+            mutablePos.add(coordinate);
             ObjectIntPair<StairConnectedBlockRuleSet.StairType> sidewaysStair = getStairData(world, mutablePos, currentRuleSet.getMaterialName());
             if (sidewaysStair == null || sidewaysStair.rightInt() != rotation) {
                backConnection = getConnection(currentYaw, otherYaw, otherStairType, false, upsideDown);
@@ -149,12 +151,12 @@ public class StairConnectedBlockRuleSet extends ConnectedBlockRuleSet implements
    }
 
    protected static StairConnectedBlockRuleSet.StairConnection getInvertedCornerConnection(
-      World world, StairLikeConnectedBlockRuleSet currentRuleSet, Vector3i coordinate, Vector3i mutablePos, Rotation currentYaw, boolean upsideDown
+      World world, StairLikeConnectedBlockRuleSet currentRuleSet, Vector3ic coordinate, Vector3i mutablePos, Rotation currentYaw, boolean upsideDown
    ) {
       StairConnectedBlockRuleSet.StairConnection frontConnection = null;
-      mutablePos.assign(Vector3i.SOUTH);
+      mutablePos.set(Vector3iUtil.SOUTH);
       currentYaw.rotateY(mutablePos, mutablePos);
-      mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
+      mutablePos.add(coordinate);
       ObjectIntPair<StairConnectedBlockRuleSet.StairType> frontStair = getStairData(world, mutablePos, currentRuleSet.getMaterialName());
       if (frontStair != null) {
          StairConnectedBlockRuleSet.StairType otherStairType = frontStair.left();
@@ -246,7 +248,7 @@ public class StairConnectedBlockRuleSet extends ConnectedBlockRuleSet implements
 
    @Override
    public Optional<ConnectedBlocksUtil.ConnectedBlockResult> getConnectedBlockType(
-      World world, Vector3i coordinate, BlockType currentBlockType, int rotation, Vector3i placementNormal, boolean isPlacement
+      World world, Vector3ic coordinate, BlockType currentBlockType, int rotation, Vector3ic placementNormal, boolean isPlacement
    ) {
       RotationTuple currentRotation = RotationTuple.get(rotation);
       Rotation currentYaw = currentRotation.yaw();

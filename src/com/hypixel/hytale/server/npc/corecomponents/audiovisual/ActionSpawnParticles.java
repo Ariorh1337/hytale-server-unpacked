@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.corecomponents.audiovisual;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ModelParticle;
 import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
@@ -19,6 +18,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ActionSpawnParticles extends ActionBase {
    protected final String particleSystem;
@@ -44,7 +44,7 @@ public class ActionSpawnParticles extends ActionBase {
       super.execute(ref, role, sensorInfo, dt, store);
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      Vector3d position = new Vector3d(this.offset).rotateY(transformComponent.getRotation().getYaw()).add(transformComponent.getPosition());
+      Vector3d position = new Vector3d(this.offset).rotateY(transformComponent.getRotation().yaw()).add(transformComponent.getPosition());
       SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = store.getResource(EntityModule.get().getPlayerSpatialResourceType());
       List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       playerSpatialResource.getSpatialStructure().collect(position, this.range, results);

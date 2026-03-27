@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -31,6 +32,10 @@ public class Edge {
 
    @Nonnull
    public static Edge deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("Edge", 9, buf.readableBytes() - offset);
+      }
+
       Edge obj = new Edge();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -66,7 +71,12 @@ public class Edge {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 9 ? ValidationResult.error("Buffer too small: expected at least 9 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 9) {
+         return ValidationResult.error("Buffer too small: expected at least 9 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public Edge clone() {

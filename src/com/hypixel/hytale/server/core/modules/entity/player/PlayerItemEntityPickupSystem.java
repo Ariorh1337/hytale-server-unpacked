@@ -17,7 +17,6 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
@@ -42,6 +41,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull
@@ -125,7 +125,7 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                   InteractionManager targetInteractionManagerComponent = store.getComponent(targetRef, this.interactionManagerType);
                   assert targetInteractionManagerComponent != null;
                   Vector3d targetPosition = targetTransformComponent.getPosition();
-                  double distance = targetPosition.distanceTo(itemEntityPosition);
+                  double distance = targetPosition.distance(itemEntityPosition);
                   if (!(distance > pickupRadius)) {
                      Ref<EntityStore> reference = archetypeChunk.getReferenceTo(index);
                      commandBuffer.run(

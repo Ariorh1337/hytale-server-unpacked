@@ -19,7 +19,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.WorldEventSystem;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -137,10 +137,10 @@ public class NPCSystems {
          boolean fromWorldGen = archetype.contains(FromWorldGen.getComponentType());
          TransformComponent transformComponent = store.getComponent(ref, this.transformComponentType);
          assert transformComponent != null;
-         npcComponent.getLeashPoint().assign(transformComponent.getPosition());
-         Vector3f bodyRotation = transformComponent.getRotation();
-         npcComponent.setLeashHeading(bodyRotation.getYaw());
-         npcComponent.setLeashPitch(bodyRotation.getPitch());
+         npcComponent.getLeashPoint().set(transformComponent.getPosition());
+         Rotation3f bodyRotation = transformComponent.getRotation();
+         npcComponent.setLeashHeading(bodyRotation.yaw());
+         npcComponent.setLeashPitch(bodyRotation.pitch());
          npcComponent.setSpawnInstant(worldTimeResource.getGameTime());
          npcComponent.getRole().onLoadFromWorldGenOrPrefab(ref, npcComponent, commandBuffer);
          if (fromWorldGen) {

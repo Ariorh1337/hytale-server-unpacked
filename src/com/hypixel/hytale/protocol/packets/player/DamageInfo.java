@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.Vector3d;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -52,6 +53,10 @@ public class DamageInfo implements Packet, ToClientPacket {
 
    @Nonnull
    public static DamageInfo deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 29) {
+         throw ProtocolException.bufferTooSmall("DamageInfo", 29, buf.readableBytes() - offset);
+      }
+
       DamageInfo obj = new DamageInfo();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {

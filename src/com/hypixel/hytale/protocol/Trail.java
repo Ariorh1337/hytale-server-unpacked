@@ -88,6 +88,10 @@ public class Trail {
 
    @Nonnull
    public static Trail deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 69) {
+         throw ProtocolException.bufferTooSmall("Trail", 69, buf.readableBytes() - offset);
+      }
+
       Trail obj = new Trail();
       byte nullBits = buf.getByte(offset);
       obj.lifeSpan = buf.getIntLE(offset + 1);
@@ -117,28 +121,48 @@ public class Trail {
 
       obj.frameLifeSpan = buf.getIntLE(offset + 57);
       if ((nullBits & 32) != 0) {
-         int varPos0 = offset + 69 + buf.getIntLE(offset + 61);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 61);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 69 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 64) != 0) {
-         int varPos1 = offset + 69 + buf.getIntLE(offset + 65);
-         int textureLen = VarInt.peek(buf, varPos1);
-         if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
+         int varPosBase1 = buf.getIntLE(offset + 65);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Texture", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 69 + varPosBase1;
+         int textureLen = VarInt.peek(buf, varPos1);
+         if (textureLen < 0) {
+            throw ProtocolException.invalidVarInt("Texture");
+         }
+
+         int textureVarIntLen = VarInt.size(textureLen);
          if (textureLen > 4096000) {
             throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
+         }
+
+         if (varPos1 + textureVarIntLen + textureLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Texture", varPos1 + textureVarIntLen + textureLen, buf.readableBytes());
          }
 
          obj.texture = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -152,9 +176,13 @@ public class Trail {
       int maxEnd = 69;
       if ((nullBits & 32) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 61);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 69 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -162,9 +190,13 @@ public class Trail {
 
       if ((nullBits & 64) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 65);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 69) {
+            throw ProtocolException.invalidOffset("Texture", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 69 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -280,17 +312,18 @@ public class Trail {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 31) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid FXRenderMode value for RenderMode");
+      }
+
       if ((nullBits & 32) != 0) {
-         int idOffset = buffer.getIntLE(offset + 61);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 61);
+         if (v < 0 || v > buffer.writerIndex() - offset - 69) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 69 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 69 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -300,7 +333,7 @@ public class Trail {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -308,16 +341,12 @@ public class Trail {
       }
 
       if ((nullBits & 64) != 0) {
-         int textureOffset = buffer.getIntLE(offset + 65);
-         if (textureOffset < 0) {
+         v = buffer.getIntLE(offset + 65);
+         if (v < 0 || v > buffer.writerIndex() - offset - 69) {
             return ValidationResult.error("Invalid offset for Texture");
          }
 
-         int pos = offset + 69 + textureOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Texture");
-         }
-
+         int pos = offset + 69 + v;
          int textureLen = VarInt.peek(buffer, pos);
          if (textureLen < 0) {
             return ValidationResult.error("Invalid string length for Texture");
@@ -327,7 +356,7 @@ public class Trail {
             return ValidationResult.error("Texture exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(textureLen);
          pos += textureLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Texture");

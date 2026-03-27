@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class ContractSelectionCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -48,10 +48,10 @@ public class ContractSelectionCommand extends AbstractPlayerCommand {
          List<Vector3i> directions = new ObjectArrayList<>();
          if (this.axisArg.provided(context)) {
             for (Axis axis : this.axisArg.get(context)) {
-               directions.add(axis.getDirection().scale(distance));
+               directions.add(axis.getDirection().mul(distance, new Vector3i()));
             }
          } else {
-            directions.add(headRotationComponent.getAxisDirection().scale(distance));
+            directions.add(headRotationComponent.getAxisDirection().mul(distance));
          }
 
          for (Vector3i direction : directions) {

@@ -79,6 +79,10 @@ public class Particle {
 
    @Nonnull
    public static Particle deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 141) {
+         throw ProtocolException.bufferTooSmall("Particle", 141, buf.readableBytes() - offset);
+      }
+
       Particle obj = new Particle();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -99,31 +103,46 @@ public class Particle {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos0 = offset + 141 + buf.getIntLE(offset + 133);
-         int texturePathLen = VarInt.peek(buf, varPos0);
-         if (texturePathLen < 0) {
-            throw ProtocolException.negativeLength("TexturePath", texturePathLen);
+         int varPosBase0 = buf.getIntLE(offset + 133);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 141) {
+            throw ProtocolException.invalidOffset("TexturePath", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 141 + varPosBase0;
+         int texturePathLen = VarInt.peek(buf, varPos0);
+         if (texturePathLen < 0) {
+            throw ProtocolException.invalidVarInt("TexturePath");
+         }
+
+         int texturePathVarIntLen = VarInt.size(texturePathLen);
          if (texturePathLen > 4096000) {
             throw ProtocolException.stringTooLong("TexturePath", texturePathLen, 4096000);
+         }
+
+         if (varPos0 + texturePathVarIntLen + texturePathLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("TexturePath", varPos0 + texturePathVarIntLen + texturePathLen, buf.readableBytes());
          }
 
          obj.texturePath = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos1 = offset + 141 + buf.getIntLE(offset + 137);
-         int animationFramesCount = VarInt.peek(buf, varPos1);
-         if (animationFramesCount < 0) {
-            throw ProtocolException.negativeLength("AnimationFrames", animationFramesCount);
+         int varPosBase1 = buf.getIntLE(offset + 137);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 141) {
+            throw ProtocolException.invalidOffset("AnimationFrames", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 141 + varPosBase1;
+         int animationFramesCount = VarInt.peek(buf, varPos1);
+         if (animationFramesCount < 0) {
+            throw ProtocolException.invalidVarInt("AnimationFrames");
+         }
+
+         int varIntLen = VarInt.size(animationFramesCount);
          if (animationFramesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("AnimationFrames", animationFramesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.animationFrames = new HashMap<>(animationFramesCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -146,9 +165,13 @@ public class Particle {
       int maxEnd = 141;
       if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 133);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 141) {
+            throw ProtocolException.invalidOffset("TexturePath", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 141 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -156,9 +179,13 @@ public class Particle {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 137);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 141) {
+            throw ProtocolException.invalidOffset("AnimationFrames", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 141 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 += 4;
@@ -268,17 +295,28 @@ public class Particle {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 9) & 255;
+      if (v >= 7) {
+         return ValidationResult.error("Invalid ParticleUVOption value for UvOption");
+      }
+
+      v = buffer.getByte(offset + 10) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid ParticleScaleRatioConstraint value for ScaleRatioConstraint");
+      }
+
+      v = buffer.getByte(offset + 11) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid SoftParticle value for SoftParticles");
+      }
+
       if ((nullBits & 8) != 0) {
-         int texturePathOffset = buffer.getIntLE(offset + 133);
-         if (texturePathOffset < 0) {
+         v = buffer.getIntLE(offset + 133);
+         if (v < 0 || v > buffer.writerIndex() - offset - 141) {
             return ValidationResult.error("Invalid offset for TexturePath");
          }
 
-         int pos = offset + 141 + texturePathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TexturePath");
-         }
-
+         int pos = offset + 141 + v;
          int texturePathLen = VarInt.peek(buffer, pos);
          if (texturePathLen < 0) {
             return ValidationResult.error("Invalid string length for TexturePath");
@@ -288,7 +326,7 @@ public class Particle {
             return ValidationResult.error("TexturePath exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(texturePathLen);
          pos += texturePathLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TexturePath");
@@ -296,16 +334,12 @@ public class Particle {
       }
 
       if ((nullBits & 16) != 0) {
-         int animationFramesOffset = buffer.getIntLE(offset + 137);
-         if (animationFramesOffset < 0) {
+         v = buffer.getIntLE(offset + 137);
+         if (v < 0 || v > buffer.writerIndex() - offset - 141) {
             return ValidationResult.error("Invalid offset for AnimationFrames");
          }
 
-         int pos = offset + 141 + animationFramesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AnimationFrames");
-         }
-
+         int pos = offset + 141 + v;
          int animationFramesCount = VarInt.peek(buffer, pos);
          if (animationFramesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for AnimationFrames");
@@ -315,7 +349,7 @@ public class Particle {
             return ValidationResult.error("AnimationFrames exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(animationFramesCount);
 
          for (int i = 0; i < animationFramesCount; i++) {
             pos += 4;

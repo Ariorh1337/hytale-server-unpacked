@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
@@ -24,6 +24,7 @@ import java.util.EnumSet;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class MotionControllerDive extends MotionControllerBase {
    public static final String TYPE = "Dive";
@@ -62,7 +63,7 @@ public class MotionControllerDive extends MotionControllerBase {
    public MotionControllerDive(@Nonnull BuilderSupport builderSupport, @Nonnull BuilderMotionControllerDive builder) {
       super(builderSupport, builder);
       this.setGravity(builder.getGravity());
-      this.componentSelector.assign(1.0, 1.0, 1.0);
+      this.componentSelector.set(1.0, 1.0, 1.0);
       this.maxVerticalSpeed = builder.getMaxVerticalSpeed();
       this.acceleration = builder.getAcceleration();
       this.maxSinkSpeed = builder.getMaxSinkSpeed();
@@ -141,12 +142,12 @@ public class MotionControllerDive extends MotionControllerBase {
       if (this.collisionWithSolid) {
          this.moveSpeed = 0.0;
          this.climbSpeed = 0.0;
-         this.forceVelocity.assign(Vector3d.ZERO);
+         this.forceVelocity.zero();
          this.appliedVelocities.clear();
       }
 
       if (this.canAct(ref, componentAccessor)) {
-         this.tempDirection.assign(dir.x, 0.0, dir.z);
+         this.tempDirection.set(dir.x, 0.0, dir.z);
          double maxVerticalSpeed = this.maxVerticalSpeed * this.effectHorizontalSpeedMultiplier;
          double hSpeed = this.tempDirection.length() * this.getMaximumSpeed();
          double vSpeed = dir.y * maxVerticalSpeed;
@@ -162,7 +163,7 @@ public class MotionControllerDive extends MotionControllerBase {
             newHeading = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(dir.x, dir.z));
             newPitch = PhysicsMath.normalizeTurnAngle(PhysicsMath.pitchFromDirection(dir.x, dir.y, dir.z));
          } else {
-            translation.assign(Vector3d.ZERO);
+            translation.zero();
             if (steering.hasYawOrDirection()) {
                newHeading = steering.getYawOrDirection();
             } else {
@@ -233,21 +234,21 @@ public class MotionControllerDive extends MotionControllerBase {
          if (!this.isAlive(ref, componentAccessor)) {
             steering.setYaw(this.getYaw());
             steering.setPitch(onGround ? 0.0F : this.getPitch());
-            this.forceVelocity.assign(Vector3d.ZERO);
+            this.forceVelocity.zero();
             this.appliedVelocities.clear();
             this.moveSpeed = 0.0;
             this.climbSpeed = 0.0;
             if (onGround) {
-               translation.assign(Vector3d.ZERO);
+               translation.zero();
             } else {
                Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
                double sinkSpeed = velocityComponent.getVelocity().y;
                sinkSpeed = NPCPhysicsMath.gravityDrag(sinkSpeed, 5.0 * this.gravity, dt, maxSpeed);
-               translation.assign(0.0, sinkSpeed, 0.0).scale(dt);
+               translation.set(0.0, sinkSpeed, 0.0).mul(dt);
             }
 
             return dt;
-         } else if (this.forceVelocity.equals(Vector3d.ZERO) && this.appliedVelocities.isEmpty()) {
+         } else if (this.forceVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
             if (!steering.hasYaw()) {
                steering.setYaw(heading);
             }
@@ -263,7 +264,7 @@ public class MotionControllerDive extends MotionControllerBase {
             this.moveSpeed = 0.0;
             this.climbSpeed = 0.0;
             if (!this.isObstructed()) {
-               translation.assign(this.forceVelocity);
+               translation.set(this.forceVelocity);
 
                for (int i = 0; i < this.appliedVelocities.size(); i++) {
                   MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
@@ -278,13 +279,13 @@ public class MotionControllerDive extends MotionControllerBase {
                   translation.add(entry.velocity);
                }
             } else {
-               translation.assign(Vector3d.ZERO);
+               translation.zero();
                this.appliedVelocities.clear();
-               this.forceVelocity.assign(Vector3d.ZERO);
+               this.forceVelocity.zero();
             }
 
             translation.y = NPCPhysicsMath.gravityDrag(this.forceVelocity.y, 5.0 * this.gravity, dt, maxSpeed);
-            translation.scale(dt);
+            translation.mul(dt);
             steering.setYaw(this.getYaw());
             steering.setPitch(this.getPitch());
             return dt;
@@ -306,7 +307,7 @@ public class MotionControllerDive extends MotionControllerBase {
       translation.x = moveSpeed * dt * PhysicsMath.headingX(heading);
       translation.z = moveSpeed * dt * PhysicsMath.headingZ(heading);
       translation.y = climbSpeed * dt;
-      translation.clipToZero(this.getEpsilonSpeed());
+      Vector3dUtil.clipToZero(translation, this.getEpsilonSpeed());
    }
 
    private boolean isNearZero(float angle) {
@@ -347,7 +348,7 @@ public class MotionControllerDive extends MotionControllerBase {
          this.dumpCollisionResults();
       }
 
-      this.lastValidPosition.assign(this.position);
+      this.lastValidPosition.set(this.position);
       this.isObstructed = false;
       this.collisionWithSolid = false;
       BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
@@ -359,10 +360,11 @@ public class MotionControllerDive extends MotionControllerBase {
             time = this.bisect(ref, this.lastValidPosition, 0.0, this.position, dt, this.position, componentAccessor);
             this.isObstructed = true;
             if (this.debugModeMove) {
-               LOGGER.at(Level.INFO).log("Move - Dive: No Collision, Bisect pos=%s, blocked=%s", Vector3d.formatShortString(this.position), this.isObstructed);
+               LOGGER.at(Level.INFO)
+                  .log("Move - Dive: No Collision, Bisect pos=%s, blocked=%s", Vector3dUtil.formatShortString(this.position), this.isObstructed);
             }
          } else if (this.debugModeMove) {
-            LOGGER.at(Level.INFO).log("Move - Dive: No collision, pos=%s, blocked=%s", Vector3d.formatShortString(this.position), this.isObstructed);
+            LOGGER.at(Level.INFO).log("Move - Dive: No collision, pos=%s, blocked=%s", Vector3dUtil.formatShortString(this.position), this.isObstructed);
          }
 
          if (this.debugModeValidatePositions && !this.isValidPosition(this.position, this.collisionResult, componentAccessor)) {
@@ -377,7 +379,7 @@ public class MotionControllerDive extends MotionControllerBase {
          }
 
          double collisionStart = collision.collisionStart;
-         this.position.assign(collision.collisionPoint);
+         this.position.set(collision.collisionPoint);
          this.isObstructed = true;
          this.collisionWithSolid = collision.blockMaterial == BlockMaterial.Solid;
          if (!this.moveProbe.probePosition(ref, this.collisionBoundingBox, this.position, this.collisionResult, this.swimDepth, componentAccessor)
@@ -388,7 +390,7 @@ public class MotionControllerDive extends MotionControllerBase {
                   .log(
                      "Move - Dive: Collision with solid=%s, Bisect pos=%s, blocked=%s",
                      this.collisionWithSolid,
-                     Vector3d.formatShortString(this.position),
+                     Vector3dUtil.formatShortString(this.position),
                      this.isObstructed
                   );
             }
@@ -397,7 +399,7 @@ public class MotionControllerDive extends MotionControllerBase {
                .log(
                   "Move - Dive: Collision with solid=%s, pos=%s, blocked=%s",
                   this.collisionWithSolid,
-                  Vector3d.formatShortString(this.position),
+                  Vector3dUtil.formatShortString(this.position),
                   this.isObstructed
                );
          }
@@ -498,7 +500,12 @@ public class MotionControllerDive extends MotionControllerBase {
          CollisionModule.findCollisions(this.collisionBoundingBox, probePosition, probeMovement, this.collisionResult, componentAccessor);
          if (this.debugModeMove) {
             LOGGER.at(Level.INFO)
-               .log("Probe Step: pos=%s mov=%s left=%s", Vector3d.formatShortString(probePosition), Vector3d.formatShortString(probeMovement), maxDistance);
+               .log(
+                  "Probe Step: pos=%s mov=%s left=%s",
+                  Vector3dUtil.formatShortString(probePosition),
+                  Vector3dUtil.formatShortString(probeMovement),
+                  maxDistance
+               );
          }
 
          if (this.debugModeCollisions) {
@@ -506,10 +513,10 @@ public class MotionControllerDive extends MotionControllerBase {
          }
 
          BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
-         this.tempPosition.assign(probePosition);
+         this.tempPosition.set(probePosition);
          if (collision == null) {
             probePosition.add(probeMovement);
-            probeMovement.assign(Vector3d.ZERO);
+            probeMovement.zero();
             double distanceTravelled;
             if (this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)
                && this.probeMoveProbe.isInWater()) {
@@ -517,7 +524,9 @@ public class MotionControllerDive extends MotionControllerBase {
                if (this.debugModeMove) {
                   LOGGER.at(Level.INFO)
                      .log(
-                        "Probe - Dive: No Collision, valid pos=%s, distanceLeft=%s", Vector3d.formatShortString(probePosition), maxDistance - distanceTravelled
+                        "Probe - Dive: No Collision, valid pos=%s, distanceLeft=%s",
+                        Vector3dUtil.formatShortString(probePosition),
+                        maxDistance - distanceTravelled
                      );
                }
             } else {
@@ -526,7 +535,7 @@ public class MotionControllerDive extends MotionControllerBase {
                   LOGGER.at(Level.INFO)
                      .log(
                         "Probe - Dive: No Collision, Bisect pos=%s, distanceLeft=%s",
-                        Vector3d.formatShortString(probePosition),
+                        Vector3dUtil.formatShortString(probePosition),
                         maxDistance - distanceTravelled
                      );
                }
@@ -550,7 +559,7 @@ public class MotionControllerDive extends MotionControllerBase {
          } else {
             double collisionStart = collision.collisionStart;
             double distanceTravelled = maxDistance * collisionStart;
-            probePosition.assign(collision.collisionPoint);
+            probePosition.set(collision.collisionPoint);
             if (!this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)
                || !this.probeMoveProbe.isInWater()) {
                distanceTravelled = this.bisect(ref, this.tempPosition, 0.0, probePosition, distanceTravelled, probePosition, componentAccessor);
@@ -558,7 +567,7 @@ public class MotionControllerDive extends MotionControllerBase {
                   LOGGER.at(Level.INFO)
                      .log(
                         "Probe - Dive: Collision, Bisect pos=%s, distanceLeft=%s, collision start=%s",
-                        Vector3d.formatShortString(probePosition),
+                        Vector3dUtil.formatShortString(probePosition),
                         maxDistance - distanceTravelled,
                         collisionStart
                      );
@@ -567,7 +576,7 @@ public class MotionControllerDive extends MotionControllerBase {
                LOGGER.at(Level.INFO)
                   .log(
                      "Probe - Dive: Collision, valid pos=%s, distanceLeft=%s, collision start=%s",
-                     Vector3d.formatShortString(probePosition),
+                     Vector3dUtil.formatShortString(probePosition),
                      maxDistance - distanceTravelled,
                      collisionStart
                   );
@@ -654,7 +663,7 @@ public class MotionControllerDive extends MotionControllerBase {
 
    @Override
    public boolean estimateVelocity(Steering steering, @Nonnull Vector3d velocityOut) {
-      velocityOut.assign(Vector3d.ZERO);
+      velocityOut.zero();
       return false;
    }
 
@@ -668,8 +677,8 @@ public class MotionControllerDive extends MotionControllerBase {
    protected void dampForceVelocity(
       @Nonnull Vector3d forceVelocity, double forceVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (forceVelocity.squaredLength() < this.minSpeedAfterForceSquared) {
-         forceVelocity.assign(Vector3d.ZERO);
+      if (forceVelocity.lengthSquared() < this.minSpeedAfterForceSquared) {
+         forceVelocity.zero();
       } else {
          NPCPhysicsMath.deccelerateToStop(forceVelocity, this.getDampingDeceleration(), interval);
       }
@@ -680,13 +689,13 @@ public class MotionControllerDive extends MotionControllerBase {
          return 0.5;
       } else {
          return swimDepth < 0.0
-            ? NPCPhysicsMath.lerp(eyeHeight, boundingBox.getMin().getY(), -swimDepth)
-            : NPCPhysicsMath.lerp(eyeHeight, boundingBox.getMax().getY(), swimDepth);
+            ? NPCPhysicsMath.lerp(eyeHeight, boundingBox.getMin().y(), -swimDepth)
+            : NPCPhysicsMath.lerp(eyeHeight, boundingBox.getMax().y(), swimDepth);
       }
    }
 
    public static double relativeSwimDepthToHeight(double swimDepth, @Nullable Box boundingBox, float eyeHeight) {
-      return boundingBox == null ? 0.5 : relativeSwimDepthToBoundingBox(swimDepth, boundingBox, eyeHeight) - boundingBox.getMin().getY();
+      return boundingBox == null ? 0.5 : relativeSwimDepthToBoundingBox(swimDepth, boundingBox, eyeHeight) - boundingBox.getMin().y();
    }
 
    public static double relativeSwimDepthToHeight(

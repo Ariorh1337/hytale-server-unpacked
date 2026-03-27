@@ -2,6 +2,7 @@ package com.hypixel.hytale.protocol.packets.worldmap;
 
 import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -34,6 +35,10 @@ public class PlacedByMarkerComponent extends MapMarkerComponent {
 
    @Nonnull
    public static PlacedByMarkerComponent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("PlacedByMarkerComponent", 16, buf.readableBytes() - offset);
+      }
+
       PlacedByMarkerComponent obj = new PlacedByMarkerComponent();
       obj.playerId = PacketIO.readUUID(buf, offset + 0);
       int pos = offset + 16;

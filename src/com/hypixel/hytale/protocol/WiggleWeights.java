@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -64,6 +65,10 @@ public class WiggleWeights {
 
    @Nonnull
    public static WiggleWeights deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 40) {
+         throw ProtocolException.bufferTooSmall("WiggleWeights", 40, buf.readableBytes() - offset);
+      }
+
       WiggleWeights obj = new WiggleWeights();
       obj.x = buf.getFloatLE(offset + 0);
       obj.xDeceleration = buf.getFloatLE(offset + 4);

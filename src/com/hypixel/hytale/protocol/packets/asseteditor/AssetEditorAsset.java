@@ -35,24 +35,43 @@ public class AssetEditorAsset {
 
    @Nonnull
    public static AssetEditorAsset deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAsset", 9, buf.readableBytes() - offset);
+      }
+
       AssetEditorAsset obj = new AssetEditorAsset();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int hashLen = VarInt.peek(buf, varPos0);
-         if (hashLen < 0) {
-            throw ProtocolException.negativeLength("Hash", hashLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Hash", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int hashLen = VarInt.peek(buf, varPos0);
+         if (hashLen < 0) {
+            throw ProtocolException.invalidVarInt("Hash");
+         }
+
+         int hashVarIntLen = VarInt.size(hashLen);
          if (hashLen > 4096000) {
             throw ProtocolException.stringTooLong("Hash", hashLen, 4096000);
+         }
+
+         if (varPos0 + hashVarIntLen + hashLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Hash", varPos0 + hashVarIntLen + hashLen, buf.readableBytes());
          }
 
          obj.hash = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 9 + varPosBase1;
          obj.path = AssetPath.deserialize(buf, varPos1);
       }
 
@@ -64,9 +83,13 @@ public class AssetEditorAsset {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Hash", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -74,6 +97,10 @@ public class AssetEditorAsset {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          pos1 += AssetPath.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -137,15 +164,11 @@ public class AssetEditorAsset {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int hashOffset = buffer.getIntLE(offset + 1);
-         if (hashOffset < 0) {
+         if (hashOffset < 0 || hashOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Hash");
          }
 
          int pos = offset + 9 + hashOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Hash");
-         }
-
          int hashLen = VarInt.peek(buffer, pos);
          if (hashLen < 0) {
             return ValidationResult.error("Invalid string length for Hash");
@@ -155,7 +178,7 @@ public class AssetEditorAsset {
             return ValidationResult.error("Hash exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(hashLen);
          pos += hashLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Hash");
@@ -164,15 +187,11 @@ public class AssetEditorAsset {
 
       if ((nullBits & 2) != 0) {
          int pathOffset = buffer.getIntLE(offset + 5);
-         if (pathOffset < 0) {
+         if (pathOffset < 0 || pathOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
          int pos = offset + 9 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
          ValidationResult pathResult = AssetPath.validateStructure(buffer, pos);
          if (!pathResult.isValid()) {
             return ValidationResult.error("Invalid Path: " + pathResult.error());

@@ -2,8 +2,8 @@ package com.hypixel.hytale.builtin.buildertools.snapshot;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -17,7 +17,7 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
    @Nonnull
    private final Transform transform;
    @Nonnull
-   private final Vector3f headRotation;
+   private final Rotation3f headRotation;
 
    public EntityTransformSnapshot(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.ref = ref;
@@ -25,8 +25,8 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
       assert transformComponent != null;
       HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
       assert headRotationComponent != null;
-      this.transform = transformComponent.getTransform().clone();
-      this.headRotation = headRotationComponent.getRotation().clone();
+      this.transform = new Transform(transformComponent.getTransform());
+      this.headRotation = new Rotation3f(headRotationComponent.getRotation());
    }
 
    public EntityTransformSnapshot restoreEntity(@Nonnull Player player, @Nonnull World world, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {

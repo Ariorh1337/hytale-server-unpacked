@@ -56,88 +56,152 @@ public class BlockTextures {
 
    @Nonnull
    public static BlockTextures deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 29) {
+         throw ProtocolException.bufferTooSmall("BlockTextures", 29, buf.readableBytes() - offset);
+      }
+
       BlockTextures obj = new BlockTextures();
       byte nullBits = buf.getByte(offset);
       obj.weight = buf.getFloatLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 29 + buf.getIntLE(offset + 5);
-         int topLen = VarInt.peek(buf, varPos0);
-         if (topLen < 0) {
-            throw ProtocolException.negativeLength("Top", topLen);
+         int varPosBase0 = buf.getIntLE(offset + 5);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Top", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 29 + varPosBase0;
+         int topLen = VarInt.peek(buf, varPos0);
+         if (topLen < 0) {
+            throw ProtocolException.invalidVarInt("Top");
+         }
+
+         int topVarIntLen = VarInt.size(topLen);
          if (topLen > 4096000) {
             throw ProtocolException.stringTooLong("Top", topLen, 4096000);
+         }
+
+         if (varPos0 + topVarIntLen + topLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Top", varPos0 + topVarIntLen + topLen, buf.readableBytes());
          }
 
          obj.top = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 29 + buf.getIntLE(offset + 9);
-         int bottomLen = VarInt.peek(buf, varPos1);
-         if (bottomLen < 0) {
-            throw ProtocolException.negativeLength("Bottom", bottomLen);
+         int varPosBase1 = buf.getIntLE(offset + 9);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Bottom", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 29 + varPosBase1;
+         int bottomLen = VarInt.peek(buf, varPos1);
+         if (bottomLen < 0) {
+            throw ProtocolException.invalidVarInt("Bottom");
+         }
+
+         int bottomVarIntLen = VarInt.size(bottomLen);
          if (bottomLen > 4096000) {
             throw ProtocolException.stringTooLong("Bottom", bottomLen, 4096000);
+         }
+
+         if (varPos1 + bottomVarIntLen + bottomLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Bottom", varPos1 + bottomVarIntLen + bottomLen, buf.readableBytes());
          }
 
          obj.bottom = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 29 + buf.getIntLE(offset + 13);
-         int frontLen = VarInt.peek(buf, varPos2);
-         if (frontLen < 0) {
-            throw ProtocolException.negativeLength("Front", frontLen);
+         int varPosBase2 = buf.getIntLE(offset + 13);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Front", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 29 + varPosBase2;
+         int frontLen = VarInt.peek(buf, varPos2);
+         if (frontLen < 0) {
+            throw ProtocolException.invalidVarInt("Front");
+         }
+
+         int frontVarIntLen = VarInt.size(frontLen);
          if (frontLen > 4096000) {
             throw ProtocolException.stringTooLong("Front", frontLen, 4096000);
+         }
+
+         if (varPos2 + frontVarIntLen + frontLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Front", varPos2 + frontVarIntLen + frontLen, buf.readableBytes());
          }
 
          obj.front = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 29 + buf.getIntLE(offset + 17);
-         int backLen = VarInt.peek(buf, varPos3);
-         if (backLen < 0) {
-            throw ProtocolException.negativeLength("Back", backLen);
+         int varPosBase3 = buf.getIntLE(offset + 17);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Back", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 29 + varPosBase3;
+         int backLen = VarInt.peek(buf, varPos3);
+         if (backLen < 0) {
+            throw ProtocolException.invalidVarInt("Back");
+         }
+
+         int backVarIntLen = VarInt.size(backLen);
          if (backLen > 4096000) {
             throw ProtocolException.stringTooLong("Back", backLen, 4096000);
+         }
+
+         if (varPos3 + backVarIntLen + backLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Back", varPos3 + backVarIntLen + backLen, buf.readableBytes());
          }
 
          obj.back = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 29 + buf.getIntLE(offset + 21);
-         int leftLen = VarInt.peek(buf, varPos4);
-         if (leftLen < 0) {
-            throw ProtocolException.negativeLength("Left", leftLen);
+         int varPosBase4 = buf.getIntLE(offset + 21);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Left", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 29 + varPosBase4;
+         int leftLen = VarInt.peek(buf, varPos4);
+         if (leftLen < 0) {
+            throw ProtocolException.invalidVarInt("Left");
+         }
+
+         int leftVarIntLen = VarInt.size(leftLen);
          if (leftLen > 4096000) {
             throw ProtocolException.stringTooLong("Left", leftLen, 4096000);
+         }
+
+         if (varPos4 + leftVarIntLen + leftLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Left", varPos4 + leftVarIntLen + leftLen, buf.readableBytes());
          }
 
          obj.left = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos5 = offset + 29 + buf.getIntLE(offset + 25);
-         int rightLen = VarInt.peek(buf, varPos5);
-         if (rightLen < 0) {
-            throw ProtocolException.negativeLength("Right", rightLen);
+         int varPosBase5 = buf.getIntLE(offset + 25);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Right", varPosBase5, buf.readableBytes());
          }
 
+         int varPos5 = offset + 29 + varPosBase5;
+         int rightLen = VarInt.peek(buf, varPos5);
+         if (rightLen < 0) {
+            throw ProtocolException.invalidVarInt("Right");
+         }
+
+         int rightVarIntLen = VarInt.size(rightLen);
          if (rightLen > 4096000) {
             throw ProtocolException.stringTooLong("Right", rightLen, 4096000);
+         }
+
+         if (varPos5 + rightVarIntLen + rightLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Right", varPos5 + rightVarIntLen + rightLen, buf.readableBytes());
          }
 
          obj.right = PacketIO.readVarString(buf, varPos5, PacketIO.UTF8);
@@ -151,9 +215,13 @@ public class BlockTextures {
       int maxEnd = 29;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 5);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Top", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 29 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -161,9 +229,13 @@ public class BlockTextures {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 9);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Bottom", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 29 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -171,9 +243,13 @@ public class BlockTextures {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 13);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Front", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 29 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -181,9 +257,13 @@ public class BlockTextures {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 17);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Back", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 29 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -191,9 +271,13 @@ public class BlockTextures {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 21);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Left", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 29 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -201,9 +285,13 @@ public class BlockTextures {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 25);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 29) {
+            throw ProtocolException.invalidOffset("Right", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 29 + fieldOffset5;
          int sl = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5) + sl;
+         pos5 += VarInt.size(sl) + sl;
          if (pos5 - offset > maxEnd) {
             maxEnd = pos5 - offset;
          }
@@ -334,15 +422,11 @@ public class BlockTextures {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int topOffset = buffer.getIntLE(offset + 5);
-         if (topOffset < 0) {
+         if (topOffset < 0 || topOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Top");
          }
 
          int pos = offset + 29 + topOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Top");
-         }
-
          int topLen = VarInt.peek(buffer, pos);
          if (topLen < 0) {
             return ValidationResult.error("Invalid string length for Top");
@@ -352,7 +436,7 @@ public class BlockTextures {
             return ValidationResult.error("Top exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(topLen);
          pos += topLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Top");
@@ -361,15 +445,11 @@ public class BlockTextures {
 
       if ((nullBits & 2) != 0) {
          int bottomOffset = buffer.getIntLE(offset + 9);
-         if (bottomOffset < 0) {
+         if (bottomOffset < 0 || bottomOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Bottom");
          }
 
          int pos = offset + 29 + bottomOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Bottom");
-         }
-
          int bottomLen = VarInt.peek(buffer, pos);
          if (bottomLen < 0) {
             return ValidationResult.error("Invalid string length for Bottom");
@@ -379,7 +459,7 @@ public class BlockTextures {
             return ValidationResult.error("Bottom exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(bottomLen);
          pos += bottomLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Bottom");
@@ -388,15 +468,11 @@ public class BlockTextures {
 
       if ((nullBits & 4) != 0) {
          int frontOffset = buffer.getIntLE(offset + 13);
-         if (frontOffset < 0) {
+         if (frontOffset < 0 || frontOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Front");
          }
 
          int pos = offset + 29 + frontOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Front");
-         }
-
          int frontLen = VarInt.peek(buffer, pos);
          if (frontLen < 0) {
             return ValidationResult.error("Invalid string length for Front");
@@ -406,7 +482,7 @@ public class BlockTextures {
             return ValidationResult.error("Front exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(frontLen);
          pos += frontLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Front");
@@ -415,15 +491,11 @@ public class BlockTextures {
 
       if ((nullBits & 8) != 0) {
          int backOffset = buffer.getIntLE(offset + 17);
-         if (backOffset < 0) {
+         if (backOffset < 0 || backOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Back");
          }
 
          int pos = offset + 29 + backOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Back");
-         }
-
          int backLen = VarInt.peek(buffer, pos);
          if (backLen < 0) {
             return ValidationResult.error("Invalid string length for Back");
@@ -433,7 +505,7 @@ public class BlockTextures {
             return ValidationResult.error("Back exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(backLen);
          pos += backLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Back");
@@ -442,15 +514,11 @@ public class BlockTextures {
 
       if ((nullBits & 16) != 0) {
          int leftOffset = buffer.getIntLE(offset + 21);
-         if (leftOffset < 0) {
+         if (leftOffset < 0 || leftOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Left");
          }
 
          int pos = offset + 29 + leftOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Left");
-         }
-
          int leftLen = VarInt.peek(buffer, pos);
          if (leftLen < 0) {
             return ValidationResult.error("Invalid string length for Left");
@@ -460,7 +528,7 @@ public class BlockTextures {
             return ValidationResult.error("Left exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(leftLen);
          pos += leftLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Left");
@@ -469,15 +537,11 @@ public class BlockTextures {
 
       if ((nullBits & 32) != 0) {
          int rightOffset = buffer.getIntLE(offset + 25);
-         if (rightOffset < 0) {
+         if (rightOffset < 0 || rightOffset > buffer.writerIndex() - offset - 29) {
             return ValidationResult.error("Invalid offset for Right");
          }
 
          int pos = offset + 29 + rightOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Right");
-         }
-
          int rightLen = VarInt.peek(buffer, pos);
          if (rightLen < 0) {
             return ValidationResult.error("Invalid string length for Right");
@@ -487,7 +551,7 @@ public class BlockTextures {
             return ValidationResult.error("Right exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(rightLen);
          pos += rightLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Right");

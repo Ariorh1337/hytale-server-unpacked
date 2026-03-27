@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.setup;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -41,6 +42,10 @@ public class SetTimeDilation implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetTimeDilation deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("SetTimeDilation", 4, buf.readableBytes() - offset);
+      }
+
       SetTimeDilation obj = new SetTimeDilation();
       obj.timeDilation = buf.getFloatLE(offset + 0);
       return obj;

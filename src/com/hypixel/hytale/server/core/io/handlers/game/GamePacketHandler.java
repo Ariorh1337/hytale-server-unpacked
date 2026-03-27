@@ -6,10 +6,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.FormattedMessage;
@@ -115,6 +113,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +124,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class GamePacketHandler extends GenericPacketHandler implements IPacketHandler {
    private static final double RELATIVE_POSITION_DELTA_SCALE = 10000.0;
@@ -371,8 +372,15 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             }
 
             UUID playerUUID = this.playerRef.getUuid();
-            List<PlayerRef> targetPlayerRefs = new ObjectArrayList<>(Universe.get().getPlayers());
-            targetPlayerRefs.removeIf(targetPlayerRef -> targetPlayerRef.getHiddenPlayersManager().isPlayerHidden(playerUUID));
+            Collection<PlayerRef> players = Universe.get().getPlayers();
+            List<PlayerRef> targetPlayerRefs = new ObjectArrayList<>(players.size());
+
+            for (PlayerRef targetPlayerRef : players) {
+               if (!targetPlayerRef.getHiddenPlayersManager().isPlayerHidden(playerUUID)) {
+                  targetPlayerRefs.add(targetPlayerRef);
+               }
+            }
+
             HytaleServer.get()
                .getEventBus()
                .<String, PlayerChatEvent>dispatchForAsync(PlayerChatEvent.class)
@@ -388,8 +396,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                         Message sentMessage = playerChatEvent.getFormatter().format(this.playerRef, playerChatEvent.getContent());
                         HytaleLogger.getLogger().at(Level.INFO).log(MessageUtil.toAnsiString(sentMessage).toAnsi(ConsoleModule.get().getTerminal()));
 
-                        for (PlayerRef targetPlayerRef : playerChatEvent.getTargets()) {
-                           targetPlayerRef.sendMessage(sentMessage);
+                        for (PlayerRef targetPlayerRefx : playerChatEvent.getTargets()) {
+                           targetPlayerRefx.sendMessage(sentMessage);
                         }
                      }
                   }
@@ -518,7 +526,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                if (transformComponent != null && playerComponent.getGameMode() != GameMode.Creative) {
                   Vector3d position = transformComponent.getPosition();
                   Vector3d blockCenter = new Vector3d(targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5);
-                  if (position.distanceSquaredTo(blockCenter) > 49.0) {
+                  if (position.distanceSquared(blockCenter) > 49.0) {
                      section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                      return;
                   }
@@ -545,7 +553,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                         itemInHand,
                         heldBlockKey,
                         inventory.getHotbar(),
-                        Vector3i.ZERO,
+                        new Vector3i(),
                         targetBlock,
                         blockRotation,
                         inventory,
@@ -665,7 +673,6 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      playerComponent.getWorldMapTracker().setClientHasWorldMapVisible(packet.visible);
    }
 
    public void handleTeleportToWorldMapMarker(
@@ -679,17 +686,17 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       assert playerComponent != null;
       WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
       if (!worldMapTracker.isAllowTeleportToMarkers()) {
-         this.disconnect(Message.translation("server.general.disconnect.teleportToMarkersNotAllowed"));
+         playerRef.sendMessage(Message.translation("server.general.disconnect.teleportToMarkersNotAllowed"));
       } else {
          MapMarker marker = worldMapTracker.getSentMarkers().get(packet.id);
          if (marker != null) {
             Transform transform = PositionUtil.toTransform(marker.transform);
             if (MapMarkerUtils.isUserMarker(marker)) {
-               int blockX = (int)transform.getPosition().getX();
-               int blockZ = (int)transform.getPosition().getZ();
+               int blockX = (int)transform.getPosition().x();
+               int blockZ = (int)transform.getPosition().z();
                WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(blockX, blockZ));
                int height = chunk == null ? 319 : chunk.getHeight(blockX, blockZ);
-               transform.getPosition().setY(height);
+               transform.getPosition().y = height;
             }
 
             Teleport teleportComponent = Teleport.createForPlayer(transform);
@@ -709,13 +716,13 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       assert playerComponent != null;
       WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
       if (!worldMapTracker.isAllowTeleportToCoordinates()) {
-         this.disconnect(Message.translation("server.general.disconnect.teleportToCoordinatesNotAllowed"));
+         playerRef.sendMessage(Message.translation("server.general.disconnect.teleportToCoordinatesNotAllowed"));
       } else {
          world.getChunkStore().getChunkReferenceAsync(ChunkUtil.indexChunkFromBlock(packet.x, packet.y)).thenAcceptAsync(chunkRef -> {
             BlockChunk blockChunkComponent = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
             assert blockChunkComponent != null;
             Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
-            Teleport teleportComponent = Teleport.createForPlayer(null, position, new Vector3f(0.0F, 0.0F, 0.0F));
+            Teleport teleportComponent = Teleport.createForPlayer(null, position, new Rotation3f(0.0F, 0.0F, 0.0F));
             world.getEntityStore().getStore().addComponent(playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
          }, world);
       }

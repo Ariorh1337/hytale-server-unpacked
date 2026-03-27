@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.corecomponents.debug;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionTestProbe extends BodyMotionBase {
    protected final double adjustX;
@@ -79,7 +79,7 @@ public class BodyMotionTestProbe extends BodyMotionBase {
          }
 
          Vector3d position = transformComponent.getPosition();
-         this.direction.subtract(position);
+         this.direction.sub(position);
          if (!this.displayText) {
             return true;
          }
@@ -91,17 +91,17 @@ public class BodyMotionTestProbe extends BodyMotionBase {
 
          if (this.adjustDistance > 0.0) {
             length = this.adjustDistance;
-            this.direction.setLength(this.adjustDistance);
+            this.direction.normalize(this.adjustDistance);
          }
 
-         double x = this.direction.getX();
-         double y = this.direction.getY();
-         double z = this.direction.getZ();
+         double x = this.direction.x();
+         double y = this.direction.y();
+         double z = this.direction.z();
          float yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
          float pitch = PhysicsMath.pitchFromDirection(x, y, z);
          if (this.snapAngle > 0.0F && this.snapAngle < (float) Math.PI) {
             yaw = MathUtil.fastRound(yaw / this.snapAngle) * this.snapAngle;
-            PhysicsMath.vectorFromAngles(yaw, pitch, this.direction).setLength(length);
+            PhysicsMath.vectorFromAngles(yaw, pitch, this.direction).normalize(length);
          }
 
          desiredSteering.setYaw(yaw);

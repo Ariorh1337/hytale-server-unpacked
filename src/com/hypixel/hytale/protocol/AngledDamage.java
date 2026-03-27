@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -37,6 +38,10 @@ public class AngledDamage {
 
    @Nonnull
    public static AngledDamage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("AngledDamage", 21, buf.readableBytes() - offset);
+      }
+
       AngledDamage obj = new AngledDamage();
       byte nullBits = buf.getByte(offset);
       obj.angle = buf.getDoubleLE(offset + 1);

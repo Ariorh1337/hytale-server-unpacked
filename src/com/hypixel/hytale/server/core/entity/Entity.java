@@ -184,7 +184,7 @@ public abstract class Entity implements Component<EntityStore> {
    public void moveTo(@Nonnull Ref<EntityStore> ref, double locX, double locY, double locZ, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      transformComponent.getPosition().assign(locX, locY, locZ);
+      transformComponent.getPosition().set(locX, locY, locZ);
    }
 
    @Nullable

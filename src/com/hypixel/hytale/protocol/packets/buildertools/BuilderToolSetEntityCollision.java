@@ -49,6 +49,10 @@ public class BuilderToolSetEntityCollision implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolSetEntityCollision deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityCollision", 5, buf.readableBytes() - offset);
+      }
+
       BuilderToolSetEntityCollision obj = new BuilderToolSetEntityCollision();
       byte nullBits = buf.getByte(offset);
       obj.entityId = buf.getIntLE(offset + 1);
@@ -56,14 +60,18 @@ public class BuilderToolSetEntityCollision implements Packet, ToServerPacket {
       if ((nullBits & 1) != 0) {
          int collisionTypeLen = VarInt.peek(buf, pos);
          if (collisionTypeLen < 0) {
-            throw ProtocolException.negativeLength("CollisionType", collisionTypeLen);
+            throw ProtocolException.invalidVarInt("CollisionType");
          }
 
+         int collisionTypeVarLen = VarInt.size(collisionTypeLen);
          if (collisionTypeLen > 4096000) {
             throw ProtocolException.stringTooLong("CollisionType", collisionTypeLen, 4096000);
          }
 
-         int collisionTypeVarLen = VarInt.length(buf, pos);
+         if (pos + collisionTypeVarLen + collisionTypeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("CollisionType", pos + collisionTypeVarLen + collisionTypeLen, buf.readableBytes());
+         }
+
          obj.collisionType = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += collisionTypeVarLen + collisionTypeLen;
       }
@@ -76,7 +84,7 @@ public class BuilderToolSetEntityCollision implements Packet, ToServerPacket {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -123,7 +131,7 @@ public class BuilderToolSetEntityCollision implements Packet, ToServerPacket {
             return ValidationResult.error("CollisionType exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(collisionTypeLen);
          pos += collisionTypeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading CollisionType");

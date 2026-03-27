@@ -77,6 +77,10 @@ public class EntityUIComponent {
 
    @Nonnull
    public static EntityUIComponent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 51) {
+         throw ProtocolException.bufferTooSmall("EntityUIComponent", 51, buf.readableBytes() - offset);
+      }
+
       EntityUIComponent obj = new EntityUIComponent();
       byte nullBits = buf.getByte(offset);
       obj.type = EntityUIType.fromValue(buf.getByte(offset + 1));
@@ -102,14 +106,14 @@ public class EntityUIComponent {
       if ((nullBits & 8) != 0) {
          int combatTextAnimationEventsCount = VarInt.peek(buf, pos);
          if (combatTextAnimationEventsCount < 0) {
-            throw ProtocolException.negativeLength("CombatTextAnimationEvents", combatTextAnimationEventsCount);
+            throw ProtocolException.invalidVarInt("CombatTextAnimationEvents");
          }
 
+         int combatTextAnimationEventsVarLen = VarInt.size(combatTextAnimationEventsCount);
          if (combatTextAnimationEventsCount > 4096000) {
             throw ProtocolException.arrayTooLong("CombatTextAnimationEvents", combatTextAnimationEventsCount, 4096000);
          }
 
-         int combatTextAnimationEventsVarLen = VarInt.size(combatTextAnimationEventsCount);
          if (pos + combatTextAnimationEventsVarLen + combatTextAnimationEventsCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall(
                "CombatTextAnimationEvents", pos + combatTextAnimationEventsVarLen + combatTextAnimationEventsCount * 34, buf.readableBytes()
@@ -133,7 +137,7 @@ public class EntityUIComponent {
       int pos = offset + 51;
       if ((nullBits & 8) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += CombatTextEntityUIComponentAnimationEvent.computeBytesConsumed(buf, pos);
@@ -215,9 +219,14 @@ public class EntityUIComponent {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 51;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid EntityUIType value for Type");
+      }
+
+      v = offset + 51;
       if ((nullBits & 8) != 0) {
-         int combatTextAnimationEventsCount = VarInt.peek(buffer, pos);
+         int combatTextAnimationEventsCount = VarInt.peek(buffer, v);
          if (combatTextAnimationEventsCount < 0) {
             return ValidationResult.error("Invalid array count for CombatTextAnimationEvents");
          }
@@ -226,9 +235,9 @@ public class EntityUIComponent {
             return ValidationResult.error("CombatTextAnimationEvents exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += combatTextAnimationEventsCount * 34;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(combatTextAnimationEventsCount);
+         v += combatTextAnimationEventsCount * 34;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading CombatTextAnimationEvents");
          }
       }

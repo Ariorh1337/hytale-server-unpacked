@@ -30,20 +30,24 @@ public class RailConfig {
 
    @Nonnull
    public static RailConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("RailConfig", 1, buf.readableBytes() - offset);
+      }
+
       RailConfig obj = new RailConfig();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int pointsCount = VarInt.peek(buf, pos);
          if (pointsCount < 0) {
-            throw ProtocolException.negativeLength("Points", pointsCount);
+            throw ProtocolException.invalidVarInt("Points");
          }
 
+         int pointsVarLen = VarInt.size(pointsCount);
          if (pointsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Points", pointsCount, 4096000);
          }
 
-         int pointsVarLen = VarInt.size(pointsCount);
          if (pos + pointsVarLen + pointsCount * 25L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Points", pos + pointsVarLen + pointsCount * 25, buf.readableBytes());
          }
@@ -65,7 +69,7 @@ public class RailConfig {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += RailPoint.computeBytesConsumed(buf, pos);
@@ -121,7 +125,7 @@ public class RailConfig {
             return ValidationResult.error("Points exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(pointsCount);
          pos += pointsCount * 25;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Points");

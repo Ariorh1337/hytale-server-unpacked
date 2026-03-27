@@ -37,14 +37,15 @@ public class EntityStatsUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int entityStatUpdatesCount = VarInt.peek(buf, pos);
       if (entityStatUpdatesCount < 0) {
-         throw ProtocolException.negativeLength("EntityStatUpdates", entityStatUpdatesCount);
+         throw ProtocolException.invalidVarInt("EntityStatUpdates");
       }
 
+      int entityStatUpdatesVarLen = VarInt.size(entityStatUpdatesCount);
       if (entityStatUpdatesCount > 4096000) {
          throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", entityStatUpdatesCount, 4096000);
       }
 
-      pos += VarInt.size(entityStatUpdatesCount);
+      pos += entityStatUpdatesVarLen;
       obj.entityStatUpdates = new HashMap<>(entityStatUpdatesCount);
 
       for (int i = 0; i < entityStatUpdatesCount; i++) {
@@ -52,14 +53,14 @@ public class EntityStatsUpdate extends ComponentUpdate {
          pos += 4;
          int valLen = VarInt.peek(buf, pos);
          if (valLen < 0) {
-            throw ProtocolException.negativeLength("val", valLen);
+            throw ProtocolException.invalidVarInt("val");
          }
 
+         int valVarLen = VarInt.size(valLen);
          if (valLen > 64) {
             throw ProtocolException.arrayTooLong("val", valLen, 64);
          }
 
-         int valVarLen = VarInt.length(buf, pos);
          if (pos + valVarLen + valLen * 13L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("val", pos + valVarLen + valLen * 13, buf.readableBytes());
          }
@@ -83,12 +84,12 @@ public class EntityStatsUpdate extends ComponentUpdate {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int dictLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(dictLen);
 
       for (int i = 0; i < dictLen; i++) {
          pos += 4;
          int al = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(al);
 
          for (int j = 0; j < al; j++) {
             pos += EntityStatUpdate.computeBytesConsumed(buf, pos);
@@ -146,7 +147,7 @@ public class EntityStatsUpdate extends ComponentUpdate {
          return ValidationResult.error("EntityStatUpdates exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(entityStatUpdatesCount);
 
       for (int i = 0; i < entityStatUpdatesCount; i++) {
          pos += 4;
@@ -159,7 +160,7 @@ public class EntityStatsUpdate extends ComponentUpdate {
             return ValidationResult.error("Invalid array count for value");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(valueArrCount);
 
          for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
             pos += EntityStatUpdate.computeBytesConsumed(buffer, pos);

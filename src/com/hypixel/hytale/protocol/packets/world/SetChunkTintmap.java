@@ -51,6 +51,10 @@ public class SetChunkTintmap implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetChunkTintmap deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("SetChunkTintmap", 9, buf.readableBytes() - offset);
+      }
+
       SetChunkTintmap obj = new SetChunkTintmap();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getIntLE(offset + 1);
@@ -59,14 +63,14 @@ public class SetChunkTintmap implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int tintmapCount = VarInt.peek(buf, pos);
          if (tintmapCount < 0) {
-            throw ProtocolException.negativeLength("Tintmap", tintmapCount);
+            throw ProtocolException.invalidVarInt("Tintmap");
          }
 
+         int tintmapVarLen = VarInt.size(tintmapCount);
          if (tintmapCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tintmap", tintmapCount, 4096000);
          }
 
-         int tintmapVarLen = VarInt.size(tintmapCount);
          if (pos + tintmapVarLen + tintmapCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tintmap", pos + tintmapVarLen + tintmapCount * 1, buf.readableBytes());
          }
@@ -89,7 +93,7 @@ public class SetChunkTintmap implements Packet, ToClientPacket {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -145,7 +149,7 @@ public class SetChunkTintmap implements Packet, ToClientPacket {
             return ValidationResult.error("Tintmap exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tintmapCount);
          pos += tintmapCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Tintmap");

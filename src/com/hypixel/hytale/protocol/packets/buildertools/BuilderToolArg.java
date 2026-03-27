@@ -97,6 +97,10 @@ public class BuilderToolArg {
 
    @Nonnull
    public static BuilderToolArg deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 53) {
+         throw ProtocolException.bufferTooSmall("BuilderToolArg", 53, buf.readableBytes() - offset);
+      }
+
       BuilderToolArg obj = new BuilderToolArg();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       obj.required = buf.getByte(offset + 2) != 0;
@@ -130,36 +134,66 @@ public class BuilderToolArg {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos0 = offset + 53 + buf.getIntLE(offset + 33);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 33);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 53 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos1 = offset + 53 + buf.getIntLE(offset + 37);
+         int varPosBase1 = buf.getIntLE(offset + 37);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("StringArg", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 53 + varPosBase1;
          obj.stringArg = BuilderToolStringArg.deserialize(buf, varPos1);
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos2 = offset + 53 + buf.getIntLE(offset + 41);
+         int varPosBase2 = buf.getIntLE(offset + 41);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("BlockArg", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 53 + varPosBase2;
          obj.blockArg = BuilderToolBlockArg.deserialize(buf, varPos2);
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int varPos3 = offset + 53 + buf.getIntLE(offset + 45);
+         int varPosBase3 = buf.getIntLE(offset + 45);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("MaskArg", varPosBase3, buf.readableBytes());
+         }
+
+         int varPos3 = offset + 53 + varPosBase3;
          obj.maskArg = BuilderToolMaskArg.deserialize(buf, varPos3);
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int varPos4 = offset + 53 + buf.getIntLE(offset + 49);
+         int varPosBase4 = buf.getIntLE(offset + 49);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("OptionArg", varPosBase4, buf.readableBytes());
+         }
+
+         int varPos4 = offset + 53 + varPosBase4;
          obj.optionArg = BuilderToolOptionArg.deserialize(buf, varPos4);
       }
 
@@ -171,9 +205,13 @@ public class BuilderToolArg {
       int maxEnd = 53;
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 33);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 53 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -181,6 +219,10 @@ public class BuilderToolArg {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 37);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("StringArg", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 53 + fieldOffset1;
          pos1 += BuilderToolStringArg.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -190,6 +232,10 @@ public class BuilderToolArg {
 
       if ((nullBits[1] & 2) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 41);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("BlockArg", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 53 + fieldOffset2;
          pos2 += BuilderToolBlockArg.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -199,6 +245,10 @@ public class BuilderToolArg {
 
       if ((nullBits[1] & 4) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 45);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("MaskArg", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 53 + fieldOffset3;
          pos3 += BuilderToolMaskArg.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
@@ -208,6 +258,10 @@ public class BuilderToolArg {
 
       if ((nullBits[1] & 8) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 49);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 53) {
+            throw ProtocolException.invalidOffset("OptionArg", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 53 + fieldOffset4;
          pos4 += BuilderToolOptionArg.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
@@ -392,17 +446,18 @@ public class BuilderToolArg {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
+      int v = buffer.getByte(offset + 3) & 255;
+      if (v >= 11) {
+         return ValidationResult.error("Invalid BuilderToolArgType value for ArgType");
+      }
+
       if ((nullBits[0] & 128) != 0) {
-         int idOffset = buffer.getIntLE(offset + 33);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 33);
+         if (v < 0 || v > buffer.writerIndex() - offset - 53) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 53 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 53 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -412,7 +467,7 @@ public class BuilderToolArg {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -420,16 +475,12 @@ public class BuilderToolArg {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int stringArgOffset = buffer.getIntLE(offset + 37);
-         if (stringArgOffset < 0) {
+         v = buffer.getIntLE(offset + 37);
+         if (v < 0 || v > buffer.writerIndex() - offset - 53) {
             return ValidationResult.error("Invalid offset for StringArg");
          }
 
-         int pos = offset + 53 + stringArgOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for StringArg");
-         }
-
+         int pos = offset + 53 + v;
          ValidationResult stringArgResult = BuilderToolStringArg.validateStructure(buffer, pos);
          if (!stringArgResult.isValid()) {
             return ValidationResult.error("Invalid StringArg: " + stringArgResult.error());
@@ -439,16 +490,12 @@ public class BuilderToolArg {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int blockArgOffset = buffer.getIntLE(offset + 41);
-         if (blockArgOffset < 0) {
+         v = buffer.getIntLE(offset + 41);
+         if (v < 0 || v > buffer.writerIndex() - offset - 53) {
             return ValidationResult.error("Invalid offset for BlockArg");
          }
 
-         int pos = offset + 53 + blockArgOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BlockArg");
-         }
-
+         int pos = offset + 53 + v;
          ValidationResult blockArgResult = BuilderToolBlockArg.validateStructure(buffer, pos);
          if (!blockArgResult.isValid()) {
             return ValidationResult.error("Invalid BlockArg: " + blockArgResult.error());
@@ -458,16 +505,12 @@ public class BuilderToolArg {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int maskArgOffset = buffer.getIntLE(offset + 45);
-         if (maskArgOffset < 0) {
+         v = buffer.getIntLE(offset + 45);
+         if (v < 0 || v > buffer.writerIndex() - offset - 53) {
             return ValidationResult.error("Invalid offset for MaskArg");
          }
 
-         int pos = offset + 53 + maskArgOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for MaskArg");
-         }
-
+         int pos = offset + 53 + v;
          ValidationResult maskArgResult = BuilderToolMaskArg.validateStructure(buffer, pos);
          if (!maskArgResult.isValid()) {
             return ValidationResult.error("Invalid MaskArg: " + maskArgResult.error());
@@ -477,16 +520,12 @@ public class BuilderToolArg {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int optionArgOffset = buffer.getIntLE(offset + 49);
-         if (optionArgOffset < 0) {
+         v = buffer.getIntLE(offset + 49);
+         if (v < 0 || v > buffer.writerIndex() - offset - 53) {
             return ValidationResult.error("Invalid offset for OptionArg");
          }
 
-         int pos = offset + 53 + optionArgOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for OptionArg");
-         }
-
+         int pos = offset + 53 + v;
          ValidationResult optionArgResult = BuilderToolOptionArg.validateStructure(buffer, pos);
          if (!optionArgResult.isValid()) {
             return ValidationResult.error("Invalid OptionArg: " + optionArgResult.error());

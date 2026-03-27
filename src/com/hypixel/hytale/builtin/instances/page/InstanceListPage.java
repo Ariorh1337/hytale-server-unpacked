@@ -7,8 +7,8 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.AssetModule;
@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class InstanceListPage extends InteractiveCustomUIPage<InstanceListPage.PageData> {
    @Nonnull
@@ -170,7 +171,7 @@ public class InstanceListPage extends InteractiveCustomUIPage<InstanceListPage.P
             HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
             assert transformComponent != null;
             Vector3d position = transformComponent.getPosition();
-            Transform returnLocation = new Transform(position.clone(), headRotationComponent.getRotation().clone());
+            Transform returnLocation = new Transform(new Vector3d(position), new Rotation3f(headRotationComponent.getRotation()));
             CompletableFuture<World> instanceWorld = InstancesPlugin.get().spawnInstance(instanceName, world, returnLocation);
             InstancesPlugin.teleportPlayerToLoadingInstance(ref, store, instanceWorld, null);
          });

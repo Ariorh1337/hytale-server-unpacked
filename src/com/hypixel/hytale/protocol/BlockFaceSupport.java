@@ -36,34 +36,53 @@ public class BlockFaceSupport {
 
    @Nonnull
    public static BlockFaceSupport deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("BlockFaceSupport", 9, buf.readableBytes() - offset);
+      }
+
       BlockFaceSupport obj = new BlockFaceSupport();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int faceTypeLen = VarInt.peek(buf, varPos0);
-         if (faceTypeLen < 0) {
-            throw ProtocolException.negativeLength("FaceType", faceTypeLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("FaceType", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int faceTypeLen = VarInt.peek(buf, varPos0);
+         if (faceTypeLen < 0) {
+            throw ProtocolException.invalidVarInt("FaceType");
+         }
+
+         int faceTypeVarIntLen = VarInt.size(faceTypeLen);
          if (faceTypeLen > 4096000) {
             throw ProtocolException.stringTooLong("FaceType", faceTypeLen, 4096000);
+         }
+
+         if (varPos0 + faceTypeVarIntLen + faceTypeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("FaceType", varPos0 + faceTypeVarIntLen + faceTypeLen, buf.readableBytes());
          }
 
          obj.faceType = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int fillerCount = VarInt.peek(buf, varPos1);
-         if (fillerCount < 0) {
-            throw ProtocolException.negativeLength("Filler", fillerCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Filler", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int fillerCount = VarInt.peek(buf, varPos1);
+         if (fillerCount < 0) {
+            throw ProtocolException.invalidVarInt("Filler");
+         }
+
+         int varIntLen = VarInt.size(fillerCount);
          if (fillerCount > 4096000) {
             throw ProtocolException.arrayTooLong("Filler", fillerCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + fillerCount * 12L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Filler", varPos1 + varIntLen + fillerCount * 12, buf.readableBytes());
          }
@@ -85,9 +104,13 @@ public class BlockFaceSupport {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("FaceType", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -95,9 +118,13 @@ public class BlockFaceSupport {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Filler", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += Vector3i.computeBytesConsumed(buf, pos1);
@@ -172,15 +199,11 @@ public class BlockFaceSupport {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int faceTypeOffset = buffer.getIntLE(offset + 1);
-         if (faceTypeOffset < 0) {
+         if (faceTypeOffset < 0 || faceTypeOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for FaceType");
          }
 
          int pos = offset + 9 + faceTypeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FaceType");
-         }
-
          int faceTypeLen = VarInt.peek(buffer, pos);
          if (faceTypeLen < 0) {
             return ValidationResult.error("Invalid string length for FaceType");
@@ -190,7 +213,7 @@ public class BlockFaceSupport {
             return ValidationResult.error("FaceType exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(faceTypeLen);
          pos += faceTypeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FaceType");
@@ -199,15 +222,11 @@ public class BlockFaceSupport {
 
       if ((nullBits & 2) != 0) {
          int fillerOffset = buffer.getIntLE(offset + 5);
-         if (fillerOffset < 0) {
+         if (fillerOffset < 0 || fillerOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Filler");
          }
 
          int pos = offset + 9 + fillerOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Filler");
-         }
-
          int fillerCount = VarInt.peek(buffer, pos);
          if (fillerCount < 0) {
             return ValidationResult.error("Invalid array count for Filler");
@@ -217,7 +236,7 @@ public class BlockFaceSupport {
             return ValidationResult.error("Filler exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fillerCount);
          pos += fillerCount * 12;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Filler");

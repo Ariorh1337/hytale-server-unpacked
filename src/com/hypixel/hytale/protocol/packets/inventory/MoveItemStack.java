@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.inventory;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -53,6 +54,10 @@ public class MoveItemStack implements Packet, ToServerPacket {
 
    @Nonnull
    public static MoveItemStack deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 20) {
+         throw ProtocolException.bufferTooSmall("MoveItemStack", 20, buf.readableBytes() - offset);
+      }
+
       MoveItemStack obj = new MoveItemStack();
       obj.fromSectionId = buf.getIntLE(offset + 0);
       obj.fromSlotId = buf.getIntLE(offset + 4);

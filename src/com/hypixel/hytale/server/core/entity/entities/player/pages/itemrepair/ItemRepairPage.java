@@ -39,7 +39,10 @@ public class ItemRepairPage extends ChoiceBasePage {
 
       for (short slot = 0; slot < itemContainer.getCapacity(); slot++) {
          ItemStack itemStack = itemContainer.getItemStack(slot);
-         if (!ItemStack.isEmpty(itemStack) && !itemStack.isUnbreakable() && !(itemStack.getDurability() >= itemStack.getMaxDurability())) {
+         if (!ItemStack.isEmpty(itemStack)
+            && !itemStack.isUnbreakable()
+            && itemStack.getItem().isRepairable()
+            && !(itemStack.getDurability() >= itemStack.getMaxDurability())) {
             ItemContext itemContext = new ItemContext(itemContainer, slot, itemStack);
             elements.add(new ItemRepairElement(itemStack, new RepairItemInteraction(itemContext, repairPenalty, heldItemContext)));
          }

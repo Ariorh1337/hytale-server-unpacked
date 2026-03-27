@@ -61,41 +61,65 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
 
    @Nonnull
    public static AssetEditorUpdateAsset deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("AssetEditorUpdateAsset", 21, buf.readableBytes() - offset);
+      }
+
       AssetEditorUpdateAsset obj = new AssetEditorUpdateAsset();
       byte nullBits = buf.getByte(offset);
       obj.token = buf.getIntLE(offset + 1);
       obj.assetIndex = buf.getIntLE(offset + 5);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 21 + buf.getIntLE(offset + 9);
-         int assetTypeLen = VarInt.peek(buf, varPos0);
-         if (assetTypeLen < 0) {
-            throw ProtocolException.negativeLength("AssetType", assetTypeLen);
+         int varPosBase0 = buf.getIntLE(offset + 9);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("AssetType", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 21 + varPosBase0;
+         int assetTypeLen = VarInt.peek(buf, varPos0);
+         if (assetTypeLen < 0) {
+            throw ProtocolException.invalidVarInt("AssetType");
+         }
+
+         int assetTypeVarIntLen = VarInt.size(assetTypeLen);
          if (assetTypeLen > 4096000) {
             throw ProtocolException.stringTooLong("AssetType", assetTypeLen, 4096000);
+         }
+
+         if (varPos0 + assetTypeVarIntLen + assetTypeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("AssetType", varPos0 + assetTypeVarIntLen + assetTypeLen, buf.readableBytes());
          }
 
          obj.assetType = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 21 + buf.getIntLE(offset + 13);
+         int varPosBase1 = buf.getIntLE(offset + 13);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Path", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 21 + varPosBase1;
          obj.path = AssetPath.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 21 + buf.getIntLE(offset + 17);
-         int dataCount = VarInt.peek(buf, varPos2);
-         if (dataCount < 0) {
-            throw ProtocolException.negativeLength("Data", dataCount);
+         int varPosBase2 = buf.getIntLE(offset + 17);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Data", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 21 + varPosBase2;
+         int dataCount = VarInt.peek(buf, varPos2);
+         if (dataCount < 0) {
+            throw ProtocolException.invalidVarInt("Data");
+         }
+
+         int varIntLen = VarInt.size(dataCount);
          if (dataCount > 4096000) {
             throw ProtocolException.arrayTooLong("Data", dataCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + dataCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Data", varPos2 + varIntLen + dataCount * 1, buf.readableBytes());
          }
@@ -115,9 +139,13 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
       int maxEnd = 21;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 9);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("AssetType", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 21 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -125,6 +153,10 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 13);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 21 + fieldOffset1;
          pos1 += AssetPath.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -134,9 +166,13 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 17);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Data", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 21 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + arrLen * 1;
+         pos2 += VarInt.size(arrLen) + arrLen * 1;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -227,15 +263,11 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int assetTypeOffset = buffer.getIntLE(offset + 9);
-         if (assetTypeOffset < 0) {
+         if (assetTypeOffset < 0 || assetTypeOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for AssetType");
          }
 
          int pos = offset + 21 + assetTypeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AssetType");
-         }
-
          int assetTypeLen = VarInt.peek(buffer, pos);
          if (assetTypeLen < 0) {
             return ValidationResult.error("Invalid string length for AssetType");
@@ -245,7 +277,7 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
             return ValidationResult.error("AssetType exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(assetTypeLen);
          pos += assetTypeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading AssetType");
@@ -254,15 +286,11 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
 
       if ((nullBits & 2) != 0) {
          int pathOffset = buffer.getIntLE(offset + 13);
-         if (pathOffset < 0) {
+         if (pathOffset < 0 || pathOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
          int pos = offset + 21 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
          ValidationResult pathResult = AssetPath.validateStructure(buffer, pos);
          if (!pathResult.isValid()) {
             return ValidationResult.error("Invalid Path: " + pathResult.error());
@@ -273,15 +301,11 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
 
       if ((nullBits & 4) != 0) {
          int dataOffset = buffer.getIntLE(offset + 17);
-         if (dataOffset < 0) {
+         if (dataOffset < 0 || dataOffset > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Data");
          }
 
          int pos = offset + 21 + dataOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Data");
-         }
-
          int dataCount = VarInt.peek(buffer, pos);
          if (dataCount < 0) {
             return ValidationResult.error("Invalid array count for Data");
@@ -291,7 +315,7 @@ public class AssetEditorUpdateAsset implements Packet, ToServerPacket {
             return ValidationResult.error("Data exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dataCount);
          pos += dataCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Data");

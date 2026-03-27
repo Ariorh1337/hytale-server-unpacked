@@ -3,22 +3,27 @@ package com.hypixel.hytale.server.core.util.io;
 import com.hypixel.hytale.common.util.BitSetUtil;
 import com.hypixel.hytale.unsafe.UnsafeUtil;
 import io.netty.buffer.ByteBuf;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import javax.annotation.Nonnull;
 
 public class ByteBufUtil {
-   private static int MAX_UNSIGNED_SHORT_VALUE = 65535;
+   public static final int MAX_UNSIGNED_SHORT_VALUE = 65535;
 
    public static void writeUTF(@Nonnull ByteBuf buf, @Nonnull String string) {
-      if (io.netty.buffer.ByteBufUtil.utf8MaxBytes(string) >= MAX_UNSIGNED_SHORT_VALUE) {
+      if (io.netty.buffer.ByteBufUtil.utf8MaxBytes(string) >= 65535) {
          throw new IllegalArgumentException("String is too large");
       }
 
       int before = buf.writerIndex();
       buf.writeShort(-1);
       int length = buf.writeCharSequence(string, StandardCharsets.UTF_8);
-      if (length >= 0 && length < MAX_UNSIGNED_SHORT_VALUE) {
+      if (length >= 0 && length < 65535) {
          int after = buf.writerIndex();
          buf.writerIndex(before);
          buf.writeShort(length);
@@ -26,6 +31,24 @@ public class ByteBufUtil {
       } else {
          throw new IllegalArgumentException("Serialized string is too large");
       }
+   }
+
+   public static void writeUTF(@Nonnull DataOutputStream out, @Nonnull String string) throws IOException {
+      byte[] str = string.getBytes(StandardCharsets.UTF_8);
+      if (str.length >= 65535) {
+         throw new IllegalArgumentException("String is too large");
+      }
+
+      out.writeShort(str.length);
+      out.write(str);
+   }
+
+   @Nonnull
+   public static String readUTF(@Nonnull ByteBuffer buffer) {
+      int length = Short.toUnsignedInt(buffer.getShort());
+      byte[] bytes = new byte[length];
+      buffer.get(bytes);
+      return new String(bytes, StandardCharsets.UTF_8);
    }
 
    @Nonnull
@@ -39,7 +62,7 @@ public class ByteBufUtil {
    }
 
    public static void writeByteArray(@Nonnull ByteBuf buf, byte[] arr, int src, int length) {
-      if (length > 0 && length < MAX_UNSIGNED_SHORT_VALUE) {
+      if (length > 0 && length < 65535) {
          buf.writeShort(length);
          buf.writeBytes(arr, src, length);
       } else {
@@ -62,27 +85,27 @@ public class ByteBufUtil {
       }
    }
 
-   public static void writeNumber(@Nonnull ByteBuf buf, int bytes, int value) {
+   public static void writeNumber(@Nonnull MemorySegment data, int offset, int bytes, int value) {
       switch (bytes) {
          case 1:
-            buf.writeByte(value);
+            data.set(ValueLayout.JAVA_BYTE, offset, (byte)value);
             break;
          case 2:
-            buf.writeShort(value);
+            data.set(ValueLayout.JAVA_SHORT_UNALIGNED, offset, (short)value);
          case 3:
          default:
             break;
          case 4:
-            buf.writeInt(value);
+            data.set(ValueLayout.JAVA_INT_UNALIGNED, offset, value);
       }
    }
 
-   public static int readNumber(@Nonnull ByteBuf buf, int bytes) {
+   public static int readNumber(@Nonnull MemorySegment data, int offset, int bytes) {
       return switch (bytes) {
-         case 1 -> buf.readByte() & 0xFF;
-         case 2 -> buf.readShort() & 65535;
+         case 1 -> data.get(ValueLayout.JAVA_BYTE, offset) & 0xFF;
+         case 2 -> data.get(ValueLayout.JAVA_SHORT_UNALIGNED, offset) & 65535;
          default -> 0;
-         case 4 -> buf.readInt();
+         case 4 -> data.get(ValueLayout.JAVA_INT_UNALIGNED, offset);
       };
    }
 

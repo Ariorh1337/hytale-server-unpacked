@@ -10,8 +10,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ScaleDensity;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class CuboidDensityAsset extends DensityAsset {
    @Nonnull
@@ -20,14 +21,14 @@ public class CuboidDensityAsset extends DensityAsset {
       )
       .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.densityCurveAsset = k, k -> k.densityCurveAsset)
       .add()
-      .<Vector3d>append(new KeyedCodec<>("Scale", Vector3d.CODEC, false), (t, k) -> t.scaleVector = k, k -> k.scaleVector)
+      .<Vector3d>append(new KeyedCodec<>("Scale", Vector3dUtil.CODEC, false), (t, k) -> t.scaleVector = k, k -> k.scaleVector)
       .addValidator((v, r) -> {
          if (v.x == 0.0 || v.y == 0.0 || v.z == 0.0) {
             r.fail("scale vector contains 0.0");
          }
       })
       .add()
-      .append(new KeyedCodec<>("NewYAxis", Vector3d.CODEC, false), (t, k) -> {
+      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, false), (t, k) -> {
          if (k.length() != 0.0) {
             t.newYAxis = k;
          }

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class InstantData {
 
    @Nonnull
    public static InstantData deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("InstantData", 12, buf.readableBytes() - offset);
+      }
+
       InstantData obj = new InstantData();
       obj.seconds = buf.getLongLE(offset + 0);
       obj.nanos = buf.getIntLE(offset + 8);

@@ -55,27 +55,51 @@ public class KillFeedMessage implements Packet, ToClientPacket {
 
    @Nonnull
    public static KillFeedMessage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("KillFeedMessage", 13, buf.readableBytes() - offset);
+      }
+
       KillFeedMessage obj = new KillFeedMessage();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Killer", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 13 + varPosBase0;
          obj.killer = FormattedMessage.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Decedent", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 13 + varPosBase1;
          obj.decedent = FormattedMessage.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int iconLen = VarInt.peek(buf, varPos2);
-         if (iconLen < 0) {
-            throw ProtocolException.negativeLength("Icon", iconLen);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Icon", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 13 + varPosBase2;
+         int iconLen = VarInt.peek(buf, varPos2);
+         if (iconLen < 0) {
+            throw ProtocolException.invalidVarInt("Icon");
+         }
+
+         int iconVarIntLen = VarInt.size(iconLen);
          if (iconLen > 4096000) {
             throw ProtocolException.stringTooLong("Icon", iconLen, 4096000);
+         }
+
+         if (varPos2 + iconVarIntLen + iconLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Icon", varPos2 + iconVarIntLen + iconLen, buf.readableBytes());
          }
 
          obj.icon = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
@@ -89,6 +113,10 @@ public class KillFeedMessage implements Packet, ToClientPacket {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Killer", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          pos0 += FormattedMessage.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -98,6 +126,10 @@ public class KillFeedMessage implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Decedent", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          pos1 += FormattedMessage.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -107,9 +139,13 @@ public class KillFeedMessage implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Icon", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -190,15 +226,11 @@ public class KillFeedMessage implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int killerOffset = buffer.getIntLE(offset + 1);
-         if (killerOffset < 0) {
+         if (killerOffset < 0 || killerOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Killer");
          }
 
          int pos = offset + 13 + killerOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Killer");
-         }
-
          ValidationResult killerResult = FormattedMessage.validateStructure(buffer, pos);
          if (!killerResult.isValid()) {
             return ValidationResult.error("Invalid Killer: " + killerResult.error());
@@ -209,15 +241,11 @@ public class KillFeedMessage implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int decedentOffset = buffer.getIntLE(offset + 5);
-         if (decedentOffset < 0) {
+         if (decedentOffset < 0 || decedentOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Decedent");
          }
 
          int pos = offset + 13 + decedentOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Decedent");
-         }
-
          ValidationResult decedentResult = FormattedMessage.validateStructure(buffer, pos);
          if (!decedentResult.isValid()) {
             return ValidationResult.error("Invalid Decedent: " + decedentResult.error());
@@ -228,15 +256,11 @@ public class KillFeedMessage implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int iconOffset = buffer.getIntLE(offset + 9);
-         if (iconOffset < 0) {
+         if (iconOffset < 0 || iconOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Icon");
          }
 
          int pos = offset + 13 + iconOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Icon");
-         }
-
          int iconLen = VarInt.peek(buffer, pos);
          if (iconLen < 0) {
             return ValidationResult.error("Invalid string length for Icon");
@@ -246,7 +270,7 @@ public class KillFeedMessage implements Packet, ToClientPacket {
             return ValidationResult.error("Icon exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(iconLen);
          pos += iconLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Icon");

@@ -55,30 +55,56 @@ public class AssetInfo {
 
    @Nonnull
    public static AssetInfo deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 23) {
+         throw ProtocolException.bufferTooSmall("AssetInfo", 23, buf.readableBytes() - offset);
+      }
+
       AssetInfo obj = new AssetInfo();
       byte nullBits = buf.getByte(offset);
       obj.isDeleted = buf.getByte(offset + 1) != 0;
       obj.isNew = buf.getByte(offset + 2) != 0;
       obj.lastModificationDate = buf.getLongLE(offset + 3);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 23 + buf.getIntLE(offset + 11);
+         int varPosBase0 = buf.getIntLE(offset + 11);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("Path", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 23 + varPosBase0;
          obj.path = AssetPath.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 23 + buf.getIntLE(offset + 15);
+         int varPosBase1 = buf.getIntLE(offset + 15);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("OldPath", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 23 + varPosBase1;
          obj.oldPath = AssetPath.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 23 + buf.getIntLE(offset + 19);
-         int lastModificationUsernameLen = VarInt.peek(buf, varPos2);
-         if (lastModificationUsernameLen < 0) {
-            throw ProtocolException.negativeLength("LastModificationUsername", lastModificationUsernameLen);
+         int varPosBase2 = buf.getIntLE(offset + 19);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("LastModificationUsername", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 23 + varPosBase2;
+         int lastModificationUsernameLen = VarInt.peek(buf, varPos2);
+         if (lastModificationUsernameLen < 0) {
+            throw ProtocolException.invalidVarInt("LastModificationUsername");
+         }
+
+         int lastModificationUsernameVarIntLen = VarInt.size(lastModificationUsernameLen);
          if (lastModificationUsernameLen > 4096000) {
             throw ProtocolException.stringTooLong("LastModificationUsername", lastModificationUsernameLen, 4096000);
+         }
+
+         if (varPos2 + lastModificationUsernameVarIntLen + lastModificationUsernameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall(
+               "LastModificationUsername", varPos2 + lastModificationUsernameVarIntLen + lastModificationUsernameLen, buf.readableBytes()
+            );
          }
 
          obj.lastModificationUsername = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
@@ -92,6 +118,10 @@ public class AssetInfo {
       int maxEnd = 23;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 11);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 23 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -101,6 +131,10 @@ public class AssetInfo {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 15);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("OldPath", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 23 + fieldOffset1;
          pos1 += AssetPath.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -110,9 +144,13 @@ public class AssetInfo {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 19);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("LastModificationUsername", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 23 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -194,15 +232,11 @@ public class AssetInfo {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int pathOffset = buffer.getIntLE(offset + 11);
-         if (pathOffset < 0) {
+         if (pathOffset < 0 || pathOffset > buffer.writerIndex() - offset - 23) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
          int pos = offset + 23 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
          ValidationResult pathResult = AssetPath.validateStructure(buffer, pos);
          if (!pathResult.isValid()) {
             return ValidationResult.error("Invalid Path: " + pathResult.error());
@@ -213,15 +247,11 @@ public class AssetInfo {
 
       if ((nullBits & 2) != 0) {
          int oldPathOffset = buffer.getIntLE(offset + 15);
-         if (oldPathOffset < 0) {
+         if (oldPathOffset < 0 || oldPathOffset > buffer.writerIndex() - offset - 23) {
             return ValidationResult.error("Invalid offset for OldPath");
          }
 
          int pos = offset + 23 + oldPathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for OldPath");
-         }
-
          ValidationResult oldPathResult = AssetPath.validateStructure(buffer, pos);
          if (!oldPathResult.isValid()) {
             return ValidationResult.error("Invalid OldPath: " + oldPathResult.error());
@@ -232,15 +262,11 @@ public class AssetInfo {
 
       if ((nullBits & 4) != 0) {
          int lastModificationUsernameOffset = buffer.getIntLE(offset + 19);
-         if (lastModificationUsernameOffset < 0) {
+         if (lastModificationUsernameOffset < 0 || lastModificationUsernameOffset > buffer.writerIndex() - offset - 23) {
             return ValidationResult.error("Invalid offset for LastModificationUsername");
          }
 
          int pos = offset + 23 + lastModificationUsernameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for LastModificationUsername");
-         }
-
          int lastModificationUsernameLen = VarInt.peek(buffer, pos);
          if (lastModificationUsernameLen < 0) {
             return ValidationResult.error("Invalid string length for LastModificationUsername");
@@ -250,7 +276,7 @@ public class AssetInfo {
             return ValidationResult.error("LastModificationUsername exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(lastModificationUsernameLen);
          pos += lastModificationUsernameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading LastModificationUsername");

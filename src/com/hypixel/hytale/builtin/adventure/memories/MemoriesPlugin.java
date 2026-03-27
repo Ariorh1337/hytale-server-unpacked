@@ -47,6 +47,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.ser
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.BsonUtil;
 import com.hypixel.hytale.server.core.util.Config;
@@ -56,7 +57,6 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -65,9 +65,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.bson.BsonDocument;
 
 public class MemoriesPlugin extends JavaPlugin {
    @Nonnull
@@ -145,16 +148,26 @@ public class MemoriesPlugin extends JavaPlugin {
    @Override
    protected void shutdown() {
       if (this.hasInitializedMemories) {
+         this.saveMemories().join();
+      }
+   }
+
+   @Nonnull
+   private CompletableFuture<Void> saveMemories() {
+      Path path = Constants.UNIVERSE_PATH.resolve("memories.json");
+      return Universe.get().getStorageManager().doSave(path, () -> {
          this.recordedMemories.lock.readLock().lock();
 
          try {
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
-         } catch (IOException e) {
-            throw new RuntimeException(e);
+            BsonDocument document = MemoriesPlugin.RecordedMemories.CODEC.encode(this.recordedMemories).asDocument();
+            return BsonUtil.writeDocument(path, document);
          } finally {
             this.recordedMemories.lock.readLock().unlock();
          }
-      }
+      }).exceptionally(e -> {
+         this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to save memories");
+         return null;
+      });
    }
 
    private void onAssetsLoad() {
@@ -220,11 +233,9 @@ public class MemoriesPlugin extends JavaPlugin {
 
       try {
          if (playerMemories.takeMemories(this.recordedMemories.memories)) {
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+            this.saveMemories();
             return true;
          }
-      } catch (IOException e) {
-         throw new RuntimeException(e);
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }
@@ -248,9 +259,7 @@ public class MemoriesPlugin extends JavaPlugin {
 
       try {
          this.recordedMemories.memories.clear();
-         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
-      } catch (IOException e) {
-         throw new RuntimeException(e);
+         this.saveMemories();
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }
@@ -264,9 +273,7 @@ public class MemoriesPlugin extends JavaPlugin {
             this.recordedMemories.memories.addAll(entry.getValue());
          }
 
-         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
-      } catch (IOException e) {
-         throw new RuntimeException(e);
+         this.saveMemories();
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }
@@ -293,10 +300,8 @@ public class MemoriesPlugin extends JavaPlugin {
             this.recordedMemories.memories.add(allAvailableMemories.get(i));
          }
 
-         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+         this.saveMemories();
          return actualCount;
-      } catch (IOException e) {
-         throw new RuntimeException(e);
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }

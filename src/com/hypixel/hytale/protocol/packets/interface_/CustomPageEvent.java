@@ -50,6 +50,10 @@ public class CustomPageEvent implements Packet, ToServerPacket {
 
    @Nonnull
    public static CustomPageEvent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("CustomPageEvent", 2, buf.readableBytes() - offset);
+      }
+
       CustomPageEvent obj = new CustomPageEvent();
       byte nullBits = buf.getByte(offset);
       obj.type = CustomPageEventType.fromValue(buf.getByte(offset + 1));
@@ -57,14 +61,18 @@ public class CustomPageEvent implements Packet, ToServerPacket {
       if ((nullBits & 1) != 0) {
          int dataLen = VarInt.peek(buf, pos);
          if (dataLen < 0) {
-            throw ProtocolException.negativeLength("Data", dataLen);
+            throw ProtocolException.invalidVarInt("Data");
          }
 
+         int dataVarLen = VarInt.size(dataLen);
          if (dataLen > 4096000) {
             throw ProtocolException.stringTooLong("Data", dataLen, 4096000);
          }
 
-         int dataVarLen = VarInt.length(buf, pos);
+         if (pos + dataVarLen + dataLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Data", pos + dataVarLen + dataLen, buf.readableBytes());
+         }
+
          obj.data = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += dataVarLen + dataLen;
       }
@@ -77,7 +85,7 @@ public class CustomPageEvent implements Packet, ToServerPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -113,9 +121,14 @@ public class CustomPageEvent implements Packet, ToServerPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid CustomPageEventType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int dataLen = VarInt.peek(buffer, pos);
+         int dataLen = VarInt.peek(buffer, v);
          if (dataLen < 0) {
             return ValidationResult.error("Invalid string length for Data");
          }
@@ -124,9 +137,9 @@ public class CustomPageEvent implements Packet, ToServerPacket {
             return ValidationResult.error("Data exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += dataLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(dataLen);
+         v += dataLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Data");
          }
       }

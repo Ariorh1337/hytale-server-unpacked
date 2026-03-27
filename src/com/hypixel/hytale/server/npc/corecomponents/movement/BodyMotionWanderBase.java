@@ -6,8 +6,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
@@ -30,6 +29,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class BodyMotionWanderBase extends BodyMotionBase {
    public static final HytaleLogger LOGGER = NPCPlugin.get().getLogger();
@@ -185,7 +185,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
 
          TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
          assert transformComponent != null;
-         Vector3f bodyRotation = transformComponent.getRotation();
+         Rotation3f bodyRotation = transformComponent.getRotation();
          if (activeMotionController.isObstructed() && this.state == BodyMotionWanderBase.State.WALKING) {
             this.restartSearch(ref, npcComponent, activeMotionController, componentAccessor);
             if (this.debugSteer) {
@@ -195,7 +195,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                      this.state.toString(),
                      this.directionIndex,
                      this.walkTime,
-                     (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                     (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                      (180.0F / (float)Math.PI) * this.walkHeading
                   );
             }
@@ -236,14 +236,14 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                      "Wander: Found move state=%s directionIndex=%s yaw=%s newYaw=%s",
                      this.state.toString(),
                      this.directionIndex,
-                     (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                     (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                      (180.0F / (float)Math.PI) * this.walkHeading
                   );
             }
          }
 
          if (this.state == BodyMotionWanderBase.State.TURNING) {
-            float heading = bodyRotation.getYaw();
+            float heading = bodyRotation.yaw();
             double turnAngle = NPCPhysicsMath.turnAngle(this.walkHeading, heading);
             if (!(Math.abs(turnAngle) < 0.05235988F)) {
                desiredSteering.setYaw(this.walkHeading);
@@ -266,7 +266,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                   .log(
                      "Wander: Walk state=%s yaw=%s desiredYaw=%s walkTime=%s",
                      this.state.toString(),
-                     (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                     (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                      (180.0F / (float)Math.PI) * this.walkHeading,
                      this.walkTime
                   );
@@ -286,7 +286,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                         "Wander: Walk done state=%s directionIndex=%s yaw=%s desiredYaw=%s",
                         this.state.toString(),
                         this.directionIndex,
-                        (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                        (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                         (180.0F / (float)Math.PI) * this.walkHeading
                      );
                }
@@ -415,7 +415,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
       }
 
       if (constrainDistance < this.desiredWalkDistance) {
-         this.probeDirection.scale(constrainDistance / this.desiredWalkDistance);
+         this.probeDirection.mul(constrainDistance / this.desiredWalkDistance);
       }
 
       this.probeMoveData.setAvoidingBlockDamage(!motionController.willReceiveBlockDamage());
@@ -430,29 +430,29 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
       }
 
       if (moveDistance < constrainDistance) {
-         this.probeDirection.scale(moveDistance / constrainDistance);
+         this.probeDirection.mul(moveDistance / constrainDistance);
       }
 
       this.walkDistance = moveDistance;
       this.walkHeading = heading;
-      this.targetPosition.assign(this.probePosition).add(this.probeDirection);
+      this.targetPosition.set(this.probePosition).add(this.probeDirection);
       return true;
    }
 
    private void computeTargetPosition(@Nonnull Ref<EntityStore> ref, float heading, double distance, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      this.probePosition.assign(transformComponent.getPosition());
+      this.probePosition.set(transformComponent.getPosition());
       this.probeDirection.x = PhysicsMath.headingX(heading) * distance;
       this.probeDirection.y = this.probeDY * distance / this.desiredWalkDistance;
       this.probeDirection.z = PhysicsMath.headingZ(heading) * distance;
-      this.targetPosition.assign(this.probePosition).add(this.probeDirection);
+      this.targetPosition.set(this.probePosition).add(this.probeDirection);
    }
 
    protected float toAngle(@Nonnull Ref<EntityStore> ref, int direction, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      return PhysicsMath.normalizeAngle(transformComponent.getRotation().getYaw() + direction * (float) (Math.PI / 16) + this.angleOffset);
+      return PhysicsMath.normalizeAngle(transformComponent.getRotation().yaw() + direction * (float) (Math.PI / 16) + this.angleOffset);
    }
 
    private int addPreOrderedDirection(int direction, int count) {

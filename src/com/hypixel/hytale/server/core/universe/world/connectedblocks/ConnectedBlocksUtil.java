@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.core.universe.world.connectedblocks;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -21,6 +20,8 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class ConnectedBlocksUtil {
    private static final int MAX_UPDATE_DEPTH = 3;
@@ -28,16 +29,16 @@ public class ConnectedBlocksUtil {
    public static void setConnectedBlockAndNotifyNeighbors(
       int blockTypeId,
       @Nonnull RotationTuple blockTypeRotation,
-      @Nonnull Vector3i placementNormal,
-      @Nonnull Vector3i blockPosition,
+      @Nonnull Vector3ic placementNormal,
+      @Nonnull Vector3ic blockPosition,
       @Nonnull WorldChunk worldChunkComponent,
       @Nonnull BlockChunk blockChunkComponent
    ) {
       Vector3i coordinate = new Vector3i(blockPosition);
       BlockType blockType = BlockType.getAssetMap().getAsset(blockTypeId);
       if (blockType != null) {
-         BlockSection sectionAtY = blockChunkComponent.getSectionAtBlockY(blockPosition.y);
-         int filler = sectionAtY.getFiller(blockPosition.x, blockPosition.y, blockPosition.z);
+         BlockSection sectionAtY = blockChunkComponent.getSectionAtBlockY(blockPosition.y());
+         int filler = sectionAtY.getFiller(blockPosition.x(), blockPosition.y(), blockPosition.z());
          int settings = 132;
          if (blockType.getConnectedBlockRuleSet() != null && filler == 0) {
             int rotationIndex = blockTypeRotation.index();
@@ -59,7 +60,7 @@ public class ConnectedBlocksUtil {
    }
 
    private static void updateNeighborsWithDepth(
-      @Nonnull WorldChunk worldChunkComponent, @Nonnull Vector3i startCoordinate, @Nonnull Vector3i placementNormal, int settings
+      @Nonnull WorldChunk worldChunkComponent, @Nonnull Vector3ic startCoordinate, @Nonnull Vector3ic placementNormal, int settings
    ) {
       record QueueEntry(Vector3i coordinate, int depth) {
       }
@@ -89,7 +90,7 @@ public class ConnectedBlocksUtil {
                Entry<Vector3i, ConnectedBlocksUtil.ConnectedBlockResult> result = (Entry<Vector3i, ConnectedBlocksUtil.ConnectedBlockResult>)var10.next();
                location = result.getKey();
                connectedBlockResult = result.getValue();
-               if (visited.add(location.clone()) && (location.x != coordinate.x || location.y != coordinate.y || location.z != coordinate.z)) {
+               if (visited.add(new Vector3i(location)) && (location.x != coordinate.x || location.y != coordinate.y || location.z != coordinate.z)) {
                   newWorldChunk = worldChunkComponent;
                   long chunkIndex = ChunkUtil.indexChunkFromBlock(location.x, location.z);
                   if (chunkIndex == newWorldChunk.getIndex()) {
@@ -130,24 +131,27 @@ public class ConnectedBlocksUtil {
             }
 
             if (depth + 1 < 3) {
-               queue.add(new QueueEntry(location.clone(), depth + 1));
+               queue.add(new QueueEntry(new Vector3i(location), depth + 1));
             }
          }
       }
    }
 
    public static void notifyNeighborsAndCollectChanges(
-      @Nonnull World world, @Nonnull Vector3i origin, @Nonnull Map<Vector3i, ConnectedBlocksUtil.ConnectedBlockResult> desiredChanges, Vector3i placementNormal
+      @Nonnull World world,
+      @Nonnull Vector3ic origin,
+      @Nonnull Map<Vector3i, ConnectedBlocksUtil.ConnectedBlockResult> desiredChanges,
+      Vector3ic placementNormal
    ) {
-      Vector3i coordinate = origin.clone();
-      long chunkIndex = ChunkUtil.indexChunkFromBlock(origin.x, origin.z);
+      Vector3i coordinate = new Vector3i(origin);
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(origin.x(), origin.z());
       WorldChunk chunk = world.getChunkIfLoaded(chunkIndex);
 
       for (int x1 = -1; x1 <= 1; x1++) {
          for (int z1 = -1; z1 <= 1; z1++) {
             for (int y1 = -1; y1 <= 1; y1++) {
                if (x1 != 0 || y1 != 0 || z1 != 0) {
-                  coordinate.assign(origin).add(x1, y1, z1);
+                  coordinate.set(origin).add(x1, y1, z1);
                   if (coordinate.y >= 0 && coordinate.y < 320 && !desiredChanges.containsKey(coordinate)) {
                      long neighborChunkIndex = ChunkUtil.indexChunkFromBlock(coordinate.x, coordinate.z);
                      if (neighborChunkIndex != chunkIndex) {
@@ -171,7 +175,7 @@ public class ConnectedBlocksUtil {
                                        int originX = coordinate.x - FillerBlockUtil.unpackX(filler);
                                        int originY = coordinate.y - FillerBlockUtil.unpackY(filler);
                                        int originZ = coordinate.z - FillerBlockUtil.unpackZ(filler);
-                                       coordinate.assign(originX, originY, originZ);
+                                       coordinate.set(originX, originY, originZ);
                                     }
 
                                     Optional<ConnectedBlocksUtil.ConnectedBlockResult> output = getDesiredConnectedBlockType(
@@ -179,7 +183,7 @@ public class ConnectedBlocksUtil {
                                     );
                                     if (output.isPresent()
                                        && (!neighborBlockType.getId().equals(output.get().blockTypeKey()) || output.get().rotationIndex != existingRotation)) {
-                                       desiredChanges.put(coordinate.clone(), output.get());
+                                       desiredChanges.put(new Vector3i(coordinate), output.get());
                                     }
                                  }
                               }
@@ -196,10 +200,10 @@ public class ConnectedBlocksUtil {
    @Nonnull
    public static Optional<ConnectedBlocksUtil.ConnectedBlockResult> getDesiredConnectedBlockType(
       @Nonnull World world,
-      @Nonnull Vector3i coordinate,
+      @Nonnull Vector3ic coordinate,
       @Nonnull BlockType currentBlockType,
       int currentRotation,
-      @Nonnull Vector3i placementNormal,
+      @Nonnull Vector3ic placementNormal,
       boolean isPlacement
    ) {
       ConnectedBlockRuleSet ruleSet = currentBlockType.getConnectedBlockRuleSet();

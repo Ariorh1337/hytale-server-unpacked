@@ -57,6 +57,10 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateHitboxCollisionConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateHitboxCollisionConfig", 6, buf.readableBytes() - offset);
+      }
+
       UpdateHitboxCollisionConfig obj = new UpdateHitboxCollisionConfig();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int hitboxCollisionConfigsCount = VarInt.peek(buf, pos);
          if (hitboxCollisionConfigsCount < 0) {
-            throw ProtocolException.negativeLength("HitboxCollisionConfigs", hitboxCollisionConfigsCount);
+            throw ProtocolException.invalidVarInt("HitboxCollisionConfigs");
          }
 
+         int hitboxCollisionConfigsVarLen = VarInt.size(hitboxCollisionConfigsCount);
          if (hitboxCollisionConfigsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("HitboxCollisionConfigs", hitboxCollisionConfigsCount, 4096000);
          }
 
-         pos += VarInt.size(hitboxCollisionConfigsCount);
+         pos += hitboxCollisionConfigsVarLen;
          obj.hitboxCollisionConfigs = new HashMap<>(hitboxCollisionConfigsCount);
 
          for (int i = 0; i < hitboxCollisionConfigsCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -145,9 +150,14 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int hitboxCollisionConfigsCount = VarInt.peek(buffer, pos);
+         int hitboxCollisionConfigsCount = VarInt.peek(buffer, v);
          if (hitboxCollisionConfigsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for HitboxCollisionConfigs");
          }
@@ -156,15 +166,15 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
             return ValidationResult.error("HitboxCollisionConfigs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(hitboxCollisionConfigsCount);
 
          for (int i = 0; i < hitboxCollisionConfigsCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += 5;
+            v += 5;
          }
       }
 

@@ -5,8 +5,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -20,6 +19,8 @@ import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabSelectionInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -61,15 +62,15 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
                Vector3d playerPosition = transformComponent.getPosition();
                PrefabEditingMetadata prefabEditingMetadata = null;
                if (type == InteractionType.Secondary) {
-                  Vector3d playerLocation = playerPosition.clone();
-                  playerLocation.setY(0.0);
+                  Vector3d playerLocation = new Vector3d(playerPosition);
+                  playerLocation.y = 0.0;
                   double distance = 2.147483647E9;
 
                   for (PrefabEditingMetadata value : prefabEditSession.getLoadedPrefabMetadata().values()) {
                      Vector3d centerPoint = new Vector3d(
                         (value.getMaxPoint().x + value.getMinPoint().x) / 2.0, 0.0, (value.getMaxPoint().z + value.getMinPoint().z) / 2.0
                      );
-                     double distanceTo = centerPoint.distanceTo(playerLocation);
+                     double distanceTo = centerPoint.distance(playerLocation);
                      if (distance > distanceTo) {
                         distance = distanceTo;
                         prefabEditingMetadata = value;
@@ -110,7 +111,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
          Ref<EntityStore> targetEntityRef = TargetUtil.getTargetEntity(ref, 50.0F, componentAccessor);
          if (targetEntityRef != null && targetEntityRef.isValid()) {
             TransformComponent entityTransformComponent = componentAccessor.getComponent(targetEntityRef, TransformComponent.getComponentType());
-            return entityTransformComponent == null ? null : entityTransformComponent.getPosition().toVector3i();
+            return entityTransformComponent == null ? null : Vector3dUtil.toVector3i(entityTransformComponent.getPosition());
          } else {
             return null;
          }

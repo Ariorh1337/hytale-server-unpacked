@@ -5,7 +5,6 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.procedurallib.condition.ConstantIntCondition;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateRndCondition;
 import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
@@ -40,6 +39,7 @@ import java.util.Objects;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabPopulator {
    private static final UniquePrefabContainer.UniquePrefabEntry[] EMPTY_UNIQUE_PREFABS = new UniquePrefabContainer.UniquePrefabEntry[0];
@@ -186,9 +186,9 @@ public class PrefabPopulator {
             Vector3i v = entry.getPosition();
             generatePrefabAt(
                seed,
-               v.getX(),
-               v.getZ(),
-               v.getY(),
+               v.x(),
+               v.z(),
+               v.y(),
                execution,
                entry.getPrefabSupplier(),
                entry.getConfiguration(),
@@ -306,8 +306,8 @@ public class PrefabPopulator {
 
       for (UniquePrefabContainer.UniquePrefabEntry unique : uniquePrefabs) {
          if (priority < unique.getCategory().priority()) {
-            long dx = x - unique.getPosition().getX();
-            long dz = z - unique.getPosition().getZ();
+            long dx = x - unique.getPosition().x();
+            long dz = z - unique.getPosition().z();
             if (dx * dx + dz * dz <= radius2) {
                return true;
             }

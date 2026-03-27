@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -35,6 +36,10 @@ public class ItemGlider {
 
    @Nonnull
    public static ItemGlider deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("ItemGlider", 16, buf.readableBytes() - offset);
+      }
+
       ItemGlider obj = new ItemGlider();
       obj.terminalVelocity = buf.getFloatLE(offset + 0);
       obj.fallSpeedMultiplier = buf.getFloatLE(offset + 4);

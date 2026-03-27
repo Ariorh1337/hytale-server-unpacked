@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -38,6 +39,10 @@ public class ChargingDelay {
 
    @Nonnull
    public static ChargingDelay deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 20) {
+         throw ProtocolException.bufferTooSmall("ChargingDelay", 20, buf.readableBytes() - offset);
+      }
+
       ChargingDelay obj = new ChargingDelay();
       obj.minDelay = buf.getFloatLE(offset + 0);
       obj.maxDelay = buf.getFloatLE(offset + 4);

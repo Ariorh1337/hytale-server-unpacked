@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class UntrackObjective implements Packet, ToClientPacket {
 
    @Nonnull
    public static UntrackObjective deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("UntrackObjective", 16, buf.readableBytes() - offset);
+      }
+
       UntrackObjective obj = new UntrackObjective();
       obj.objectiveUuid = PacketIO.readUUID(buf, offset + 0);
       return obj;

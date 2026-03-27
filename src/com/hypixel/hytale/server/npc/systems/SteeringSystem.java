@@ -10,7 +10,6 @@ import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackSystems;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.system.TransformSystems;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SteeringSystem extends SteppableTickingSystem {
    @Nonnull
@@ -77,12 +77,12 @@ public class SteeringSystem extends SteppableTickingSystem {
          try {
             if (role.getDebugSupport().isDebugMotionSteering()) {
                Vector3d position = transformComponent.getPosition();
-               double x = position.getX();
-               double z = position.getZ();
-               float yaw = transformComponent.getRotation().getYaw();
+               double x = position.x();
+               double z = position.z();
+               float yaw = transformComponent.getRotation().yaw();
                role.getActiveMotionController().steer(ref, role, role.getBodySteering(), role.getHeadSteering(), dt, commandBuffer);
-               x = position.getX() - x;
-               z = position.getZ() - z;
+               x = position.x() - x;
+               z = position.z() - z;
                double l = Math.sqrt(x * x + z * z);
                double v = l / dt;
                double vx = x / dt;

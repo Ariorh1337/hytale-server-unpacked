@@ -60,6 +60,10 @@ public class UpdateEnvironments implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateEnvironments deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 7) {
+         throw ProtocolException.bufferTooSmall("UpdateEnvironments", 7, buf.readableBytes() - offset);
+      }
+
       UpdateEnvironments obj = new UpdateEnvironments();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -69,14 +73,15 @@ public class UpdateEnvironments implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int environmentsCount = VarInt.peek(buf, pos);
          if (environmentsCount < 0) {
-            throw ProtocolException.negativeLength("Environments", environmentsCount);
+            throw ProtocolException.invalidVarInt("Environments");
          }
 
+         int environmentsVarLen = VarInt.size(environmentsCount);
          if (environmentsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Environments", environmentsCount, 4096000);
          }
 
-         pos += VarInt.size(environmentsCount);
+         pos += environmentsVarLen;
          obj.environments = new HashMap<>(environmentsCount);
 
          for (int i = 0; i < environmentsCount; i++) {
@@ -98,7 +103,7 @@ public class UpdateEnvironments implements Packet, ToClientPacket {
       int pos = offset + 7;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -156,9 +161,14 @@ public class UpdateEnvironments implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 7;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 7;
       if ((nullBits & 1) != 0) {
-         int environmentsCount = VarInt.peek(buffer, pos);
+         int environmentsCount = VarInt.peek(buffer, v);
          if (environmentsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Environments");
          }
@@ -167,15 +177,15 @@ public class UpdateEnvironments implements Packet, ToClientPacket {
             return ValidationResult.error("Environments exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(environmentsCount);
 
          for (int i = 0; i < environmentsCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += WorldEnvironment.computeBytesConsumed(buffer, pos);
+            v += WorldEnvironment.computeBytesConsumed(buffer, v);
          }
       }
 

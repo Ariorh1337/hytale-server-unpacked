@@ -5,8 +5,7 @@ import com.hypixel.hytale.builtin.teleport.Warp;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class WarpCommand extends AbstractCommandCollection {
    @Nonnull
@@ -49,9 +49,9 @@ public class WarpCommand extends AbstractCommandCollection {
                HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
                assert headRotationComponent != null;
                Vector3d playerPosition = transformComponent.getPosition();
-               Vector3f playerHeadRotation = headRotationComponent.getRotation();
+               Rotation3f playerHeadRotation = headRotationComponent.getRotation();
                store.ensureAndGetComponent(ref, TeleportHistory.getComponentType())
-                  .append(world, playerPosition.clone(), playerHeadRotation.clone(), "Warp '" + warp + "'");
+                  .append(world, new Vector3d(playerPosition), new Rotation3f(playerHeadRotation), "Warp '" + warp + "'");
                store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
                context.sendMessage(Message.translation("server.commands.teleport.warp.warpedTo").param("name", warp));
             } else {

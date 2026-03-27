@@ -35,31 +35,55 @@ public class Harvesting {
 
    @Nonnull
    public static Harvesting deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("Harvesting", 9, buf.readableBytes() - offset);
+      }
+
       Harvesting obj = new Harvesting();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int itemIdLen = VarInt.peek(buf, varPos0);
-         if (itemIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemId", itemIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ItemId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int itemIdLen = VarInt.peek(buf, varPos0);
+         if (itemIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ItemId");
+         }
+
+         int itemIdVarIntLen = VarInt.size(itemIdLen);
          if (itemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
+         }
+
+         if (varPos0 + itemIdVarIntLen + itemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemId", varPos0 + itemIdVarIntLen + itemIdLen, buf.readableBytes());
          }
 
          obj.itemId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int dropListIdLen = VarInt.peek(buf, varPos1);
-         if (dropListIdLen < 0) {
-            throw ProtocolException.negativeLength("DropListId", dropListIdLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("DropListId", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int dropListIdLen = VarInt.peek(buf, varPos1);
+         if (dropListIdLen < 0) {
+            throw ProtocolException.invalidVarInt("DropListId");
+         }
+
+         int dropListIdVarIntLen = VarInt.size(dropListIdLen);
          if (dropListIdLen > 4096000) {
             throw ProtocolException.stringTooLong("DropListId", dropListIdLen, 4096000);
+         }
+
+         if (varPos1 + dropListIdVarIntLen + dropListIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("DropListId", varPos1 + dropListIdVarIntLen + dropListIdLen, buf.readableBytes());
          }
 
          obj.dropListId = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -73,9 +97,13 @@ public class Harvesting {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ItemId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -83,9 +111,13 @@ public class Harvesting {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("DropListId", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -147,15 +179,11 @@ public class Harvesting {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int itemIdOffset = buffer.getIntLE(offset + 1);
-         if (itemIdOffset < 0) {
+         if (itemIdOffset < 0 || itemIdOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for ItemId");
          }
 
          int pos = offset + 9 + itemIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemId");
-         }
-
          int itemIdLen = VarInt.peek(buffer, pos);
          if (itemIdLen < 0) {
             return ValidationResult.error("Invalid string length for ItemId");
@@ -165,7 +193,7 @@ public class Harvesting {
             return ValidationResult.error("ItemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemIdLen);
          pos += itemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ItemId");
@@ -174,15 +202,11 @@ public class Harvesting {
 
       if ((nullBits & 2) != 0) {
          int dropListIdOffset = buffer.getIntLE(offset + 5);
-         if (dropListIdOffset < 0) {
+         if (dropListIdOffset < 0 || dropListIdOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for DropListId");
          }
 
          int pos = offset + 9 + dropListIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DropListId");
-         }
-
          int dropListIdLen = VarInt.peek(buffer, pos);
          if (dropListIdLen < 0) {
             return ValidationResult.error("Invalid string length for DropListId");
@@ -192,7 +216,7 @@ public class Harvesting {
             return ValidationResult.error("DropListId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dropListIdLen);
          pos += dropListIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading DropListId");

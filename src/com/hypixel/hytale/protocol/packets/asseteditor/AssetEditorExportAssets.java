@@ -45,20 +45,24 @@ public class AssetEditorExportAssets implements Packet, ToServerPacket {
 
    @Nonnull
    public static AssetEditorExportAssets deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorExportAssets", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorExportAssets obj = new AssetEditorExportAssets();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int pathsCount = VarInt.peek(buf, pos);
          if (pathsCount < 0) {
-            throw ProtocolException.negativeLength("Paths", pathsCount);
+            throw ProtocolException.invalidVarInt("Paths");
          }
 
+         int pathsVarLen = VarInt.size(pathsCount);
          if (pathsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Paths", pathsCount, 4096000);
          }
 
-         int pathsVarLen = VarInt.size(pathsCount);
          if (pos + pathsVarLen + pathsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Paths", pos + pathsVarLen + pathsCount * 1, buf.readableBytes());
          }
@@ -80,7 +84,7 @@ public class AssetEditorExportAssets implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += AssetPath.computeBytesConsumed(buf, pos);
@@ -144,7 +148,7 @@ public class AssetEditorExportAssets implements Packet, ToServerPacket {
             return ValidationResult.error("Paths exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(pathsCount);
 
          for (int i = 0; i < pathsCount; i++) {
             ValidationResult structResult = AssetPath.validateStructure(buffer, pos);

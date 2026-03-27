@@ -54,20 +54,29 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateWorldMap deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("UpdateWorldMap", 13, buf.readableBytes() - offset);
+      }
+
       UpdateWorldMap obj = new UpdateWorldMap();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         int chunksCount = VarInt.peek(buf, varPos0);
-         if (chunksCount < 0) {
-            throw ProtocolException.negativeLength("Chunks", chunksCount);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Chunks", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int chunksCount = VarInt.peek(buf, varPos0);
+         if (chunksCount < 0) {
+            throw ProtocolException.invalidVarInt("Chunks");
+         }
+
+         int varIntLen = VarInt.size(chunksCount);
          if (chunksCount > 4096000) {
             throw ProtocolException.arrayTooLong("Chunks", chunksCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + chunksCount * 9L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Chunks", varPos0 + varIntLen + chunksCount * 9, buf.readableBytes());
          }
@@ -82,17 +91,22 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int addedMarkersCount = VarInt.peek(buf, varPos1);
-         if (addedMarkersCount < 0) {
-            throw ProtocolException.negativeLength("AddedMarkers", addedMarkersCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("AddedMarkers", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int addedMarkersCount = VarInt.peek(buf, varPos1);
+         if (addedMarkersCount < 0) {
+            throw ProtocolException.invalidVarInt("AddedMarkers");
+         }
+
+         int varIntLen = VarInt.size(addedMarkersCount);
          if (addedMarkersCount > 4096000) {
             throw ProtocolException.arrayTooLong("AddedMarkers", addedMarkersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + addedMarkersCount * 38L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("AddedMarkers", varPos1 + varIntLen + addedMarkersCount * 38, buf.readableBytes());
          }
@@ -107,17 +121,22 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int removedMarkersCount = VarInt.peek(buf, varPos2);
-         if (removedMarkersCount < 0) {
-            throw ProtocolException.negativeLength("RemovedMarkers", removedMarkersCount);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("RemovedMarkers", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 13 + varPosBase2;
+         int removedMarkersCount = VarInt.peek(buf, varPos2);
+         if (removedMarkersCount < 0) {
+            throw ProtocolException.invalidVarInt("RemovedMarkers");
+         }
+
+         int varIntLen = VarInt.size(removedMarkersCount);
          if (removedMarkersCount > 4096000) {
             throw ProtocolException.arrayTooLong("RemovedMarkers", removedMarkersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + removedMarkersCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("RemovedMarkers", varPos2 + varIntLen + removedMarkersCount * 1, buf.readableBytes());
          }
@@ -128,14 +147,18 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
          for (int i = 0; i < removedMarkersCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("removedMarkers[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("removedMarkers[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("removedMarkers[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("removedMarkers[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.removedMarkers[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
@@ -149,9 +172,13 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Chunks", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += MapChunk.computeBytesConsumed(buf, pos0);
@@ -164,9 +191,13 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("AddedMarkers", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += MapMarker.computeBytesConsumed(buf, pos1);
@@ -179,13 +210,17 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("RemovedMarkers", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos2);
-            pos2 += VarInt.length(buf, pos2) + sl;
+            pos2 += VarInt.size(sl) + sl;
          }
 
          if (pos2 - offset > maxEnd) {
@@ -310,15 +345,11 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int chunksOffset = buffer.getIntLE(offset + 1);
-         if (chunksOffset < 0) {
+         if (chunksOffset < 0 || chunksOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Chunks");
          }
 
          int pos = offset + 13 + chunksOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Chunks");
-         }
-
          int chunksCount = VarInt.peek(buffer, pos);
          if (chunksCount < 0) {
             return ValidationResult.error("Invalid array count for Chunks");
@@ -328,7 +359,7 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
             return ValidationResult.error("Chunks exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(chunksCount);
 
          for (int i = 0; i < chunksCount; i++) {
             ValidationResult structResult = MapChunk.validateStructure(buffer, pos);
@@ -342,15 +373,11 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int addedMarkersOffset = buffer.getIntLE(offset + 5);
-         if (addedMarkersOffset < 0) {
+         if (addedMarkersOffset < 0 || addedMarkersOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for AddedMarkers");
          }
 
          int pos = offset + 13 + addedMarkersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AddedMarkers");
-         }
-
          int addedMarkersCount = VarInt.peek(buffer, pos);
          if (addedMarkersCount < 0) {
             return ValidationResult.error("Invalid array count for AddedMarkers");
@@ -360,7 +387,7 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
             return ValidationResult.error("AddedMarkers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(addedMarkersCount);
 
          for (int i = 0; i < addedMarkersCount; i++) {
             ValidationResult structResult = MapMarker.validateStructure(buffer, pos);
@@ -374,15 +401,11 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int removedMarkersOffset = buffer.getIntLE(offset + 9);
-         if (removedMarkersOffset < 0) {
+         if (removedMarkersOffset < 0 || removedMarkersOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for RemovedMarkers");
          }
 
          int pos = offset + 13 + removedMarkersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for RemovedMarkers");
-         }
-
          int removedMarkersCount = VarInt.peek(buffer, pos);
          if (removedMarkersCount < 0) {
             return ValidationResult.error("Invalid array count for RemovedMarkers");
@@ -392,7 +415,7 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
             return ValidationResult.error("RemovedMarkers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(removedMarkersCount);
 
          for (int i = 0; i < removedMarkersCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -400,7 +423,7 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
                return ValidationResult.error("Invalid string length in RemovedMarkers");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in RemovedMarkers");

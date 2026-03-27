@@ -41,33 +41,57 @@ public class MaterialQuantity {
 
    @Nonnull
    public static MaterialQuantity deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("MaterialQuantity", 17, buf.readableBytes() - offset);
+      }
+
       MaterialQuantity obj = new MaterialQuantity();
       byte nullBits = buf.getByte(offset);
       obj.itemTag = buf.getIntLE(offset + 1);
       obj.quantity = buf.getIntLE(offset + 5);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 17 + buf.getIntLE(offset + 9);
-         int itemIdLen = VarInt.peek(buf, varPos0);
-         if (itemIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemId", itemIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 9);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ItemId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 17 + varPosBase0;
+         int itemIdLen = VarInt.peek(buf, varPos0);
+         if (itemIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ItemId");
+         }
+
+         int itemIdVarIntLen = VarInt.size(itemIdLen);
          if (itemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
+         }
+
+         if (varPos0 + itemIdVarIntLen + itemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemId", varPos0 + itemIdVarIntLen + itemIdLen, buf.readableBytes());
          }
 
          obj.itemId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 17 + buf.getIntLE(offset + 13);
-         int resourceTypeIdLen = VarInt.peek(buf, varPos1);
-         if (resourceTypeIdLen < 0) {
-            throw ProtocolException.negativeLength("ResourceTypeId", resourceTypeIdLen);
+         int varPosBase1 = buf.getIntLE(offset + 13);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ResourceTypeId", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 17 + varPosBase1;
+         int resourceTypeIdLen = VarInt.peek(buf, varPos1);
+         if (resourceTypeIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ResourceTypeId");
+         }
+
+         int resourceTypeIdVarIntLen = VarInt.size(resourceTypeIdLen);
          if (resourceTypeIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ResourceTypeId", resourceTypeIdLen, 4096000);
+         }
+
+         if (varPos1 + resourceTypeIdVarIntLen + resourceTypeIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ResourceTypeId", varPos1 + resourceTypeIdVarIntLen + resourceTypeIdLen, buf.readableBytes());
          }
 
          obj.resourceTypeId = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -81,9 +105,13 @@ public class MaterialQuantity {
       int maxEnd = 17;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 9);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ItemId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -91,9 +119,13 @@ public class MaterialQuantity {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 13);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ResourceTypeId", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 17 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -157,15 +189,11 @@ public class MaterialQuantity {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int itemIdOffset = buffer.getIntLE(offset + 9);
-         if (itemIdOffset < 0) {
+         if (itemIdOffset < 0 || itemIdOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for ItemId");
          }
 
          int pos = offset + 17 + itemIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemId");
-         }
-
          int itemIdLen = VarInt.peek(buffer, pos);
          if (itemIdLen < 0) {
             return ValidationResult.error("Invalid string length for ItemId");
@@ -175,7 +203,7 @@ public class MaterialQuantity {
             return ValidationResult.error("ItemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemIdLen);
          pos += itemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ItemId");
@@ -184,15 +212,11 @@ public class MaterialQuantity {
 
       if ((nullBits & 2) != 0) {
          int resourceTypeIdOffset = buffer.getIntLE(offset + 13);
-         if (resourceTypeIdOffset < 0) {
+         if (resourceTypeIdOffset < 0 || resourceTypeIdOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for ResourceTypeId");
          }
 
          int pos = offset + 17 + resourceTypeIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ResourceTypeId");
-         }
-
          int resourceTypeIdLen = VarInt.peek(buffer, pos);
          if (resourceTypeIdLen < 0) {
             return ValidationResult.error("Invalid string length for ResourceTypeId");
@@ -202,7 +226,7 @@ public class MaterialQuantity {
             return ValidationResult.error("ResourceTypeId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(resourceTypeIdLen);
          pos += resourceTypeIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ResourceTypeId");

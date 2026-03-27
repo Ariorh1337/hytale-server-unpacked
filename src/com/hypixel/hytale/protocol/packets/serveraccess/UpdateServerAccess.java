@@ -51,6 +51,10 @@ public class UpdateServerAccess implements Packet, ToServerPacket {
 
    @Nonnull
    public static UpdateServerAccess deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateServerAccess", 2, buf.readableBytes() - offset);
+      }
+
       UpdateServerAccess obj = new UpdateServerAccess();
       byte nullBits = buf.getByte(offset);
       obj.access = Access.fromValue(buf.getByte(offset + 1));
@@ -58,14 +62,14 @@ public class UpdateServerAccess implements Packet, ToServerPacket {
       if ((nullBits & 1) != 0) {
          int hostsCount = VarInt.peek(buf, pos);
          if (hostsCount < 0) {
-            throw ProtocolException.negativeLength("Hosts", hostsCount);
+            throw ProtocolException.invalidVarInt("Hosts");
          }
 
+         int hostsVarLen = VarInt.size(hostsCount);
          if (hostsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Hosts", hostsCount, 4096000);
          }
 
-         int hostsVarLen = VarInt.size(hostsCount);
          if (pos + hostsVarLen + hostsCount * 2L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Hosts", pos + hostsVarLen + hostsCount * 2, buf.readableBytes());
          }
@@ -87,7 +91,7 @@ public class UpdateServerAccess implements Packet, ToServerPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += HostAddress.computeBytesConsumed(buf, pos);
@@ -141,9 +145,14 @@ public class UpdateServerAccess implements Packet, ToServerPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid Access value for Access");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int hostsCount = VarInt.peek(buffer, pos);
+         int hostsCount = VarInt.peek(buffer, v);
          if (hostsCount < 0) {
             return ValidationResult.error("Invalid array count for Hosts");
          }
@@ -152,15 +161,15 @@ public class UpdateServerAccess implements Packet, ToServerPacket {
             return ValidationResult.error("Hosts exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(hostsCount);
 
          for (int i = 0; i < hostsCount; i++) {
-            ValidationResult structResult = HostAddress.validateStructure(buffer, pos);
+            ValidationResult structResult = HostAddress.validateStructure(buffer, v);
             if (!structResult.isValid()) {
                return ValidationResult.error("Invalid HostAddress in Hosts[" + i + "]: " + structResult.error());
             }
 
-            pos += HostAddress.computeBytesConsumed(buffer, pos);
+            v += HostAddress.computeBytesConsumed(buffer, v);
          }
       }
 

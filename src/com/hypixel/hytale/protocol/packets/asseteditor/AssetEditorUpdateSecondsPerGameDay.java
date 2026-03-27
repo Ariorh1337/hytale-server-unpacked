@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class AssetEditorUpdateSecondsPerGameDay implements Packet, ToClientPacke
 
    @Nonnull
    public static AssetEditorUpdateSecondsPerGameDay deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("AssetEditorUpdateSecondsPerGameDay", 8, buf.readableBytes() - offset);
+      }
+
       AssetEditorUpdateSecondsPerGameDay obj = new AssetEditorUpdateSecondsPerGameDay();
       obj.daytimeDurationSeconds = buf.getIntLE(offset + 0);
       obj.nighttimeDurationSeconds = buf.getIntLE(offset + 4);

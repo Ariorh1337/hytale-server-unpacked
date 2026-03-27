@@ -50,6 +50,10 @@ public class ParticleSystem {
 
    @Nonnull
    public static ParticleSystem deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 22) {
+         throw ProtocolException.bufferTooSmall("ParticleSystem", 22, buf.readableBytes() - offset);
+      }
+
       ParticleSystem obj = new ParticleSystem();
       byte nullBits = buf.getByte(offset);
       obj.lifeSpan = buf.getFloatLE(offset + 1);
@@ -57,31 +61,46 @@ public class ParticleSystem {
       obj.boundingRadius = buf.getFloatLE(offset + 9);
       obj.isImportant = buf.getByte(offset + 13) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 22 + buf.getIntLE(offset + 14);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 14);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 22) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 22 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 22 + buf.getIntLE(offset + 18);
-         int spawnersCount = VarInt.peek(buf, varPos1);
-         if (spawnersCount < 0) {
-            throw ProtocolException.negativeLength("Spawners", spawnersCount);
+         int varPosBase1 = buf.getIntLE(offset + 18);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 22) {
+            throw ProtocolException.invalidOffset("Spawners", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 22 + varPosBase1;
+         int spawnersCount = VarInt.peek(buf, varPos1);
+         if (spawnersCount < 0) {
+            throw ProtocolException.invalidVarInt("Spawners");
+         }
+
+         int varIntLen = VarInt.size(spawnersCount);
          if (spawnersCount > 4096000) {
             throw ProtocolException.arrayTooLong("Spawners", spawnersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + spawnersCount * 113L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Spawners", varPos1 + varIntLen + spawnersCount * 113, buf.readableBytes());
          }
@@ -103,9 +122,13 @@ public class ParticleSystem {
       int maxEnd = 22;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 14);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 22) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 22 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -113,9 +136,13 @@ public class ParticleSystem {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 18);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 22) {
+            throw ProtocolException.invalidOffset("Spawners", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 22 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += ParticleSpawnerGroup.computeBytesConsumed(buf, pos1);
@@ -200,15 +227,11 @@ public class ParticleSystem {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 14);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 22) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 22 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -218,7 +241,7 @@ public class ParticleSystem {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -227,15 +250,11 @@ public class ParticleSystem {
 
       if ((nullBits & 2) != 0) {
          int spawnersOffset = buffer.getIntLE(offset + 18);
-         if (spawnersOffset < 0) {
+         if (spawnersOffset < 0 || spawnersOffset > buffer.writerIndex() - offset - 22) {
             return ValidationResult.error("Invalid offset for Spawners");
          }
 
          int pos = offset + 22 + spawnersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Spawners");
-         }
-
          int spawnersCount = VarInt.peek(buffer, pos);
          if (spawnersCount < 0) {
             return ValidationResult.error("Invalid array count for Spawners");
@@ -245,7 +264,7 @@ public class ParticleSystem {
             return ValidationResult.error("Spawners exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(spawnersCount);
 
          for (int i = 0; i < spawnersCount; i++) {
             ValidationResult structResult = ParticleSpawnerGroup.validateStructure(buffer, pos);

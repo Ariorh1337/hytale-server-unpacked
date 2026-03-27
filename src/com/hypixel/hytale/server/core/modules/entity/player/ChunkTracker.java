@@ -13,7 +13,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.iterator.CircleSpiralIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.metrics.MetricsRegistry;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.ToClientPacket;
@@ -40,6 +39,7 @@ import java.util.concurrent.locks.StampedLock;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ChunkTracker implements Component<EntityStore> {
    @Nonnull
@@ -146,8 +146,8 @@ public class ChunkTracker implements Component<EntityStore> {
          this.transformComponent = transformComponent;
          int chunkViewRadius = this.chunkViewRadius = playerComponent.getViewRadius();
          Vector3d position = transformComponent.getPosition();
-         int chunkX = MathUtil.floor(position.getX()) >> 5;
-         int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+         int chunkX = MathUtil.floor(position.x()) >> 5;
+         int chunkZ = MathUtil.floor(position.z()) >> 5;
          int xDiff = Math.abs(this.lastChunkX - chunkX);
          int zDiff = Math.abs(this.lastChunkZ - chunkZ);
          int chunkMoveDistance = xDiff <= 0 && zDiff <= 0 ? 0 : (int)Math.ceil(Math.sqrt(xDiff * xDiff + zDiff * zDiff));
@@ -269,8 +269,8 @@ public class ChunkTracker implements Component<EntityStore> {
       }
 
       Vector3d position = this.transformComponent.getPosition();
-      int chunkX = MathUtil.floor(position.getX()) >> 5;
-      int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+      int chunkX = MathUtil.floor(position.x()) >> 5;
+      int chunkZ = MathUtil.floor(position.z()) >> 5;
       int x = ChunkUtil.xOfChunkIndex(chunkCoordinates);
       int z = ChunkUtil.zOfChunkIndex(chunkCoordinates);
       int minLoadedRadius = Math.max(this.minLoadedChunksRadius, this.chunkViewRadius);
@@ -283,8 +283,8 @@ public class ChunkTracker implements Component<EntityStore> {
          return ChunkTracker.ChunkVisibility.NONE;
       } else {
          Vector3d position = this.transformComponent.getPosition();
-         int chunkX = MathUtil.floor(position.getX()) >> 5;
-         int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+         int chunkX = MathUtil.floor(position.x()) >> 5;
+         int chunkZ = MathUtil.floor(position.z()) >> 5;
          int x = ChunkUtil.xOfChunkIndex(indexChunk);
          int z = ChunkUtil.zOfChunkIndex(indexChunk);
          int xDiff = Math.abs(x - chunkX);
@@ -537,8 +537,8 @@ public class ChunkTracker implements Component<EntityStore> {
    ) {
       World world = componentAccessor.getExternalData().getWorld();
       Vector3d position = transformComponent.getPosition();
-      int chunkX = MathUtil.floor(position.getX()) >> 5;
-      int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+      int chunkX = MathUtil.floor(position.x()) >> 5;
+      int chunkZ = MathUtil.floor(position.z()) >> 5;
       int x = ChunkUtil.xOfChunkIndex(chunkIndex);
       int z = ChunkUtil.zOfChunkIndex(chunkIndex);
       boolean isHot = shouldBeVisible(this.maxHotLoadedChunksRadius, chunkX, chunkZ, x, z);

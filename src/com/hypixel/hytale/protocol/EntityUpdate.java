@@ -37,21 +37,30 @@ public class EntityUpdate {
 
    @Nonnull
    public static EntityUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("EntityUpdate", 13, buf.readableBytes() - offset);
+      }
+
       EntityUpdate obj = new EntityUpdate();
       byte nullBits = buf.getByte(offset);
       obj.networkId = buf.getIntLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 5);
-         int removedCount = VarInt.peek(buf, varPos0);
-         if (removedCount < 0) {
-            throw ProtocolException.negativeLength("Removed", removedCount);
+         int varPosBase0 = buf.getIntLE(offset + 5);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Removed", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int removedCount = VarInt.peek(buf, varPos0);
+         if (removedCount < 0) {
+            throw ProtocolException.invalidVarInt("Removed");
+         }
+
+         int varIntLen = VarInt.size(removedCount);
          if (removedCount > 4096000) {
             throw ProtocolException.arrayTooLong("Removed", removedCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + removedCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Removed", varPos0 + varIntLen + removedCount * 1, buf.readableBytes());
          }
@@ -66,17 +75,22 @@ public class EntityUpdate {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 9);
-         int updatesCount = VarInt.peek(buf, varPos1);
-         if (updatesCount < 0) {
-            throw ProtocolException.negativeLength("Updates", updatesCount);
+         int varPosBase1 = buf.getIntLE(offset + 9);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Updates", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int updatesCount = VarInt.peek(buf, varPos1);
+         if (updatesCount < 0) {
+            throw ProtocolException.invalidVarInt("Updates");
+         }
+
+         int varIntLen = VarInt.size(updatesCount);
          if (updatesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Updates", updatesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + updatesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Updates", varPos1 + varIntLen + updatesCount * 1, buf.readableBytes());
          }
@@ -98,9 +112,13 @@ public class EntityUpdate {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 5);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Removed", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 1;
+         pos0 += VarInt.size(arrLen) + arrLen * 1;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -108,9 +126,13 @@ public class EntityUpdate {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 9);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Updates", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += ComponentUpdate.computeBytesConsumed(buf, pos1);
@@ -200,15 +222,11 @@ public class EntityUpdate {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int removedOffset = buffer.getIntLE(offset + 5);
-         if (removedOffset < 0) {
+         if (removedOffset < 0 || removedOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Removed");
          }
 
          int pos = offset + 13 + removedOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Removed");
-         }
-
          int removedCount = VarInt.peek(buffer, pos);
          if (removedCount < 0) {
             return ValidationResult.error("Invalid array count for Removed");
@@ -218,24 +236,28 @@ public class EntityUpdate {
             return ValidationResult.error("Removed exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += removedCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(removedCount);
+         if (pos + removedCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Removed");
+         }
+
+         for (int i = 0; i < removedCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 26) {
+               return ValidationResult.error("Invalid ComponentUpdateType value for Removed[i]");
+            }
+
+            pos++;
          }
       }
 
       if ((nullBits & 2) != 0) {
          int updatesOffset = buffer.getIntLE(offset + 9);
-         if (updatesOffset < 0) {
+         if (updatesOffset < 0 || updatesOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Updates");
          }
 
          int pos = offset + 13 + updatesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Updates");
-         }
-
          int updatesCount = VarInt.peek(buffer, pos);
          if (updatesCount < 0) {
             return ValidationResult.error("Invalid array count for Updates");
@@ -245,7 +267,7 @@ public class EntityUpdate {
             return ValidationResult.error("Updates exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(updatesCount);
 
          for (int i = 0; i < updatesCount; i++) {
             ValidationResult structResult = ComponentUpdate.validateStructure(buffer, pos);

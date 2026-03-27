@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.ObjectiveTask;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -53,6 +54,10 @@ public class UpdateObjectiveTask implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateObjectiveTask deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("UpdateObjectiveTask", 21, buf.readableBytes() - offset);
+      }
+
       UpdateObjectiveTask obj = new UpdateObjectiveTask();
       byte nullBits = buf.getByte(offset);
       obj.objectiveUuid = PacketIO.readUUID(buf, offset + 1);

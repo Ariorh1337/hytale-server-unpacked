@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.interaction;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -50,6 +51,10 @@ public class MountNPC implements Packet, ToClientPacket {
 
    @Nonnull
    public static MountNPC deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("MountNPC", 16, buf.readableBytes() - offset);
+      }
+
       MountNPC obj = new MountNPC();
       obj.anchorX = buf.getFloatLE(offset + 0);
       obj.anchorY = buf.getFloatLE(offset + 4);

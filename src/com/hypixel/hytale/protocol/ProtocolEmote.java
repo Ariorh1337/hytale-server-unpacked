@@ -46,60 +46,104 @@ public class ProtocolEmote {
 
    @Nonnull
    public static ProtocolEmote deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 18) {
+         throw ProtocolException.bufferTooSmall("ProtocolEmote", 18, buf.readableBytes() - offset);
+      }
+
       ProtocolEmote obj = new ProtocolEmote();
       byte nullBits = buf.getByte(offset);
       obj.isLooping = buf.getByte(offset + 1) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 18 + buf.getIntLE(offset + 2);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 18 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 18 + buf.getIntLE(offset + 6);
-         int nameLen = VarInt.peek(buf, varPos1);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Name", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 18 + varPosBase1;
+         int nameLen = VarInt.peek(buf, varPos1);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos1 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos1 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 18 + buf.getIntLE(offset + 10);
-         int animationLen = VarInt.peek(buf, varPos2);
-         if (animationLen < 0) {
-            throw ProtocolException.negativeLength("Animation", animationLen);
+         int varPosBase2 = buf.getIntLE(offset + 10);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Animation", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 18 + varPosBase2;
+         int animationLen = VarInt.peek(buf, varPos2);
+         if (animationLen < 0) {
+            throw ProtocolException.invalidVarInt("Animation");
+         }
+
+         int animationVarIntLen = VarInt.size(animationLen);
          if (animationLen > 4096000) {
             throw ProtocolException.stringTooLong("Animation", animationLen, 4096000);
+         }
+
+         if (varPos2 + animationVarIntLen + animationLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Animation", varPos2 + animationVarIntLen + animationLen, buf.readableBytes());
          }
 
          obj.animation = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 18 + buf.getIntLE(offset + 14);
-         int iconLen = VarInt.peek(buf, varPos3);
-         if (iconLen < 0) {
-            throw ProtocolException.negativeLength("Icon", iconLen);
+         int varPosBase3 = buf.getIntLE(offset + 14);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Icon", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 18 + varPosBase3;
+         int iconLen = VarInt.peek(buf, varPos3);
+         if (iconLen < 0) {
+            throw ProtocolException.invalidVarInt("Icon");
+         }
+
+         int iconVarIntLen = VarInt.size(iconLen);
          if (iconLen > 4096000) {
             throw ProtocolException.stringTooLong("Icon", iconLen, 4096000);
+         }
+
+         if (varPos3 + iconVarIntLen + iconLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Icon", varPos3 + iconVarIntLen + iconLen, buf.readableBytes());
          }
 
          obj.icon = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
@@ -113,9 +157,13 @@ public class ProtocolEmote {
       int maxEnd = 18;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 18 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -123,9 +171,13 @@ public class ProtocolEmote {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 18 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -133,9 +185,13 @@ public class ProtocolEmote {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 10);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Animation", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 18 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -143,9 +199,13 @@ public class ProtocolEmote {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 14);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Icon", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 18 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -242,15 +302,11 @@ public class ProtocolEmote {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 2);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 18 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -260,7 +316,7 @@ public class ProtocolEmote {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -269,15 +325,11 @@ public class ProtocolEmote {
 
       if ((nullBits & 2) != 0) {
          int nameOffset = buffer.getIntLE(offset + 6);
-         if (nameOffset < 0) {
+         if (nameOffset < 0 || nameOffset > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
          int pos = offset + 18 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -287,7 +339,7 @@ public class ProtocolEmote {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -296,15 +348,11 @@ public class ProtocolEmote {
 
       if ((nullBits & 4) != 0) {
          int animationOffset = buffer.getIntLE(offset + 10);
-         if (animationOffset < 0) {
+         if (animationOffset < 0 || animationOffset > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Animation");
          }
 
          int pos = offset + 18 + animationOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Animation");
-         }
-
          int animationLen = VarInt.peek(buffer, pos);
          if (animationLen < 0) {
             return ValidationResult.error("Invalid string length for Animation");
@@ -314,7 +362,7 @@ public class ProtocolEmote {
             return ValidationResult.error("Animation exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(animationLen);
          pos += animationLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Animation");
@@ -323,15 +371,11 @@ public class ProtocolEmote {
 
       if ((nullBits & 8) != 0) {
          int iconOffset = buffer.getIntLE(offset + 14);
-         if (iconOffset < 0) {
+         if (iconOffset < 0 || iconOffset > buffer.writerIndex() - offset - 18) {
             return ValidationResult.error("Invalid offset for Icon");
          }
 
          int pos = offset + 18 + iconOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Icon");
-         }
-
          int iconLen = VarInt.peek(buffer, pos);
          if (iconLen < 0) {
             return ValidationResult.error("Invalid string length for Icon");
@@ -341,7 +385,7 @@ public class ProtocolEmote {
             return ValidationResult.error("Icon exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(iconLen);
          pos += iconLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Icon");

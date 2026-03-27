@@ -6,7 +6,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
@@ -27,6 +27,7 @@ import com.hypixel.hytale.server.npc.util.PositionProbeAir;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class MotionControllerFly extends MotionControllerBase {
    public static final String TYPE = "Fly";
@@ -70,7 +71,7 @@ public class MotionControllerFly extends MotionControllerBase {
    public MotionControllerFly(@Nonnull BuilderSupport builderSupport, @Nonnull BuilderMotionControllerFly builder) {
       super(builderSupport, builder);
       this.setGravity(builder.getGravity());
-      this.componentSelector.assign(1.0, 1.0, 1.0);
+      this.componentSelector.set(1.0, 1.0, 1.0);
       this.minAirSpeed = builder.getMinAirSpeed();
       this.maxClimbSpeed = builder.getMaxClimbSpeed();
       this.maxSinkSpeed = builder.getMaxSinkSpeed();
@@ -115,20 +116,20 @@ public class MotionControllerFly extends MotionControllerBase {
       this.moveProbe.probePosition(ref, this.collisionBoundingBox, this.position, this.collisionResult, componentAccessor);
       this.currentRelativeSpeed = steering.getSpeed();
       if (!this.isAlive(ref, componentAccessor)) {
-         this.forceVelocity.assign(Vector3d.ZERO);
+         this.forceVelocity.zero();
          this.appliedVelocities.clear();
       }
 
       double maxFallSpeed = this.moveProbe.isInWater() ? this.maxSinkSpeedFluid : this.maxFallSpeed;
       boolean onGround = this.onGround();
-      if (this.forceVelocity.equals(Vector3d.ZERO) && this.appliedVelocities.isEmpty()) {
-         if (NPCPhysicsMath.near(this.lastVelocity, Vector3d.ZERO)) {
+      if (this.forceVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
+         if (NPCPhysicsMath.near(this.lastVelocity, Vector3dUtil.ZERO)) {
             PhysicsMath.vectorFromAngles(this.getYaw(), this.getPitch(), this.lastVelocity);
             this.lastSpeed = 0.0;
          }
 
          if (this.canAct(ref, componentAccessor)) {
-            translation.assign(steering.getTranslation());
+            translation.set(steering.getTranslation());
             double steeringSpeed = steering.hasTranslation() ? translation.length() : 0.0;
             float yaw = PhysicsMath.normalizeAngle(this.getYaw());
             float pitch = PhysicsMath.normalizeTurnAngle(this.getPitch());
@@ -179,14 +180,14 @@ public class MotionControllerFly extends MotionControllerBase {
             steering.setPitch(newPitch);
             steering.setRoll(constrainedRoll);
             if (steeringSpeed == 0.0) {
-               translation.assign(Vector3d.ZERO);
+               translation.zero();
             } else {
-               translation.scale(steeringSpeed * this.effectHorizontalSpeedMultiplier);
+               translation.mul(steeringSpeed * this.effectHorizontalSpeedMultiplier);
             }
 
-            this.lastVelocity.assign(translation);
+            this.lastVelocity.set(translation);
             this.lastSpeed = steeringSpeed;
-            translation.scale(dt);
+            translation.mul(dt);
             if (this.debugModeValidateMath && !NPCPhysicsMath.isValid(translation)) {
                throw new IllegalArgumentException(String.valueOf(translation));
             }
@@ -196,7 +197,7 @@ public class MotionControllerFly extends MotionControllerBase {
             steering.setRoll(this.getRoll());
             if (onGround) {
                this.setMotionKind(MotionKind.STANDING);
-               this.lastVelocity.assign(Vector3d.ZERO);
+               this.lastVelocity.zero();
                this.lastSpeed = 0.0;
                return dt;
             }
@@ -219,9 +220,9 @@ public class MotionControllerFly extends MotionControllerBase {
                translation.z = 0.0;
             }
 
-            this.lastVelocity.assign(translation);
+            this.lastVelocity.set(translation);
             this.lastSpeed = this.lastVelocity.length();
-            translation.scale(dt);
+            translation.mul(dt);
             if (this.debugModeValidateMath && !NPCPhysicsMath.isValid(translation)) {
                throw new IllegalArgumentException(String.valueOf(translation));
             }
@@ -237,7 +238,7 @@ public class MotionControllerFly extends MotionControllerBase {
          steering.setPitch(this.getPitch());
          steering.setRoll(this.getRoll());
          if (!this.isObstructed()) {
-            translation.assign(this.forceVelocity);
+            translation.set(this.forceVelocity);
 
             for (int i = 0; i < this.appliedVelocities.size(); i++) {
                MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
@@ -252,18 +253,18 @@ public class MotionControllerFly extends MotionControllerBase {
                translation.add(entry.velocity);
             }
          } else {
-            translation.assign(Vector3d.ZERO);
+            translation.zero();
             this.appliedVelocities.clear();
-            this.forceVelocity.assign(Vector3d.ZERO);
+            this.forceVelocity.zero();
          }
 
          if (!onGround) {
             translation.y = NPCPhysicsMath.accelerateDrag(translation.y, -this.gravity, dt, maxFallSpeed);
          }
 
-         this.lastVelocity.assign(translation);
+         this.lastVelocity.set(translation);
          this.lastSpeed = this.lastVelocity.length();
-         translation.scale(dt);
+         translation.mul(dt);
          if (this.debugModeValidateMath && !NPCPhysicsMath.isValid(translation)) {
             throw new IllegalArgumentException(String.valueOf(translation));
          } else {
@@ -302,15 +303,15 @@ public class MotionControllerFly extends MotionControllerBase {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
-      int ix = MathUtil.floor(position.getX());
-      int iz = MathUtil.floor(position.getZ());
+      int ix = MathUtil.floor(position.x());
+      int iz = MathUtil.floor(position.z());
       if (ix == this.lastVerticalPositionX && iz == this.lastVerticalPositionZ) {
          return this.verticalRange;
       }
 
       this.lastVerticalPositionX = ix;
       this.lastVerticalPositionZ = iz;
-      double y = position.getY();
+      double y = position.y();
       World world = componentAccessor.getExternalData().getWorld();
       ChunkStore chunkStore = world.getChunkStore();
       long chunkIndex = ChunkUtil.indexChunkFromBlock(ix, iz);
@@ -377,8 +378,8 @@ public class MotionControllerFly extends MotionControllerBase {
             .log(
                "%s - Fly: Execute pos=%s vel=%s onGround=%s blocked=%s ",
                debugPrefix,
-               Vector3d.formatShortString(position),
-               Vector3d.formatShortString(translation),
+               Vector3dUtil.formatShortString(position),
+               Vector3dUtil.formatShortString(translation),
                this.onGround(),
                this.isObstructed
             );
@@ -411,7 +412,7 @@ public class MotionControllerFly extends MotionControllerBase {
       }
 
       BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
-      this.lastValidPosition.assign(position);
+      this.lastValidPosition.set(position);
       double distanceFactor;
       if (collision == null) {
          position.add(translation);
@@ -421,8 +422,8 @@ public class MotionControllerFly extends MotionControllerBase {
                .log(
                   "%s - Fly: No collision pos=%s vel=%s onGround=%s blocked=%s ",
                   debugPrefix,
-                  Vector3d.formatShortString(position),
-                  Vector3d.formatShortString(translation),
+                  Vector3dUtil.formatShortString(position),
+                  Vector3dUtil.formatShortString(translation),
                   this.onGround(),
                   this.isObstructed
                );
@@ -432,7 +433,7 @@ public class MotionControllerFly extends MotionControllerBase {
             throw new IllegalStateException("Invalid position");
          }
       } else {
-         position.assign(collision.collisionPoint);
+         position.set(collision.collisionPoint);
          distanceFactor = collision.collisionStart;
          if (!probeOnly) {
             this.isObstructed = true;
@@ -443,9 +444,9 @@ public class MotionControllerFly extends MotionControllerBase {
                .log(
                   "%s - Fly: Collision pos=%s collStart=%s vel=%s onGround=%s blocked=%s ",
                   debugPrefix,
-                  Vector3d.formatShortString(position),
+                  Vector3dUtil.formatShortString(position),
                   distanceFactor,
-                  Vector3d.formatShortString(translation),
+                  Vector3dUtil.formatShortString(translation),
                   this.onGround(),
                   this.isObstructed
                );
@@ -467,7 +468,7 @@ public class MotionControllerFly extends MotionControllerBase {
          distanceFactor *= adjust;
          if (this.debugModeMove) {
             LOGGER.at(Level.INFO)
-               .log("%s - Fly: Bisect step pos=%s distanceFactor=%s adjust=%s", debugPrefix, Vector3d.formatShortString(position), distanceFactor, adjust);
+               .log("%s - Fly: Bisect step pos=%s distanceFactor=%s adjust=%s", debugPrefix, Vector3dUtil.formatShortString(position), distanceFactor, adjust);
          }
       }
 
@@ -497,7 +498,7 @@ public class MotionControllerFly extends MotionControllerBase {
       if (scale < 1.0) {
          dt *= scale;
          this.lastSpeed *= scale;
-         this.lastVelocity.scale(scale);
+         this.lastVelocity.mul(scale);
       }
 
       return dt;
@@ -516,8 +517,8 @@ public class MotionControllerFly extends MotionControllerBase {
    protected void dampForceVelocity(
       @Nonnull Vector3d forceVelocity, double forceVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (forceVelocity.squaredLength() < this.minSpeedAfterForceSquared) {
-         forceVelocity.assign(Vector3d.ZERO);
+      if (forceVelocity.lengthSquared() < this.minSpeedAfterForceSquared) {
+         forceVelocity.zero();
       } else {
          NPCPhysicsMath.deccelerateToStop(forceVelocity, this.getDampingDeceleration(), interval);
       }
@@ -609,7 +610,7 @@ public class MotionControllerFly extends MotionControllerBase {
 
    @Override
    public boolean estimateVelocity(Steering steering, @Nonnull Vector3d velocityOut) {
-      velocityOut.assign(Vector3d.ZERO);
+      velocityOut.zero();
       return false;
    }
 
@@ -625,7 +626,7 @@ public class MotionControllerFly extends MotionControllerBase {
    public void takeOff(@Nonnull Ref<EntityStore> ref, double speed, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      PhysicsMath.vectorFromAngles(transformComponent.getRotation().getYaw(), (float) (Math.PI / 4), this.lastVelocity);
+      PhysicsMath.vectorFromAngles(transformComponent.getRotation().yaw(), (float) (Math.PI / 4), this.lastVelocity);
       this.lastSpeed = speed;
    }
 

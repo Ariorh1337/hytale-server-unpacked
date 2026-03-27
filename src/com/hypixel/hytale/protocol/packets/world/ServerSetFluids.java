@@ -53,6 +53,10 @@ public class ServerSetFluids implements Packet, ToClientPacket {
 
    @Nonnull
    public static ServerSetFluids deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("ServerSetFluids", 12, buf.readableBytes() - offset);
+      }
+
       ServerSetFluids obj = new ServerSetFluids();
       obj.x = buf.getIntLE(offset + 0);
       obj.y = buf.getIntLE(offset + 4);
@@ -60,14 +64,14 @@ public class ServerSetFluids implements Packet, ToClientPacket {
       int pos = offset + 12;
       int cmdsCount = VarInt.peek(buf, pos);
       if (cmdsCount < 0) {
-         throw ProtocolException.negativeLength("Cmds", cmdsCount);
+         throw ProtocolException.invalidVarInt("Cmds");
       }
 
+      int cmdsVarLen = VarInt.size(cmdsCount);
       if (cmdsCount > 4096000) {
          throw ProtocolException.arrayTooLong("Cmds", cmdsCount, 4096000);
       }
 
-      int cmdsVarLen = VarInt.size(cmdsCount);
       if (pos + cmdsVarLen + cmdsCount * 7L > buf.readableBytes()) {
          throw ProtocolException.bufferTooSmall("Cmds", pos + cmdsVarLen + cmdsCount * 7, buf.readableBytes());
       }
@@ -86,7 +90,7 @@ public class ServerSetFluids implements Packet, ToClientPacket {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 12;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(arrLen);
 
       for (int i = 0; i < arrLen; i++) {
          pos += SetFluidCmd.computeBytesConsumed(buf, pos);
@@ -132,7 +136,7 @@ public class ServerSetFluids implements Packet, ToClientPacket {
          return ValidationResult.error("Cmds exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(cmdsCount);
       pos += cmdsCount * 7;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading Cmds") : ValidationResult.OK;
    }

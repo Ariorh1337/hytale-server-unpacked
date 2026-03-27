@@ -48,20 +48,25 @@ public class UpdateFeatures implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateFeatures deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateFeatures", 1, buf.readableBytes() - offset);
+      }
+
       UpdateFeatures obj = new UpdateFeatures();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int featuresCount = VarInt.peek(buf, pos);
          if (featuresCount < 0) {
-            throw ProtocolException.negativeLength("Features", featuresCount);
+            throw ProtocolException.invalidVarInt("Features");
          }
 
+         int featuresVarLen = VarInt.size(featuresCount);
          if (featuresCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Features", featuresCount, 4096000);
          }
 
-         pos += VarInt.size(featuresCount);
+         pos += featuresVarLen;
          obj.features = new HashMap<>(featuresCount);
 
          for (int i = 0; i < featuresCount; i++) {
@@ -83,7 +88,7 @@ public class UpdateFeatures implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos++;
@@ -143,9 +148,14 @@ public class UpdateFeatures implements Packet, ToClientPacket {
             return ValidationResult.error("Features exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(featuresCount);
 
          for (int i = 0; i < featuresCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 11) {
+               return ValidationResult.error("Invalid ClientFeature value for key");
+            }
+
             pos++;
             if (++pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");

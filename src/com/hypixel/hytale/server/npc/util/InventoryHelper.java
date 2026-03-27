@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -114,11 +115,12 @@ public class InventoryHelper {
       return -1;
    }
 
-   public static short findInventorySlotWithItem(@Nonnull Inventory inventory, String name) {
-      CombinedItemContainer container = inventory.getCombinedHotbarFirst();
+   public static short findInventorySlotWithItem(@Nonnull Ref<EntityStore> ref, @Nonnull String name, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      CombinedItemContainer combinedContainer = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
 
-      for (short i = 0; i < container.getCapacity(); i++) {
-         if (matchesItem(name, container.getItemStack(i))) {
+      for (short i = 0; i < combinedContainer.getCapacity(); i++) {
+         ItemStack itemStack = combinedContainer.getItemStack(i);
+         if (itemStack != null && matchesItem(name, itemStack)) {
             return i;
          }
       }
@@ -126,11 +128,14 @@ public class InventoryHelper {
       return -1;
    }
 
-   public static short findInventorySlotWithItem(@Nonnull Inventory inventory, List<String> name) {
-      CombinedItemContainer container = inventory.getCombinedHotbarFirst();
+   public static short findInventorySlotWithItem(
+      @Nonnull Ref<EntityStore> ref, @Nonnull List<String> name, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      CombinedItemContainer combinedContainer = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
 
-      for (short i = 0; i < container.getCapacity(); i++) {
-         if (matchesItem(name, container.getItemStack(i))) {
+      for (short i = 0; i < combinedContainer.getCapacity(); i++) {
+         ItemStack itemStack = combinedContainer.getItemStack(i);
+         if (itemStack != null && matchesItem(name, itemStack)) {
             return i;
          }
       }
@@ -142,9 +147,9 @@ public class InventoryHelper {
       int count = 0;
 
       for (short i = 0; i < container.getCapacity(); i++) {
-         ItemStack item = container.getItemStack(i);
-         if (matchesItem(name, item)) {
-            count += item.getQuantity();
+         ItemStack itemStack = container.getItemStack(i);
+         if (itemStack != null && matchesItem(name, itemStack)) {
+            count += itemStack.getQuantity();
          }
       }
 
@@ -176,12 +181,12 @@ public class InventoryHelper {
       return matchesItem(name, inventory.getItemInHand());
    }
 
-   public static boolean containsItem(@Nonnull Inventory inventory, String name) {
-      return findInventorySlotWithItem(inventory, name) != -1;
+   public static boolean containsItem(@Nonnull Ref<EntityStore> ref, String name, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return findInventorySlotWithItem(ref, name, componentAccessor) != -1;
    }
 
-   public static boolean containsItem(@Nonnull Inventory inventory, List<String> name) {
-      return findInventorySlotWithItem(inventory, name) != -1;
+   public static boolean containsItem(@Nonnull Ref<EntityStore> ref, List<String> name, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return findInventorySlotWithItem(ref, name, componentAccessor) != -1;
    }
 
    public static boolean clearItemInHand(

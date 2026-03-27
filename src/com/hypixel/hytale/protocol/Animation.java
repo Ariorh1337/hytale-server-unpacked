@@ -63,6 +63,10 @@ public class Animation {
 
    @Nonnull
    public static Animation deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 30) {
+         throw ProtocolException.bufferTooSmall("Animation", 30, buf.readableBytes() - offset);
+      }
+
       Animation obj = new Animation();
       byte nullBits = buf.getByte(offset);
       obj.speed = buf.getFloatLE(offset + 1);
@@ -72,31 +76,46 @@ public class Animation {
       obj.soundEventIndex = buf.getIntLE(offset + 14);
       obj.passiveLoopCount = buf.getIntLE(offset + 18);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 30 + buf.getIntLE(offset + 22);
-         int nameLen = VarInt.peek(buf, varPos0);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase0 = buf.getIntLE(offset + 22);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Name", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 30 + varPosBase0;
+         int nameLen = VarInt.peek(buf, varPos0);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos0 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos0 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 30 + buf.getIntLE(offset + 26);
-         int footstepIntervalsCount = VarInt.peek(buf, varPos1);
-         if (footstepIntervalsCount < 0) {
-            throw ProtocolException.negativeLength("FootstepIntervals", footstepIntervalsCount);
+         int varPosBase1 = buf.getIntLE(offset + 26);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("FootstepIntervals", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 30 + varPosBase1;
+         int footstepIntervalsCount = VarInt.peek(buf, varPos1);
+         if (footstepIntervalsCount < 0) {
+            throw ProtocolException.invalidVarInt("FootstepIntervals");
+         }
+
+         int varIntLen = VarInt.size(footstepIntervalsCount);
          if (footstepIntervalsCount > 4096000) {
             throw ProtocolException.arrayTooLong("FootstepIntervals", footstepIntervalsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + footstepIntervalsCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FootstepIntervals", varPos1 + varIntLen + footstepIntervalsCount * 4, buf.readableBytes());
          }
@@ -116,9 +135,13 @@ public class Animation {
       int maxEnd = 30;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 22);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 30 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -126,9 +149,13 @@ public class Animation {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 26);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("FootstepIntervals", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 30 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 4;
+         pos1 += VarInt.size(arrLen) + arrLen * 4;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -204,15 +231,11 @@ public class Animation {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int nameOffset = buffer.getIntLE(offset + 22);
-         if (nameOffset < 0) {
+         if (nameOffset < 0 || nameOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
          int pos = offset + 30 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -222,7 +245,7 @@ public class Animation {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -231,15 +254,11 @@ public class Animation {
 
       if ((nullBits & 2) != 0) {
          int footstepIntervalsOffset = buffer.getIntLE(offset + 26);
-         if (footstepIntervalsOffset < 0) {
+         if (footstepIntervalsOffset < 0 || footstepIntervalsOffset > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for FootstepIntervals");
          }
 
          int pos = offset + 30 + footstepIntervalsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FootstepIntervals");
-         }
-
          int footstepIntervalsCount = VarInt.peek(buffer, pos);
          if (footstepIntervalsCount < 0) {
             return ValidationResult.error("Invalid array count for FootstepIntervals");
@@ -249,7 +268,7 @@ public class Animation {
             return ValidationResult.error("FootstepIntervals exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(footstepIntervalsCount);
          pos += footstepIntervalsCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FootstepIntervals");

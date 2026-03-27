@@ -45,20 +45,24 @@ public class AssetEditorExportComplete implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorExportComplete deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorExportComplete", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorExportComplete obj = new AssetEditorExportComplete();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int assetsCount = VarInt.peek(buf, pos);
          if (assetsCount < 0) {
-            throw ProtocolException.negativeLength("Assets", assetsCount);
+            throw ProtocolException.invalidVarInt("Assets");
          }
 
+         int assetsVarLen = VarInt.size(assetsCount);
          if (assetsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Assets", assetsCount, 4096000);
          }
 
-         int assetsVarLen = VarInt.size(assetsCount);
          if (pos + assetsVarLen + assetsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Assets", pos + assetsVarLen + assetsCount * 1, buf.readableBytes());
          }
@@ -80,7 +84,7 @@ public class AssetEditorExportComplete implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += TimestampedAssetReference.computeBytesConsumed(buf, pos);
@@ -144,7 +148,7 @@ public class AssetEditorExportComplete implements Packet, ToClientPacket {
             return ValidationResult.error("Assets exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(assetsCount);
 
          for (int i = 0; i < assetsCount; i++) {
             ValidationResult structResult = TimestampedAssetReference.validateStructure(buffer, pos);

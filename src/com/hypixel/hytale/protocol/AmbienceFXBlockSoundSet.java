@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -31,6 +32,10 @@ public class AmbienceFXBlockSoundSet {
 
    @Nonnull
    public static AmbienceFXBlockSoundSet deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXBlockSoundSet", 13, buf.readableBytes() - offset);
+      }
+
       AmbienceFXBlockSoundSet obj = new AmbienceFXBlockSoundSet();
       byte nullBits = buf.getByte(offset);
       obj.blockSoundSetIndex = buf.getIntLE(offset + 1);
@@ -65,7 +70,12 @@ public class AmbienceFXBlockSoundSet {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 13 ? ValidationResult.error("Buffer too small: expected at least 13 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 13) {
+         return ValidationResult.error("Buffer too small: expected at least 13 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public AmbienceFXBlockSoundSet clone() {

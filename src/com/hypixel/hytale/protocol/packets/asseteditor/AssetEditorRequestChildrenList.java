@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -43,6 +44,10 @@ public class AssetEditorRequestChildrenList implements Packet, ToServerPacket {
 
    @Nonnull
    public static AssetEditorRequestChildrenList deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRequestChildrenList", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorRequestChildrenList obj = new AssetEditorRequestChildrenList();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;

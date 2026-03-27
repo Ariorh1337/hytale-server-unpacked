@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.serveraccess;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -45,6 +46,10 @@ public class RequestServerAccess implements Packet, ToClientPacket {
 
    @Nonnull
    public static RequestServerAccess deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 3) {
+         throw ProtocolException.bufferTooSmall("RequestServerAccess", 3, buf.readableBytes() - offset);
+      }
+
       RequestServerAccess obj = new RequestServerAccess();
       obj.access = Access.fromValue(buf.getByte(offset + 0));
       obj.externalPort = buf.getShortLE(offset + 1);
@@ -67,7 +72,12 @@ public class RequestServerAccess implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 3 ? ValidationResult.error("Buffer too small: expected at least 3 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 3) {
+         return ValidationResult.error("Buffer too small: expected at least 3 bytes");
+      }
+
+      int v = buffer.getByte(offset + 0) & 255;
+      return v >= 4 ? ValidationResult.error("Invalid Access value for Access") : ValidationResult.OK;
    }
 
    public RequestServerAccess clone() {

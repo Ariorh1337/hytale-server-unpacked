@@ -11,9 +11,9 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -47,6 +47,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManag
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.ecs.ChangeGameModeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
+import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -91,6 +92,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Player extends LivingEntity implements CommandSender, PermissionHolder, MetricProvider {
    @Nonnull
@@ -234,7 +236,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
-      this.addLocationChange(ref, locX - position.getX(), locY - position.getY(), locZ - position.getZ(), componentAccessor);
+      this.addLocationChange(ref, locX - position.x(), locY - position.y(), locZ - position.z(), componentAccessor);
       super.moveTo(ref, locX, locY, locZ, componentAccessor);
       this.windowManager.validateWindows(ref, componentAccessor);
    }
@@ -299,13 +301,13 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    }
 
    @Nonnull
-   public CompletableFuture<Void> saveConfig(@Nonnull World world, @Nonnull Holder<EntityStore> holder) {
+   public CompletableFuture<Void> saveConfig(@Nonnull World world, @Nonnull Holder<EntityStore> holder, boolean required) {
       MovementStatesComponent movementStatesComponent = holder.getComponent(MovementStatesComponent.getComponentType());
       assert movementStatesComponent != null;
       UUIDComponent uuidComponent = holder.getComponent(UUIDComponent.getComponentType());
       assert uuidComponent != null;
       this.data.getPerWorldData(world.getName()).setLastMovementStates(movementStatesComponent.getMovementStates(), false);
-      return Universe.get().getPlayerStorage().save(uuidComponent.getUuid(), holder);
+      return Universe.get().getPlayerStorage().save(uuidComponent.getUuid(), holder, required);
    }
 
    @Deprecated(forRemoval = true)
@@ -422,7 +424,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
          assert transformComponent != null;
          Vector3d position = transformComponent.getPosition();
-         collisionResultComponent.getCollisionStartPosition().assign(position);
+         collisionResultComponent.getCollisionStartPosition().set(position);
          collisionResultComponent.markPendingCollisionCheck();
       }
    }
@@ -506,8 +508,8 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          List<PlayerRespawnPointData> sortedRespawnPoints = Arrays.stream(respawnPoints).sorted((a, b) -> {
             Vector3d posA = a.getRespawnPosition();
             Vector3d posB = b.getRespawnPosition();
-            double distA = playerPosition.distanceSquaredTo(posA.x, playerPosition.y, posA.z);
-            double distB = playerPosition.distanceSquaredTo(posB.x, playerPosition.y, posB.z);
+            double distA = playerPosition.distanceSquared(posA.x, playerPosition.y, posA.z);
+            double distB = playerPosition.distanceSquared(posB.x, playerPosition.y, posB.z);
             return Double.compare(distA, distB);
          }).toList();
          BoundingBox playerBoundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
@@ -516,7 +518,6 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
             : tryUseSpawnPoint(world, sortedRespawnPoints, 0, ref, playerComponent, playerBoundingBoxComponent.getBoundingBox());
       } else {
          Transform worldSpawnPoint = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, componentAccessor);
-         worldSpawnPoint.setRotation(Vector3f.ZERO);
          return CompletableFuture.completedFuture(worldSpawnPoint);
       }
    }
@@ -536,7 +537,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          }
 
          if (respawnPoint.getBlockPosition() != null) {
-            boundingBox.forEachBlock(respawnPoint.getBlockPosition().toVector3d(), 2.0, requiredChunks, (x, y, z, chunks) -> {
+            boundingBox.forEachBlock(Vector3iUtil.toVector3d(respawnPoint.getBlockPosition()), 2.0, requiredChunks, (x, y, z, chunks) -> {
                chunks.add(ChunkUtil.indexChunkFromBlock(x, z));
                return true;
             });
@@ -564,7 +565,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
             .thenApplyAsync(v -> {
                Vector3d pos = ensureNoCollisionAtRespawnPosition(respawnPoint, boundingBox, world);
                if (pos != null) {
-                  return new Transform(pos, Vector3f.ZERO);
+                  return new Transform(pos, new Rotation3f(Rotation3f.IDENTITY));
                }
 
                playerComponent.sendMessage(Message.translation("server.general.respawnPointObstructed").param("respawnPointName", respawnPoint.getName()));
@@ -588,7 +589,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
             }
 
             Transform worldSpawnPoint = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, ref.getStore());
-            worldSpawnPoint.setRotation(Vector3f.ZERO);
+            worldSpawnPoint.setRotation(Rotation3f.IDENTITY);
             return worldSpawnPoint;
          }, world);
       }
@@ -834,7 +835,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          playerSettings = PlayerSettings.defaults();
       }
 
-      return this.getInventory().getContainerForItemPickup(stack.getItem(), playerSettings).addItemStack(stack);
+      return Inventory.getContainerForItemPickup(ref, stack.getItem(), playerSettings, componentAccessor).addItemStack(stack);
    }
 
    @Override

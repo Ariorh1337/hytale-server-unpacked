@@ -26,8 +26,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
 import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
@@ -41,6 +39,8 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabProp extends Prop {
    @Nonnull
@@ -182,7 +182,7 @@ public class PrefabProp extends Prop {
       RotatedPositionsScanResult scanResult = new RotatedPositionsScanResult(new ArrayList<>());
 
       for (Vector3i validPosition : validPositions) {
-         patternPosition.assign(validPosition);
+         patternPosition.set(validPosition);
          PrefabRotation rotation = this.directionality.getRotationAt(patternContext);
          if (rotation != null) {
             scanResult.positions.add(new RotatedPosition(validPosition.x, validPosition.y, validPosition.z, rotation));
@@ -291,9 +291,9 @@ public class PrefabProp extends Prop {
                      for (int ix = 0; ix < entityWrappers.length; ix++) {
                         TransformComponent transformComp = entityWrappers[ix].getComponent(TransformComponent.getComponentType());
                         if (transformComp != null) {
-                           Vector3d entityPosition = transformComp.getPosition().clone();
+                           Vector3d entityPosition = new Vector3d(transformComp.getPosition());
                            buffer.rotation.rotate(entityPosition);
-                           Vector3d entityWorldPosition = entityPosition.add(prefabPositionVector);
+                           Vector3d entityWorldPosition = entityPosition.add(prefabPositionVector.x, prefabPositionVector.y, prefabPositionVector.z);
                            if (entityBuffer.getBounds().contains(entityWorldPosition)) {
                               Holder<EntityStore> entityClone = entityWrappers[ix].clone();
                               transformComp = entityClone.getComponent(TransformComponent.getComponentType());

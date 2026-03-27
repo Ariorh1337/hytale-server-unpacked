@@ -5,6 +5,8 @@ import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.common.plugin.Mod;
+import com.hypixel.hytale.common.plugin.ModLoadOrderException;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.semver.SemverRange;
@@ -120,7 +122,7 @@ public class PluginManager {
          enabled = modConfig.getEnabled();
       } else {
          HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-         enabled = !manifest.isDisabledByDefault() && (plugin.isInServerClassPath() || serverConfig.getDefaultModsEnabled());
+         enabled = !manifest.isDisabledByDefault() && (plugin.isCoreMod() || serverConfig.getDefaultModsEnabled());
       }
 
       if (enabled) {
@@ -131,7 +133,7 @@ public class PluginManager {
       return false;
    }
 
-   public void setup() {
+   public void setup() throws ModLoadOrderException {
       if (this.state != PluginState.NONE) {
          throw new IllegalStateException("Expected PluginState.NONE but found " + this.state);
       }
@@ -154,14 +156,6 @@ public class PluginManager {
          }
       }
 
-      Path self;
-      try {
-         self = Paths.get(PluginManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-      } catch (URISyntaxException e) {
-         throw new RuntimeException(e);
-      }
-
-      this.loadPluginsFromDirectory(pending, self.getParent().resolve("builtin"), false, this.availablePlugins);
       this.loadPluginsInClasspath(pending, this.availablePlugins);
       this.loadPluginsFromDirectory(pending, MODS_PATH, !Options.getOptionSet().has(Options.BARE), this.availablePlugins);
 
@@ -222,7 +216,20 @@ public class PluginManager {
             );
       }
 
-      this.loadOrder = PendingLoadPlugin.calculateLoadOrder(pending);
+      List<PluginIdentifier> modOrder = List.of(HytaleServer.get().getConfig().getModLoadOrder());
+      this.loadOrder = Mod.calculateLoadOrder(pending, pluginIdentifier -> AssetModule.get().getAssetPack(pluginIdentifier.toString()) != null, modOrder);
+
+      for (PendingLoadPlugin pendingLoadPlugin : this.loadOrder) {
+         if (pendingLoadPlugin instanceof PendingLoadJavaPlugin javaPlugin && javaPlugin.isCoreMod() && !"Hytale".equals(javaPlugin.getIdentifier().getGroup())
+            )
+          {
+            PluginClassLoader oldClassLoader = javaPlugin.getClassLoader();
+            PluginClassLoader newClassLoader = new PluginClassLoader(this, javaPlugin.getIdentifier(), true, true, oldClassLoader.getURLs());
+            javaPlugin.setClassLoader(newClassLoader);
+            LOGGER.at(Level.FINE).log("Using child-first classloader for classpath plugin %s", javaPlugin.getIdentifier());
+         }
+      }
+
       this.loading = new Object2ObjectOpenHashMap<>();
       pending.forEach((identifier, pendingLoad) -> this.availablePlugins.put(identifier, pendingLoad.getManifest()));
       ObjectArrayList<CompletableFuture<Void>> preLoadFutures = new ObjectArrayList<>();
@@ -757,26 +764,6 @@ public class PluginManager {
                      return this.load(plugin);
                   }
                }
-            }
-         }
-
-         Path path = Paths.get(uri).getParent().resolve("builtin");
-         if (Files.exists(path)) {
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
-               for (Path file : stream) {
-                  if (Files.isRegularFile(file) && file.getFileName().toString().toLowerCase().endsWith(".jar")) {
-                     PluginManifest manifest = loadManifest(file);
-                     if (manifest != null && new PluginIdentifier(manifest).equals(identifier)) {
-                        PendingLoadJavaPlugin pendingLoadJavaPlugin = this.loadPendingJavaPlugin(file);
-                        if (pendingLoadJavaPlugin != null) {
-                           return this.load(pendingLoadJavaPlugin);
-                        }
-                        break;
-                     }
-                  }
-               }
-            } catch (IOException e) {
-               LOGGER.at(Level.SEVERE).withCause(e).log("Failed to find plugins!");
             }
          }
       } catch (IOException | URISyntaxException e) {

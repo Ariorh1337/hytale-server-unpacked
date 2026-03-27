@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.corecomponents.audiovisual;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -13,6 +12,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ActionPlaySound extends ActionBase {
    protected final int soundEventIndex;
@@ -30,7 +30,7 @@ public class ActionPlaySound extends ActionBase {
       NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
       Vector3d position = transformComponent.getPosition();
-      SoundUtil.playSoundEvent3d(ref, this.soundEventIndex, position.getX(), position.getY(), position.getZ(), false, store);
+      SoundUtil.playSoundEvent3d(ref, this.soundEventIndex, position.x(), position.y(), position.z(), false, store);
       return true;
    }
 }

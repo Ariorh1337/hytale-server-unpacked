@@ -3,11 +3,13 @@ package com.hypixel.hytale.builtin.hytalegenerator.voxelspace;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class RotationVoxelSpace implements VoxelSpace<Material> {
    @Nonnull
@@ -33,13 +35,13 @@ public class RotationVoxelSpace implements VoxelSpace<Material> {
       this.materialCache = materialCache;
       this.viewBounds = new Bounds3i();
       this.anchor = new Vector3i();
-      this.setSource(NullSpace.instance(), Vector3i.ZERO);
+      this.setSource(NullSpace.instance(), Vector3iUtil.ZERO);
       this.rPosition = new Vector3i();
    }
 
-   public void setSource(@Nonnull VoxelSpace<Material> source, @Nonnull Vector3i anchor) {
+   public void setSource(@Nonnull VoxelSpace<Material> source, @Nonnull Vector3ic anchor) {
       this.source = source;
-      this.anchor.assign(anchor);
+      this.anchor.set(anchor);
       this.viewBounds.assign(source.getBounds());
       this.viewBounds.undoRotationAroundVoxel(this.rotation_fromViewToSource, anchor);
    }
@@ -86,8 +88,8 @@ public class RotationVoxelSpace implements VoxelSpace<Material> {
 
    private void loadPosition(int x, int y, int z) {
       assert this.viewBounds.contains(x, y, z);
-      this.rPosition.assign(x, y, z);
-      this.rPosition.subtract(this.anchor);
+      this.rPosition.set(x, y, z);
+      this.rPosition.sub(this.anchor);
       this.rotation_fromViewToSource.applyRotationTo(this.rPosition);
       this.rPosition.add(this.anchor);
       assert this.source.getBounds().contains(this.rPosition);

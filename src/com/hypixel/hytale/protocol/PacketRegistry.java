@@ -166,6 +166,7 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomHud;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPage;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageEvent;
 import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
+import com.hypixel.hytale.protocol.packets.interface_.ExecuteServersidePageCommand;
 import com.hypixel.hytale.protocol.packets.interface_.HideEventTitle;
 import com.hypixel.hytale.protocol.packets.interface_.KillFeedMessage;
 import com.hypixel.hytale.protocol.packets.interface_.Notification;
@@ -182,6 +183,7 @@ import com.hypixel.hytale.protocol.packets.interface_.UpdateLanguage;
 import com.hypixel.hytale.protocol.packets.interface_.UpdatePortal;
 import com.hypixel.hytale.protocol.packets.interface_.UpdateServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.UpdateServerPlayerListPing;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateServersideUIPage;
 import com.hypixel.hytale.protocol.packets.interface_.UpdateVisibleHudComponents;
 import com.hypixel.hytale.protocol.packets.interface_.WorldSavingStatus;
 import com.hypixel.hytale.protocol.packets.inventory.DropCreativeItem;
@@ -3695,6 +3697,30 @@ public final class PacketRegistry {
          false,
          StreamOpenResponse::validateStructure,
          StreamOpenResponse::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         1200,
+         "UpdateServersideUIPage",
+         UpdateServersideUIPage.class,
+         0,
+         1677721600,
+         false,
+         UpdateServersideUIPage::validateStructure,
+         UpdateServersideUIPage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         1202,
+         "ExecuteServersidePageCommand",
+         ExecuteServersidePageCommand.class,
+         1,
+         1677721600,
+         false,
+         ExecuteServersidePageCommand::validateStructure,
+         ExecuteServersidePageCommand::deserialize
       );
    }
 

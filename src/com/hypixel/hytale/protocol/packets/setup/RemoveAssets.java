@@ -46,20 +46,24 @@ public class RemoveAssets implements Packet, ToClientPacket {
 
    @Nonnull
    public static RemoveAssets deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("RemoveAssets", 1, buf.readableBytes() - offset);
+      }
+
       RemoveAssets obj = new RemoveAssets();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int assetCount = VarInt.peek(buf, pos);
          if (assetCount < 0) {
-            throw ProtocolException.negativeLength("Asset", assetCount);
+            throw ProtocolException.invalidVarInt("Asset");
          }
 
+         int assetVarLen = VarInt.size(assetCount);
          if (assetCount > 4096000) {
             throw ProtocolException.arrayTooLong("Asset", assetCount, 4096000);
          }
 
-         int assetVarLen = VarInt.size(assetCount);
          if (pos + assetVarLen + assetCount * 64L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Asset", pos + assetVarLen + assetCount * 64, buf.readableBytes());
          }
@@ -81,7 +85,7 @@ public class RemoveAssets implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += Asset.computeBytesConsumed(buf, pos);
@@ -145,7 +149,7 @@ public class RemoveAssets implements Packet, ToClientPacket {
             return ValidationResult.error("Asset exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(assetCount);
 
          for (int i = 0; i < assetCount; i++) {
             ValidationResult structResult = Asset.validateStructure(buffer, pos);

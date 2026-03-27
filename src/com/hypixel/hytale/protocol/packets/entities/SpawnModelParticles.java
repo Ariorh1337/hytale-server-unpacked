@@ -49,6 +49,10 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
 
    @Nonnull
    public static SpawnModelParticles deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("SpawnModelParticles", 5, buf.readableBytes() - offset);
+      }
+
       SpawnModelParticles obj = new SpawnModelParticles();
       byte nullBits = buf.getByte(offset);
       obj.entityId = buf.getIntLE(offset + 1);
@@ -56,14 +60,14 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int modelParticlesCount = VarInt.peek(buf, pos);
          if (modelParticlesCount < 0) {
-            throw ProtocolException.negativeLength("ModelParticles", modelParticlesCount);
+            throw ProtocolException.invalidVarInt("ModelParticles");
          }
 
+         int modelParticlesVarLen = VarInt.size(modelParticlesCount);
          if (modelParticlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("ModelParticles", modelParticlesCount, 4096000);
          }
 
-         int modelParticlesVarLen = VarInt.size(modelParticlesCount);
          if (pos + modelParticlesVarLen + modelParticlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("ModelParticles", pos + modelParticlesVarLen + modelParticlesCount * 34, buf.readableBytes());
          }
@@ -85,7 +89,7 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ModelParticle.computeBytesConsumed(buf, pos);
@@ -150,7 +154,7 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
             return ValidationResult.error("ModelParticles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modelParticlesCount);
 
          for (int i = 0; i < modelParticlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);

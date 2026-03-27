@@ -15,8 +15,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.event.IEventDispatcher;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MouseButtonType;
@@ -145,6 +143,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector3i;
 
 public class InteractionModule extends JavaPlugin {
    @Nonnull

@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.store.CodecStore;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Component;
-import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentRegistry;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
@@ -25,6 +24,7 @@ import com.hypixel.hytale.component.system.StoreSystem;
 import com.hypixel.hytale.component.system.data.EntityDataSystem;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.data.Int3ObjectOpenHashMap;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -37,6 +37,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
 import com.hypixel.hytale.server.core.universe.world.events.ChunkPreLoadProcessEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
 import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkUnloadingSystem;
@@ -95,6 +96,8 @@ public class ChunkStore implements WorldProvider {
    private final World world;
    @Nonnull
    private final Long2ObjectConcurrentHashMap<ChunkStore.ChunkLoadState> chunks = new Long2ObjectConcurrentHashMap<>(true, ChunkUtil.NOT_FOUND);
+   private final StampedLock lock = new StampedLock();
+   private final Int3ObjectOpenHashMap<ChunkStore.ChunkLoadState> chunkSections = new Int3ObjectOpenHashMap<>();
    private Store<ChunkStore> store;
    private Object storageData;
    @Nullable
@@ -260,24 +263,65 @@ public class ChunkStore implements WorldProvider {
          this.world.getNotificationHandler().updateChunk(worldChunkComponent.getIndex());
       }
 
-      oldReference = this.store.addEntity(holder, AddReason.SPAWN);
-      if (oldReference == null) {
+      ChunkColumn chunkColumn = holder.ensureAndGetComponent(ChunkColumn.getComponentType());
+      Ref<ChunkStore> ref = this.store.addEntity(holder, AddReason.SPAWN);
+      if (ref == null) {
          throw new UnsupportedOperationException("Unable to add the chunk to the world!");
       }
 
-      worldChunkComponent.setReference(oldReference);
-      stamp = chunkState.lock.writeLock();
+      Ref<ChunkStore>[] refs = chunkColumn.getSections();
+      Holder<ChunkStore>[] storedHolders = chunkColumn.takeSectionHolders();
+      boolean isTicking = worldChunkComponent.is(ChunkFlag.TICKING);
+
+      for (int i = 0; i < refs.length; i++) {
+         Holder<ChunkStore> section;
+         AddReason reason;
+         if (storedHolders != null && storedHolders[i] != null) {
+            section = storedHolders[i];
+            reason = worldChunkComponent.is(ChunkFlag.NEWLY_GENERATED) ? AddReason.SPAWN : AddReason.LOAD;
+         } else {
+            section = REGISTRY.newHolder();
+            reason = AddReason.SPAWN;
+         }
+
+         section.putComponent(ChunkSection.getComponentType(), new ChunkSection(ref, worldChunkComponent.getX(), i, worldChunkComponent.getZ()));
+         if (!isTicking) {
+            section.ensureComponent(REGISTRY.getNonTickingComponentType());
+         } else {
+            section.tryRemoveComponent(REGISTRY.getNonTickingComponentType());
+         }
+
+         refs[i] = this.store.addEntity(section, reason);
+         long stampx = this.lock.writeLock();
+
+         try {
+            ChunkStore.ChunkLoadState sectionState = this.chunkSections.get(worldChunkComponent.getX(), i, worldChunkComponent.getZ());
+            if (sectionState == null) {
+               sectionState = new ChunkStore.ChunkLoadState();
+               sectionState.reference = refs[i];
+               this.chunkSections.put(worldChunkComponent.getX(), i, worldChunkComponent.getZ(), sectionState);
+            } else {
+               sectionState.reference = refs[i];
+               sectionState.future = null;
+            }
+         } finally {
+            this.lock.unlockWrite(stampx);
+         }
+      }
+
+      worldChunkComponent.setReference(ref);
+      long stampx = chunkState.lock.writeLock();
 
       try {
-         chunkState.reference = oldReference;
+         chunkState.reference = ref;
          chunkState.flags = 0;
          chunkState.future = null;
          chunkState.throwable = null;
          chunkState.failedWhen = 0L;
          chunkState.failedCounter = 0;
-         return oldReference;
+         return ref;
       } finally {
-         chunkState.lock.unlockWrite(stamp);
+         chunkState.lock.unlockWrite(stampx);
       }
    }
 
@@ -296,6 +340,27 @@ public class ChunkStore implements WorldProvider {
             chunkState.reference = null;
          } else {
             this.chunks.remove(index, chunkState);
+         }
+
+         long sectionStamp = this.lock.writeLock();
+
+         try {
+            for (int i = 0; i < 10; i++) {
+               ChunkStore.ChunkLoadState sectionState = this.chunkSections.get(worldChunkComponent.getX(), i, worldChunkComponent.getZ());
+               if (sectionState != null) {
+                  if (sectionState.reference != null && sectionState.reference.isValid()) {
+                     throw new IllegalStateException("Section reference was failed to be removed");
+                  }
+
+                  if (sectionState.future != null) {
+                     sectionState.reference = null;
+                  } else {
+                     this.chunkSections.remove(worldChunkComponent.getX(), i, worldChunkComponent.getZ());
+                  }
+               }
+            }
+         } finally {
+            this.lock.unlockWrite(sectionStamp);
          }
       } finally {
          chunkState.lock.unlockRead(stamp);
@@ -326,24 +391,32 @@ public class ChunkStore implements WorldProvider {
 
    @Nullable
    public Ref<ChunkStore> getChunkSectionReference(int x, int y, int z) {
-      Ref<ChunkStore> ref = this.getChunkReference(ChunkUtil.indexChunk(x, z));
-      if (ref == null) {
+      long sectionStamp = this.lock.readLock();
+
+      ChunkStore.ChunkLoadState chunkState;
+      try {
+         chunkState = this.chunkSections.get(x, y, z);
+      } finally {
+         this.lock.unlockRead(sectionStamp);
+      }
+
+      if (chunkState == null) {
          return null;
       }
 
-      ChunkColumn chunkColumnComponent = this.store.getComponent(ref, ChunkColumn.getComponentType());
-      return chunkColumnComponent == null ? null : chunkColumnComponent.getSection(y);
-   }
-
-   @Nullable
-   public Ref<ChunkStore> getChunkSectionReference(@Nonnull ComponentAccessor<ChunkStore> commandBuffer, int x, int y, int z) {
-      Ref<ChunkStore> ref = this.getChunkReference(ChunkUtil.indexChunk(x, z));
-      if (ref == null) {
-         return null;
+      long stamp = chunkState.lock.tryOptimisticRead();
+      Ref<ChunkStore> reference = chunkState.reference;
+      if (chunkState.lock.validate(stamp)) {
+         return reference;
       }
 
-      ChunkColumn chunkColumnComponent = commandBuffer.getComponent(ref, ChunkColumn.getComponentType());
-      return chunkColumnComponent == null ? null : chunkColumnComponent.getSection(y);
+      stamp = chunkState.lock.readLock();
+
+      try {
+         return chunkState.reference;
+      } finally {
+         chunkState.lock.unlockRead(stamp);
+      }
    }
 
    @Nonnull
@@ -353,27 +426,85 @@ public class ChunkStore implements WorldProvider {
 
    @Nonnull
    public CompletableFuture<Ref<ChunkStore>> getChunkSectionReferenceAsync(int x, int y, int z, int flags) {
-      return y >= 0 && y < 10 ? this.getChunkReferenceAsync(ChunkUtil.indexChunk(x, z), flags).thenApplyAsync(ref -> {
-         if (ref != null && ref.isValid()) {
-            Store<ChunkStore> store = ref.getStore();
-            ChunkColumn chunkColumnComponent = store.getComponent((Ref<ChunkStore>)ref, ChunkColumn.getComponentType());
-            return chunkColumnComponent == null ? null : chunkColumnComponent.getSection(y);
+      if (y >= 0 && y < 10) {
+         if ((flags & 3) == 3) {
+            long sectionStamp = this.lock.readLock();
+
+            ChunkStore.ChunkLoadState chunkState;
+            try {
+               chunkState = this.chunkSections.get(x, y, z);
+            } finally {
+               this.lock.unlockRead(sectionStamp);
+            }
+
+            if (chunkState == null) {
+               return CompletableFuture.completedFuture(null);
+            }
+
+            long stamp = chunkState.lock.tryOptimisticRead();
+            Ref<ChunkStore> ref = chunkState.reference;
+            if (chunkState.lock.validate(stamp) && ref != null) {
+               return CompletableFuture.completedFuture(ref);
+            }
+
+            stamp = chunkState.lock.readLock();
+
+            try {
+               if (chunkState.reference != null) {
+                  return CompletableFuture.completedFuture(chunkState.reference);
+               } else {
+                  return chunkState.future == null ? CompletableFuture.completedFuture(null) : chunkState.future;
+               }
+            } finally {
+               chunkState.lock.unlockRead(stamp);
+            }
          } else {
-            return null;
+            long sectionStamp = this.lock.writeLock();
+
+            ChunkStore.ChunkLoadState chunkState;
+            try {
+               chunkState = this.chunkSections.get(x, y, z);
+               if (chunkState == null) {
+                  this.chunkSections.put(x, y, z, chunkState = new ChunkStore.ChunkLoadState());
+               }
+            } finally {
+               this.lock.unlockWrite(sectionStamp);
+            }
+
+            long stamp = chunkState.lock.writeLock();
+
+            try {
+               if (chunkState.reference != null) {
+                  return CompletableFuture.completedFuture(chunkState.reference);
+               }
+
+               if (chunkState.future != null) {
+                  return chunkState.future;
+               }
+
+               ChunkStore.ChunkLoadState finalChunkState = chunkState;
+               chunkState.future = this.getChunkReferenceAsync(ChunkUtil.indexChunk(x, z), flags).thenApply(v -> {
+                  long stamp1 = finalChunkState.lock.readLock();
+
+                  try {
+                     return finalChunkState.reference;
+                  } finally {
+                     finalChunkState.lock.unlockRead(stamp1);
+                  }
+               });
+               return chunkState.future;
+            } finally {
+               chunkState.lock.unlockWrite(stamp);
+            }
          }
-      }, this.store.getExternalData().getWorld()) : CompletableFuture.failedFuture(new IndexOutOfBoundsException("Invalid y: " + y));
+      } else {
+         return CompletableFuture.completedFuture(null);
+      }
    }
 
    @Nullable
    public Ref<ChunkStore> getChunkSectionReferenceAtBlock(int blockX, int blockY, int blockZ) {
       return this.getChunkSectionReference(ChunkUtil.chunkCoordinate(blockX), ChunkUtil.chunkCoordinate(blockY), ChunkUtil.chunkCoordinate(blockZ));
-   }
-
-   @Nullable
-   public Ref<ChunkStore> getChunkSectionReferenceAtBlock(@Nonnull ComponentAccessor<ChunkStore> commandBuffer, int blockX, int blockY, int blockZ) {
-      return this.getChunkSectionReference(
-         commandBuffer, ChunkUtil.chunkCoordinate(blockX), ChunkUtil.chunkCoordinate(blockY), ChunkUtil.chunkCoordinate(blockZ)
-      );
    }
 
    @Nonnull
@@ -725,6 +856,18 @@ public class ChunkStore implements WorldProvider {
          return reference;
       } else {
          return null;
+      }
+   }
+
+   public void pauseBackgroundSaving(ChunkSavingSystems.Data data) {
+      if (this.saver != null) {
+         this.saver.pauseBackgroundSaving(data);
+      }
+   }
+
+   public void resumeBackgroundSaving() {
+      if (this.saver != null) {
+         this.saver.resumeBackgroundSaving();
       }
    }
 

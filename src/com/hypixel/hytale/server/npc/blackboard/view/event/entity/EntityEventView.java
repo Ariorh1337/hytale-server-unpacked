@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.Entity;
@@ -24,6 +23,7 @@ import com.hypixel.hytale.server.npc.blackboard.view.event.EventView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class EntityEventView extends EventView<EntityEventView, EntityEventType, EntityEventNotification> {
    public EntityEventView(@Nonnull World world) {

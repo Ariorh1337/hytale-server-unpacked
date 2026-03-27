@@ -79,6 +79,10 @@ public class SoundEvent {
 
    @Nonnull
    public static SoundEvent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 46) {
+         throw ProtocolException.bufferTooSmall("SoundEvent", 46, buf.readableBytes() - offset);
+      }
+
       SoundEvent obj = new SoundEvent();
       byte nullBits = buf.getByte(offset);
       obj.volume = buf.getFloatLE(offset + 1);
@@ -92,31 +96,46 @@ public class SoundEvent {
       obj.spatialBlend = buf.getFloatLE(offset + 30);
       obj.audioCategory = buf.getIntLE(offset + 34);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 46 + buf.getIntLE(offset + 38);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 38);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 46 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 46 + buf.getIntLE(offset + 42);
-         int layersCount = VarInt.peek(buf, varPos1);
-         if (layersCount < 0) {
-            throw ProtocolException.negativeLength("Layers", layersCount);
+         int varPosBase1 = buf.getIntLE(offset + 42);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("Layers", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 46 + varPosBase1;
+         int layersCount = VarInt.peek(buf, varPos1);
+         if (layersCount < 0) {
+            throw ProtocolException.invalidVarInt("Layers");
+         }
+
+         int varIntLen = VarInt.size(layersCount);
          if (layersCount > 4096000) {
             throw ProtocolException.arrayTooLong("Layers", layersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + layersCount * 42L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Layers", varPos1 + varIntLen + layersCount * 42, buf.readableBytes());
          }
@@ -138,9 +157,13 @@ public class SoundEvent {
       int maxEnd = 46;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 38);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 46 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -148,9 +171,13 @@ public class SoundEvent {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 42);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("Layers", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 46 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += SoundEventLayer.computeBytesConsumed(buf, pos1);
@@ -241,15 +268,11 @@ public class SoundEvent {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 38);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 46) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 46 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -259,7 +282,7 @@ public class SoundEvent {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -268,15 +291,11 @@ public class SoundEvent {
 
       if ((nullBits & 2) != 0) {
          int layersOffset = buffer.getIntLE(offset + 42);
-         if (layersOffset < 0) {
+         if (layersOffset < 0 || layersOffset > buffer.writerIndex() - offset - 46) {
             return ValidationResult.error("Invalid offset for Layers");
          }
 
          int pos = offset + 46 + layersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Layers");
-         }
-
          int layersCount = VarInt.peek(buffer, pos);
          if (layersCount < 0) {
             return ValidationResult.error("Invalid array count for Layers");
@@ -286,7 +305,7 @@ public class SoundEvent {
             return ValidationResult.error("Layers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(layersCount);
 
          for (int i = 0; i < layersCount; i++) {
             ValidationResult structResult = SoundEventLayer.validateStructure(buffer, pos);

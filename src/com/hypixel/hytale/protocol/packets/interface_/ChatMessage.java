@@ -46,20 +46,28 @@ public class ChatMessage implements Packet, ToServerPacket {
 
    @Nonnull
    public static ChatMessage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("ChatMessage", 1, buf.readableBytes() - offset);
+      }
+
       ChatMessage obj = new ChatMessage();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int messageLen = VarInt.peek(buf, pos);
          if (messageLen < 0) {
-            throw ProtocolException.negativeLength("Message", messageLen);
+            throw ProtocolException.invalidVarInt("Message");
          }
 
+         int messageVarLen = VarInt.size(messageLen);
          if (messageLen > 255) {
             throw ProtocolException.stringTooLong("Message", messageLen, 255);
          }
 
-         int messageVarLen = VarInt.length(buf, pos);
+         if (pos + messageVarLen + messageLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Message", pos + messageVarLen + messageLen, buf.readableBytes());
+         }
+
          obj.message = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += messageVarLen + messageLen;
       }
@@ -72,7 +80,7 @@ public class ChatMessage implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,7 +126,7 @@ public class ChatMessage implements Packet, ToServerPacket {
             return ValidationResult.error("Message exceeds max length 255");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(messageLen);
          pos += messageLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Message");

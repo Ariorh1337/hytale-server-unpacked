@@ -103,6 +103,10 @@ public class AmbienceFXConditions {
 
    @Nonnull
    public static AmbienceFXConditions deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 57) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXConditions", 57, buf.readableBytes() - offset);
+      }
+
       AmbienceFXConditions obj = new AmbienceFXConditions();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       obj.never = buf.getByte(offset + 2) != 0;
@@ -136,17 +140,22 @@ public class AmbienceFXConditions {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int varPos0 = offset + 57 + buf.getIntLE(offset + 41);
-         int environmentIndicesCount = VarInt.peek(buf, varPos0);
-         if (environmentIndicesCount < 0) {
-            throw ProtocolException.negativeLength("EnvironmentIndices", environmentIndicesCount);
+         int varPosBase0 = buf.getIntLE(offset + 41);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("EnvironmentIndices", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 57 + varPosBase0;
+         int environmentIndicesCount = VarInt.peek(buf, varPos0);
+         if (environmentIndicesCount < 0) {
+            throw ProtocolException.invalidVarInt("EnvironmentIndices");
+         }
+
+         int varIntLen = VarInt.size(environmentIndicesCount);
          if (environmentIndicesCount > 4096000) {
             throw ProtocolException.arrayTooLong("EnvironmentIndices", environmentIndicesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + environmentIndicesCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EnvironmentIndices", varPos0 + varIntLen + environmentIndicesCount * 4, buf.readableBytes());
          }
@@ -159,17 +168,22 @@ public class AmbienceFXConditions {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos1 = offset + 57 + buf.getIntLE(offset + 45);
-         int weatherIndicesCount = VarInt.peek(buf, varPos1);
-         if (weatherIndicesCount < 0) {
-            throw ProtocolException.negativeLength("WeatherIndices", weatherIndicesCount);
+         int varPosBase1 = buf.getIntLE(offset + 45);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("WeatherIndices", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 57 + varPosBase1;
+         int weatherIndicesCount = VarInt.peek(buf, varPos1);
+         if (weatherIndicesCount < 0) {
+            throw ProtocolException.invalidVarInt("WeatherIndices");
+         }
+
+         int varIntLen = VarInt.size(weatherIndicesCount);
          if (weatherIndicesCount > 4096000) {
             throw ProtocolException.arrayTooLong("WeatherIndices", weatherIndicesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + weatherIndicesCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("WeatherIndices", varPos1 + varIntLen + weatherIndicesCount * 4, buf.readableBytes());
          }
@@ -182,17 +196,22 @@ public class AmbienceFXConditions {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos2 = offset + 57 + buf.getIntLE(offset + 49);
-         int fluidFXIndicesCount = VarInt.peek(buf, varPos2);
-         if (fluidFXIndicesCount < 0) {
-            throw ProtocolException.negativeLength("FluidFXIndices", fluidFXIndicesCount);
+         int varPosBase2 = buf.getIntLE(offset + 49);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("FluidFXIndices", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 57 + varPosBase2;
+         int fluidFXIndicesCount = VarInt.peek(buf, varPos2);
+         if (fluidFXIndicesCount < 0) {
+            throw ProtocolException.invalidVarInt("FluidFXIndices");
+         }
+
+         int varIntLen = VarInt.size(fluidFXIndicesCount);
          if (fluidFXIndicesCount > 4096000) {
             throw ProtocolException.arrayTooLong("FluidFXIndices", fluidFXIndicesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + fluidFXIndicesCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FluidFXIndices", varPos2 + varIntLen + fluidFXIndicesCount * 4, buf.readableBytes());
          }
@@ -205,17 +224,22 @@ public class AmbienceFXConditions {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos3 = offset + 57 + buf.getIntLE(offset + 53);
-         int surroundingBlockSoundSetsCount = VarInt.peek(buf, varPos3);
-         if (surroundingBlockSoundSetsCount < 0) {
-            throw ProtocolException.negativeLength("SurroundingBlockSoundSets", surroundingBlockSoundSetsCount);
+         int varPosBase3 = buf.getIntLE(offset + 53);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("SurroundingBlockSoundSets", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 57 + varPosBase3;
+         int surroundingBlockSoundSetsCount = VarInt.peek(buf, varPos3);
+         if (surroundingBlockSoundSetsCount < 0) {
+            throw ProtocolException.invalidVarInt("SurroundingBlockSoundSets");
+         }
+
+         int varIntLen = VarInt.size(surroundingBlockSoundSetsCount);
          if (surroundingBlockSoundSetsCount > 4096000) {
             throw ProtocolException.arrayTooLong("SurroundingBlockSoundSets", surroundingBlockSoundSetsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + surroundingBlockSoundSetsCount * 13L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("SurroundingBlockSoundSets", varPos3 + varIntLen + surroundingBlockSoundSetsCount * 13, buf.readableBytes());
          }
@@ -237,9 +261,13 @@ public class AmbienceFXConditions {
       int maxEnd = 57;
       if ((nullBits[0] & 64) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 41);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("EnvironmentIndices", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 57 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 4;
+         pos0 += VarInt.size(arrLen) + arrLen * 4;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -247,9 +275,13 @@ public class AmbienceFXConditions {
 
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 45);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("WeatherIndices", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 57 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 4;
+         pos1 += VarInt.size(arrLen) + arrLen * 4;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -257,9 +289,13 @@ public class AmbienceFXConditions {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 49);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("FluidFXIndices", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 57 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + arrLen * 4;
+         pos2 += VarInt.size(arrLen) + arrLen * 4;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -267,9 +303,13 @@ public class AmbienceFXConditions {
 
       if ((nullBits[1] & 2) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 53);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 57) {
+            throw ProtocolException.invalidOffset("SurroundingBlockSoundSets", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 57 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos3 += AmbienceFXBlockSoundSet.computeBytesConsumed(buf, pos3);
@@ -468,15 +508,11 @@ public class AmbienceFXConditions {
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
       if ((nullBits[0] & 64) != 0) {
          int environmentIndicesOffset = buffer.getIntLE(offset + 41);
-         if (environmentIndicesOffset < 0) {
+         if (environmentIndicesOffset < 0 || environmentIndicesOffset > buffer.writerIndex() - offset - 57) {
             return ValidationResult.error("Invalid offset for EnvironmentIndices");
          }
 
          int pos = offset + 57 + environmentIndicesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for EnvironmentIndices");
-         }
-
          int environmentIndicesCount = VarInt.peek(buffer, pos);
          if (environmentIndicesCount < 0) {
             return ValidationResult.error("Invalid array count for EnvironmentIndices");
@@ -486,7 +522,7 @@ public class AmbienceFXConditions {
             return ValidationResult.error("EnvironmentIndices exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(environmentIndicesCount);
          pos += environmentIndicesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading EnvironmentIndices");
@@ -495,15 +531,11 @@ public class AmbienceFXConditions {
 
       if ((nullBits[0] & 128) != 0) {
          int weatherIndicesOffset = buffer.getIntLE(offset + 45);
-         if (weatherIndicesOffset < 0) {
+         if (weatherIndicesOffset < 0 || weatherIndicesOffset > buffer.writerIndex() - offset - 57) {
             return ValidationResult.error("Invalid offset for WeatherIndices");
          }
 
          int pos = offset + 57 + weatherIndicesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for WeatherIndices");
-         }
-
          int weatherIndicesCount = VarInt.peek(buffer, pos);
          if (weatherIndicesCount < 0) {
             return ValidationResult.error("Invalid array count for WeatherIndices");
@@ -513,7 +545,7 @@ public class AmbienceFXConditions {
             return ValidationResult.error("WeatherIndices exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(weatherIndicesCount);
          pos += weatherIndicesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading WeatherIndices");
@@ -522,15 +554,11 @@ public class AmbienceFXConditions {
 
       if ((nullBits[1] & 1) != 0) {
          int fluidFXIndicesOffset = buffer.getIntLE(offset + 49);
-         if (fluidFXIndicesOffset < 0) {
+         if (fluidFXIndicesOffset < 0 || fluidFXIndicesOffset > buffer.writerIndex() - offset - 57) {
             return ValidationResult.error("Invalid offset for FluidFXIndices");
          }
 
          int pos = offset + 57 + fluidFXIndicesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FluidFXIndices");
-         }
-
          int fluidFXIndicesCount = VarInt.peek(buffer, pos);
          if (fluidFXIndicesCount < 0) {
             return ValidationResult.error("Invalid array count for FluidFXIndices");
@@ -540,7 +568,7 @@ public class AmbienceFXConditions {
             return ValidationResult.error("FluidFXIndices exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fluidFXIndicesCount);
          pos += fluidFXIndicesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FluidFXIndices");
@@ -549,15 +577,11 @@ public class AmbienceFXConditions {
 
       if ((nullBits[1] & 2) != 0) {
          int surroundingBlockSoundSetsOffset = buffer.getIntLE(offset + 53);
-         if (surroundingBlockSoundSetsOffset < 0) {
+         if (surroundingBlockSoundSetsOffset < 0 || surroundingBlockSoundSetsOffset > buffer.writerIndex() - offset - 57) {
             return ValidationResult.error("Invalid offset for SurroundingBlockSoundSets");
          }
 
          int pos = offset + 57 + surroundingBlockSoundSetsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SurroundingBlockSoundSets");
-         }
-
          int surroundingBlockSoundSetsCount = VarInt.peek(buffer, pos);
          if (surroundingBlockSoundSetsCount < 0) {
             return ValidationResult.error("Invalid array count for SurroundingBlockSoundSets");
@@ -567,7 +591,7 @@ public class AmbienceFXConditions {
             return ValidationResult.error("SurroundingBlockSoundSets exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(surroundingBlockSoundSetsCount);
          pos += surroundingBlockSoundSetsCount * 13;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading SurroundingBlockSoundSets");

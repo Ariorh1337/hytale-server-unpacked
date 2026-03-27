@@ -19,7 +19,6 @@ import com.hypixel.hytale.math.block.BlockInvertedDomeUtil;
 import com.hypixel.hytale.math.block.BlockPyramidUtil;
 import com.hypixel.hytale.math.block.BlockSphereUtil;
 import com.hypixel.hytale.math.block.BlockTorusUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.Rotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
@@ -47,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -171,9 +171,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       BrushOrigin shapeOrigin = origin != null ? BrushOrigin.valueOf((String)origin) : BrushOrigin.Center;
       boolean originRotation = rotateOrigin != null ? (Boolean)rotateOrigin : false;
       Vector3i offsets = getOffsets(this.shapeRange, this.shapeHeight, originRotation, shapeOrigin, this.transform, this.vector, true);
-      this.originOffsetX = offsets.getX();
-      this.originOffsetY = offsets.getY();
-      this.originOffsetZ = offsets.getZ();
+      this.originOffsetX = offsets.x();
+      this.originOffsetY = offsets.y();
+      this.originOffsetZ = offsets.z();
       this.random = this.builderState.getRandom();
       this.currentCenterX = this.x;
       this.currentCenterY = this.y;
@@ -204,9 +204,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          return positions;
       }
 
-      double dx = currentPosition.getX() - lastPosition.getX();
-      double dy = currentPosition.getY() - lastPosition.getY();
-      double dz = currentPosition.getZ() - lastPosition.getZ();
+      double dx = currentPosition.x() - lastPosition.x();
+      double dy = currentPosition.y() - lastPosition.y();
+      double dz = currentPosition.z() - lastPosition.z();
       double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
       if (brushSpacing == 0) {
          float maxBrushDimension = Math.max(brushWidth, brushHeight);
@@ -220,9 +220,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
 
          for (int i = 1; i <= steps; i++) {
             float t = (float)i / steps;
-            int interpX = (int)Math.round(lastPosition.getX() + dx * t);
-            int interpY = (int)Math.round(lastPosition.getY() + dy * t);
-            int interpZ = (int)Math.round(lastPosition.getZ() + dz * t);
+            int interpX = (int)Math.round(lastPosition.x() + dx * t);
+            int interpY = (int)Math.round(lastPosition.y() + dy * t);
+            int interpZ = (int)Math.round(lastPosition.z() + dz * t);
             positions.add(new Vector3i(interpX, interpY, interpZ));
          }
       } else if (distance >= brushSpacing) {
@@ -359,7 +359,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          return this.execute0(x, y + this.originOffsetY, z);
       }
 
-      this.vector.assign(x - this.currentCenterX, y - this.currentCenterY, z - this.currentCenterZ);
+      this.vector.set(x - this.currentCenterX, y - this.currentCenterY, z - this.currentCenterZ);
       this.transform.apply(this.vector);
       x = this.currentCenterX + this.originOffsetX + this.vector.x;
       y = this.currentCenterY + this.originOffsetY + this.vector.y;
@@ -446,17 +446,17 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    ) {
       int offsetY = height / 2;
       int offsetXZ = originRotation ? width / 2 : 0;
-      vector.assign(0, offsetY, 0);
+      vector.set(0, offsetY, 0);
       transform.apply(vector);
-      int ox = vector.getX();
-      int oz = vector.getZ();
-      vector.assign(offsetXZ, offsetY, -offsetXZ);
+      int ox = vector.x();
+      int oz = vector.z();
+      vector.set(offsetXZ, offsetY, -offsetXZ);
       transform.apply(vector);
-      int oy = vector.getY();
+      int oy = vector.y();
       ox = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? ox : -ox);
       oy = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? oy + (applyBottomOriginFix ? 1 : 0) : -oy);
       oz = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? oz : -oz);
-      return vector.assign(ox, oy, oz);
+      return vector.set(ox, oy, oz);
    }
 
    private static Transform getTransform(

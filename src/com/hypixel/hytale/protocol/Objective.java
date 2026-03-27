@@ -55,45 +55,74 @@ public class Objective {
 
    @Nonnull
    public static Objective deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 33) {
+         throw ProtocolException.bufferTooSmall("Objective", 33, buf.readableBytes() - offset);
+      }
+
       Objective obj = new Objective();
       byte nullBits = buf.getByte(offset);
       obj.objectiveUuid = PacketIO.readUUID(buf, offset + 1);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 33 + buf.getIntLE(offset + 17);
+         int varPosBase0 = buf.getIntLE(offset + 17);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("ObjectiveTitleKey", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 33 + varPosBase0;
          obj.objectiveTitleKey = FormattedMessage.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 33 + buf.getIntLE(offset + 21);
+         int varPosBase1 = buf.getIntLE(offset + 21);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("ObjectiveDescriptionKey", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 33 + varPosBase1;
          obj.objectiveDescriptionKey = FormattedMessage.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 33 + buf.getIntLE(offset + 25);
-         int objectiveLineIdLen = VarInt.peek(buf, varPos2);
-         if (objectiveLineIdLen < 0) {
-            throw ProtocolException.negativeLength("ObjectiveLineId", objectiveLineIdLen);
+         int varPosBase2 = buf.getIntLE(offset + 25);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("ObjectiveLineId", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 33 + varPosBase2;
+         int objectiveLineIdLen = VarInt.peek(buf, varPos2);
+         if (objectiveLineIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ObjectiveLineId");
+         }
+
+         int objectiveLineIdVarIntLen = VarInt.size(objectiveLineIdLen);
          if (objectiveLineIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ObjectiveLineId", objectiveLineIdLen, 4096000);
+         }
+
+         if (varPos2 + objectiveLineIdVarIntLen + objectiveLineIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ObjectiveLineId", varPos2 + objectiveLineIdVarIntLen + objectiveLineIdLen, buf.readableBytes());
          }
 
          obj.objectiveLineId = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 33 + buf.getIntLE(offset + 29);
-         int tasksCount = VarInt.peek(buf, varPos3);
-         if (tasksCount < 0) {
-            throw ProtocolException.negativeLength("Tasks", tasksCount);
+         int varPosBase3 = buf.getIntLE(offset + 29);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Tasks", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 33 + varPosBase3;
+         int tasksCount = VarInt.peek(buf, varPos3);
+         if (tasksCount < 0) {
+            throw ProtocolException.invalidVarInt("Tasks");
+         }
+
+         int varIntLen = VarInt.size(tasksCount);
          if (tasksCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tasks", tasksCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + tasksCount * 9L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tasks", varPos3 + varIntLen + tasksCount * 9, buf.readableBytes());
          }
@@ -115,6 +144,10 @@ public class Objective {
       int maxEnd = 33;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 17);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("ObjectiveTitleKey", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 33 + fieldOffset0;
          pos0 += FormattedMessage.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -124,6 +157,10 @@ public class Objective {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 21);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("ObjectiveDescriptionKey", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 33 + fieldOffset1;
          pos1 += FormattedMessage.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -133,9 +170,13 @@ public class Objective {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 25);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("ObjectiveLineId", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 33 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -143,9 +184,13 @@ public class Objective {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 29);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 33) {
+            throw ProtocolException.invalidOffset("Tasks", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 33 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos3 += ObjectiveTask.computeBytesConsumed(buf, pos3);
@@ -261,15 +306,11 @@ public class Objective {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int objectiveTitleKeyOffset = buffer.getIntLE(offset + 17);
-         if (objectiveTitleKeyOffset < 0) {
+         if (objectiveTitleKeyOffset < 0 || objectiveTitleKeyOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for ObjectiveTitleKey");
          }
 
          int pos = offset + 33 + objectiveTitleKeyOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ObjectiveTitleKey");
-         }
-
          ValidationResult objectiveTitleKeyResult = FormattedMessage.validateStructure(buffer, pos);
          if (!objectiveTitleKeyResult.isValid()) {
             return ValidationResult.error("Invalid ObjectiveTitleKey: " + objectiveTitleKeyResult.error());
@@ -280,15 +321,11 @@ public class Objective {
 
       if ((nullBits & 2) != 0) {
          int objectiveDescriptionKeyOffset = buffer.getIntLE(offset + 21);
-         if (objectiveDescriptionKeyOffset < 0) {
+         if (objectiveDescriptionKeyOffset < 0 || objectiveDescriptionKeyOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for ObjectiveDescriptionKey");
          }
 
          int pos = offset + 33 + objectiveDescriptionKeyOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ObjectiveDescriptionKey");
-         }
-
          ValidationResult objectiveDescriptionKeyResult = FormattedMessage.validateStructure(buffer, pos);
          if (!objectiveDescriptionKeyResult.isValid()) {
             return ValidationResult.error("Invalid ObjectiveDescriptionKey: " + objectiveDescriptionKeyResult.error());
@@ -299,15 +336,11 @@ public class Objective {
 
       if ((nullBits & 4) != 0) {
          int objectiveLineIdOffset = buffer.getIntLE(offset + 25);
-         if (objectiveLineIdOffset < 0) {
+         if (objectiveLineIdOffset < 0 || objectiveLineIdOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for ObjectiveLineId");
          }
 
          int pos = offset + 33 + objectiveLineIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ObjectiveLineId");
-         }
-
          int objectiveLineIdLen = VarInt.peek(buffer, pos);
          if (objectiveLineIdLen < 0) {
             return ValidationResult.error("Invalid string length for ObjectiveLineId");
@@ -317,7 +350,7 @@ public class Objective {
             return ValidationResult.error("ObjectiveLineId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(objectiveLineIdLen);
          pos += objectiveLineIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ObjectiveLineId");
@@ -326,15 +359,11 @@ public class Objective {
 
       if ((nullBits & 8) != 0) {
          int tasksOffset = buffer.getIntLE(offset + 29);
-         if (tasksOffset < 0) {
+         if (tasksOffset < 0 || tasksOffset > buffer.writerIndex() - offset - 33) {
             return ValidationResult.error("Invalid offset for Tasks");
          }
 
          int pos = offset + 33 + tasksOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Tasks");
-         }
-
          int tasksCount = VarInt.peek(buffer, pos);
          if (tasksCount < 0) {
             return ValidationResult.error("Invalid array count for Tasks");
@@ -344,7 +373,7 @@ public class Objective {
             return ValidationResult.error("Tasks exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tasksCount);
 
          for (int i = 0; i < tasksCount; i++) {
             ValidationResult structResult = ObjectiveTask.validateStructure(buffer, pos);

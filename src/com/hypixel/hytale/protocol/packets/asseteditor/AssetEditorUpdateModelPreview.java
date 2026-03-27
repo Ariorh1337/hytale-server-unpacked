@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.Model;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -59,6 +60,10 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorUpdateModelPreview deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 42) {
+         throw ProtocolException.bufferTooSmall("AssetEditorUpdateModelPreview", 42, buf.readableBytes() - offset);
+      }
+
       AssetEditorUpdateModelPreview obj = new AssetEditorUpdateModelPreview();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -66,17 +71,32 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 42 + buf.getIntLE(offset + 30);
+         int varPosBase0 = buf.getIntLE(offset + 30);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("AssetPath", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 42 + varPosBase0;
          obj.assetPath = AssetPath.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 42 + buf.getIntLE(offset + 34);
+         int varPosBase1 = buf.getIntLE(offset + 34);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("Model", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 42 + varPosBase1;
          obj.model = Model.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos2 = offset + 42 + buf.getIntLE(offset + 38);
+         int varPosBase2 = buf.getIntLE(offset + 38);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("Block", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 42 + varPosBase2;
          obj.block = BlockType.deserialize(buf, varPos2);
       }
 
@@ -88,6 +108,10 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       int maxEnd = 42;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 30);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("AssetPath", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 42 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -97,6 +121,10 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 34);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 42 + fieldOffset1;
          pos1 += Model.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -106,6 +134,10 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 38);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 42) {
+            throw ProtocolException.invalidOffset("Block", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 42 + fieldOffset2;
          pos2 += BlockType.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -198,15 +230,11 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
          int assetPathOffset = buffer.getIntLE(offset + 30);
-         if (assetPathOffset < 0) {
+         if (assetPathOffset < 0 || assetPathOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for AssetPath");
          }
 
          int pos = offset + 42 + assetPathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AssetPath");
-         }
-
          ValidationResult assetPathResult = AssetPath.validateStructure(buffer, pos);
          if (!assetPathResult.isValid()) {
             return ValidationResult.error("Invalid AssetPath: " + assetPathResult.error());
@@ -217,15 +245,11 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int modelOffset = buffer.getIntLE(offset + 34);
-         if (modelOffset < 0) {
+         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
          int pos = offset + 42 + modelOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Model");
-         }
-
          ValidationResult modelResult = Model.validateStructure(buffer, pos);
          if (!modelResult.isValid()) {
             return ValidationResult.error("Invalid Model: " + modelResult.error());
@@ -236,15 +260,11 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
       if ((nullBits & 8) != 0) {
          int blockOffset = buffer.getIntLE(offset + 38);
-         if (blockOffset < 0) {
+         if (blockOffset < 0 || blockOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for Block");
          }
 
          int pos = offset + 42 + blockOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Block");
-         }
-
          ValidationResult blockResult = BlockType.validateStructure(buffer, pos);
          if (!blockResult.isValid()) {
             return ValidationResult.error("Invalid Block: " + blockResult.error());

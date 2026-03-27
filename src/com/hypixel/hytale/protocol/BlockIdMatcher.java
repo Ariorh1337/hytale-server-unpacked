@@ -38,32 +38,56 @@ public class BlockIdMatcher {
 
    @Nonnull
    public static BlockIdMatcher deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("BlockIdMatcher", 13, buf.readableBytes() - offset);
+      }
+
       BlockIdMatcher obj = new BlockIdMatcher();
       byte nullBits = buf.getByte(offset);
       obj.tagIndex = buf.getIntLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 5);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 5);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 9);
-         int stateLen = VarInt.peek(buf, varPos1);
-         if (stateLen < 0) {
-            throw ProtocolException.negativeLength("State", stateLen);
+         int varPosBase1 = buf.getIntLE(offset + 9);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("State", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int stateLen = VarInt.peek(buf, varPos1);
+         if (stateLen < 0) {
+            throw ProtocolException.invalidVarInt("State");
+         }
+
+         int stateVarIntLen = VarInt.size(stateLen);
          if (stateLen > 4096000) {
             throw ProtocolException.stringTooLong("State", stateLen, 4096000);
+         }
+
+         if (varPos1 + stateVarIntLen + stateLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("State", varPos1 + stateVarIntLen + stateLen, buf.readableBytes());
          }
 
          obj.state = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -77,9 +101,13 @@ public class BlockIdMatcher {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 5);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -87,9 +115,13 @@ public class BlockIdMatcher {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 9);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("State", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -152,15 +184,11 @@ public class BlockIdMatcher {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 5);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 13 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -170,7 +198,7 @@ public class BlockIdMatcher {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -179,15 +207,11 @@ public class BlockIdMatcher {
 
       if ((nullBits & 2) != 0) {
          int stateOffset = buffer.getIntLE(offset + 9);
-         if (stateOffset < 0) {
+         if (stateOffset < 0 || stateOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for State");
          }
 
          int pos = offset + 13 + stateOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for State");
-         }
-
          int stateLen = VarInt.peek(buffer, pos);
          if (stateLen < 0) {
             return ValidationResult.error("Invalid string length for State");
@@ -197,7 +221,7 @@ public class BlockIdMatcher {
             return ValidationResult.error("State exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(stateLen);
          pos += stateLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading State");

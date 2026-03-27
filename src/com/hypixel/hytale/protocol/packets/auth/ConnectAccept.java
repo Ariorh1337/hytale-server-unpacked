@@ -45,20 +45,24 @@ public class ConnectAccept implements Packet, ToClientPacket {
 
    @Nonnull
    public static ConnectAccept deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("ConnectAccept", 1, buf.readableBytes() - offset);
+      }
+
       ConnectAccept obj = new ConnectAccept();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int passwordChallengeCount = VarInt.peek(buf, pos);
          if (passwordChallengeCount < 0) {
-            throw ProtocolException.negativeLength("PasswordChallenge", passwordChallengeCount);
+            throw ProtocolException.invalidVarInt("PasswordChallenge");
          }
 
+         int passwordChallengeVarLen = VarInt.size(passwordChallengeCount);
          if (passwordChallengeCount > 64) {
             throw ProtocolException.arrayTooLong("PasswordChallenge", passwordChallengeCount, 64);
          }
 
-         int passwordChallengeVarLen = VarInt.size(passwordChallengeCount);
          if (pos + passwordChallengeVarLen + passwordChallengeCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("PasswordChallenge", pos + passwordChallengeVarLen + passwordChallengeCount * 1, buf.readableBytes());
          }
@@ -81,7 +85,7 @@ public class ConnectAccept implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -135,7 +139,7 @@ public class ConnectAccept implements Packet, ToClientPacket {
             return ValidationResult.error("PasswordChallenge exceeds max length 64");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(passwordChallengeCount);
          pos += passwordChallengeCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading PasswordChallenge");

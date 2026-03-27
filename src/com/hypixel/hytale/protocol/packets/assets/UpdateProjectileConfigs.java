@@ -60,35 +60,48 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateProjectileConfigs deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("UpdateProjectileConfigs", 10, buf.readableBytes() - offset);
+      }
+
       UpdateProjectileConfigs obj = new UpdateProjectileConfigs();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 10 + buf.getIntLE(offset + 2);
-         int configsCount = VarInt.peek(buf, varPos0);
-         if (configsCount < 0) {
-            throw ProtocolException.negativeLength("Configs", configsCount);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Configs", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 10 + varPosBase0;
+         int configsCount = VarInt.peek(buf, varPos0);
+         if (configsCount < 0) {
+            throw ProtocolException.invalidVarInt("Configs");
+         }
+
+         int varIntLen = VarInt.size(configsCount);
          if (configsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Configs", configsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          obj.configs = new HashMap<>(configsCount);
          int dictPos = varPos0 + varIntLen;
 
          for (int i = 0; i < configsCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             ProjectileConfig val = ProjectileConfig.deserialize(buf, dictPos);
@@ -100,17 +113,22 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 10 + buf.getIntLE(offset + 6);
-         int removedConfigsCount = VarInt.peek(buf, varPos1);
-         if (removedConfigsCount < 0) {
-            throw ProtocolException.negativeLength("RemovedConfigs", removedConfigsCount);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("RemovedConfigs", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 10 + varPosBase1;
+         int removedConfigsCount = VarInt.peek(buf, varPos1);
+         if (removedConfigsCount < 0) {
+            throw ProtocolException.invalidVarInt("RemovedConfigs");
+         }
+
+         int varIntLen = VarInt.size(removedConfigsCount);
          if (removedConfigsCount > 4096000) {
             throw ProtocolException.arrayTooLong("RemovedConfigs", removedConfigsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + removedConfigsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("RemovedConfigs", varPos1 + varIntLen + removedConfigsCount * 1, buf.readableBytes());
          }
@@ -121,14 +139,18 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
          for (int i = 0; i < removedConfigsCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("removedConfigs[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("removedConfigs[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("removedConfigs[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("removedConfigs[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.removedConfigs[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
@@ -142,13 +164,17 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
       int maxEnd = 10;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Configs", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 10 + fieldOffset0;
          int dictLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos0);
-            pos0 += VarInt.length(buf, pos0) + sl;
+            pos0 += VarInt.size(sl) + sl;
             pos0 += ProjectileConfig.computeBytesConsumed(buf, pos0);
          }
 
@@ -159,13 +185,17 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("RemovedConfigs", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 10 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
          }
 
          if (pos1 - offset > maxEnd) {
@@ -259,17 +289,18 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
       if ((nullBits & 1) != 0) {
-         int configsOffset = buffer.getIntLE(offset + 2);
-         if (configsOffset < 0) {
+         v = buffer.getIntLE(offset + 2);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Configs");
          }
 
-         int pos = offset + 10 + configsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Configs");
-         }
-
+         int pos = offset + 10 + v;
          int configsCount = VarInt.peek(buffer, pos);
          if (configsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Configs");
@@ -279,7 +310,7 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
             return ValidationResult.error("Configs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(configsCount);
 
          for (int i = 0; i < configsCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -291,7 +322,7 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -302,16 +333,12 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int removedConfigsOffset = buffer.getIntLE(offset + 6);
-         if (removedConfigsOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for RemovedConfigs");
          }
 
-         int pos = offset + 10 + removedConfigsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for RemovedConfigs");
-         }
-
+         int pos = offset + 10 + v;
          int removedConfigsCount = VarInt.peek(buffer, pos);
          if (removedConfigsCount < 0) {
             return ValidationResult.error("Invalid array count for RemovedConfigs");
@@ -321,7 +348,7 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
             return ValidationResult.error("RemovedConfigs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(removedConfigsCount);
 
          for (int i = 0; i < removedConfigsCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -329,7 +356,7 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
                return ValidationResult.error("Invalid string length in RemovedConfigs");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in RemovedConfigs");

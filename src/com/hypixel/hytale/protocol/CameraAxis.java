@@ -35,6 +35,10 @@ public class CameraAxis {
 
    @Nonnull
    public static CameraAxis deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("CameraAxis", 9, buf.readableBytes() - offset);
+      }
+
       CameraAxis obj = new CameraAxis();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -45,14 +49,14 @@ public class CameraAxis {
       if ((nullBits & 2) != 0) {
          int targetNodesCount = VarInt.peek(buf, pos);
          if (targetNodesCount < 0) {
-            throw ProtocolException.negativeLength("TargetNodes", targetNodesCount);
+            throw ProtocolException.invalidVarInt("TargetNodes");
          }
 
+         int targetNodesVarLen = VarInt.size(targetNodesCount);
          if (targetNodesCount > 4096000) {
             throw ProtocolException.arrayTooLong("TargetNodes", targetNodesCount, 4096000);
          }
 
-         int targetNodesVarLen = VarInt.size(targetNodesCount);
          if (pos + targetNodesVarLen + targetNodesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("TargetNodes", pos + targetNodesVarLen + targetNodesCount * 1, buf.readableBytes());
          }
@@ -74,7 +78,7 @@ public class CameraAxis {
       int pos = offset + 9;
       if ((nullBits & 2) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -136,10 +140,18 @@ public class CameraAxis {
             return ValidationResult.error("TargetNodes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += targetNodesCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(targetNodesCount);
+         if (pos + targetNodesCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TargetNodes");
+         }
+
+         for (int i = 0; i < targetNodesCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 5) {
+               return ValidationResult.error("Invalid CameraNode value for TargetNodes[i]");
+            }
+
+            pos++;
          }
       }
 

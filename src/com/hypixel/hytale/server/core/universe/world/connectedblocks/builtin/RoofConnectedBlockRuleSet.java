@@ -7,7 +7,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.simple.IntegerCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.ConnectedBlockRuleSetType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFaceSupport;
@@ -23,6 +23,8 @@ import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements StairLikeConnectedBlockRuleSet {
    public static final BuilderCodec<RoofConnectedBlockRuleSet> CODEC = BuilderCodec.builder(RoofConnectedBlockRuleSet.class, RoofConnectedBlockRuleSet::new)
@@ -45,7 +47,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
    private int width = 1;
 
    private static StairConnectedBlockRuleSet.StairType getConnectedBlockStairType(
-      World world, Vector3i coordinate, StairLikeConnectedBlockRuleSet currentRuleSet, int blockId, int rotation, int width
+      World world, Vector3ic coordinate, StairLikeConnectedBlockRuleSet currentRuleSet, int blockId, int rotation, int width
    ) {
       RotationTuple currentRotation = RotationTuple.get(rotation);
       Rotation currentYaw = currentRotation.yaw();
@@ -112,7 +114,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
 
    private static boolean isWidthFulfilled(
       World world,
-      Vector3i coordinate,
+      Vector3ic coordinate,
       Vector3i mutablePos,
       StairConnectedBlockRuleSet.StairConnection backConnection,
       Rotation currentYaw,
@@ -123,10 +125,10 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
       boolean valid = true;
 
       for (int i = 0; i < width - 1; i++) {
-         mutablePos.assign(backConnection == StairConnectedBlockRuleSet.StairConnection.CORNER_LEFT ? Vector3i.WEST : Vector3i.EAST).scale(i + 1);
+         mutablePos.set(backConnection == StairConnectedBlockRuleSet.StairConnection.CORNER_LEFT ? Vector3iUtil.WEST : Vector3iUtil.EAST).mul(i + 1);
          currentYaw.rotateY(mutablePos, mutablePos);
          int requiredFiller = FillerBlockUtil.pack(mutablePos.x, mutablePos.y, mutablePos.z);
-         mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
+         mutablePos.add(coordinate);
          WorldChunk chunk = world.getChunkIfLoaded(ChunkUtil.indexChunkFromBlock(mutablePos.x, mutablePos.z));
          if (chunk != null) {
             int otherRotation = chunk.getRotationIndex(mutablePos.x, mutablePos.y, mutablePos.z);
@@ -145,7 +147,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
 
    private static StairConnectedBlockRuleSet.StairConnection getValleyConnection(
       World world,
-      Vector3i placementCoordinate,
+      Vector3ic placementCoordinate,
       Vector3i checkCoordinate,
       StairLikeConnectedBlockRuleSet currentRuleSet,
       RotationTuple rotation,
@@ -156,7 +158,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
       int width
    ) {
       Rotation yaw = rotation.yaw();
-      mutablePos.assign(reverse ? Vector3i.SOUTH : Vector3i.NORTH).scale(width);
+      mutablePos.set(reverse ? Vector3iUtil.SOUTH : Vector3iUtil.NORTH).mul(width);
       yaw.rotateY(mutablePos, mutablePos);
       mutablePos.add(checkCoordinate.x, checkCoordinate.y, checkCoordinate.z);
       ObjectIntPair<StairConnectedBlockRuleSet.StairType> backStair = StairConnectedBlockRuleSet.getStairData(
@@ -173,13 +175,13 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
          return null;
       }
 
-      mutablePos.assign(reverse ? Vector3i.EAST : Vector3i.WEST).scale(width);
+      mutablePos.set(reverse ? Vector3iUtil.EAST : Vector3iUtil.WEST).mul(width);
       yaw.rotateY(mutablePos, mutablePos);
       mutablePos.add(checkCoordinate.x, checkCoordinate.y, checkCoordinate.z);
       ObjectIntPair<StairConnectedBlockRuleSet.StairType> leftStair = StairConnectedBlockRuleSet.getStairData(
          world, mutablePos, currentRuleSet.getMaterialName()
       );
-      mutablePos.assign(reverse ? Vector3i.WEST : Vector3i.EAST).scale(width);
+      mutablePos.set(reverse ? Vector3iUtil.WEST : Vector3iUtil.EAST).mul(width);
       yaw.rotateY(mutablePos, mutablePos);
       mutablePos.add(checkCoordinate.x, checkCoordinate.y, checkCoordinate.z);
       ObjectIntPair<StairConnectedBlockRuleSet.StairType> rightStair = StairConnectedBlockRuleSet.getStairData(
@@ -211,11 +213,11 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
       World world, Vector3i coordinate, StairLikeConnectedBlockRuleSet currentRuleSet, RotationTuple rotation, Vector3i mutablePos
    ) {
       Rotation yaw = rotation.yaw();
-      Vector3i[] directions = new Vector3i[]{Vector3i.NORTH, Vector3i.SOUTH, Vector3i.EAST, Vector3i.WEST};
+      Vector3ic[] directions = new Vector3ic[]{Vector3iUtil.NORTH, Vector3iUtil.SOUTH, Vector3iUtil.EAST, Vector3iUtil.WEST};
       Rotation[] yawOffsets = new Rotation[]{Rotation.OneEighty, Rotation.None, Rotation.Ninety, Rotation.TwoSeventy};
 
       for (int i = 0; i < directions.length; i++) {
-         mutablePos.assign(directions[i]);
+         mutablePos.set(directions[i]);
          yaw.rotateY(mutablePos, mutablePos);
          mutablePos.add(coordinate.x, coordinate.y, coordinate.z);
          ObjectIntPair<StairConnectedBlockRuleSet.StairType> stair = StairConnectedBlockRuleSet.getStairData(
@@ -261,16 +263,16 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
 
    @Override
    public Optional<ConnectedBlocksUtil.ConnectedBlockResult> getConnectedBlockType(
-      World world, Vector3i coordinate, BlockType blockType, int rotation, Vector3i placementNormal, boolean isPlacement
+      World world, Vector3ic coordinate, BlockType blockType, int rotation, Vector3ic placementNormal, boolean isPlacement
    ) {
-      WorldChunk chunk = world.getChunkIfLoaded(ChunkUtil.indexChunkFromBlock(coordinate.x, coordinate.z));
+      WorldChunk chunk = world.getChunkIfLoaded(ChunkUtil.indexChunkFromBlock(coordinate.x(), coordinate.z()));
       if (chunk == null) {
          return Optional.empty();
       }
 
-      int belowBlockId = chunk.getBlock(coordinate.x, coordinate.y - 1, coordinate.z);
+      int belowBlockId = chunk.getBlock(coordinate.x(), coordinate.y() - 1, coordinate.z());
       BlockType belowBlockType = BlockType.getAssetMap().getAsset(belowBlockId);
-      int belowBlockRotation = chunk.getRotationIndex(coordinate.x, coordinate.y - 1, coordinate.z);
+      int belowBlockRotation = chunk.getRotationIndex(coordinate.x(), coordinate.y() - 1, coordinate.z());
       boolean hollow = true;
       if (belowBlockType != null) {
          Map<BlockFace, BlockFaceSupport[]> supporting = belowBlockType.getSupporting(belowBlockRotation);
@@ -314,7 +316,7 @@ public class RoofConnectedBlockRuleSet extends ConnectedBlockRuleSet implements 
                if (newWidth != previousWidth) {
                   Vector3i mutablePos = new Vector3i();
                   Rotation currentYaw = RotationTuple.get(rotation).yaw();
-                  mutablePos.assign(Vector3i.EAST).scale(previousWidth);
+                  mutablePos.set(Vector3iUtil.EAST).mul(previousWidth);
                   currentYaw.rotateY(mutablePos, mutablePos);
                   result.addAdditionalBlock(mutablePos, regularBlockType.getId(), rotation);
                }

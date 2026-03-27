@@ -38,20 +38,29 @@ public class OffsetNoise {
 
    @Nonnull
    public static OffsetNoise deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("OffsetNoise", 13, buf.readableBytes() - offset);
+      }
+
       OffsetNoise obj = new OffsetNoise();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         int xCount = VarInt.peek(buf, varPos0);
-         if (xCount < 0) {
-            throw ProtocolException.negativeLength("X", xCount);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("X", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 13 + varPosBase0;
+         int xCount = VarInt.peek(buf, varPos0);
+         if (xCount < 0) {
+            throw ProtocolException.invalidVarInt("X");
+         }
+
+         int varIntLen = VarInt.size(xCount);
          if (xCount > 4096000) {
             throw ProtocolException.arrayTooLong("X", xCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + xCount * 23L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("X", varPos0 + varIntLen + xCount * 23, buf.readableBytes());
          }
@@ -66,17 +75,22 @@ public class OffsetNoise {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int yCount = VarInt.peek(buf, varPos1);
-         if (yCount < 0) {
-            throw ProtocolException.negativeLength("Y", yCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Y", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 13 + varPosBase1;
+         int yCount = VarInt.peek(buf, varPos1);
+         if (yCount < 0) {
+            throw ProtocolException.invalidVarInt("Y");
+         }
+
+         int varIntLen = VarInt.size(yCount);
          if (yCount > 4096000) {
             throw ProtocolException.arrayTooLong("Y", yCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + yCount * 23L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Y", varPos1 + varIntLen + yCount * 23, buf.readableBytes());
          }
@@ -91,17 +105,22 @@ public class OffsetNoise {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int zCount = VarInt.peek(buf, varPos2);
-         if (zCount < 0) {
-            throw ProtocolException.negativeLength("Z", zCount);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Z", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 13 + varPosBase2;
+         int zCount = VarInt.peek(buf, varPos2);
+         if (zCount < 0) {
+            throw ProtocolException.invalidVarInt("Z");
+         }
+
+         int varIntLen = VarInt.size(zCount);
          if (zCount > 4096000) {
             throw ProtocolException.arrayTooLong("Z", zCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + zCount * 23L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Z", varPos2 + varIntLen + zCount * 23, buf.readableBytes());
          }
@@ -123,9 +142,13 @@ public class OffsetNoise {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("X", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += NoiseConfig.computeBytesConsumed(buf, pos0);
@@ -138,9 +161,13 @@ public class OffsetNoise {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Y", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += NoiseConfig.computeBytesConsumed(buf, pos1);
@@ -153,9 +180,13 @@ public class OffsetNoise {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Z", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += NoiseConfig.computeBytesConsumed(buf, pos2);
@@ -263,15 +294,11 @@ public class OffsetNoise {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int xOffset = buffer.getIntLE(offset + 1);
-         if (xOffset < 0) {
+         if (xOffset < 0 || xOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for X");
          }
 
          int pos = offset + 13 + xOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for X");
-         }
-
          int xCount = VarInt.peek(buffer, pos);
          if (xCount < 0) {
             return ValidationResult.error("Invalid array count for X");
@@ -281,7 +308,7 @@ public class OffsetNoise {
             return ValidationResult.error("X exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(xCount);
          pos += xCount * 23;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading X");
@@ -290,15 +317,11 @@ public class OffsetNoise {
 
       if ((nullBits & 2) != 0) {
          int yOffset = buffer.getIntLE(offset + 5);
-         if (yOffset < 0) {
+         if (yOffset < 0 || yOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Y");
          }
 
          int pos = offset + 13 + yOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Y");
-         }
-
          int yCount = VarInt.peek(buffer, pos);
          if (yCount < 0) {
             return ValidationResult.error("Invalid array count for Y");
@@ -308,7 +331,7 @@ public class OffsetNoise {
             return ValidationResult.error("Y exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(yCount);
          pos += yCount * 23;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Y");
@@ -317,15 +340,11 @@ public class OffsetNoise {
 
       if ((nullBits & 4) != 0) {
          int zOffset = buffer.getIntLE(offset + 9);
-         if (zOffset < 0) {
+         if (zOffset < 0 || zOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Z");
          }
 
          int pos = offset + 13 + zOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Z");
-         }
-
          int zCount = VarInt.peek(buffer, pos);
          if (zCount < 0) {
             return ValidationResult.error("Invalid array count for Z");
@@ -335,7 +354,7 @@ public class OffsetNoise {
             return ValidationResult.error("Z exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(zCount);
          pos += zCount * 23;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Z");

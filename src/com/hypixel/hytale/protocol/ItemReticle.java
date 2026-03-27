@@ -37,6 +37,10 @@ public class ItemReticle {
 
    @Nonnull
    public static ItemReticle deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("ItemReticle", 6, buf.readableBytes() - offset);
+      }
+
       ItemReticle obj = new ItemReticle();
       byte nullBits = buf.getByte(offset);
       obj.hideBase = buf.getByte(offset + 1) != 0;
@@ -45,14 +49,14 @@ public class ItemReticle {
       if ((nullBits & 1) != 0) {
          int partsCount = VarInt.peek(buf, pos);
          if (partsCount < 0) {
-            throw ProtocolException.negativeLength("Parts", partsCount);
+            throw ProtocolException.invalidVarInt("Parts");
          }
 
+         int partsVarLen = VarInt.size(partsCount);
          if (partsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Parts", partsCount, 4096000);
          }
 
-         int partsVarLen = VarInt.size(partsCount);
          if (pos + partsVarLen + partsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Parts", pos + partsVarLen + partsCount * 1, buf.readableBytes());
          }
@@ -63,14 +67,18 @@ public class ItemReticle {
          for (int i = 0; i < partsCount; i++) {
             int strLen = VarInt.peek(buf, pos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("parts[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("parts[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("parts[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
+            if (pos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("parts[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.parts[i] = PacketIO.readVarString(buf, pos);
             pos += strVarLen + strLen;
          }
@@ -84,11 +92,11 @@ public class ItemReticle {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -149,7 +157,7 @@ public class ItemReticle {
             return ValidationResult.error("Parts exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(partsCount);
 
          for (int i = 0; i < partsCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -157,7 +165,7 @@ public class ItemReticle {
                return ValidationResult.error("Invalid string length in Parts");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Parts");

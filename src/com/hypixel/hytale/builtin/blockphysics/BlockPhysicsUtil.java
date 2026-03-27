@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
@@ -25,6 +24,8 @@ import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class BlockPhysicsUtil {
    public static final int DOESNT_SATISFY = 0;
@@ -249,14 +250,14 @@ public class BlockPhysicsUtil {
             RequiredBlockFaceSupport[] requiredBlockFaceSupports = requiredBlockFaceSupportMap.get(blockFace);
             if (requiredBlockFaceSupports != null && requiredBlockFaceSupports.length != 0) {
                BlockFace[] connectingFaces = blockFace.getConnectingFaces();
-               Vector3i[] connectingFaceOffsets = blockFace.getConnectingFaceOffsets();
+               Vector3ic[] connectingFaceOffsets = blockFace.getConnectingFaceOffsets();
 
                for (int i = 0; i < connectingFaces.length; i++) {
                   BlockFace neighbourBlockFace = connectingFaces[i];
-                  Vector3i neighbourDirection = connectingFaceOffsets[i];
-                  int neighbourX = blockX + neighbourDirection.x;
-                  int neighbourY = blockY + neighbourDirection.y;
-                  int neighbourZ = blockZ + neighbourDirection.z;
+                  Vector3ic neighbourDirection = connectingFaceOffsets[i];
+                  int neighbourX = blockX + neighbourDirection.x();
+                  int neighbourY = blockY + neighbourDirection.y();
+                  int neighbourZ = blockZ + neighbourDirection.z();
                   if (!boundingBox.containsBlock(origin, neighbourX, neighbourY, neighbourZ)) {
                      BlockSection neighbourBlockSection;
                      FluidSection neighbourFluidSection;
@@ -284,7 +285,7 @@ public class BlockPhysicsUtil {
                      int neighbourRotation = neighbourBlockSection.getRotationIndex(neighbourX, neighbourY, neighbourZ);
                      BlockType neighbourBlockType = BlockType.getAssetMap().getAsset(neighbourBlockId);
                      Fluid neighbourFluid = Fluid.getAssetMap().getAsset(neighbourFluidId);
-                     neighbourFillerOffset.assign(
+                     neighbourFillerOffset.set(
                         FillerBlockUtil.unpackX(neighbourFiller), FillerBlockUtil.unpackY(neighbourFiller), FillerBlockUtil.unpackZ(neighbourFiller)
                      );
                      boolean doesSatisfySupport = false;

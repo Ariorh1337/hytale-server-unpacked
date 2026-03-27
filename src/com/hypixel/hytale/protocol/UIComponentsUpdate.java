@@ -33,14 +33,14 @@ public class UIComponentsUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int componentsCount = VarInt.peek(buf, pos);
       if (componentsCount < 0) {
-         throw ProtocolException.negativeLength("Components", componentsCount);
+         throw ProtocolException.invalidVarInt("Components");
       }
 
+      int componentsVarLen = VarInt.size(componentsCount);
       if (componentsCount > 4096000) {
          throw ProtocolException.arrayTooLong("Components", componentsCount, 4096000);
       }
 
-      int componentsVarLen = VarInt.size(componentsCount);
       if (pos + componentsVarLen + componentsCount * 4L > buf.readableBytes()) {
          throw ProtocolException.bufferTooSmall("Components", pos + componentsVarLen + componentsCount * 4, buf.readableBytes());
       }
@@ -59,7 +59,7 @@ public class UIComponentsUpdate extends ComponentUpdate {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + arrLen * 4;
+      pos += VarInt.size(arrLen) + arrLen * 4;
       return pos - offset;
    }
 
@@ -100,7 +100,7 @@ public class UIComponentsUpdate extends ComponentUpdate {
          return ValidationResult.error("Components exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(componentsCount);
       pos += componentsCount * 4;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading Components") : ValidationResult.OK;
    }

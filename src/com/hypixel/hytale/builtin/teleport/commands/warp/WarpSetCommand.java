@@ -5,9 +5,8 @@ import com.hypixel.hytale.builtin.teleport.Warp;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Instant;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class WarpSetCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -51,8 +51,8 @@ public class WarpSetCommand extends AbstractPlayerCommand {
             HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
             assert headRotationComponent != null;
             Vector3d position = transformComponent.getPosition();
-            Vector3f headRotation = headRotationComponent.getRotation();
-            Transform transform = new Transform(position.clone(), headRotation.clone());
+            Rotation3f headRotation = headRotationComponent.getRotation();
+            Transform transform = new Transform(new Vector3d(position), new Rotation3f(headRotation));
             Warp newWarp = new Warp(transform, newId, world, playerRef.getUsername(), Instant.now());
             warps.put(newWarp.getId().toLowerCase(), newWarp);
             TeleportPlugin plugin = TeleportPlugin.get();

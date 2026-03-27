@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SmartMoveType;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -48,6 +49,10 @@ public class SmartGiveCreativeItem implements Packet, ToServerPacket {
 
    @Nonnull
    public static SmartGiveCreativeItem deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("SmartGiveCreativeItem", 1, buf.readableBytes() - offset);
+      }
+
       SmartGiveCreativeItem obj = new SmartGiveCreativeItem();
       obj.moveType = SmartMoveType.fromValue(buf.getByte(offset + 0));
       int pos = offset + 1;
@@ -79,13 +84,18 @@ public class SmartGiveCreativeItem implements Packet, ToServerPacket {
          return ValidationResult.error("Buffer too small: expected at least 1 bytes");
       }
 
-      int pos = offset + 1;
-      ValidationResult itemResult = ItemQuantity.validateStructure(buffer, pos);
+      int v = buffer.getByte(offset + 0) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid SmartMoveType value for MoveType");
+      }
+
+      v = offset + 1;
+      ValidationResult itemResult = ItemQuantity.validateStructure(buffer, v);
       if (!itemResult.isValid()) {
          return ValidationResult.error("Invalid Item: " + itemResult.error());
       }
 
-      pos += ItemQuantity.computeBytesConsumed(buffer, pos);
+      v += ItemQuantity.computeBytesConsumed(buffer, v);
       return ValidationResult.OK;
    }
 

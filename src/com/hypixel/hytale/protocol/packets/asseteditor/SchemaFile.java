@@ -31,20 +31,28 @@ public class SchemaFile {
 
    @Nonnull
    public static SchemaFile deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("SchemaFile", 1, buf.readableBytes() - offset);
+      }
+
       SchemaFile obj = new SchemaFile();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int contentLen = VarInt.peek(buf, pos);
          if (contentLen < 0) {
-            throw ProtocolException.negativeLength("Content", contentLen);
+            throw ProtocolException.invalidVarInt("Content");
          }
 
+         int contentVarLen = VarInt.size(contentLen);
          if (contentLen > 16777215) {
             throw ProtocolException.stringTooLong("Content", contentLen, 16777215);
          }
 
-         int contentVarLen = VarInt.length(buf, pos);
+         if (pos + contentVarLen + contentLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Content", pos + contentVarLen + contentLen, buf.readableBytes());
+         }
+
          obj.content = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += contentVarLen + contentLen;
       }
@@ -57,7 +65,7 @@ public class SchemaFile {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -101,7 +109,7 @@ public class SchemaFile {
             return ValidationResult.error("Content exceeds max length 16777215");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(contentLen);
          pos += contentLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Content");

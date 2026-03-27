@@ -6,7 +6,6 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
 import com.hypixel.hytale.common.util.CompletableFutureUtil;
-import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -486,17 +485,16 @@ public class WorldMapManager extends TickingThread {
       }
 
       private void removeMarkerFromOfflinePlayer() {
-         Universe.get().getPlayerStorage().load(this.player).thenApply(holder -> {
-            Player player = holder.getComponent(Player.getComponentType());
-            PlayerConfigData data = player.getPlayerConfigData();
+         Universe.get().getPlayerStorage().update(this.player, holder -> {
+            Player playerComponent = holder.getComponent(Player.getComponentType());
+            PlayerConfigData data = playerComponent.getPlayerConfigData();
             String world = this.world;
             if (world == null) {
                world = data.getWorld();
             }
 
             removeMarkerFromData(data, world, this.markerId);
-            return holder;
-         }).thenCompose(holder -> Universe.get().getPlayerStorage().save(this.player, (Holder<EntityStore>)holder));
+         });
       }
 
       @Nullable

@@ -47,6 +47,10 @@ public class ModelDisplay {
 
    @Nonnull
    public static ModelDisplay deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 45) {
+         throw ProtocolException.bufferTooSmall("ModelDisplay", 45, buf.readableBytes() - offset);
+      }
+
       ModelDisplay obj = new ModelDisplay();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -62,28 +66,48 @@ public class ModelDisplay {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos0 = offset + 45 + buf.getIntLE(offset + 37);
-         int nodeLen = VarInt.peek(buf, varPos0);
-         if (nodeLen < 0) {
-            throw ProtocolException.negativeLength("Node", nodeLen);
+         int varPosBase0 = buf.getIntLE(offset + 37);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 45) {
+            throw ProtocolException.invalidOffset("Node", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 45 + varPosBase0;
+         int nodeLen = VarInt.peek(buf, varPos0);
+         if (nodeLen < 0) {
+            throw ProtocolException.invalidVarInt("Node");
+         }
+
+         int nodeVarIntLen = VarInt.size(nodeLen);
          if (nodeLen > 4096000) {
             throw ProtocolException.stringTooLong("Node", nodeLen, 4096000);
+         }
+
+         if (varPos0 + nodeVarIntLen + nodeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Node", varPos0 + nodeVarIntLen + nodeLen, buf.readableBytes());
          }
 
          obj.node = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos1 = offset + 45 + buf.getIntLE(offset + 41);
-         int attachToLen = VarInt.peek(buf, varPos1);
-         if (attachToLen < 0) {
-            throw ProtocolException.negativeLength("AttachTo", attachToLen);
+         int varPosBase1 = buf.getIntLE(offset + 41);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 45) {
+            throw ProtocolException.invalidOffset("AttachTo", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 45 + varPosBase1;
+         int attachToLen = VarInt.peek(buf, varPos1);
+         if (attachToLen < 0) {
+            throw ProtocolException.invalidVarInt("AttachTo");
+         }
+
+         int attachToVarIntLen = VarInt.size(attachToLen);
          if (attachToLen > 4096000) {
             throw ProtocolException.stringTooLong("AttachTo", attachToLen, 4096000);
+         }
+
+         if (varPos1 + attachToVarIntLen + attachToLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("AttachTo", varPos1 + attachToVarIntLen + attachToLen, buf.readableBytes());
          }
 
          obj.attachTo = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -97,9 +121,13 @@ public class ModelDisplay {
       int maxEnd = 45;
       if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 37);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 45) {
+            throw ProtocolException.invalidOffset("Node", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 45 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -107,9 +135,13 @@ public class ModelDisplay {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 41);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 45) {
+            throw ProtocolException.invalidOffset("AttachTo", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 45 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -201,15 +233,11 @@ public class ModelDisplay {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 8) != 0) {
          int nodeOffset = buffer.getIntLE(offset + 37);
-         if (nodeOffset < 0) {
+         if (nodeOffset < 0 || nodeOffset > buffer.writerIndex() - offset - 45) {
             return ValidationResult.error("Invalid offset for Node");
          }
 
          int pos = offset + 45 + nodeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Node");
-         }
-
          int nodeLen = VarInt.peek(buffer, pos);
          if (nodeLen < 0) {
             return ValidationResult.error("Invalid string length for Node");
@@ -219,7 +247,7 @@ public class ModelDisplay {
             return ValidationResult.error("Node exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nodeLen);
          pos += nodeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Node");
@@ -228,15 +256,11 @@ public class ModelDisplay {
 
       if ((nullBits & 16) != 0) {
          int attachToOffset = buffer.getIntLE(offset + 41);
-         if (attachToOffset < 0) {
+         if (attachToOffset < 0 || attachToOffset > buffer.writerIndex() - offset - 45) {
             return ValidationResult.error("Invalid offset for AttachTo");
          }
 
          int pos = offset + 45 + attachToOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AttachTo");
-         }
-
          int attachToLen = VarInt.peek(buffer, pos);
          if (attachToLen < 0) {
             return ValidationResult.error("Invalid string length for AttachTo");
@@ -246,7 +270,7 @@ public class ModelDisplay {
             return ValidationResult.error("AttachTo exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(attachToLen);
          pos += attachToLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading AttachTo");

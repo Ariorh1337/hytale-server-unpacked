@@ -54,6 +54,10 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateCameraShake deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateCameraShake", 2, buf.readableBytes() - offset);
+      }
+
       UpdateCameraShake obj = new UpdateCameraShake();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -61,14 +65,15 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int profilesCount = VarInt.peek(buf, pos);
          if (profilesCount < 0) {
-            throw ProtocolException.negativeLength("Profiles", profilesCount);
+            throw ProtocolException.invalidVarInt("Profiles");
          }
 
+         int profilesVarLen = VarInt.size(profilesCount);
          if (profilesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Profiles", profilesCount, 4096000);
          }
 
-         pos += VarInt.size(profilesCount);
+         pos += profilesVarLen;
          obj.profiles = new HashMap<>(profilesCount);
 
          for (int i = 0; i < profilesCount; i++) {
@@ -90,7 +95,7 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -146,9 +151,14 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int profilesCount = VarInt.peek(buffer, pos);
+         int profilesCount = VarInt.peek(buffer, v);
          if (profilesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Profiles");
          }
@@ -157,15 +167,15 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
             return ValidationResult.error("Profiles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(profilesCount);
 
          for (int i = 0; i < profilesCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += CameraShake.computeBytesConsumed(buffer, pos);
+            v += CameraShake.computeBytesConsumed(buffer, v);
          }
       }
 

@@ -91,6 +91,10 @@ public class DamageEntityInteraction extends Interaction {
 
    @Nonnull
    public static DamageEntityInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 60) {
+         throw ProtocolException.bufferTooSmall("DamageEntityInteraction", 60, buf.readableBytes() - offset);
+      }
+
       DamageEntityInteraction obj = new DamageEntityInteraction();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       obj.waitForDataFrom = WaitForDataFrom.fromValue(buf.getByte(offset + 2));
@@ -101,22 +105,32 @@ public class DamageEntityInteraction extends Interaction {
       obj.failed = buf.getIntLE(offset + 16);
       obj.blocked = buf.getIntLE(offset + 20);
       if ((nullBits[0] & 1) != 0) {
-         int varPos0 = offset + 60 + buf.getIntLE(offset + 24);
+         int varPosBase0 = buf.getIntLE(offset + 24);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Effects", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 60 + varPosBase0;
          obj.effects = InteractionEffects.deserialize(buf, varPos0);
       }
 
       if ((nullBits[0] & 2) != 0) {
-         int varPos1 = offset + 60 + buf.getIntLE(offset + 28);
-         int settingsCount = VarInt.peek(buf, varPos1);
-         if (settingsCount < 0) {
-            throw ProtocolException.negativeLength("Settings", settingsCount);
+         int varPosBase1 = buf.getIntLE(offset + 28);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Settings", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 60 + varPosBase1;
+         int settingsCount = VarInt.peek(buf, varPos1);
+         if (settingsCount < 0) {
+            throw ProtocolException.invalidVarInt("Settings");
+         }
+
+         int varIntLen = VarInt.size(settingsCount);
          if (settingsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Settings", settingsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.settings = new HashMap<>(settingsCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -131,22 +145,32 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 4) != 0) {
-         int varPos2 = offset + 60 + buf.getIntLE(offset + 32);
+         int varPosBase2 = buf.getIntLE(offset + 32);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Rules", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 60 + varPosBase2;
          obj.rules = InteractionRules.deserialize(buf, varPos2);
       }
 
       if ((nullBits[0] & 8) != 0) {
-         int varPos3 = offset + 60 + buf.getIntLE(offset + 36);
-         int tagsCount = VarInt.peek(buf, varPos3);
-         if (tagsCount < 0) {
-            throw ProtocolException.negativeLength("Tags", tagsCount);
+         int varPosBase3 = buf.getIntLE(offset + 36);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Tags", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 60 + varPosBase3;
+         int tagsCount = VarInt.peek(buf, varPos3);
+         if (tagsCount < 0) {
+            throw ProtocolException.invalidVarInt("Tags");
+         }
+
+         int varIntLen = VarInt.size(tagsCount);
          if (tagsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tags", tagsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + tagsCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tags", varPos3 + varIntLen + tagsCount * 4, buf.readableBytes());
          }
@@ -159,27 +183,42 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 16) != 0) {
-         int varPos4 = offset + 60 + buf.getIntLE(offset + 40);
+         int varPosBase4 = buf.getIntLE(offset + 40);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Camera", varPosBase4, buf.readableBytes());
+         }
+
+         int varPos4 = offset + 60 + varPosBase4;
          obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int varPos5 = offset + 60 + buf.getIntLE(offset + 44);
+         int varPosBase5 = buf.getIntLE(offset + 44);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("DamageEffects", varPosBase5, buf.readableBytes());
+         }
+
+         int varPos5 = offset + 60 + varPosBase5;
          obj.damageEffects = DamageEffects.deserialize(buf, varPos5);
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int varPos6 = offset + 60 + buf.getIntLE(offset + 48);
-         int angledDamageCount = VarInt.peek(buf, varPos6);
-         if (angledDamageCount < 0) {
-            throw ProtocolException.negativeLength("AngledDamage", angledDamageCount);
+         int varPosBase6 = buf.getIntLE(offset + 48);
+         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("AngledDamage", varPosBase6, buf.readableBytes());
          }
 
+         int varPos6 = offset + 60 + varPosBase6;
+         int angledDamageCount = VarInt.peek(buf, varPos6);
+         if (angledDamageCount < 0) {
+            throw ProtocolException.invalidVarInt("AngledDamage");
+         }
+
+         int varIntLen = VarInt.size(angledDamageCount);
          if (angledDamageCount > 4096000) {
             throw ProtocolException.arrayTooLong("AngledDamage", angledDamageCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos6);
          if (varPos6 + varIntLen + angledDamageCount * 21L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("AngledDamage", varPos6 + varIntLen + angledDamageCount * 21, buf.readableBytes());
          }
@@ -194,31 +233,40 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos7 = offset + 60 + buf.getIntLE(offset + 52);
-         int targetedDamageCount = VarInt.peek(buf, varPos7);
-         if (targetedDamageCount < 0) {
-            throw ProtocolException.negativeLength("TargetedDamage", targetedDamageCount);
+         int varPosBase7 = buf.getIntLE(offset + 52);
+         if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("TargetedDamage", varPosBase7, buf.readableBytes());
          }
 
+         int varPos7 = offset + 60 + varPosBase7;
+         int targetedDamageCount = VarInt.peek(buf, varPos7);
+         if (targetedDamageCount < 0) {
+            throw ProtocolException.invalidVarInt("TargetedDamage");
+         }
+
+         int varIntLen = VarInt.size(targetedDamageCount);
          if (targetedDamageCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("TargetedDamage", targetedDamageCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos7);
          obj.targetedDamage = new HashMap<>(targetedDamageCount);
          int dictPos = varPos7 + varIntLen;
 
          for (int i = 0; i < targetedDamageCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             TargetedDamage val = TargetedDamage.deserialize(buf, dictPos);
@@ -230,17 +278,22 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos8 = offset + 60 + buf.getIntLE(offset + 56);
-         int entityStatsOnHitCount = VarInt.peek(buf, varPos8);
-         if (entityStatsOnHitCount < 0) {
-            throw ProtocolException.negativeLength("EntityStatsOnHit", entityStatsOnHitCount);
+         int varPosBase8 = buf.getIntLE(offset + 56);
+         if (varPosBase8 < 0 || varPosBase8 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("EntityStatsOnHit", varPosBase8, buf.readableBytes());
          }
 
+         int varPos8 = offset + 60 + varPosBase8;
+         int entityStatsOnHitCount = VarInt.peek(buf, varPos8);
+         if (entityStatsOnHitCount < 0) {
+            throw ProtocolException.invalidVarInt("EntityStatsOnHit");
+         }
+
+         int varIntLen = VarInt.size(entityStatsOnHitCount);
          if (entityStatsOnHitCount > 4096000) {
             throw ProtocolException.arrayTooLong("EntityStatsOnHit", entityStatsOnHitCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos8);
          if (varPos8 + varIntLen + entityStatsOnHitCount * 13L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EntityStatsOnHit", varPos8 + varIntLen + entityStatsOnHitCount * 13, buf.readableBytes());
          }
@@ -262,6 +315,10 @@ public class DamageEntityInteraction extends Interaction {
       int maxEnd = 60;
       if ((nullBits[0] & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 24);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Effects", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 60 + fieldOffset0;
          pos0 += InteractionEffects.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -271,9 +328,13 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[0] & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 28);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Settings", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 60 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + InteractionSettings.computeBytesConsumed(buf, pos1);
@@ -286,6 +347,10 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[0] & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 32);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Rules", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 60 + fieldOffset2;
          pos2 += InteractionRules.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -295,9 +360,13 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[0] & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 36);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Tags", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 60 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + arrLen * 4;
+         pos3 += VarInt.size(arrLen) + arrLen * 4;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -305,6 +374,10 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[0] & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 40);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("Camera", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 60 + fieldOffset4;
          pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
@@ -314,6 +387,10 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[0] & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 44);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("DamageEffects", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 60 + fieldOffset5;
          pos5 += DamageEffects.computeBytesConsumed(buf, pos5);
          if (pos5 - offset > maxEnd) {
@@ -323,9 +400,13 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[0] & 64) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 48);
+         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("AngledDamage", fieldOffset6, maxEnd);
+         }
+
          int pos6 = offset + 60 + fieldOffset6;
          int arrLen = VarInt.peek(buf, pos6);
-         pos6 += VarInt.length(buf, pos6);
+         pos6 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos6 += AngledDamage.computeBytesConsumed(buf, pos6);
@@ -338,13 +419,17 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset7 = buf.getIntLE(offset + 52);
+         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("TargetedDamage", fieldOffset7, maxEnd);
+         }
+
          int pos7 = offset + 60 + fieldOffset7;
          int dictLen = VarInt.peek(buf, pos7);
-         pos7 += VarInt.length(buf, pos7);
+         pos7 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos7);
-            pos7 += VarInt.length(buf, pos7) + sl;
+            pos7 += VarInt.size(sl) + sl;
             pos7 += TargetedDamage.computeBytesConsumed(buf, pos7);
          }
 
@@ -355,9 +440,13 @@ public class DamageEntityInteraction extends Interaction {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset8 = buf.getIntLE(offset + 56);
+         if (fieldOffset8 < 0 || fieldOffset8 > buf.writerIndex() - offset - 60) {
+            throw ProtocolException.invalidOffset("EntityStatsOnHit", fieldOffset8, maxEnd);
+         }
+
          int pos8 = offset + 60 + fieldOffset8;
          int arrLen = VarInt.peek(buf, pos8);
-         pos8 += VarInt.length(buf, pos8);
+         pos8 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos8 += EntityStatOnHit.computeBytesConsumed(buf, pos8);
@@ -612,17 +701,18 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
+      int v = buffer.getByte(offset + 2) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid WaitForDataFrom value for WaitForDataFrom");
+      }
+
       if ((nullBits[0] & 1) != 0) {
-         int effectsOffset = buffer.getIntLE(offset + 24);
-         if (effectsOffset < 0) {
+         v = buffer.getIntLE(offset + 24);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for Effects");
          }
 
-         int pos = offset + 60 + effectsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Effects");
-         }
-
+         int pos = offset + 60 + v;
          ValidationResult effectsResult = InteractionEffects.validateStructure(buffer, pos);
          if (!effectsResult.isValid()) {
             return ValidationResult.error("Invalid Effects: " + effectsResult.error());
@@ -632,16 +722,12 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 2) != 0) {
-         int settingsOffset = buffer.getIntLE(offset + 28);
-         if (settingsOffset < 0) {
+         v = buffer.getIntLE(offset + 28);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for Settings");
          }
 
-         int pos = offset + 60 + settingsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Settings");
-         }
-
+         int pos = offset + 60 + v;
          int settingsCount = VarInt.peek(buffer, pos);
          if (settingsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Settings");
@@ -651,25 +737,26 @@ public class DamageEntityInteraction extends Interaction {
             return ValidationResult.error("Settings exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(settingsCount);
 
          for (int i = 0; i < settingsCount; i++) {
+            int vx = buffer.getByte(pos) & 255;
+            if (vx >= 2) {
+               return ValidationResult.error("Invalid GameMode value for key");
+            }
+
             pos++;
             pos++;
          }
       }
 
       if ((nullBits[0] & 4) != 0) {
-         int rulesOffset = buffer.getIntLE(offset + 32);
-         if (rulesOffset < 0) {
+         v = buffer.getIntLE(offset + 32);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for Rules");
          }
 
-         int pos = offset + 60 + rulesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Rules");
-         }
-
+         int pos = offset + 60 + v;
          ValidationResult rulesResult = InteractionRules.validateStructure(buffer, pos);
          if (!rulesResult.isValid()) {
             return ValidationResult.error("Invalid Rules: " + rulesResult.error());
@@ -679,16 +766,12 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 8) != 0) {
-         int tagsOffset = buffer.getIntLE(offset + 36);
-         if (tagsOffset < 0) {
+         v = buffer.getIntLE(offset + 36);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for Tags");
          }
 
-         int pos = offset + 60 + tagsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Tags");
-         }
-
+         int pos = offset + 60 + v;
          int tagsCount = VarInt.peek(buffer, pos);
          if (tagsCount < 0) {
             return ValidationResult.error("Invalid array count for Tags");
@@ -698,7 +781,7 @@ public class DamageEntityInteraction extends Interaction {
             return ValidationResult.error("Tags exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagsCount);
          pos += tagsCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Tags");
@@ -706,16 +789,12 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 16) != 0) {
-         int cameraOffset = buffer.getIntLE(offset + 40);
-         if (cameraOffset < 0) {
+         v = buffer.getIntLE(offset + 40);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for Camera");
          }
 
-         int pos = offset + 60 + cameraOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Camera");
-         }
-
+         int pos = offset + 60 + v;
          ValidationResult cameraResult = InteractionCameraSettings.validateStructure(buffer, pos);
          if (!cameraResult.isValid()) {
             return ValidationResult.error("Invalid Camera: " + cameraResult.error());
@@ -725,16 +804,12 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int damageEffectsOffset = buffer.getIntLE(offset + 44);
-         if (damageEffectsOffset < 0) {
+         v = buffer.getIntLE(offset + 44);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for DamageEffects");
          }
 
-         int pos = offset + 60 + damageEffectsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DamageEffects");
-         }
-
+         int pos = offset + 60 + v;
          ValidationResult damageEffectsResult = DamageEffects.validateStructure(buffer, pos);
          if (!damageEffectsResult.isValid()) {
             return ValidationResult.error("Invalid DamageEffects: " + damageEffectsResult.error());
@@ -744,16 +819,12 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int angledDamageOffset = buffer.getIntLE(offset + 48);
-         if (angledDamageOffset < 0) {
+         v = buffer.getIntLE(offset + 48);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for AngledDamage");
          }
 
-         int pos = offset + 60 + angledDamageOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AngledDamage");
-         }
-
+         int pos = offset + 60 + v;
          int angledDamageCount = VarInt.peek(buffer, pos);
          if (angledDamageCount < 0) {
             return ValidationResult.error("Invalid array count for AngledDamage");
@@ -763,7 +834,7 @@ public class DamageEntityInteraction extends Interaction {
             return ValidationResult.error("AngledDamage exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(angledDamageCount);
 
          for (int i = 0; i < angledDamageCount; i++) {
             ValidationResult structResult = AngledDamage.validateStructure(buffer, pos);
@@ -776,16 +847,12 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int targetedDamageOffset = buffer.getIntLE(offset + 52);
-         if (targetedDamageOffset < 0) {
+         v = buffer.getIntLE(offset + 52);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for TargetedDamage");
          }
 
-         int pos = offset + 60 + targetedDamageOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TargetedDamage");
-         }
-
+         int pos = offset + 60 + v;
          int targetedDamageCount = VarInt.peek(buffer, pos);
          if (targetedDamageCount < 0) {
             return ValidationResult.error("Invalid dictionary count for TargetedDamage");
@@ -795,7 +862,7 @@ public class DamageEntityInteraction extends Interaction {
             return ValidationResult.error("TargetedDamage exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(targetedDamageCount);
 
          for (int i = 0; i < targetedDamageCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -807,7 +874,7 @@ public class DamageEntityInteraction extends Interaction {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -818,16 +885,12 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int entityStatsOnHitOffset = buffer.getIntLE(offset + 56);
-         if (entityStatsOnHitOffset < 0) {
+         v = buffer.getIntLE(offset + 56);
+         if (v < 0 || v > buffer.writerIndex() - offset - 60) {
             return ValidationResult.error("Invalid offset for EntityStatsOnHit");
          }
 
-         int pos = offset + 60 + entityStatsOnHitOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for EntityStatsOnHit");
-         }
-
+         int pos = offset + 60 + v;
          int entityStatsOnHitCount = VarInt.peek(buffer, pos);
          if (entityStatsOnHitCount < 0) {
             return ValidationResult.error("Invalid array count for EntityStatsOnHit");
@@ -837,7 +900,7 @@ public class DamageEntityInteraction extends Interaction {
             return ValidationResult.error("EntityStatsOnHit exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(entityStatsOnHitCount);
 
          for (int i = 0; i < entityStatsOnHitCount; i++) {
             ValidationResult structResult = EntityStatOnHit.validateStructure(buffer, pos);

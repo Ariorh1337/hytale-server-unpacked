@@ -38,6 +38,10 @@ public class ItemEntityConfig {
 
    @Nonnull
    public static ItemEntityConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("ItemEntityConfig", 5, buf.readableBytes() - offset);
+      }
+
       ItemEntityConfig obj = new ItemEntityConfig();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -49,14 +53,18 @@ public class ItemEntityConfig {
       if ((nullBits & 2) != 0) {
          int particleSystemIdLen = VarInt.peek(buf, pos);
          if (particleSystemIdLen < 0) {
-            throw ProtocolException.negativeLength("ParticleSystemId", particleSystemIdLen);
+            throw ProtocolException.invalidVarInt("ParticleSystemId");
          }
 
+         int particleSystemIdVarLen = VarInt.size(particleSystemIdLen);
          if (particleSystemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ParticleSystemId", particleSystemIdLen, 4096000);
          }
 
-         int particleSystemIdVarLen = VarInt.length(buf, pos);
+         if (pos + particleSystemIdVarLen + particleSystemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ParticleSystemId", pos + particleSystemIdVarLen + particleSystemIdLen, buf.readableBytes());
+         }
+
          obj.particleSystemId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += particleSystemIdVarLen + particleSystemIdLen;
       }
@@ -69,7 +77,7 @@ public class ItemEntityConfig {
       int pos = offset + 5;
       if ((nullBits & 2) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -124,7 +132,7 @@ public class ItemEntityConfig {
             return ValidationResult.error("ParticleSystemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(particleSystemIdLen);
          pos += particleSystemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ParticleSystemId");

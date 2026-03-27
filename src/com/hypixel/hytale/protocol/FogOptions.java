@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -48,6 +49,10 @@ public class FogOptions {
 
    @Nonnull
    public static FogOptions deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 18) {
+         throw ProtocolException.bufferTooSmall("FogOptions", 18, buf.readableBytes() - offset);
+      }
+
       FogOptions obj = new FogOptions();
       obj.ignoreFogLimits = buf.getByte(offset + 0) != 0;
       obj.effectiveViewDistanceMultiplier = buf.getFloatLE(offset + 1);

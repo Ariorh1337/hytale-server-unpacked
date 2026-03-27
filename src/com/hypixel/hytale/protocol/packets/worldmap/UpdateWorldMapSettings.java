@@ -90,6 +90,10 @@ public class UpdateWorldMapSettings implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateWorldMapSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 20) {
+         throw ProtocolException.bufferTooSmall("UpdateWorldMapSettings", 20, buf.readableBytes() - offset);
+      }
+
       UpdateWorldMapSettings obj = new UpdateWorldMapSettings();
       byte nullBits = buf.getByte(offset);
       obj.enabled = buf.getByte(offset + 1) != 0;
@@ -106,14 +110,15 @@ public class UpdateWorldMapSettings implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int biomeDataMapCount = VarInt.peek(buf, pos);
          if (biomeDataMapCount < 0) {
-            throw ProtocolException.negativeLength("BiomeDataMap", biomeDataMapCount);
+            throw ProtocolException.invalidVarInt("BiomeDataMap");
          }
 
+         int biomeDataMapVarLen = VarInt.size(biomeDataMapCount);
          if (biomeDataMapCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("BiomeDataMap", biomeDataMapCount, 4096000);
          }
 
-         pos += VarInt.size(biomeDataMapCount);
+         pos += biomeDataMapVarLen;
          obj.biomeDataMap = new HashMap<>(biomeDataMapCount);
 
          for (int i = 0; i < biomeDataMapCount; i++) {
@@ -135,7 +140,7 @@ public class UpdateWorldMapSettings implements Packet, ToClientPacket {
       int pos = offset + 20;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 2;
@@ -211,7 +216,7 @@ public class UpdateWorldMapSettings implements Packet, ToClientPacket {
             return ValidationResult.error("BiomeDataMap exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(biomeDataMapCount);
 
          for (int i = 0; i < biomeDataMapCount; i++) {
             pos += 2;

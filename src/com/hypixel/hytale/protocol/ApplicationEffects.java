@@ -94,6 +94,10 @@ public class ApplicationEffects {
 
    @Nonnull
    public static ApplicationEffects deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 59) {
+         throw ProtocolException.bufferTooSmall("ApplicationEffects", 59, buf.readableBytes() - offset);
+      }
+
       ApplicationEffects obj = new ApplicationEffects();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       if ((nullBits[0] & 1) != 0) {
@@ -114,31 +118,46 @@ public class ApplicationEffects {
       obj.mouseSensitivityAdjustmentTarget = buf.getFloatLE(offset + 27);
       obj.mouseSensitivityAdjustmentDuration = buf.getFloatLE(offset + 31);
       if ((nullBits[0] & 8) != 0) {
-         int varPos0 = offset + 59 + buf.getIntLE(offset + 35);
-         int entityAnimationIdLen = VarInt.peek(buf, varPos0);
-         if (entityAnimationIdLen < 0) {
-            throw ProtocolException.negativeLength("EntityAnimationId", entityAnimationIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 35);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("EntityAnimationId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 59 + varPosBase0;
+         int entityAnimationIdLen = VarInt.peek(buf, varPos0);
+         if (entityAnimationIdLen < 0) {
+            throw ProtocolException.invalidVarInt("EntityAnimationId");
+         }
+
+         int entityAnimationIdVarIntLen = VarInt.size(entityAnimationIdLen);
          if (entityAnimationIdLen > 4096000) {
             throw ProtocolException.stringTooLong("EntityAnimationId", entityAnimationIdLen, 4096000);
+         }
+
+         if (varPos0 + entityAnimationIdVarIntLen + entityAnimationIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("EntityAnimationId", varPos0 + entityAnimationIdVarIntLen + entityAnimationIdLen, buf.readableBytes());
          }
 
          obj.entityAnimationId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits[0] & 16) != 0) {
-         int varPos1 = offset + 59 + buf.getIntLE(offset + 39);
-         int particlesCount = VarInt.peek(buf, varPos1);
-         if (particlesCount < 0) {
-            throw ProtocolException.negativeLength("Particles", particlesCount);
+         int varPosBase1 = buf.getIntLE(offset + 39);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("Particles", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 59 + varPosBase1;
+         int particlesCount = VarInt.peek(buf, varPos1);
+         if (particlesCount < 0) {
+            throw ProtocolException.invalidVarInt("Particles");
+         }
+
+         int varIntLen = VarInt.size(particlesCount);
          if (particlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Particles", varPos1 + varIntLen + particlesCount * 34, buf.readableBytes());
          }
@@ -153,17 +172,22 @@ public class ApplicationEffects {
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int varPos2 = offset + 59 + buf.getIntLE(offset + 43);
-         int firstPersonParticlesCount = VarInt.peek(buf, varPos2);
-         if (firstPersonParticlesCount < 0) {
-            throw ProtocolException.negativeLength("FirstPersonParticles", firstPersonParticlesCount);
+         int varPosBase2 = buf.getIntLE(offset + 43);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("FirstPersonParticles", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 59 + varPosBase2;
+         int firstPersonParticlesCount = VarInt.peek(buf, varPos2);
+         if (firstPersonParticlesCount < 0) {
+            throw ProtocolException.invalidVarInt("FirstPersonParticles");
+         }
+
+         int varIntLen = VarInt.size(firstPersonParticlesCount);
          if (firstPersonParticlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("FirstPersonParticles", firstPersonParticlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + firstPersonParticlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FirstPersonParticles", varPos2 + varIntLen + firstPersonParticlesCount * 34, buf.readableBytes());
          }
@@ -178,35 +202,60 @@ public class ApplicationEffects {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int varPos3 = offset + 59 + buf.getIntLE(offset + 47);
-         int screenEffectLen = VarInt.peek(buf, varPos3);
-         if (screenEffectLen < 0) {
-            throw ProtocolException.negativeLength("ScreenEffect", screenEffectLen);
+         int varPosBase3 = buf.getIntLE(offset + 47);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("ScreenEffect", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 59 + varPosBase3;
+         int screenEffectLen = VarInt.peek(buf, varPos3);
+         if (screenEffectLen < 0) {
+            throw ProtocolException.invalidVarInt("ScreenEffect");
+         }
+
+         int screenEffectVarIntLen = VarInt.size(screenEffectLen);
          if (screenEffectLen > 4096000) {
             throw ProtocolException.stringTooLong("ScreenEffect", screenEffectLen, 4096000);
+         }
+
+         if (varPos3 + screenEffectVarIntLen + screenEffectLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ScreenEffect", varPos3 + screenEffectVarIntLen + screenEffectLen, buf.readableBytes());
          }
 
          obj.screenEffect = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos4 = offset + 59 + buf.getIntLE(offset + 51);
-         int modelVFXIdLen = VarInt.peek(buf, varPos4);
-         if (modelVFXIdLen < 0) {
-            throw ProtocolException.negativeLength("ModelVFXId", modelVFXIdLen);
+         int varPosBase4 = buf.getIntLE(offset + 51);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("ModelVFXId", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 59 + varPosBase4;
+         int modelVFXIdLen = VarInt.peek(buf, varPos4);
+         if (modelVFXIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ModelVFXId");
+         }
+
+         int modelVFXIdVarIntLen = VarInt.size(modelVFXIdLen);
          if (modelVFXIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ModelVFXId", modelVFXIdLen, 4096000);
+         }
+
+         if (varPos4 + modelVFXIdVarIntLen + modelVFXIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ModelVFXId", varPos4 + modelVFXIdVarIntLen + modelVFXIdLen, buf.readableBytes());
          }
 
          obj.modelVFXId = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos5 = offset + 59 + buf.getIntLE(offset + 55);
+         int varPosBase5 = buf.getIntLE(offset + 55);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("AbilityEffects", varPosBase5, buf.readableBytes());
+         }
+
+         int varPos5 = offset + 59 + varPosBase5;
          obj.abilityEffects = AbilityEffects.deserialize(buf, varPos5);
       }
 
@@ -218,9 +267,13 @@ public class ApplicationEffects {
       int maxEnd = 59;
       if ((nullBits[0] & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 35);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("EntityAnimationId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 59 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -228,9 +281,13 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 39);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("Particles", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 59 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += ModelParticle.computeBytesConsumed(buf, pos1);
@@ -243,9 +300,13 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 32) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 43);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("FirstPersonParticles", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 59 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += ModelParticle.computeBytesConsumed(buf, pos2);
@@ -258,9 +319,13 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 64) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 47);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("ScreenEffect", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 59 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -268,9 +333,13 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 51);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("ModelVFXId", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 59 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -278,6 +347,10 @@ public class ApplicationEffects {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 55);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 59) {
+            throw ProtocolException.invalidOffset("AbilityEffects", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 59 + fieldOffset5;
          pos5 += AbilityEffects.computeBytesConsumed(buf, pos5);
          if (pos5 - offset > maxEnd) {
@@ -472,15 +545,11 @@ public class ApplicationEffects {
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
       if ((nullBits[0] & 8) != 0) {
          int entityAnimationIdOffset = buffer.getIntLE(offset + 35);
-         if (entityAnimationIdOffset < 0) {
+         if (entityAnimationIdOffset < 0 || entityAnimationIdOffset > buffer.writerIndex() - offset - 59) {
             return ValidationResult.error("Invalid offset for EntityAnimationId");
          }
 
          int pos = offset + 59 + entityAnimationIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for EntityAnimationId");
-         }
-
          int entityAnimationIdLen = VarInt.peek(buffer, pos);
          if (entityAnimationIdLen < 0) {
             return ValidationResult.error("Invalid string length for EntityAnimationId");
@@ -490,7 +559,7 @@ public class ApplicationEffects {
             return ValidationResult.error("EntityAnimationId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(entityAnimationIdLen);
          pos += entityAnimationIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading EntityAnimationId");
@@ -499,15 +568,11 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 16) != 0) {
          int particlesOffset = buffer.getIntLE(offset + 39);
-         if (particlesOffset < 0) {
+         if (particlesOffset < 0 || particlesOffset > buffer.writerIndex() - offset - 59) {
             return ValidationResult.error("Invalid offset for Particles");
          }
 
          int pos = offset + 59 + particlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Particles");
-         }
-
          int particlesCount = VarInt.peek(buffer, pos);
          if (particlesCount < 0) {
             return ValidationResult.error("Invalid array count for Particles");
@@ -517,7 +582,7 @@ public class ApplicationEffects {
             return ValidationResult.error("Particles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(particlesCount);
 
          for (int i = 0; i < particlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);
@@ -531,15 +596,11 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 32) != 0) {
          int firstPersonParticlesOffset = buffer.getIntLE(offset + 43);
-         if (firstPersonParticlesOffset < 0) {
+         if (firstPersonParticlesOffset < 0 || firstPersonParticlesOffset > buffer.writerIndex() - offset - 59) {
             return ValidationResult.error("Invalid offset for FirstPersonParticles");
          }
 
          int pos = offset + 59 + firstPersonParticlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FirstPersonParticles");
-         }
-
          int firstPersonParticlesCount = VarInt.peek(buffer, pos);
          if (firstPersonParticlesCount < 0) {
             return ValidationResult.error("Invalid array count for FirstPersonParticles");
@@ -549,7 +610,7 @@ public class ApplicationEffects {
             return ValidationResult.error("FirstPersonParticles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(firstPersonParticlesCount);
 
          for (int i = 0; i < firstPersonParticlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);
@@ -563,15 +624,11 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 64) != 0) {
          int screenEffectOffset = buffer.getIntLE(offset + 47);
-         if (screenEffectOffset < 0) {
+         if (screenEffectOffset < 0 || screenEffectOffset > buffer.writerIndex() - offset - 59) {
             return ValidationResult.error("Invalid offset for ScreenEffect");
          }
 
          int pos = offset + 59 + screenEffectOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ScreenEffect");
-         }
-
          int screenEffectLen = VarInt.peek(buffer, pos);
          if (screenEffectLen < 0) {
             return ValidationResult.error("Invalid string length for ScreenEffect");
@@ -581,7 +638,7 @@ public class ApplicationEffects {
             return ValidationResult.error("ScreenEffect exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(screenEffectLen);
          pos += screenEffectLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ScreenEffect");
@@ -590,15 +647,11 @@ public class ApplicationEffects {
 
       if ((nullBits[0] & 128) != 0) {
          int modelVFXIdOffset = buffer.getIntLE(offset + 51);
-         if (modelVFXIdOffset < 0) {
+         if (modelVFXIdOffset < 0 || modelVFXIdOffset > buffer.writerIndex() - offset - 59) {
             return ValidationResult.error("Invalid offset for ModelVFXId");
          }
 
          int pos = offset + 59 + modelVFXIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ModelVFXId");
-         }
-
          int modelVFXIdLen = VarInt.peek(buffer, pos);
          if (modelVFXIdLen < 0) {
             return ValidationResult.error("Invalid string length for ModelVFXId");
@@ -608,7 +661,7 @@ public class ApplicationEffects {
             return ValidationResult.error("ModelVFXId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modelVFXIdLen);
          pos += modelVFXIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ModelVFXId");
@@ -617,15 +670,11 @@ public class ApplicationEffects {
 
       if ((nullBits[1] & 1) != 0) {
          int abilityEffectsOffset = buffer.getIntLE(offset + 55);
-         if (abilityEffectsOffset < 0) {
+         if (abilityEffectsOffset < 0 || abilityEffectsOffset > buffer.writerIndex() - offset - 59) {
             return ValidationResult.error("Invalid offset for AbilityEffects");
          }
 
          int pos = offset + 59 + abilityEffectsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for AbilityEffects");
-         }
-
          ValidationResult abilityEffectsResult = AbilityEffects.validateStructure(buffer, pos);
          if (!abilityEffectsResult.isValid()) {
             return ValidationResult.error("Invalid AbilityEffects: " + abilityEffectsResult.error());

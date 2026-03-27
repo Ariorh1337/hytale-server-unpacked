@@ -4,10 +4,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.ReusableList;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PositionsPinchDensity extends Density {
    @Nullable
@@ -57,10 +57,10 @@ public class PositionsPinchDensity extends Density {
    }
 
    private void pipe(@Nonnull Vector3d p, @Nonnull Control control) {
-      double distance = p.distanceTo(this.rSamplePoint);
+      double distance = p.distance(this.rSamplePoint);
       if (!(distance > this.maxDistance)) {
          double normalizedDistance = distance / this.maxDistance;
-         this.rWarpVector.assign(p).subtract(this.rSamplePoint);
+         this.rWarpVector.set(p).sub(this.rSamplePoint);
          double radialDistance;
          if (this.distanceNormalized) {
             radialDistance = this.pinchCurve.applyAsDouble(normalizedDistance);
@@ -70,13 +70,13 @@ public class PositionsPinchDensity extends Density {
          }
 
          if (!(Math.abs(this.rWarpVector.length()) < 1.0E-9)) {
-            this.rWarpVector.setLength(radialDistance);
+            this.rWarpVector.normalize(radialDistance);
          }
 
          if (this.rWarpVectors.isAtHardCapacity()) {
-            this.rWarpVectors.expandAndSet(this.rWarpVector.clone());
+            this.rWarpVectors.expandAndSet(new Vector3d(this.rWarpVector));
          } else {
-            this.rWarpVectors.expandAndGet().assign(this.rWarpVector);
+            this.rWarpVectors.expandAndGet().set(this.rWarpVector);
          }
 
          this.rWarpDistances.expandAndSet(normalizedDistance);
@@ -93,14 +93,14 @@ public class PositionsPinchDensity extends Density {
          return this.input.process(context);
       }
 
-      this.rMin.assign(context.position.x - this.maxDistance, context.position.y - this.maxDistance, context.position.z - this.maxDistance);
-      this.rMax.assign(context.position.x + this.maxDistance, context.position.y + this.maxDistance, context.position.z + this.maxDistance);
-      this.rSamplePoint.assign(context.position);
+      this.rMin.set(context.position.x - this.maxDistance, context.position.y - this.maxDistance, context.position.z - this.maxDistance);
+      this.rMax.set(context.position.x + this.maxDistance, context.position.y + this.maxDistance, context.position.z + this.maxDistance);
+      this.rSamplePoint.set(context.position);
       this.rWarpVectors.clear();
       this.rWarpDistances.clear();
       PositionProvider.Context positionsContext = new PositionProvider.Context();
-      positionsContext.bounds.min.assign(this.rMin);
-      positionsContext.bounds.max.assign(this.rMax);
+      positionsContext.bounds.min.set(this.rMin);
+      positionsContext.bounds.max.set(this.rMax);
       positionsContext.pipe = this::pipe;
       this.positions.generate(positionsContext);
       if (this.rWarpVectors.getSoftSize() == 0) {
@@ -129,7 +129,7 @@ public class PositionsPinchDensity extends Density {
       for (int i = 0; i < possiblePointsSize; i++) {
          double weight = this.rWeights.get(i) / totalWeight;
          Vector3d warpVector = this.rWarpVectors.get(i);
-         warpVector.scale(weight);
+         warpVector.mul(weight);
          this.rSamplePoint.add(warpVector);
       }
 

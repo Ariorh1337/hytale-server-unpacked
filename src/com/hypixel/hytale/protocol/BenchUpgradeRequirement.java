@@ -33,6 +33,10 @@ public class BenchUpgradeRequirement {
 
    @Nonnull
    public static BenchUpgradeRequirement deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("BenchUpgradeRequirement", 9, buf.readableBytes() - offset);
+      }
+
       BenchUpgradeRequirement obj = new BenchUpgradeRequirement();
       byte nullBits = buf.getByte(offset);
       obj.timeSeconds = buf.getDoubleLE(offset + 1);
@@ -40,14 +44,14 @@ public class BenchUpgradeRequirement {
       if ((nullBits & 1) != 0) {
          int materialCount = VarInt.peek(buf, pos);
          if (materialCount < 0) {
-            throw ProtocolException.negativeLength("Material", materialCount);
+            throw ProtocolException.invalidVarInt("Material");
          }
 
+         int materialVarLen = VarInt.size(materialCount);
          if (materialCount > 4096000) {
             throw ProtocolException.arrayTooLong("Material", materialCount, 4096000);
          }
 
-         int materialVarLen = VarInt.size(materialCount);
          if (pos + materialVarLen + materialCount * 9L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Material", pos + materialVarLen + materialCount * 9, buf.readableBytes());
          }
@@ -69,7 +73,7 @@ public class BenchUpgradeRequirement {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += MaterialQuantity.computeBytesConsumed(buf, pos);
@@ -132,7 +136,7 @@ public class BenchUpgradeRequirement {
             return ValidationResult.error("Material exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(materialCount);
 
          for (int i = 0; i < materialCount; i++) {
             ValidationResult structResult = MaterialQuantity.validateStructure(buffer, pos);

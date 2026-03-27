@@ -45,20 +45,24 @@ public class PasswordResponse implements Packet, ToServerPacket {
 
    @Nonnull
    public static PasswordResponse deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("PasswordResponse", 1, buf.readableBytes() - offset);
+      }
+
       PasswordResponse obj = new PasswordResponse();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int hashCount = VarInt.peek(buf, pos);
          if (hashCount < 0) {
-            throw ProtocolException.negativeLength("Hash", hashCount);
+            throw ProtocolException.invalidVarInt("Hash");
          }
 
+         int hashVarLen = VarInt.size(hashCount);
          if (hashCount > 64) {
             throw ProtocolException.arrayTooLong("Hash", hashCount, 64);
          }
 
-         int hashVarLen = VarInt.size(hashCount);
          if (pos + hashVarLen + hashCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Hash", pos + hashVarLen + hashCount * 1, buf.readableBytes());
          }
@@ -81,7 +85,7 @@ public class PasswordResponse implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -135,7 +139,7 @@ public class PasswordResponse implements Packet, ToServerPacket {
             return ValidationResult.error("Hash exceeds max length 64");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(hashCount);
          pos += hashCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Hash");

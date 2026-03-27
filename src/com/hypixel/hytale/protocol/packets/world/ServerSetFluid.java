@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -53,6 +54,10 @@ public class ServerSetFluid implements Packet, ToClientPacket {
 
    @Nonnull
    public static ServerSetFluid deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("ServerSetFluid", 17, buf.readableBytes() - offset);
+      }
+
       ServerSetFluid obj = new ServerSetFluid();
       obj.x = buf.getIntLE(offset + 0);
       obj.y = buf.getIntLE(offset + 4);

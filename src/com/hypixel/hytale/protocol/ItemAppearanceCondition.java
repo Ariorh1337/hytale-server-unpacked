@@ -72,6 +72,10 @@ public class ItemAppearanceCondition {
 
    @Nonnull
    public static ItemAppearanceCondition deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 38) {
+         throw ProtocolException.bufferTooSmall("ItemAppearanceCondition", 38, buf.readableBytes() - offset);
+      }
+
       ItemAppearanceCondition obj = new ItemAppearanceCondition();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -82,17 +86,22 @@ public class ItemAppearanceCondition {
       obj.localSoundEventId = buf.getIntLE(offset + 10);
       obj.worldSoundEventId = buf.getIntLE(offset + 14);
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 38 + buf.getIntLE(offset + 18);
-         int particlesCount = VarInt.peek(buf, varPos0);
-         if (particlesCount < 0) {
-            throw ProtocolException.negativeLength("Particles", particlesCount);
+         int varPosBase0 = buf.getIntLE(offset + 18);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("Particles", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 38 + varPosBase0;
+         int particlesCount = VarInt.peek(buf, varPos0);
+         if (particlesCount < 0) {
+            throw ProtocolException.invalidVarInt("Particles");
+         }
+
+         int varIntLen = VarInt.size(particlesCount);
          if (particlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Particles", varPos0 + varIntLen + particlesCount * 34, buf.readableBytes());
          }
@@ -107,17 +116,22 @@ public class ItemAppearanceCondition {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 38 + buf.getIntLE(offset + 22);
-         int firstPersonParticlesCount = VarInt.peek(buf, varPos1);
-         if (firstPersonParticlesCount < 0) {
-            throw ProtocolException.negativeLength("FirstPersonParticles", firstPersonParticlesCount);
+         int varPosBase1 = buf.getIntLE(offset + 22);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("FirstPersonParticles", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 38 + varPosBase1;
+         int firstPersonParticlesCount = VarInt.peek(buf, varPos1);
+         if (firstPersonParticlesCount < 0) {
+            throw ProtocolException.invalidVarInt("FirstPersonParticles");
+         }
+
+         int varIntLen = VarInt.size(firstPersonParticlesCount);
          if (firstPersonParticlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("FirstPersonParticles", firstPersonParticlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + firstPersonParticlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FirstPersonParticles", varPos1 + varIntLen + firstPersonParticlesCount * 34, buf.readableBytes());
          }
@@ -132,42 +146,72 @@ public class ItemAppearanceCondition {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos2 = offset + 38 + buf.getIntLE(offset + 26);
-         int modelLen = VarInt.peek(buf, varPos2);
-         if (modelLen < 0) {
-            throw ProtocolException.negativeLength("Model", modelLen);
+         int varPosBase2 = buf.getIntLE(offset + 26);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("Model", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 38 + varPosBase2;
+         int modelLen = VarInt.peek(buf, varPos2);
+         if (modelLen < 0) {
+            throw ProtocolException.invalidVarInt("Model");
+         }
+
+         int modelVarIntLen = VarInt.size(modelLen);
          if (modelLen > 4096000) {
             throw ProtocolException.stringTooLong("Model", modelLen, 4096000);
+         }
+
+         if (varPos2 + modelVarIntLen + modelLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Model", varPos2 + modelVarIntLen + modelLen, buf.readableBytes());
          }
 
          obj.model = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos3 = offset + 38 + buf.getIntLE(offset + 30);
-         int textureLen = VarInt.peek(buf, varPos3);
-         if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
+         int varPosBase3 = buf.getIntLE(offset + 30);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("Texture", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 38 + varPosBase3;
+         int textureLen = VarInt.peek(buf, varPos3);
+         if (textureLen < 0) {
+            throw ProtocolException.invalidVarInt("Texture");
+         }
+
+         int textureVarIntLen = VarInt.size(textureLen);
          if (textureLen > 4096000) {
             throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
+         }
+
+         if (varPos3 + textureVarIntLen + textureLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Texture", varPos3 + textureVarIntLen + textureLen, buf.readableBytes());
          }
 
          obj.texture = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos4 = offset + 38 + buf.getIntLE(offset + 34);
-         int modelVFXIdLen = VarInt.peek(buf, varPos4);
-         if (modelVFXIdLen < 0) {
-            throw ProtocolException.negativeLength("ModelVFXId", modelVFXIdLen);
+         int varPosBase4 = buf.getIntLE(offset + 34);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("ModelVFXId", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 38 + varPosBase4;
+         int modelVFXIdLen = VarInt.peek(buf, varPos4);
+         if (modelVFXIdLen < 0) {
+            throw ProtocolException.invalidVarInt("ModelVFXId");
+         }
+
+         int modelVFXIdVarIntLen = VarInt.size(modelVFXIdLen);
          if (modelVFXIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ModelVFXId", modelVFXIdLen, 4096000);
+         }
+
+         if (varPos4 + modelVFXIdVarIntLen + modelVFXIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ModelVFXId", varPos4 + modelVFXIdVarIntLen + modelVFXIdLen, buf.readableBytes());
          }
 
          obj.modelVFXId = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
@@ -181,9 +225,13 @@ public class ItemAppearanceCondition {
       int maxEnd = 38;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 18);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("Particles", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 38 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += ModelParticle.computeBytesConsumed(buf, pos0);
@@ -196,9 +244,13 @@ public class ItemAppearanceCondition {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 22);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("FirstPersonParticles", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 38 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += ModelParticle.computeBytesConsumed(buf, pos1);
@@ -211,9 +263,13 @@ public class ItemAppearanceCondition {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 26);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 38 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -221,9 +277,13 @@ public class ItemAppearanceCondition {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 30);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("Texture", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 38 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -231,9 +291,13 @@ public class ItemAppearanceCondition {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 34);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 38) {
+            throw ProtocolException.invalidOffset("ModelVFXId", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 38 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -385,17 +449,18 @@ public class ItemAppearanceCondition {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 9) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid ValueType value for ConditionValueType");
+      }
+
       if ((nullBits & 2) != 0) {
-         int particlesOffset = buffer.getIntLE(offset + 18);
-         if (particlesOffset < 0) {
+         v = buffer.getIntLE(offset + 18);
+         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
             return ValidationResult.error("Invalid offset for Particles");
          }
 
-         int pos = offset + 38 + particlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Particles");
-         }
-
+         int pos = offset + 38 + v;
          int particlesCount = VarInt.peek(buffer, pos);
          if (particlesCount < 0) {
             return ValidationResult.error("Invalid array count for Particles");
@@ -405,7 +470,7 @@ public class ItemAppearanceCondition {
             return ValidationResult.error("Particles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(particlesCount);
 
          for (int i = 0; i < particlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);
@@ -418,16 +483,12 @@ public class ItemAppearanceCondition {
       }
 
       if ((nullBits & 4) != 0) {
-         int firstPersonParticlesOffset = buffer.getIntLE(offset + 22);
-         if (firstPersonParticlesOffset < 0) {
+         v = buffer.getIntLE(offset + 22);
+         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
             return ValidationResult.error("Invalid offset for FirstPersonParticles");
          }
 
-         int pos = offset + 38 + firstPersonParticlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FirstPersonParticles");
-         }
-
+         int pos = offset + 38 + v;
          int firstPersonParticlesCount = VarInt.peek(buffer, pos);
          if (firstPersonParticlesCount < 0) {
             return ValidationResult.error("Invalid array count for FirstPersonParticles");
@@ -437,7 +498,7 @@ public class ItemAppearanceCondition {
             return ValidationResult.error("FirstPersonParticles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(firstPersonParticlesCount);
 
          for (int i = 0; i < firstPersonParticlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);
@@ -450,16 +511,12 @@ public class ItemAppearanceCondition {
       }
 
       if ((nullBits & 8) != 0) {
-         int modelOffset = buffer.getIntLE(offset + 26);
-         if (modelOffset < 0) {
+         v = buffer.getIntLE(offset + 26);
+         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
-         int pos = offset + 38 + modelOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Model");
-         }
-
+         int pos = offset + 38 + v;
          int modelLen = VarInt.peek(buffer, pos);
          if (modelLen < 0) {
             return ValidationResult.error("Invalid string length for Model");
@@ -469,7 +526,7 @@ public class ItemAppearanceCondition {
             return ValidationResult.error("Model exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modelLen);
          pos += modelLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Model");
@@ -477,16 +534,12 @@ public class ItemAppearanceCondition {
       }
 
       if ((nullBits & 16) != 0) {
-         int textureOffset = buffer.getIntLE(offset + 30);
-         if (textureOffset < 0) {
+         v = buffer.getIntLE(offset + 30);
+         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
             return ValidationResult.error("Invalid offset for Texture");
          }
 
-         int pos = offset + 38 + textureOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Texture");
-         }
-
+         int pos = offset + 38 + v;
          int textureLen = VarInt.peek(buffer, pos);
          if (textureLen < 0) {
             return ValidationResult.error("Invalid string length for Texture");
@@ -496,7 +549,7 @@ public class ItemAppearanceCondition {
             return ValidationResult.error("Texture exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(textureLen);
          pos += textureLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Texture");
@@ -504,16 +557,12 @@ public class ItemAppearanceCondition {
       }
 
       if ((nullBits & 32) != 0) {
-         int modelVFXIdOffset = buffer.getIntLE(offset + 34);
-         if (modelVFXIdOffset < 0) {
+         v = buffer.getIntLE(offset + 34);
+         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
             return ValidationResult.error("Invalid offset for ModelVFXId");
          }
 
-         int pos = offset + 38 + modelVFXIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ModelVFXId");
-         }
-
+         int pos = offset + 38 + v;
          int modelVFXIdLen = VarInt.peek(buffer, pos);
          if (modelVFXIdLen < 0) {
             return ValidationResult.error("Invalid string length for ModelVFXId");
@@ -523,7 +572,7 @@ public class ItemAppearanceCondition {
             return ValidationResult.error("ModelVFXId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modelVFXIdLen);
          pos += modelVFXIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ModelVFXId");

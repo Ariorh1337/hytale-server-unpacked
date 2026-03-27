@@ -38,9 +38,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Map.Entry;
@@ -415,7 +415,7 @@ public class I18nModule extends JavaPlugin {
                }
             }
 
-            List<PlayerRef> players = Universe.get().getPlayers();
+            Collection<PlayerRef> players = Universe.get().getPlayers();
             Map<String, UpdateTranslations[]> updatePackets = new Object2ObjectOpenHashMap<>();
 
             for (PlayerRef playerRef : players) {

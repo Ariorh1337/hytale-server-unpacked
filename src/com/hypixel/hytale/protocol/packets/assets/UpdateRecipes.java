@@ -60,35 +60,48 @@ public class UpdateRecipes implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateRecipes deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("UpdateRecipes", 10, buf.readableBytes() - offset);
+      }
+
       UpdateRecipes obj = new UpdateRecipes();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 10 + buf.getIntLE(offset + 2);
-         int recipesCount = VarInt.peek(buf, varPos0);
-         if (recipesCount < 0) {
-            throw ProtocolException.negativeLength("Recipes", recipesCount);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Recipes", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 10 + varPosBase0;
+         int recipesCount = VarInt.peek(buf, varPos0);
+         if (recipesCount < 0) {
+            throw ProtocolException.invalidVarInt("Recipes");
+         }
+
+         int varIntLen = VarInt.size(recipesCount);
          if (recipesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Recipes", recipesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          obj.recipes = new HashMap<>(recipesCount);
          int dictPos = varPos0 + varIntLen;
 
          for (int i = 0; i < recipesCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             CraftingRecipe val = CraftingRecipe.deserialize(buf, dictPos);
@@ -100,17 +113,22 @@ public class UpdateRecipes implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 10 + buf.getIntLE(offset + 6);
-         int removedRecipesCount = VarInt.peek(buf, varPos1);
-         if (removedRecipesCount < 0) {
-            throw ProtocolException.negativeLength("RemovedRecipes", removedRecipesCount);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("RemovedRecipes", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 10 + varPosBase1;
+         int removedRecipesCount = VarInt.peek(buf, varPos1);
+         if (removedRecipesCount < 0) {
+            throw ProtocolException.invalidVarInt("RemovedRecipes");
+         }
+
+         int varIntLen = VarInt.size(removedRecipesCount);
          if (removedRecipesCount > 4096000) {
             throw ProtocolException.arrayTooLong("RemovedRecipes", removedRecipesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + removedRecipesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("RemovedRecipes", varPos1 + varIntLen + removedRecipesCount * 1, buf.readableBytes());
          }
@@ -121,14 +139,18 @@ public class UpdateRecipes implements Packet, ToClientPacket {
          for (int i = 0; i < removedRecipesCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("removedRecipes[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("removedRecipes[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("removedRecipes[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("removedRecipes[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.removedRecipes[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
@@ -142,13 +164,17 @@ public class UpdateRecipes implements Packet, ToClientPacket {
       int maxEnd = 10;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Recipes", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 10 + fieldOffset0;
          int dictLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos0);
-            pos0 += VarInt.length(buf, pos0) + sl;
+            pos0 += VarInt.size(sl) + sl;
             pos0 += CraftingRecipe.computeBytesConsumed(buf, pos0);
          }
 
@@ -159,13 +185,17 @@ public class UpdateRecipes implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("RemovedRecipes", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 10 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
          }
 
          if (pos1 - offset > maxEnd) {
@@ -259,17 +289,18 @@ public class UpdateRecipes implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
       if ((nullBits & 1) != 0) {
-         int recipesOffset = buffer.getIntLE(offset + 2);
-         if (recipesOffset < 0) {
+         v = buffer.getIntLE(offset + 2);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Recipes");
          }
 
-         int pos = offset + 10 + recipesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Recipes");
-         }
-
+         int pos = offset + 10 + v;
          int recipesCount = VarInt.peek(buffer, pos);
          if (recipesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Recipes");
@@ -279,7 +310,7 @@ public class UpdateRecipes implements Packet, ToClientPacket {
             return ValidationResult.error("Recipes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(recipesCount);
 
          for (int i = 0; i < recipesCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -291,7 +322,7 @@ public class UpdateRecipes implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -302,16 +333,12 @@ public class UpdateRecipes implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int removedRecipesOffset = buffer.getIntLE(offset + 6);
-         if (removedRecipesOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for RemovedRecipes");
          }
 
-         int pos = offset + 10 + removedRecipesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for RemovedRecipes");
-         }
-
+         int pos = offset + 10 + v;
          int removedRecipesCount = VarInt.peek(buffer, pos);
          if (removedRecipesCount < 0) {
             return ValidationResult.error("Invalid array count for RemovedRecipes");
@@ -321,7 +348,7 @@ public class UpdateRecipes implements Packet, ToClientPacket {
             return ValidationResult.error("RemovedRecipes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(removedRecipesCount);
 
          for (int i = 0; i < removedRecipesCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -329,7 +356,7 @@ public class UpdateRecipes implements Packet, ToClientPacket {
                return ValidationResult.error("Invalid string length in RemovedRecipes");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in RemovedRecipes");

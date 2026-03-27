@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -27,6 +28,10 @@ public class MovementStatesUpdate extends ComponentUpdate {
 
    @Nonnull
    public static MovementStatesUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 23) {
+         throw ProtocolException.bufferTooSmall("MovementStatesUpdate", 23, buf.readableBytes() - offset);
+      }
+
       MovementStatesUpdate obj = new MovementStatesUpdate();
       obj.movementStates = MovementStates.deserialize(buf, offset + 0);
       return obj;

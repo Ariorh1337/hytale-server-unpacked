@@ -4,8 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -23,6 +22,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionMoveAway extends BodyMotionFindWithTarget {
    protected final double stopDistance;
@@ -92,16 +92,16 @@ public class BodyMotionMoveAway extends BodyMotionFindWithTarget {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d selfPosition = transformComponent.getPosition();
-      Vector3f bodyRotation = transformComponent.getRotation();
+      Rotation3f bodyRotation = transformComponent.getRotation();
       Vector3d lastTargetPosition = this.getLastTargetPosition();
       if (NPCPhysicsMath.inViewSector(
-         selfPosition.x, selfPosition.z, bodyRotation.getYaw(), this.changeDirectionViewSector, lastTargetPosition.x, lastTargetPosition.z
+         selfPosition.x, selfPosition.z, bodyRotation.yaw(), this.changeDirectionViewSector, lastTargetPosition.x, lastTargetPosition.z
       )) {
          this.holdDirectionTimeRemaining = 0.0;
       }
 
       if (this.holdDirectionTimeRemaining <= 0.0) {
-         boolean inErraticRange = selfPosition.distanceSquaredTo(lastTargetPosition) < this.erraticDistanceSquared;
+         boolean inErraticRange = selfPosition.distanceSquared(lastTargetPosition) < this.erraticDistanceSquared;
          float jitter = inErraticRange ? this.erraticJitter : this.jitterAngle;
          this.fleeDirection = PhysicsMath.headingFromDirection(selfPosition.x - lastTargetPosition.x, selfPosition.z - lastTargetPosition.z)
             + RandomExtra.randomRange(-jitter, jitter);

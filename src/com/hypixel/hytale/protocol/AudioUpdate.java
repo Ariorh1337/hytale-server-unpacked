@@ -33,14 +33,14 @@ public class AudioUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int soundEventIdsCount = VarInt.peek(buf, pos);
       if (soundEventIdsCount < 0) {
-         throw ProtocolException.negativeLength("SoundEventIds", soundEventIdsCount);
+         throw ProtocolException.invalidVarInt("SoundEventIds");
       }
 
+      int soundEventIdsVarLen = VarInt.size(soundEventIdsCount);
       if (soundEventIdsCount > 4096000) {
          throw ProtocolException.arrayTooLong("SoundEventIds", soundEventIdsCount, 4096000);
       }
 
-      int soundEventIdsVarLen = VarInt.size(soundEventIdsCount);
       if (pos + soundEventIdsVarLen + soundEventIdsCount * 4L > buf.readableBytes()) {
          throw ProtocolException.bufferTooSmall("SoundEventIds", pos + soundEventIdsVarLen + soundEventIdsCount * 4, buf.readableBytes());
       }
@@ -59,7 +59,7 @@ public class AudioUpdate extends ComponentUpdate {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + arrLen * 4;
+      pos += VarInt.size(arrLen) + arrLen * 4;
       return pos - offset;
    }
 
@@ -100,7 +100,7 @@ public class AudioUpdate extends ComponentUpdate {
          return ValidationResult.error("SoundEventIds exceeds max length 4096000");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(soundEventIdsCount);
       pos += soundEventIdsCount * 4;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading SoundEventIds") : ValidationResult.OK;
    }

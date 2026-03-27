@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -57,6 +58,10 @@ public class PlaySoundEventLocalPlayer implements Packet, ToClientPacket {
 
    @Nonnull
    public static PlaySoundEventLocalPlayer deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("PlaySoundEventLocalPlayer", 17, buf.readableBytes() - offset);
+      }
+
       PlaySoundEventLocalPlayer obj = new PlaySoundEventLocalPlayer();
       obj.localSoundEventIndex = buf.getIntLE(offset + 0);
       obj.worldSoundEventIndex = buf.getIntLE(offset + 4);
@@ -85,7 +90,12 @@ public class PlaySoundEventLocalPlayer implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 17 ? ValidationResult.error("Buffer too small: expected at least 17 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 17) {
+         return ValidationResult.error("Buffer too small: expected at least 17 bytes");
+      }
+
+      int v = buffer.getByte(offset + 8) & 255;
+      return v >= 5 ? ValidationResult.error("Invalid SoundCategory value for Category") : ValidationResult.OK;
    }
 
    public PlaySoundEventLocalPlayer clone() {

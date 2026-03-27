@@ -46,20 +46,28 @@ public class UpdateLanguage implements Packet, ToServerPacket {
 
    @Nonnull
    public static UpdateLanguage deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateLanguage", 1, buf.readableBytes() - offset);
+      }
+
       UpdateLanguage obj = new UpdateLanguage();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int languageLen = VarInt.peek(buf, pos);
          if (languageLen < 0) {
-            throw ProtocolException.negativeLength("Language", languageLen);
+            throw ProtocolException.invalidVarInt("Language");
          }
 
+         int languageVarLen = VarInt.size(languageLen);
          if (languageLen > 4096000) {
             throw ProtocolException.stringTooLong("Language", languageLen, 4096000);
          }
 
-         int languageVarLen = VarInt.length(buf, pos);
+         if (pos + languageVarLen + languageLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Language", pos + languageVarLen + languageLen, buf.readableBytes());
+         }
+
          obj.language = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += languageVarLen + languageLen;
       }
@@ -72,7 +80,7 @@ public class UpdateLanguage implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,7 +126,7 @@ public class UpdateLanguage implements Packet, ToServerPacket {
             return ValidationResult.error("Language exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(languageLen);
          pos += languageLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Language");

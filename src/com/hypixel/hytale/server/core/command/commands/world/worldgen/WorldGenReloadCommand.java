@@ -106,8 +106,8 @@ public class WorldGenReloadCommand extends AbstractAsyncWorldCommand {
    private static CompletableFuture<Void> clearChunks(@Nonnull CommandContext context, @Nonnull World world) {
       ChunkStore chunkComponentStore = world.getChunkStore();
       Store<ChunkStore> componentStore = chunkComponentStore.getStore();
+      world.lockSaving();
       ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
-      data.isSaving = false;
       data.clearSaveQueue();
       context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_CHUNK_SAVING_DISABLED);
       context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_DELETING_CHUNKS);
@@ -172,9 +172,7 @@ public class WorldGenReloadCommand extends AbstractAsyncWorldCommand {
                return CompletableFuture.allOf(regenerateFutures.toArray(CompletableFuture[]::new));
             }, world)
             .thenRunAsync(() -> {
-               Store<ChunkStore> chunkStore = chunkComponentStore.getStore();
-               ChunkSavingSystems.Data saveData = chunkStore.getResource(ChunkStore.SAVE_RESOURCE);
-               saveData.isSaving = true;
+               world.unlockSaving();
                context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_CHUNK_SAVING_ENABLED);
             }, world);
       }

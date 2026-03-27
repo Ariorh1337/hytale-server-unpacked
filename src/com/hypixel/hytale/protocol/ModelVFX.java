@@ -98,6 +98,10 @@ public class ModelVFX {
 
    @Nonnull
    public static ModelVFX deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 49) {
+         throw ProtocolException.bufferTooSmall("ModelVFX", 49, buf.readableBytes() - offset);
+      }
+
       ModelVFX obj = new ModelVFX();
       byte nullBits = buf.getByte(offset);
       obj.switchTo = SwitchTo.fromValue(buf.getByte(offset + 1));
@@ -133,14 +137,18 @@ public class ModelVFX {
       if ((nullBits & 32) != 0) {
          int idLen = VarInt.peek(buf, pos);
          if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+            throw ProtocolException.invalidVarInt("Id");
          }
 
+         int idVarLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
          }
 
-         int idVarLen = VarInt.length(buf, pos);
+         if (pos + idVarLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", pos + idVarLen + idLen, buf.readableBytes());
+         }
+
          obj.id = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += idVarLen + idLen;
       }
@@ -153,7 +161,7 @@ public class ModelVFX {
       int pos = offset + 49;
       if ((nullBits & 32) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -245,9 +253,29 @@ public class ModelVFX {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 49;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid SwitchTo value for SwitchTo");
+      }
+
+      v = buffer.getByte(offset + 2) & 255;
+      if (v >= 5) {
+         return ValidationResult.error("Invalid EffectDirection value for EffectDirection");
+      }
+
+      v = buffer.getByte(offset + 15) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid LoopOption value for LoopOption");
+      }
+
+      v = buffer.getByte(offset + 16) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid CurveType value for CurveType");
+      }
+
+      v = offset + 49;
       if ((nullBits & 32) != 0) {
-         int idLen = VarInt.peek(buffer, pos);
+         int idLen = VarInt.peek(buffer, v);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
          }
@@ -256,9 +284,9 @@ public class ModelVFX {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += idLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(idLen);
+         v += idLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
          }
       }

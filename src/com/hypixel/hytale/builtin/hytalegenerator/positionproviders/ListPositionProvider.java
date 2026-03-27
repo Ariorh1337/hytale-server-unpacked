@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ListPositionProvider extends PositionProvider {
    private List<Vector3d> positions = new ArrayList<>();
@@ -12,7 +12,7 @@ public class ListPositionProvider extends PositionProvider {
    private final Control rControl;
 
    public ListPositionProvider(@Nonnull List<Vector3d> positions) {
-      positions.forEach(p -> this.positions.add(p.clone()));
+      positions.forEach(p -> this.positions.add(new Vector3d(p)));
       this.rControl = new Control();
    }
 

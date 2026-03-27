@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -35,6 +36,10 @@ public class BlockMatcher {
 
    @Nonnull
    public static BlockMatcher deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 3) {
+         throw ProtocolException.bufferTooSmall("BlockMatcher", 3, buf.readableBytes() - offset);
+      }
+
       BlockMatcher obj = new BlockMatcher();
       byte nullBits = buf.getByte(offset);
       obj.face = BlockFace.fromValue(buf.getByte(offset + 1));
@@ -87,14 +92,19 @@ public class BlockMatcher {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 3;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 7) {
+         return ValidationResult.error("Invalid BlockFace value for Face");
+      }
+
+      v = offset + 3;
       if ((nullBits & 1) != 0) {
-         ValidationResult blockResult = BlockIdMatcher.validateStructure(buffer, pos);
+         ValidationResult blockResult = BlockIdMatcher.validateStructure(buffer, v);
          if (!blockResult.isValid()) {
             return ValidationResult.error("Invalid Block: " + blockResult.error());
          }
 
-         pos += BlockIdMatcher.computeBytesConsumed(buffer, pos);
+         v += BlockIdMatcher.computeBytesConsumed(buffer, v);
       }
 
       return ValidationResult.OK;

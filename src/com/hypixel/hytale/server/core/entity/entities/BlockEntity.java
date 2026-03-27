@@ -9,8 +9,7 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
@@ -26,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BlockEntity implements Component<EntityStore> {
    public static final BuilderCodec<BlockEntity> CODEC = BuilderCodec.builder(BlockEntity.class, BlockEntity::new)
@@ -59,7 +59,7 @@ public class BlockEntity implements Component<EntityStore> {
       Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
       holder.addComponent(getComponentType(), new BlockEntity(blockTypeKey));
       holder.addComponent(DespawnComponent.getComponentType(), DespawnComponent.despawnInSeconds(time, 120));
-      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position.clone(), Vector3f.FORWARD));
+      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(new Vector3d(position), Rotation3f.IDENTITY));
       holder.ensureComponent(Velocity.getComponentType());
       holder.ensureComponent(UUIDComponent.getComponentType());
       return holder;

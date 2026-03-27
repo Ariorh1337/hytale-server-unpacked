@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -39,6 +40,10 @@ public class BenchTierLevel {
 
    @Nonnull
    public static BenchTierLevel deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("BenchTierLevel", 17, buf.readableBytes() - offset);
+      }
+
       BenchTierLevel obj = new BenchTierLevel();
       byte nullBits = buf.getByte(offset);
       obj.craftingTimeReductionModifier = buf.getDoubleLE(offset + 1);

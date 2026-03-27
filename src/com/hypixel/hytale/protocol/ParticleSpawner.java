@@ -152,6 +152,10 @@ public class ParticleSpawner {
 
    @Nonnull
    public static ParticleSpawner deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 147) {
+         throw ProtocolException.bufferTooSmall("ParticleSpawner", 147, buf.readableBytes() - offset);
+      }
+
       ParticleSpawner obj = new ParticleSpawner();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       obj.shape = EmitShape.fromValue(buf.getByte(offset + 2));
@@ -202,41 +206,66 @@ public class ParticleSpawner {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos0 = offset + 147 + buf.getIntLE(offset + 131);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 131);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 147 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos1 = offset + 147 + buf.getIntLE(offset + 135);
+         int varPosBase1 = buf.getIntLE(offset + 135);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("Particle", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 147 + varPosBase1;
          obj.particle = Particle.deserialize(buf, varPos1);
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int varPos2 = offset + 147 + buf.getIntLE(offset + 139);
+         int varPosBase2 = buf.getIntLE(offset + 139);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("UvMotion", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 147 + varPosBase2;
          obj.uvMotion = UVMotion.deserialize(buf, varPos2);
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int varPos3 = offset + 147 + buf.getIntLE(offset + 143);
-         int attractorsCount = VarInt.peek(buf, varPos3);
-         if (attractorsCount < 0) {
-            throw ProtocolException.negativeLength("Attractors", attractorsCount);
+         int varPosBase3 = buf.getIntLE(offset + 143);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("Attractors", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 147 + varPosBase3;
+         int attractorsCount = VarInt.peek(buf, varPos3);
+         if (attractorsCount < 0) {
+            throw ProtocolException.invalidVarInt("Attractors");
+         }
+
+         int varIntLen = VarInt.size(attractorsCount);
          if (attractorsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Attractors", attractorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + attractorsCount * 85L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Attractors", varPos3 + varIntLen + attractorsCount * 85, buf.readableBytes());
          }
@@ -258,9 +287,13 @@ public class ParticleSpawner {
       int maxEnd = 147;
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 131);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 147 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -268,6 +301,10 @@ public class ParticleSpawner {
 
       if ((nullBits[1] & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 135);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("Particle", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 147 + fieldOffset1;
          pos1 += Particle.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -277,6 +314,10 @@ public class ParticleSpawner {
 
       if ((nullBits[1] & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 139);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("UvMotion", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 147 + fieldOffset2;
          pos2 += UVMotion.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -286,9 +327,13 @@ public class ParticleSpawner {
 
       if ((nullBits[1] & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 143);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 147) {
+            throw ProtocolException.invalidOffset("Attractors", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 147 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos3 += ParticleAttractor.computeBytesConsumed(buf, pos3);
@@ -490,17 +535,28 @@ public class ParticleSpawner {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
+      int v = buffer.getByte(offset + 2) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid EmitShape value for Shape");
+      }
+
+      v = buffer.getByte(offset + 95) & 255;
+      if (v >= 5) {
+         return ValidationResult.error("Invalid ParticleRotationInfluence value for ParticleRotationInfluence");
+      }
+
+      v = buffer.getByte(offset + 109) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid FXRenderMode value for RenderMode");
+      }
+
       if ((nullBits[1] & 1) != 0) {
-         int idOffset = buffer.getIntLE(offset + 131);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 131);
+         if (v < 0 || v > buffer.writerIndex() - offset - 147) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 147 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 147 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -510,7 +566,7 @@ public class ParticleSpawner {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -518,16 +574,12 @@ public class ParticleSpawner {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int particleOffset = buffer.getIntLE(offset + 135);
-         if (particleOffset < 0) {
+         v = buffer.getIntLE(offset + 135);
+         if (v < 0 || v > buffer.writerIndex() - offset - 147) {
             return ValidationResult.error("Invalid offset for Particle");
          }
 
-         int pos = offset + 147 + particleOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Particle");
-         }
-
+         int pos = offset + 147 + v;
          ValidationResult particleResult = Particle.validateStructure(buffer, pos);
          if (!particleResult.isValid()) {
             return ValidationResult.error("Invalid Particle: " + particleResult.error());
@@ -537,16 +589,12 @@ public class ParticleSpawner {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int uvMotionOffset = buffer.getIntLE(offset + 139);
-         if (uvMotionOffset < 0) {
+         v = buffer.getIntLE(offset + 139);
+         if (v < 0 || v > buffer.writerIndex() - offset - 147) {
             return ValidationResult.error("Invalid offset for UvMotion");
          }
 
-         int pos = offset + 147 + uvMotionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for UvMotion");
-         }
-
+         int pos = offset + 147 + v;
          ValidationResult uvMotionResult = UVMotion.validateStructure(buffer, pos);
          if (!uvMotionResult.isValid()) {
             return ValidationResult.error("Invalid UvMotion: " + uvMotionResult.error());
@@ -556,16 +604,12 @@ public class ParticleSpawner {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int attractorsOffset = buffer.getIntLE(offset + 143);
-         if (attractorsOffset < 0) {
+         v = buffer.getIntLE(offset + 143);
+         if (v < 0 || v > buffer.writerIndex() - offset - 147) {
             return ValidationResult.error("Invalid offset for Attractors");
          }
 
-         int pos = offset + 147 + attractorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Attractors");
-         }
-
+         int pos = offset + 147 + v;
          int attractorsCount = VarInt.peek(buffer, pos);
          if (attractorsCount < 0) {
             return ValidationResult.error("Invalid array count for Attractors");
@@ -575,7 +619,7 @@ public class ParticleSpawner {
             return ValidationResult.error("Attractors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(attractorsCount);
          pos += attractorsCount * 85;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Attractors");

@@ -19,8 +19,6 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.RepulsionUpdate;
@@ -38,6 +36,8 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class RepulsionSystems {
    public static class EntityTrackerRemove extends RefChangeSystem<EntityStore, Repulsion> {
@@ -252,7 +252,7 @@ public class RepulsionSystems {
                if (entityTransformComponent != null) {
                   Vector2d entityPosition = new Vector2d(entityTransformComponent.getPosition().x, entityTransformComponent.getPosition().z);
                   if (!entityPosition.equals(position)) {
-                     double distance = position.distanceTo(entityPosition);
+                     double distance = position.distance(entityPosition);
                      if (!(distance < 0.1)) {
                         double fraction = (radius - distance) / radius;
                         float maxForce = repulsion.maxForce;
@@ -264,9 +264,9 @@ public class RepulsionSystems {
 
                         double force = Math.max(repulsion.minForce, maxForce * fraction);
                         force *= flip;
-                        Vector2d push = entityPosition.subtract(position);
+                        Vector2d push = entityPosition.sub(position);
                         push.normalize();
-                        push.scale(force);
+                        push.mul(force);
                         Velocity entityVelocityComponent = commandBuffer.getComponent(entityRef, Velocity.getComponentType());
                         if (entityVelocityComponent != null) {
                            Vector3d addedVelocity = new Vector3d((float)push.x, 0.0, (float)push.y);

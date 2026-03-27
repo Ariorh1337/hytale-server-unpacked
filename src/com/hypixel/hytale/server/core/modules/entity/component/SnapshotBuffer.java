@@ -2,14 +2,14 @@ package com.hypixel.hytale.server.core.modules.entity.component;
 
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.entity.EntitySnapshot;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SnapshotBuffer implements Component<EntityStore> {
    private EntitySnapshot[] snapshots;
@@ -61,7 +61,7 @@ public class SnapshotBuffer implements Component<EntityStore> {
       return this.snapshots[index];
    }
 
-   public void storeSnapshot(int tickIndex, @Nonnull Vector3d position, @Nonnull Vector3f bodyRotation) {
+   public void storeSnapshot(int tickIndex, @Nonnull Vector3d position, @Nonnull Rotation3f bodyRotation) {
       if (this.currentIndex != -1 && this.currentTickIndex != tickIndex - 1) {
          this.currentIndex = -1;
          this.currentTickIndex = Integer.MIN_VALUE;

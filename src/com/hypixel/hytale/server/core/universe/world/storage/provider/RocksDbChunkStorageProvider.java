@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.BufferChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
+import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
@@ -217,6 +218,20 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
 
       @Override
       public void close() throws IOException {
+      }
+
+      @Override
+      public void pauseBackgroundSaving(ChunkSavingSystems.Data data) {
+         data.pushSavingFuture(CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> this.db.db.pauseBackgroundWork())));
+      }
+
+      @Override
+      public void resumeBackgroundSaving() {
+         try {
+            this.db.db.continueBackgroundWork();
+         } catch (RocksDBException e) {
+            throw SneakyThrow.sneakyThrow(e);
+         }
       }
    }
 }

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -36,16 +37,30 @@ public class ConnectedBlockRuleSet {
 
    @Nonnull
    public static ConnectedBlockRuleSet deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("ConnectedBlockRuleSet", 10, buf.readableBytes() - offset);
+      }
+
       ConnectedBlockRuleSet obj = new ConnectedBlockRuleSet();
       byte nullBits = buf.getByte(offset);
       obj.type = ConnectedBlockRuleSetType.fromValue(buf.getByte(offset + 1));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 10 + buf.getIntLE(offset + 2);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Stair", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 10 + varPosBase0;
          obj.stair = StairConnectedBlockRuleSet.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 10 + buf.getIntLE(offset + 6);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Roof", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 10 + varPosBase1;
          obj.roof = RoofConnectedBlockRuleSet.deserialize(buf, varPos1);
       }
 
@@ -57,6 +72,10 @@ public class ConnectedBlockRuleSet {
       int maxEnd = 10;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Stair", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 10 + fieldOffset0;
          pos0 += StairConnectedBlockRuleSet.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -66,6 +85,10 @@ public class ConnectedBlockRuleSet {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Roof", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 10 + fieldOffset1;
          pos1 += RoofConnectedBlockRuleSet.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -128,17 +151,18 @@ public class ConnectedBlockRuleSet {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid ConnectedBlockRuleSetType value for Type");
+      }
+
       if ((nullBits & 1) != 0) {
-         int stairOffset = buffer.getIntLE(offset + 2);
-         if (stairOffset < 0) {
+         v = buffer.getIntLE(offset + 2);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Stair");
          }
 
-         int pos = offset + 10 + stairOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Stair");
-         }
-
+         int pos = offset + 10 + v;
          ValidationResult stairResult = StairConnectedBlockRuleSet.validateStructure(buffer, pos);
          if (!stairResult.isValid()) {
             return ValidationResult.error("Invalid Stair: " + stairResult.error());
@@ -148,16 +172,12 @@ public class ConnectedBlockRuleSet {
       }
 
       if ((nullBits & 2) != 0) {
-         int roofOffset = buffer.getIntLE(offset + 6);
-         if (roofOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Roof");
          }
 
-         int pos = offset + 10 + roofOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Roof");
-         }
-
+         int pos = offset + 10 + v;
          ValidationResult roofResult = RoofConnectedBlockRuleSet.validateStructure(buffer, pos);
          if (!roofResult.isValid()) {
             return ValidationResult.error("Invalid Roof: " + roofResult.error());

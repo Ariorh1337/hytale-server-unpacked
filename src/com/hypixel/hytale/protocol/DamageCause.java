@@ -35,31 +35,55 @@ public class DamageCause {
 
    @Nonnull
    public static DamageCause deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("DamageCause", 9, buf.readableBytes() - offset);
+      }
+
       DamageCause obj = new DamageCause();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int damageTextColorLen = VarInt.peek(buf, varPos1);
-         if (damageTextColorLen < 0) {
-            throw ProtocolException.negativeLength("DamageTextColor", damageTextColorLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("DamageTextColor", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int damageTextColorLen = VarInt.peek(buf, varPos1);
+         if (damageTextColorLen < 0) {
+            throw ProtocolException.invalidVarInt("DamageTextColor");
+         }
+
+         int damageTextColorVarIntLen = VarInt.size(damageTextColorLen);
          if (damageTextColorLen > 4096000) {
             throw ProtocolException.stringTooLong("DamageTextColor", damageTextColorLen, 4096000);
+         }
+
+         if (varPos1 + damageTextColorVarIntLen + damageTextColorLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("DamageTextColor", varPos1 + damageTextColorVarIntLen + damageTextColorLen, buf.readableBytes());
          }
 
          obj.damageTextColor = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -73,9 +97,13 @@ public class DamageCause {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -83,9 +111,13 @@ public class DamageCause {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("DamageTextColor", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -147,15 +179,11 @@ public class DamageCause {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 1);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 9 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -165,7 +193,7 @@ public class DamageCause {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -174,15 +202,11 @@ public class DamageCause {
 
       if ((nullBits & 2) != 0) {
          int damageTextColorOffset = buffer.getIntLE(offset + 5);
-         if (damageTextColorOffset < 0) {
+         if (damageTextColorOffset < 0 || damageTextColorOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for DamageTextColor");
          }
 
          int pos = offset + 9 + damageTextColorOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DamageTextColor");
-         }
-
          int damageTextColorLen = VarInt.peek(buffer, pos);
          if (damageTextColorLen < 0) {
             return ValidationResult.error("Invalid string length for DamageTextColor");
@@ -192,7 +216,7 @@ public class DamageCause {
             return ValidationResult.error("DamageTextColor exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(damageTextColorLen);
          pos += damageTextColorLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading DamageTextColor");

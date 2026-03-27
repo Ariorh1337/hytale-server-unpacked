@@ -42,33 +42,57 @@ public class CustomUIEventBinding {
 
    @Nonnull
    public static CustomUIEventBinding deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 11) {
+         throw ProtocolException.bufferTooSmall("CustomUIEventBinding", 11, buf.readableBytes() - offset);
+      }
+
       CustomUIEventBinding obj = new CustomUIEventBinding();
       byte nullBits = buf.getByte(offset);
       obj.type = CustomUIEventBindingType.fromValue(buf.getByte(offset + 1));
       obj.locksInterface = buf.getByte(offset + 2) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 11 + buf.getIntLE(offset + 3);
-         int selectorLen = VarInt.peek(buf, varPos0);
-         if (selectorLen < 0) {
-            throw ProtocolException.negativeLength("Selector", selectorLen);
+         int varPosBase0 = buf.getIntLE(offset + 3);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("Selector", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 11 + varPosBase0;
+         int selectorLen = VarInt.peek(buf, varPos0);
+         if (selectorLen < 0) {
+            throw ProtocolException.invalidVarInt("Selector");
+         }
+
+         int selectorVarIntLen = VarInt.size(selectorLen);
          if (selectorLen > 4096000) {
             throw ProtocolException.stringTooLong("Selector", selectorLen, 4096000);
+         }
+
+         if (varPos0 + selectorVarIntLen + selectorLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Selector", varPos0 + selectorVarIntLen + selectorLen, buf.readableBytes());
          }
 
          obj.selector = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 11 + buf.getIntLE(offset + 7);
-         int dataLen = VarInt.peek(buf, varPos1);
-         if (dataLen < 0) {
-            throw ProtocolException.negativeLength("Data", dataLen);
+         int varPosBase1 = buf.getIntLE(offset + 7);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("Data", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 11 + varPosBase1;
+         int dataLen = VarInt.peek(buf, varPos1);
+         if (dataLen < 0) {
+            throw ProtocolException.invalidVarInt("Data");
+         }
+
+         int dataVarIntLen = VarInt.size(dataLen);
          if (dataLen > 4096000) {
             throw ProtocolException.stringTooLong("Data", dataLen, 4096000);
+         }
+
+         if (varPos1 + dataVarIntLen + dataLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Data", varPos1 + dataVarIntLen + dataLen, buf.readableBytes());
          }
 
          obj.data = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -82,9 +106,13 @@ public class CustomUIEventBinding {
       int maxEnd = 11;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 3);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("Selector", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 11 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -92,9 +120,13 @@ public class CustomUIEventBinding {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 7);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 11) {
+            throw ProtocolException.invalidOffset("Data", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 11 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -156,17 +188,18 @@ public class CustomUIEventBinding {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 24) {
+         return ValidationResult.error("Invalid CustomUIEventBindingType value for Type");
+      }
+
       if ((nullBits & 1) != 0) {
-         int selectorOffset = buffer.getIntLE(offset + 3);
-         if (selectorOffset < 0) {
+         v = buffer.getIntLE(offset + 3);
+         if (v < 0 || v > buffer.writerIndex() - offset - 11) {
             return ValidationResult.error("Invalid offset for Selector");
          }
 
-         int pos = offset + 11 + selectorOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Selector");
-         }
-
+         int pos = offset + 11 + v;
          int selectorLen = VarInt.peek(buffer, pos);
          if (selectorLen < 0) {
             return ValidationResult.error("Invalid string length for Selector");
@@ -176,7 +209,7 @@ public class CustomUIEventBinding {
             return ValidationResult.error("Selector exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(selectorLen);
          pos += selectorLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Selector");
@@ -184,16 +217,12 @@ public class CustomUIEventBinding {
       }
 
       if ((nullBits & 2) != 0) {
-         int dataOffset = buffer.getIntLE(offset + 7);
-         if (dataOffset < 0) {
+         v = buffer.getIntLE(offset + 7);
+         if (v < 0 || v > buffer.writerIndex() - offset - 11) {
             return ValidationResult.error("Invalid offset for Data");
          }
 
-         int pos = offset + 11 + dataOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Data");
-         }
-
+         int pos = offset + 11 + v;
          int dataLen = VarInt.peek(buffer, pos);
          if (dataLen < 0) {
             return ValidationResult.error("Invalid string length for Data");
@@ -203,7 +232,7 @@ public class CustomUIEventBinding {
             return ValidationResult.error("Data exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dataLen);
          pos += dataLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Data");

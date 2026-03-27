@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -8,10 +9,10 @@ import javax.annotation.Nullable;
 
 public class MountedUpdate extends ComponentUpdate {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 48;
+   public static final int FIXED_BLOCK_SIZE = 60;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 48;
-   public static final int MAX_SIZE = 48;
+   public static final int VARIABLE_BLOCK_START = 60;
+   public static final int MAX_SIZE = 60;
    public int mountedToEntity;
    @Nullable
    public Vector3f attachmentOffset;
@@ -39,6 +40,10 @@ public class MountedUpdate extends ComponentUpdate {
 
    @Nonnull
    public static MountedUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 60) {
+         throw ProtocolException.bufferTooSmall("MountedUpdate", 60, buf.readableBytes() - offset);
+      }
+
       MountedUpdate obj = new MountedUpdate();
       byte nullBits = buf.getByte(offset);
       obj.mountedToEntity = buf.getIntLE(offset + 1);
@@ -55,7 +60,7 @@ public class MountedUpdate extends ComponentUpdate {
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 48;
+      return 60;
    }
 
    @Override
@@ -82,7 +87,7 @@ public class MountedUpdate extends ComponentUpdate {
       if (this.block != null) {
          this.block.serialize(buf);
       } else {
-         buf.writeZero(30);
+         buf.writeZero(42);
       }
 
       return buf.writerIndex() - startPos;
@@ -90,11 +95,17 @@ public class MountedUpdate extends ComponentUpdate {
 
    @Override
    public int computeSize() {
-      return 48;
+      return 60;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 48 ? ValidationResult.error("Buffer too small: expected at least 48 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 60) {
+         return ValidationResult.error("Buffer too small: expected at least 60 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 17) & 255;
+      return v >= 2 ? ValidationResult.error("Invalid MountController value for Controller") : ValidationResult.OK;
    }
 
    public MountedUpdate clone() {

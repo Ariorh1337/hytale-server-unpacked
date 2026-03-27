@@ -8,9 +8,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.dependency.Dependency;
-import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.RootDependency;
-import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.modules.migrations.ChunkColumnMigrationSystem;
@@ -70,7 +68,6 @@ public class LegacyModule extends JavaPlugin {
       this.blockPositionProviderComponentType = this.getChunkStoreRegistry().registerComponent(BlockPositionProvider.class, () -> {
          throw new UnsupportedOperationException("BlockPositionProvider cannot be constructed");
       });
-      this.getChunkStoreRegistry().registerSystem(new ChunkSystems.OnNewChunk());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.OnChunkLoad());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.OnNonTicking());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.EnsureBlockSection());
@@ -128,9 +125,7 @@ public class LegacyModule extends JavaPlugin {
    @Deprecated(forRemoval = true)
    public static class MigrateLegacySections extends ChunkColumnMigrationSystem {
       private final Query<ChunkStore> QUERY = Query.and(ChunkColumn.getComponentType(), BlockChunk.getComponentType());
-      private final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(
-         new SystemDependency<>(Order.AFTER, ChunkSystems.OnNewChunk.class), RootDependency.first()
-      );
+      private final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(RootDependency.first());
 
       @Override
       public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {

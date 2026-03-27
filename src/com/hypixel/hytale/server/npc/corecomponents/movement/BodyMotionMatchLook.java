@@ -28,7 +28,7 @@ public class BodyMotionMatchLook extends BodyMotionBase {
    ) {
       HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
       assert headRotationComponent != null;
-      float headYaw = headRotationComponent.getRotation().getYaw();
+      float headYaw = headRotationComponent.getRotation().yaw();
       desiredSteering.setYaw(headYaw);
       return true;
    }

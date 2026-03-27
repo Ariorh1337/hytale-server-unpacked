@@ -47,20 +47,28 @@ public class AssetEditorDeleteAssetPack implements Packet, ToServerPacket, ToCli
 
    @Nonnull
    public static AssetEditorDeleteAssetPack deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorDeleteAssetPack", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorDeleteAssetPack obj = new AssetEditorDeleteAssetPack();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int idLen = VarInt.peek(buf, pos);
          if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+            throw ProtocolException.invalidVarInt("Id");
          }
 
+         int idVarLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
          }
 
-         int idVarLen = VarInt.length(buf, pos);
+         if (pos + idVarLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", pos + idVarLen + idLen, buf.readableBytes());
+         }
+
          obj.id = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += idVarLen + idLen;
       }
@@ -73,7 +81,7 @@ public class AssetEditorDeleteAssetPack implements Packet, ToServerPacket, ToCli
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -119,7 +127,7 @@ public class AssetEditorDeleteAssetPack implements Packet, ToServerPacket, ToCli
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");

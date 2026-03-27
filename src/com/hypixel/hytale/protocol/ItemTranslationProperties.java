@@ -35,31 +35,55 @@ public class ItemTranslationProperties {
 
    @Nonnull
    public static ItemTranslationProperties deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ItemTranslationProperties", 9, buf.readableBytes() - offset);
+      }
+
       ItemTranslationProperties obj = new ItemTranslationProperties();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int nameLen = VarInt.peek(buf, varPos0);
-         if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Name", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int nameLen = VarInt.peek(buf, varPos0);
+         if (nameLen < 0) {
+            throw ProtocolException.invalidVarInt("Name");
+         }
+
+         int nameVarIntLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
+         }
+
+         if (varPos0 + nameVarIntLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", varPos0 + nameVarIntLen + nameLen, buf.readableBytes());
          }
 
          obj.name = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int descriptionLen = VarInt.peek(buf, varPos1);
-         if (descriptionLen < 0) {
-            throw ProtocolException.negativeLength("Description", descriptionLen);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Description", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int descriptionLen = VarInt.peek(buf, varPos1);
+         if (descriptionLen < 0) {
+            throw ProtocolException.invalidVarInt("Description");
+         }
+
+         int descriptionVarIntLen = VarInt.size(descriptionLen);
          if (descriptionLen > 4096000) {
             throw ProtocolException.stringTooLong("Description", descriptionLen, 4096000);
+         }
+
+         if (varPos1 + descriptionVarIntLen + descriptionLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Description", varPos1 + descriptionVarIntLen + descriptionLen, buf.readableBytes());
          }
 
          obj.description = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -73,9 +97,13 @@ public class ItemTranslationProperties {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Name", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -83,9 +111,13 @@ public class ItemTranslationProperties {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Description", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -147,15 +179,11 @@ public class ItemTranslationProperties {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int nameOffset = buffer.getIntLE(offset + 1);
-         if (nameOffset < 0) {
+         if (nameOffset < 0 || nameOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
          int pos = offset + 9 + nameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Name");
-         }
-
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -165,7 +193,7 @@ public class ItemTranslationProperties {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");
@@ -174,15 +202,11 @@ public class ItemTranslationProperties {
 
       if ((nullBits & 2) != 0) {
          int descriptionOffset = buffer.getIntLE(offset + 5);
-         if (descriptionOffset < 0) {
+         if (descriptionOffset < 0 || descriptionOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Description");
          }
 
          int pos = offset + 9 + descriptionOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Description");
-         }
-
          int descriptionLen = VarInt.peek(buffer, pos);
          if (descriptionLen < 0) {
             return ValidationResult.error("Invalid string length for Description");
@@ -192,7 +216,7 @@ public class ItemTranslationProperties {
             return ValidationResult.error("Description exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(descriptionLen);
          pos += descriptionLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Description");

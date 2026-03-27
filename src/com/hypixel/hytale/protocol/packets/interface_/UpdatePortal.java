@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.interface_;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -47,6 +48,10 @@ public class UpdatePortal implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdatePortal deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdatePortal", 6, buf.readableBytes() - offset);
+      }
+
       UpdatePortal obj = new UpdatePortal();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {

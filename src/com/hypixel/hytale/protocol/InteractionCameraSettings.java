@@ -34,20 +34,29 @@ public class InteractionCameraSettings {
 
    @Nonnull
    public static InteractionCameraSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("InteractionCameraSettings", 9, buf.readableBytes() - offset);
+      }
+
       InteractionCameraSettings obj = new InteractionCameraSettings();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int firstPersonCount = VarInt.peek(buf, varPos0);
-         if (firstPersonCount < 0) {
-            throw ProtocolException.negativeLength("FirstPerson", firstPersonCount);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("FirstPerson", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int firstPersonCount = VarInt.peek(buf, varPos0);
+         if (firstPersonCount < 0) {
+            throw ProtocolException.invalidVarInt("FirstPerson");
+         }
+
+         int varIntLen = VarInt.size(firstPersonCount);
          if (firstPersonCount > 4096000) {
             throw ProtocolException.arrayTooLong("FirstPerson", firstPersonCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + firstPersonCount * 29L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FirstPerson", varPos0 + varIntLen + firstPersonCount * 29, buf.readableBytes());
          }
@@ -62,17 +71,22 @@ public class InteractionCameraSettings {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int thirdPersonCount = VarInt.peek(buf, varPos1);
-         if (thirdPersonCount < 0) {
-            throw ProtocolException.negativeLength("ThirdPerson", thirdPersonCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ThirdPerson", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int thirdPersonCount = VarInt.peek(buf, varPos1);
+         if (thirdPersonCount < 0) {
+            throw ProtocolException.invalidVarInt("ThirdPerson");
+         }
+
+         int varIntLen = VarInt.size(thirdPersonCount);
          if (thirdPersonCount > 4096000) {
             throw ProtocolException.arrayTooLong("ThirdPerson", thirdPersonCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + thirdPersonCount * 29L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("ThirdPerson", varPos1 + varIntLen + thirdPersonCount * 29, buf.readableBytes());
          }
@@ -94,9 +108,13 @@ public class InteractionCameraSettings {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("FirstPerson", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += InteractionCamera.computeBytesConsumed(buf, pos0);
@@ -109,9 +127,13 @@ public class InteractionCameraSettings {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ThirdPerson", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += InteractionCamera.computeBytesConsumed(buf, pos1);
@@ -194,15 +216,11 @@ public class InteractionCameraSettings {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int firstPersonOffset = buffer.getIntLE(offset + 1);
-         if (firstPersonOffset < 0) {
+         if (firstPersonOffset < 0 || firstPersonOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for FirstPerson");
          }
 
          int pos = offset + 9 + firstPersonOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FirstPerson");
-         }
-
          int firstPersonCount = VarInt.peek(buffer, pos);
          if (firstPersonCount < 0) {
             return ValidationResult.error("Invalid array count for FirstPerson");
@@ -212,7 +230,7 @@ public class InteractionCameraSettings {
             return ValidationResult.error("FirstPerson exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(firstPersonCount);
          pos += firstPersonCount * 29;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FirstPerson");
@@ -221,15 +239,11 @@ public class InteractionCameraSettings {
 
       if ((nullBits & 2) != 0) {
          int thirdPersonOffset = buffer.getIntLE(offset + 5);
-         if (thirdPersonOffset < 0) {
+         if (thirdPersonOffset < 0 || thirdPersonOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for ThirdPerson");
          }
 
          int pos = offset + 9 + thirdPersonOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ThirdPerson");
-         }
-
          int thirdPersonCount = VarInt.peek(buffer, pos);
          if (thirdPersonCount < 0) {
             return ValidationResult.error("Invalid array count for ThirdPerson");
@@ -239,7 +253,7 @@ public class InteractionCameraSettings {
             return ValidationResult.error("ThirdPerson exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(thirdPersonCount);
          pos += thirdPersonCount * 29;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ThirdPerson");

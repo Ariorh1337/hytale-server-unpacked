@@ -7,9 +7,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.NearestBlockUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
 import com.hypixel.hytale.server.core.entity.Entity;
@@ -38,6 +37,8 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 @Deprecated
 public class SimplePhysicsProvider implements IBlockCollisionConsumer {
@@ -166,16 +167,16 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       BlockMaterial blockMaterial = blockData.getBlockType().getMaterial();
       if (this.moveOutOfSolidSpeed > 0.0 && contactData.isOverlapping() && blockMaterial == BlockMaterial.Solid) {
          Vector3i nearestBlock = NearestBlockUtil.findNearestBlock(this.position, (block, w) -> {
-            WorldChunk worldChunk = w.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(block.getX(), block.getZ()));
+            WorldChunk worldChunk = w.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(block.x(), block.z()));
             return worldChunk != null && worldChunk.getBlockType(block).getMaterial() != BlockMaterial.Solid;
          }, this.world);
          if (nearestBlock != null) {
-            this.tempVector.assign(nearestBlock.x, nearestBlock.y, nearestBlock.z);
+            this.tempVector.set(nearestBlock.x, nearestBlock.y, nearestBlock.z);
             this.tempVector.add(0.5, 0.5, 0.5);
-            this.tempVector.subtract(this.position);
-            this.tempVector.setLength(this.moveOutOfSolidSpeed);
+            this.tempVector.sub(this.position);
+            this.tempVector.normalize(this.moveOutOfSolidSpeed);
          } else {
-            this.tempVector.assign(0.0, this.moveOutOfSolidSpeed, 0.0);
+            this.tempVector.set(0.0, this.moveOutOfSolidSpeed, 0.0);
          }
 
          this.moveOutOfSolidVelocity.add(this.tempVector);
@@ -215,8 +216,8 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
             return IBlockCollisionConsumer.Result.CONTINUE;
          }
 
-         this.contactPosition.assign(contactData.getCollisionPoint());
-         this.contactNormal.assign(contactData.getCollisionNormal());
+         this.contactPosition.set(contactData.getCollisionPoint());
+         this.contactNormal.set(contactData.getCollisionNormal());
          this.collisionStart = contactData.getCollisionStart();
          this.bounced = true;
          return IBlockCollisionConsumer.Result.STOP;
@@ -260,7 +261,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       }
 
       if (this.state == SimplePhysicsProvider.STATE.Resting) {
-         if (this.forceProviderStandardState.externalForce.squaredLength() == 0.0 && !this.restingSupport.hasChanged(entityWorld)) {
+         if (this.forceProviderStandardState.externalForce.lengthSquared() == 0.0 && !this.restingSupport.hasChanged(entityWorld)) {
             return null;
          }
 
@@ -268,13 +269,13 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       }
 
       this.world = entityWorld;
-      this.position.assign(entityTransform.getPosition());
+      this.position.set(entityTransform.getPosition());
       entityVelocity.assignVelocityTo(this.velocity);
       double mass = this.forceProviderEntity.getMass(this.boundingBox.getBoundingBox().getVolume());
       this.forceProviderStandardState.convertToForces(dt, mass);
       this.forceProviderStandardState.updateVelocity(this.velocity);
-      if (!(this.velocity.squaredLength() * dt * dt >= 1.0000000000000002E-10) && !(this.forceProviderStandardState.externalForce.squaredLength() >= 0.0)) {
-         this.velocity.assign(Vector3d.ZERO);
+      if (!(this.velocity.lengthSquared() * dt * dt >= 1.0000000000000002E-10) && !(this.forceProviderStandardState.externalForce.lengthSquared() >= 0.0)) {
+         this.velocity.zero();
       } else {
          this.state = SimplePhysicsProvider.STATE.Active;
       }
@@ -283,17 +284,17 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
          this.state = SimplePhysicsProvider.STATE.Active;
       }
 
-      this.stateBefore.position.assign(this.position);
-      this.stateBefore.velocity.assign(this.velocity);
+      this.stateBefore.position.set(this.position);
+      this.stateBefore.velocity.set(this.velocity);
       this.forceProviderEntity.setForceProviderStandardState(this.forceProviderStandardState);
       this.stateUpdater.update(this.stateBefore, this.stateAfter, mass, dt, this.onGround, this.forceProviders);
-      this.velocity.assign(this.stateAfter.velocity);
-      this.movement.assign(this.velocity).scale(dt);
+      this.velocity.set(this.stateAfter.velocity);
+      this.movement.set(this.velocity).mul(dt);
       this.forceProviderStandardState.clear();
-      if (this.velocity.squaredLength() * dt * dt >= 1.0000000000000002E-10) {
+      if (this.velocity.lengthSquared() * dt * dt >= 1.0000000000000002E-10) {
          this.state = SimplePhysicsProvider.STATE.Active;
       } else {
-         this.velocity.assign(Vector3d.ZERO);
+         this.velocity.zero();
       }
 
       double maxRelativeDistance = 1.0;
@@ -312,22 +313,22 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
 
       this.bounced = false;
       this.onGround = false;
-      this.moveOutOfSolidVelocity.assign(Vector3d.ZERO);
+      this.moveOutOfSolidVelocity.zero();
       this.movedInsideSolid = false;
       this.displacedMass = 0.0;
       this.subSurfaceVolume = 0.0;
       this.enterFluid = Double.MAX_VALUE;
       this.leaveFluid = -Double.MAX_VALUE;
       this.collisionStart = maxRelativeDistance;
-      this.contactPosition.assign(this.position).addScaled(this.movement, this.collisionStart);
-      this.contactNormal.assign(Vector3d.ZERO);
+      this.contactPosition.set(this.position).fma(this.collisionStart, this.movement);
+      this.contactNormal.zero();
       this.blockCollisionProvider
          .cast(entityWorld, this.boundingBox.getBoundingBox(), this.position, this.movement, this, this.triggerTracker, maxRelativeDistance);
       this.fluidTracker.reset();
       double density = this.displacedMass > 0.0 ? this.displacedMass / this.subSurfaceVolume : 1.2;
       if (this.movedInsideSolid) {
-         this.position.addScaled(this.moveOutOfSolidVelocity, dt);
-         this.velocity.assign(this.moveOutOfSolidVelocity);
+         this.position.fma(dt, this.moveOutOfSolidVelocity);
+         this.velocity.set(this.moveOutOfSolidVelocity);
          this.forceProviderStandardState.dragCoefficient = this.getDragCoefficient(density);
          this.forceProviderStandardState.displacedMass = this.displacedMass;
          this.forceProviderStandardState.gravity = this.gravity;
@@ -350,7 +351,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
 
       if (velocityClip > 0.0 && velocityClip < 1.0) {
          this.stateUpdater.update(this.stateBefore, this.stateAfter, mass, dt * velocityClip, this.onGround, this.forceProviders);
-         this.velocity.assign(this.stateAfter.velocity);
+         this.velocity.set(this.stateAfter.velocity);
       }
 
       if (this.inFluid && this.subSurfaceVolume < this.boundingBox.getBoundingBox().getVolume() && this.velocityExtremaCount > 0) {
@@ -367,7 +368,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       }
 
       if (enteringWater) {
-         this.forceProviderStandardState.externalImpulse.addScaled(this.stateAfter.velocity, -this.hitWaterImpulseLoss * mass);
+         this.forceProviderStandardState.externalImpulse.fma(-this.hitWaterImpulseLoss * mass, this.stateAfter.velocity);
       }
 
       this.forceProviderStandardState.displacedMass = this.displacedMass;
@@ -378,7 +379,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
             EntityContactData contact = this.entityCollisionProvider.getContact(0);
             Ref<EntityStore> contactRef = contact.getEntityReference();
             Entity target = EntityUtils.getEntity(contactRef, componentAccessor);
-            this.position.assign(contact.getCollisionPoint());
+            this.position.set(contact.getCollisionPoint());
             this.state = SimplePhysicsProvider.STATE.Inactive;
             if (this.impactConsumer != null) {
                this.impactConsumer.accept(selfRef, this.position, contactRef, componentAccessor);
@@ -394,11 +395,11 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
             return null;
          }
       } else {
-         this.position.assign(this.contactPosition);
+         this.position.set(this.contactPosition);
          computeReflectedVector(this.velocity, this.contactNormal, this.velocity);
-         this.velocity.scale(this.bounciness);
-         if (this.velocity.squaredLength() * dt * dt < 0.16000000000000003) {
-            boolean hitGround = this.contactNormal.equals(Vector3d.UP);
+         this.velocity.mul(this.bounciness);
+         if (this.velocity.lengthSquared() * dt * dt < 0.16000000000000003) {
+            boolean hitGround = this.contactNormal.equals(Vector3dUtil.UP);
             if (this.sticksVertically || hitGround) {
                this.state = SimplePhysicsProvider.STATE.Resting;
                this.restingSupport.rest(entityWorld, this.boundingBox.getBoundingBox(), this.position);
@@ -408,7 +409,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
                }
             }
 
-            this.velocity.assign(Vector3d.ZERO);
+            this.velocity.zero();
          } else if (this.bounceConsumer != null) {
             this.bounceConsumer.accept(this.position, componentAccessor);
          }
@@ -426,7 +427,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       this.entityCollisionProvider.clear();
    }
 
-   protected void rotateBody(double dt, @Nonnull Vector3f bodyRotation) {
+   protected void rotateBody(double dt, @Nonnull Rotation3f bodyRotation) {
       if (this.isComputeYaw() || this.isComputePitch()) {
          double vx = this.stateAfter.velocity.x;
          double vz = this.stateAfter.velocity.z;
@@ -450,10 +451,10 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
                   }
 
                   if (this.isComputePitch()) {
-                     float pitch = bodyRotation.getPitch();
+                     float pitch = bodyRotation.pitch();
                      float targetPitch = PhysicsMath.pitchFromDirection(vx, this.velocity.y, vz);
                      float delta = PhysicsMath.normalizeTurnAngle(targetPitch - pitch);
-                     float maxDelta = (float)(this.velocity.squaredLength() * dt * this.speedRotationFactor);
+                     float maxDelta = (float)(this.velocity.lengthSquared() * dt * this.speedRotationFactor);
                      if (delta > maxDelta) {
                         targetPitch = pitch + maxDelta;
                         delta = maxDelta;
@@ -463,7 +464,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
                      }
 
                      bodyRotation.setPitch(targetPitch);
-                     this.forceProviderStandardState.externalForce.addScaled(this.stateAfter.velocity, delta * -this.rotationForce);
+                     this.forceProviderStandardState.externalForce.fma(delta * -this.rotationForce, this.stateAfter.velocity);
                   }
             }
          }
@@ -479,11 +480,11 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
    }
 
    public static void computeReflectedVector(@Nonnull Vector3d vec, @Nonnull Vector3d normal, @Nonnull Vector3d result) {
-      result.assign(vec);
-      double squaredLength = normal.squaredLength();
+      result.set(vec);
+      double squaredLength = normal.lengthSquared();
       if (squaredLength != 0.0) {
          double proj = vec.dot(normal) / squaredLength;
-         result.addScaled(normal, -2.0 * proj);
+         result.fma(-2.0 * proj, normal);
       }
    }
 
@@ -578,7 +579,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
    }
 
    public void setVelocity(@Nonnull Vector3d velocity) {
-      this.forceProviderStandardState.nextTickVelocity.assign(velocity);
+      this.forceProviderStandardState.nextTickVelocity.set(velocity);
    }
 
    public void setMoveOutOfSolid(boolean moveOutOfSolid) {

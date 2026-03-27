@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.worldmap;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class TeleportToWorldMapPosition implements Packet, ToServerPacket {
 
    @Nonnull
    public static TeleportToWorldMapPosition deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("TeleportToWorldMapPosition", 8, buf.readableBytes() - offset);
+      }
+
       TeleportToWorldMapPosition obj = new TeleportToWorldMapPosition();
       obj.x = buf.getIntLE(offset + 0);
       obj.y = buf.getIntLE(offset + 4);

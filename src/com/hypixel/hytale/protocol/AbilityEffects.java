@@ -30,20 +30,24 @@ public class AbilityEffects {
 
    @Nonnull
    public static AbilityEffects deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AbilityEffects", 1, buf.readableBytes() - offset);
+      }
+
       AbilityEffects obj = new AbilityEffects();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int disabledCount = VarInt.peek(buf, pos);
          if (disabledCount < 0) {
-            throw ProtocolException.negativeLength("Disabled", disabledCount);
+            throw ProtocolException.invalidVarInt("Disabled");
          }
 
+         int disabledVarLen = VarInt.size(disabledCount);
          if (disabledCount > 4096000) {
             throw ProtocolException.arrayTooLong("Disabled", disabledCount, 4096000);
          }
 
-         int disabledVarLen = VarInt.size(disabledCount);
          if (pos + disabledVarLen + disabledCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Disabled", pos + disabledVarLen + disabledCount * 1, buf.readableBytes());
          }
@@ -65,7 +69,7 @@ public class AbilityEffects {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -117,10 +121,18 @@ public class AbilityEffects {
             return ValidationResult.error("Disabled exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += disabledCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(disabledCount);
+         if (pos + disabledCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Disabled");
+         }
+
+         for (int i = 0; i < disabledCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for Disabled[i]");
+            }
+
+            pos++;
          }
       }
 

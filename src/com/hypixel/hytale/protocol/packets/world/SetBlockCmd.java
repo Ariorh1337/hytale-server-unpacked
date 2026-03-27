@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.world;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -35,6 +36,10 @@ public class SetBlockCmd {
 
    @Nonnull
    public static SetBlockCmd deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("SetBlockCmd", 9, buf.readableBytes() - offset);
+      }
+
       SetBlockCmd obj = new SetBlockCmd();
       obj.index = buf.getShortLE(offset + 0);
       obj.blockId = buf.getIntLE(offset + 2);

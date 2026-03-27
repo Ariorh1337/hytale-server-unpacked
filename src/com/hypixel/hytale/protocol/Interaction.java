@@ -29,7 +29,7 @@ public abstract class Interaction {
    @Nonnull
    public static Interaction deserialize(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> SimpleBlockInteraction.deserialize(buf, offset + typeIdLen);
@@ -82,7 +82,7 @@ public abstract class Interaction {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return typeIdLen + switch (typeId) {
          case 0 -> SimpleBlockInteraction.computeBytesConsumed(buf, offset + typeIdLen);
@@ -244,7 +244,7 @@ public abstract class Interaction {
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
       int typeId = VarInt.peek(buffer, offset);
-      int typeIdLen = VarInt.length(buffer, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> SimpleBlockInteraction.validateStructure(buffer, offset + typeIdLen);

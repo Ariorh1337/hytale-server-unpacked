@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.util.io.FileUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import io.netty.buffer.ByteBuf;
 import java.io.BufferedWriter;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
@@ -73,8 +74,29 @@ public class BsonUtil {
       return readFromBytes(ByteBufUtil.readByteArray(buf));
    }
 
+   public static BsonDocument readFromBinaryStream(@Nonnull ByteBuffer buf) {
+      int length = Short.toUnsignedInt(buf.getShort());
+      if (length == 0) {
+         return null;
+      }
+
+      ByteBuffer slice = buf.slice(buf.position(), length);
+      buf.position(buf.position() + length);
+      return readFromBuffer(slice);
+   }
+
    public static void writeToBinaryStream(@Nonnull ByteBuf buf, BsonDocument doc) {
       ByteBufUtil.writeByteArray(buf, writeToBytes(doc));
+   }
+
+   public static void writeToBinaryStream(@Nonnull DataOutputStream out, BsonDocument doc) throws IOException {
+      byte[] bytes = writeToBytes(doc);
+      if (bytes.length >= 65535) {
+         throw new IllegalArgumentException("length is too large");
+      }
+
+      out.writeShort(bytes.length);
+      out.write(bytes);
    }
 
    @Nonnull

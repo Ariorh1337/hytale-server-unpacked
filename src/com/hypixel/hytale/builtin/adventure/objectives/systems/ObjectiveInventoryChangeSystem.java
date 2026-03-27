@@ -16,6 +16,7 @@ import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -44,7 +45,7 @@ public class ObjectiveInventoryChangeSystem extends EntityEventSystem<EntityStor
          Set<UUID> activeObjectiveUUIDs = playerComponent.getPlayerConfigData().getActiveObjectiveUUIDs();
          if (!activeObjectiveUUIDs.isEmpty()) {
             Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-            handleRemoveOnItemDrop(ref, playerComponent, activeObjectiveUUIDs, objectiveDataStore, store);
+            handleRemoveOnItemDrop(ref, activeObjectiveUUIDs, objectiveDataStore, store);
 
             for (UUID objectiveUUID : activeObjectiveUUIDs) {
                Objective objective = objectiveDataStore.getObjective(objectiveUUID);
@@ -64,17 +65,13 @@ public class ObjectiveInventoryChangeSystem extends EntityEventSystem<EntityStor
    }
 
    private static void handleRemoveOnItemDrop(
-      @Nonnull Ref<EntityStore> ref,
-      @Nonnull Player playerComponent,
-      @Nonnull Set<UUID> activeObjectiveUUIDs,
-      @Nonnull ObjectiveDataStore objectiveDataStore,
-      @Nonnull Store<EntityStore> store
+      @Nonnull Ref<EntityStore> ref, @Nonnull Set<UUID> activeObjectiveUUIDs, @Nonnull ObjectiveDataStore objectiveDataStore, @Nonnull Store<EntityStore> store
    ) {
       Set<UUID> inventoryItemObjectiveUUIDs = null;
-      CombinedItemContainer inventory = playerComponent.getInventory().getCombinedHotbarFirst();
+      CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
 
-      for (short i = 0; i < inventory.getCapacity(); i++) {
-         ItemStack itemStack = inventory.getItemStack(i);
+      for (short i = 0; i < combinedInventory.getCapacity(); i++) {
+         ItemStack itemStack = combinedInventory.getItemStack(i);
          if (!ItemStack.isEmpty(itemStack)) {
             UUID objectiveUUID = itemStack.getFromMetadataOrNull(StartObjectiveInteraction.OBJECTIVE_UUID);
             if (objectiveUUID != null) {

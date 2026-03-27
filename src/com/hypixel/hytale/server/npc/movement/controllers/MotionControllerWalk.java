@@ -8,9 +8,8 @@ import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
@@ -49,6 +48,9 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class MotionControllerWalk extends MotionControllerBase {
    public static final String TYPE = "Walk";
@@ -199,7 +201,7 @@ public class MotionControllerWalk extends MotionControllerBase {
    public MotionController.VerticalRange getDesiredVerticalRange(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      this.verticalRange.assign(transformComponent.getPosition().getY(), 0.0, 320.0);
+      this.verticalRange.assign(transformComponent.getPosition().y(), 0.0, 320.0);
       return this.verticalRange;
    }
 
@@ -430,13 +432,13 @@ public class MotionControllerWalk extends MotionControllerBase {
 
    @Override
    public void constrainRotations(Role role, @Nonnull TransformComponent transform) {
-      Vector3f rotation = transform.getRotation();
+      Rotation3f rotation = transform.getRotation();
       rotation.setPitch(0.0F);
       rotation.setRoll(0.0F);
    }
 
    @Override
-   public void forceVelocity(@Nonnull Vector3d velocity, VelocityConfig velocityConfig, boolean ignoreDamping) {
+   public void forceVelocity(@Nonnull Vector3dc velocity, VelocityConfig velocityConfig, boolean ignoreDamping) {
       super.forceVelocity(velocity, velocityConfig, ignoreDamping);
       this.onGround = false;
    }
@@ -514,10 +516,10 @@ public class MotionControllerWalk extends MotionControllerBase {
    @Override
    public boolean estimateVelocity(@Nonnull Steering steering, @Nonnull Vector3d velocityOut) {
       if (steering.hasTranslation()) {
-         velocityOut.assign(steering.getTranslation()).scale(this.getCurrentSpeed());
+         velocityOut.set(steering.getTranslation()).mul(this.getCurrentSpeed());
          return true;
       } else {
-         velocityOut.assign(Vector3d.ZERO);
+         velocityOut.zero();
          return false;
       }
    }
@@ -535,7 +537,7 @@ public class MotionControllerWalk extends MotionControllerBase {
    public void postReadPosition(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.footingPosition.equals(this.position)) {
          this.footingBlocksValid = false;
-         this.footingPosition.assign(this.position);
+         this.footingPosition.set(this.position);
       }
 
       World world = componentAccessor.getExternalData().getWorld();
@@ -783,12 +785,12 @@ public class MotionControllerWalk extends MotionControllerBase {
    public int translateToAccessiblePosition(
       @Nonnull Vector3d position, double minYValue, double maxYValue, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (position.getY() < 0.0) {
+      if (position.y() < 0.0) {
          return -1;
       }
 
       World world = componentAccessor.getExternalData().getWorld();
-      long chunkIndex = ChunkUtil.indexChunkFromBlock(position.getX(), position.getZ());
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x(), position.z());
       WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
       if (chunk == null) {
          return -1;
@@ -796,9 +798,9 @@ public class MotionControllerWalk extends MotionControllerBase {
 
       BlockChunk blockChunk = chunk.getBlockChunk();
       BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
-      int x = MathUtil.floor(position.getX());
-      int y = MathUtil.floor(position.getY());
-      int z = MathUtil.floor(position.getZ());
+      int x = MathUtil.floor(position.x());
+      int y = MathUtil.floor(position.y());
+      int z = MathUtil.floor(position.z());
       if (y < 320) {
          int blockId = chunk.getBlock(x, y, z);
          if (blockId != 0) {
@@ -839,7 +841,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   return 0;
                }
 
-               position.setY(top);
+               position.y = top;
                return 1;
             }
          }
@@ -880,7 +882,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                            return 0;
                         }
 
-                        position.setY(top);
+                        position.y = top;
                         return 1;
                      }
                   } else if (blockType.getMaterial() == BlockMaterial.Solid) {
@@ -891,7 +893,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                         return 0;
                      }
 
-                     position.setY(top);
+                     position.y = top;
                      return 1;
                   }
                }
@@ -929,24 +931,24 @@ public class MotionControllerWalk extends MotionControllerBase {
          this.climbUpDistance = 0.0;
          this.currentClimbForwardDistance = 0.0;
          this.maxClimbForwardDistance = 0.0;
-         this.forceVelocity.assign(Vector3d.ZERO);
+         this.forceVelocity.zero();
          this.appliedVelocities.clear();
          steering.setYaw(this.getYaw());
          if (this.onGround) {
-            translation.assign(Vector3d.ZERO);
+            translation.zero();
             steering.setPitch(0.0F);
          } else {
             steering.setPitch(this.getPitch());
             Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
             Vector3d velocity = velocityComponent.getVelocity();
-            translation.assign(velocity);
+            translation.set(velocity);
          }
 
          translation.y = this.computeNewFallSpeed(dt, translation.y);
-         translation.scale(dt);
+         translation.mul(dt);
          this.validateTranslation(translation, "Death");
          return dt;
-      } else if (this.forceVelocity.equals(Vector3d.ZERO) && this.appliedVelocities.isEmpty()) {
+      } else if (this.forceVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
          if (this.cachedMovementBlocked) {
             return dt;
          }
@@ -1028,7 +1030,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   }
 
                   this.currentClimbForwardDistance += moveDistance;
-                  translation.assign(this.climbForwardDirection).scale(moveDistance);
+                  translation.set(this.climbForwardDirection).mul(moveDistance);
                   this.onGround = false;
                } else {
                   this.setMotionKind(MotionKind.DROPPING);
@@ -1078,9 +1080,9 @@ public class MotionControllerWalk extends MotionControllerBase {
                vertical *= Math.pow(this.descentSteepness, this.descentBlending) * Math.pow(scaledDiff, this.descentBlending);
             }
 
-            translation.assign(this.climbForwardDirection.x, vertical, this.climbForwardDirection.z);
-            translation.scale(this.moveSpeed * dt);
-            translation.clipToZero(this.getEpsilonSpeed());
+            translation.set(this.climbForwardDirection.x, vertical, this.climbForwardDirection.z);
+            translation.mul(this.moveSpeed * dt);
+            Vector3dUtil.clipToZero(translation, this.getEpsilonSpeed());
             if (this.isBlendingHeading) {
                heading = this.computeBlendHeading(
                   heading,
@@ -1111,7 +1113,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                      );
                      turnAngle = MathUtil.clamp(turnAngle, -maxRotation, maxRotation);
                      heading = PhysicsMath.normalizeTurnAngle(heading + turnAngle);
-                     translation.assign(0.0, 0.0, 0.0);
+                     translation.set(0.0, 0.0, 0.0);
                      steering.setYaw(heading);
                      this.isFullyRotated = false;
                      return dt;
@@ -1212,7 +1214,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                double lenSquared = NPCPhysicsMath.dotProduct(translation.x, translation.y, translation.z, this.getComponentSelector());
                double len = Math.sqrt(lenSquared);
                if (len > maxDistance) {
-                  translation.scale(maxDistance / len);
+                  translation.mul(maxDistance / len);
                }
             }
 
@@ -1224,7 +1226,7 @@ public class MotionControllerWalk extends MotionControllerBase {
          this.climbUpDistance = 0.0;
          this.currentClimbForwardDistance = 0.0;
          this.maxClimbForwardDistance = 0.0;
-         translation.assign(this.forceVelocity);
+         translation.set(this.forceVelocity);
 
          for (int i = 0; i < this.appliedVelocities.size(); i++) {
             MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
@@ -1239,7 +1241,7 @@ public class MotionControllerWalk extends MotionControllerBase {
             translation.add(entry.velocity);
          }
 
-         translation.scale(dt);
+         translation.mul(dt);
          if (!this.onGround || !(this.forceVelocity.y < 0.0)) {
             this.forceVelocity.y = this.computeNewFallSpeed(dt, this.forceVelocity.y);
          } else if (translation.y < 0.0) {
@@ -1247,7 +1249,7 @@ public class MotionControllerWalk extends MotionControllerBase {
             this.forceVelocity.y = 0.0;
          }
 
-         if (!this.appliedForce.equals(Vector3d.ZERO)) {
+         if (!this.appliedForce.equals(Vector3dUtil.ZERO)) {
             if (this.moveSpeed > 0.0) {
                float headingX = PhysicsMath.headingX(this.getYaw());
                float headingZ = PhysicsMath.headingZ(this.getYaw());
@@ -1267,15 +1269,15 @@ public class MotionControllerWalk extends MotionControllerBase {
                npcComponent.setHoverHeight(translation.y <= 0.0 ? this.minHoverDrop : this.maxHover);
             }
 
-            this.appliedForce.assign(Vector3d.ZERO);
+            this.appliedForce.zero();
          }
 
          if (this.onGround && this.ignoreDamping) {
             double speed = this.forceVelocity.length() - dt * this.inertia * this.acceleration * 5.0;
             if (speed > 0.0) {
-               this.forceVelocity.setLength(speed);
+               this.forceVelocity.normalize(speed);
             } else {
-               this.forceVelocity.assign(Vector3d.ZERO);
+               this.forceVelocity.zero();
             }
          }
 
@@ -1313,8 +1315,8 @@ public class MotionControllerWalk extends MotionControllerBase {
          LOGGER.at(Level.INFO)
             .log(
                "Move: Execute pos=%s vel=%s onGround=%s blocked=%s canAct=%s avdDmg=%s relax=%s",
-               Vector3d.formatShortString(this.position),
-               Vector3d.formatShortString(translation),
+               Vector3dUtil.formatShortString(this.position),
+               Vector3dUtil.formatShortString(translation),
                this.onGround,
                this.isObstructed,
                this.canAct(ref, componentAccessor),
@@ -1358,7 +1360,7 @@ public class MotionControllerWalk extends MotionControllerBase {
 
       boolean tryClimb = false;
       boolean needsRotation = this.isRequiresPreciseMovement() && !this.isFullyRotated;
-      this.lastValidPosition.assign(this.position);
+      this.lastValidPosition.set(this.position);
       boolean wasOnGround = this.onGround;
       if (collision == null) {
          double triggerScale;
@@ -1371,7 +1373,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   this.isObstructed = false;
                   endSlide = this.shortenSlide(translation, endSlide);
                } else if (this.isRequiresDepthProbing() || role.avoidanceFallCheckRequired()) {
-                  this.tmpMovePosition.assign(this.position).addScaled(translation, endSlide);
+                  this.tmpMovePosition.set(this.position).fma(endSlide, translation);
                   if (this.isDropBlocked(this.tmpMovePosition, this.maxDropHeight, false, avoidingBlockDamage, this.isRelaxedMoveConstraints, componentAccessor)
                      )
                    {
@@ -1382,7 +1384,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                }
             }
 
-            this.position.addScaled(translation, endSlide);
+            this.position.fma(endSlide, translation);
             triggerScale = endSlide;
             dt *= endSlide;
          } else {
@@ -1394,7 +1396,7 @@ public class MotionControllerWalk extends MotionControllerBase {
          if (this.getMotionKind() != MotionKind.ASCENDING) {
             if (!this.onGround) {
                if (this.initiateDescend(translation, wasOnGround, "No collision", componentAccessor)) {
-                  this.position.assign(this.lastValidPosition);
+                  this.position.set(this.lastValidPosition);
                   this.moveSpeed = 0.0;
                   triggerScale = 0.0;
                }
@@ -1423,7 +1425,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                      startSlide,
                      endSlide,
                      scale,
-                     Vector3d.formatShortString(this.position),
+                     Vector3dUtil.formatShortString(this.position),
                      this.getMotionKind(),
                      this.isObstructed
                   );
@@ -1440,7 +1442,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   this.onGround,
                   startSlide,
                   endSlide,
-                  Vector3d.formatShortString(this.position),
+                  Vector3dUtil.formatShortString(this.position),
                   this.getMotionKind()
                );
          }
@@ -1452,11 +1454,11 @@ public class MotionControllerWalk extends MotionControllerBase {
          }
 
          double triggerScale = collision.collisionStart;
-         this.position.assign(collision.collisionPoint);
-         Vector3d remainingTranslation = this.lastValidPosition.clone().add(translation).subtract(collision.collisionPoint);
-         if (!remainingTranslation.equals(Vector3d.ZERO)) {
+         this.position.set(collision.collisionPoint);
+         Vector3d remainingTranslation = new Vector3d(this.lastValidPosition).add(translation).sub(collision.collisionPoint);
+         if (!remainingTranslation.equals(Vector3dUtil.ZERO)) {
             double t = remainingTranslation.dot(collision.collisionNormal);
-            remainingTranslation.addScaled(collision.collisionNormal, -t);
+            remainingTranslation.fma(-t, collision.collisionNormal);
             this.position.add(remainingTranslation);
          }
 
@@ -1498,7 +1500,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                         this.onGround,
                         wasOnGround,
                         this.isObstructed,
-                        Vector3d.formatShortString(this.position),
+                        Vector3dUtil.formatShortString(this.position),
                         this.getMotionKind()
                      );
                }
@@ -1510,7 +1512,7 @@ public class MotionControllerWalk extends MotionControllerBase {
 
                this.onGround = true;
             }
-         } else if (this.forceVelocity.equals(Vector3d.ZERO) && this.appliedVelocities.isEmpty()) {
+         } else if (this.forceVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
             if (collision.collisionNormal.equals(this.getWorldAntiNormal())) {
                this.fallSpeed = 0.0;
                this.setMotionKind(MotionKind.DROPPING);
@@ -1518,7 +1520,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   LOGGER.at(Level.INFO)
                      .log(
                         "Move: No ext force, collision down, clear vert speed newpos=%s state=%s",
-                        Vector3d.formatShortString(this.position),
+                        Vector3dUtil.formatShortString(this.position),
                         this.getMotionKind()
                      );
                }
@@ -1536,8 +1538,8 @@ public class MotionControllerWalk extends MotionControllerBase {
                            "Move: No ext force, collision horz, try climb h=%s succ=%s newpos(succ|fail)=%s|%s state=%s",
                            this.climbUpDistance,
                            tryClimb,
-                           Vector3d.formatShortString(this.tmpMovePosition),
-                           Vector3d.formatShortString(this.position),
+                           Vector3dUtil.formatShortString(this.tmpMovePosition),
+                           Vector3dUtil.formatShortString(this.position),
                            this.getMotionKind()
                         );
                   }
@@ -1553,7 +1555,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                            "Move: No ext force, collision horz, don't try climb onGround %s, block %s newpos=%s state=%s",
                            this.onGround,
                            collision.blockType != null,
-                           Vector3d.formatShortString(this.position),
+                           Vector3dUtil.formatShortString(this.position),
                            this.getMotionKind()
                         );
                   }
@@ -1585,13 +1587,15 @@ public class MotionControllerWalk extends MotionControllerBase {
                   LOGGER.at(Level.INFO)
                      .log(
                         "Move: Ext force, collision down, clear force and vert speed newpos=%s state=%s",
-                        Vector3d.formatShortString(this.position),
+                        Vector3dUtil.formatShortString(this.position),
                         this.getMotionKind()
                      );
                }
             } else if (this.debugModeMove) {
                LOGGER.at(Level.INFO)
-                  .log("Move: Ext force, collision not down, clear force newpos=%s state=%s", Vector3d.formatShortString(this.position), this.getMotionKind());
+                  .log(
+                     "Move: Ext force, collision not down, clear force newpos=%s state=%s", Vector3dUtil.formatShortString(this.position), this.getMotionKind()
+                  );
             }
          }
 
@@ -1601,8 +1605,8 @@ public class MotionControllerWalk extends MotionControllerBase {
 
       if (tryClimb && !this.isProcessTriggersHasMoved()) {
          this.setMotionKind(MotionKind.ASCENDING);
-         this.climbUpDirection.assign(this.getWorldNormal());
-         this.climbForwardDirection.assign(translation).normalize();
+         this.climbUpDirection.set(this.getWorldNormal());
+         this.climbForwardDirection.set(translation).normalize();
          this.climbSpeed = this.computeClimbSpeed(this.moveSpeed);
          this.onGround = false;
          if (this.debugModeMove) {
@@ -1657,8 +1661,8 @@ public class MotionControllerWalk extends MotionControllerBase {
          onGround = collisionModule.validatePosition(world, this.collisionBoundingBox, probePosition, this.collisionResult) == 1;
       }
 
-      directionComponentSelector.assign(this.getComponentSelector());
-      probeMovement.scale(directionComponentSelector);
+      directionComponentSelector.set(this.getComponentSelector());
+      probeMovement.mul(directionComponentSelector);
       boolean stopOnDamageBlocks = probeMoveData.isAvoidingBlockDamage;
       boolean relaxedMoveConstraints = probeMoveData.isRelaxedMoveConstraints;
       if (saveSegments) {
@@ -1696,8 +1700,8 @@ public class MotionControllerWalk extends MotionControllerBase {
             LOGGER.at(Level.INFO)
                .log(
                   "Probe Step: pos=%s mov=%s left=%s",
-                  Vector3d.formatShortString(probePosition),
-                  Vector3d.formatShortString(probeMovement),
+                  Vector3dUtil.formatShortString(probePosition),
+                  Vector3dUtil.formatShortString(probeMovement),
                   Math.sqrt(distanceLeftSquared)
                );
          }
@@ -1717,7 +1721,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                this.shortenMovement(probePosition, collision.collisionPoint, probePosition);
                distanceLeftSquared = 0.0;
             } else {
-               probePosition.assign(collision.collisionPoint);
+               probePosition.set(collision.collisionPoint);
                distanceLeftSquared = this.updateMovementVector(probePosition, probeMovement, targetPosition, directionComponentSelector);
             }
 
@@ -1768,7 +1772,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                return this.waypointDistance(initialPosition, probePosition);
             }
 
-            probePosition.addScaled(this.getWorldNormal(), climbHeight);
+            probePosition.fma(climbHeight, this.getWorldNormal());
             if (saveSegments) {
                probeMoveData.addClimbSegment(probePosition, this.waypointDistance(initialPosition, probePosition), blockId);
             }
@@ -1777,7 +1781,7 @@ public class MotionControllerWalk extends MotionControllerBase {
          } else {
             if (endSlide >= 1.0) {
                probePosition.add(probeMovement);
-               probeMovement.assign(Vector3d.ZERO);
+               probeMovement.zero();
                double distance = this.waypointDistance(initialPosition, probePosition);
                if (saveSegments) {
                   probeMoveData.addMoveSegment(probePosition, true, distance);
@@ -1786,13 +1790,13 @@ public class MotionControllerWalk extends MotionControllerBase {
                return distance;
             }
 
-            probePosition.addScaled(probeMovement, endSlide);
+            probePosition.fma(endSlide, probeMovement);
             if (saveSegments) {
                probeMoveData.addHitEdgeSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
             }
 
             if (this.isDropBlocked(probePosition, this.maxDropHeight, true, stopOnDamageBlocks, relaxedMoveConstraints, componentAccessor)) {
-               probeMovement.assign(targetPosition).subtract(probePosition).scale(directionComponentSelector);
+               probeMovement.set(targetPosition).sub(probePosition).mul(directionComponentSelector);
                if (saveSegments) {
                   probeMoveData.changeSegmentToBlockedEdge();
                   return probeMoveData.getLastDistance();
@@ -1904,7 +1908,7 @@ public class MotionControllerWalk extends MotionControllerBase {
    protected double updateMovementVector(
       @Nonnull Vector3d probePosition, @Nonnull Vector3d probeMovement, @Nonnull Vector3d targetPosition, @Nonnull Vector3d directionComponentSelector
    ) {
-      probeMovement.assign(targetPosition).subtract(probePosition).scale(directionComponentSelector);
+      probeMovement.set(targetPosition).sub(probePosition).mul(directionComponentSelector);
       return this.waypointDistanceSquared(probePosition, targetPosition);
    }
 
@@ -1939,7 +1943,7 @@ public class MotionControllerWalk extends MotionControllerBase {
       @Nonnull Vector3d validPosition, @Nonnull Vector3d invalidPosition, @Nonnull Vector3d result, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (!this.isValidPosition(validPosition, this.collisionResult, componentAccessor)) {
-         result.assign(invalidPosition);
+         result.set(invalidPosition);
          return 1.0;
       } else {
          return this.bisect(validPosition, invalidPosition, this, (_this, pos) -> _this.isValidPosition(pos, _this.collisionResult, componentAccessor), result);
@@ -1958,7 +1962,7 @@ public class MotionControllerWalk extends MotionControllerBase {
    }
 
    private double shortenMovement(@Nonnull Vector3d start, @Nonnull Vector3d end, @Nonnull Vector3d result) {
-      double moveLength = end.distanceTo(start);
+      double moveLength = end.distance(start);
       if (moveLength <= 0.001) {
          return 0.0;
       }
@@ -1980,7 +1984,7 @@ public class MotionControllerWalk extends MotionControllerBase {
 
    private void validateTranslation(@Nonnull Vector3d translation, String kind) {
       if (this.debugModeValidateMath) {
-         boolean b = NPCPhysicsMath.isValid(translation) && translation.squaredLength() < 1000000.0;
+         boolean b = NPCPhysicsMath.isValid(translation) && translation.lengthSquared() < 1000000.0;
          if (!b) {
             throw new IllegalStateException(
                String.format(
@@ -1989,12 +1993,12 @@ public class MotionControllerWalk extends MotionControllerBase {
                   translation.toString(),
                   this.moveSpeed,
                   this.fallSpeed,
-                  Vector3d.formatShortString(this.position)
+                  Vector3dUtil.formatShortString(this.position)
                )
             );
          }
-      } else if (translation.squaredLength() > 1000000.0) {
-         translation.assign(Vector3d.ZERO);
+      } else if (translation.lengthSquared() > 1000000.0) {
+         translation.zero();
       }
    }
 
@@ -2011,7 +2015,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   this.fallSpeed,
                   this.onGround,
                   this.canAct(ref, componentAccessor),
-                  Vector3d.formatShortString(this.position),
+                  Vector3dUtil.formatShortString(this.position),
                   this.getMotionKind()
                )
             );
@@ -2070,12 +2074,12 @@ public class MotionControllerWalk extends MotionControllerBase {
          }
       }
 
-      translation.assign(climbDirection).scale(distance);
+      translation.set(climbDirection).mul(distance);
       return climbDistance;
    }
 
    private void computeDescendDirection(@Nonnull Vector3d translation) {
-      this.climbForwardDirection.assign(this.getWorldAntiNormal());
+      this.climbForwardDirection.set(this.getWorldAntiNormal());
       if (!(this.descendFlatness <= 0.0)) {
          double forwardDistance = NPCPhysicsMath.dotProduct(translation.x, 0.0, translation.z);
          if (!(forwardDistance <= 1.0E-12)) {
@@ -2087,7 +2091,7 @@ public class MotionControllerWalk extends MotionControllerBase {
             double newForwardDistance = Math.sqrt(NPCPhysicsMath.dotProduct(this.climbForwardDirection.x, 0.0, this.climbForwardDirection.z));
             if (newForwardDistance > 1.0E-6) {
                double compensation = 1.0 + (1.0 / newForwardDistance - 1.0) * this.descendSpeedCompensation;
-               this.climbForwardDirection.scale(compensation);
+               this.climbForwardDirection.mul(compensation);
             }
          }
       }
@@ -2127,14 +2131,14 @@ public class MotionControllerWalk extends MotionControllerBase {
          this.currentJumpHeight = targetJumpHeight;
          this.jumpDropHeight = this.currentJumpHeight - this.climbUpDistance;
          this.jumpBlockHeight = this.climbUpDistance;
-         this.jumpDropDirection.assign(this.getWorldAntiNormal());
+         this.jumpDropDirection.set(this.getWorldAntiNormal());
          double baseClimbUpDistance = this.climbUpDistance;
          this.climbUpDistance = this.currentJumpHeight;
-         this.tmpClimbMovement.assign(translation).setLength(0.4);
-         this.tmpMovePosition.assign(this.position).add(0.0, baseClimbUpDistance, 0.0);
+         this.tmpClimbMovement.set(translation).normalize(0.4);
+         this.tmpMovePosition.set(this.position).add(0.0, baseClimbUpDistance, 0.0);
          double forwardMax = this.maxMoveFactor(this.tmpMovePosition, this.tmpClimbMovement, avoidingBlockDamage, componentAccessor);
          this.maxClimbForwardDistance += forwardMax * 0.4;
-         this.tmpMovePosition.addScaled(this.tmpClimbMovement, forwardMax);
+         this.tmpMovePosition.fma(forwardMax, this.tmpClimbMovement);
          this.jumping = this.maxClimbForwardDistance >= this.minJumpDistance;
       } else {
          this.jumping = false;
@@ -2157,25 +2161,25 @@ public class MotionControllerWalk extends MotionControllerBase {
       World world = componentAccessor.getExternalData().getWorld();
       ChunkStore chunkStore = world.getChunkStore();
       this.tmpResults.setCollisionByMaterial(4, relaxMoveConstraints ? 13 : 5);
-      results.assign(0.0);
-      Vector3d worldNormal = this.getWorldNormal();
-      this.tmpClimbMovement.assign(worldNormal).scale(height);
+      results.zero();
+      Vector3dc worldNormal = this.getWorldNormal();
+      this.tmpClimbMovement.set(worldNormal).mul(height);
       double scale = this.maxMoveFactor(position, this.tmpClimbMovement, acknowledgeDamage, componentAccessor);
       height *= scale;
       if (height == 0.0) {
          return 0.0;
       }
 
-      this.tmpClimbMovement.assign(direction).setLength(forward);
-      this.tmpClimbPosition.assign(position).add(this.tmpClimbMovement);
-      this.tmpClimbMovement.assign(worldNormal).scale(height);
+      this.tmpClimbMovement.set(direction).normalize(forward);
+      this.tmpClimbPosition.set(position).add(this.tmpClimbMovement);
+      this.tmpClimbMovement.set(worldNormal).mul(height);
       boolean saveComputeOverlaps = this.tmpResults.isComputeOverlaps();
       this.tmpResults.setComputeOverlaps(true);
       CollisionModule.get();
       CollisionModule.findCollisions(this.collisionBoundingBox, this.tmpClimbPosition, this.tmpClimbMovement, false, this.tmpResults, componentAccessor);
       this.tmpResults.setComputeOverlaps(saveComputeOverlaps);
       BlockCollisionData collisionData = this.tmpResults.getFirstBlockCollision();
-      Vector3d worldAntiNormal = this.getWorldAntiNormal();
+      Vector3dc worldAntiNormal = this.getWorldAntiNormal();
       double top = 0.0;
       double high = 1.0;
 
@@ -2206,7 +2210,7 @@ public class MotionControllerWalk extends MotionControllerBase {
          return 0.0;
       }
 
-      this.tmpClimbPosition.addScaled(this.tmpClimbMovement, top);
+      this.tmpClimbPosition.fma(top, this.tmpClimbMovement);
       relaxMoveConstraints |= this.role.isBreathesInAir();
       if (!this.isValidWalkPosition(
          chunkStore, this.tmpClimbPosition.x, this.tmpClimbPosition.y, this.tmpClimbPosition.z, acknowledgeDamage, relaxMoveConstraints
@@ -2215,9 +2219,9 @@ public class MotionControllerWalk extends MotionControllerBase {
       }
 
       double bottom = height * top;
-      results.assign(bottom, height * high);
+      results.set(bottom, height * high);
       if (targetPosition != null) {
-         targetPosition.assign(this.tmpClimbPosition);
+         targetPosition.set(this.tmpClimbPosition);
       }
 
       return bottom;
@@ -2242,7 +2246,7 @@ public class MotionControllerWalk extends MotionControllerBase {
          return true;
       }
 
-      this.tmpClimbPosition.assign(collision.collisionPoint);
+      this.tmpClimbPosition.set(collision.collisionPoint);
       if (acknowledgeDamage) {
          double collisionStart = collision.collisionStart;
 
@@ -2274,7 +2278,7 @@ public class MotionControllerWalk extends MotionControllerBase {
          }
 
          if (updatePosition) {
-            position.assign(this.tmpClimbPosition);
+            position.set(this.tmpClimbPosition);
          }
 
          return false;
@@ -2291,7 +2295,7 @@ public class MotionControllerWalk extends MotionControllerBase {
       @Nonnull Vector3d position, double maxTestDistance, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       this.tmpResults.setCollisionByMaterial(4);
-      this.tmpClimbMovement.assign(this.getWorldAntiNormal()).scale(maxTestDistance);
+      this.tmpClimbMovement.set(this.getWorldAntiNormal()).mul(maxTestDistance);
       CollisionModule.get();
       CollisionModule.findCollisions(this.collisionBoundingBox, position, this.tmpClimbMovement, this.tmpResults, componentAccessor);
       BlockCollisionData collision = this.tmpResults.getFirstBlockCollision();

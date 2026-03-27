@@ -52,6 +52,10 @@ public class UpdateItemCategories implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateItemCategories deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateItemCategories", 2, buf.readableBytes() - offset);
+      }
+
       UpdateItemCategories obj = new UpdateItemCategories();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -59,14 +63,14 @@ public class UpdateItemCategories implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int itemCategoriesCount = VarInt.peek(buf, pos);
          if (itemCategoriesCount < 0) {
-            throw ProtocolException.negativeLength("ItemCategories", itemCategoriesCount);
+            throw ProtocolException.invalidVarInt("ItemCategories");
          }
 
+         int itemCategoriesVarLen = VarInt.size(itemCategoriesCount);
          if (itemCategoriesCount > 4096000) {
             throw ProtocolException.arrayTooLong("ItemCategories", itemCategoriesCount, 4096000);
          }
 
-         int itemCategoriesVarLen = VarInt.size(itemCategoriesCount);
          if (pos + itemCategoriesVarLen + itemCategoriesCount * 6L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("ItemCategories", pos + itemCategoriesVarLen + itemCategoriesCount * 6, buf.readableBytes());
          }
@@ -88,7 +92,7 @@ public class UpdateItemCategories implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ItemCategory.computeBytesConsumed(buf, pos);
@@ -142,9 +146,14 @@ public class UpdateItemCategories implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int itemCategoriesCount = VarInt.peek(buffer, pos);
+         int itemCategoriesCount = VarInt.peek(buffer, v);
          if (itemCategoriesCount < 0) {
             return ValidationResult.error("Invalid array count for ItemCategories");
          }
@@ -153,15 +162,15 @@ public class UpdateItemCategories implements Packet, ToClientPacket {
             return ValidationResult.error("ItemCategories exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(itemCategoriesCount);
 
          for (int i = 0; i < itemCategoriesCount; i++) {
-            ValidationResult structResult = ItemCategory.validateStructure(buffer, pos);
+            ValidationResult structResult = ItemCategory.validateStructure(buffer, v);
             if (!structResult.isValid()) {
                return ValidationResult.error("Invalid ItemCategory in ItemCategories[" + i + "]: " + structResult.error());
             }
 
-            pos += ItemCategory.computeBytesConsumed(buffer, pos);
+            v += ItemCategory.computeBytesConsumed(buffer, v);
          }
       }
 

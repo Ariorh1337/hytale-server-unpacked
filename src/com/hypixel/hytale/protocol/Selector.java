@@ -12,7 +12,7 @@ public abstract class Selector {
    @Nonnull
    public static Selector deserialize(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> AOECircleSelector.deserialize(buf, offset + typeIdLen);
@@ -26,7 +26,7 @@ public abstract class Selector {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return typeIdLen + switch (typeId) {
          case 0 -> AOECircleSelector.computeBytesConsumed(buf, offset + typeIdLen);
@@ -71,7 +71,7 @@ public abstract class Selector {
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
       int typeId = VarInt.peek(buffer, offset);
-      int typeIdLen = VarInt.length(buffer, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> AOECircleSelector.validateStructure(buffer, offset + typeIdLen);

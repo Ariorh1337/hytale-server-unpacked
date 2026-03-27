@@ -58,6 +58,10 @@ public class UVMotion {
 
    @Nonnull
    public static UVMotion deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 19) {
+         throw ProtocolException.bufferTooSmall("UVMotion", 19, buf.readableBytes() - offset);
+      }
+
       UVMotion obj = new UVMotion();
       byte nullBits = buf.getByte(offset);
       obj.addRandomUVOffset = buf.getByte(offset + 1) != 0;
@@ -70,14 +74,18 @@ public class UVMotion {
       if ((nullBits & 1) != 0) {
          int textureLen = VarInt.peek(buf, pos);
          if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
+            throw ProtocolException.invalidVarInt("Texture");
          }
 
+         int textureVarLen = VarInt.size(textureLen);
          if (textureLen > 4096000) {
             throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
          }
 
-         int textureVarLen = VarInt.length(buf, pos);
+         if (pos + textureVarLen + textureLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Texture", pos + textureVarLen + textureLen, buf.readableBytes());
+         }
+
          obj.texture = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += textureVarLen + textureLen;
       }
@@ -90,7 +98,7 @@ public class UVMotion {
       int pos = offset + 19;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -129,9 +137,14 @@ public class UVMotion {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 19;
+      int v = buffer.getByte(offset + 18) & 255;
+      if (v >= 9) {
+         return ValidationResult.error("Invalid UVMotionCurveType value for StrengthCurveType");
+      }
+
+      v = offset + 19;
       if ((nullBits & 1) != 0) {
-         int textureLen = VarInt.peek(buffer, pos);
+         int textureLen = VarInt.peek(buffer, v);
          if (textureLen < 0) {
             return ValidationResult.error("Invalid string length for Texture");
          }
@@ -140,9 +153,9 @@ public class UVMotion {
             return ValidationResult.error("Texture exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += textureLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(textureLen);
+         v += textureLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Texture");
          }
       }

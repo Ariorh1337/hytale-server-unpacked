@@ -94,7 +94,8 @@ public class InventoryPacketHandler implements SubPacketHandler {
                   if (quantity > 0) {
                      ItemStack itemStack = ItemStack.fromPacket(packet.item);
                      if (packet.slotId < 0) {
-                        ItemStackTransaction transaction = inventory.getCombinedHotbarFirst().addItemStack(itemStack);
+                        CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+                        ItemStackTransaction transaction = combinedInventory.addItemStack(itemStack);
                         ItemStack remainder = transaction.getRemainder();
                         if (remainder != null && !remainder.isEmpty()) {
                            ItemUtils.dropItem(ref, remainder, store);
@@ -163,11 +164,12 @@ public class InventoryPacketHandler implements SubPacketHandler {
             () -> {
                Player playerComponent = store.getComponent(ref, Player.getComponentType());
                assert playerComponent != null;
-               Inventory inventory = playerComponent.getInventory();
-               byte slot = inventory.getActiveHotbarSlot();
-               if (slot != -1) {
-                  ItemContainer hotbar = inventory.getHotbar();
-                  ItemStack stack = hotbar.getItemStack(slot);
+               InventoryComponent.Hotbar hotbarComponent = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+               assert hotbarComponent != null;
+               ItemContainer hotbar = hotbarComponent.getInventory();
+               byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+               if (activeHotbarSlot != -1) {
+                  ItemStack stack = hotbar.getItemStack(activeHotbarSlot);
                   if (stack != null && !stack.isEmpty()) {
                      BlockGroup set = BlockGroup.findItemGroup(stack.getItem());
                      if (set != null) {
@@ -179,7 +181,9 @@ public class InventoryPacketHandler implements SubPacketHandler {
                               if (desiredIndex != -1 && desiredIndex != currentIndex) {
                                  ItemStack maxSelectorTool = null;
                                  short maxSlot = -1;
-                                 CombinedItemContainer combinedInventory = inventory.getCombinedArmorHotbarUtilityStorage();
+                                 CombinedItemContainer combinedInventory = InventoryComponent.getCombined(
+                                    store, ref, InventoryComponent.ARMOR_HOTBAR_UTILITY_STORAGE
+                                 );
 
                                  for (short i = 0; i < combinedInventory.getCapacity(); i++) {
                                     ItemStack potentialSelector = combinedInventory.getItemStack(i);
@@ -203,7 +207,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                                     }
 
                                     ItemStack replacement = new ItemStack(set.get(desiredIndex), stack.getQuantity());
-                                    hotbar.setItemStackForSlot(slot, replacement);
+                                    hotbar.setItemStackForSlot(activeHotbarSlot, replacement);
                                     ItemSoundSet soundSet = ItemSoundSet.getAssetMap().getAsset(desiredItem.getItemSoundSetIndex());
                                     if (soundSet != null) {
                                        String dragSound = soundSet.getSoundEventIds().get(ItemSoundEvent.Drop);
@@ -354,7 +358,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                }
 
                newSlot = event.getNewSlot();
-               inventory.setActiveSlot(ref, inventorySectionId, newSlot, store);
+               Inventory.setActiveSlot(ref, inventorySectionId, newSlot, store);
                playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(inventorySectionId, newSlot));
             }
          });
@@ -417,7 +421,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                   }
 
                   if (targetSlot != previousSlot) {
-                     inventory.setActiveSlot(ref, packet.inventorySectionId, targetSlot, store);
+                     Inventory.setActiveSlot(ref, packet.inventorySectionId, targetSlot, store);
                   }
                }
             }
@@ -445,7 +449,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                   switch (packet.inventoryActionType) {
                      case TakeAll:
                         if (packet.inventorySectionId == -9) {
-                           inventory.takeAll(packet.inventorySectionId, settings);
+                           inventory.takeAll(ref, packet.inventorySectionId, settings, store);
                            return;
                         }
 
@@ -455,10 +459,10 @@ public class InventoryPacketHandler implements SubPacketHandler {
                               if (itemContainerWindow.getItemContainer() instanceof CombinedItemContainer combinedItemContainer
                                  && combinedItemContainer.getContainersSize() >= 3) {
                                  ItemContainer outputContainer = combinedItemContainer.getContainer(2);
-                                 inventory.takeAllWithPriority(outputContainer, settings);
+                                 Inventory.takeAllWithPriority(ref, outputContainer, settings, store);
                               }
                            } else {
-                              inventory.takeAll(packet.inventorySectionId, settings);
+                              inventory.takeAll(ref, packet.inventorySectionId, settings, store);
                            }
                         }
                         break;
@@ -475,13 +479,13 @@ public class InventoryPacketHandler implements SubPacketHandler {
                         break;
                      case QuickStack:
                         if (packet.inventorySectionId == -9) {
-                           inventory.quickStack(packet.inventorySectionId);
+                           inventory.quickStack(ref, packet.inventorySectionId, store);
                            return;
                         }
 
                         Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
                         if (window instanceof ItemContainerWindow) {
-                           inventory.quickStack(packet.inventorySectionId);
+                           inventory.quickStack(ref, packet.inventorySectionId, store);
                         }
                         break;
                      case Sort:

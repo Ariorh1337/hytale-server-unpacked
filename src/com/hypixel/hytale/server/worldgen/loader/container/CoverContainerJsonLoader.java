@@ -58,9 +58,10 @@ public class CoverContainerJsonLoader extends JsonLoader<SeedStringResource, Cov
          ModifyEvent.dispatch(
             ModifyEvents.BiomeCovers.class,
             new ModifyEvents.BiomeCovers(
+               this.seed,
                this.biomeContext,
                entries,
-               content -> new CoverContainerJsonLoader.CoverContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+               path -> new CoverContainerJsonLoader.CoverContainerEntryJsonLoader(seed.next(), this.dataFolder, this.loadFile(path)).load()
             )
          );
          return new CoverContainer(entries.toArray());

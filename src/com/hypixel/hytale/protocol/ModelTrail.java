@@ -57,6 +57,10 @@ public class ModelTrail {
 
    @Nonnull
    public static ModelTrail deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 35) {
+         throw ProtocolException.bufferTooSmall("ModelTrail", 35, buf.readableBytes() - offset);
+      }
+
       ModelTrail obj = new ModelTrail();
       byte nullBits = buf.getByte(offset);
       obj.targetEntityPart = EntityPart.fromValue(buf.getByte(offset + 1));
@@ -70,28 +74,48 @@ public class ModelTrail {
 
       obj.fixedRotation = buf.getByte(offset + 26) != 0;
       if ((nullBits & 4) != 0) {
-         int varPos0 = offset + 35 + buf.getIntLE(offset + 27);
-         int trailIdLen = VarInt.peek(buf, varPos0);
-         if (trailIdLen < 0) {
-            throw ProtocolException.negativeLength("TrailId", trailIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 27);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 35) {
+            throw ProtocolException.invalidOffset("TrailId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 35 + varPosBase0;
+         int trailIdLen = VarInt.peek(buf, varPos0);
+         if (trailIdLen < 0) {
+            throw ProtocolException.invalidVarInt("TrailId");
+         }
+
+         int trailIdVarIntLen = VarInt.size(trailIdLen);
          if (trailIdLen > 4096000) {
             throw ProtocolException.stringTooLong("TrailId", trailIdLen, 4096000);
+         }
+
+         if (varPos0 + trailIdVarIntLen + trailIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("TrailId", varPos0 + trailIdVarIntLen + trailIdLen, buf.readableBytes());
          }
 
          obj.trailId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos1 = offset + 35 + buf.getIntLE(offset + 31);
-         int targetNodeNameLen = VarInt.peek(buf, varPos1);
-         if (targetNodeNameLen < 0) {
-            throw ProtocolException.negativeLength("TargetNodeName", targetNodeNameLen);
+         int varPosBase1 = buf.getIntLE(offset + 31);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 35) {
+            throw ProtocolException.invalidOffset("TargetNodeName", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 35 + varPosBase1;
+         int targetNodeNameLen = VarInt.peek(buf, varPos1);
+         if (targetNodeNameLen < 0) {
+            throw ProtocolException.invalidVarInt("TargetNodeName");
+         }
+
+         int targetNodeNameVarIntLen = VarInt.size(targetNodeNameLen);
          if (targetNodeNameLen > 4096000) {
             throw ProtocolException.stringTooLong("TargetNodeName", targetNodeNameLen, 4096000);
+         }
+
+         if (varPos1 + targetNodeNameVarIntLen + targetNodeNameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("TargetNodeName", varPos1 + targetNodeNameVarIntLen + targetNodeNameLen, buf.readableBytes());
          }
 
          obj.targetNodeName = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -105,9 +129,13 @@ public class ModelTrail {
       int maxEnd = 35;
       if ((nullBits & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 27);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 35) {
+            throw ProtocolException.invalidOffset("TrailId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 35 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -115,9 +143,13 @@ public class ModelTrail {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 31);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 35) {
+            throw ProtocolException.invalidOffset("TargetNodeName", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 35 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -199,17 +231,18 @@ public class ModelTrail {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid EntityPart value for TargetEntityPart");
+      }
+
       if ((nullBits & 4) != 0) {
-         int trailIdOffset = buffer.getIntLE(offset + 27);
-         if (trailIdOffset < 0) {
+         v = buffer.getIntLE(offset + 27);
+         if (v < 0 || v > buffer.writerIndex() - offset - 35) {
             return ValidationResult.error("Invalid offset for TrailId");
          }
 
-         int pos = offset + 35 + trailIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TrailId");
-         }
-
+         int pos = offset + 35 + v;
          int trailIdLen = VarInt.peek(buffer, pos);
          if (trailIdLen < 0) {
             return ValidationResult.error("Invalid string length for TrailId");
@@ -219,7 +252,7 @@ public class ModelTrail {
             return ValidationResult.error("TrailId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(trailIdLen);
          pos += trailIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TrailId");
@@ -227,16 +260,12 @@ public class ModelTrail {
       }
 
       if ((nullBits & 8) != 0) {
-         int targetNodeNameOffset = buffer.getIntLE(offset + 31);
-         if (targetNodeNameOffset < 0) {
+         v = buffer.getIntLE(offset + 31);
+         if (v < 0 || v > buffer.writerIndex() - offset - 35) {
             return ValidationResult.error("Invalid offset for TargetNodeName");
          }
 
-         int pos = offset + 35 + targetNodeNameOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TargetNodeName");
-         }
-
+         int pos = offset + 35 + v;
          int targetNodeNameLen = VarInt.peek(buffer, pos);
          if (targetNodeNameLen < 0) {
             return ValidationResult.error("Invalid string length for TargetNodeName");
@@ -246,7 +275,7 @@ public class ModelTrail {
             return ValidationResult.error("TargetNodeName exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(targetNodeNameLen);
          pos += targetNodeNameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TargetNodeName");

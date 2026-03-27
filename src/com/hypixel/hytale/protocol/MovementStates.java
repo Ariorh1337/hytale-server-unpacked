@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -116,6 +117,10 @@ public class MovementStates {
 
    @Nonnull
    public static MovementStates deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 23) {
+         throw ProtocolException.bufferTooSmall("MovementStates", 23, buf.readableBytes() - offset);
+      }
+
       MovementStates obj = new MovementStates();
       obj.idle = buf.getByte(offset + 0) != 0;
       obj.horizontalIdle = buf.getByte(offset + 1) != 0;

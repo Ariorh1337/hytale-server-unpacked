@@ -6,7 +6,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -35,6 +34,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotionBase implements AStarEvaluator, DebugSupport.DebugFlagsChangeListener {
    protected final int nodesPerTick;
@@ -234,7 +234,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
                   if (steeringTarget != null && !steeringTarget.equals(this.lastSeekVisTarget)) {
                      this.cachedDebugSupport.clearPathVisualization();
                      this.cachedDebugSupport.recordPathWaypoint(steeringTarget, true, true, true);
-                     this.lastSeekVisTarget.assign(steeringTarget);
+                     this.lastSeekVisTarget.set(steeringTarget);
                   }
                }
 
@@ -328,7 +328,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
             } else if (this.pathFollower.isWaypointFrozen()) {
                this.aStar.clearPath();
                Vector3d targetPosition = this.pathFollower.getCurrentWaypointPosition();
-               if (targetPosition.distanceSquaredTo(position) < 1.0) {
+               if (targetPosition.distanceSquared(position) < 1.0) {
                   this.pathFollower.setWaypointFrozen(false);
                   if (this.canSkipSteering && this.shouldSkipSteering(ref, activeMotionController, targetPosition, componentAccessor)) {
                      this.startPathFinder(ref, position, role, activeMotionController, componentAccessor);
@@ -460,7 +460,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
             this.onNoPathFound(activeMotionController);
             return false;
          } else {
-            double pathLengthSquared = this.aStar.getEndPosition().distanceSquaredTo(this.aStar.getPosition());
+            double pathLengthSquared = this.aStar.getEndPosition().distanceSquared(this.aStar.getPosition());
             if (pathLengthSquared < this.minPathLengthSquared) {
                if (this.dbgStatus) {
                   NPCPlugin.get().getLogger().at(Level.INFO).log("Path computation failed. Path to short length=%s", Math.sqrt(pathLengthSquared));

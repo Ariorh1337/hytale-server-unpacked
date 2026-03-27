@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ScaleDensity extends Density {
    @Nonnull
@@ -34,8 +34,8 @@ public class ScaleDensity extends Density {
          return 0.0;
       }
 
-      this.rChildPosition.assign(context.position);
-      this.rChildPosition.scale(this.scale);
+      this.rChildPosition.set(context.position);
+      this.rChildPosition.mul(this.scale);
       this.rChildContext.assign(context);
       this.rChildContext.position = this.rChildPosition;
       return this.input.process(this.rChildContext);

@@ -63,7 +63,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.function.function.TriFunction;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.packets.assets.TrackOrUpdateObjective;
 import com.hypixel.hytale.protocol.packets.assets.UntrackObjective;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -820,8 +820,8 @@ public class ObjectivePlugin extends JavaPlugin {
                            if (objectiveLocationMarkerAsset != null) {
                               TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                               assert transformComponent != null;
-                              Vector3f rotation = transformComponent.getRotation();
-                              objectiveLocationMarkerComponent.updateLocationMarkerValues(objectiveLocationMarkerAsset, rotation.getYaw(), store);
+                              Rotation3f rotation = transformComponent.getRotation();
+                              objectiveLocationMarkerComponent.updateLocationMarkerValues(objectiveLocationMarkerAsset, rotation.yaw(), store);
                               ModelComponent modelComponent = archetypeChunk.getComponent(index, ModelComponent.getComponentType());
                               assert modelComponent != null;
                               Model oldModel = modelComponent.getModel();

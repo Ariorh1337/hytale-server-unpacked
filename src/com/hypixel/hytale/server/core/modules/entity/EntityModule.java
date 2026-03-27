@@ -492,6 +492,7 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new LivingEntityEffectClearChangesSystem());
       entityStoreRegistry.registerSystem(new PlayerSendInventorySystem(this.playerComponentType));
       entityStoreRegistry.registerSystem(new PlayerSavingSystems.WorldRemovedSystem(this.playerComponentType));
+      entityStoreRegistry.registerSystem(new PlayerSavingSystems.EntityRemovedSystem(this.playerComponentType));
       entityStoreRegistry.registerSystem(new PlayerSavingSystems.TickingSystem(this.playerComponentType));
       this.entityGroupComponentType = entityStoreRegistry.registerComponent(EntityGroup.class, () -> {
          throw new UnsupportedOperationException("Not implemented");

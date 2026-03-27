@@ -1,8 +1,9 @@
 package com.hypixel.hytale.math.block;
 
 import com.hypixel.hytale.function.predicate.TriIntObjPredicate;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BlockCubeUtil {
    public static <T> boolean forEachBlock(
@@ -79,8 +80,8 @@ public class BlockCubeUtil {
    }
 
    public static <T> boolean forEachBlock(@Nonnull Vector3i pointOne, @Nonnull Vector3i pointTwo, T t, @Nonnull TriIntObjPredicate<T> consumer) {
-      Vector3i min = Vector3i.min(pointOne, pointTwo);
-      Vector3i max = Vector3i.max(pointOne, pointTwo);
+      Vector3i min = Vector3iUtil.min(pointOne, pointTwo);
+      Vector3i max = Vector3iUtil.max(pointOne, pointTwo);
 
       for (int x = min.x; x <= max.x; x++) {
          for (int z = min.z; z <= max.z; z++) {
@@ -109,8 +110,8 @@ public class BlockCubeUtil {
          return forEachBlock(pointOne, pointTwo, t, consumer);
       }
 
-      Vector3i min = Vector3i.min(pointOne, pointTwo);
-      Vector3i max = Vector3i.max(pointOne, pointTwo);
+      Vector3i min = Vector3iUtil.min(pointOne, pointTwo);
+      Vector3i max = Vector3iUtil.max(pointOne, pointTwo);
       int innerMinX = min.x + thickness;
       int innerMaxX = max.x - thickness;
       int innerMinZ = min.z + thickness;

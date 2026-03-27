@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class FloatRange {
 
    @Nonnull
    public static FloatRange deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("FloatRange", 8, buf.readableBytes() - offset);
+      }
+
       FloatRange obj = new FloatRange();
       obj.inclusiveMin = buf.getFloatLE(offset + 0);
       obj.inclusiveMax = buf.getFloatLE(offset + 4);

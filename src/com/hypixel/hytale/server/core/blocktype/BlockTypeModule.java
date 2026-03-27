@@ -42,7 +42,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
-import com.hypixel.hytale.server.core.universe.world.chunk.systems.ChunkSystems;
 import com.hypixel.hytale.server.core.universe.world.events.ChunkPreLoadProcessEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
@@ -417,9 +416,7 @@ public class BlockTypeModule extends JavaPlugin {
    private static class MigrateLegacySections extends ChunkColumnMigrationSystem {
       private final Query<ChunkStore> QUERY = Query.and(ChunkColumn.getComponentType(), BlockChunk.getComponentType());
       private final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(
-         new SystemDependency<>(Order.BEFORE, LegacyModule.MigrateLegacySections.class),
-         new SystemDependency<>(Order.AFTER, ChunkSystems.OnNewChunk.class),
-         RootDependency.first()
+         new SystemDependency<>(Order.BEFORE, LegacyModule.MigrateLegacySections.class), RootDependency.first()
       );
 
       @Override

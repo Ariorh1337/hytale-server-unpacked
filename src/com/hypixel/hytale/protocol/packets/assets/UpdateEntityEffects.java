@@ -57,6 +57,10 @@ public class UpdateEntityEffects implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateEntityEffects deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateEntityEffects", 6, buf.readableBytes() - offset);
+      }
+
       UpdateEntityEffects obj = new UpdateEntityEffects();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateEntityEffects implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int entityEffectsCount = VarInt.peek(buf, pos);
          if (entityEffectsCount < 0) {
-            throw ProtocolException.negativeLength("EntityEffects", entityEffectsCount);
+            throw ProtocolException.invalidVarInt("EntityEffects");
          }
 
+         int entityEffectsVarLen = VarInt.size(entityEffectsCount);
          if (entityEffectsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("EntityEffects", entityEffectsCount, 4096000);
          }
 
-         pos += VarInt.size(entityEffectsCount);
+         pos += entityEffectsVarLen;
          obj.entityEffects = new HashMap<>(entityEffectsCount);
 
          for (int i = 0; i < entityEffectsCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateEntityEffects implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateEntityEffects implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int entityEffectsCount = VarInt.peek(buffer, pos);
+         int entityEffectsCount = VarInt.peek(buffer, v);
          if (entityEffectsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for EntityEffects");
          }
@@ -162,15 +172,15 @@ public class UpdateEntityEffects implements Packet, ToClientPacket {
             return ValidationResult.error("EntityEffects exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(entityEffectsCount);
 
          for (int i = 0; i < entityEffectsCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += EntityEffect.computeBytesConsumed(buffer, pos);
+            v += EntityEffect.computeBytesConsumed(buffer, v);
          }
       }
 

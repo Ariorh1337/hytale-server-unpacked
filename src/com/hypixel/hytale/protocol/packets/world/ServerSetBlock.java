@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -56,6 +57,10 @@ public class ServerSetBlock implements Packet, ToClientPacket {
 
    @Nonnull
    public static ServerSetBlock deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 19) {
+         throw ProtocolException.bufferTooSmall("ServerSetBlock", 19, buf.readableBytes() - offset);
+      }
+
       ServerSetBlock obj = new ServerSetBlock();
       obj.x = buf.getIntLE(offset + 0);
       obj.y = buf.getIntLE(offset + 4);

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class RepulsionConfig {
 
    @Nonnull
    public static RepulsionConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("RepulsionConfig", 12, buf.readableBytes() - offset);
+      }
+
       RepulsionConfig obj = new RepulsionConfig();
       obj.radius = buf.getFloatLE(offset + 0);
       obj.minForce = buf.getFloatLE(offset + 4);

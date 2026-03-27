@@ -9,8 +9,8 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
@@ -27,6 +27,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PrefabUtil;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class SpawnPrefabInteraction extends SimpleInstantInteraction {
    public static final BuilderCodec<SpawnPrefabInteraction> CODEC = BuilderCodec.builder(
@@ -35,7 +37,7 @@ public class SpawnPrefabInteraction extends SimpleInstantInteraction {
       .documentation("Spawns a prefab at the current location.")
       .appendInherited(new KeyedCodec<>("PrefabPath", Codec.STRING), (o, i) -> o.prefabPath = i, o -> o.prefabPath, (o, p) -> o.prefabPath = p.prefabPath)
       .add()
-      .<Vector3i>appendInherited(new KeyedCodec<>("Offset", Vector3i.CODEC), (o, i) -> o.offset = i, o -> o.offset, (o, p) -> o.offset = p.offset)
+      .<Vector3i>appendInherited(new KeyedCodec<>("Offset", Vector3iUtil.CODEC), (o, i) -> o.offset = i, o -> o.offset, (o, p) -> o.offset = p.offset)
       .addValidator(Validators.nonNull())
       .add()
       .<Rotation>appendInherited(
@@ -55,7 +57,7 @@ public class SpawnPrefabInteraction extends SimpleInstantInteraction {
       .add()
       .build();
    private String prefabPath;
-   private Vector3i offset = Vector3i.ZERO;
+   private Vector3i offset = new Vector3i();
    private Rotation rotationYaw = Rotation.None;
    @Nonnull
    private SpawnPrefabInteraction.OriginSource originSource = SpawnPrefabInteraction.OriginSource.ENTITY;
@@ -77,7 +79,7 @@ public class SpawnPrefabInteraction extends SimpleInstantInteraction {
             Vector3i target;
             switch (this.originSource) {
                case ENTITY:
-                  target = entityPosition.toVector3i();
+                  target = Vector3dUtil.toVector3i(entityPosition);
                   target.add(this.offset);
                   break;
                case BLOCK:

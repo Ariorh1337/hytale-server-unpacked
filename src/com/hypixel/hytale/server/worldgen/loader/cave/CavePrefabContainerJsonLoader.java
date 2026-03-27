@@ -44,9 +44,10 @@ public class CavePrefabContainerJsonLoader extends JsonLoader<SeedStringResource
          ModifyEvent.dispatch(
             ModifyEvents.CavePrefabs.class,
             new ModifyEvents.CavePrefabs(
+               this.seed,
                this.context,
                entries,
-               content -> new CavePrefabEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content), this.context.getParentContext()).load()
+               path -> new CavePrefabEntryJsonLoader(seed.next(), this.dataFolder, this.loadFile(path), this.context.getParentContext()).load()
             )
          );
          return entries.toArray();

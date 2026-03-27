@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -39,6 +40,10 @@ public class SelectedHitEntity {
 
    @Nonnull
    public static SelectedHitEntity deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 53) {
+         throw ProtocolException.bufferTooSmall("SelectedHitEntity", 53, buf.readableBytes() - offset);
+      }
+
       SelectedHitEntity obj = new SelectedHitEntity();
       byte nullBits = buf.getByte(offset);
       obj.networkId = buf.getIntLE(offset + 1);
@@ -101,7 +106,12 @@ public class SelectedHitEntity {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 53 ? ValidationResult.error("Buffer too small: expected at least 53 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 53) {
+         return ValidationResult.error("Buffer too small: expected at least 53 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public SelectedHitEntity clone() {

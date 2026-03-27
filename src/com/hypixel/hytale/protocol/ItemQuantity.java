@@ -34,6 +34,10 @@ public class ItemQuantity {
 
    @Nonnull
    public static ItemQuantity deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("ItemQuantity", 5, buf.readableBytes() - offset);
+      }
+
       ItemQuantity obj = new ItemQuantity();
       byte nullBits = buf.getByte(offset);
       obj.quantity = buf.getIntLE(offset + 1);
@@ -41,14 +45,18 @@ public class ItemQuantity {
       if ((nullBits & 1) != 0) {
          int itemIdLen = VarInt.peek(buf, pos);
          if (itemIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemId", itemIdLen);
+            throw ProtocolException.invalidVarInt("ItemId");
          }
 
+         int itemIdVarLen = VarInt.size(itemIdLen);
          if (itemIdLen > 4096000) {
             throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
          }
 
-         int itemIdVarLen = VarInt.length(buf, pos);
+         if (pos + itemIdVarLen + itemIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ItemId", pos + itemIdVarLen + itemIdLen, buf.readableBytes());
+         }
+
          obj.itemId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += itemIdVarLen + itemIdLen;
       }
@@ -61,7 +69,7 @@ public class ItemQuantity {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -106,7 +114,7 @@ public class ItemQuantity {
             return ValidationResult.error("ItemId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(itemIdLen);
          pos += itemIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ItemId");

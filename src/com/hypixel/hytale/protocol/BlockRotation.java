@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -35,6 +36,10 @@ public class BlockRotation {
 
    @Nonnull
    public static BlockRotation deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 3) {
+         throw ProtocolException.bufferTooSmall("BlockRotation", 3, buf.readableBytes() - offset);
+      }
+
       BlockRotation obj = new BlockRotation();
       obj.rotationYaw = Rotation.fromValue(buf.getByte(offset + 0));
       obj.rotationPitch = Rotation.fromValue(buf.getByte(offset + 1));
@@ -57,7 +62,22 @@ public class BlockRotation {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 3 ? ValidationResult.error("Buffer too small: expected at least 3 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 3) {
+         return ValidationResult.error("Buffer too small: expected at least 3 bytes");
+      }
+
+      int v = buffer.getByte(offset + 0) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid Rotation value for RotationYaw");
+      }
+
+      v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid Rotation value for RotationPitch");
+      }
+
+      v = buffer.getByte(offset + 2) & 255;
+      return v >= 4 ? ValidationResult.error("Invalid Rotation value for RotationRoll") : ValidationResult.OK;
    }
 
    public BlockRotation clone() {

@@ -57,7 +57,7 @@ public class ServerAuthManager {
    });
    private ScheduledFuture<?> refreshTask;
    private Runnable cancelActiveFlow;
-   private volatile String pendingFatalError;
+   private volatile Message pendingFatalError;
 
    private ServerAuthManager() {
    }
@@ -79,7 +79,7 @@ public class ServerAuthManager {
       if (this.profileServiceClient == null) {
          synchronized (this) {
             if (this.profileServiceClient == null) {
-               this.profileServiceClient = new ProfileServiceClient("https://account-data.butter.lat");
+               this.profileServiceClient = new ProfileServiceClient("https://account-data.hytale.com");
             }
          }
       }
@@ -110,12 +110,12 @@ public class ServerAuthManager {
                   LOGGER.at(Level.INFO).log("Offline token validated, singleplayer offline mode");
                   LOGGER.at(Level.INFO).log("Server session ID: %s", this.serverSessionId);
                } else {
-                  this.pendingFatalError = "Offline token validation failed. The token may be expired, tampered, or malformed.";
-                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+                  this.pendingFatalError = Message.translation("client.disconnection.shutdownReason.authFailed.offlineTokenValidationFailed");
+                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError.getAnsiMessage());
                }
             } else {
-               this.pendingFatalError = "Offline singleplayer mode requires the game must be launched through the official launcher.";
-               LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+               this.pendingFatalError = Message.translation("client.disconnection.shutdownReason.authFailed.needOfficialLauncher");
+               LOGGER.at(Level.SEVERE).log(this.pendingFatalError.getAnsiMessage());
             }
          } else {
             boolean hasCliTokens = false;
@@ -151,8 +151,8 @@ public class ServerAuthManager {
                   this.gameSession.set(session);
                   hasCliTokens = true;
                } else {
-                  this.pendingFatalError = "Token validation failed. Provided tokens may be expired, tampered, or malformed. Remove invalid tokens or provide valid ones.";
-                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+                  this.pendingFatalError = Message.translation("client.disconnection.shutdownReason.authFailed.tokenValidationFailed");
+                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError.getAnsiMessage());
                }
             }
 
@@ -184,8 +184,7 @@ public class ServerAuthManager {
 
    public void checkPendingFatalError() {
       if (this.pendingFatalError != null) {
-         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.authFailed.detail").param("detail", this.pendingFatalError);
-         HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(reasonMessage));
+         HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(this.pendingFatalError));
       }
    }
 
@@ -216,7 +215,7 @@ public class ServerAuthManager {
          String currentSessionToken = this.getSessionToken();
          if (currentSessionToken != null && !currentSessionToken.isEmpty()) {
             if (this.sessionServiceClient == null) {
-               this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+               this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
             }
 
             this.sessionServiceClient.terminateSession(currentSessionToken);
@@ -500,10 +499,10 @@ public class ServerAuthManager {
 
    private boolean validateOfflineToken(@Nonnull String offlineToken) {
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
       }
 
-      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.butter.lat", "");
+      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.hytale.com", "");
       JWTValidator.IdentityTokenClaims claims = validator.validateOfflineToken(offlineToken);
       if (claims == null) {
          LOGGER.at(Level.WARNING).log("Offline token validation failed");
@@ -534,10 +533,10 @@ public class ServerAuthManager {
       }
 
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
       }
 
-      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.butter.lat", "");
+      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.hytale.com", "");
       boolean valid = true;
       OptionSet optionSet = Options.getOptionSet();
       UUID expectedOwnerUuid = optionSet != null && optionSet.has(Options.OWNER_UUID) ? optionSet.valueOf(Options.OWNER_UUID) : null;
@@ -607,7 +606,7 @@ public class ServerAuthManager {
       }
 
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
       }
 
       SessionServiceClient.GameProfile[] profiles = this.sessionServiceClient.getGameProfiles(accessToken);
@@ -759,7 +758,7 @@ public class ServerAuthManager {
    @Nullable
    private SessionServiceClient.GameSessionResponse createGameSession(UUID profileUuid) {
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
       }
 
       if (!this.refreshOAuthTokens()) {
@@ -884,7 +883,7 @@ public class ServerAuthManager {
 
    private boolean refreshGameSession(String currentSessionToken) {
       if (this.sessionServiceClient == null) {
-         this.sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
       }
 
       SessionServiceClient.GameSessionResponse response = this.sessionServiceClient.refreshSessionAsync(currentSessionToken).join();

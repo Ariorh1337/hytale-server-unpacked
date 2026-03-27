@@ -1,6 +1,7 @@
 package com.hypixel.hytale.protocol.packets.world;
 
 import com.hypixel.hytale.protocol.InstantData;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -39,6 +40,10 @@ public class SleepClock {
 
    @Nonnull
    public static SleepClock deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 33) {
+         throw ProtocolException.bufferTooSmall("SleepClock", 33, buf.readableBytes() - offset);
+      }
+
       SleepClock obj = new SleepClock();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -90,7 +95,12 @@ public class SleepClock {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 33 ? ValidationResult.error("Buffer too small: expected at least 33 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 33) {
+         return ValidationResult.error("Buffer too small: expected at least 33 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public SleepClock clone() {

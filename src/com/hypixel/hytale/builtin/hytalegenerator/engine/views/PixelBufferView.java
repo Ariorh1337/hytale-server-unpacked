@@ -5,10 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.BufferBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.PixelBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class PixelBufferView<T> implements VoxelSpace<T> {
    public static final int Y_LEVEL_BUFFER_GRID = 0;
@@ -42,7 +42,7 @@ public class PixelBufferView<T> implements VoxelSpace<T> {
    public void set(T value, @Nonnull Vector3i position_voxelGrid) {
       assert this.bounds_voxelGrid.contains(position_voxelGrid);
       PixelBuffer<T> buffer = this.getBuffer(position_voxelGrid);
-      Vector3i positionInBuffer_voxelGrid = position_voxelGrid.clone();
+      Vector3i positionInBuffer_voxelGrid = new Vector3i(position_voxelGrid);
       GridUtils.toVoxelGridInsideBuffer_fromWorldGrid(positionInBuffer_voxelGrid);
       buffer.setPixelContent(positionInBuffer_voxelGrid, value);
    }
@@ -63,7 +63,7 @@ public class PixelBufferView<T> implements VoxelSpace<T> {
    public T get(@Nonnull Vector3i position_voxelGrid) {
       assert this.bounds_voxelGrid.contains(position_voxelGrid);
       PixelBuffer<T> buffer = this.getBuffer(position_voxelGrid);
-      Vector3i positionInBuffer_voxelGrid = position_voxelGrid.clone();
+      Vector3i positionInBuffer_voxelGrid = new Vector3i(position_voxelGrid);
       GridUtils.toVoxelGridInsideBuffer_fromWorldGrid(positionInBuffer_voxelGrid);
       return buffer.getPixelContent(positionInBuffer_voxelGrid);
    }
@@ -71,7 +71,7 @@ public class PixelBufferView<T> implements VoxelSpace<T> {
    @Nonnull
    private PixelBuffer<T> getBuffer(@Nonnull Vector3i position_voxelGrid) {
       assert this.bounds_voxelGrid.contains(position_voxelGrid);
-      Vector3i localBufferPosition_bufferGrid = position_voxelGrid.clone();
+      Vector3i localBufferPosition_bufferGrid = new Vector3i(position_voxelGrid);
       GridUtils.toBufferGrid_fromVoxelGrid(localBufferPosition_bufferGrid);
       return (PixelBuffer<T>)this.bufferAccess.getBuffer(localBufferPosition_bufferGrid).buffer();
    }

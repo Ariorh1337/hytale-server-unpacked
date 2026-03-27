@@ -18,9 +18,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.metrics.ExecutorMetricsRegistry;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import com.hypixel.hytale.protocol.packets.entities.SetEntitySeed;
@@ -113,6 +112,7 @@ import java.util.function.IntUnaryOperator;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class World extends TickingThread implements Executor, ExecutorMetricsRegistry.ExecutorMetric, ChunkAccessor<WorldChunk>, IWorldChunks, IMessageReceiver {
    public static final float SAVE_INTERVAL = 10.0F;
@@ -164,6 +164,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    @Nonnull
    private final Map<ClientFeature, Boolean> features = Collections.synchronizedMap(new EnumMap<>(ClientFeature.class));
    private volatile boolean gcHasRun;
+   private final AtomicInteger savingLocks = new AtomicInteger(0);
 
    public World(@Nonnull String name, @Nonnull Path savePath, @Nonnull WorldConfig worldConfig) throws IOException {
       super("WorldThread - " + name);
@@ -680,13 +681,13 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
 
    @Deprecated
    @Nullable
-   public <T extends Entity> T spawnEntity(T entity, @Nonnull Vector3d position, Vector3f rotation) {
+   public <T extends Entity> T spawnEntity(T entity, @Nonnull Vector3d position, Rotation3f rotation) {
       return this.addEntity(entity, position, rotation, AddReason.SPAWN);
    }
 
    @Deprecated
    @Nullable
-   public <T extends Entity> T addEntity(T entity, @Nonnull Vector3d position, @Nullable Vector3f rotation, @Nonnull AddReason reason) {
+   public <T extends Entity> T addEntity(T entity, @Nonnull Vector3d position, @Nullable Rotation3f rotation, @Nonnull AddReason reason) {
       if (!EntityModule.get().isKnown(entity)) {
          throw new IllegalArgumentException("Unknown entity");
       }
@@ -707,7 +708,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          throw new IllegalArgumentException("Entity already has a valid EntityReference: " + entity.getReference());
       }
 
-      if (position.getY() < -32.0) {
+      if (position.y() < -32.0) {
          throw new IllegalArgumentException("Unable to spawn entity below the world! -32 < " + position);
       }
 
@@ -872,7 +873,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       }
 
       Vector3d spawnPosition = transformComponent.getPosition();
-      long chunkIndex = ChunkUtil.indexChunkFromBlock(spawnPosition.getX(), spawnPosition.getZ());
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(spawnPosition.x(), spawnPosition.z());
       CompletableFuture<Void> loadTargetChunkFuture = this.chunkStore
          .getChunkReferenceAsync(chunkIndex)
          .thenAccept(v -> playerComponent.startClientReadyTimeout());
@@ -1048,6 +1049,19 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       boolean gcHasRun = this.gcHasRun;
       this.gcHasRun = false;
       return gcHasRun;
+   }
+
+   public boolean isSavingLocked() {
+      return this.savingLocks.get() > 0;
+   }
+
+   public void lockSaving() {
+      this.savingLocks.incrementAndGet();
+   }
+
+   public void unlockSaving() {
+      int result = this.savingLocks.decrementAndGet();
+      assert result >= 0 : "savingLocks underflow";
    }
 
    @Override

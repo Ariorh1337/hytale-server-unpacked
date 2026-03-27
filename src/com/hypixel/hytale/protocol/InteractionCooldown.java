@@ -50,6 +50,10 @@ public class InteractionCooldown {
 
    @Nonnull
    public static InteractionCooldown deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("InteractionCooldown", 16, buf.readableBytes() - offset);
+      }
+
       InteractionCooldown obj = new InteractionCooldown();
       byte nullBits = buf.getByte(offset);
       obj.cooldown = buf.getFloatLE(offset + 1);
@@ -57,31 +61,46 @@ public class InteractionCooldown {
       obj.skipCooldownReset = buf.getByte(offset + 6) != 0;
       obj.interruptRecharge = buf.getByte(offset + 7) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 16 + buf.getIntLE(offset + 8);
-         int cooldownIdLen = VarInt.peek(buf, varPos0);
-         if (cooldownIdLen < 0) {
-            throw ProtocolException.negativeLength("CooldownId", cooldownIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 8);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("CooldownId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 16 + varPosBase0;
+         int cooldownIdLen = VarInt.peek(buf, varPos0);
+         if (cooldownIdLen < 0) {
+            throw ProtocolException.invalidVarInt("CooldownId");
+         }
+
+         int cooldownIdVarIntLen = VarInt.size(cooldownIdLen);
          if (cooldownIdLen > 4096000) {
             throw ProtocolException.stringTooLong("CooldownId", cooldownIdLen, 4096000);
+         }
+
+         if (varPos0 + cooldownIdVarIntLen + cooldownIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("CooldownId", varPos0 + cooldownIdVarIntLen + cooldownIdLen, buf.readableBytes());
          }
 
          obj.cooldownId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 16 + buf.getIntLE(offset + 12);
-         int chargeTimesCount = VarInt.peek(buf, varPos1);
-         if (chargeTimesCount < 0) {
-            throw ProtocolException.negativeLength("ChargeTimes", chargeTimesCount);
+         int varPosBase1 = buf.getIntLE(offset + 12);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("ChargeTimes", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 16 + varPosBase1;
+         int chargeTimesCount = VarInt.peek(buf, varPos1);
+         if (chargeTimesCount < 0) {
+            throw ProtocolException.invalidVarInt("ChargeTimes");
+         }
+
+         int varIntLen = VarInt.size(chargeTimesCount);
          if (chargeTimesCount > 4096000) {
             throw ProtocolException.arrayTooLong("ChargeTimes", chargeTimesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + chargeTimesCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("ChargeTimes", varPos1 + varIntLen + chargeTimesCount * 4, buf.readableBytes());
          }
@@ -101,9 +120,13 @@ public class InteractionCooldown {
       int maxEnd = 16;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 8);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("CooldownId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 16 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -111,9 +134,13 @@ public class InteractionCooldown {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 12);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 16) {
+            throw ProtocolException.invalidOffset("ChargeTimes", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 16 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 4;
+         pos1 += VarInt.size(arrLen) + arrLen * 4;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -187,15 +214,11 @@ public class InteractionCooldown {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int cooldownIdOffset = buffer.getIntLE(offset + 8);
-         if (cooldownIdOffset < 0) {
+         if (cooldownIdOffset < 0 || cooldownIdOffset > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for CooldownId");
          }
 
          int pos = offset + 16 + cooldownIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for CooldownId");
-         }
-
          int cooldownIdLen = VarInt.peek(buffer, pos);
          if (cooldownIdLen < 0) {
             return ValidationResult.error("Invalid string length for CooldownId");
@@ -205,7 +228,7 @@ public class InteractionCooldown {
             return ValidationResult.error("CooldownId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(cooldownIdLen);
          pos += cooldownIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading CooldownId");
@@ -214,15 +237,11 @@ public class InteractionCooldown {
 
       if ((nullBits & 2) != 0) {
          int chargeTimesOffset = buffer.getIntLE(offset + 12);
-         if (chargeTimesOffset < 0) {
+         if (chargeTimesOffset < 0 || chargeTimesOffset > buffer.writerIndex() - offset - 16) {
             return ValidationResult.error("Invalid offset for ChargeTimes");
          }
 
          int pos = offset + 16 + chargeTimesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ChargeTimes");
-         }
-
          int chargeTimesCount = VarInt.peek(buffer, pos);
          if (chargeTimesCount < 0) {
             return ValidationResult.error("Invalid array count for ChargeTimes");
@@ -232,7 +251,7 @@ public class InteractionCooldown {
             return ValidationResult.error("ChargeTimes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(chargeTimesCount);
          pos += chargeTimesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ChargeTimes");

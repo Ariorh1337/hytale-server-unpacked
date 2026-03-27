@@ -7,15 +7,16 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class GradientDensityAsset extends DensityAsset {
    @Nonnull
    public static final BuilderCodec<GradientDensityAsset> CODEC = BuilderCodec.builder(
          GradientDensityAsset.class, GradientDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Axis", Vector3d.CODEC, false), (t, k) -> t.axis = k, k -> k.axis)
+      .append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, false), (t, k) -> t.axis = k, k -> k.axis)
       .addValidator((v, r) -> {
          if (v.x == 0.0 && v.y == 0.0 && v.z == 0.0) {
             r.fail("Axis can't be zero.");
@@ -32,7 +33,7 @@ public class GradientDensityAsset extends DensityAsset {
    @Nonnull
    @Override
    public Density build(@Nonnull DensityAsset.Argument argument) {
-      return this.isSkipped() ? new ConstantValueDensity(0.0) : new GradientDensity(this.buildFirstInput(argument), this.sampleRange, this.axis.clone());
+      return this.isSkipped() ? new ConstantValueDensity(0.0) : new GradientDensity(this.buildFirstInput(argument), this.sampleRange, new Vector3d(this.axis));
    }
 
    @Override

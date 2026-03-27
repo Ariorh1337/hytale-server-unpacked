@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
@@ -24,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ActionInventory extends ActionBase {
+   @Nonnull
    private static final EnumSet<ActionInventory.Operation> ITEM_FREE_OPERATIONS = EnumSet.of(
       ActionInventory.Operation.ClearHeldItem,
       ActionInventory.Operation.RemoveHeldItem,
@@ -77,7 +79,7 @@ public class ActionInventory extends ActionBase {
          if (this.operation != ActionInventory.Operation.EquipOffHand || this.item != null && !this.item.isEmpty()) {
             String itemStackKey = this.item;
             if (itemStackKey != null && !"Empty".equals(itemStackKey) && !"Unknown".equals(itemStackKey) && ItemModule.exists(itemStackKey)) {
-               CombinedItemContainer combinedStorage = inventory.getCombinedHotbarFirst();
+               CombinedItemContainer combinedStorage = InventoryComponent.getCombined(store, targetRef, InventoryComponent.HOTBAR_FIRST);
                ItemStack itemStack = new ItemStack(itemStackKey, this.count);
                switch (this.operation) {
                   case Add:

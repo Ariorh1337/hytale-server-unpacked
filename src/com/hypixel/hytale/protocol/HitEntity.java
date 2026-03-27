@@ -33,6 +33,10 @@ public class HitEntity {
 
    @Nonnull
    public static HitEntity deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("HitEntity", 5, buf.readableBytes() - offset);
+      }
+
       HitEntity obj = new HitEntity();
       byte nullBits = buf.getByte(offset);
       obj.next = buf.getIntLE(offset + 1);
@@ -40,14 +44,14 @@ public class HitEntity {
       if ((nullBits & 1) != 0) {
          int matchersCount = VarInt.peek(buf, pos);
          if (matchersCount < 0) {
-            throw ProtocolException.negativeLength("Matchers", matchersCount);
+            throw ProtocolException.invalidVarInt("Matchers");
          }
 
+         int matchersVarLen = VarInt.size(matchersCount);
          if (matchersCount > 4096000) {
             throw ProtocolException.arrayTooLong("Matchers", matchersCount, 4096000);
          }
 
-         int matchersVarLen = VarInt.size(matchersCount);
          if (pos + matchersVarLen + matchersCount * 2L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Matchers", pos + matchersVarLen + matchersCount * 2, buf.readableBytes());
          }
@@ -69,7 +73,7 @@ public class HitEntity {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += EntityMatcher.computeBytesConsumed(buf, pos);
@@ -126,7 +130,7 @@ public class HitEntity {
             return ValidationResult.error("Matchers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(matchersCount);
          pos += matchersCount * 2;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Matchers");

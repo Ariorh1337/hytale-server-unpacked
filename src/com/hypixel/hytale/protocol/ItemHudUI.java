@@ -35,6 +35,10 @@ public class ItemHudUI {
 
    @Nonnull
    public static ItemHudUI deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("ItemHudUI", 2, buf.readableBytes() - offset);
+      }
+
       ItemHudUI obj = new ItemHudUI();
       byte nullBits = buf.getByte(offset);
       obj.type = ItemHudUIType.fromValue(buf.getByte(offset + 1));
@@ -42,14 +46,18 @@ public class ItemHudUI {
       if ((nullBits & 1) != 0) {
          int pathLen = VarInt.peek(buf, pos);
          if (pathLen < 0) {
-            throw ProtocolException.negativeLength("Path", pathLen);
+            throw ProtocolException.invalidVarInt("Path");
          }
 
+         int pathVarLen = VarInt.size(pathLen);
          if (pathLen > 4096000) {
             throw ProtocolException.stringTooLong("Path", pathLen, 4096000);
          }
 
-         int pathVarLen = VarInt.length(buf, pos);
+         if (pos + pathVarLen + pathLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Path", pos + pathVarLen + pathLen, buf.readableBytes());
+         }
+
          obj.path = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += pathVarLen + pathLen;
       }
@@ -62,7 +70,7 @@ public class ItemHudUI {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -96,9 +104,14 @@ public class ItemHudUI {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid ItemHudUIType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int pathLen = VarInt.peek(buffer, pos);
+         int pathLen = VarInt.peek(buffer, v);
          if (pathLen < 0) {
             return ValidationResult.error("Invalid string length for Path");
          }
@@ -107,9 +120,9 @@ public class ItemHudUI {
             return ValidationResult.error("Path exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += pathLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(pathLen);
+         v += pathLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Path");
          }
       }

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -55,6 +56,10 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
 
    @Nonnull
    public static ClientPlaceBlock deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("ClientPlaceBlock", 21, buf.readableBytes() - offset);
+      }
+
       ClientPlaceBlock obj = new ClientPlaceBlock();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -108,7 +113,12 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 21 ? ValidationResult.error("Buffer too small: expected at least 21 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 21) {
+         return ValidationResult.error("Buffer too small: expected at least 21 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public ClientPlaceBlock clone() {

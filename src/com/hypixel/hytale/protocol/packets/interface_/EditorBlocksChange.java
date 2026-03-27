@@ -76,6 +76,10 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
    @Nonnull
    public static EditorBlocksChange deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 43) {
+         throw ProtocolException.bufferTooSmall("EditorBlocksChange", 43, buf.readableBytes() - offset);
+      }
+
       EditorBlocksChange obj = new EditorBlocksChange();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -86,17 +90,22 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       obj.advancedPreview = buf.getByte(offset + 29) != 0;
       obj.skipPreviewRebuild = buf.getByte(offset + 30) != 0;
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 43 + buf.getIntLE(offset + 31);
-         int blocksChangeCount = VarInt.peek(buf, varPos0);
-         if (blocksChangeCount < 0) {
-            throw ProtocolException.negativeLength("BlocksChange", blocksChangeCount);
+         int varPosBase0 = buf.getIntLE(offset + 31);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("BlocksChange", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 43 + varPosBase0;
+         int blocksChangeCount = VarInt.peek(buf, varPos0);
+         if (blocksChangeCount < 0) {
+            throw ProtocolException.invalidVarInt("BlocksChange");
+         }
+
+         int varIntLen = VarInt.size(blocksChangeCount);
          if (blocksChangeCount > 4096000) {
             throw ProtocolException.arrayTooLong("BlocksChange", blocksChangeCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + blocksChangeCount * 17L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("BlocksChange", varPos0 + varIntLen + blocksChangeCount * 17, buf.readableBytes());
          }
@@ -111,17 +120,22 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 43 + buf.getIntLE(offset + 35);
-         int fluidsChangeCount = VarInt.peek(buf, varPos1);
-         if (fluidsChangeCount < 0) {
-            throw ProtocolException.negativeLength("FluidsChange", fluidsChangeCount);
+         int varPosBase1 = buf.getIntLE(offset + 35);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("FluidsChange", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 43 + varPosBase1;
+         int fluidsChangeCount = VarInt.peek(buf, varPos1);
+         if (fluidsChangeCount < 0) {
+            throw ProtocolException.invalidVarInt("FluidsChange");
+         }
+
+         int varIntLen = VarInt.size(fluidsChangeCount);
          if (fluidsChangeCount > 4096000) {
             throw ProtocolException.arrayTooLong("FluidsChange", fluidsChangeCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + fluidsChangeCount * 17L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FluidsChange", varPos1 + varIntLen + fluidsChangeCount * 17, buf.readableBytes());
          }
@@ -136,17 +150,22 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos2 = offset + 43 + buf.getIntLE(offset + 39);
-         int entityChangesCount = VarInt.peek(buf, varPos2);
-         if (entityChangesCount < 0) {
-            throw ProtocolException.negativeLength("EntityChanges", entityChangesCount);
+         int varPosBase2 = buf.getIntLE(offset + 39);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("EntityChanges", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 43 + varPosBase2;
+         int entityChangesCount = VarInt.peek(buf, varPos2);
+         if (entityChangesCount < 0) {
+            throw ProtocolException.invalidVarInt("EntityChanges");
+         }
+
+         int varIntLen = VarInt.size(entityChangesCount);
          if (entityChangesCount > 4096000) {
             throw ProtocolException.arrayTooLong("EntityChanges", entityChangesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + entityChangesCount * 45L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EntityChanges", varPos2 + varIntLen + entityChangesCount * 45, buf.readableBytes());
          }
@@ -168,9 +187,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       int maxEnd = 43;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 31);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("BlocksChange", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 43 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos0 += BlockChange.computeBytesConsumed(buf, pos0);
@@ -183,9 +206,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 35);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("FluidsChange", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 43 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += FluidChange.computeBytesConsumed(buf, pos1);
@@ -198,9 +225,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 39);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 43) {
+            throw ProtocolException.invalidOffset("EntityChanges", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 43 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos2 += ClipboardEntityChange.computeBytesConsumed(buf, pos2);
@@ -329,15 +360,11 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
          int blocksChangeOffset = buffer.getIntLE(offset + 31);
-         if (blocksChangeOffset < 0) {
+         if (blocksChangeOffset < 0 || blocksChangeOffset > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for BlocksChange");
          }
 
          int pos = offset + 43 + blocksChangeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BlocksChange");
-         }
-
          int blocksChangeCount = VarInt.peek(buffer, pos);
          if (blocksChangeCount < 0) {
             return ValidationResult.error("Invalid array count for BlocksChange");
@@ -347,7 +374,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
             return ValidationResult.error("BlocksChange exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(blocksChangeCount);
          pos += blocksChangeCount * 17;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BlocksChange");
@@ -356,15 +383,11 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fluidsChangeOffset = buffer.getIntLE(offset + 35);
-         if (fluidsChangeOffset < 0) {
+         if (fluidsChangeOffset < 0 || fluidsChangeOffset > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for FluidsChange");
          }
 
          int pos = offset + 43 + fluidsChangeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FluidsChange");
-         }
-
          int fluidsChangeCount = VarInt.peek(buffer, pos);
          if (fluidsChangeCount < 0) {
             return ValidationResult.error("Invalid array count for FluidsChange");
@@ -374,7 +397,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
             return ValidationResult.error("FluidsChange exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fluidsChangeCount);
          pos += fluidsChangeCount * 17;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FluidsChange");
@@ -383,15 +406,11 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
       if ((nullBits & 8) != 0) {
          int entityChangesOffset = buffer.getIntLE(offset + 39);
-         if (entityChangesOffset < 0) {
+         if (entityChangesOffset < 0 || entityChangesOffset > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for EntityChanges");
          }
 
          int pos = offset + 43 + entityChangesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for EntityChanges");
-         }
-
          int entityChangesCount = VarInt.peek(buffer, pos);
          if (entityChangesCount < 0) {
             return ValidationResult.error("Invalid array count for EntityChanges");
@@ -401,7 +420,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
             return ValidationResult.error("EntityChanges exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(entityChangesCount);
 
          for (int i = 0; i < entityChangesCount; i++) {
             ValidationResult structResult = ClipboardEntityChange.validateStructure(buffer, pos);

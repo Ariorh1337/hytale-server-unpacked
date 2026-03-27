@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -27,6 +28,10 @@ public class TransformUpdate extends ComponentUpdate {
 
    @Nonnull
    public static TransformUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 49) {
+         throw ProtocolException.bufferTooSmall("TransformUpdate", 49, buf.readableBytes() - offset);
+      }
+
       TransformUpdate obj = new TransformUpdate();
       obj.transform = ModelTransform.deserialize(buf, offset + 0);
       return obj;

@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Model implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
    public static final String UNKNOWN_TEXTURE = "textures/Unknown.png";
@@ -107,9 +108,11 @@ public class Model implements NetworkSerializable<com.hypixel.hytale.protocol.Mo
       this.trails = trails;
       this.physicsValues = physicsValues;
       this.detailBoxes = detailBoxes;
-      this.crouchBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, crouchOffset, 0.0));
-      this.sittingBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, sittingOffset, 0.0));
-      this.sleepingBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, sleepingOffset, 0.0));
+      this.crouchBoundingBox = boundingBox == null ? null : new Box(new Vector3d(boundingBox.min), new Vector3d(boundingBox.max).add(0.0, crouchOffset, 0.0));
+      this.sittingBoundingBox = boundingBox == null ? null : new Box(new Vector3d(boundingBox.min), new Vector3d(boundingBox.max).add(0.0, sittingOffset, 0.0));
+      this.sleepingBoundingBox = boundingBox == null
+         ? null
+         : new Box(new Vector3d(boundingBox.min), new Vector3d(boundingBox.max).add(0.0, sleepingOffset, 0.0));
       this.phobia = phobia;
       this.phobiaModelAssetId = phobiaModelAssetId;
    }

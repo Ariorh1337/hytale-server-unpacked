@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.worldmap;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -34,6 +35,10 @@ public class MapChunk {
 
    @Nonnull
    public static MapChunk deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("MapChunk", 9, buf.readableBytes() - offset);
+      }
+
       MapChunk obj = new MapChunk();
       byte nullBits = buf.getByte(offset);
       obj.chunkX = buf.getIntLE(offset + 1);

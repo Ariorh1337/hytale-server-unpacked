@@ -63,6 +63,10 @@ public class SoundEventLayer {
 
    @Nonnull
    public static SoundEventLayer deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 42) {
+         throw ProtocolException.bufferTooSmall("SoundEventLayer", 42, buf.readableBytes() - offset);
+      }
+
       SoundEventLayer obj = new SoundEventLayer();
       byte nullBits = buf.getByte(offset);
       obj.volume = buf.getFloatLE(offset + 1);
@@ -79,14 +83,14 @@ public class SoundEventLayer {
       if ((nullBits & 2) != 0) {
          int filesCount = VarInt.peek(buf, pos);
          if (filesCount < 0) {
-            throw ProtocolException.negativeLength("Files", filesCount);
+            throw ProtocolException.invalidVarInt("Files");
          }
 
+         int filesVarLen = VarInt.size(filesCount);
          if (filesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Files", filesCount, 4096000);
          }
 
-         int filesVarLen = VarInt.size(filesCount);
          if (pos + filesVarLen + filesCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Files", pos + filesVarLen + filesCount * 1, buf.readableBytes());
          }
@@ -97,14 +101,18 @@ public class SoundEventLayer {
          for (int i = 0; i < filesCount; i++) {
             int strLen = VarInt.peek(buf, pos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("files[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("files[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("files[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
+            if (pos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("files[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.files[i] = PacketIO.readVarString(buf, pos);
             pos += strVarLen + strLen;
          }
@@ -118,11 +126,11 @@ public class SoundEventLayer {
       int pos = offset + 42;
       if ((nullBits & 2) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
@@ -197,7 +205,7 @@ public class SoundEventLayer {
             return ValidationResult.error("Files exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(filesCount);
 
          for (int i = 0; i < filesCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -205,7 +213,7 @@ public class SoundEventLayer {
                return ValidationResult.error("Invalid string length in Files");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Files");

@@ -58,6 +58,10 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateBlockHitboxes deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockHitboxes", 6, buf.readableBytes() - offset);
+      }
+
       UpdateBlockHitboxes obj = new UpdateBlockHitboxes();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -66,14 +70,15 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int blockBaseHitboxesCount = VarInt.peek(buf, pos);
          if (blockBaseHitboxesCount < 0) {
-            throw ProtocolException.negativeLength("BlockBaseHitboxes", blockBaseHitboxesCount);
+            throw ProtocolException.invalidVarInt("BlockBaseHitboxes");
          }
 
+         int blockBaseHitboxesVarLen = VarInt.size(blockBaseHitboxesCount);
          if (blockBaseHitboxesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("BlockBaseHitboxes", blockBaseHitboxesCount, 4096000);
          }
 
-         pos += VarInt.size(blockBaseHitboxesCount);
+         pos += blockBaseHitboxesVarLen;
          obj.blockBaseHitboxes = new HashMap<>(blockBaseHitboxesCount);
 
          for (int i = 0; i < blockBaseHitboxesCount; i++) {
@@ -81,14 +86,14 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
             pos += 4;
             int valLen = VarInt.peek(buf, pos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 64) {
                throw ProtocolException.arrayTooLong("val", valLen, 64);
             }
 
-            int valVarLen = VarInt.length(buf, pos);
             if (pos + valVarLen + valLen * 24L > buf.readableBytes()) {
                throw ProtocolException.bufferTooSmall("val", pos + valVarLen + valLen * 24, buf.readableBytes());
             }
@@ -115,12 +120,12 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
             int al = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos);
+            pos += VarInt.size(al);
 
             for (int j = 0; j < al; j++) {
                pos += Hitbox.computeBytesConsumed(buf, pos);
@@ -181,9 +186,14 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int blockBaseHitboxesCount = VarInt.peek(buffer, pos);
+         int blockBaseHitboxesCount = VarInt.peek(buffer, v);
          if (blockBaseHitboxesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for BlockBaseHitboxes");
          }
@@ -192,23 +202,23 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
             return ValidationResult.error("BlockBaseHitboxes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(blockBaseHitboxesCount);
 
          for (int i = 0; i < blockBaseHitboxesCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            int valueArrCount = VarInt.peek(buffer, pos);
+            int valueArrCount = VarInt.peek(buffer, v);
             if (valueArrCount < 0) {
                return ValidationResult.error("Invalid array count for value");
             }
 
-            pos += VarInt.length(buffer, pos);
+            v += VarInt.size(valueArrCount);
 
             for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
-               pos += 24;
+               v += 24;
             }
          }
       }

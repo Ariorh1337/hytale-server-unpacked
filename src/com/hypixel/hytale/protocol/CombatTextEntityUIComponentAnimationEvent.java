@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -59,6 +60,10 @@ public class CombatTextEntityUIComponentAnimationEvent {
 
    @Nonnull
    public static CombatTextEntityUIComponentAnimationEvent deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 34) {
+         throw ProtocolException.bufferTooSmall("CombatTextEntityUIComponentAnimationEvent", 34, buf.readableBytes() - offset);
+      }
+
       CombatTextEntityUIComponentAnimationEvent obj = new CombatTextEntityUIComponentAnimationEvent();
       byte nullBits = buf.getByte(offset);
       obj.type = CombatTextEntityUIAnimationEventType.fromValue(buf.getByte(offset + 1));
@@ -106,7 +111,13 @@ public class CombatTextEntityUIComponentAnimationEvent {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 34 ? ValidationResult.error("Buffer too small: expected at least 34 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 34) {
+         return ValidationResult.error("Buffer too small: expected at least 34 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      return v >= 3 ? ValidationResult.error("Invalid CombatTextEntityUIAnimationEventType value for Type") : ValidationResult.OK;
    }
 
    public CombatTextEntityUIComponentAnimationEvent clone() {

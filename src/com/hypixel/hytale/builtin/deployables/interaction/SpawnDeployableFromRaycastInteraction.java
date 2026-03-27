@@ -11,14 +11,14 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.Position;
+import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -34,6 +34,7 @@ import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -73,7 +74,7 @@ public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteract
       }
    }
 
-   private static boolean isSurface(@Nonnull Vector3f normal) {
+   private static boolean isSurface(@Nonnull Rotation3f normal) {
       return normal.x == 0.0F && normal.y - 1.0F < 0.01 && normal.z == 0.0F;
    }
 
@@ -107,19 +108,17 @@ public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteract
             raycastHit = new Position((float)position.x, (float)position.y, (float)position.z);
          }
 
-         com.hypixel.hytale.protocol.Vector3f raycastNormal = clientState.raycastNormal;
+         Vector3f raycastNormal = clientState.raycastNormal;
          float correctedRaycastDistance = clientState.raycastDistance;
-         com.hypixel.hytale.protocol.Vector3f spawnPosition = new com.hypixel.hytale.protocol.Vector3f(
-            (float)raycastHit.x, (float)raycastHit.y, (float)raycastHit.z
-         );
-         Vector3f norm = new Vector3f(raycastNormal.x, raycastNormal.y, raycastNormal.z);
+         Vector3f spawnPosition = new Vector3f((float)raycastHit.x, (float)raycastHit.y, (float)raycastHit.z);
+         Rotation3f norm = new Rotation3f(raycastNormal.x, raycastNormal.y, raycastNormal.z);
          if (correctedRaycastDistance > 0.0F
             && correctedRaycastDistance <= this.maxPlacementDistance
             && (this.config.getAllowPlaceOnWalls() || isSurface(norm))) {
             Direction attackerRot = clientState.attackerRot;
-            Vector3f rot = new Vector3f(0.0F, attackerRot.yaw, 0.0F);
+            Rotation3f rot = new Rotation3f(0.0F, attackerRot.yaw, 0.0F);
             DeployablesUtils.spawnDeployable(
-               commandBuffer, store, this.config, entityRef, new Vector3f(spawnPosition.x, spawnPosition.y, spawnPosition.z), rot, "UP"
+               commandBuffer, store, this.config, entityRef, new Vector3d(spawnPosition.x, spawnPosition.y, spawnPosition.z), rot, "UP"
             );
          }
       }

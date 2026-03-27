@@ -70,7 +70,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
       if (sessionServiceClient == null) {
          synchronized (HandshakeHandler.class) {
             if (sessionServiceClient == null) {
-               sessionServiceClient = new SessionServiceClient("https://sessions.butter.lat");
+               sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
             }
          }
       }
@@ -82,7 +82,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
       if (jwtValidator == null) {
          synchronized (HandshakeHandler.class) {
             if (jwtValidator == null) {
-               jwtValidator = new JWTValidator(getSessionServiceClient(), "https://sessions.butter.lat", AuthConfig.getServerAudience());
+               jwtValidator = new JWTValidator(getSessionServiceClient(), "https://sessions.hytale.com", AuthConfig.getServerAudience());
             }
          }
       }

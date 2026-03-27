@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.core.universe.world.worldgen;
 
 import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -14,6 +13,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class GeneratedEntityChunk {
    private final List<GeneratedEntityChunk.EntityWrapperEntry> entities;
@@ -50,7 +50,7 @@ public class GeneratedEntityChunk {
          for (Holder<EntityStore> entityHolder : entry.entityHolders()) {
             TransformComponent transformComponent = entityHolder.getComponent(TransformComponent.getComponentType());
             assert transformComponent != null;
-            entry.rotation().rotate(transformComponent.getPosition().subtract(0.5, 0.0, 0.5));
+            entry.rotation().rotate(transformComponent.getPosition().sub(0.5, 0.0, 0.5));
             transformComponent.getPosition().add(0.5, 0.0, 0.5);
             HeadRotation headRotationComponent = entityHolder.getComponent(HeadRotation.getComponentType());
             if (headRotationComponent != null) {
@@ -58,7 +58,8 @@ public class GeneratedEntityChunk {
             }
 
             transformComponent.getRotation().addYaw(-entry.rotation().getYaw());
-            transformComponent.getPosition().add(entry.offset());
+            Vector3i offset = entry.offset();
+            transformComponent.getPosition().add(offset.x, offset.y, offset.z);
             entityHolder.putComponent(FromWorldGen.getComponentType(), fromWorldGen);
             entityChunk.storeEntityHolder(entityHolder);
          }

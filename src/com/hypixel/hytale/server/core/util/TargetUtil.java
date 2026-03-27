@@ -8,11 +8,8 @@ import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.iterator.BlockIterator;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.modules.collision.CollisionMath;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -32,6 +29,9 @@ import java.util.List;
 import java.util.function.IntPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public final class TargetUtil {
    private static final float ENTITY_TARGET_RADIUS = 8.0F;
@@ -261,7 +261,7 @@ public final class TargetUtil {
          if (targetRef != null && targetRef.isValid()) {
             TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TransformComponent.getComponentType());
             assert targetTransformComponent != null;
-            double distance = transformPosition.distanceSquaredTo(targetTransformComponent.getPosition());
+            double distance = transformPosition.distanceSquared(targetTransformComponent.getPosition());
             if (distance < minDist2) {
                minDist2 = distance;
                closest = targetRef;
@@ -285,10 +285,8 @@ public final class TargetUtil {
       HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
       assert headRotationComponent != null;
       Vector3d position = transformComponent.getPosition();
-      Vector3f headRotation = headRotationComponent.getRotation();
-      return new Transform(
-         position.getX(), position.getY() + eyeHeight, position.getZ(), headRotation.getPitch(), headRotation.getYaw(), headRotation.getRoll()
-      );
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      return new Transform(position.x(), position.y() + eyeHeight, position.z(), headRotation.pitch(), headRotation.yaw(), headRotation.roll());
    }
 
    private static boolean isHitByRay(
@@ -304,7 +302,7 @@ public final class TargetUtil {
       Box boundingBox = boundingBoxComponent.getBoundingBox();
       Vector3d position = transformComponent.getPosition();
       Vector2d minMax = new Vector2d();
-      return CollisionMath.intersectRayAABB(rayStart, rayDir, position.getX(), position.getY(), position.getZ(), boundingBox, minMax);
+      return CollisionMath.intersectRayAABB(rayStart, rayDir, position.x(), position.y(), position.z(), boundingBox, minMax);
    }
 
    private static class TargetBuffer {

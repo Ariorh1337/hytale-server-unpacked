@@ -15,24 +15,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class EntityUtils {
-   @Nonnull
-   public static Holder<EntityStore> toHolder(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk) {
-      Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-      Archetype<EntityStore> archetype = archetypeChunk.getArchetype();
-
-      for (int i = archetype.getMinIndex(); i < archetype.length(); i++) {
-         ComponentType componentType = archetype.get(i);
-         if (componentType != null) {
-            Component component = archetypeChunk.getComponent(index, componentType);
-            if (component != null) {
-               holder.addComponent(componentType, component);
-            }
-         }
-      }
-
-      return holder;
-   }
-
    @Nullable
    private static <T extends Entity> ComponentType<EntityStore, T> findComponentType(@Nonnull Archetype<EntityStore> archetype) {
       return findComponentType(archetype, Entity.class);

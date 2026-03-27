@@ -6,7 +6,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockFace;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.BlockRotation;
@@ -31,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public abstract class SimpleBlockInteraction extends SimpleInteraction {
    @Nonnull
@@ -79,7 +79,7 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
             BlockPosition latestBlockPos = clientState.blockPosition;
             TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
             assert transformComponent != null;
-            double distanceSquared = transformComponent.getPosition().distanceSquaredTo(latestBlockPos.x + 0.5, latestBlockPos.y + 0.5, latestBlockPos.z + 0.5);
+            double distanceSquared = transformComponent.getPosition().distanceSquared(latestBlockPos.x + 0.5, latestBlockPos.y + 0.5, latestBlockPos.z + 0.5);
             BlockPosition baseBlock = world.getBaseBlock(latestBlockPos);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK, baseBlock);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK_RAW, latestBlockPos);

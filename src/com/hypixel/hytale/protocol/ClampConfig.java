@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class ClampConfig {
 
    @Nonnull
    public static ClampConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ClampConfig", 9, buf.readableBytes() - offset);
+      }
+
       ClampConfig obj = new ClampConfig();
       obj.min = buf.getFloatLE(offset + 0);
       obj.max = buf.getFloatLE(offset + 4);

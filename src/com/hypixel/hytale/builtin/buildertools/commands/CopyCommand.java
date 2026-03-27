@@ -7,8 +7,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
@@ -27,6 +25,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class CopyCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -78,27 +78,21 @@ public class CopyCommand extends AbstractPlayerCommand {
 
          int settingsFinal = settings;
          Vector3i playerAnchor = getPlayerAnchor(ref, store, this.playerAnchorFlag.get(context));
-         BuilderToolsPlugin.addToQueue(
-            playerComponent,
-            playerRef,
-            (r, s, componentAccessor) -> {
-               try {
-                  BlockSelection selection = builderState.getSelection();
-                  if (selection == null || !selection.hasSelectionBounds()) {
-                     context.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
-                     return;
-                  }
-
-                  Vector3i min = selection.getSelectionMin();
-                  Vector3i max = selection.getSelectionMax();
-                  builderState.copyOrCut(
-                     r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settingsFinal, playerAnchor, componentAccessor
-                  );
-               } catch (PrefabCopyException e) {
-                  context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));
+         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+            try {
+               BlockSelection selection = builderState.getSelection();
+               if (selection == null || !selection.hasSelectionBounds()) {
+                  context.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
+                  return;
                }
+
+               Vector3i min = selection.getSelectionMin();
+               Vector3i max = selection.getSelectionMax();
+               builderState.copyOrCut(r, min.x(), min.y(), min.z(), max.x(), max.y(), max.z(), settingsFinal, playerAnchor, componentAccessor);
+            } catch (PrefabCopyException e) {
+               context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));
             }
-         );
+         });
       }
    }
 
@@ -114,7 +108,7 @@ public class CopyCommand extends AbstractPlayerCommand {
       }
 
       Vector3d position = transformComponent.getPosition();
-      return new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ()));
+      return new Vector3i(MathUtil.floor(position.x()), MathUtil.floor(position.y()), MathUtil.floor(position.z()));
    }
 
    public static void copySelection(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -145,7 +139,7 @@ public class CopyCommand extends AbstractPlayerCommand {
 
             Vector3i min = selection.getSelectionMin();
             Vector3i max = selection.getSelectionMax();
-            builderState.copyOrCut(r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settings, c);
+            builderState.copyOrCut(r, min.x(), min.y(), min.z(), max.x(), max.y(), max.z(), settings, c);
          } catch (PrefabCopyException e) {
             playerComponent.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));
          }

@@ -93,6 +93,10 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
    @Nonnull
    public static ModifyInventoryInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 65) {
+         throw ProtocolException.bufferTooSmall("ModifyInventoryInteraction", 65, buf.readableBytes() - offset);
+      }
+
       ModifyInventoryInteraction obj = new ModifyInventoryInteraction();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       obj.waitForDataFrom = WaitForDataFrom.fromValue(buf.getByte(offset + 2));
@@ -108,22 +112,32 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       obj.adjustHeldItemQuantity = buf.getIntLE(offset + 21);
       obj.adjustHeldItemDurability = buf.getDoubleLE(offset + 25);
       if ((nullBits[0] & 2) != 0) {
-         int varPos0 = offset + 65 + buf.getIntLE(offset + 33);
+         int varPosBase0 = buf.getIntLE(offset + 33);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Effects", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 65 + varPosBase0;
          obj.effects = InteractionEffects.deserialize(buf, varPos0);
       }
 
       if ((nullBits[0] & 4) != 0) {
-         int varPos1 = offset + 65 + buf.getIntLE(offset + 37);
-         int settingsCount = VarInt.peek(buf, varPos1);
-         if (settingsCount < 0) {
-            throw ProtocolException.negativeLength("Settings", settingsCount);
+         int varPosBase1 = buf.getIntLE(offset + 37);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Settings", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 65 + varPosBase1;
+         int settingsCount = VarInt.peek(buf, varPos1);
+         if (settingsCount < 0) {
+            throw ProtocolException.invalidVarInt("Settings");
+         }
+
+         int varIntLen = VarInt.size(settingsCount);
          if (settingsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Settings", settingsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.settings = new HashMap<>(settingsCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -138,22 +152,32 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[0] & 8) != 0) {
-         int varPos2 = offset + 65 + buf.getIntLE(offset + 41);
+         int varPosBase2 = buf.getIntLE(offset + 41);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Rules", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 65 + varPosBase2;
          obj.rules = InteractionRules.deserialize(buf, varPos2);
       }
 
       if ((nullBits[0] & 16) != 0) {
-         int varPos3 = offset + 65 + buf.getIntLE(offset + 45);
-         int tagsCount = VarInt.peek(buf, varPos3);
-         if (tagsCount < 0) {
-            throw ProtocolException.negativeLength("Tags", tagsCount);
+         int varPosBase3 = buf.getIntLE(offset + 45);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Tags", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 65 + varPosBase3;
+         int tagsCount = VarInt.peek(buf, varPos3);
+         if (tagsCount < 0) {
+            throw ProtocolException.invalidVarInt("Tags");
+         }
+
+         int varIntLen = VarInt.size(tagsCount);
          if (tagsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Tags", tagsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + tagsCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Tags", varPos3 + varIntLen + tagsCount * 4, buf.readableBytes());
          }
@@ -166,29 +190,54 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int varPos4 = offset + 65 + buf.getIntLE(offset + 49);
+         int varPosBase4 = buf.getIntLE(offset + 49);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Camera", varPosBase4, buf.readableBytes());
+         }
+
+         int varPos4 = offset + 65 + varPosBase4;
          obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int varPos5 = offset + 65 + buf.getIntLE(offset + 53);
+         int varPosBase5 = buf.getIntLE(offset + 53);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("ItemToRemove", varPosBase5, buf.readableBytes());
+         }
+
+         int varPos5 = offset + 65 + varPosBase5;
          obj.itemToRemove = ItemWithAllMetadata.deserialize(buf, varPos5);
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos6 = offset + 65 + buf.getIntLE(offset + 57);
+         int varPosBase6 = buf.getIntLE(offset + 57);
+         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("ItemToAdd", varPosBase6, buf.readableBytes());
+         }
+
+         int varPos6 = offset + 65 + varPosBase6;
          obj.itemToAdd = ItemWithAllMetadata.deserialize(buf, varPos6);
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos7 = offset + 65 + buf.getIntLE(offset + 61);
-         int brokenItemLen = VarInt.peek(buf, varPos7);
-         if (brokenItemLen < 0) {
-            throw ProtocolException.negativeLength("BrokenItem", brokenItemLen);
+         int varPosBase7 = buf.getIntLE(offset + 61);
+         if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("BrokenItem", varPosBase7, buf.readableBytes());
          }
 
+         int varPos7 = offset + 65 + varPosBase7;
+         int brokenItemLen = VarInt.peek(buf, varPos7);
+         if (brokenItemLen < 0) {
+            throw ProtocolException.invalidVarInt("BrokenItem");
+         }
+
+         int brokenItemVarIntLen = VarInt.size(brokenItemLen);
          if (brokenItemLen > 4096000) {
             throw ProtocolException.stringTooLong("BrokenItem", brokenItemLen, 4096000);
+         }
+
+         if (varPos7 + brokenItemVarIntLen + brokenItemLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("BrokenItem", varPos7 + brokenItemVarIntLen + brokenItemLen, buf.readableBytes());
          }
 
          obj.brokenItem = PacketIO.readVarString(buf, varPos7, PacketIO.UTF8);
@@ -202,6 +251,10 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       int maxEnd = 65;
       if ((nullBits[0] & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 33);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Effects", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 65 + fieldOffset0;
          pos0 += InteractionEffects.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -211,9 +264,13 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
       if ((nullBits[0] & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 37);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Settings", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 65 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + InteractionSettings.computeBytesConsumed(buf, pos1);
@@ -226,6 +283,10 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
       if ((nullBits[0] & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 41);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Rules", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 65 + fieldOffset2;
          pos2 += InteractionRules.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -235,9 +296,13 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
       if ((nullBits[0] & 16) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 45);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Tags", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 65 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + arrLen * 4;
+         pos3 += VarInt.size(arrLen) + arrLen * 4;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -245,6 +310,10 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
       if ((nullBits[0] & 32) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 49);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("Camera", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 65 + fieldOffset4;
          pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
@@ -254,6 +323,10 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
       if ((nullBits[0] & 64) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 53);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("ItemToRemove", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 65 + fieldOffset5;
          pos5 += ItemWithAllMetadata.computeBytesConsumed(buf, pos5);
          if (pos5 - offset > maxEnd) {
@@ -263,6 +336,10 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 57);
+         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("ItemToAdd", fieldOffset6, maxEnd);
+         }
+
          int pos6 = offset + 65 + fieldOffset6;
          pos6 += ItemWithAllMetadata.computeBytesConsumed(buf, pos6);
          if (pos6 - offset > maxEnd) {
@@ -272,9 +349,13 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset7 = buf.getIntLE(offset + 61);
+         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 65) {
+            throw ProtocolException.invalidOffset("BrokenItem", fieldOffset7, maxEnd);
+         }
+
          int pos7 = offset + 65 + fieldOffset7;
          int sl = VarInt.peek(buf, pos7);
-         pos7 += VarInt.length(buf, pos7) + sl;
+         pos7 += VarInt.size(sl) + sl;
          if (pos7 - offset > maxEnd) {
             maxEnd = pos7 - offset;
          }
@@ -475,17 +556,25 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
+      int v = buffer.getByte(offset + 2) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid WaitForDataFrom value for WaitForDataFrom");
+      }
+
+      if ((nullBits[0] & 1) != 0) {
+         v = buffer.getByte(offset + 20) & 255;
+         if (v >= 2) {
+            return ValidationResult.error("Invalid GameMode value for RequiredGameMode");
+         }
+      }
+
       if ((nullBits[0] & 2) != 0) {
-         int effectsOffset = buffer.getIntLE(offset + 33);
-         if (effectsOffset < 0) {
+         v = buffer.getIntLE(offset + 33);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for Effects");
          }
 
-         int pos = offset + 65 + effectsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Effects");
-         }
-
+         int pos = offset + 65 + v;
          ValidationResult effectsResult = InteractionEffects.validateStructure(buffer, pos);
          if (!effectsResult.isValid()) {
             return ValidationResult.error("Invalid Effects: " + effectsResult.error());
@@ -495,16 +584,12 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[0] & 4) != 0) {
-         int settingsOffset = buffer.getIntLE(offset + 37);
-         if (settingsOffset < 0) {
+         v = buffer.getIntLE(offset + 37);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for Settings");
          }
 
-         int pos = offset + 65 + settingsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Settings");
-         }
-
+         int pos = offset + 65 + v;
          int settingsCount = VarInt.peek(buffer, pos);
          if (settingsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Settings");
@@ -514,25 +599,26 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
             return ValidationResult.error("Settings exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(settingsCount);
 
          for (int i = 0; i < settingsCount; i++) {
+            int vx = buffer.getByte(pos) & 255;
+            if (vx >= 2) {
+               return ValidationResult.error("Invalid GameMode value for key");
+            }
+
             pos++;
             pos++;
          }
       }
 
       if ((nullBits[0] & 8) != 0) {
-         int rulesOffset = buffer.getIntLE(offset + 41);
-         if (rulesOffset < 0) {
+         v = buffer.getIntLE(offset + 41);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for Rules");
          }
 
-         int pos = offset + 65 + rulesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Rules");
-         }
-
+         int pos = offset + 65 + v;
          ValidationResult rulesResult = InteractionRules.validateStructure(buffer, pos);
          if (!rulesResult.isValid()) {
             return ValidationResult.error("Invalid Rules: " + rulesResult.error());
@@ -542,16 +628,12 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[0] & 16) != 0) {
-         int tagsOffset = buffer.getIntLE(offset + 45);
-         if (tagsOffset < 0) {
+         v = buffer.getIntLE(offset + 45);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for Tags");
          }
 
-         int pos = offset + 65 + tagsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Tags");
-         }
-
+         int pos = offset + 65 + v;
          int tagsCount = VarInt.peek(buffer, pos);
          if (tagsCount < 0) {
             return ValidationResult.error("Invalid array count for Tags");
@@ -561,7 +643,7 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
             return ValidationResult.error("Tags exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagsCount);
          pos += tagsCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Tags");
@@ -569,16 +651,12 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int cameraOffset = buffer.getIntLE(offset + 49);
-         if (cameraOffset < 0) {
+         v = buffer.getIntLE(offset + 49);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for Camera");
          }
 
-         int pos = offset + 65 + cameraOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Camera");
-         }
-
+         int pos = offset + 65 + v;
          ValidationResult cameraResult = InteractionCameraSettings.validateStructure(buffer, pos);
          if (!cameraResult.isValid()) {
             return ValidationResult.error("Invalid Camera: " + cameraResult.error());
@@ -588,16 +666,12 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int itemToRemoveOffset = buffer.getIntLE(offset + 53);
-         if (itemToRemoveOffset < 0) {
+         v = buffer.getIntLE(offset + 53);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for ItemToRemove");
          }
 
-         int pos = offset + 65 + itemToRemoveOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemToRemove");
-         }
-
+         int pos = offset + 65 + v;
          ValidationResult itemToRemoveResult = ItemWithAllMetadata.validateStructure(buffer, pos);
          if (!itemToRemoveResult.isValid()) {
             return ValidationResult.error("Invalid ItemToRemove: " + itemToRemoveResult.error());
@@ -607,16 +681,12 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int itemToAddOffset = buffer.getIntLE(offset + 57);
-         if (itemToAddOffset < 0) {
+         v = buffer.getIntLE(offset + 57);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for ItemToAdd");
          }
 
-         int pos = offset + 65 + itemToAddOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ItemToAdd");
-         }
-
+         int pos = offset + 65 + v;
          ValidationResult itemToAddResult = ItemWithAllMetadata.validateStructure(buffer, pos);
          if (!itemToAddResult.isValid()) {
             return ValidationResult.error("Invalid ItemToAdd: " + itemToAddResult.error());
@@ -626,16 +696,12 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int brokenItemOffset = buffer.getIntLE(offset + 61);
-         if (brokenItemOffset < 0) {
+         v = buffer.getIntLE(offset + 61);
+         if (v < 0 || v > buffer.writerIndex() - offset - 65) {
             return ValidationResult.error("Invalid offset for BrokenItem");
          }
 
-         int pos = offset + 65 + brokenItemOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BrokenItem");
-         }
-
+         int pos = offset + 65 + v;
          int brokenItemLen = VarInt.peek(buffer, pos);
          if (brokenItemLen < 0) {
             return ValidationResult.error("Invalid string length for BrokenItem");
@@ -645,7 +711,7 @@ public class ModifyInventoryInteraction extends SimpleInteraction {
             return ValidationResult.error("BrokenItem exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(brokenItemLen);
          pos += brokenItemLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BrokenItem");

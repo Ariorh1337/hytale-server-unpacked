@@ -57,6 +57,10 @@ public class UpdateSoundSets implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateSoundSets deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateSoundSets", 6, buf.readableBytes() - offset);
+      }
+
       UpdateSoundSets obj = new UpdateSoundSets();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -65,14 +69,15 @@ public class UpdateSoundSets implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int soundSetsCount = VarInt.peek(buf, pos);
          if (soundSetsCount < 0) {
-            throw ProtocolException.negativeLength("SoundSets", soundSetsCount);
+            throw ProtocolException.invalidVarInt("SoundSets");
          }
 
+         int soundSetsVarLen = VarInt.size(soundSetsCount);
          if (soundSetsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SoundSets", soundSetsCount, 4096000);
          }
 
-         pos += VarInt.size(soundSetsCount);
+         pos += soundSetsVarLen;
          obj.soundSets = new HashMap<>(soundSetsCount);
 
          for (int i = 0; i < soundSetsCount; i++) {
@@ -94,7 +99,7 @@ public class UpdateSoundSets implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -151,9 +156,14 @@ public class UpdateSoundSets implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int soundSetsCount = VarInt.peek(buffer, pos);
+         int soundSetsCount = VarInt.peek(buffer, v);
          if (soundSetsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SoundSets");
          }
@@ -162,15 +172,15 @@ public class UpdateSoundSets implements Packet, ToClientPacket {
             return ValidationResult.error("SoundSets exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(soundSetsCount);
 
          for (int i = 0; i < soundSetsCount; i++) {
-            pos += 4;
-            if (pos > buffer.writerIndex()) {
+            v += 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
             }
 
-            pos += SoundSet.computeBytesConsumed(buffer, pos);
+            v += SoundSet.computeBytesConsumed(buffer, v);
          }
       }
 

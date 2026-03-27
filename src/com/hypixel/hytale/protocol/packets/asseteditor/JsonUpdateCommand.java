@@ -59,6 +59,10 @@ public class JsonUpdateCommand {
 
    @Nonnull
    public static JsonUpdateCommand deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 23) {
+         throw ProtocolException.bufferTooSmall("JsonUpdateCommand", 23, buf.readableBytes() - offset);
+      }
+
       JsonUpdateCommand obj = new JsonUpdateCommand();
       byte nullBits = buf.getByte(offset);
       obj.type = JsonUpdateType.fromValue(buf.getByte(offset + 1));
@@ -67,17 +71,22 @@ public class JsonUpdateCommand {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 23 + buf.getIntLE(offset + 7);
-         int pathCount = VarInt.peek(buf, varPos0);
-         if (pathCount < 0) {
-            throw ProtocolException.negativeLength("Path", pathCount);
+         int varPosBase0 = buf.getIntLE(offset + 7);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("Path", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 23 + varPosBase0;
+         int pathCount = VarInt.peek(buf, varPos0);
+         if (pathCount < 0) {
+            throw ProtocolException.invalidVarInt("Path");
+         }
+
+         int varIntLen = VarInt.size(pathCount);
          if (pathCount > 4096000) {
             throw ProtocolException.arrayTooLong("Path", pathCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + pathCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Path", varPos0 + varIntLen + pathCount * 1, buf.readableBytes());
          }
@@ -88,59 +97,88 @@ public class JsonUpdateCommand {
          for (int i = 0; i < pathCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("path[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("path[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("path[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("path[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.path[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 23 + buf.getIntLE(offset + 11);
-         int valueLen = VarInt.peek(buf, varPos1);
-         if (valueLen < 0) {
-            throw ProtocolException.negativeLength("Value", valueLen);
+         int varPosBase1 = buf.getIntLE(offset + 11);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("Value", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 23 + varPosBase1;
+         int valueLen = VarInt.peek(buf, varPos1);
+         if (valueLen < 0) {
+            throw ProtocolException.invalidVarInt("Value");
+         }
+
+         int valueVarIntLen = VarInt.size(valueLen);
          if (valueLen > 4096000) {
             throw ProtocolException.stringTooLong("Value", valueLen, 4096000);
+         }
+
+         if (varPos1 + valueVarIntLen + valueLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Value", varPos1 + valueVarIntLen + valueLen, buf.readableBytes());
          }
 
          obj.value = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos2 = offset + 23 + buf.getIntLE(offset + 15);
-         int previousValueLen = VarInt.peek(buf, varPos2);
-         if (previousValueLen < 0) {
-            throw ProtocolException.negativeLength("PreviousValue", previousValueLen);
+         int varPosBase2 = buf.getIntLE(offset + 15);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("PreviousValue", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 23 + varPosBase2;
+         int previousValueLen = VarInt.peek(buf, varPos2);
+         if (previousValueLen < 0) {
+            throw ProtocolException.invalidVarInt("PreviousValue");
+         }
+
+         int previousValueVarIntLen = VarInt.size(previousValueLen);
          if (previousValueLen > 4096000) {
             throw ProtocolException.stringTooLong("PreviousValue", previousValueLen, 4096000);
+         }
+
+         if (varPos2 + previousValueVarIntLen + previousValueLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("PreviousValue", varPos2 + previousValueVarIntLen + previousValueLen, buf.readableBytes());
          }
 
          obj.previousValue = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos3 = offset + 23 + buf.getIntLE(offset + 19);
-         int firstCreatedPropertyCount = VarInt.peek(buf, varPos3);
-         if (firstCreatedPropertyCount < 0) {
-            throw ProtocolException.negativeLength("FirstCreatedProperty", firstCreatedPropertyCount);
+         int varPosBase3 = buf.getIntLE(offset + 19);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("FirstCreatedProperty", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 23 + varPosBase3;
+         int firstCreatedPropertyCount = VarInt.peek(buf, varPos3);
+         if (firstCreatedPropertyCount < 0) {
+            throw ProtocolException.invalidVarInt("FirstCreatedProperty");
+         }
+
+         int varIntLen = VarInt.size(firstCreatedPropertyCount);
          if (firstCreatedPropertyCount > 4096000) {
             throw ProtocolException.arrayTooLong("FirstCreatedProperty", firstCreatedPropertyCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + firstCreatedPropertyCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FirstCreatedProperty", varPos3 + varIntLen + firstCreatedPropertyCount * 1, buf.readableBytes());
          }
@@ -151,14 +189,18 @@ public class JsonUpdateCommand {
          for (int i = 0; i < firstCreatedPropertyCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("firstCreatedProperty[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("firstCreatedProperty[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("firstCreatedProperty[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("firstCreatedProperty[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.firstCreatedProperty[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
@@ -172,13 +214,17 @@ public class JsonUpdateCommand {
       int maxEnd = 23;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 7);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 23 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos0);
-            pos0 += VarInt.length(buf, pos0) + sl;
+            pos0 += VarInt.size(sl) + sl;
          }
 
          if (pos0 - offset > maxEnd) {
@@ -188,9 +234,13 @@ public class JsonUpdateCommand {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 11);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("Value", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 23 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -198,9 +248,13 @@ public class JsonUpdateCommand {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 15);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("PreviousValue", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 23 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -208,13 +262,17 @@ public class JsonUpdateCommand {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 19);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 23) {
+            throw ProtocolException.invalidOffset("FirstCreatedProperty", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 23 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos3);
-            pos3 += VarInt.length(buf, pos3) + sl;
+            pos3 += VarInt.size(sl) + sl;
          }
 
          if (pos3 - offset > maxEnd) {
@@ -349,17 +407,18 @@ public class JsonUpdateCommand {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid JsonUpdateType value for Type");
+      }
+
       if ((nullBits & 2) != 0) {
-         int pathOffset = buffer.getIntLE(offset + 7);
-         if (pathOffset < 0) {
+         v = buffer.getIntLE(offset + 7);
+         if (v < 0 || v > buffer.writerIndex() - offset - 23) {
             return ValidationResult.error("Invalid offset for Path");
          }
 
-         int pos = offset + 23 + pathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Path");
-         }
-
+         int pos = offset + 23 + v;
          int pathCount = VarInt.peek(buffer, pos);
          if (pathCount < 0) {
             return ValidationResult.error("Invalid array count for Path");
@@ -369,7 +428,7 @@ public class JsonUpdateCommand {
             return ValidationResult.error("Path exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(pathCount);
 
          for (int i = 0; i < pathCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -377,7 +436,7 @@ public class JsonUpdateCommand {
                return ValidationResult.error("Invalid string length in Path");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Path");
@@ -386,16 +445,12 @@ public class JsonUpdateCommand {
       }
 
       if ((nullBits & 4) != 0) {
-         int valueOffset = buffer.getIntLE(offset + 11);
-         if (valueOffset < 0) {
+         v = buffer.getIntLE(offset + 11);
+         if (v < 0 || v > buffer.writerIndex() - offset - 23) {
             return ValidationResult.error("Invalid offset for Value");
          }
 
-         int pos = offset + 23 + valueOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Value");
-         }
-
+         int pos = offset + 23 + v;
          int valueLen = VarInt.peek(buffer, pos);
          if (valueLen < 0) {
             return ValidationResult.error("Invalid string length for Value");
@@ -405,7 +460,7 @@ public class JsonUpdateCommand {
             return ValidationResult.error("Value exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(valueLen);
          pos += valueLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Value");
@@ -413,16 +468,12 @@ public class JsonUpdateCommand {
       }
 
       if ((nullBits & 8) != 0) {
-         int previousValueOffset = buffer.getIntLE(offset + 15);
-         if (previousValueOffset < 0) {
+         v = buffer.getIntLE(offset + 15);
+         if (v < 0 || v > buffer.writerIndex() - offset - 23) {
             return ValidationResult.error("Invalid offset for PreviousValue");
          }
 
-         int pos = offset + 23 + previousValueOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for PreviousValue");
-         }
-
+         int pos = offset + 23 + v;
          int previousValueLen = VarInt.peek(buffer, pos);
          if (previousValueLen < 0) {
             return ValidationResult.error("Invalid string length for PreviousValue");
@@ -432,7 +483,7 @@ public class JsonUpdateCommand {
             return ValidationResult.error("PreviousValue exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(previousValueLen);
          pos += previousValueLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading PreviousValue");
@@ -440,16 +491,12 @@ public class JsonUpdateCommand {
       }
 
       if ((nullBits & 16) != 0) {
-         int firstCreatedPropertyOffset = buffer.getIntLE(offset + 19);
-         if (firstCreatedPropertyOffset < 0) {
+         v = buffer.getIntLE(offset + 19);
+         if (v < 0 || v > buffer.writerIndex() - offset - 23) {
             return ValidationResult.error("Invalid offset for FirstCreatedProperty");
          }
 
-         int pos = offset + 23 + firstCreatedPropertyOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FirstCreatedProperty");
-         }
-
+         int pos = offset + 23 + v;
          int firstCreatedPropertyCount = VarInt.peek(buffer, pos);
          if (firstCreatedPropertyCount < 0) {
             return ValidationResult.error("Invalid array count for FirstCreatedProperty");
@@ -459,7 +506,7 @@ public class JsonUpdateCommand {
             return ValidationResult.error("FirstCreatedProperty exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(firstCreatedPropertyCount);
 
          for (int i = 0; i < firstCreatedPropertyCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -467,7 +514,7 @@ public class JsonUpdateCommand {
                return ValidationResult.error("Invalid string length in FirstCreatedProperty");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in FirstCreatedProperty");

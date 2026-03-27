@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -26,6 +27,10 @@ public class HitboxCollisionUpdate extends ComponentUpdate {
 
    @Nonnull
    public static HitboxCollisionUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("HitboxCollisionUpdate", 4, buf.readableBytes() - offset);
+      }
+
       HitboxCollisionUpdate obj = new HitboxCollisionUpdate();
       obj.hitboxCollisionConfigIndex = buf.getIntLE(offset + 0);
       return obj;

@@ -15,7 +15,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.List;
+import java.util.Collection;
 import javax.annotation.Nonnull;
 
 public class SudoCommand extends CommandBase {
@@ -42,7 +42,7 @@ public class SudoCommand extends CommandBase {
             commandToExecute = commandToExecute.substring(1);
          }
 
-         List<PlayerRef> players;
+         Collection<PlayerRef> players;
          if (playerName.equals("*")) {
             players = Universe.get().getPlayers();
          } else {

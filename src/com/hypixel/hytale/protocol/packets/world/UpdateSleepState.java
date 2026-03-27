@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -53,6 +54,10 @@ public class UpdateSleepState implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateSleepState deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 36) {
+         throw ProtocolException.bufferTooSmall("UpdateSleepState", 36, buf.readableBytes() - offset);
+      }
+
       UpdateSleepState obj = new UpdateSleepState();
       byte nullBits = buf.getByte(offset);
       obj.grayFade = buf.getByte(offset + 1) != 0;

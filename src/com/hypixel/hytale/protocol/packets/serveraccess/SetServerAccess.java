@@ -50,6 +50,10 @@ public class SetServerAccess implements Packet, ToServerPacket {
 
    @Nonnull
    public static SetServerAccess deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("SetServerAccess", 2, buf.readableBytes() - offset);
+      }
+
       SetServerAccess obj = new SetServerAccess();
       byte nullBits = buf.getByte(offset);
       obj.access = Access.fromValue(buf.getByte(offset + 1));
@@ -57,14 +61,18 @@ public class SetServerAccess implements Packet, ToServerPacket {
       if ((nullBits & 1) != 0) {
          int passwordLen = VarInt.peek(buf, pos);
          if (passwordLen < 0) {
-            throw ProtocolException.negativeLength("Password", passwordLen);
+            throw ProtocolException.invalidVarInt("Password");
          }
 
+         int passwordVarLen = VarInt.size(passwordLen);
          if (passwordLen > 4096000) {
             throw ProtocolException.stringTooLong("Password", passwordLen, 4096000);
          }
 
-         int passwordVarLen = VarInt.length(buf, pos);
+         if (pos + passwordVarLen + passwordLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Password", pos + passwordVarLen + passwordLen, buf.readableBytes());
+         }
+
          obj.password = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += passwordVarLen + passwordLen;
       }
@@ -77,7 +85,7 @@ public class SetServerAccess implements Packet, ToServerPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -113,9 +121,14 @@ public class SetServerAccess implements Packet, ToServerPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid Access value for Access");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int passwordLen = VarInt.peek(buffer, pos);
+         int passwordLen = VarInt.peek(buffer, v);
          if (passwordLen < 0) {
             return ValidationResult.error("Invalid string length for Password");
          }
@@ -124,9 +137,9 @@ public class SetServerAccess implements Packet, ToServerPacket {
             return ValidationResult.error("Password exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += passwordLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(passwordLen);
+         v += passwordLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Password");
          }
       }

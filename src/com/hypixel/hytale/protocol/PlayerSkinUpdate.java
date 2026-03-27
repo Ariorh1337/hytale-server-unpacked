@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -28,6 +29,10 @@ public class PlayerSkinUpdate extends ComponentUpdate {
 
    @Nonnull
    public static PlayerSkinUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("PlayerSkinUpdate", 1, buf.readableBytes() - offset);
+      }
+
       PlayerSkinUpdate obj = new PlayerSkinUpdate();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;

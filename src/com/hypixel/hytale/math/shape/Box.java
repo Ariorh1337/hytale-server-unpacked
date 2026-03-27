@@ -7,15 +7,17 @@ import com.hypixel.hytale.function.predicate.TriIntObjPredicate;
 import com.hypixel.hytale.function.predicate.TriIntPredicate;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.joml.Vector3i;
 
 public class Box implements Shape {
    public static final Codec<Box> CODEC = BuilderCodec.builder(Box.class, Box::new)
-      .append(new KeyedCodec<>("Min", Vector3d.CODEC), (box, v) -> box.min.assign(v), box -> box.min)
+      .append(new KeyedCodec<>("Min", Vector3dUtil.CODEC), (box, v) -> box.min.set(v), box -> box.min)
       .add()
-      .append(new KeyedCodec<>("Max", Vector3d.CODEC), (box, v) -> box.max.assign(v), box -> box.max)
+      .append(new KeyedCodec<>("Max", Vector3dUtil.CODEC), (box, v) -> box.max.set(v), box -> box.max)
       .add()
       .validator((box, results) -> {
          if (box.width() <= 0.0) {
@@ -31,8 +33,8 @@ public class Box implements Shape {
          }
       })
       .build();
-   public static final Box UNIT = new Box(Vector3d.ZERO, Vector3d.ALL_ONES);
-   public static final Box ZERO = new Box(Vector3d.ZERO, Vector3d.ZERO);
+   public static final Box UNIT = new Box(Vector3dUtil.ZERO, Vector3dUtil.ALL_ONES);
+   public static final Box ZERO = new Box(Vector3dUtil.ZERO, Vector3dUtil.ZERO);
    @Nonnull
    public final Vector3d min = new Vector3d();
    @Nonnull
@@ -48,20 +50,20 @@ public class Box implements Shape {
 
    public Box(@Nonnull Box box) {
       this();
-      this.min.assign(box.min);
-      this.max.assign(box.max);
+      this.min.set(box.min);
+      this.max.set(box.max);
    }
 
-   public Box(@Nonnull Vector3d min, @Nonnull Vector3d max) {
+   public Box(@Nonnull Vector3dc min, @Nonnull Vector3dc max) {
       this();
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
    }
 
    public Box(double xMin, double yMin, double zMin, double xMax, double yMax, double zMax) {
       this();
-      this.min.assign(xMin, yMin, zMin);
-      this.max.assign(xMax, yMax, zMax);
+      this.min.set(xMin, yMin, zMin);
+      this.max.set(xMax, yMax, zMax);
    }
 
    public static Box cube(@Nonnull Vector3d min, double side) {
@@ -74,22 +76,22 @@ public class Box implements Shape {
 
    @Nonnull
    public Box setMinMax(@Nonnull Vector3d min, @Nonnull Vector3d max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
    @Nonnull
    public Box setMinMax(@Nonnull double[] min, @Nonnull double[] max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
    @Nonnull
    public Box setMinMax(@Nonnull float[] min, @Nonnull float[] max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
@@ -101,8 +103,8 @@ public class Box implements Shape {
 
    @Nonnull
    public Box setMinMax(double min, double max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
@@ -137,29 +139,29 @@ public class Box implements Shape {
 
    @Nonnull
    public Box assign(@Nonnull Box other) {
-      this.min.assign(other.min);
-      this.max.assign(other.max);
+      this.min.set(other.min);
+      this.max.set(other.max);
       return this;
    }
 
    @Nonnull
    public Box assign(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
-      this.min.assign(minX, minY, minZ);
-      this.max.assign(maxX, maxY, maxZ);
+      this.min.set(minX, minY, minZ);
+      this.max.set(maxX, maxY, maxZ);
       return this;
    }
 
    @Nonnull
    public Box minkowskiSum(@Nonnull Box bb) {
-      this.min.subtract(bb.max);
-      this.max.subtract(bb.min);
+      this.min.sub(bb.max);
+      this.max.sub(bb.min);
       return this;
    }
 
    @Nonnull
    public Box scale(float scale) {
-      this.min.scale(scale);
-      this.max.scale(scale);
+      this.min.mul(scale);
+      this.max.mul(scale);
       return this;
    }
 
@@ -246,7 +248,7 @@ public class Box implements Shape {
 
    @Nonnull
    public Box extend(double extentX, double extentY, double extentZ) {
-      this.min.subtract(extentX, extentY, extentZ);
+      this.min.sub(extentX, extentY, extentZ);
       this.max.add(extentX, extentY, extentZ);
       return this;
    }
@@ -308,7 +310,7 @@ public class Box implements Shape {
    }
 
    public boolean isUnitBox() {
-      return this.min.equals(Vector3d.ZERO) && this.max.equals(Vector3d.ALL_ONES);
+      return this.min.equals(Vector3dUtil.ZERO) && this.max.equals(Vector3dUtil.ALL_ONES);
    }
 
    public double middleX() {
@@ -343,12 +345,12 @@ public class Box implements Shape {
    @Nonnull
    @Override
    public Box getBox(double x, double y, double z) {
-      return new Box(this.min.getX() + x, this.min.getY() + y, this.min.getZ() + z, this.max.getX() + x, this.max.getY() + y, this.max.getZ() + z);
+      return new Box(this.min.x() + x, this.min.y() + y, this.min.z() + z, this.max.x() + x, this.max.y() + y, this.max.z() + z);
    }
 
    @Override
    public boolean containsPosition(double x, double y, double z) {
-      return x >= this.min.getX() && x <= this.max.getX() && y >= this.min.getY() && y <= this.max.getY() && z >= this.min.getZ() && z <= this.max.getZ();
+      return x >= this.min.x() && x <= this.max.x() && y >= this.min.y() && y <= this.max.y() && z >= this.min.z() && z <= this.max.z();
    }
 
    @Override
@@ -357,27 +359,27 @@ public class Box implements Shape {
    }
 
    public boolean containsBlock(int x, int y, int z) {
-      int minX = MathUtil.floor(this.min.getX());
-      int minY = MathUtil.floor(this.min.getY());
-      int minZ = MathUtil.floor(this.min.getZ());
-      int maxX = MathUtil.ceil(this.max.getX());
-      int maxY = MathUtil.ceil(this.max.getY());
-      int maxZ = MathUtil.ceil(this.max.getZ());
+      int minX = MathUtil.floor(this.min.x());
+      int minY = MathUtil.floor(this.min.y());
+      int minZ = MathUtil.floor(this.min.z());
+      int maxX = MathUtil.ceil(this.max.x());
+      int maxY = MathUtil.ceil(this.max.y());
+      int maxZ = MathUtil.ceil(this.max.z());
       return x >= minX && x < maxX && y >= minY && y < maxY && z >= minZ && z < maxZ;
    }
 
    public boolean containsBlock(@Nonnull Vector3i origin, int x, int y, int z) {
-      return this.containsBlock(x - origin.getX(), y - origin.getY(), z - origin.getZ());
+      return this.containsBlock(x - origin.x(), y - origin.y(), z - origin.z());
    }
 
    @Override
    public boolean forEachBlock(double x, double y, double z, double epsilon, @Nonnull TriIntPredicate consumer) {
-      int minX = MathUtil.floor(x + this.min.getX() - epsilon);
-      int minY = MathUtil.floor(y + this.min.getY() - epsilon);
-      int minZ = MathUtil.floor(z + this.min.getZ() - epsilon);
-      int maxX = MathUtil.floor(x + this.max.getX() + epsilon);
-      int maxY = MathUtil.floor(y + this.max.getY() + epsilon);
-      int maxZ = MathUtil.floor(z + this.max.getZ() + epsilon);
+      int minX = MathUtil.floor(x + this.min.x() - epsilon);
+      int minY = MathUtil.floor(y + this.min.y() - epsilon);
+      int minZ = MathUtil.floor(z + this.min.z() - epsilon);
+      int maxX = MathUtil.floor(x + this.max.x() + epsilon);
+      int maxY = MathUtil.floor(y + this.max.y() + epsilon);
+      int maxZ = MathUtil.floor(z + this.max.z() + epsilon);
 
       for (int _x = minX; _x <= maxX && _x >= minX; _x++) {
          for (int _y = minY; _y <= maxY && _y >= minY; _y++) {
@@ -394,12 +396,12 @@ public class Box implements Shape {
 
    @Override
    public <T> boolean forEachBlock(double x, double y, double z, double epsilon, T t, @Nonnull TriIntObjPredicate<T> consumer) {
-      int minX = MathUtil.floor(x + this.min.getX() - epsilon);
-      int minY = MathUtil.floor(y + this.min.getY() - epsilon);
-      int minZ = MathUtil.floor(z + this.min.getZ() - epsilon);
-      int maxX = MathUtil.floor(x + this.max.getX() + epsilon);
-      int maxY = MathUtil.floor(y + this.max.getY() + epsilon);
-      int maxZ = MathUtil.floor(z + this.max.getZ() + epsilon);
+      int minX = MathUtil.floor(x + this.min.x() - epsilon);
+      int minY = MathUtil.floor(y + this.min.y() - epsilon);
+      int minZ = MathUtil.floor(z + this.min.z() - epsilon);
+      int maxX = MathUtil.floor(x + this.max.x() + epsilon);
+      int maxY = MathUtil.floor(y + this.max.y() + epsilon);
+      int maxZ = MathUtil.floor(z + this.max.z() + epsilon);
 
       for (int _x = minX; _x <= maxX && _x >= minX; _x++) {
          for (int _y = minY; _y <= maxY && _y >= minY; _y++) {
@@ -444,7 +446,7 @@ public class Box implements Shape {
    }
 
    public boolean intersectsLine(@Nonnull Vector3d start, @Nonnull Vector3d end) {
-      Vector3d direction = end.clone().subtract(start);
+      Vector3d direction = new Vector3d(end).sub(start);
       double tmin = 0.0;
       double tmax = 1.0;
       if (Math.abs(direction.x) < 1.0E-10) {

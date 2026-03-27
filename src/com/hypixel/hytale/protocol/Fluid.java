@@ -95,6 +95,10 @@ public class Fluid {
 
    @Nonnull
    public static Fluid deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 47) {
+         throw ProtocolException.bufferTooSmall("Fluid", 47, buf.readableBytes() - offset);
+      }
+
       Fluid obj = new Fluid();
       byte nullBits = buf.getByte(offset);
       obj.maxFluidLevel = buf.getIntLE(offset + 1);
@@ -112,31 +116,46 @@ public class Fluid {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos0 = offset + 47 + buf.getIntLE(offset + 23);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 23);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 47 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos1 = offset + 47 + buf.getIntLE(offset + 27);
-         int cubeTexturesCount = VarInt.peek(buf, varPos1);
-         if (cubeTexturesCount < 0) {
-            throw ProtocolException.negativeLength("CubeTextures", cubeTexturesCount);
+         int varPosBase1 = buf.getIntLE(offset + 27);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("CubeTextures", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 47 + varPosBase1;
+         int cubeTexturesCount = VarInt.peek(buf, varPos1);
+         if (cubeTexturesCount < 0) {
+            throw ProtocolException.invalidVarInt("CubeTextures");
+         }
+
+         int varIntLen = VarInt.size(cubeTexturesCount);
          if (cubeTexturesCount > 4096000) {
             throw ProtocolException.arrayTooLong("CubeTextures", cubeTexturesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + cubeTexturesCount * 5L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("CubeTextures", varPos1 + varIntLen + cubeTexturesCount * 5, buf.readableBytes());
          }
@@ -151,17 +170,22 @@ public class Fluid {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos2 = offset + 47 + buf.getIntLE(offset + 31);
-         int shaderEffectCount = VarInt.peek(buf, varPos2);
-         if (shaderEffectCount < 0) {
-            throw ProtocolException.negativeLength("ShaderEffect", shaderEffectCount);
+         int varPosBase2 = buf.getIntLE(offset + 31);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("ShaderEffect", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 47 + varPosBase2;
+         int shaderEffectCount = VarInt.peek(buf, varPos2);
+         if (shaderEffectCount < 0) {
+            throw ProtocolException.invalidVarInt("ShaderEffect");
+         }
+
+         int varIntLen = VarInt.size(shaderEffectCount);
          if (shaderEffectCount > 4096000) {
             throw ProtocolException.arrayTooLong("ShaderEffect", shaderEffectCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          if (varPos2 + varIntLen + shaderEffectCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("ShaderEffect", varPos2 + varIntLen + shaderEffectCount * 1, buf.readableBytes());
          }
@@ -176,17 +200,22 @@ public class Fluid {
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos3 = offset + 47 + buf.getIntLE(offset + 35);
-         int particlesCount = VarInt.peek(buf, varPos3);
-         if (particlesCount < 0) {
-            throw ProtocolException.negativeLength("Particles", particlesCount);
+         int varPosBase3 = buf.getIntLE(offset + 35);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("Particles", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 47 + varPosBase3;
+         int particlesCount = VarInt.peek(buf, varPos3);
+         if (particlesCount < 0) {
+            throw ProtocolException.invalidVarInt("Particles");
+         }
+
+         int varIntLen = VarInt.size(particlesCount);
          if (particlesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          if (varPos3 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Particles", varPos3 + varIntLen + particlesCount * 34, buf.readableBytes());
          }
@@ -201,31 +230,46 @@ public class Fluid {
       }
 
       if ((nullBits & 64) != 0) {
-         int varPos4 = offset + 47 + buf.getIntLE(offset + 39);
-         int blockParticleSetIdLen = VarInt.peek(buf, varPos4);
-         if (blockParticleSetIdLen < 0) {
-            throw ProtocolException.negativeLength("BlockParticleSetId", blockParticleSetIdLen);
+         int varPosBase4 = buf.getIntLE(offset + 39);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("BlockParticleSetId", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 47 + varPosBase4;
+         int blockParticleSetIdLen = VarInt.peek(buf, varPos4);
+         if (blockParticleSetIdLen < 0) {
+            throw ProtocolException.invalidVarInt("BlockParticleSetId");
+         }
+
+         int blockParticleSetIdVarIntLen = VarInt.size(blockParticleSetIdLen);
          if (blockParticleSetIdLen > 4096000) {
             throw ProtocolException.stringTooLong("BlockParticleSetId", blockParticleSetIdLen, 4096000);
+         }
+
+         if (varPos4 + blockParticleSetIdVarIntLen + blockParticleSetIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("BlockParticleSetId", varPos4 + blockParticleSetIdVarIntLen + blockParticleSetIdLen, buf.readableBytes());
          }
 
          obj.blockParticleSetId = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
       }
 
       if ((nullBits & 128) != 0) {
-         int varPos5 = offset + 47 + buf.getIntLE(offset + 43);
-         int tagIndexesCount = VarInt.peek(buf, varPos5);
-         if (tagIndexesCount < 0) {
-            throw ProtocolException.negativeLength("TagIndexes", tagIndexesCount);
+         int varPosBase5 = buf.getIntLE(offset + 43);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("TagIndexes", varPosBase5, buf.readableBytes());
          }
 
+         int varPos5 = offset + 47 + varPosBase5;
+         int tagIndexesCount = VarInt.peek(buf, varPos5);
+         if (tagIndexesCount < 0) {
+            throw ProtocolException.invalidVarInt("TagIndexes");
+         }
+
+         int varIntLen = VarInt.size(tagIndexesCount);
          if (tagIndexesCount > 4096000) {
             throw ProtocolException.arrayTooLong("TagIndexes", tagIndexesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos5);
          if (varPos5 + varIntLen + tagIndexesCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("TagIndexes", varPos5 + varIntLen + tagIndexesCount * 4, buf.readableBytes());
          }
@@ -245,9 +289,13 @@ public class Fluid {
       int maxEnd = 47;
       if ((nullBits & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 23);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 47 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -255,9 +303,13 @@ public class Fluid {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 27);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("CubeTextures", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 47 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += BlockTextures.computeBytesConsumed(buf, pos1);
@@ -270,9 +322,13 @@ public class Fluid {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 31);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("ShaderEffect", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 47 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + arrLen * 1;
+         pos2 += VarInt.size(arrLen) + arrLen * 1;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -280,9 +336,13 @@ public class Fluid {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 35);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("Particles", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 47 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos3 += ModelParticle.computeBytesConsumed(buf, pos3);
@@ -295,9 +355,13 @@ public class Fluid {
 
       if ((nullBits & 64) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 39);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("BlockParticleSetId", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 47 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -305,9 +369,13 @@ public class Fluid {
 
       if ((nullBits & 128) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 43);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 47) {
+            throw ProtocolException.invalidOffset("TagIndexes", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 47 + fieldOffset5;
          int arrLen = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5) + arrLen * 4;
+         pos5 += VarInt.size(arrLen) + arrLen * 4;
          if (pos5 - offset > maxEnd) {
             maxEnd = pos5 - offset;
          }
@@ -505,17 +573,23 @@ public class Fluid {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 6) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid Opacity value for Opacity");
+      }
+
+      v = buffer.getByte(offset + 11) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid FluidDrawType value for DrawType");
+      }
+
       if ((nullBits & 4) != 0) {
-         int idOffset = buffer.getIntLE(offset + 23);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 23);
+         if (v < 0 || v > buffer.writerIndex() - offset - 47) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 47 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 47 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -525,7 +599,7 @@ public class Fluid {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -533,16 +607,12 @@ public class Fluid {
       }
 
       if ((nullBits & 8) != 0) {
-         int cubeTexturesOffset = buffer.getIntLE(offset + 27);
-         if (cubeTexturesOffset < 0) {
+         v = buffer.getIntLE(offset + 27);
+         if (v < 0 || v > buffer.writerIndex() - offset - 47) {
             return ValidationResult.error("Invalid offset for CubeTextures");
          }
 
-         int pos = offset + 47 + cubeTexturesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for CubeTextures");
-         }
-
+         int pos = offset + 47 + v;
          int cubeTexturesCount = VarInt.peek(buffer, pos);
          if (cubeTexturesCount < 0) {
             return ValidationResult.error("Invalid array count for CubeTextures");
@@ -552,7 +622,7 @@ public class Fluid {
             return ValidationResult.error("CubeTextures exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(cubeTexturesCount);
 
          for (int i = 0; i < cubeTexturesCount; i++) {
             ValidationResult structResult = BlockTextures.validateStructure(buffer, pos);
@@ -565,16 +635,12 @@ public class Fluid {
       }
 
       if ((nullBits & 16) != 0) {
-         int shaderEffectOffset = buffer.getIntLE(offset + 31);
-         if (shaderEffectOffset < 0) {
+         v = buffer.getIntLE(offset + 31);
+         if (v < 0 || v > buffer.writerIndex() - offset - 47) {
             return ValidationResult.error("Invalid offset for ShaderEffect");
          }
 
-         int pos = offset + 47 + shaderEffectOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ShaderEffect");
-         }
-
+         int pos = offset + 47 + v;
          int shaderEffectCount = VarInt.peek(buffer, pos);
          if (shaderEffectCount < 0) {
             return ValidationResult.error("Invalid array count for ShaderEffect");
@@ -584,24 +650,28 @@ public class Fluid {
             return ValidationResult.error("ShaderEffect exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += shaderEffectCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(shaderEffectCount);
+         if (pos + shaderEffectCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ShaderEffect");
+         }
+
+         for (int i = 0; i < shaderEffectCount; i++) {
+            int vx = buffer.getByte(pos) & 255;
+            if (vx >= 10) {
+               return ValidationResult.error("Invalid ShaderType value for ShaderEffect[i]");
+            }
+
+            pos++;
          }
       }
 
       if ((nullBits & 32) != 0) {
-         int particlesOffset = buffer.getIntLE(offset + 35);
-         if (particlesOffset < 0) {
+         v = buffer.getIntLE(offset + 35);
+         if (v < 0 || v > buffer.writerIndex() - offset - 47) {
             return ValidationResult.error("Invalid offset for Particles");
          }
 
-         int pos = offset + 47 + particlesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Particles");
-         }
-
+         int pos = offset + 47 + v;
          int particlesCount = VarInt.peek(buffer, pos);
          if (particlesCount < 0) {
             return ValidationResult.error("Invalid array count for Particles");
@@ -611,7 +681,7 @@ public class Fluid {
             return ValidationResult.error("Particles exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(particlesCount);
 
          for (int i = 0; i < particlesCount; i++) {
             ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);
@@ -624,16 +694,12 @@ public class Fluid {
       }
 
       if ((nullBits & 64) != 0) {
-         int blockParticleSetIdOffset = buffer.getIntLE(offset + 39);
-         if (blockParticleSetIdOffset < 0) {
+         v = buffer.getIntLE(offset + 39);
+         if (v < 0 || v > buffer.writerIndex() - offset - 47) {
             return ValidationResult.error("Invalid offset for BlockParticleSetId");
          }
 
-         int pos = offset + 47 + blockParticleSetIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for BlockParticleSetId");
-         }
-
+         int pos = offset + 47 + v;
          int blockParticleSetIdLen = VarInt.peek(buffer, pos);
          if (blockParticleSetIdLen < 0) {
             return ValidationResult.error("Invalid string length for BlockParticleSetId");
@@ -643,7 +709,7 @@ public class Fluid {
             return ValidationResult.error("BlockParticleSetId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(blockParticleSetIdLen);
          pos += blockParticleSetIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BlockParticleSetId");
@@ -651,16 +717,12 @@ public class Fluid {
       }
 
       if ((nullBits & 128) != 0) {
-         int tagIndexesOffset = buffer.getIntLE(offset + 43);
-         if (tagIndexesOffset < 0) {
+         v = buffer.getIntLE(offset + 43);
+         if (v < 0 || v > buffer.writerIndex() - offset - 47) {
             return ValidationResult.error("Invalid offset for TagIndexes");
          }
 
-         int pos = offset + 47 + tagIndexesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TagIndexes");
-         }
-
+         int pos = offset + 47 + v;
          int tagIndexesCount = VarInt.peek(buffer, pos);
          if (tagIndexesCount < 0) {
             return ValidationResult.error("Invalid array count for TagIndexes");
@@ -670,7 +732,7 @@ public class Fluid {
             return ValidationResult.error("TagIndexes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagIndexesCount);
          pos += tagIndexesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TagIndexes");

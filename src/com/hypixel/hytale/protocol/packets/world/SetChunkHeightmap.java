@@ -51,6 +51,10 @@ public class SetChunkHeightmap implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetChunkHeightmap deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("SetChunkHeightmap", 9, buf.readableBytes() - offset);
+      }
+
       SetChunkHeightmap obj = new SetChunkHeightmap();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getIntLE(offset + 1);
@@ -59,14 +63,14 @@ public class SetChunkHeightmap implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int heightmapCount = VarInt.peek(buf, pos);
          if (heightmapCount < 0) {
-            throw ProtocolException.negativeLength("Heightmap", heightmapCount);
+            throw ProtocolException.invalidVarInt("Heightmap");
          }
 
+         int heightmapVarLen = VarInt.size(heightmapCount);
          if (heightmapCount > 4096000) {
             throw ProtocolException.arrayTooLong("Heightmap", heightmapCount, 4096000);
          }
 
-         int heightmapVarLen = VarInt.size(heightmapCount);
          if (pos + heightmapVarLen + heightmapCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Heightmap", pos + heightmapVarLen + heightmapCount * 1, buf.readableBytes());
          }
@@ -89,7 +93,7 @@ public class SetChunkHeightmap implements Packet, ToClientPacket {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -145,7 +149,7 @@ public class SetChunkHeightmap implements Packet, ToClientPacket {
             return ValidationResult.error("Heightmap exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(heightmapCount);
          pos += heightmapCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Heightmap");

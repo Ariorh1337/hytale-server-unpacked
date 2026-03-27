@@ -34,6 +34,10 @@ public class BuilderToolBlockArg {
 
    @Nonnull
    public static BuilderToolBlockArg deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("BuilderToolBlockArg", 2, buf.readableBytes() - offset);
+      }
+
       BuilderToolBlockArg obj = new BuilderToolBlockArg();
       byte nullBits = buf.getByte(offset);
       obj.allowPattern = buf.getByte(offset + 1) != 0;
@@ -41,14 +45,18 @@ public class BuilderToolBlockArg {
       if ((nullBits & 1) != 0) {
          int defaultValueLen = VarInt.peek(buf, pos);
          if (defaultValueLen < 0) {
-            throw ProtocolException.negativeLength("Default", defaultValueLen);
+            throw ProtocolException.invalidVarInt("Default");
          }
 
+         int defaultValueVarLen = VarInt.size(defaultValueLen);
          if (defaultValueLen > 4096000) {
             throw ProtocolException.stringTooLong("Default", defaultValueLen, 4096000);
          }
 
-         int defaultValueVarLen = VarInt.length(buf, pos);
+         if (pos + defaultValueVarLen + defaultValueLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Default", pos + defaultValueVarLen + defaultValueLen, buf.readableBytes());
+         }
+
          obj.defaultValue = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += defaultValueVarLen + defaultValueLen;
       }
@@ -61,7 +69,7 @@ public class BuilderToolBlockArg {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -106,7 +114,7 @@ public class BuilderToolBlockArg {
             return ValidationResult.error("Default exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(defaultLen);
          pos += defaultLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Default");

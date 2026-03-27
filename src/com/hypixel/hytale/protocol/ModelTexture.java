@@ -34,6 +34,10 @@ public class ModelTexture {
 
    @Nonnull
    public static ModelTexture deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("ModelTexture", 5, buf.readableBytes() - offset);
+      }
+
       ModelTexture obj = new ModelTexture();
       byte nullBits = buf.getByte(offset);
       obj.weight = buf.getFloatLE(offset + 1);
@@ -41,14 +45,18 @@ public class ModelTexture {
       if ((nullBits & 1) != 0) {
          int textureLen = VarInt.peek(buf, pos);
          if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
+            throw ProtocolException.invalidVarInt("Texture");
          }
 
+         int textureVarLen = VarInt.size(textureLen);
          if (textureLen > 4096000) {
             throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
          }
 
-         int textureVarLen = VarInt.length(buf, pos);
+         if (pos + textureVarLen + textureLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Texture", pos + textureVarLen + textureLen, buf.readableBytes());
+         }
+
          obj.texture = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += textureVarLen + textureLen;
       }
@@ -61,7 +69,7 @@ public class ModelTexture {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -106,7 +114,7 @@ public class ModelTexture {
             return ValidationResult.error("Texture exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(textureLen);
          pos += textureLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Texture");

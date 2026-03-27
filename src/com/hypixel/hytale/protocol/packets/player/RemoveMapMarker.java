@@ -46,20 +46,28 @@ public class RemoveMapMarker implements Packet, ToServerPacket {
 
    @Nonnull
    public static RemoveMapMarker deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("RemoveMapMarker", 1, buf.readableBytes() - offset);
+      }
+
       RemoveMapMarker obj = new RemoveMapMarker();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int markerIdLen = VarInt.peek(buf, pos);
          if (markerIdLen < 0) {
-            throw ProtocolException.negativeLength("MarkerId", markerIdLen);
+            throw ProtocolException.invalidVarInt("MarkerId");
          }
 
+         int markerIdVarLen = VarInt.size(markerIdLen);
          if (markerIdLen > 4096000) {
             throw ProtocolException.stringTooLong("MarkerId", markerIdLen, 4096000);
          }
 
-         int markerIdVarLen = VarInt.length(buf, pos);
+         if (pos + markerIdVarLen + markerIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("MarkerId", pos + markerIdVarLen + markerIdLen, buf.readableBytes());
+         }
+
          obj.markerId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += markerIdVarLen + markerIdLen;
       }
@@ -72,7 +80,7 @@ public class RemoveMapMarker implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,7 +126,7 @@ public class RemoveMapMarker implements Packet, ToServerPacket {
             return ValidationResult.error("MarkerId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(markerIdLen);
          pos += markerIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading MarkerId");

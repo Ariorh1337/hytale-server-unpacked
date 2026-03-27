@@ -4,8 +4,7 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
@@ -33,6 +32,7 @@ import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
 import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpawnBeaconsCommand extends AbstractCommandCollection {
    private static final AssetArgumentType<BeaconNPCSpawn, ?> BEACON_SPAWN_ASSET_TYPE = new AssetArgumentType(
@@ -63,7 +63,7 @@ public class SpawnBeaconsCommand extends AbstractCommandCollection {
       ) {
          TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
          assert transformComponent != null;
-         Vector3f rotation = transformComponent.getRotation();
+         Rotation3f rotation = transformComponent.getRotation();
          Vector3d position = transformComponent.getPosition();
          BeaconNPCSpawn beacon = this.beaconArg.get(context);
          BeaconSpawnWrapper wrapper = SpawningPlugin.get().getBeaconSpawnWrapper(BeaconNPCSpawn.getAssetMap().getIndex(beacon.getId()));

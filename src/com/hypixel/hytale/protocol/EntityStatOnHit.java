@@ -39,6 +39,10 @@ public class EntityStatOnHit {
 
    @Nonnull
    public static EntityStatOnHit deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("EntityStatOnHit", 13, buf.readableBytes() - offset);
+      }
+
       EntityStatOnHit obj = new EntityStatOnHit();
       byte nullBits = buf.getByte(offset);
       obj.entityStatIndex = buf.getIntLE(offset + 1);
@@ -48,14 +52,14 @@ public class EntityStatOnHit {
       if ((nullBits & 1) != 0) {
          int multipliersPerEntitiesHitCount = VarInt.peek(buf, pos);
          if (multipliersPerEntitiesHitCount < 0) {
-            throw ProtocolException.negativeLength("MultipliersPerEntitiesHit", multipliersPerEntitiesHitCount);
+            throw ProtocolException.invalidVarInt("MultipliersPerEntitiesHit");
          }
 
+         int multipliersPerEntitiesHitVarLen = VarInt.size(multipliersPerEntitiesHitCount);
          if (multipliersPerEntitiesHitCount > 4096000) {
             throw ProtocolException.arrayTooLong("MultipliersPerEntitiesHit", multipliersPerEntitiesHitCount, 4096000);
          }
 
-         int multipliersPerEntitiesHitVarLen = VarInt.size(multipliersPerEntitiesHitCount);
          if (pos + multipliersPerEntitiesHitVarLen + multipliersPerEntitiesHitCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall(
                "MultipliersPerEntitiesHit", pos + multipliersPerEntitiesHitVarLen + multipliersPerEntitiesHitCount * 4, buf.readableBytes()
@@ -80,7 +84,7 @@ public class EntityStatOnHit {
       int pos = offset + 13;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 4;
+         pos += VarInt.size(arrLen) + arrLen * 4;
       }
 
       return pos - offset;
@@ -135,7 +139,7 @@ public class EntityStatOnHit {
             return ValidationResult.error("MultipliersPerEntitiesHit exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(multipliersPerEntitiesHitCount);
          pos += multipliersPerEntitiesHitCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading MultipliersPerEntitiesHit");

@@ -30,20 +30,24 @@ public class ExtraResources {
 
    @Nonnull
    public static ExtraResources deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("ExtraResources", 1, buf.readableBytes() - offset);
+      }
+
       ExtraResources obj = new ExtraResources();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int resourcesCount = VarInt.peek(buf, pos);
          if (resourcesCount < 0) {
-            throw ProtocolException.negativeLength("Resources", resourcesCount);
+            throw ProtocolException.invalidVarInt("Resources");
          }
 
+         int resourcesVarLen = VarInt.size(resourcesCount);
          if (resourcesCount > 4096000) {
             throw ProtocolException.arrayTooLong("Resources", resourcesCount, 4096000);
          }
 
-         int resourcesVarLen = VarInt.size(resourcesCount);
          if (pos + resourcesVarLen + resourcesCount * 5L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Resources", pos + resourcesVarLen + resourcesCount * 5, buf.readableBytes());
          }
@@ -65,7 +69,7 @@ public class ExtraResources {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ItemQuantity.computeBytesConsumed(buf, pos);
@@ -127,7 +131,7 @@ public class ExtraResources {
             return ValidationResult.error("Resources exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(resourcesCount);
 
          for (int i = 0; i < resourcesCount; i++) {
             ValidationResult structResult = ItemQuantity.validateStructure(buffer, pos);

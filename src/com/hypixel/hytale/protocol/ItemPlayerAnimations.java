@@ -60,6 +60,10 @@ public class ItemPlayerAnimations {
 
    @Nonnull
    public static ItemPlayerAnimations deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 103) {
+         throw ProtocolException.bufferTooSmall("ItemPlayerAnimations", 103, buf.readableBytes() - offset);
+      }
+
       ItemPlayerAnimations obj = new ItemPlayerAnimations();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -72,45 +76,64 @@ public class ItemPlayerAnimations {
 
       obj.useFirstPersonOverride = buf.getByte(offset + 90) != 0;
       if ((nullBits & 4) != 0) {
-         int varPos0 = offset + 103 + buf.getIntLE(offset + 91);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 91);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 103) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 103 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos1 = offset + 103 + buf.getIntLE(offset + 95);
-         int animationsCount = VarInt.peek(buf, varPos1);
-         if (animationsCount < 0) {
-            throw ProtocolException.negativeLength("Animations", animationsCount);
+         int varPosBase1 = buf.getIntLE(offset + 95);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 103) {
+            throw ProtocolException.invalidOffset("Animations", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 103 + varPosBase1;
+         int animationsCount = VarInt.peek(buf, varPos1);
+         if (animationsCount < 0) {
+            throw ProtocolException.invalidVarInt("Animations");
+         }
+
+         int varIntLen = VarInt.size(animationsCount);
          if (animationsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Animations", animationsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.animations = new HashMap<>(animationsCount);
          int dictPos = varPos1 + varIntLen;
 
          for (int i = 0; i < animationsCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             ItemAnimation val = ItemAnimation.deserialize(buf, dictPos);
@@ -122,7 +145,12 @@ public class ItemPlayerAnimations {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos2 = offset + 103 + buf.getIntLE(offset + 99);
+         int varPosBase2 = buf.getIntLE(offset + 99);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 103) {
+            throw ProtocolException.invalidOffset("Camera", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 103 + varPosBase2;
          obj.camera = CameraSettings.deserialize(buf, varPos2);
       }
 
@@ -134,9 +162,13 @@ public class ItemPlayerAnimations {
       int maxEnd = 103;
       if ((nullBits & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 91);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 103) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 103 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -144,13 +176,17 @@ public class ItemPlayerAnimations {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 95);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 103) {
+            throw ProtocolException.invalidOffset("Animations", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 103 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
             pos1 += ItemAnimation.computeBytesConsumed(buf, pos1);
          }
 
@@ -161,6 +197,10 @@ public class ItemPlayerAnimations {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 99);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 103) {
+            throw ProtocolException.invalidOffset("Camera", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 103 + fieldOffset2;
          pos2 += CameraSettings.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -277,15 +317,11 @@ public class ItemPlayerAnimations {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 4) != 0) {
          int idOffset = buffer.getIntLE(offset + 91);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 103) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 103 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -295,7 +331,7 @@ public class ItemPlayerAnimations {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -304,15 +340,11 @@ public class ItemPlayerAnimations {
 
       if ((nullBits & 8) != 0) {
          int animationsOffset = buffer.getIntLE(offset + 95);
-         if (animationsOffset < 0) {
+         if (animationsOffset < 0 || animationsOffset > buffer.writerIndex() - offset - 103) {
             return ValidationResult.error("Invalid offset for Animations");
          }
 
          int pos = offset + 103 + animationsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Animations");
-         }
-
          int animationsCount = VarInt.peek(buffer, pos);
          if (animationsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Animations");
@@ -322,7 +354,7 @@ public class ItemPlayerAnimations {
             return ValidationResult.error("Animations exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(animationsCount);
 
          for (int i = 0; i < animationsCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -334,7 +366,7 @@ public class ItemPlayerAnimations {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -346,15 +378,11 @@ public class ItemPlayerAnimations {
 
       if ((nullBits & 16) != 0) {
          int cameraOffset = buffer.getIntLE(offset + 99);
-         if (cameraOffset < 0) {
+         if (cameraOffset < 0 || cameraOffset > buffer.writerIndex() - offset - 103) {
             return ValidationResult.error("Invalid offset for Camera");
          }
 
          int pos = offset + 103 + cameraOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Camera");
-         }
-
          ValidationResult cameraResult = CameraSettings.validateStructure(buffer, pos);
          if (!cameraResult.isValid()) {
             return ValidationResult.error("Invalid Camera: " + cameraResult.error());

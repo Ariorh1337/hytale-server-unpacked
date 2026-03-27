@@ -30,20 +30,24 @@ public class Bench {
 
    @Nonnull
    public static Bench deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("Bench", 1, buf.readableBytes() - offset);
+      }
+
       Bench obj = new Bench();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int benchTierLevelsCount = VarInt.peek(buf, pos);
          if (benchTierLevelsCount < 0) {
-            throw ProtocolException.negativeLength("BenchTierLevels", benchTierLevelsCount);
+            throw ProtocolException.invalidVarInt("BenchTierLevels");
          }
 
+         int benchTierLevelsVarLen = VarInt.size(benchTierLevelsCount);
          if (benchTierLevelsCount > 4096000) {
             throw ProtocolException.arrayTooLong("BenchTierLevels", benchTierLevelsCount, 4096000);
          }
 
-         int benchTierLevelsVarLen = VarInt.size(benchTierLevelsCount);
          if (pos + benchTierLevelsVarLen + benchTierLevelsCount * 17L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("BenchTierLevels", pos + benchTierLevelsVarLen + benchTierLevelsCount * 17, buf.readableBytes());
          }
@@ -65,7 +69,7 @@ public class Bench {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += BenchTierLevel.computeBytesConsumed(buf, pos);
@@ -127,7 +131,7 @@ public class Bench {
             return ValidationResult.error("BenchTierLevels exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(benchTierLevelsCount);
 
          for (int i = 0; i < benchTierLevelsCount; i++) {
             ValidationResult structResult = BenchTierLevel.validateStructure(buffer, pos);

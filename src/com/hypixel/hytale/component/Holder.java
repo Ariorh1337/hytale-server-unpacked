@@ -122,8 +122,25 @@ public class Holder<ECS_TYPE> {
 
    @Nonnull
    public <T extends Component<ECS_TYPE>> T ensureAndGetComponent(@Nonnull ComponentType<ECS_TYPE, T> componentType) {
-      this.ensureComponent(componentType);
-      return this.getComponent(componentType);
+      assert this.archetype != null;
+      assert this.registry != null;
+      if (this.ensureValidComponents) {
+         componentType.validate();
+      }
+
+      long writeStamp = this.lock.writeLock();
+
+      try {
+         if (!this.archetype.contains(componentType)) {
+            T component = this.registry.createComponent(componentType);
+            this.addComponent0(componentType, component);
+            return component;
+         } else {
+            return (T)this.components[componentType.getIndex()];
+         }
+      } finally {
+         this.lock.unlockWrite(writeStamp);
+      }
    }
 
    public <T extends Component<ECS_TYPE>> void addComponent(@Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {
@@ -183,10 +200,23 @@ public class Holder<ECS_TYPE> {
    }
 
    public <T extends Component<ECS_TYPE>> void putComponent(@Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {
-      if (this.<T>getComponent(componentType) != null) {
-         this.replaceComponent(componentType, component);
-      } else {
-         this.addComponent(componentType, component);
+      assert this.archetype != null;
+      assert this.components != null;
+      if (this.ensureValidComponents) {
+         componentType.validate();
+      }
+
+      long stamp = this.lock.writeLock();
+
+      try {
+         if (this.archetype.contains(componentType)) {
+            this.archetype.validateComponentType(componentType);
+            this.components[componentType.getIndex()] = component;
+         } else {
+            this.addComponent0(componentType, component);
+         }
+      } finally {
+         this.lock.unlockWrite(stamp);
       }
    }
 
@@ -226,12 +256,26 @@ public class Holder<ECS_TYPE> {
    }
 
    public <T extends Component<ECS_TYPE>> boolean tryRemoveComponent(@Nonnull ComponentType<ECS_TYPE, T> componentType) {
-      if (this.<T>getComponent(componentType) == null) {
-         return false;
+      assert this.archetype != null;
+      assert this.components != null;
+      if (this.ensureValidComponents) {
+         componentType.validate();
       }
 
-      this.removeComponent(componentType);
-      return true;
+      long stamp = this.lock.writeLock();
+
+      try {
+         if (!this.archetype.contains(componentType)) {
+            return false;
+         }
+
+         this.archetype.validateComponentType(componentType);
+         this.archetype = Archetype.remove(this.archetype, componentType);
+         this.components[componentType.getIndex()] = null;
+         return true;
+      } finally {
+         this.lock.unlockWrite(stamp);
+      }
    }
 
    public boolean hasSerializableComponents(@Nonnull ComponentRegistry.Data<ECS_TYPE> data) {

@@ -50,33 +50,42 @@ public class UpdateKnownRecipes implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateKnownRecipes deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateKnownRecipes", 1, buf.readableBytes() - offset);
+      }
+
       UpdateKnownRecipes obj = new UpdateKnownRecipes();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int knownCount = VarInt.peek(buf, pos);
          if (knownCount < 0) {
-            throw ProtocolException.negativeLength("Known", knownCount);
+            throw ProtocolException.invalidVarInt("Known");
          }
 
+         int knownVarLen = VarInt.size(knownCount);
          if (knownCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Known", knownCount, 4096000);
          }
 
-         pos += VarInt.size(knownCount);
+         pos += knownVarLen;
          obj.known = new HashMap<>(knownCount);
 
          for (int i = 0; i < knownCount; i++) {
             int keyLen = VarInt.peek(buf, pos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, pos);
+            if (pos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", pos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, pos);
             pos += keyVarLen + keyLen;
             CraftingRecipe val = CraftingRecipe.deserialize(buf, pos);
@@ -95,11 +104,11 @@ public class UpdateKnownRecipes implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
             pos += CraftingRecipe.computeBytesConsumed(buf, pos);
          }
       }
@@ -162,7 +171,7 @@ public class UpdateKnownRecipes implements Packet, ToClientPacket {
             return ValidationResult.error("Known exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(knownCount);
 
          for (int i = 0; i < knownCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -174,7 +183,7 @@ public class UpdateKnownRecipes implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");

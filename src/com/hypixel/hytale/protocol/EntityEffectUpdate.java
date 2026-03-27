@@ -47,6 +47,10 @@ public class EntityEffectUpdate {
 
    @Nonnull
    public static EntityEffectUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("EntityEffectUpdate", 12, buf.readableBytes() - offset);
+      }
+
       EntityEffectUpdate obj = new EntityEffectUpdate();
       byte nullBits = buf.getByte(offset);
       obj.type = EffectOp.fromValue(buf.getByte(offset + 1));
@@ -58,14 +62,18 @@ public class EntityEffectUpdate {
       if ((nullBits & 1) != 0) {
          int statusEffectIconLen = VarInt.peek(buf, pos);
          if (statusEffectIconLen < 0) {
-            throw ProtocolException.negativeLength("StatusEffectIcon", statusEffectIconLen);
+            throw ProtocolException.invalidVarInt("StatusEffectIcon");
          }
 
+         int statusEffectIconVarLen = VarInt.size(statusEffectIconLen);
          if (statusEffectIconLen > 4096000) {
             throw ProtocolException.stringTooLong("StatusEffectIcon", statusEffectIconLen, 4096000);
          }
 
-         int statusEffectIconVarLen = VarInt.length(buf, pos);
+         if (pos + statusEffectIconVarLen + statusEffectIconLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("StatusEffectIcon", pos + statusEffectIconVarLen + statusEffectIconLen, buf.readableBytes());
+         }
+
          obj.statusEffectIcon = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += statusEffectIconVarLen + statusEffectIconLen;
       }
@@ -78,7 +86,7 @@ public class EntityEffectUpdate {
       int pos = offset + 12;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -116,9 +124,14 @@ public class EntityEffectUpdate {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 12;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid EffectOp value for Type");
+      }
+
+      v = offset + 12;
       if ((nullBits & 1) != 0) {
-         int statusEffectIconLen = VarInt.peek(buffer, pos);
+         int statusEffectIconLen = VarInt.peek(buffer, v);
          if (statusEffectIconLen < 0) {
             return ValidationResult.error("Invalid string length for StatusEffectIcon");
          }
@@ -127,9 +140,9 @@ public class EntityEffectUpdate {
             return ValidationResult.error("StatusEffectIcon exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += statusEffectIconLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(statusEffectIconLen);
+         v += statusEffectIconLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading StatusEffectIcon");
          }
       }

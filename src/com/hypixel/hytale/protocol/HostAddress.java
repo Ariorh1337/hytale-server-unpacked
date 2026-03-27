@@ -33,19 +33,27 @@ public class HostAddress {
 
    @Nonnull
    public static HostAddress deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("HostAddress", 2, buf.readableBytes() - offset);
+      }
+
       HostAddress obj = new HostAddress();
       obj.port = buf.getShortLE(offset + 0);
       int pos = offset + 2;
       int hostLen = VarInt.peek(buf, pos);
       if (hostLen < 0) {
-         throw ProtocolException.negativeLength("Host", hostLen);
+         throw ProtocolException.invalidVarInt("Host");
       }
 
+      int hostVarLen = VarInt.size(hostLen);
       if (hostLen > 256) {
          throw ProtocolException.stringTooLong("Host", hostLen, 256);
       }
 
-      int hostVarLen = VarInt.length(buf, pos);
+      if (pos + hostVarLen + hostLen > buf.readableBytes()) {
+         throw ProtocolException.bufferTooSmall("Host", pos + hostVarLen + hostLen, buf.readableBytes());
+      }
+
       obj.host = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
       pos += hostVarLen + hostLen;
       return obj;
@@ -54,7 +62,7 @@ public class HostAddress {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 2;
       int sl = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + sl;
+      pos += VarInt.size(sl) + sl;
       return pos - offset;
    }
 
@@ -83,7 +91,7 @@ public class HostAddress {
          return ValidationResult.error("Host exceeds max length 256");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(hostLen);
       pos += hostLen;
       return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading Host") : ValidationResult.OK;
    }

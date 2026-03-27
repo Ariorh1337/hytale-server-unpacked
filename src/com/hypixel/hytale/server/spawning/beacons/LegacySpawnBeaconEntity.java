@@ -11,8 +11,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -48,6 +47,8 @@ import java.time.Instant;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class LegacySpawnBeaconEntity extends Entity {
    @Nonnull
@@ -300,8 +301,8 @@ public class LegacySpawnBeaconEntity extends Entity {
    @Nonnull
    public static Pair<Ref<EntityStore>, LegacySpawnBeaconEntity> create(
       @Nonnull BeaconSpawnWrapper spawnWrapper,
-      @Nonnull Vector3d position,
-      @Nonnull Vector3f rotation,
+      @Nonnull Vector3dc position,
+      @Nonnull Rotation3fc rotation,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       Holder<EntityStore> holder = createHolder(spawnWrapper, position, rotation);
@@ -310,7 +311,7 @@ public class LegacySpawnBeaconEntity extends Entity {
       return Pair.of(ref, legacySpawnBeaconComponent);
    }
 
-   public static Holder<EntityStore> createHolder(@Nonnull BeaconSpawnWrapper spawnWrapper, @Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public static Holder<EntityStore> createHolder(@Nonnull BeaconSpawnWrapper spawnWrapper, @Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
       LegacySpawnBeaconEntity entity = new LegacySpawnBeaconEntity();
       entity.setSpawnConfiguration(spawnWrapper);
       BeaconNPCSpawn spawn = spawnWrapper.getSpawn();

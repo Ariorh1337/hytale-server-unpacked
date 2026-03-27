@@ -44,7 +44,7 @@ public class UpdateService {
    private static final Path STAGING_DIR = Path.of("..").resolve("updater").resolve("staging");
    private static final Path BACKUP_DIR = Path.of("..").resolve("updater").resolve("backup");
    private final HttpClient httpClient;
-   private final String accountDataUrl = "https://account-data.butter.lat";
+   private final String accountDataUrl = "https://account-data.hytale.com";
 
    public UpdateService() {
       this.httpClient = ServiceHttpClientFactory.newBuilder(REQUEST_TIMEOUT).followRedirects(Redirect.NORMAL).build();

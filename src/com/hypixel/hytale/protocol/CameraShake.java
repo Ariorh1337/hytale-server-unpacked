@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,15 +33,29 @@ public class CameraShake {
 
    @Nonnull
    public static CameraShake deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("CameraShake", 9, buf.readableBytes() - offset);
+      }
+
       CameraShake obj = new CameraShake();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("FirstPerson", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 9 + varPosBase0;
          obj.firstPerson = CameraShakeConfig.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ThirdPerson", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 9 + varPosBase1;
          obj.thirdPerson = CameraShakeConfig.deserialize(buf, varPos1);
       }
 
@@ -52,6 +67,10 @@ public class CameraShake {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("FirstPerson", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          pos0 += CameraShakeConfig.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -61,6 +80,10 @@ public class CameraShake {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ThirdPerson", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          pos1 += CameraShakeConfig.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -124,15 +147,11 @@ public class CameraShake {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int firstPersonOffset = buffer.getIntLE(offset + 1);
-         if (firstPersonOffset < 0) {
+         if (firstPersonOffset < 0 || firstPersonOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for FirstPerson");
          }
 
          int pos = offset + 9 + firstPersonOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FirstPerson");
-         }
-
          ValidationResult firstPersonResult = CameraShakeConfig.validateStructure(buffer, pos);
          if (!firstPersonResult.isValid()) {
             return ValidationResult.error("Invalid FirstPerson: " + firstPersonResult.error());
@@ -143,15 +162,11 @@ public class CameraShake {
 
       if ((nullBits & 2) != 0) {
          int thirdPersonOffset = buffer.getIntLE(offset + 5);
-         if (thirdPersonOffset < 0) {
+         if (thirdPersonOffset < 0 || thirdPersonOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for ThirdPerson");
          }
 
          int pos = offset + 9 + thirdPersonOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ThirdPerson");
-         }
-
          ValidationResult thirdPersonResult = CameraShakeConfig.validateStructure(buffer, pos);
          if (!thirdPersonResult.isValid()) {
             return ValidationResult.error("Invalid ThirdPerson: " + thirdPersonResult.error());

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -26,6 +27,10 @@ public class DoubleParamValue extends ParamValue {
 
    @Nonnull
    public static DoubleParamValue deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("DoubleParamValue", 8, buf.readableBytes() - offset);
+      }
+
       DoubleParamValue obj = new DoubleParamValue();
       obj.value = buf.getDoubleLE(offset + 0);
       return obj;

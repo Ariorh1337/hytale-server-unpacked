@@ -51,34 +51,53 @@ public class ServerAuthToken implements Packet, ToClientPacket {
 
    @Nonnull
    public static ServerAuthToken deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ServerAuthToken", 9, buf.readableBytes() - offset);
+      }
+
       ServerAuthToken obj = new ServerAuthToken();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
-         int serverAccessTokenLen = VarInt.peek(buf, varPos0);
-         if (serverAccessTokenLen < 0) {
-            throw ProtocolException.negativeLength("ServerAccessToken", serverAccessTokenLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ServerAccessToken", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 9 + varPosBase0;
+         int serverAccessTokenLen = VarInt.peek(buf, varPos0);
+         if (serverAccessTokenLen < 0) {
+            throw ProtocolException.invalidVarInt("ServerAccessToken");
+         }
+
+         int serverAccessTokenVarIntLen = VarInt.size(serverAccessTokenLen);
          if (serverAccessTokenLen > 8192) {
             throw ProtocolException.stringTooLong("ServerAccessToken", serverAccessTokenLen, 8192);
+         }
+
+         if (varPos0 + serverAccessTokenVarIntLen + serverAccessTokenLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ServerAccessToken", varPos0 + serverAccessTokenVarIntLen + serverAccessTokenLen, buf.readableBytes());
          }
 
          obj.serverAccessToken = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int passwordChallengeCount = VarInt.peek(buf, varPos1);
-         if (passwordChallengeCount < 0) {
-            throw ProtocolException.negativeLength("PasswordChallenge", passwordChallengeCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("PasswordChallenge", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int passwordChallengeCount = VarInt.peek(buf, varPos1);
+         if (passwordChallengeCount < 0) {
+            throw ProtocolException.invalidVarInt("PasswordChallenge");
+         }
+
+         int varIntLen = VarInt.size(passwordChallengeCount);
          if (passwordChallengeCount > 64) {
             throw ProtocolException.arrayTooLong("PasswordChallenge", passwordChallengeCount, 64);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + passwordChallengeCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("PasswordChallenge", varPos1 + varIntLen + passwordChallengeCount * 1, buf.readableBytes());
          }
@@ -98,9 +117,13 @@ public class ServerAuthToken implements Packet, ToClientPacket {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("ServerAccessToken", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -108,9 +131,13 @@ public class ServerAuthToken implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("PasswordChallenge", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 1;
+         pos1 += VarInt.size(arrLen) + arrLen * 1;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -182,15 +209,11 @@ public class ServerAuthToken implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int serverAccessTokenOffset = buffer.getIntLE(offset + 1);
-         if (serverAccessTokenOffset < 0) {
+         if (serverAccessTokenOffset < 0 || serverAccessTokenOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for ServerAccessToken");
          }
 
          int pos = offset + 9 + serverAccessTokenOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ServerAccessToken");
-         }
-
          int serverAccessTokenLen = VarInt.peek(buffer, pos);
          if (serverAccessTokenLen < 0) {
             return ValidationResult.error("Invalid string length for ServerAccessToken");
@@ -200,7 +223,7 @@ public class ServerAuthToken implements Packet, ToClientPacket {
             return ValidationResult.error("ServerAccessToken exceeds max length 8192");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(serverAccessTokenLen);
          pos += serverAccessTokenLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ServerAccessToken");
@@ -209,15 +232,11 @@ public class ServerAuthToken implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int passwordChallengeOffset = buffer.getIntLE(offset + 5);
-         if (passwordChallengeOffset < 0) {
+         if (passwordChallengeOffset < 0 || passwordChallengeOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for PasswordChallenge");
          }
 
          int pos = offset + 9 + passwordChallengeOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for PasswordChallenge");
-         }
-
          int passwordChallengeCount = VarInt.peek(buffer, pos);
          if (passwordChallengeCount < 0) {
             return ValidationResult.error("Invalid array count for PasswordChallenge");
@@ -227,7 +246,7 @@ public class ServerAuthToken implements Packet, ToClientPacket {
             return ValidationResult.error("PasswordChallenge exceeds max length 64");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(passwordChallengeCount);
          pos += passwordChallengeCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading PasswordChallenge");

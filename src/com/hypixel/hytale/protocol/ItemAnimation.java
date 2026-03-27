@@ -73,6 +73,10 @@ public class ItemAnimation {
 
    @Nonnull
    public static ItemAnimation deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 32) {
+         throw ProtocolException.bufferTooSmall("ItemAnimation", 32, buf.readableBytes() - offset);
+      }
+
       ItemAnimation obj = new ItemAnimation();
       byte nullBits = buf.getByte(offset);
       obj.keepPreviousFirstPersonAnimation = buf.getByte(offset + 1) != 0;
@@ -81,70 +85,120 @@ public class ItemAnimation {
       obj.looping = buf.getByte(offset + 10) != 0;
       obj.clipsGeometry = buf.getByte(offset + 11) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 32 + buf.getIntLE(offset + 12);
-         int thirdPersonLen = VarInt.peek(buf, varPos0);
-         if (thirdPersonLen < 0) {
-            throw ProtocolException.negativeLength("ThirdPerson", thirdPersonLen);
+         int varPosBase0 = buf.getIntLE(offset + 12);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("ThirdPerson", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 32 + varPosBase0;
+         int thirdPersonLen = VarInt.peek(buf, varPos0);
+         if (thirdPersonLen < 0) {
+            throw ProtocolException.invalidVarInt("ThirdPerson");
+         }
+
+         int thirdPersonVarIntLen = VarInt.size(thirdPersonLen);
          if (thirdPersonLen > 4096000) {
             throw ProtocolException.stringTooLong("ThirdPerson", thirdPersonLen, 4096000);
+         }
+
+         if (varPos0 + thirdPersonVarIntLen + thirdPersonLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ThirdPerson", varPos0 + thirdPersonVarIntLen + thirdPersonLen, buf.readableBytes());
          }
 
          obj.thirdPerson = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 32 + buf.getIntLE(offset + 16);
-         int thirdPersonMovingLen = VarInt.peek(buf, varPos1);
-         if (thirdPersonMovingLen < 0) {
-            throw ProtocolException.negativeLength("ThirdPersonMoving", thirdPersonMovingLen);
+         int varPosBase1 = buf.getIntLE(offset + 16);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("ThirdPersonMoving", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 32 + varPosBase1;
+         int thirdPersonMovingLen = VarInt.peek(buf, varPos1);
+         if (thirdPersonMovingLen < 0) {
+            throw ProtocolException.invalidVarInt("ThirdPersonMoving");
+         }
+
+         int thirdPersonMovingVarIntLen = VarInt.size(thirdPersonMovingLen);
          if (thirdPersonMovingLen > 4096000) {
             throw ProtocolException.stringTooLong("ThirdPersonMoving", thirdPersonMovingLen, 4096000);
+         }
+
+         if (varPos1 + thirdPersonMovingVarIntLen + thirdPersonMovingLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ThirdPersonMoving", varPos1 + thirdPersonMovingVarIntLen + thirdPersonMovingLen, buf.readableBytes());
          }
 
          obj.thirdPersonMoving = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 32 + buf.getIntLE(offset + 20);
-         int thirdPersonFaceLen = VarInt.peek(buf, varPos2);
-         if (thirdPersonFaceLen < 0) {
-            throw ProtocolException.negativeLength("ThirdPersonFace", thirdPersonFaceLen);
+         int varPosBase2 = buf.getIntLE(offset + 20);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("ThirdPersonFace", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 32 + varPosBase2;
+         int thirdPersonFaceLen = VarInt.peek(buf, varPos2);
+         if (thirdPersonFaceLen < 0) {
+            throw ProtocolException.invalidVarInt("ThirdPersonFace");
+         }
+
+         int thirdPersonFaceVarIntLen = VarInt.size(thirdPersonFaceLen);
          if (thirdPersonFaceLen > 4096000) {
             throw ProtocolException.stringTooLong("ThirdPersonFace", thirdPersonFaceLen, 4096000);
+         }
+
+         if (varPos2 + thirdPersonFaceVarIntLen + thirdPersonFaceLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ThirdPersonFace", varPos2 + thirdPersonFaceVarIntLen + thirdPersonFaceLen, buf.readableBytes());
          }
 
          obj.thirdPersonFace = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 32 + buf.getIntLE(offset + 24);
-         int firstPersonLen = VarInt.peek(buf, varPos3);
-         if (firstPersonLen < 0) {
-            throw ProtocolException.negativeLength("FirstPerson", firstPersonLen);
+         int varPosBase3 = buf.getIntLE(offset + 24);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("FirstPerson", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 32 + varPosBase3;
+         int firstPersonLen = VarInt.peek(buf, varPos3);
+         if (firstPersonLen < 0) {
+            throw ProtocolException.invalidVarInt("FirstPerson");
+         }
+
+         int firstPersonVarIntLen = VarInt.size(firstPersonLen);
          if (firstPersonLen > 4096000) {
             throw ProtocolException.stringTooLong("FirstPerson", firstPersonLen, 4096000);
+         }
+
+         if (varPos3 + firstPersonVarIntLen + firstPersonLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("FirstPerson", varPos3 + firstPersonVarIntLen + firstPersonLen, buf.readableBytes());
          }
 
          obj.firstPerson = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 32 + buf.getIntLE(offset + 28);
-         int firstPersonOverrideLen = VarInt.peek(buf, varPos4);
-         if (firstPersonOverrideLen < 0) {
-            throw ProtocolException.negativeLength("FirstPersonOverride", firstPersonOverrideLen);
+         int varPosBase4 = buf.getIntLE(offset + 28);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("FirstPersonOverride", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 32 + varPosBase4;
+         int firstPersonOverrideLen = VarInt.peek(buf, varPos4);
+         if (firstPersonOverrideLen < 0) {
+            throw ProtocolException.invalidVarInt("FirstPersonOverride");
+         }
+
+         int firstPersonOverrideVarIntLen = VarInt.size(firstPersonOverrideLen);
          if (firstPersonOverrideLen > 4096000) {
             throw ProtocolException.stringTooLong("FirstPersonOverride", firstPersonOverrideLen, 4096000);
+         }
+
+         if (varPos4 + firstPersonOverrideVarIntLen + firstPersonOverrideLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("FirstPersonOverride", varPos4 + firstPersonOverrideVarIntLen + firstPersonOverrideLen, buf.readableBytes());
          }
 
          obj.firstPersonOverride = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
@@ -158,9 +212,13 @@ public class ItemAnimation {
       int maxEnd = 32;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 12);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("ThirdPerson", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 32 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -168,9 +226,13 @@ public class ItemAnimation {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 16);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("ThirdPersonMoving", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 32 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -178,9 +240,13 @@ public class ItemAnimation {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 20);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("ThirdPersonFace", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 32 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -188,9 +254,13 @@ public class ItemAnimation {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 24);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("FirstPerson", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 32 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -198,9 +268,13 @@ public class ItemAnimation {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 28);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 32) {
+            throw ProtocolException.invalidOffset("FirstPersonOverride", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 32 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -318,15 +392,11 @@ public class ItemAnimation {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int thirdPersonOffset = buffer.getIntLE(offset + 12);
-         if (thirdPersonOffset < 0) {
+         if (thirdPersonOffset < 0 || thirdPersonOffset > buffer.writerIndex() - offset - 32) {
             return ValidationResult.error("Invalid offset for ThirdPerson");
          }
 
          int pos = offset + 32 + thirdPersonOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ThirdPerson");
-         }
-
          int thirdPersonLen = VarInt.peek(buffer, pos);
          if (thirdPersonLen < 0) {
             return ValidationResult.error("Invalid string length for ThirdPerson");
@@ -336,7 +406,7 @@ public class ItemAnimation {
             return ValidationResult.error("ThirdPerson exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(thirdPersonLen);
          pos += thirdPersonLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ThirdPerson");
@@ -345,15 +415,11 @@ public class ItemAnimation {
 
       if ((nullBits & 2) != 0) {
          int thirdPersonMovingOffset = buffer.getIntLE(offset + 16);
-         if (thirdPersonMovingOffset < 0) {
+         if (thirdPersonMovingOffset < 0 || thirdPersonMovingOffset > buffer.writerIndex() - offset - 32) {
             return ValidationResult.error("Invalid offset for ThirdPersonMoving");
          }
 
          int pos = offset + 32 + thirdPersonMovingOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ThirdPersonMoving");
-         }
-
          int thirdPersonMovingLen = VarInt.peek(buffer, pos);
          if (thirdPersonMovingLen < 0) {
             return ValidationResult.error("Invalid string length for ThirdPersonMoving");
@@ -363,7 +429,7 @@ public class ItemAnimation {
             return ValidationResult.error("ThirdPersonMoving exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(thirdPersonMovingLen);
          pos += thirdPersonMovingLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ThirdPersonMoving");
@@ -372,15 +438,11 @@ public class ItemAnimation {
 
       if ((nullBits & 4) != 0) {
          int thirdPersonFaceOffset = buffer.getIntLE(offset + 20);
-         if (thirdPersonFaceOffset < 0) {
+         if (thirdPersonFaceOffset < 0 || thirdPersonFaceOffset > buffer.writerIndex() - offset - 32) {
             return ValidationResult.error("Invalid offset for ThirdPersonFace");
          }
 
          int pos = offset + 32 + thirdPersonFaceOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ThirdPersonFace");
-         }
-
          int thirdPersonFaceLen = VarInt.peek(buffer, pos);
          if (thirdPersonFaceLen < 0) {
             return ValidationResult.error("Invalid string length for ThirdPersonFace");
@@ -390,7 +452,7 @@ public class ItemAnimation {
             return ValidationResult.error("ThirdPersonFace exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(thirdPersonFaceLen);
          pos += thirdPersonFaceLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ThirdPersonFace");
@@ -399,15 +461,11 @@ public class ItemAnimation {
 
       if ((nullBits & 8) != 0) {
          int firstPersonOffset = buffer.getIntLE(offset + 24);
-         if (firstPersonOffset < 0) {
+         if (firstPersonOffset < 0 || firstPersonOffset > buffer.writerIndex() - offset - 32) {
             return ValidationResult.error("Invalid offset for FirstPerson");
          }
 
          int pos = offset + 32 + firstPersonOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FirstPerson");
-         }
-
          int firstPersonLen = VarInt.peek(buffer, pos);
          if (firstPersonLen < 0) {
             return ValidationResult.error("Invalid string length for FirstPerson");
@@ -417,7 +475,7 @@ public class ItemAnimation {
             return ValidationResult.error("FirstPerson exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(firstPersonLen);
          pos += firstPersonLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FirstPerson");
@@ -426,15 +484,11 @@ public class ItemAnimation {
 
       if ((nullBits & 16) != 0) {
          int firstPersonOverrideOffset = buffer.getIntLE(offset + 28);
-         if (firstPersonOverrideOffset < 0) {
+         if (firstPersonOverrideOffset < 0 || firstPersonOverrideOffset > buffer.writerIndex() - offset - 32) {
             return ValidationResult.error("Invalid offset for FirstPersonOverride");
          }
 
          int pos = offset + 32 + firstPersonOverrideOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FirstPersonOverride");
-         }
-
          int firstPersonOverrideLen = VarInt.peek(buffer, pos);
          if (firstPersonOverrideLen < 0) {
             return ValidationResult.error("Invalid string length for FirstPersonOverride");
@@ -444,7 +498,7 @@ public class ItemAnimation {
             return ValidationResult.error("FirstPersonOverride exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(firstPersonOverrideLen);
          pos += firstPersonOverrideLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FirstPersonOverride");

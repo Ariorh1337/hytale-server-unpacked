@@ -39,35 +39,54 @@ public class BuilderToolState {
 
    @Nonnull
    public static BuilderToolState deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("BuilderToolState", 10, buf.readableBytes() - offset);
+      }
+
       BuilderToolState obj = new BuilderToolState();
       byte nullBits = buf.getByte(offset);
       obj.isBrush = buf.getByte(offset + 1) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 10 + buf.getIntLE(offset + 2);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 10 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 10 + buf.getIntLE(offset + 6);
-         int argsCount = VarInt.peek(buf, varPos1);
-         if (argsCount < 0) {
-            throw ProtocolException.negativeLength("Args", argsCount);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Args", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 10 + varPosBase1;
+         int argsCount = VarInt.peek(buf, varPos1);
+         if (argsCount < 0) {
+            throw ProtocolException.invalidVarInt("Args");
+         }
+
+         int varIntLen = VarInt.size(argsCount);
          if (argsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Args", argsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + argsCount * 33L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Args", varPos1 + varIntLen + argsCount * 33, buf.readableBytes());
          }
@@ -89,9 +108,13 @@ public class BuilderToolState {
       int maxEnd = 10;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 10 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -99,9 +122,13 @@ public class BuilderToolState {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Args", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 10 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += BuilderToolArg.computeBytesConsumed(buf, pos1);
@@ -183,15 +210,11 @@ public class BuilderToolState {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 2);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 10 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -201,7 +224,7 @@ public class BuilderToolState {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -210,15 +233,11 @@ public class BuilderToolState {
 
       if ((nullBits & 2) != 0) {
          int argsOffset = buffer.getIntLE(offset + 6);
-         if (argsOffset < 0) {
+         if (argsOffset < 0 || argsOffset > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Args");
          }
 
          int pos = offset + 10 + argsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Args");
-         }
-
          int argsCount = VarInt.peek(buffer, pos);
          if (argsCount < 0) {
             return ValidationResult.error("Invalid array count for Args");
@@ -228,7 +247,7 @@ public class BuilderToolState {
             return ValidationResult.error("Args exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(argsCount);
 
          for (int i = 0; i < argsCount; i++) {
             ValidationResult structResult = BuilderToolArg.validateStructure(buffer, pos);

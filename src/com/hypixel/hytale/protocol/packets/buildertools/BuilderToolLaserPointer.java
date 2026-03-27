@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -65,6 +66,10 @@ public class BuilderToolLaserPointer implements Packet, ToClientPacket {
 
    @Nonnull
    public static BuilderToolLaserPointer deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 36) {
+         throw ProtocolException.bufferTooSmall("BuilderToolLaserPointer", 36, buf.readableBytes() - offset);
+      }
+
       BuilderToolLaserPointer obj = new BuilderToolLaserPointer();
       obj.playerNetworkId = buf.getIntLE(offset + 0);
       obj.startX = buf.getFloatLE(offset + 4);

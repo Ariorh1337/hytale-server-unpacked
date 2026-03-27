@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -31,6 +32,10 @@ public class RootInteractionSettings {
 
    @Nonnull
    public static RootInteractionSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("RootInteractionSettings", 2, buf.readableBytes() - offset);
+      }
+
       RootInteractionSettings obj = new RootInteractionSettings();
       byte nullBits = buf.getByte(offset);
       obj.allowSkipChainOnClick = buf.getByte(offset + 1) != 0;

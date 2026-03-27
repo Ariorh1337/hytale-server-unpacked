@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class VelocityConfig {
 
    @Nonnull
    public static VelocityConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("VelocityConfig", 21, buf.readableBytes() - offset);
+      }
+
       VelocityConfig obj = new VelocityConfig();
       obj.groundResistance = buf.getFloatLE(offset + 0);
       obj.groundResistanceMax = buf.getFloatLE(offset + 4);
@@ -72,7 +77,12 @@ public class VelocityConfig {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 21 ? ValidationResult.error("Buffer too small: expected at least 21 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 21) {
+         return ValidationResult.error("Buffer too small: expected at least 21 bytes");
+      }
+
+      int v = buffer.getByte(offset + 20) & 255;
+      return v >= 2 ? ValidationResult.error("Invalid VelocityThresholdStyle value for Style") : ValidationResult.OK;
    }
 
    public VelocityConfig clone() {

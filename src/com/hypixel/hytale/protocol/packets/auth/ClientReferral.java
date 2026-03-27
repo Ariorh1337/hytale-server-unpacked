@@ -51,25 +51,39 @@ public class ClientReferral implements Packet, ToClientPacket {
 
    @Nonnull
    public static ClientReferral deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ClientReferral", 9, buf.readableBytes() - offset);
+      }
+
       ClientReferral obj = new ClientReferral();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("HostTo", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 9 + varPosBase0;
          obj.hostTo = HostAddress.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
-         int dataCount = VarInt.peek(buf, varPos1);
-         if (dataCount < 0) {
-            throw ProtocolException.negativeLength("Data", dataCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Data", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 9 + varPosBase1;
+         int dataCount = VarInt.peek(buf, varPos1);
+         if (dataCount < 0) {
+            throw ProtocolException.invalidVarInt("Data");
+         }
+
+         int varIntLen = VarInt.size(dataCount);
          if (dataCount > 4096) {
             throw ProtocolException.arrayTooLong("Data", dataCount, 4096);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + dataCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Data", varPos1 + varIntLen + dataCount * 1, buf.readableBytes());
          }
@@ -89,6 +103,10 @@ public class ClientReferral implements Packet, ToClientPacket {
       int maxEnd = 9;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("HostTo", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 9 + fieldOffset0;
          pos0 += HostAddress.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -98,9 +116,13 @@ public class ClientReferral implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
+            throw ProtocolException.invalidOffset("Data", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 9 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 1;
+         pos1 += VarInt.size(arrLen) + arrLen * 1;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -172,15 +194,11 @@ public class ClientReferral implements Packet, ToClientPacket {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int hostToOffset = buffer.getIntLE(offset + 1);
-         if (hostToOffset < 0) {
+         if (hostToOffset < 0 || hostToOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for HostTo");
          }
 
          int pos = offset + 9 + hostToOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for HostTo");
-         }
-
          ValidationResult hostToResult = HostAddress.validateStructure(buffer, pos);
          if (!hostToResult.isValid()) {
             return ValidationResult.error("Invalid HostTo: " + hostToResult.error());
@@ -191,15 +209,11 @@ public class ClientReferral implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int dataOffset = buffer.getIntLE(offset + 5);
-         if (dataOffset < 0) {
+         if (dataOffset < 0 || dataOffset > buffer.writerIndex() - offset - 9) {
             return ValidationResult.error("Invalid offset for Data");
          }
 
          int pos = offset + 9 + dataOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Data");
-         }
-
          int dataCount = VarInt.peek(buffer, pos);
          if (dataCount < 0) {
             return ValidationResult.error("Invalid array count for Data");
@@ -209,7 +223,7 @@ public class ClientReferral implements Packet, ToClientPacket {
             return ValidationResult.error("Data exceeds max length 4096");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(dataCount);
          pos += dataCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Data");

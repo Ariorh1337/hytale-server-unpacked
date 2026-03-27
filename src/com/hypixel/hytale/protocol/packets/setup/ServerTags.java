@@ -49,33 +49,42 @@ public class ServerTags implements Packet, ToClientPacket {
 
    @Nonnull
    public static ServerTags deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("ServerTags", 1, buf.readableBytes() - offset);
+      }
+
       ServerTags obj = new ServerTags();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int tagsCount = VarInt.peek(buf, pos);
          if (tagsCount < 0) {
-            throw ProtocolException.negativeLength("Tags", tagsCount);
+            throw ProtocolException.invalidVarInt("Tags");
          }
 
+         int tagsVarLen = VarInt.size(tagsCount);
          if (tagsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Tags", tagsCount, 4096000);
          }
 
-         pos += VarInt.size(tagsCount);
+         pos += tagsVarLen;
          obj.tags = new HashMap<>(tagsCount);
 
          for (int i = 0; i < tagsCount; i++) {
             int keyLen = VarInt.peek(buf, pos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, pos);
+            if (pos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", pos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, pos);
             pos += keyVarLen + keyLen;
             int val = buf.getIntLE(pos);
@@ -94,11 +103,11 @@ public class ServerTags implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
             pos += 4;
          }
       }
@@ -161,7 +170,7 @@ public class ServerTags implements Packet, ToClientPacket {
             return ValidationResult.error("Tags exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagsCount);
 
          for (int i = 0; i < tagsCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -173,7 +182,7 @@ public class ServerTags implements Packet, ToClientPacket {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");

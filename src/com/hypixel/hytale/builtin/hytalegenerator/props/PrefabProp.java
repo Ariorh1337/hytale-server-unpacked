@@ -14,8 +14,6 @@ import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
@@ -26,6 +24,8 @@ import java.util.List;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabProp extends Prop {
    @Nonnull
@@ -87,7 +87,7 @@ public class PrefabProp extends Prop {
       this.random.setSeed(this.rngField.get(context.position.x, context.position.y, context.position.z));
       PrefabBufferCall callInstance = new PrefabBufferCall(this.random, PrefabRotation.ROTATION_0);
       IPrefabBuffer prefab = this.pickPrefab(this.random);
-      this.rPrefabPosition.assign(context.position);
+      this.rPrefabPosition.set(context.position);
       this.rColumnPredicate.bounds.assign(context.materialWriteSpace.getBounds());
       this.rColumnPredicate.bounds.offsetOpposite(context.position);
 
@@ -95,7 +95,7 @@ public class PrefabProp extends Prop {
          prefab.forEach(
             this.rColumnPredicate,
             (x, y, z, blockId, holder, support, rotation, filler, call, fluidId, fluidLevel) -> {
-               this.rWorldPosition.assign(x + context.position.x, y + context.position.y, z + context.position.z);
+               this.rWorldPosition.set(x + context.position.x, y + context.position.y, z + context.position.z);
                if (context.materialWriteSpace.getBounds().contains(this.rWorldPosition)) {
                   SolidMaterial solid = this.materialCache.getSolidMaterial(blockId, support, rotation, filler, holder != null ? holder.clone() : null);
                   FluidMaterial fluid = this.materialCache.getFluidMaterial(fluidId, (byte)fluidLevel);
@@ -116,7 +116,7 @@ public class PrefabProp extends Prop {
                            Holder<EntityStore> entityClone = entityWrappers[i].clone();
                            transformComp = entityClone.getComponent(TransformComponent.getComponentType());
                            if (transformComp != null) {
-                              transformComp.getPosition().assign(this.rEntityWorldPosition);
+                              transformComp.getPosition().set(this.rEntityWorldPosition);
                               EntityPlacementData placementData = new EntityPlacementData(new Vector3i(), PrefabRotation.ROTATION_0, entityClone, this.prefabId);
                               context.entityWriteBuffer.addEntity(placementData);
                            }

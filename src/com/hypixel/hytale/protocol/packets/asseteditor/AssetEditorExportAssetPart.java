@@ -45,20 +45,24 @@ public class AssetEditorExportAssetPart implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorExportAssetPart deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorExportAssetPart", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorExportAssetPart obj = new AssetEditorExportAssetPart();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int partCount = VarInt.peek(buf, pos);
          if (partCount < 0) {
-            throw ProtocolException.negativeLength("Part", partCount);
+            throw ProtocolException.invalidVarInt("Part");
          }
 
+         int partVarLen = VarInt.size(partCount);
          if (partCount > 4096000) {
             throw ProtocolException.arrayTooLong("Part", partCount, 4096000);
          }
 
-         int partVarLen = VarInt.size(partCount);
          if (pos + partVarLen + partCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Part", pos + partVarLen + partCount * 1, buf.readableBytes());
          }
@@ -81,7 +85,7 @@ public class AssetEditorExportAssetPart implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -135,7 +139,7 @@ public class AssetEditorExportAssetPart implements Packet, ToClientPacket {
             return ValidationResult.error("Part exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(partCount);
          pos += partCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Part");

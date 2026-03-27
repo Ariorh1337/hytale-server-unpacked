@@ -48,6 +48,10 @@ public class PasswordRejected implements Packet, ToClientPacket {
 
    @Nonnull
    public static PasswordRejected deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("PasswordRejected", 5, buf.readableBytes() - offset);
+      }
+
       PasswordRejected obj = new PasswordRejected();
       byte nullBits = buf.getByte(offset);
       obj.attemptsRemaining = buf.getIntLE(offset + 1);
@@ -55,14 +59,14 @@ public class PasswordRejected implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int newChallengeCount = VarInt.peek(buf, pos);
          if (newChallengeCount < 0) {
-            throw ProtocolException.negativeLength("NewChallenge", newChallengeCount);
+            throw ProtocolException.invalidVarInt("NewChallenge");
          }
 
+         int newChallengeVarLen = VarInt.size(newChallengeCount);
          if (newChallengeCount > 64) {
             throw ProtocolException.arrayTooLong("NewChallenge", newChallengeCount, 64);
          }
 
-         int newChallengeVarLen = VarInt.size(newChallengeCount);
          if (pos + newChallengeVarLen + newChallengeCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("NewChallenge", pos + newChallengeVarLen + newChallengeCount * 1, buf.readableBytes());
          }
@@ -85,7 +89,7 @@ public class PasswordRejected implements Packet, ToClientPacket {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
@@ -140,7 +144,7 @@ public class PasswordRejected implements Packet, ToClientPacket {
             return ValidationResult.error("NewChallenge exceeds max length 64");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(newChallengeCount);
          pos += newChallengeCount * 1;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading NewChallenge");

@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -53,17 +54,31 @@ public class AssetEditorExportAssetInitialize implements Packet, ToClientPacket 
 
    @Nonnull
    public static AssetEditorExportAssetInitialize deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 14) {
+         throw ProtocolException.bufferTooSmall("AssetEditorExportAssetInitialize", 14, buf.readableBytes() - offset);
+      }
+
       AssetEditorExportAssetInitialize obj = new AssetEditorExportAssetInitialize();
       byte nullBits = buf.getByte(offset);
       obj.size = buf.getIntLE(offset + 1);
       obj.failed = buf.getByte(offset + 5) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 14 + buf.getIntLE(offset + 6);
+         int varPosBase0 = buf.getIntLE(offset + 6);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Asset", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 14 + varPosBase0;
          obj.asset = AssetEditorAsset.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 14 + buf.getIntLE(offset + 10);
+         int varPosBase1 = buf.getIntLE(offset + 10);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("OldPath", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 14 + varPosBase1;
          obj.oldPath = AssetPath.deserialize(buf, varPos1);
       }
 
@@ -75,6 +90,10 @@ public class AssetEditorExportAssetInitialize implements Packet, ToClientPacket 
       int maxEnd = 14;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 6);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("Asset", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 14 + fieldOffset0;
          pos0 += AssetEditorAsset.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -84,6 +103,10 @@ public class AssetEditorExportAssetInitialize implements Packet, ToClientPacket 
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 10);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 14) {
+            throw ProtocolException.invalidOffset("OldPath", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 14 + fieldOffset1;
          pos1 += AssetPath.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -151,15 +174,11 @@ public class AssetEditorExportAssetInitialize implements Packet, ToClientPacket 
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int assetOffset = buffer.getIntLE(offset + 6);
-         if (assetOffset < 0) {
+         if (assetOffset < 0 || assetOffset > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for Asset");
          }
 
          int pos = offset + 14 + assetOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Asset");
-         }
-
          ValidationResult assetResult = AssetEditorAsset.validateStructure(buffer, pos);
          if (!assetResult.isValid()) {
             return ValidationResult.error("Invalid Asset: " + assetResult.error());
@@ -170,15 +189,11 @@ public class AssetEditorExportAssetInitialize implements Packet, ToClientPacket 
 
       if ((nullBits & 2) != 0) {
          int oldPathOffset = buffer.getIntLE(offset + 10);
-         if (oldPathOffset < 0) {
+         if (oldPathOffset < 0 || oldPathOffset > buffer.writerIndex() - offset - 14) {
             return ValidationResult.error("Invalid offset for OldPath");
          }
 
          int pos = offset + 14 + oldPathOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for OldPath");
-         }
-
          ValidationResult oldPathResult = AssetPath.validateStructure(buffer, pos);
          if (!oldPathResult.isValid()) {
             return ValidationResult.error("Invalid OldPath: " + oldPathResult.error());

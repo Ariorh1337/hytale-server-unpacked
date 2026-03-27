@@ -1,8 +1,7 @@
 package com.hypixel.hytale.server.core.command.system.arguments.types;
 
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
@@ -45,6 +44,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
+import org.joml.Vector3i;
 
 public final class ArgTypes {
    public static final SingleArgumentType<Boolean> BOOLEAN = new SingleArgumentType<Boolean>(
@@ -578,7 +579,7 @@ public final class ArgTypes {
          return new RelativeChunkPosition(context.get(this.xValue), context.get(this.zValue));
       }
    };
-   public static final ArgumentType<Vector3f> ROTATION = new MultiArgumentType<Vector3f>(
+   public static final ArgumentType<Rotation3fc> ROTATION = new MultiArgumentType<Rotation3fc>(
       "server.commands.parsing.argtype.rotation.name", "server.commands.parsing.argtype.rotation.usage", "124.63 232.27 234.22"
    ) {
       private final WrappedArgumentType<Float> pitch = this.withParameter(
@@ -592,8 +593,8 @@ public final class ArgTypes {
       );
 
       @Nonnull
-      public Vector3f parse(@Nonnull MultiArgumentContext context, ParseResult parseResult) {
-         return new Vector3f(context.get(this.pitch), context.get(this.yaw), context.get(this.roll));
+      public Rotation3fc parse(@Nonnull MultiArgumentContext context, ParseResult parseResult) {
+         return new Rotation3f(context.get(this.pitch), context.get(this.yaw), context.get(this.roll));
       }
    };
    public static final SingleArgumentType<String> BLOCK_TYPE_KEY = new SingleArgumentType<String>("Block Type Key", "A block type", "Wood_Drywood_Planks_Half") {

@@ -5,7 +5,6 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -19,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Map.Entry;
 import javax.annotation.Nullable;
+import org.joml.Vector3ic;
 
 public class CustomTemplateConnectedBlockRuleSet extends ConnectedBlockRuleSet {
    public static final BuilderCodec<CustomTemplateConnectedBlockRuleSet> CODEC = BuilderCodec.builder(
@@ -84,7 +84,7 @@ public class CustomTemplateConnectedBlockRuleSet extends ConnectedBlockRuleSet {
 
    @Override
    public Optional<ConnectedBlocksUtil.ConnectedBlockResult> getConnectedBlockType(
-      World world, Vector3i testedCoordinate, BlockType blockType, int rotation, Vector3i placementNormal, boolean isPlacement
+      World world, Vector3ic testedCoordinate, BlockType blockType, int rotation, Vector3ic placementNormal, boolean isPlacement
    ) {
       CustomConnectedBlockTemplateAsset shapeTemplateAsset = this.getShapeTemplateAsset();
       return shapeTemplateAsset == null

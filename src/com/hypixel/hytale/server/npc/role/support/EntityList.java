@@ -13,7 +13,6 @@ import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.function.predicate.QuadObjectDoublePredicate;
 import com.hypixel.hytale.function.predicate.QuadPredicate;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.components.SortBufferProviderResource;
@@ -25,6 +24,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class EntityList extends BucketList<Ref<EntityStore>> {
    protected static final int BUCKET_COUNT = 6;
@@ -139,7 +139,7 @@ public class EntityList extends BucketList<Ref<EntityStore>> {
       if (this.validator.test(ref, commandBuffer)) {
          TransformComponent transformComponent = commandBuffer.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
          assert transformComponent != null;
-         double distance = parentPosition.distanceSquaredTo(transformComponent.getPosition());
+         double distance = parentPosition.distanceSquared(transformComponent.getPosition());
          this.add(ref, distance);
       }
    }

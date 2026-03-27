@@ -18,9 +18,9 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -46,6 +46,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -66,14 +67,14 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
       .documentation("The key to name the world. Random if not provided")
       .add()
       .<Vector3d>appendInherited(
-         new KeyedCodec<>("PositionOffset", Vector3d.CODEC),
+         new KeyedCodec<>("PositionOffset", Vector3dUtil.CODEC),
          (o, i) -> o.positionOffset = i,
          o -> o.positionOffset,
          (o, p) -> o.positionOffset = p.positionOffset
       )
       .documentation("The offset to apply to the return point.\n\nUsed to prevent repeated interactions when returning from the instance.")
       .add()
-      .<Vector3f>appendInherited(new KeyedCodec<>("Rotation", Vector3f.ROTATION), (o, i) -> o.rotation = i, o -> o.rotation, (o, p) -> o.rotation = p.rotation)
+      .<Rotation3f>appendInherited(new KeyedCodec<>("Rotation", Rotation3f.CODEC), (o, i) -> o.rotation = i, o -> o.rotation, (o, p) -> o.rotation = p.rotation)
       .documentation("The rotation to set the player to when returning from an instance.")
       .add()
       .<TeleportInstanceInteraction.OriginSource>appendInherited(
@@ -115,7 +116,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
       .add()
       .afterDecode(i -> {
          if (i.rotation != null) {
-            i.rotation.scale((float) (Math.PI / 180.0));
+            i.rotation.mul((float) (Math.PI / 180.0));
          }
       })
       .build();
@@ -123,7 +124,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    private String instanceName;
    private String instanceKey;
    private Vector3d positionOffset;
-   private Vector3f rotation;
+   private Rotation3f rotation;
    @Nonnull
    private TeleportInstanceInteraction.OriginSource originSource = TeleportInstanceInteraction.OriginSource.PLAYER;
    private boolean personalReturnPoint = false;
@@ -267,9 +268,9 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
          case PLAYER:
             TransformComponent transformComponent = componentAccessor.getComponent(playerRef, TransformComponent.getComponentType());
             assert transformComponent != null;
-            transform = transformComponent.getTransform().clone();
+            transform = new Transform(transformComponent.getTransform());
             transform.getPosition().add(this.positionOffset);
-            transform.setRotation(this.rotation != null ? this.rotation : Vector3f.NaN);
+            transform.setRotation(this.rotation != null ? this.rotation : Rotation3f.NaN);
             break;
          case BLOCK:
             BlockPosition targetBlock = context.getTargetBlock();
@@ -292,11 +293,13 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
             position.x = position.x + (hitbox.middleX() + targetBlock.x);
             position.y = position.y + (hitbox.middleY() + targetBlock.y);
             position.z = position.z + (hitbox.middleZ() + targetBlock.z);
-            Vector3f rotation = Vector3f.NaN;
+            Rotation3f rotation;
             if (this.rotation != null) {
-               rotation = this.rotation.clone();
+               rotation = new Rotation3f(this.rotation);
                rotation.addRotationOnAxis(Axis.Y, rotationTuple.yaw().getDegrees());
                rotation.addRotationOnAxis(Axis.X, rotationTuple.pitch().getDegrees());
+            } else {
+               rotation = new Rotation3f(Rotation3f.NaN);
             }
 
             transform = new Transform(position, rotation);

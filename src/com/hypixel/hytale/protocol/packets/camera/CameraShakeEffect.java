@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.AccumulationMode;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -49,6 +50,10 @@ public class CameraShakeEffect implements Packet, ToClientPacket {
 
    @Nonnull
    public static CameraShakeEffect deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("CameraShakeEffect", 9, buf.readableBytes() - offset);
+      }
+
       CameraShakeEffect obj = new CameraShakeEffect();
       obj.cameraShakeId = buf.getIntLE(offset + 0);
       obj.intensity = buf.getFloatLE(offset + 4);
@@ -73,7 +78,12 @@ public class CameraShakeEffect implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 9 ? ValidationResult.error("Buffer too small: expected at least 9 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 9) {
+         return ValidationResult.error("Buffer too small: expected at least 9 bytes");
+      }
+
+      int v = buffer.getByte(offset + 8) & 255;
+      return v >= 3 ? ValidationResult.error("Invalid AccumulationMode value for Mode") : ValidationResult.OK;
    }
 
    public CameraShakeEffect clone() {

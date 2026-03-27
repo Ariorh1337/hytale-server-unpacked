@@ -54,6 +54,10 @@ public class UpdateUnarmedInteractions implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateUnarmedInteractions deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateUnarmedInteractions", 2, buf.readableBytes() - offset);
+      }
+
       UpdateUnarmedInteractions obj = new UpdateUnarmedInteractions();
       byte nullBits = buf.getByte(offset);
       obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
@@ -61,14 +65,15 @@ public class UpdateUnarmedInteractions implements Packet, ToClientPacket {
       if ((nullBits & 1) != 0) {
          int interactionsCount = VarInt.peek(buf, pos);
          if (interactionsCount < 0) {
-            throw ProtocolException.negativeLength("Interactions", interactionsCount);
+            throw ProtocolException.invalidVarInt("Interactions");
          }
 
+         int interactionsVarLen = VarInt.size(interactionsCount);
          if (interactionsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Interactions", interactionsCount, 4096000);
          }
 
-         pos += VarInt.size(interactionsCount);
+         pos += interactionsVarLen;
          obj.interactions = new HashMap<>(interactionsCount);
 
          for (int i = 0; i < interactionsCount; i++) {
@@ -89,7 +94,7 @@ public class UpdateUnarmedInteractions implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos = ++pos + 4;
@@ -138,9 +143,14 @@ public class UpdateUnarmedInteractions implements Packet, ToClientPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 2;
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid UpdateType value for Type");
+      }
+
+      v = offset + 2;
       if ((nullBits & 1) != 0) {
-         int interactionsCount = VarInt.peek(buffer, pos);
+         int interactionsCount = VarInt.peek(buffer, v);
          if (interactionsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Interactions");
          }
@@ -149,11 +159,16 @@ public class UpdateUnarmedInteractions implements Packet, ToClientPacket {
             return ValidationResult.error("Interactions exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         v += VarInt.size(interactionsCount);
 
          for (int i = 0; i < interactionsCount; i++) {
-            pos = ++pos + 4;
-            if (pos > buffer.writerIndex()) {
+            int vx = buffer.getByte(v) & 255;
+            if (vx >= 25) {
+               return ValidationResult.error("Invalid InteractionType value for key");
+            }
+
+            v = ++v + 4;
+            if (v > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");
             }
          }

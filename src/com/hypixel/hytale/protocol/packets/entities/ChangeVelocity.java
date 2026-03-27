@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.VelocityConfig;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -58,6 +59,10 @@ public class ChangeVelocity implements Packet, ToClientPacket {
 
    @Nonnull
    public static ChangeVelocity deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 35) {
+         throw ProtocolException.bufferTooSmall("ChangeVelocity", 35, buf.readableBytes() - offset);
+      }
+
       ChangeVelocity obj = new ChangeVelocity();
       byte nullBits = buf.getByte(offset);
       obj.x = buf.getFloatLE(offset + 1);
@@ -100,7 +105,13 @@ public class ChangeVelocity implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 35 ? ValidationResult.error("Buffer too small: expected at least 35 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 35) {
+         return ValidationResult.error("Buffer too small: expected at least 35 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 13) & 255;
+      return v >= 2 ? ValidationResult.error("Invalid ChangeVelocityType value for ChangeType") : ValidationResult.OK;
    }
 
    public ChangeVelocity clone() {

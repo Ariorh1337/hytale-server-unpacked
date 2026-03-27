@@ -45,20 +45,24 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorSetupAssetTypes deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorSetupAssetTypes", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorSetupAssetTypes obj = new AssetEditorSetupAssetTypes();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int assetTypesCount = VarInt.peek(buf, pos);
          if (assetTypesCount < 0) {
-            throw ProtocolException.negativeLength("AssetTypes", assetTypesCount);
+            throw ProtocolException.invalidVarInt("AssetTypes");
          }
 
+         int assetTypesVarLen = VarInt.size(assetTypesCount);
          if (assetTypesCount > 4096000) {
             throw ProtocolException.arrayTooLong("AssetTypes", assetTypesCount, 4096000);
          }
 
-         int assetTypesVarLen = VarInt.size(assetTypesCount);
          if (pos + assetTypesVarLen + assetTypesCount * 3L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("AssetTypes", pos + assetTypesVarLen + assetTypesCount * 3, buf.readableBytes());
          }
@@ -80,7 +84,7 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += AssetEditorAssetType.computeBytesConsumed(buf, pos);
@@ -144,7 +148,7 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
             return ValidationResult.error("AssetTypes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(assetTypesCount);
 
          for (int i = 0; i < assetTypesCount; i++) {
             ValidationResult structResult = AssetEditorAssetType.validateStructure(buffer, pos);

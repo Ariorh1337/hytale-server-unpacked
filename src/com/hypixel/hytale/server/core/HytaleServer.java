@@ -126,7 +126,7 @@ public class HytaleServer {
       } else if (!optionSet.has(Options.DISABLE_SENTRY)) {
          LOGGER.at(Level.INFO).log("Enabling Sentry");
          SentryOptions options = new SentryOptions();
-         options.setDsn("https://6043a13c7b5c45b5c834b6d896fb378e@sentry.butter.lat/4");
+         options.setDsn("https://6043a13c7b5c45b5c834b6d896fb378e@sentry.hytale.com/4");
          options.setRelease(ManifestUtil.getImplementationVersion());
          options.setDist(ManifestUtil.getImplementationRevisionId());
          options.setEnvironment("release");
@@ -162,17 +162,16 @@ public class HytaleServer {
                contexts.put("universe", universeContext);
             }
 
-            HashMap pluginsContext = new HashMap();
+            HashMap<String, Object> pluginsContext = new HashMap<>();
             boolean hasExternalPlugins = false;
 
             for (PluginBase plugin : this.pluginManager.getPlugins()) {
-               PluginManifest manifestx = plugin.getManifest();
-               HashMap<String, String> pluginInfo = new HashMap<>();
-               pluginInfo.put("version", manifestx.getVersion().toString());
+               PluginManifest manifestxx = plugin.getManifest();
+               HashMap<String, Object> pluginInfo = new HashMap<>();
+               pluginInfo.put("version", manifestxx.getVersion().toString());
                pluginInfo.put("state", plugin.getState().name());
                pluginsContext.put(plugin.getIdentifier().toString(), pluginInfo);
-               JavaPlugin jp;
-               if (plugin instanceof JavaPlugin && !(jp = (JavaPlugin)plugin).getClassLoader().isInServerClassPath()) {
+               if (plugin instanceof JavaPlugin jp && !jp.getClassLoader().isInServerClassPath()) {
                   hasExternalPlugins = true;
                }
             }
@@ -181,13 +180,13 @@ public class HytaleServer {
             AssetModule assetModule = AssetModule.get();
             boolean hasUserPacks = false;
             if (assetModule != null) {
-               HashMap packsContext = new HashMap();
+               HashMap<String, Object> packsContext = new HashMap<>();
 
                for (AssetPack pack : assetModule.getAssetPacks()) {
                   HashMap<String, Object> packInfo = new HashMap<>();
-                  PluginManifest manifestxx = pack.getManifest();
-                  if (manifestxx != null && manifestxx.getVersion() != null) {
-                     packInfo.put("version", manifestxx.getVersion().toString());
+                  PluginManifest manifestx = pack.getManifest();
+                  if (manifestx != null && manifestx.getVersion() != null) {
+                     packInfo.put("version", manifestx.getVersion().toString());
                   }
 
                   packInfo.put("immutable", pack.isImmutable());
@@ -268,22 +267,33 @@ public class HytaleServer {
          }
       }, "ShutdownHook");
       shutdownHook.setDaemon(false);
-      Runtime.getRuntime().addShutdownHook(shutdownHook);
-      AssetRegistryLoader.init();
-
-      for (PluginManifest manifest : Constants.CORE_PLUGINS) {
-         this.pluginManager.registerCorePlugin(manifest);
-      }
-
-      GCUtil.register(info -> {
-         Universe universe = Universe.get();
-         if (universe != null) {
-            for (World world : universe.getWorlds().values()) {
-               world.markGCHasRun();
+      if (!this.isShuttingDown()) {
+         try {
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+         } catch (IllegalStateException e) {
+            if (!this.isShuttingDown()) {
+               throw e;
             }
+
+            return;
          }
-      });
-      this.boot();
+
+         AssetRegistryLoader.init();
+
+         for (PluginManifest manifest : Constants.CORE_PLUGINS) {
+            this.pluginManager.registerCorePlugin(manifest);
+         }
+
+         GCUtil.register(info -> {
+            Universe universe = Universe.get();
+            if (universe != null) {
+               for (World world : universe.getWorlds().values()) {
+                  world.markGCHasRun();
+               }
+            }
+         });
+         this.boot();
+      }
    }
 
    @Nonnull
@@ -408,7 +418,7 @@ public class HytaleServer {
             LOGGER.at(Level.INFO).log("Getting Hytale Universe ready...");
             Universe.get().getUniverseReady().join();
             LOGGER.at(Level.INFO).log("Universe ready!");
-            ObjectArrayList tags = new ObjectArrayList();
+            List<String> tags = new ObjectArrayList<>();
             if (Constants.SINGLEPLAYER) {
                tags.add("Singleplayer");
             } else {
@@ -431,7 +441,7 @@ public class HytaleServer {
             LOGGER.at(Level.INFO).log("\u001b[0;32m===============================================================================================");
             LOGGER.at(Level.INFO)
                .log(
-                  "%s         Hytale Server Booted! (Patched by Butter Launcher Team) [%s] took %s",
+                  "%s         Hytale Server Booted! [%s] took %s",
                   "\u001b[0;32m",
                   String.join(", ", tags),
                   FormatUtil.nanosToString(System.nanoTime() - this.bootStart)
@@ -440,6 +450,11 @@ public class HytaleServer {
             UpdateModule updateModule = UpdateModule.get();
             if (updateModule != null) {
                updateModule.onServerReady();
+            }
+
+            ServerAuthManager authManager = ServerAuthManager.getInstance();
+            if (!authManager.isSingleplayer() && authManager.getAuthMode() == ServerAuthManager.AuthMode.NONE) {
+               LOGGER.at(Level.WARNING).log("%sNo server tokens configured. Use /auth login to authenticate.", "\u001b[0;31m");
             }
 
             this.sendSingleplayerSignal(">> Singleplayer Ready <<");

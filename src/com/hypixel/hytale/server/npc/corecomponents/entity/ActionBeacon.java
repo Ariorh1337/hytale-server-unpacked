@@ -5,8 +5,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
@@ -28,6 +26,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ActionBeacon extends ActionBase {
    protected final String message;
@@ -141,14 +141,14 @@ public class ActionBeacon extends ActionBase {
          Vector3d targetPos = targetTransformComponent.getPosition();
          ModelComponent targetModelComponent = componentAccessor.getComponent(targetRef, ModelComponent.getComponentType());
          float targetEyeHeight = targetModelComponent != null ? targetModelComponent.getModel().getEyeHeight(targetRef, componentAccessor) : 0.0F;
-         x -= targetPos.getX();
-         y -= targetPos.getY() + targetEyeHeight;
-         z -= targetPos.getZ();
+         x -= targetPos.x();
+         y -= targetPos.y() + targetEyeHeight;
+         z -= targetPos.z();
          double angleY = Math.atan2(-z, -x);
          matrix.rotateAxis(angleY + (float) (Math.PI / 2), 0.0, 1.0, 0.0, tmp);
          double angleX = Math.atan2(Math.sqrt(x * x + z * z), -y);
          matrix.rotateAxis(angleX, 1.0, 0.0, 0.0, tmp);
-         DebugUtils.addArrow(componentAccessor.getExternalData().getWorld(), matrix, color, pos.distanceTo(targetPos), 5.0F, DebugUtils.FLAG_FADE);
+         DebugUtils.addArrow(componentAccessor.getExternalData().getWorld(), matrix, color, pos.distance(targetPos), 5.0F, DebugUtils.FLAG_FADE);
       }
 
       BeaconSupport beaconSupportComponent = componentAccessor.getComponent(targetRef, BeaconSupport.getComponentType());

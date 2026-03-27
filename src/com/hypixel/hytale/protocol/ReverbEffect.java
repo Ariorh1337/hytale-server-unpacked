@@ -89,6 +89,10 @@ public class ReverbEffect {
 
    @Nonnull
    public static ReverbEffect deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 54) {
+         throw ProtocolException.bufferTooSmall("ReverbEffect", 54, buf.readableBytes() - offset);
+      }
+
       ReverbEffect obj = new ReverbEffect();
       byte nullBits = buf.getByte(offset);
       obj.dryGain = buf.getFloatLE(offset + 1);
@@ -109,14 +113,18 @@ public class ReverbEffect {
       if ((nullBits & 1) != 0) {
          int idLen = VarInt.peek(buf, pos);
          if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+            throw ProtocolException.invalidVarInt("Id");
          }
 
+         int idVarLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
          }
 
-         int idVarLen = VarInt.length(buf, pos);
+         if (pos + idVarLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", pos + idVarLen + idLen, buf.readableBytes());
+         }
+
          obj.id = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += idVarLen + idLen;
       }
@@ -129,7 +137,7 @@ public class ReverbEffect {
       int pos = offset + 54;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -187,7 +195,7 @@ public class ReverbEffect {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");

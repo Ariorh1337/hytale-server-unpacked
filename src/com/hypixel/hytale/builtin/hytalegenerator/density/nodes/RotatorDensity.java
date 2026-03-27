@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class RotatorDensity extends Density {
    @Nonnull
@@ -56,10 +56,10 @@ public class RotatorDensity extends Density {
          return 0.0;
       }
 
-      this.rChildPosition.assign(context.position);
+      this.rChildPosition.set(context.position);
       switch (this.axisSpecialCase) {
          case INVERTED_Y_AXIS:
-            this.rChildPosition.scale(-1.0);
+            this.rChildPosition.mul(-1.0);
          case NONE:
             VectorUtil.rotateAroundAxis(this.rChildPosition, this.tiltAxis, this.tiltAngle);
          case Y_AXIS:

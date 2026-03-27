@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -41,6 +42,10 @@ public class Hitbox {
 
    @Nonnull
    public static Hitbox deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("Hitbox", 24, buf.readableBytes() - offset);
+      }
+
       Hitbox obj = new Hitbox();
       obj.minX = buf.getFloatLE(offset + 0);
       obj.minY = buf.getFloatLE(offset + 4);

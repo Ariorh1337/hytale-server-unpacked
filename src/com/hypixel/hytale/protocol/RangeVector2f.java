@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class RangeVector2f {
 
    @Nonnull
    public static RangeVector2f deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("RangeVector2f", 17, buf.readableBytes() - offset);
+      }
+
       RangeVector2f obj = new RangeVector2f();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -78,7 +83,12 @@ public class RangeVector2f {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 17 ? ValidationResult.error("Buffer too small: expected at least 17 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 17) {
+         return ValidationResult.error("Buffer too small: expected at least 17 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public RangeVector2f clone() {

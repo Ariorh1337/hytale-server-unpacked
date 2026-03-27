@@ -39,8 +39,8 @@ public class TimeCommand extends AbstractWorldCommand {
    public void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
       LocalDateTime gameDateTime = worldTimeResource.getGameDateTime();
-      Message pausedMessage = Message.translation(world.getWorldConfig().isGameTimePaused() ? "server.commands.time.paused" : "server.commands.time.unpaused");
-      Message message = Message.translation("server.commands.time.info").param("worldName", world.getName()).param("timePaused", pausedMessage);
+      String pausedMessageKey = world.getWorldConfig().isGameTimePaused() ? "server.commands.time.info" : "server.commands.time.infoUnpaused";
+      Message message = Message.translation(pausedMessageKey).param("worldName", world.getName());
       context.sendMessage(
          message.param("time", worldTimeResource.getGameTime().toString())
             .param("dayOfWeek", FormatUtil.addNumberSuffix(gameDateTime.get(ChronoField.DAY_OF_WEEK)))
@@ -90,9 +90,9 @@ public class TimeCommand extends AbstractWorldCommand {
          WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
          worldTimeResource.setDayTime(periodTime / WorldTimeResource.HOURS_PER_DAY, world, store);
          context.sendMessage(
-            Message.translation("server.commands.time.set")
+            Message.translation("server.commands.time.setPeriod." + this.timeOfDay.name().toLowerCase())
                .param("worldName", world.getName())
-               .param("time", String.format("%s (%s)", worldTimeResource.getGameTime().toString(), this.timeOfDay.name()))
+               .param("time", worldTimeResource.getGameTime().toString())
          );
       }
    }

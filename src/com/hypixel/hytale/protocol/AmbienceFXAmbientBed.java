@@ -38,6 +38,10 @@ public class AmbienceFXAmbientBed {
 
    @Nonnull
    public static AmbienceFXAmbientBed deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXAmbientBed", 6, buf.readableBytes() - offset);
+      }
+
       AmbienceFXAmbientBed obj = new AmbienceFXAmbientBed();
       byte nullBits = buf.getByte(offset);
       obj.volume = buf.getFloatLE(offset + 1);
@@ -46,14 +50,18 @@ public class AmbienceFXAmbientBed {
       if ((nullBits & 1) != 0) {
          int trackLen = VarInt.peek(buf, pos);
          if (trackLen < 0) {
-            throw ProtocolException.negativeLength("Track", trackLen);
+            throw ProtocolException.invalidVarInt("Track");
          }
 
+         int trackVarLen = VarInt.size(trackLen);
          if (trackLen > 4096000) {
             throw ProtocolException.stringTooLong("Track", trackLen, 4096000);
          }
 
-         int trackVarLen = VarInt.length(buf, pos);
+         if (pos + trackVarLen + trackLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Track", pos + trackVarLen + trackLen, buf.readableBytes());
+         }
+
          obj.track = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += trackVarLen + trackLen;
       }
@@ -66,7 +74,7 @@ public class AmbienceFXAmbientBed {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -101,9 +109,14 @@ public class AmbienceFXAmbientBed {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 6;
+      int v = buffer.getByte(offset + 5) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid AmbienceTransitionSpeed value for TransitionSpeed");
+      }
+
+      v = offset + 6;
       if ((nullBits & 1) != 0) {
-         int trackLen = VarInt.peek(buffer, pos);
+         int trackLen = VarInt.peek(buffer, v);
          if (trackLen < 0) {
             return ValidationResult.error("Invalid string length for Track");
          }
@@ -112,9 +125,9 @@ public class AmbienceFXAmbientBed {
             return ValidationResult.error("Track exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += trackLen;
-         if (pos > buffer.writerIndex()) {
+         v += VarInt.size(trackLen);
+         v += trackLen;
+         if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Track");
          }
       }

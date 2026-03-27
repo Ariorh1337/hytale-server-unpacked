@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
@@ -33,6 +32,7 @@ import java.time.temporal.ChronoField;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class RoleDebugDisplay {
    protected boolean debugDisplayState;
@@ -152,9 +152,9 @@ public class RoleDebugDisplay {
             BlockChunk blockChunkComponent = chunkStore.getComponent(chunkRef, BlockChunk.getComponentType());
             assert blockChunkComponent != null;
             Vector3d position = transformComponent.getPosition();
-            int x = MathUtil.floor(position.getX());
-            int y = MathUtil.floor(position.getY());
-            int z = MathUtil.floor(position.getZ());
+            int x = MathUtil.floor(position.x());
+            int y = MathUtil.floor(position.y());
+            int z = MathUtil.floor(position.z());
             double sunlightFactor = worldTimeResource.getSunlightFactor();
             this.debugDisplay
                .append(" LL:")

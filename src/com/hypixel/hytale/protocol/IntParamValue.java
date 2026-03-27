@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -26,6 +27,10 @@ public class IntParamValue extends ParamValue {
 
    @Nonnull
    public static IntParamValue deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("IntParamValue", 4, buf.readableBytes() - offset);
+      }
+
       IntParamValue obj = new IntParamValue();
       obj.value = buf.getIntLE(offset + 0);
       return obj;

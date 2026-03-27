@@ -19,7 +19,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
@@ -38,7 +37,9 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
@@ -62,6 +63,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDeviceSummonPage.Data> {
    private final PortalDeviceConfig config;
@@ -193,6 +195,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull PortalDeviceSummonPage.Data data) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
+      CombinedItemContainer combinedInventoryHotbarFirst = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
       if (this.computeState(playerComponent, store) instanceof PortalDeviceSummonPage.CanSpawnPortal canSpawn) {
          if ("SummonMouseEntered".equals(data.action)) {
             UICommandBuilder commandBuilder = new UICommandBuilder();
@@ -277,7 +280,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
 
                         try {
                            playerComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
-                           playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(removedItem);
+                           combinedInventoryHotbarFirst.addItemStack(removedItem);
                            worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(offType.getId()), offType, rotation, 0, 6);
                         } catch (Throwable t2) {
                            HytaleLogger.getLogger().at(Level.SEVERE).withCause(t2).log("Error while resolving portal device error");
@@ -303,7 +306,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
          .thenCompose(
             spawnTransform -> {
                Vector3d spawnPoint = spawnTransform.getPosition();
-               Transform playerSpawnTransform = spawnTransform.clone();
+               Transform playerSpawnTransform = new Transform(spawnTransform);
                return world.getChunkAsync(ChunkUtil.indexChunkFromBlock((int)spawnPoint.x, (int)spawnPoint.z))
                   .thenAccept(
                      chunk -> {

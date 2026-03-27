@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol.packets.interface_;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -29,6 +30,10 @@ public class PortalState {
 
    @Nonnull
    public static PortalState deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("PortalState", 5, buf.readableBytes() - offset);
+      }
+
       PortalState obj = new PortalState();
       obj.remainingSeconds = buf.getIntLE(offset + 0);
       obj.breaching = buf.getByte(offset + 4) != 0;

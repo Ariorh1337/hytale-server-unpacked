@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.EquipmentUpdate;
 import com.hypixel.hytale.protocol.ItemArmorSlot;
 import com.hypixel.hytale.protocol.ModelUpdate;
@@ -44,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class LegacyEntityTrackerSystems {
    @Deprecated
@@ -431,7 +431,7 @@ public class LegacyEntityTrackerSystems {
             if (targetBoundingBoxComponent != null) {
                TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
                if (targetTransformComponent != null) {
-                  double distanceSq = targetTransformComponent.getPosition().distanceSquaredTo(position);
+                  double distanceSq = targetTransformComponent.getPosition().distanceSquared(position);
                   double maximumThickness = targetBoundingBoxComponent.getBoundingBox().getMaximumThickness();
                   if (maximumThickness < ENTITY_LOD_RATIO * distanceSq) {
                      entityViewerComponent.lodExcludedCount++;

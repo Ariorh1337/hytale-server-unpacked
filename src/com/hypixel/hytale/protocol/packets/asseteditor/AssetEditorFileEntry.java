@@ -34,6 +34,10 @@ public class AssetEditorFileEntry {
 
    @Nonnull
    public static AssetEditorFileEntry deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFileEntry", 2, buf.readableBytes() - offset);
+      }
+
       AssetEditorFileEntry obj = new AssetEditorFileEntry();
       byte nullBits = buf.getByte(offset);
       obj.isDirectory = buf.getByte(offset + 1) != 0;
@@ -41,14 +45,18 @@ public class AssetEditorFileEntry {
       if ((nullBits & 1) != 0) {
          int pathLen = VarInt.peek(buf, pos);
          if (pathLen < 0) {
-            throw ProtocolException.negativeLength("Path", pathLen);
+            throw ProtocolException.invalidVarInt("Path");
          }
 
+         int pathVarLen = VarInt.size(pathLen);
          if (pathLen > 4096000) {
             throw ProtocolException.stringTooLong("Path", pathLen, 4096000);
          }
 
-         int pathVarLen = VarInt.length(buf, pos);
+         if (pos + pathVarLen + pathLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Path", pos + pathVarLen + pathLen, buf.readableBytes());
+         }
+
          obj.path = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += pathVarLen + pathLen;
       }
@@ -61,7 +69,7 @@ public class AssetEditorFileEntry {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -106,7 +114,7 @@ public class AssetEditorFileEntry {
             return ValidationResult.error("Path exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(pathLen);
          pos += pathLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Path");

@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class ClearEntitiesCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -42,11 +42,11 @@ public class ClearEntitiesCommand extends AbstractPlayerCommand {
          } else {
             Vector3i min = selection.getSelectionMin();
             Vector3i max = selection.getSelectionMax();
-            int width = max.getX() - min.getX();
-            int height = max.getY() - min.getY();
-            int depth = max.getZ() - min.getZ();
+            int width = max.x() - min.x();
+            int height = max.y() - min.y();
+            int depth = max.z() - min.z();
             ReferenceArrayList<Ref<EntityStore>> entitiesToRemove = new ReferenceArrayList<>();
-            BuilderToolsPlugin.forEachCopyableInSelection(world, min.getX(), min.getY(), min.getZ(), width, height, depth, entitiesToRemove::add);
+            BuilderToolsPlugin.forEachCopyableInSelection(world, min.x(), min.y(), min.z(), width, height, depth, entitiesToRemove::add);
             Store<EntityStore> entityStore = world.getEntityStore().getStore();
 
             for (Ref<EntityStore> entityRef : entitiesToRemove) {

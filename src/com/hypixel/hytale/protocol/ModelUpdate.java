@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -31,6 +32,10 @@ public class ModelUpdate extends ComponentUpdate {
 
    @Nonnull
    public static ModelUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("ModelUpdate", 5, buf.readableBytes() - offset);
+      }
+
       ModelUpdate obj = new ModelUpdate();
       byte nullBits = buf.getByte(offset);
       obj.entityScale = buf.getFloatLE(offset + 1);

@@ -154,9 +154,8 @@ import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.iterator.LineIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.math.vector.VectorBoxUtil;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
@@ -286,6 +285,10 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Quaterniond;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider, MetricProvider {
    public static final String EDITOR_BLOCK = "Editor_Block";
@@ -1406,7 +1409,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
 
          for (Vector3i position : positionsToExecute) {
-            toolOperation.executeAt(position.getX(), position.getY(), position.getZ(), componentAccessor);
+            toolOperation.executeAt(position.x(), position.y(), position.z(), componentAccessor);
          }
 
          if (protoSettings != null) {
@@ -1526,7 +1529,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          int x = BlockUtil.unpackX(blockPosition);
          int y = BlockUtil.unpackY(blockPosition);
          int z = BlockUtil.unpackZ(blockPosition);
-         if (x >= min.getX() && y >= min.getY() && z >= min.getZ() && x <= max.getX() && y <= max.getY() && z <= max.getZ()) {
+         if (x >= min.x() && y >= min.y() && z >= min.z() && x <= max.x() && y <= max.y() && z <= max.z()) {
             BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
             BlockType blockType = assetMap.getAsset(accessor.getBlock(x, y, z));
             return accessor.getBlock(x, y, z) == targetBlockId || blockType.getDrawType() != DrawType.Cube && blockType.getDrawType() != DrawType.CubeWithModel;
@@ -1690,14 +1693,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
                for (int sx = -iHalfWidth; sx <= iHalfWidth; sx++) {
                   for (int sz = iHalfWidth; sz >= -iHalfWidth; sz--) {
-                     int blockX = coord.getX() + sx;
-                     int blockZ = coord.getZ() + sz;
+                     int blockX = coord.x() + sx;
+                     int blockZ = coord.z() + sz;
                      WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(blockX, blockZ));
 
                      for (int sy = -iHalfHeight; sy <= iHalfHeight; sy++) {
-                        rel.assign(sx, sy, sz);
+                        rel.set(sx, sy, sz);
                         if (isInShape.test(rel)) {
-                           int blockY = coord.getY() + sy + originOffset;
+                           int blockY = coord.y() + sy + originOffset;
                            int currentBlockId = chunk.getBlock(blockX, blockY, blockZ);
                            int currentFluidId = chunk.getFluidId(blockX, blockY, blockZ);
                            if ((mask == null || !mask.isExcluded(accessor, blockX, blockY, blockZ, min, max, currentBlockId, currentFluidId))
@@ -1727,7 +1730,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          long end = System.nanoTime();
          long diff = end - start;
          int size = after.getBlockCount();
-         double length = new Vector3i(x1, y1, z1).distanceTo(x2, y2, z2);
+         double length = new Vector3i(x1, y1, z1).distance(x2, y2, z2);
          BuilderToolsPlugin.get()
             .getLogger()
             .at(Level.FINE)
@@ -1745,9 +1748,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          return switch (shape) {
             case Cube -> coord -> {
-               double ax = Math.abs(coord.getX());
-               double ay = Math.abs(coord.getY());
-               double az = Math.abs(coord.getZ());
+               double ax = Math.abs(coord.x());
+               double ay = Math.abs(coord.y());
+               double az = Math.abs(coord.z());
                boolean inOuter = ax <= hw && ay <= hh && az <= hw;
                if (!hollow) {
                   return inOuter;
@@ -1757,9 +1760,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                return inOuter && !inInner;
             };
             case Sphere -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double outerDist = sx * sx / (hw * hw) + sy * sy / (hh * hh) + sz * sz / (hw * hw);
                boolean inOuter = outerDist <= 1.0;
                if (!hollow) {
@@ -1771,9 +1774,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                return inOuter && !inInner;
             };
             case Cylinder -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double outerRadialDist = (sx * sx + sz * sz) / (hw * hw);
                boolean inOuterRadius = outerRadialDist <= 1.0 && Math.abs(sy) <= hh;
                if (!hollow) {
@@ -1785,9 +1788,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                return inOuterRadius && !inInnerRadius;
             };
             case Cone -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double normalizedY = (sy + hh) / (2.0F * hh);
                if (!(normalizedY < 0.0) && !(normalizedY > 1.0)) {
                   double currentRadius = hw * (1.0 - normalizedY);
@@ -1805,9 +1808,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             };
             case InvertedCone -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double normalizedY = (sy + hh) / (2.0F * hh);
                if (!(normalizedY < 0.0) && !(normalizedY > 1.0)) {
                   double currentRadius = hw * normalizedY;
@@ -1825,9 +1828,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             };
             case Pyramid -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double normalizedY = (sy + hh) / (2.0F * hh);
                if (!(normalizedY < 0.0) && !(normalizedY > 1.0)) {
                   double currentHalfSize = hw * (1.0 - normalizedY);
@@ -1844,9 +1847,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             };
             case InvertedPyramid -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double normalizedY = (sy + hh) / (2.0F * hh);
                if (!(normalizedY < 0.0) && !(normalizedY > 1.0)) {
                   double currentHalfSize = hw * normalizedY;
@@ -1863,9 +1866,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             };
             case Dome -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                if (sy < 0.0) {
                   return false;
                }
@@ -1881,9 +1884,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                return inOuter && !inInner;
             };
             case InvertedDome -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                if (sy > 0.0) {
                   return false;
                }
@@ -1899,9 +1902,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                return inOuter && !inInner;
             };
             case Diamond -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double normalizedY = Math.abs(sy) / hh;
                if (normalizedY > 1.0) {
                   return false;
@@ -1918,9 +1921,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                return inOuter && !inInner;
             };
             case Torus -> coord -> {
-               double sx = coord.getX();
-               double sy = coord.getY();
-               double sz = coord.getZ();
+               double sx = coord.x();
+               double sy = coord.y();
+               double sz = coord.z();
                double minorRadius = Math.max(1.0F, hh / 2.0F);
                double majorRadius = Math.max(1.0, hw - minorRadius);
                double minorRadiusAdjusted = minorRadius + 0.41F;
@@ -1959,17 +1962,17 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if (min == null) {
             min = new Vector3i(x - radiusAllowed, y - radiusAllowed, z - radiusAllowed);
          } else {
-            int minX = min.getX();
+            int minX = min.x();
             if (x - radiusAllowed > minX) {
                minX = x - radiusAllowed;
             }
 
-            int minY = min.getY();
+            int minY = min.y();
             if (y - radiusAllowed > minY) {
                minY = y - radiusAllowed;
             }
 
-            int minZ = min.getZ();
+            int minZ = min.z();
             if (z - radiusAllowed > minZ) {
                minZ = z - radiusAllowed;
             }
@@ -1980,17 +1983,17 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if (max == null) {
             max = new Vector3i(x + radiusAllowed, y + radiusAllowed, z + radiusAllowed);
          } else {
-            int maxX = max.getX();
+            int maxX = max.x();
             if (x + radiusAllowed < maxX) {
                maxX = x + radiusAllowed;
             }
 
-            int maxY = max.getY();
+            int maxY = max.y();
             if (y + radiusAllowed < maxY) {
                maxY = y + radiusAllowed;
             }
 
-            int maxZ = max.getZ();
+            int maxZ = max.z();
             if (z + radiusAllowed < maxZ) {
                maxZ = z + radiusAllowed;
             }
@@ -1998,16 +2001,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             max = new Vector3i(maxX, maxY, maxZ);
          }
 
-         int totalBlocks = (max.getX() - min.getX() + 1) * (max.getZ() - min.getZ() + 1) * (max.getY() - min.getY() + 1);
+         int totalBlocks = (max.x() - min.x() + 1) * (max.z() - min.z() + 1) * (max.y() - min.y() + 1);
          BlockSelection before = new BlockSelection(totalBlocks, 0);
          before.setPosition(x + normalX, y + normalY, z + normalZ);
          before.setSelectionArea(min, max);
          this.pushHistory(BuilderToolsPlugin.Action.EXTRUDE, new BlockSelectionSnapshot(before));
          BlockSelection after = new BlockSelection(totalBlocks, 0);
          after.copyPropertiesFrom(before);
-         if (x >= min.getX() && x <= max.getX()) {
-            if (y >= min.getY() && y <= max.getY()) {
-               if (z >= min.getZ() && z <= max.getZ()) {
+         if (x >= min.x() && x <= max.x()) {
+            if (y >= min.y() && y <= max.y()) {
+               if (z >= min.z() && z <= max.z()) {
                   int testBlock = accessor.getBlock(x - normalX, y - normalY, z - normalZ);
                   BlockType testBlockType = BlockType.getAssetMap().getAsset(testBlock);
                   if (testBlockType != null && (testBlockType.getDrawType() == DrawType.Cube || testBlockType.getDrawType() == DrawType.CubeWithModel)) {
@@ -2047,12 +2050,12 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          @Nonnull Vector3i surfaceMin,
          @Nonnull Vector3i surfaceMax
       ) {
-         int xMin = surfaceMin.getX();
-         int yMin = surfaceMin.getY();
-         int zMin = surfaceMin.getZ();
-         int xMax = surfaceMax.getX();
-         int yMax = surfaceMax.getY();
-         int zMax = surfaceMax.getZ();
+         int xMin = surfaceMin.x();
+         int yMin = surfaceMin.y();
+         int zMin = surfaceMin.z();
+         int xMax = surfaceMax.x();
+         int yMax = surfaceMax.y();
+         int zMax = surfaceMax.z();
 
          for (int x = xMin; x <= xMax; x++) {
             for (int z = zMin; z <= zMax; z++) {
@@ -2117,10 +2120,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          } else {
             World world = componentAccessor.getExternalData().getWorld();
             int count = 0;
-            int minX = this.selection.getSelectionMin().getX();
-            int minZ = this.selection.getSelectionMin().getZ();
-            int maxX = this.selection.getSelectionMax().getX();
-            int maxZ = this.selection.getSelectionMax().getZ();
+            int minX = this.selection.getSelectionMin().x();
+            int minZ = this.selection.getSelectionMin().z();
+            int maxX = this.selection.getSelectionMax().x();
+            int maxZ = this.selection.getSelectionMax().z();
             BlockSelection place = new BlockSelection();
             place.setPosition(minX, 0, minZ);
 
@@ -2147,12 +2150,12 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             LongSet dirtyChunks = new LongOpenHashSet();
             int count = 0;
 
-            for (int x = this.selection.getSelectionMin().getX(); x < this.selection.getSelectionMax().getX(); x++) {
-               for (int z = this.selection.getSelectionMin().getZ(); z < this.selection.getSelectionMax().getZ(); z++) {
+            for (int x = this.selection.getSelectionMin().x(); x < this.selection.getSelectionMax().x(); x++) {
+               for (int z = this.selection.getSelectionMin().z(); z < this.selection.getSelectionMax().z(); z++) {
                   WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
                   dirtyChunks.add(chunk.getIndex());
 
-                  for (int y = this.selection.getSelectionMin().getY(); y < this.selection.getSelectionMax().getY(); y++) {
+                  for (int y = this.selection.getSelectionMin().y(); y < this.selection.getSelectionMax().y(); y++) {
                      chunk.getBlockChunk().setEnvironment(x, y, z, environmentId);
                      count++;
                   }
@@ -2265,8 +2268,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
 
          Set<Vector3i> anchors = new HashSet<>();
-         Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-         Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+         Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+         Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
          this.selection = new BlockSelection();
          this.selection.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
          this.selection.setSelectionArea(min, max);
@@ -2348,13 +2351,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
 
                first = false;
-               sb.append('[').append(anchor.getX()).append(", ").append(anchor.getY()).append(", ").append(anchor.getZ()).append(']');
+               sb.append('[').append(anchor.x()).append(", ").append(anchor.y()).append(", ").append(anchor.z()).append(']');
             }
 
             throw new PrefabCopyException("Prefab has multiple anchor blocks!\n" + sb);
          } else {
             if (playerAnchor != null) {
-               this.selection.setAnchorAtWorldPos(playerAnchor.getX(), playerAnchor.getY(), playerAnchor.getZ());
+               this.selection.setAnchorAtWorldPos(playerAnchor.x(), playerAnchor.y(), playerAnchor.z());
             }
 
             if (entities) {
@@ -2484,8 +2487,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          return size;
       }
 
-      private static Vector3f rotateByEulerMatrix(@Nonnull Vector3f v, @Nonnull RotationTuple t) {
-         Vector3f r = v.clone();
+      private static Vector3d rotateByEulerMatrix(@Nonnull Vector3dc v, @Nonnull RotationTuple t) {
+         Vector3d r = new Vector3d(v);
          t.roll().rotateZ(r, r);
          t.pitch().rotateX(r, r);
          t.yaw().rotateY(r, r);
@@ -2493,21 +2496,21 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       public static RotationTuple transformRotation(RotationTuple prevRot, Quaterniond rotation) {
-         Vector3f forwardVec = new Vector3f(1.0F, 0.0F, 0.0F);
-         Vector3f upVec = new Vector3f(0.0F, 1.0F, 0.0F);
+         Vector3d forwardVec = new Vector3d(1.0, 0.0, 0.0);
+         Vector3d upVec = new Vector3d(0.0, 1.0, 0.0);
          forwardVec = rotateByEulerMatrix(forwardVec, prevRot);
          upVec = rotateByEulerMatrix(upVec, prevRot);
-         org.joml.Vector3d fwd = rotation.transform(new org.joml.Vector3d(forwardVec.x, forwardVec.y, forwardVec.z));
-         org.joml.Vector3d up = rotation.transform(new org.joml.Vector3d(upVec.x, upVec.y, upVec.z));
-         Vector3f newForward = new Vector3f((float)fwd.x, (float)fwd.y, (float)fwd.z);
-         Vector3f newUp = new Vector3f((float)up.x, (float)up.y, (float)up.z);
-         float bestScore = Float.MIN_VALUE;
+         Vector3d fwd = rotation.transform(new Vector3d(forwardVec.x, forwardVec.y, forwardVec.z));
+         Vector3d up = rotation.transform(new Vector3d(upVec.x, upVec.y, upVec.z));
+         Vector3d newForward = new Vector3d(fwd.x, fwd.y, fwd.z);
+         Vector3d newUp = new Vector3d(up.x, up.y, up.z);
+         double bestScore = Float.MIN_VALUE;
          RotationTuple bestRot = prevRot;
 
          for (RotationTuple rot : RotationTuple.VALUES) {
-            Vector3f rotForward = rotateByEulerMatrix(new Vector3f(1.0F, 0.0F, 0.0F), rot);
-            Vector3f rotUp = rotateByEulerMatrix(new Vector3f(0.0F, 1.0F, 0.0F), rot);
-            float score = rotForward.dot(newForward) + rotUp.dot(newUp);
+            Vector3d rotForward = rotateByEulerMatrix(new Vector3d(1.0, 0.0, 0.0), rot);
+            Vector3d rotUp = rotateByEulerMatrix(new Vector3d(0.0, 1.0, 0.0), rot);
+            double score = rotForward.dot(newForward) + rotUp.dot(newUp);
             if (score > bestScore) {
                bestScore = score;
                bestRot = rot;
@@ -2517,20 +2520,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          return bestRot;
       }
 
-      private void transformEntityRotation(Vector3f rotation, Quaterniond deltaQuat) {
-         Quaterniond originalQuat = new Quaterniond().rotationYXZ(rotation.y, rotation.x, rotation.z);
-         Quaterniond resultQuat = deltaQuat.mul(originalQuat, new Quaterniond());
-         org.joml.Vector3d eulerAngles = resultQuat.getEulerAnglesYXZ(new org.joml.Vector3d());
-         rotation.assign((float)eulerAngles.x, (float)eulerAngles.y, (float)eulerAngles.z);
-      }
-
       public void transformThenPasteClipboard(
          @Nonnull BlockChange[] blockChanges,
          @Nullable PrototypePlayerBuilderToolSettings.FluidChange[] fluidChanges,
          @Nullable PrototypePlayerBuilderToolSettings.EntityChange[] entityChanges,
          @Nonnull Quaterniond rotation,
          @Nonnull Vector3i translationOffset,
-         @Nonnull Vector3f rotationOrigin,
+         @Nonnull Rotation3f rotationOrigin,
          @Nonnull Vector3i initialPastePoint,
          boolean keepEmptyBlocks,
          @Nonnull PrototypePlayerBuilderToolSettings prototypeSettings,
@@ -2567,7 +2563,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          ObjectArrayList<RotatedBlock> rotatedBlocks = new ObjectArrayList<>(blockChanges.length);
          LongOpenHashSet basePositions = new LongOpenHashSet(blockChanges.length);
-         org.joml.Vector3d mutableVec = new org.joml.Vector3d();
+         Vector3d mutableVec = new Vector3d();
 
          for (BlockChange blockChange : blockChanges) {
             mutableVec.set(
@@ -2690,7 +2686,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          List<Ref<EntityStore>> addedEntityRefs = new ReferenceArrayList<>();
          if (entityChanges != null && entityChanges.length > 0) {
-            org.joml.Vector3d mutableEntityPos = new org.joml.Vector3d();
+            Vector3d mutableEntityPos = new Vector3d();
 
             for (PrototypePlayerBuilderToolSettings.EntityChange entityChange : entityChanges) {
                boolean isBlockEntity = entityChange.entityHolder().getComponent(BlockEntity.getComponentType()) != null;
@@ -2708,16 +2704,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                Holder<EntityStore> clonedHolder = entityChange.entityHolder().clone();
                TransformComponent transformComponent = clonedHolder.getComponent(TransformComponent.getComponentType());
                if (transformComponent != null && transformComponent.getPosition() != null) {
-                  transformComponent.getPosition().assign(newX, newY, newZ);
-                  Vector3f entityRotation = transformComponent.getRotation();
+                  transformComponent.getPosition().set(newX, newY, newZ);
+                  Rotation3f entityRotation = transformComponent.getRotation();
                   if (entityRotation != null) {
-                     this.transformEntityRotation(entityRotation, rotation);
+                     entityRotation.premul(rotation);
                   }
                }
 
                HeadRotation headRotation = clonedHolder.getComponent(HeadRotation.getComponentType());
                if (headRotation != null && headRotation.getRotation() != null) {
-                  this.transformEntityRotation(headRotation.getRotation(), rotation);
+                  headRotation.getRotation().premul(rotation);
                }
 
                clonedHolder.putComponent(UUIDComponent.getComponentType(), new UUIDComponent(UUID.randomUUID()));
@@ -2765,19 +2761,19 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          this.sendArea();
       }
 
-      public void transformSelectionPoints(@Nonnull Quaterniond rotation, @Nonnull Vector3i translationOffset, @Nonnull Vector3f rotationOrigin) {
+      public void transformSelectionPoints(@Nonnull Quaterniond rotation, @Nonnull Vector3i translationOffset, @Nonnull Rotation3f rotationOrigin) {
          Vector3i newMin = this.transformBlockLocation(this.selection.getSelectionMin(), rotation, translationOffset, rotationOrigin);
          Vector3i newMax = this.transformBlockLocation(this.selection.getSelectionMax(), rotation, translationOffset, rotationOrigin);
-         this.selection.setSelectionArea(Vector3i.min(newMin, newMax), Vector3i.max(newMin, newMax));
+         this.selection.setSelectionArea(Vector3iUtil.min(newMin, newMax), Vector3iUtil.max(newMin, newMax));
          this.sendUpdate();
          this.sendArea();
       }
 
       @Nonnull
       public Vector3i transformBlockLocation(
-         @Nonnull Vector3i blockLocation, @Nonnull Quaterniond rotation, @Nonnull Vector3i translationOffset, @Nonnull Vector3f rotationOrigin
+         @Nonnull Vector3i blockLocation, @Nonnull Quaterniond rotation, @Nonnull Vector3i translationOffset, @Nonnull Rotation3f rotationOrigin
       ) {
-         org.joml.Vector3d relative = new org.joml.Vector3d(
+         Vector3d relative = new Vector3d(
             blockLocation.x - rotationOrigin.x + 0.5, blockLocation.y - rotationOrigin.y + 0.5, blockLocation.z - rotationOrigin.z + 0.5
          );
          rotation.transform(relative);
@@ -2795,14 +2791,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          int z,
          @Nonnull List<Pair<Integer, String>> layers,
          int depth,
-         Vector3i direction,
+         Vector3ic direction,
          WorldChunk chunk,
          BlockSelection before,
          BlockSelection after
       ) {
-         int xModifier = direction.x == 1 ? -1 : (direction.x == -1 ? 1 : 0);
-         int yModifier = direction.y == 1 ? -1 : (direction.y == -1 ? 1 : 0);
-         int zModifier = direction.z == 1 ? -1 : (direction.z == -1 ? 1 : 0);
+         int xModifier = direction.x() == 1 ? -1 : (direction.x() == -1 ? 1 : 0);
+         int yModifier = direction.y() == 1 ? -1 : (direction.y() == -1 ? 1 : 0);
+         int zModifier = direction.z() == 1 ? -1 : (direction.z() == -1 ? 1 : 0);
 
          for (int i = 0; i < depth; i++) {
             if (chunk.getBlock(x + i * xModifier + xModifier, y + i * yModifier + yModifier, z + i * zModifier + zModifier) <= 0
@@ -2812,7 +2808,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
       }
 
-      public void layer(@Nonnull List<Pair<Integer, String>> layers, Vector3i direction, ComponentAccessor<EntityStore> componentAccessor) {
+      public void layer(@Nonnull List<Pair<Integer, String>> layers, Vector3ic direction, ComponentAccessor<EntityStore> componentAccessor) {
          if (this.selection == null) {
             this.sendFeedback(Message.translation("server.builderTools.noSelection"), componentAccessor);
          } else if (!this.selection.hasSelectionBounds()) {
@@ -2825,14 +2821,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             long start = System.nanoTime();
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            int xMin = min.getX();
-            int xMax = max.getX();
-            int yMin = min.getY();
-            int yMax = max.getY();
-            int zMin = min.getZ();
-            int zMax = max.getZ();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
             BlockSelection before = new BlockSelection();
             int width = xMax - xMin;
             int depth = zMax - zMin;
@@ -2937,7 +2933,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                collector = e -> snapshots.add(new EntityAddSnapshot(e));
             }
 
-            BlockSelection before = selectionToPlace.place(this.player, world, Vector3i.ZERO, this.globalMask, collector);
+            BlockSelection before = selectionToPlace.place(this.player, world, Vector3iUtil.ZERO, this.globalMask, collector);
             before.setSelectionArea(pasteMin, pasteMax);
             snapshots.add(new BlockSelectionSnapshot(before));
             this.pushHistory(BuilderToolsPlugin.Action.PASTE, snapshots);
@@ -3097,8 +3093,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             long start = System.nanoTime();
-            final Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            final Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            final Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            final Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
             final BlockSelection before = new BlockSelection();
             before.setPosition(min.x, min.y, min.z);
             before.setSelectionArea(min, max);
@@ -3176,8 +3172,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             } else {
                World world = componentAccessor.getExternalData().getWorld();
                long start = System.nanoTime();
-               final Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               final Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               final Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               final Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
                final BlockSelection before = new BlockSelection();
                before.setPosition(min.x, min.y, min.z);
                before.setSelectionArea(min, max);
@@ -3267,14 +3263,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                this.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
             } else {
                long start = System.nanoTime();
-               Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               int xMin = min.getX();
-               int xMax = max.getX();
-               int yMin = min.getY();
-               int yMax = max.getY();
-               int zMin = min.getZ();
-               int zMax = max.getZ();
+               Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               int xMin = min.x();
+               int xMax = max.x();
+               int yMin = min.y();
+               int yMax = max.y();
+               int zMin = min.z();
+               int zMax = max.z();
                int totalBlocks = (xMax - xMin + 1) * (zMax - zMin + 1) * (yMax - yMin + 1);
                int width = xMax - xMin;
                int depth = zMax - zMin;
@@ -3353,14 +3349,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                this.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
             } else {
                long start = System.nanoTime();
-               Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               int xMin = min.getX();
-               int xMax = max.getX();
-               int yMin = min.getY();
-               int yMax = max.getY();
-               int zMin = min.getZ();
-               int zMax = max.getZ();
+               Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               int xMin = min.x();
+               int xMax = max.x();
+               int yMin = min.y();
+               int yMax = max.y();
+               int zMin = min.z();
+               int zMax = max.z();
                int totalBlocks = (xMax - xMin + 1) * (zMax - zMin + 1) * (yMax - yMin + 1);
                int width = xMax - xMin;
                int depth = zMax - zMin;
@@ -3432,14 +3428,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             long start = System.nanoTime();
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            int xMin = min.getX();
-            int xMax = max.getX();
-            int yMin = min.getY();
-            int yMax = max.getY();
-            int zMin = min.getZ();
-            int zMax = max.getZ();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
             BlockSelection before = new BlockSelection();
             int width = xMax - xMin;
             int depth = zMax - zMin;
@@ -3649,14 +3645,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             long start = System.nanoTime();
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            int xMin = min.getX();
-            int xMax = max.getX();
-            int yMin = min.getY();
-            int yMax = max.getY();
-            int zMin = min.getZ();
-            int zMax = max.getZ();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
             BlockSelection before = new BlockSelection();
             int width = xMax - xMin;
             int depth = zMax - zMin;
@@ -3747,14 +3743,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
 
          long start = System.nanoTime();
-         Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-         Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-         int xMin = min.getX();
-         int xMax = max.getX();
-         int yMin = min.getY();
-         int yMax = max.getY();
-         int zMin = min.getZ();
-         int zMax = max.getZ();
+         Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+         Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+         int xMin = min.x();
+         int xMax = max.x();
+         int yMin = min.y();
+         int yMax = max.y();
+         int zMin = min.z();
+         int zMax = max.z();
          BlockSelection before = new BlockSelection();
          int width = xMax - xMin;
          int depth = zMax - zMin;
@@ -3826,14 +3822,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             long start = System.nanoTime();
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            int xMin = min.getX();
-            int xMax = max.getX();
-            int yMin = min.getY();
-            int yMax = max.getY();
-            int zMin = min.getZ();
-            int zMax = max.getZ();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
             BlockSelection selected = new BlockSelection();
             int width = xMax - xMin;
             int height = yMax - yMin;
@@ -3914,24 +3910,26 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             BlockSelection beforeCleared = cleared.place(this.player, world);
-            selected.setPosition(xPos + direction.getX(), yPos + direction.getY(), zPos + direction.getZ());
+            selected.setPosition(xPos + direction.x(), yPos + direction.y(), zPos + direction.z());
             BlockSelection beforePlace = selected.place(this.player, world);
             List<SelectionSnapshot<?>> snapshots = new ObjectArrayList<>();
             if (entities) {
-               for (Ref<EntityStore> targetEntityRef : TargetUtil.getAllEntitiesInBox(min.toVector3d(), max.toVector3d(), componentAccessor)) {
+               for (Ref<EntityStore> targetEntityRef : TargetUtil.getAllEntitiesInBox(
+                  Vector3iUtil.toVector3d(min), Vector3iUtil.toVector3d(max), componentAccessor
+               )) {
                   snapshots.add(new EntityTransformSnapshot(targetEntityRef, componentAccessor));
                   TransformComponent transformComponent = componentAccessor.getComponent(targetEntityRef, TransformComponent.getComponentType());
                   if (transformComponent != null) {
-                     transformComponent.getPosition().add(direction);
+                     transformComponent.getPosition().add(direction.x, direction.y, direction.z);
                   }
                }
             }
 
             beforePlace.add(beforeCleared);
             ClipboardBoundsSnapshot clipboardSnapshot = new ClipboardBoundsSnapshot(min, max);
-            Vector3i destMin = min.clone().add(direction);
-            Vector3i destMax = max.clone().add(direction);
-            beforePlace.setSelectionArea(Vector3i.min(min, destMin), Vector3i.max(max, destMax));
+            Vector3i destMin = new Vector3i(min).add(direction);
+            Vector3i destMax = new Vector3i(max).add(direction);
+            beforePlace.setSelectionArea(Vector3iUtil.min(min, destMin), Vector3iUtil.max(max, destMax));
             snapshots.add(new BlockSelectionSnapshot(beforePlace));
             snapshots.add(clipboardSnapshot);
             this.pushHistory(BuilderToolsPlugin.Action.MOVE, snapshots);
@@ -3947,10 +3945,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendUpdate();
             this.sendArea();
             this.sendFeedback(
-               Message.translation("server.builderTools.selectionMovedBy")
-                  .param("x", direction.getX())
-                  .param("y", direction.getY())
-                  .param("z", direction.getZ()),
+               Message.translation("server.builderTools.selectionMovedBy").param("x", direction.x()).param("y", direction.y()).param("z", direction.z()),
                componentAccessor
             );
          }
@@ -3966,17 +3961,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.selection.setSelectionArea(this.selection.getSelectionMin().add(direction), this.selection.getSelectionMax().add(direction));
             this.sendArea();
             this.sendFeedback(
-               Message.translation("server.builderTools.selectionShiftedBy")
-                  .param("x", direction.getX())
-                  .param("y", direction.getY())
-                  .param("z", direction.getZ()),
+               Message.translation("server.builderTools.selectionShiftedBy").param("x", direction.x()).param("y", direction.y()).param("z", direction.z()),
                componentAccessor
             );
          }
       }
 
       public void pos1(@Nonnull Vector3i pos1, ComponentAccessor<EntityStore> componentAccessor) {
-         if (this.selection != null && !this.selection.getSelectionMax().equals(Vector3i.ZERO)) {
+         if (this.selection != null && !this.selection.getSelectionMax().equals(Vector3iUtil.ZERO)) {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
             this.selection.setSelectionArea(pos1, this.selection.getSelectionMax());
             this.sendArea();
@@ -3991,13 +3983,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
 
          this.sendFeedback(
-            Message.translation("server.builderTools.setPosTo").param("num", 1).param("x", pos1.getX()).param("y", pos1.getY()).param("z", pos1.getZ()),
+            Message.translation("server.builderTools.setPosTo").param("num", 1).param("x", pos1.x()).param("y", pos1.y()).param("z", pos1.z()),
             componentAccessor
          );
       }
 
       public void pos2(@Nonnull Vector3i pos2, ComponentAccessor<EntityStore> componentAccessor) {
-         if (this.selection != null && !this.selection.getSelectionMin().equals(Vector3i.ZERO)) {
+         if (this.selection != null && !this.selection.getSelectionMin().equals(Vector3iUtil.ZERO)) {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
             this.selection.setSelectionArea(this.selection.getSelectionMin(), pos2);
             this.sendArea();
@@ -4012,13 +4004,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
 
          this.sendFeedback(
-            Message.translation("server.builderTools.setPosTo").param("num", 2).param("x", pos2.getX()).param("y", pos2.getY()).param("z", pos2.getZ()),
+            Message.translation("server.builderTools.setPosTo").param("num", 2).param("x", pos2.x()).param("y", pos2.y()).param("z", pos2.z()),
             componentAccessor
          );
       }
 
       public void select(@Nonnull Vector3i pos1, @Nonnull Vector3i pos2, @Nullable String reason, ComponentAccessor<EntityStore> componentAccessor) {
-         if (this.selection != null && !this.selection.getSelectionMax().equals(Vector3i.ZERO)) {
+         if (this.selection != null && !this.selection.getSelectionMax().equals(Vector3iUtil.ZERO)) {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
             this.selection.setSelectionArea(pos1, pos2);
             this.sendArea();
@@ -4035,23 +4027,23 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if (reason != null) {
             this.sendFeedback(
                Message.translation(reason)
-                  .param("x1", pos1.getX())
-                  .param("y1", pos1.getY())
-                  .param("z1", pos1.getZ())
-                  .param("x2", pos2.getX())
-                  .param("y2", pos2.getY())
-                  .param("z2", pos2.getZ()),
+                  .param("x1", pos1.x())
+                  .param("y1", pos1.y())
+                  .param("z1", pos1.z())
+                  .param("x2", pos2.x())
+                  .param("y2", pos2.y())
+                  .param("z2", pos2.z()),
                componentAccessor
             );
          } else {
             this.sendFeedback(
                Message.translation("server.builderTools.selected")
-                  .param("x1", pos1.getX())
-                  .param("y1", pos1.getY())
-                  .param("z1", pos1.getZ())
-                  .param("x2", pos2.getX())
-                  .param("y2", pos2.getY())
-                  .param("z2", pos2.getZ()),
+                  .param("x1", pos1.x())
+                  .param("y1", pos1.y())
+                  .param("z1", pos1.z())
+                  .param("x2", pos2.x())
+                  .param("y2", pos2.y())
+                  .param("z2", pos2.z()),
                componentAccessor
             );
          }
@@ -4060,7 +4052,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       public void deselect(ComponentAccessor<EntityStore> componentAccessor) {
          if (this.selection != null && this.selection.hasSelectionBounds()) {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
-            this.selection.setSelectionArea(Vector3i.ZERO, Vector3i.ZERO);
+            this.selection.setSelectionArea(Vector3iUtil.ZERO, Vector3iUtil.ZERO);
             EditorBlocksChange packet = new EditorBlocksChange();
             packet.selection = null;
             this.player.getPlayerConnection().write(packet);
@@ -4084,14 +4076,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             long start = System.nanoTime();
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            int xMin = min.getX();
-            int xMax = max.getX();
-            int yMin = min.getY();
-            int yMax = max.getY();
-            int zMin = min.getZ();
-            int zMax = max.getZ();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
             BlockSelection selected = new BlockSelection();
             int width = xMax - xMin;
             int depth = zMax - zMin;
@@ -4130,24 +4122,22 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             BlockSelection before = new BlockSelection();
             before.setAnchor(selected.getAnchorX(), selected.getAnchorY(), selected.getAnchorZ());
             before.setPosition(selected.getX(), selected.getY(), selected.getZ());
-            Vector3i size = max.subtract(min).add(1, 1, 1);
+            Vector3i size = max.sub(min).add(1, 1, 1);
 
             for (int i = 1; i <= count; i++) {
                selected.setPosition(
-                  before.getX() + (size.getX() + spacing) * direction.getX() * i,
-                  before.getY() + (size.getY() + spacing) * direction.getY() * i,
-                  before.getZ() + (size.getZ() + spacing) * direction.getZ() * i
+                  before.getX() + (size.x() + spacing) * direction.x() * i,
+                  before.getY() + (size.y() + spacing) * direction.y() * i,
+                  before.getZ() + (size.z() + spacing) * direction.z() * i
                );
                before.add(selected.place(this.player, world));
             }
 
             Vector3i stackOffset = new Vector3i(
-               (size.getX() + spacing) * direction.getX() * count,
-               (size.getY() + spacing) * direction.getY() * count,
-               (size.getZ() + spacing) * direction.getZ() * count
+               (size.x() + spacing) * direction.x() * count, (size.y() + spacing) * direction.y() * count, (size.z() + spacing) * direction.z() * count
             );
-            Vector3i totalMin = Vector3i.min(min, min.add(stackOffset));
-            Vector3i totalMax = Vector3i.max(max, max.add(stackOffset));
+            Vector3i totalMin = Vector3iUtil.min(min, min.add(stackOffset));
+            Vector3i totalMax = Vector3iUtil.max(max, max.add(stackOffset));
             before.setSelectionArea(totalMin, totalMax);
             this.pushHistory(BuilderToolsPlugin.Action.STACK, new BlockSelectionSnapshot(before));
             BuilderToolsPlugin.invalidateWorldMapForSelection(before, world);
@@ -4162,9 +4152,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendFeedback(
                Message.translation("server.builderTools.selectionStacked")
                   .param("count", count)
-                  .param("x", direction.getX())
-                  .param("y", direction.getY())
-                  .param("z", direction.getZ()),
+                  .param("x", direction.x())
+                  .param("y", direction.y())
+                  .param("z", direction.z()),
                componentAccessor
             );
          }
@@ -4177,33 +4167,30 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            if (direction.getX() < 0) {
-               min = min.add(direction.getX(), 0, 0);
-            } else if (direction.getX() > 0) {
-               max = max.add(direction.getX(), 0, 0);
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            if (direction.x() < 0) {
+               min = min.add(direction.x(), 0, 0);
+            } else if (direction.x() > 0) {
+               max = max.add(direction.x(), 0, 0);
             }
 
-            if (direction.getY() < 0) {
-               min = min.add(0, direction.getY(), 0);
-            } else if (direction.getY() > 0) {
-               max = max.add(0, direction.getY(), 0);
+            if (direction.y() < 0) {
+               min = min.add(0, direction.y(), 0);
+            } else if (direction.y() > 0) {
+               max = max.add(0, direction.y(), 0);
             }
 
-            if (direction.getZ() < 0) {
-               min = min.add(0, 0, direction.getZ());
-            } else if (direction.getZ() > 0) {
-               max = max.add(0, 0, direction.getZ());
+            if (direction.z() < 0) {
+               min = min.add(0, 0, direction.z());
+            } else if (direction.z() > 0) {
+               max = max.add(0, 0, direction.z());
             }
 
             this.selection.setSelectionArea(min, max);
             this.sendArea();
             this.sendFeedback(
-               Message.translation("server.builderTools.selectionExpanded")
-                  .param("x", direction.getX())
-                  .param("y", direction.getY())
-                  .param("z", direction.getZ()),
+               Message.translation("server.builderTools.selectionExpanded").param("x", direction.x()).param("y", direction.y()).param("z", direction.z()),
                componentAccessor
             );
          }
@@ -4216,34 +4203,31 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            if (direction.getX() > 0) {
-               min = min.add(direction.getX(), 0, 0);
-            } else if (direction.getX() < 0) {
-               max = max.add(direction.getX(), 0, 0);
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            if (direction.x() > 0) {
+               min = min.add(direction.x(), 0, 0);
+            } else if (direction.x() < 0) {
+               max = max.add(direction.x(), 0, 0);
             }
 
-            if (direction.getY() > 0) {
-               min = min.add(0, direction.getY(), 0);
-            } else if (direction.getY() < 0) {
-               max = max.add(0, direction.getY(), 0);
+            if (direction.y() > 0) {
+               min = min.add(0, direction.y(), 0);
+            } else if (direction.y() < 0) {
+               max = max.add(0, direction.y(), 0);
             }
 
-            if (direction.getZ() > 0) {
-               min = min.add(0, 0, direction.getZ());
-            } else if (direction.getZ() < 0) {
-               max = max.add(0, 0, direction.getZ());
+            if (direction.z() > 0) {
+               min = min.add(0, 0, direction.z());
+            } else if (direction.z() < 0) {
+               max = max.add(0, 0, direction.z());
             }
 
             this.selection.setSelectionArea(min, max);
             this.sendArea();
             this.sendFeedback(
                ref,
-               Message.translation("server.builderTools.selectionContracted")
-                  .param("x", direction.getX())
-                  .param("y", direction.getY())
-                  .param("z", direction.getZ()),
+               Message.translation("server.builderTools.selectionContracted").param("x", direction.x()).param("y", direction.y()).param("z", direction.z()),
                direction.length() > 0.0 ? "CREATE_SCALE_INCREASE" : "CREATE_SCALE_DECREASE",
                componentAccessor
             );
@@ -4257,14 +4241,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
          } else {
             long start = System.nanoTime();
-            Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-            int xMin = min.getX();
-            int xMax = max.getX();
-            int yMin = min.getY();
-            int yMax = max.getY();
-            int zMin = min.getZ();
-            int zMax = max.getZ();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
             int totalBlocks = (xMax - xMin + 1) * (zMax - zMin + 1) * (yMax - yMin + 1);
             int width = xMax - xMin;
             int height = yMax - yMin;
@@ -4512,7 +4496,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          @Nullable AssetPack targetPack,
          @Nonnull ComponentAccessor<EntityStore> componentAccessor
       ) {
-         if (this.selection != null && (!this.selection.getSelectionMin().equals(Vector3i.ZERO) || !this.selection.getSelectionMax().equals(Vector3i.ZERO))) {
+         if (this.selection != null
+            && (!this.selection.getSelectionMin().equals(Vector3iUtil.ZERO) || !this.selection.getSelectionMax().equals(Vector3iUtil.ZERO))) {
             World world = componentAccessor.getExternalData().getWorld();
             long start = System.nanoTime();
             if (!name.endsWith(".prefab.json")) {
@@ -4524,14 +4509,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             if (!PathUtil.isChildOf(basePath, basePath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
                this.sendFeedback(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"), componentAccessor);
             } else {
-               Vector3i min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               Vector3i max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               int xMin = min.getX();
-               int yMin = min.getY();
-               int zMin = min.getZ();
-               int xMax = max.getX();
-               int yMax = max.getY();
-               int zMax = max.getZ();
+               Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               int xMin = min.x();
+               int yMin = min.y();
+               int zMin = min.z();
+               int xMax = max.x();
+               int yMax = max.y();
+               int zMax = max.z();
                int width = xMax - xMin;
                int height = yMax - yMin;
                int depth = zMax - zMin;
@@ -4594,7 +4579,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
 
                if (playerAnchor != null) {
-                  tempSelection.setAnchorAtWorldPos(playerAnchor.getX(), playerAnchor.getY(), playerAnchor.getZ());
+                  tempSelection.setAnchorAtWorldPos(playerAnchor.x(), playerAnchor.y(), playerAnchor.z());
                }
 
                if (includeEntities) {
@@ -4655,13 +4640,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          long start = System.nanoTime();
 
          try {
-            Vector3i min = Vector3i.ZERO;
-            Vector3i max = Vector3i.ZERO;
+            Vector3ic min = Vector3iUtil.ZERO;
+            Vector3ic max = Vector3iUtil.ZERO;
             if (this.selection != null) {
                Objects.requireNonNull(this.selection.getSelectionMin(), "min is null");
                Objects.requireNonNull(this.selection.getSelectionMax(), "max is null");
-               min = Vector3i.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               max = Vector3i.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
             }
 
             this.selection = serverPrefab.cloneSelection();

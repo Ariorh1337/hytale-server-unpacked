@@ -45,20 +45,24 @@ public class AssetEditorSetupSchemas implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorSetupSchemas deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorSetupSchemas", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorSetupSchemas obj = new AssetEditorSetupSchemas();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int schemasCount = VarInt.peek(buf, pos);
          if (schemasCount < 0) {
-            throw ProtocolException.negativeLength("Schemas", schemasCount);
+            throw ProtocolException.invalidVarInt("Schemas");
          }
 
+         int schemasVarLen = VarInt.size(schemasCount);
          if (schemasCount > 4096000) {
             throw ProtocolException.arrayTooLong("Schemas", schemasCount, 4096000);
          }
 
-         int schemasVarLen = VarInt.size(schemasCount);
          if (pos + schemasVarLen + schemasCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Schemas", pos + schemasVarLen + schemasCount * 1, buf.readableBytes());
          }
@@ -80,7 +84,7 @@ public class AssetEditorSetupSchemas implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += SchemaFile.computeBytesConsumed(buf, pos);
@@ -144,7 +148,7 @@ public class AssetEditorSetupSchemas implements Packet, ToClientPacket {
             return ValidationResult.error("Schemas exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(schemasCount);
 
          for (int i = 0; i < schemasCount; i++) {
             ValidationResult structResult = SchemaFile.validateStructure(buffer, pos);

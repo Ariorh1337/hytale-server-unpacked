@@ -49,14 +49,14 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
       int pos = offset + 0;
       int updatesCount = VarInt.peek(buf, pos);
       if (updatesCount < 0) {
-         throw ProtocolException.negativeLength("Updates", updatesCount);
+         throw ProtocolException.invalidVarInt("Updates");
       }
 
+      int updatesVarLen = VarInt.size(updatesCount);
       if (updatesCount > 128) {
          throw ProtocolException.arrayTooLong("Updates", updatesCount, 128);
       }
 
-      int updatesVarLen = VarInt.size(updatesCount);
       if (pos + updatesVarLen + updatesCount * 33L > buf.readableBytes()) {
          throw ProtocolException.bufferTooSmall("Updates", pos + updatesVarLen + updatesCount * 33, buf.readableBytes());
       }
@@ -75,7 +75,7 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(arrLen);
 
       for (int i = 0; i < arrLen; i++) {
          pos += SyncInteractionChain.computeBytesConsumed(buf, pos);
@@ -124,7 +124,7 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
          return ValidationResult.error("Updates exceeds max length 128");
       }
 
-      pos += VarInt.length(buffer, pos);
+      pos += VarInt.size(updatesCount);
 
       for (int i = 0; i < updatesCount; i++) {
          ValidationResult structResult = SyncInteractionChain.validateStructure(buffer, pos);

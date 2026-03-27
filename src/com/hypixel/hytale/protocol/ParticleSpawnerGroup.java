@@ -90,6 +90,10 @@ public class ParticleSpawnerGroup {
 
    @Nonnull
    public static ParticleSpawnerGroup deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 121) {
+         throw ProtocolException.bufferTooSmall("ParticleSpawnerGroup", 121, buf.readableBytes() - offset);
+      }
+
       ParticleSpawnerGroup obj = new ParticleSpawnerGroup();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       if ((nullBits[0] & 1) != 0) {
@@ -125,31 +129,46 @@ public class ParticleSpawnerGroup {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos0 = offset + 121 + buf.getIntLE(offset + 113);
-         int spawnerIdLen = VarInt.peek(buf, varPos0);
-         if (spawnerIdLen < 0) {
-            throw ProtocolException.negativeLength("SpawnerId", spawnerIdLen);
+         int varPosBase0 = buf.getIntLE(offset + 113);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 121) {
+            throw ProtocolException.invalidOffset("SpawnerId", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 121 + varPosBase0;
+         int spawnerIdLen = VarInt.peek(buf, varPos0);
+         if (spawnerIdLen < 0) {
+            throw ProtocolException.invalidVarInt("SpawnerId");
+         }
+
+         int spawnerIdVarIntLen = VarInt.size(spawnerIdLen);
          if (spawnerIdLen > 4096000) {
             throw ProtocolException.stringTooLong("SpawnerId", spawnerIdLen, 4096000);
+         }
+
+         if (varPos0 + spawnerIdVarIntLen + spawnerIdLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("SpawnerId", varPos0 + spawnerIdVarIntLen + spawnerIdLen, buf.readableBytes());
          }
 
          obj.spawnerId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos1 = offset + 121 + buf.getIntLE(offset + 117);
-         int attractorsCount = VarInt.peek(buf, varPos1);
-         if (attractorsCount < 0) {
-            throw ProtocolException.negativeLength("Attractors", attractorsCount);
+         int varPosBase1 = buf.getIntLE(offset + 117);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 121) {
+            throw ProtocolException.invalidOffset("Attractors", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 121 + varPosBase1;
+         int attractorsCount = VarInt.peek(buf, varPos1);
+         if (attractorsCount < 0) {
+            throw ProtocolException.invalidVarInt("Attractors");
+         }
+
+         int varIntLen = VarInt.size(attractorsCount);
          if (attractorsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Attractors", attractorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + attractorsCount * 85L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Attractors", varPos1 + varIntLen + attractorsCount * 85, buf.readableBytes());
          }
@@ -171,9 +190,13 @@ public class ParticleSpawnerGroup {
       int maxEnd = 121;
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 113);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 121) {
+            throw ProtocolException.invalidOffset("SpawnerId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 121 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -181,9 +204,13 @@ public class ParticleSpawnerGroup {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 117);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 121) {
+            throw ProtocolException.invalidOffset("Attractors", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 121 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos1 += ParticleAttractor.computeBytesConsumed(buf, pos1);
@@ -332,15 +359,11 @@ public class ParticleSpawnerGroup {
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
       if ((nullBits[0] & 128) != 0) {
          int spawnerIdOffset = buffer.getIntLE(offset + 113);
-         if (spawnerIdOffset < 0) {
+         if (spawnerIdOffset < 0 || spawnerIdOffset > buffer.writerIndex() - offset - 121) {
             return ValidationResult.error("Invalid offset for SpawnerId");
          }
 
          int pos = offset + 121 + spawnerIdOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SpawnerId");
-         }
-
          int spawnerIdLen = VarInt.peek(buffer, pos);
          if (spawnerIdLen < 0) {
             return ValidationResult.error("Invalid string length for SpawnerId");
@@ -350,7 +373,7 @@ public class ParticleSpawnerGroup {
             return ValidationResult.error("SpawnerId exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(spawnerIdLen);
          pos += spawnerIdLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading SpawnerId");
@@ -359,15 +382,11 @@ public class ParticleSpawnerGroup {
 
       if ((nullBits[1] & 1) != 0) {
          int attractorsOffset = buffer.getIntLE(offset + 117);
-         if (attractorsOffset < 0) {
+         if (attractorsOffset < 0 || attractorsOffset > buffer.writerIndex() - offset - 121) {
             return ValidationResult.error("Invalid offset for Attractors");
          }
 
          int pos = offset + 121 + attractorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Attractors");
-         }
-
          int attractorsCount = VarInt.peek(buffer, pos);
          if (attractorsCount < 0) {
             return ValidationResult.error("Invalid array count for Attractors");
@@ -377,7 +396,7 @@ public class ParticleSpawnerGroup {
             return ValidationResult.error("Attractors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(attractorsCount);
          pos += attractorsCount * 85;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Attractors");

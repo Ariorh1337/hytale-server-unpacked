@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -52,6 +53,10 @@ public class MovementEffects {
 
    @Nonnull
    public static MovementEffects deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 7) {
+         throw ProtocolException.bufferTooSmall("MovementEffects", 7, buf.readableBytes() - offset);
+      }
+
       MovementEffects obj = new MovementEffects();
       obj.disableForward = buf.getByte(offset + 0) != 0;
       obj.disableBackward = buf.getByte(offset + 1) != 0;

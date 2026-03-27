@@ -14,8 +14,6 @@ import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.Opacity;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -48,6 +46,8 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class PositionCache {
    public static final BiPredicate<Ref<EntityStore>, ComponentAccessor<EntityStore>> IS_VALID_PLAYER = (ref, componentAccessor) -> {
@@ -297,7 +297,7 @@ public class PositionCache {
             if (itemComponent != null) {
                TransformComponent itemEntityTransformComponent = componentAccessor.getComponent(itemEntityRef, TRANSFORM_COMPONENT_TYPE);
                assert itemEntityTransformComponent != null;
-               double squaredDistance = itemEntityTransformComponent.getPosition().distanceSquaredTo(position);
+               double squaredDistance = itemEntityTransformComponent.getPosition().distanceSquared(position);
                if (!(squaredDistance < minRange)) {
                   if (squaredDistance >= maxRange) {
                      break;
@@ -505,15 +505,15 @@ public class PositionCache {
       Vector3d position = transformComponent.getPosition();
       ModelComponent modelComponent = componentAccessor.getComponent(ref, MODEL_COMPONENT_TYPE);
       float eyeHeight = modelComponent != null ? modelComponent.getModel().getEyeHeight() : 0.0F;
-      double sx = position.getX();
-      double sy = position.getY() + eyeHeight;
-      double sz = position.getZ();
+      double sx = position.x();
+      double sy = position.y() + eyeHeight;
+      double sz = position.z();
       TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
       assert targetTransformComponent != null;
       Vector3d targetPosition = targetTransformComponent.getPosition();
-      double tx = targetPosition.getX();
-      double ty = targetPosition.getY();
-      double tz = targetPosition.getZ();
+      double tx = targetPosition.x();
+      double ty = targetPosition.y();
+      double tz = targetPosition.z();
       ModelComponent targetModelComponent = componentAccessor.getComponent(targetRef, MODEL_COMPONENT_TYPE);
       if (targetModelComponent != null) {
          return predicate.test(sx, sy, sz, tx, ty + targetModelComponent.getModel().getEyeHeight(), tz, t, componentAccessor);
@@ -525,9 +525,9 @@ public class PositionCache {
       BoundingBox boundingBoxComponent = componentAccessor.getComponent(targetRef, BOUNDING_BOX_COMPONENT_TYPE);
       if (boundingBoxComponent != null) {
          Box boundingBox = boundingBoxComponent.getBoundingBox();
-         ox = (boundingBox.getMax().getX() + boundingBox.getMin().getX()) / 2.0;
-         oy = (boundingBox.getMax().getY() + boundingBox.getMin().getY()) / 2.0;
-         oz = (boundingBox.getMax().getZ() + boundingBox.getMin().getZ()) / 2.0;
+         ox = (boundingBox.getMax().x() + boundingBox.getMin().x()) / 2.0;
+         oy = (boundingBox.getMax().y() + boundingBox.getMin().y()) / 2.0;
+         oz = (boundingBox.getMax().z() + boundingBox.getMin().z()) / 2.0;
       }
 
       return predicate.test(sx, sy, sz, tx + ox, ty + oy, tz + oz, t, componentAccessor);
@@ -544,7 +544,7 @@ public class PositionCache {
       assert transformComponent != null;
       TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
       assert targetTransformComponent != null;
-      if (transformComponent.getPosition().distanceSquaredTo(targetTransformComponent.getPosition()) <= 1.0E-12) {
+      if (transformComponent.getPosition().distanceSquared(targetTransformComponent.getPosition()) <= 1.0E-12) {
          return true;
       }
 
@@ -668,9 +668,9 @@ public class PositionCache {
          targetRef,
          (sx, sy, sz, tx, ty, tz, _this, accessor) -> {
             PositionCache.LineOfSightEntityBuffer buffer = _this.lineOfSightEntityComputeBuffer;
-            buffer.pos.assign(sx, sy, sz);
-            buffer.dir.assign(tx - sx, ty - sy, tz - sz);
-            double squaredLength = buffer.dir.squaredLength();
+            buffer.pos.set(sx, sy, sz);
+            buffer.dir.set(tx - sx, ty - sy, tz - sz);
+            double squaredLength = buffer.dir.lengthSquared();
             return squaredLength < 1.0E-6
                ? false
                : _this.players
@@ -743,9 +743,9 @@ public class PositionCache {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
-      double px = position.getX();
-      double py = position.getY();
-      double pz = position.getZ();
+      double px = position.x();
+      double py = position.y();
+      double pz = position.z();
       double dx = px - pos.x;
       double dy = py - pos.y;
       double dz = pz - pos.z;

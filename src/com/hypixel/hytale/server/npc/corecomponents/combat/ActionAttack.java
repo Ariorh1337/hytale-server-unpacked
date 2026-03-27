@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.combat;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -213,8 +213,8 @@ public class ActionAttack extends ActionBase {
       assert transformComponent != null;
       HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
       assert headRotationComponent != null;
-      Vector3f rotation = aimingData != null && aimingData.getChargeDistance() > 0.0 ? transformComponent.getRotation() : headRotationComponent.getRotation();
-      if (this.hasTimeForAiming(dt) && aimingData != null && !aimingData.isOnTarget(rotation.getYaw(), rotation.getPitch(), this.meleeConeAngle)) {
+      Rotation3f rotation = aimingData != null && aimingData.getChargeDistance() > 0.0 ? transformComponent.getRotation() : headRotationComponent.getRotation();
+      if (this.hasTimeForAiming(dt) && aimingData != null && !aimingData.isOnTarget(rotation.yaw(), rotation.pitch(), this.meleeConeAngle)) {
          aimingData.clearSolution();
          return false;
       }

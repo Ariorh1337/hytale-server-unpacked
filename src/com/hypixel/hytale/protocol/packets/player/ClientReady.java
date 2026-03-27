@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.player;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class ClientReady implements Packet, ToServerPacket {
 
    @Nonnull
    public static ClientReady deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("ClientReady", 2, buf.readableBytes() - offset);
+      }
+
       ClientReady obj = new ClientReady();
       obj.readyForChunks = buf.getByte(offset + 0) != 0;
       obj.readyForGameplay = buf.getByte(offset + 1) != 0;

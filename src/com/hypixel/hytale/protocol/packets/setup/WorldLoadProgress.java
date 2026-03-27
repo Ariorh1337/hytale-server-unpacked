@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -50,6 +51,10 @@ public class WorldLoadProgress implements Packet, ToClientPacket {
 
    @Nonnull
    public static WorldLoadProgress deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("WorldLoadProgress", 9, buf.readableBytes() - offset);
+      }
+
       WorldLoadProgress obj = new WorldLoadProgress();
       byte nullBits = buf.getByte(offset);
       obj.percentComplete = buf.getIntLE(offset + 1);

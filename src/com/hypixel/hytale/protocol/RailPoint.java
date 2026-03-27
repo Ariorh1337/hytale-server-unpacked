@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class RailPoint {
 
    @Nonnull
    public static RailPoint deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 25) {
+         throw ProtocolException.bufferTooSmall("RailPoint", 25, buf.readableBytes() - offset);
+      }
+
       RailPoint obj = new RailPoint();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -78,7 +83,12 @@ public class RailPoint {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 25 ? ValidationResult.error("Buffer too small: expected at least 25 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 25) {
+         return ValidationResult.error("Buffer too small: expected at least 25 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public RailPoint clone() {

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class Position {
 
    @Nonnull
    public static Position deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("Position", 24, buf.readableBytes() - offset);
+      }
+
       Position obj = new Position();
       obj.x = buf.getDoubleLE(offset + 0);
       obj.y = buf.getDoubleLE(offset + 8);

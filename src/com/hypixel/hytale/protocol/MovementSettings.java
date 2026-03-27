@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -284,6 +285,10 @@ public class MovementSettings {
 
    @Nonnull
    public static MovementSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 251) {
+         throw ProtocolException.bufferTooSmall("MovementSettings", 251, buf.readableBytes() - offset);
+      }
+
       MovementSettings obj = new MovementSettings();
       obj.mass = buf.getFloatLE(offset + 0);
       obj.dragCoefficient = buf.getFloatLE(offset + 4);

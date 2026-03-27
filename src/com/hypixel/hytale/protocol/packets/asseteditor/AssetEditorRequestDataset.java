@@ -46,20 +46,28 @@ public class AssetEditorRequestDataset implements Packet, ToServerPacket {
 
    @Nonnull
    public static AssetEditorRequestDataset deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRequestDataset", 1, buf.readableBytes() - offset);
+      }
+
       AssetEditorRequestDataset obj = new AssetEditorRequestDataset();
       byte nullBits = buf.getByte(offset);
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int nameLen = VarInt.peek(buf, pos);
          if (nameLen < 0) {
-            throw ProtocolException.negativeLength("Name", nameLen);
+            throw ProtocolException.invalidVarInt("Name");
          }
 
+         int nameVarLen = VarInt.size(nameLen);
          if (nameLen > 4096000) {
             throw ProtocolException.stringTooLong("Name", nameLen, 4096000);
          }
 
-         int nameVarLen = VarInt.length(buf, pos);
+         if (pos + nameVarLen + nameLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Name", pos + nameVarLen + nameLen, buf.readableBytes());
+         }
+
          obj.name = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += nameVarLen + nameLen;
       }
@@ -72,7 +80,7 @@ public class AssetEditorRequestDataset implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -118,7 +126,7 @@ public class AssetEditorRequestDataset implements Packet, ToServerPacket {
             return ValidationResult.error("Name exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(nameLen);
          pos += nameLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Name");

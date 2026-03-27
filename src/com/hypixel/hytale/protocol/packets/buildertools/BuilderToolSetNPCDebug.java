@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -44,6 +45,10 @@ public class BuilderToolSetNPCDebug implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolSetNPCDebug deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetNPCDebug", 5, buf.readableBytes() - offset);
+      }
+
       BuilderToolSetNPCDebug obj = new BuilderToolSetNPCDebug();
       obj.entityId = buf.getIntLE(offset + 0);
       obj.enabled = buf.getByte(offset + 4) != 0;

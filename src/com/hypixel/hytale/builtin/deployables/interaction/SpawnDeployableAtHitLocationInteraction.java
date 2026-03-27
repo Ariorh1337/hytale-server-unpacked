@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpawnDeployableAtHitLocationInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -45,13 +46,13 @@ public class SpawnDeployableAtHitLocationInteraction extends SimpleInstantIntera
          assert commandBuffer != null;
          Store<EntityStore> store = commandBuffer.getStore();
          Vector3f hitNormal = chainData.hitNormal;
-         com.hypixel.hytale.math.vector.Vector3f hitNormalVec = new com.hypixel.hytale.math.vector.Vector3f(hitNormal.x, hitNormal.y, hitNormal.z);
+         Vector3d hitNormalVec = new Vector3d(hitNormal.x, hitNormal.y, hitNormal.z);
          DeployablesUtils.spawnDeployable(
             commandBuffer,
             store,
             this.config,
             context.getEntity(),
-            new com.hypixel.hytale.math.vector.Vector3f(hitLocation.x, hitLocation.y, hitLocation.z),
+            new Vector3d(hitLocation.x, hitLocation.y, hitLocation.z),
             MathUtil.getRotationForHitNormal(hitNormalVec),
             MathUtil.getNameForHitNormal(hitNormalVec)
          );

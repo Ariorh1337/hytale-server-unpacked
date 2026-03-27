@@ -37,6 +37,10 @@ public class ItemToolSpec {
 
    @Nonnull
    public static ItemToolSpec deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ItemToolSpec", 9, buf.readableBytes() - offset);
+      }
+
       ItemToolSpec obj = new ItemToolSpec();
       byte nullBits = buf.getByte(offset);
       obj.power = buf.getFloatLE(offset + 1);
@@ -45,14 +49,18 @@ public class ItemToolSpec {
       if ((nullBits & 1) != 0) {
          int gatherTypeLen = VarInt.peek(buf, pos);
          if (gatherTypeLen < 0) {
-            throw ProtocolException.negativeLength("GatherType", gatherTypeLen);
+            throw ProtocolException.invalidVarInt("GatherType");
          }
 
+         int gatherTypeVarLen = VarInt.size(gatherTypeLen);
          if (gatherTypeLen > 4096000) {
             throw ProtocolException.stringTooLong("GatherType", gatherTypeLen, 4096000);
          }
 
-         int gatherTypeVarLen = VarInt.length(buf, pos);
+         if (pos + gatherTypeVarLen + gatherTypeLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("GatherType", pos + gatherTypeVarLen + gatherTypeLen, buf.readableBytes());
+         }
+
          obj.gatherType = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += gatherTypeVarLen + gatherTypeLen;
       }
@@ -65,7 +73,7 @@ public class ItemToolSpec {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -111,7 +119,7 @@ public class ItemToolSpec {
             return ValidationResult.error("GatherType exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(gatherTypeLen);
          pos += gatherTypeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading GatherType");

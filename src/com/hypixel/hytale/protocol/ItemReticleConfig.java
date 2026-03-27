@@ -52,34 +52,53 @@ public class ItemReticleConfig {
 
    @Nonnull
    public static ItemReticleConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("ItemReticleConfig", 17, buf.readableBytes() - offset);
+      }
+
       ItemReticleConfig obj = new ItemReticleConfig();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 17 + buf.getIntLE(offset + 1);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 17 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 17 + buf.getIntLE(offset + 5);
-         int baseCount = VarInt.peek(buf, varPos1);
-         if (baseCount < 0) {
-            throw ProtocolException.negativeLength("Base", baseCount);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Base", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 17 + varPosBase1;
+         int baseCount = VarInt.peek(buf, varPos1);
+         if (baseCount < 0) {
+            throw ProtocolException.invalidVarInt("Base");
+         }
+
+         int varIntLen = VarInt.size(baseCount);
          if (baseCount > 4096000) {
             throw ProtocolException.arrayTooLong("Base", baseCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + baseCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Base", varPos1 + varIntLen + baseCount * 1, buf.readableBytes());
          }
@@ -90,31 +109,40 @@ public class ItemReticleConfig {
          for (int i = 0; i < baseCount; i++) {
             int strLen = VarInt.peek(buf, elemPos);
             if (strLen < 0) {
-               throw ProtocolException.negativeLength("base[" + i + "]", strLen);
+               throw ProtocolException.invalidVarInt("base[" + i + "]");
             }
 
+            int strVarLen = VarInt.size(strLen);
             if (strLen > 4096000) {
                throw ProtocolException.stringTooLong("base[" + i + "]", strLen, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, elemPos);
+            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("base[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
+            }
+
             obj.base[i] = PacketIO.readVarString(buf, elemPos);
             elemPos += strVarLen + strLen;
          }
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 17 + buf.getIntLE(offset + 9);
-         int serverEventsCount = VarInt.peek(buf, varPos2);
-         if (serverEventsCount < 0) {
-            throw ProtocolException.negativeLength("ServerEvents", serverEventsCount);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ServerEvents", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 17 + varPosBase2;
+         int serverEventsCount = VarInt.peek(buf, varPos2);
+         if (serverEventsCount < 0) {
+            throw ProtocolException.invalidVarInt("ServerEvents");
+         }
+
+         int varIntLen = VarInt.size(serverEventsCount);
          if (serverEventsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("ServerEvents", serverEventsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          obj.serverEvents = new HashMap<>(serverEventsCount);
          int dictPos = varPos2 + varIntLen;
 
@@ -130,17 +158,22 @@ public class ItemReticleConfig {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 17 + buf.getIntLE(offset + 13);
-         int clientEventsCount = VarInt.peek(buf, varPos3);
-         if (clientEventsCount < 0) {
-            throw ProtocolException.negativeLength("ClientEvents", clientEventsCount);
+         int varPosBase3 = buf.getIntLE(offset + 13);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ClientEvents", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 17 + varPosBase3;
+         int clientEventsCount = VarInt.peek(buf, varPos3);
+         if (clientEventsCount < 0) {
+            throw ProtocolException.invalidVarInt("ClientEvents");
+         }
+
+         int varIntLen = VarInt.size(clientEventsCount);
          if (clientEventsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("ClientEvents", clientEventsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          obj.clientEvents = new HashMap<>(clientEventsCount);
          int dictPos = varPos3 + varIntLen;
 
@@ -162,9 +195,13 @@ public class ItemReticleConfig {
       int maxEnd = 17;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -172,13 +209,17 @@ public class ItemReticleConfig {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Base", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 17 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
          }
 
          if (pos1 - offset > maxEnd) {
@@ -188,9 +229,13 @@ public class ItemReticleConfig {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ServerEvents", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 17 + fieldOffset2;
          int dictLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos2 += 4;
@@ -204,9 +249,13 @@ public class ItemReticleConfig {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 13);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("ClientEvents", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 17 + fieldOffset3;
          int dictLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos3 = ++pos3 + ItemReticle.computeBytesConsumed(buf, pos3);
@@ -351,15 +400,11 @@ public class ItemReticleConfig {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 1);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 17 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -369,7 +414,7 @@ public class ItemReticleConfig {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -378,15 +423,11 @@ public class ItemReticleConfig {
 
       if ((nullBits & 2) != 0) {
          int baseOffset = buffer.getIntLE(offset + 5);
-         if (baseOffset < 0) {
+         if (baseOffset < 0 || baseOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for Base");
          }
 
          int pos = offset + 17 + baseOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Base");
-         }
-
          int baseCount = VarInt.peek(buffer, pos);
          if (baseCount < 0) {
             return ValidationResult.error("Invalid array count for Base");
@@ -396,7 +437,7 @@ public class ItemReticleConfig {
             return ValidationResult.error("Base exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(baseCount);
 
          for (int i = 0; i < baseCount; i++) {
             int strLen = VarInt.peek(buffer, pos);
@@ -404,7 +445,7 @@ public class ItemReticleConfig {
                return ValidationResult.error("Invalid string length in Base");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(strLen);
             pos += strLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading string in Base");
@@ -414,15 +455,11 @@ public class ItemReticleConfig {
 
       if ((nullBits & 4) != 0) {
          int serverEventsOffset = buffer.getIntLE(offset + 9);
-         if (serverEventsOffset < 0) {
+         if (serverEventsOffset < 0 || serverEventsOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for ServerEvents");
          }
 
          int pos = offset + 17 + serverEventsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ServerEvents");
-         }
-
          int serverEventsCount = VarInt.peek(buffer, pos);
          if (serverEventsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for ServerEvents");
@@ -432,7 +469,7 @@ public class ItemReticleConfig {
             return ValidationResult.error("ServerEvents exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(serverEventsCount);
 
          for (int i = 0; i < serverEventsCount; i++) {
             pos += 4;
@@ -446,15 +483,11 @@ public class ItemReticleConfig {
 
       if ((nullBits & 8) != 0) {
          int clientEventsOffset = buffer.getIntLE(offset + 13);
-         if (clientEventsOffset < 0) {
+         if (clientEventsOffset < 0 || clientEventsOffset > buffer.writerIndex() - offset - 17) {
             return ValidationResult.error("Invalid offset for ClientEvents");
          }
 
          int pos = offset + 17 + clientEventsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ClientEvents");
-         }
-
          int clientEventsCount = VarInt.peek(buffer, pos);
          if (clientEventsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for ClientEvents");
@@ -464,9 +497,14 @@ public class ItemReticleConfig {
             return ValidationResult.error("ClientEvents exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(clientEventsCount);
 
          for (int i = 0; i < clientEventsCount; i++) {
+            int v = buffer.getByte(pos) & 255;
+            if (v >= 5) {
+               return ValidationResult.error("Invalid ItemReticleClientEvent value for key");
+            }
+
             pos = ++pos + ItemReticle.computeBytesConsumed(buffer, pos);
          }
       }

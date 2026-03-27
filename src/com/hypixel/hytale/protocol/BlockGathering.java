@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -36,20 +37,39 @@ public class BlockGathering {
 
    @Nonnull
    public static BlockGathering deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("BlockGathering", 13, buf.readableBytes() - offset);
+      }
+
       BlockGathering obj = new BlockGathering();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
+         int varPosBase0 = buf.getIntLE(offset + 1);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Breaking", varPosBase0, buf.readableBytes());
+         }
+
+         int varPos0 = offset + 13 + varPosBase0;
          obj.breaking = BlockBreaking.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
+         int varPosBase1 = buf.getIntLE(offset + 5);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Harvest", varPosBase1, buf.readableBytes());
+         }
+
+         int varPos1 = offset + 13 + varPosBase1;
          obj.harvest = Harvesting.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
+         int varPosBase2 = buf.getIntLE(offset + 9);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Soft", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 13 + varPosBase2;
          obj.soft = SoftBlock.deserialize(buf, varPos2);
       }
 
@@ -61,6 +81,10 @@ public class BlockGathering {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Breaking", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          pos0 += BlockBreaking.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -70,6 +94,10 @@ public class BlockGathering {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Harvest", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          pos1 += Harvesting.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -79,6 +107,10 @@ public class BlockGathering {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Soft", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          pos2 += SoftBlock.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -159,15 +191,11 @@ public class BlockGathering {
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int breakingOffset = buffer.getIntLE(offset + 1);
-         if (breakingOffset < 0) {
+         if (breakingOffset < 0 || breakingOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Breaking");
          }
 
          int pos = offset + 13 + breakingOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Breaking");
-         }
-
          ValidationResult breakingResult = BlockBreaking.validateStructure(buffer, pos);
          if (!breakingResult.isValid()) {
             return ValidationResult.error("Invalid Breaking: " + breakingResult.error());
@@ -178,15 +206,11 @@ public class BlockGathering {
 
       if ((nullBits & 2) != 0) {
          int harvestOffset = buffer.getIntLE(offset + 5);
-         if (harvestOffset < 0) {
+         if (harvestOffset < 0 || harvestOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Harvest");
          }
 
          int pos = offset + 13 + harvestOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Harvest");
-         }
-
          ValidationResult harvestResult = Harvesting.validateStructure(buffer, pos);
          if (!harvestResult.isValid()) {
             return ValidationResult.error("Invalid Harvest: " + harvestResult.error());
@@ -197,15 +221,11 @@ public class BlockGathering {
 
       if ((nullBits & 4) != 0) {
          int softOffset = buffer.getIntLE(offset + 9);
-         if (softOffset < 0) {
+         if (softOffset < 0 || softOffset > buffer.writerIndex() - offset - 13) {
             return ValidationResult.error("Invalid offset for Soft");
          }
 
          int pos = offset + 13 + softOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Soft");
-         }
-
          ValidationResult softResult = SoftBlock.validateStructure(buffer, pos);
          if (!softResult.isValid()) {
             return ValidationResult.error("Invalid Soft: " + softResult.error());

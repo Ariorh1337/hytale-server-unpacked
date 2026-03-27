@@ -62,6 +62,10 @@ public class InteractionChainData {
 
    @Nonnull
    public static InteractionChainData deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 61) {
+         throw ProtocolException.bufferTooSmall("InteractionChainData", 61, buf.readableBytes() - offset);
+      }
+
       InteractionChainData obj = new InteractionChainData();
       byte nullBits = buf.getByte(offset);
       obj.entityId = buf.getIntLE(offset + 1);
@@ -83,14 +87,18 @@ public class InteractionChainData {
       if ((nullBits & 8) != 0) {
          int hitDetailLen = VarInt.peek(buf, pos);
          if (hitDetailLen < 0) {
-            throw ProtocolException.negativeLength("HitDetail", hitDetailLen);
+            throw ProtocolException.invalidVarInt("HitDetail");
          }
 
+         int hitDetailVarLen = VarInt.size(hitDetailLen);
          if (hitDetailLen > 4096000) {
             throw ProtocolException.stringTooLong("HitDetail", hitDetailLen, 4096000);
          }
 
-         int hitDetailVarLen = VarInt.length(buf, pos);
+         if (pos + hitDetailVarLen + hitDetailLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("HitDetail", pos + hitDetailVarLen + hitDetailLen, buf.readableBytes());
+         }
+
          obj.hitDetail = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
          pos += hitDetailVarLen + hitDetailLen;
       }
@@ -103,7 +111,7 @@ public class InteractionChainData {
       int pos = offset + 61;
       if ((nullBits & 8) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
@@ -180,7 +188,7 @@ public class InteractionChainData {
             return ValidationResult.error("HitDetail exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(hitDetailLen);
          pos += hitDetailLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading HitDetail");

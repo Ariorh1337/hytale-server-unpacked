@@ -162,6 +162,10 @@ public class Weather {
 
    @Nonnull
    public static Weather deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 126) {
+         throw ProtocolException.bufferTooSmall("Weather", 126, buf.readableBytes() - offset);
+      }
+
       Weather obj = new Weather();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 4);
       if ((nullBits[0] & 1) != 0) {
@@ -173,31 +177,46 @@ public class Weather {
       }
 
       if ((nullBits[0] & 4) != 0) {
-         int varPos0 = offset + 126 + buf.getIntLE(offset + 30);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 30);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 126 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits[0] & 8) != 0) {
-         int varPos1 = offset + 126 + buf.getIntLE(offset + 34);
-         int tagIndexesCount = VarInt.peek(buf, varPos1);
-         if (tagIndexesCount < 0) {
-            throw ProtocolException.negativeLength("TagIndexes", tagIndexesCount);
+         int varPosBase1 = buf.getIntLE(offset + 34);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("TagIndexes", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 126 + varPosBase1;
+         int tagIndexesCount = VarInt.peek(buf, varPos1);
+         if (tagIndexesCount < 0) {
+            throw ProtocolException.invalidVarInt("TagIndexes");
+         }
+
+         int varIntLen = VarInt.size(tagIndexesCount);
          if (tagIndexesCount > 4096000) {
             throw ProtocolException.arrayTooLong("TagIndexes", tagIndexesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          if (varPos1 + varIntLen + tagIndexesCount * 4L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("TagIndexes", varPos1 + varIntLen + tagIndexesCount * 4, buf.readableBytes());
          }
@@ -210,31 +229,46 @@ public class Weather {
       }
 
       if ((nullBits[0] & 16) != 0) {
-         int varPos2 = offset + 126 + buf.getIntLE(offset + 38);
-         int starsLen = VarInt.peek(buf, varPos2);
-         if (starsLen < 0) {
-            throw ProtocolException.negativeLength("Stars", starsLen);
+         int varPosBase2 = buf.getIntLE(offset + 38);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Stars", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 126 + varPosBase2;
+         int starsLen = VarInt.peek(buf, varPos2);
+         if (starsLen < 0) {
+            throw ProtocolException.invalidVarInt("Stars");
+         }
+
+         int starsVarIntLen = VarInt.size(starsLen);
          if (starsLen > 4096000) {
             throw ProtocolException.stringTooLong("Stars", starsLen, 4096000);
+         }
+
+         if (varPos2 + starsVarIntLen + starsLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Stars", varPos2 + starsVarIntLen + starsLen, buf.readableBytes());
          }
 
          obj.stars = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
       }
 
       if ((nullBits[0] & 32) != 0) {
-         int varPos3 = offset + 126 + buf.getIntLE(offset + 42);
-         int moonsCount = VarInt.peek(buf, varPos3);
-         if (moonsCount < 0) {
-            throw ProtocolException.negativeLength("Moons", moonsCount);
+         int varPosBase3 = buf.getIntLE(offset + 42);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Moons", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 126 + varPosBase3;
+         int moonsCount = VarInt.peek(buf, varPos3);
+         if (moonsCount < 0) {
+            throw ProtocolException.invalidVarInt("Moons");
+         }
+
+         int varIntLen = VarInt.size(moonsCount);
          if (moonsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Moons", moonsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          obj.moons = new HashMap<>(moonsCount);
          int dictPos = varPos3 + varIntLen;
 
@@ -243,14 +277,18 @@ public class Weather {
             dictPos += 4;
             int valLen = VarInt.peek(buf, dictPos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 4096000) {
                throw ProtocolException.stringTooLong("val", valLen, 4096000);
             }
 
-            int valVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + valVarLen + valLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen, buf.readableBytes());
+            }
+
             String val = PacketIO.readVarString(buf, dictPos);
             dictPos += valVarLen + valLen;
             if (obj.moons.put(key, val) != null) {
@@ -260,17 +298,22 @@ public class Weather {
       }
 
       if ((nullBits[0] & 64) != 0) {
-         int varPos4 = offset + 126 + buf.getIntLE(offset + 46);
-         int cloudsCount = VarInt.peek(buf, varPos4);
-         if (cloudsCount < 0) {
-            throw ProtocolException.negativeLength("Clouds", cloudsCount);
+         int varPosBase4 = buf.getIntLE(offset + 46);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Clouds", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 126 + varPosBase4;
+         int cloudsCount = VarInt.peek(buf, varPos4);
+         if (cloudsCount < 0) {
+            throw ProtocolException.invalidVarInt("Clouds");
+         }
+
+         int varIntLen = VarInt.size(cloudsCount);
          if (cloudsCount > 4096000) {
             throw ProtocolException.arrayTooLong("Clouds", cloudsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos4);
          if (varPos4 + varIntLen + cloudsCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Clouds", varPos4 + varIntLen + cloudsCount * 1, buf.readableBytes());
          }
@@ -285,17 +328,22 @@ public class Weather {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos5 = offset + 126 + buf.getIntLE(offset + 50);
-         int sunlightDampingMultiplierCount = VarInt.peek(buf, varPos5);
-         if (sunlightDampingMultiplierCount < 0) {
-            throw ProtocolException.negativeLength("SunlightDampingMultiplier", sunlightDampingMultiplierCount);
+         int varPosBase5 = buf.getIntLE(offset + 50);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunlightDampingMultiplier", varPosBase5, buf.readableBytes());
          }
 
+         int varPos5 = offset + 126 + varPosBase5;
+         int sunlightDampingMultiplierCount = VarInt.peek(buf, varPos5);
+         if (sunlightDampingMultiplierCount < 0) {
+            throw ProtocolException.invalidVarInt("SunlightDampingMultiplier");
+         }
+
+         int varIntLen = VarInt.size(sunlightDampingMultiplierCount);
          if (sunlightDampingMultiplierCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SunlightDampingMultiplier", sunlightDampingMultiplierCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos5);
          obj.sunlightDampingMultiplier = new HashMap<>(sunlightDampingMultiplierCount);
          int dictPos = varPos5 + varIntLen;
 
@@ -311,17 +359,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos6 = offset + 126 + buf.getIntLE(offset + 54);
-         int sunlightColorsCount = VarInt.peek(buf, varPos6);
-         if (sunlightColorsCount < 0) {
-            throw ProtocolException.negativeLength("SunlightColors", sunlightColorsCount);
+         int varPosBase6 = buf.getIntLE(offset + 54);
+         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunlightColors", varPosBase6, buf.readableBytes());
          }
 
+         int varPos6 = offset + 126 + varPosBase6;
+         int sunlightColorsCount = VarInt.peek(buf, varPos6);
+         if (sunlightColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("SunlightColors");
+         }
+
+         int varIntLen = VarInt.size(sunlightColorsCount);
          if (sunlightColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SunlightColors", sunlightColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos6);
          obj.sunlightColors = new HashMap<>(sunlightColorsCount);
          int dictPos = varPos6 + varIntLen;
 
@@ -337,17 +390,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos7 = offset + 126 + buf.getIntLE(offset + 58);
-         int skyTopColorsCount = VarInt.peek(buf, varPos7);
-         if (skyTopColorsCount < 0) {
-            throw ProtocolException.negativeLength("SkyTopColors", skyTopColorsCount);
+         int varPosBase7 = buf.getIntLE(offset + 58);
+         if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SkyTopColors", varPosBase7, buf.readableBytes());
          }
 
+         int varPos7 = offset + 126 + varPosBase7;
+         int skyTopColorsCount = VarInt.peek(buf, varPos7);
+         if (skyTopColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("SkyTopColors");
+         }
+
+         int varIntLen = VarInt.size(skyTopColorsCount);
          if (skyTopColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SkyTopColors", skyTopColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos7);
          obj.skyTopColors = new HashMap<>(skyTopColorsCount);
          int dictPos = varPos7 + varIntLen;
 
@@ -363,17 +421,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int varPos8 = offset + 126 + buf.getIntLE(offset + 62);
-         int skyBottomColorsCount = VarInt.peek(buf, varPos8);
-         if (skyBottomColorsCount < 0) {
-            throw ProtocolException.negativeLength("SkyBottomColors", skyBottomColorsCount);
+         int varPosBase8 = buf.getIntLE(offset + 62);
+         if (varPosBase8 < 0 || varPosBase8 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SkyBottomColors", varPosBase8, buf.readableBytes());
          }
 
+         int varPos8 = offset + 126 + varPosBase8;
+         int skyBottomColorsCount = VarInt.peek(buf, varPos8);
+         if (skyBottomColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("SkyBottomColors");
+         }
+
+         int varIntLen = VarInt.size(skyBottomColorsCount);
          if (skyBottomColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SkyBottomColors", skyBottomColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos8);
          obj.skyBottomColors = new HashMap<>(skyBottomColorsCount);
          int dictPos = varPos8 + varIntLen;
 
@@ -389,17 +452,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 8) != 0) {
-         int varPos9 = offset + 126 + buf.getIntLE(offset + 66);
-         int skySunsetColorsCount = VarInt.peek(buf, varPos9);
-         if (skySunsetColorsCount < 0) {
-            throw ProtocolException.negativeLength("SkySunsetColors", skySunsetColorsCount);
+         int varPosBase9 = buf.getIntLE(offset + 66);
+         if (varPosBase9 < 0 || varPosBase9 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SkySunsetColors", varPosBase9, buf.readableBytes());
          }
 
+         int varPos9 = offset + 126 + varPosBase9;
+         int skySunsetColorsCount = VarInt.peek(buf, varPos9);
+         if (skySunsetColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("SkySunsetColors");
+         }
+
+         int varIntLen = VarInt.size(skySunsetColorsCount);
          if (skySunsetColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SkySunsetColors", skySunsetColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos9);
          obj.skySunsetColors = new HashMap<>(skySunsetColorsCount);
          int dictPos = varPos9 + varIntLen;
 
@@ -415,17 +483,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 16) != 0) {
-         int varPos10 = offset + 126 + buf.getIntLE(offset + 70);
-         int sunColorsCount = VarInt.peek(buf, varPos10);
-         if (sunColorsCount < 0) {
-            throw ProtocolException.negativeLength("SunColors", sunColorsCount);
+         int varPosBase10 = buf.getIntLE(offset + 70);
+         if (varPosBase10 < 0 || varPosBase10 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunColors", varPosBase10, buf.readableBytes());
          }
 
+         int varPos10 = offset + 126 + varPosBase10;
+         int sunColorsCount = VarInt.peek(buf, varPos10);
+         if (sunColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("SunColors");
+         }
+
+         int varIntLen = VarInt.size(sunColorsCount);
          if (sunColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SunColors", sunColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos10);
          obj.sunColors = new HashMap<>(sunColorsCount);
          int dictPos = varPos10 + varIntLen;
 
@@ -441,17 +514,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 32) != 0) {
-         int varPos11 = offset + 126 + buf.getIntLE(offset + 74);
-         int sunScalesCount = VarInt.peek(buf, varPos11);
-         if (sunScalesCount < 0) {
-            throw ProtocolException.negativeLength("SunScales", sunScalesCount);
+         int varPosBase11 = buf.getIntLE(offset + 74);
+         if (varPosBase11 < 0 || varPosBase11 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunScales", varPosBase11, buf.readableBytes());
          }
 
+         int varPos11 = offset + 126 + varPosBase11;
+         int sunScalesCount = VarInt.peek(buf, varPos11);
+         if (sunScalesCount < 0) {
+            throw ProtocolException.invalidVarInt("SunScales");
+         }
+
+         int varIntLen = VarInt.size(sunScalesCount);
          if (sunScalesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SunScales", sunScalesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos11);
          obj.sunScales = new HashMap<>(sunScalesCount);
          int dictPos = varPos11 + varIntLen;
 
@@ -467,17 +545,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 64) != 0) {
-         int varPos12 = offset + 126 + buf.getIntLE(offset + 78);
-         int sunGlowColorsCount = VarInt.peek(buf, varPos12);
-         if (sunGlowColorsCount < 0) {
-            throw ProtocolException.negativeLength("SunGlowColors", sunGlowColorsCount);
+         int varPosBase12 = buf.getIntLE(offset + 78);
+         if (varPosBase12 < 0 || varPosBase12 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunGlowColors", varPosBase12, buf.readableBytes());
          }
 
+         int varPos12 = offset + 126 + varPosBase12;
+         int sunGlowColorsCount = VarInt.peek(buf, varPos12);
+         if (sunGlowColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("SunGlowColors");
+         }
+
+         int varIntLen = VarInt.size(sunGlowColorsCount);
          if (sunGlowColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("SunGlowColors", sunGlowColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos12);
          obj.sunGlowColors = new HashMap<>(sunGlowColorsCount);
          int dictPos = varPos12 + varIntLen;
 
@@ -493,17 +576,22 @@ public class Weather {
       }
 
       if ((nullBits[1] & 128) != 0) {
-         int varPos13 = offset + 126 + buf.getIntLE(offset + 82);
-         int moonColorsCount = VarInt.peek(buf, varPos13);
-         if (moonColorsCount < 0) {
-            throw ProtocolException.negativeLength("MoonColors", moonColorsCount);
+         int varPosBase13 = buf.getIntLE(offset + 82);
+         if (varPosBase13 < 0 || varPosBase13 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("MoonColors", varPosBase13, buf.readableBytes());
          }
 
+         int varPos13 = offset + 126 + varPosBase13;
+         int moonColorsCount = VarInt.peek(buf, varPos13);
+         if (moonColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("MoonColors");
+         }
+
+         int varIntLen = VarInt.size(moonColorsCount);
          if (moonColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("MoonColors", moonColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos13);
          obj.moonColors = new HashMap<>(moonColorsCount);
          int dictPos = varPos13 + varIntLen;
 
@@ -519,17 +607,22 @@ public class Weather {
       }
 
       if ((nullBits[2] & 1) != 0) {
-         int varPos14 = offset + 126 + buf.getIntLE(offset + 86);
-         int moonScalesCount = VarInt.peek(buf, varPos14);
-         if (moonScalesCount < 0) {
-            throw ProtocolException.negativeLength("MoonScales", moonScalesCount);
+         int varPosBase14 = buf.getIntLE(offset + 86);
+         if (varPosBase14 < 0 || varPosBase14 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("MoonScales", varPosBase14, buf.readableBytes());
          }
 
+         int varPos14 = offset + 126 + varPosBase14;
+         int moonScalesCount = VarInt.peek(buf, varPos14);
+         if (moonScalesCount < 0) {
+            throw ProtocolException.invalidVarInt("MoonScales");
+         }
+
+         int varIntLen = VarInt.size(moonScalesCount);
          if (moonScalesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("MoonScales", moonScalesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos14);
          obj.moonScales = new HashMap<>(moonScalesCount);
          int dictPos = varPos14 + varIntLen;
 
@@ -545,17 +638,22 @@ public class Weather {
       }
 
       if ((nullBits[2] & 2) != 0) {
-         int varPos15 = offset + 126 + buf.getIntLE(offset + 90);
-         int moonGlowColorsCount = VarInt.peek(buf, varPos15);
-         if (moonGlowColorsCount < 0) {
-            throw ProtocolException.negativeLength("MoonGlowColors", moonGlowColorsCount);
+         int varPosBase15 = buf.getIntLE(offset + 90);
+         if (varPosBase15 < 0 || varPosBase15 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("MoonGlowColors", varPosBase15, buf.readableBytes());
          }
 
+         int varPos15 = offset + 126 + varPosBase15;
+         int moonGlowColorsCount = VarInt.peek(buf, varPos15);
+         if (moonGlowColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("MoonGlowColors");
+         }
+
+         int varIntLen = VarInt.size(moonGlowColorsCount);
          if (moonGlowColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("MoonGlowColors", moonGlowColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos15);
          obj.moonGlowColors = new HashMap<>(moonGlowColorsCount);
          int dictPos = varPos15 + varIntLen;
 
@@ -571,17 +669,22 @@ public class Weather {
       }
 
       if ((nullBits[2] & 4) != 0) {
-         int varPos16 = offset + 126 + buf.getIntLE(offset + 94);
-         int fogColorsCount = VarInt.peek(buf, varPos16);
-         if (fogColorsCount < 0) {
-            throw ProtocolException.negativeLength("FogColors", fogColorsCount);
+         int varPosBase16 = buf.getIntLE(offset + 94);
+         if (varPosBase16 < 0 || varPosBase16 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("FogColors", varPosBase16, buf.readableBytes());
          }
 
+         int varPos16 = offset + 126 + varPosBase16;
+         int fogColorsCount = VarInt.peek(buf, varPos16);
+         if (fogColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("FogColors");
+         }
+
+         int varIntLen = VarInt.size(fogColorsCount);
          if (fogColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("FogColors", fogColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos16);
          obj.fogColors = new HashMap<>(fogColorsCount);
          int dictPos = varPos16 + varIntLen;
 
@@ -597,17 +700,22 @@ public class Weather {
       }
 
       if ((nullBits[2] & 8) != 0) {
-         int varPos17 = offset + 126 + buf.getIntLE(offset + 98);
-         int fogHeightFalloffsCount = VarInt.peek(buf, varPos17);
-         if (fogHeightFalloffsCount < 0) {
-            throw ProtocolException.negativeLength("FogHeightFalloffs", fogHeightFalloffsCount);
+         int varPosBase17 = buf.getIntLE(offset + 98);
+         if (varPosBase17 < 0 || varPosBase17 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("FogHeightFalloffs", varPosBase17, buf.readableBytes());
          }
 
+         int varPos17 = offset + 126 + varPosBase17;
+         int fogHeightFalloffsCount = VarInt.peek(buf, varPos17);
+         if (fogHeightFalloffsCount < 0) {
+            throw ProtocolException.invalidVarInt("FogHeightFalloffs");
+         }
+
+         int varIntLen = VarInt.size(fogHeightFalloffsCount);
          if (fogHeightFalloffsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("FogHeightFalloffs", fogHeightFalloffsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos17);
          obj.fogHeightFalloffs = new HashMap<>(fogHeightFalloffsCount);
          int dictPos = varPos17 + varIntLen;
 
@@ -623,17 +731,22 @@ public class Weather {
       }
 
       if ((nullBits[2] & 16) != 0) {
-         int varPos18 = offset + 126 + buf.getIntLE(offset + 102);
-         int fogDensitiesCount = VarInt.peek(buf, varPos18);
-         if (fogDensitiesCount < 0) {
-            throw ProtocolException.negativeLength("FogDensities", fogDensitiesCount);
+         int varPosBase18 = buf.getIntLE(offset + 102);
+         if (varPosBase18 < 0 || varPosBase18 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("FogDensities", varPosBase18, buf.readableBytes());
          }
 
+         int varPos18 = offset + 126 + varPosBase18;
+         int fogDensitiesCount = VarInt.peek(buf, varPos18);
+         if (fogDensitiesCount < 0) {
+            throw ProtocolException.invalidVarInt("FogDensities");
+         }
+
+         int varIntLen = VarInt.size(fogDensitiesCount);
          if (fogDensitiesCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("FogDensities", fogDensitiesCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos18);
          obj.fogDensities = new HashMap<>(fogDensitiesCount);
          int dictPos = varPos18 + varIntLen;
 
@@ -649,31 +762,46 @@ public class Weather {
       }
 
       if ((nullBits[2] & 32) != 0) {
-         int varPos19 = offset + 126 + buf.getIntLE(offset + 106);
-         int screenEffectLen = VarInt.peek(buf, varPos19);
-         if (screenEffectLen < 0) {
-            throw ProtocolException.negativeLength("ScreenEffect", screenEffectLen);
+         int varPosBase19 = buf.getIntLE(offset + 106);
+         if (varPosBase19 < 0 || varPosBase19 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("ScreenEffect", varPosBase19, buf.readableBytes());
          }
 
+         int varPos19 = offset + 126 + varPosBase19;
+         int screenEffectLen = VarInt.peek(buf, varPos19);
+         if (screenEffectLen < 0) {
+            throw ProtocolException.invalidVarInt("ScreenEffect");
+         }
+
+         int screenEffectVarIntLen = VarInt.size(screenEffectLen);
          if (screenEffectLen > 4096000) {
             throw ProtocolException.stringTooLong("ScreenEffect", screenEffectLen, 4096000);
+         }
+
+         if (varPos19 + screenEffectVarIntLen + screenEffectLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ScreenEffect", varPos19 + screenEffectVarIntLen + screenEffectLen, buf.readableBytes());
          }
 
          obj.screenEffect = PacketIO.readVarString(buf, varPos19, PacketIO.UTF8);
       }
 
       if ((nullBits[2] & 64) != 0) {
-         int varPos20 = offset + 126 + buf.getIntLE(offset + 110);
-         int screenEffectColorsCount = VarInt.peek(buf, varPos20);
-         if (screenEffectColorsCount < 0) {
-            throw ProtocolException.negativeLength("ScreenEffectColors", screenEffectColorsCount);
+         int varPosBase20 = buf.getIntLE(offset + 110);
+         if (varPosBase20 < 0 || varPosBase20 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("ScreenEffectColors", varPosBase20, buf.readableBytes());
          }
 
+         int varPos20 = offset + 126 + varPosBase20;
+         int screenEffectColorsCount = VarInt.peek(buf, varPos20);
+         if (screenEffectColorsCount < 0) {
+            throw ProtocolException.invalidVarInt("ScreenEffectColors");
+         }
+
+         int varIntLen = VarInt.size(screenEffectColorsCount);
          if (screenEffectColorsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("ScreenEffectColors", screenEffectColorsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos20);
          obj.screenEffectColors = new HashMap<>(screenEffectColorsCount);
          int dictPos = varPos20 + varIntLen;
 
@@ -689,17 +817,22 @@ public class Weather {
       }
 
       if ((nullBits[2] & 128) != 0) {
-         int varPos21 = offset + 126 + buf.getIntLE(offset + 114);
-         int colorFiltersCount = VarInt.peek(buf, varPos21);
-         if (colorFiltersCount < 0) {
-            throw ProtocolException.negativeLength("ColorFilters", colorFiltersCount);
+         int varPosBase21 = buf.getIntLE(offset + 114);
+         if (varPosBase21 < 0 || varPosBase21 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("ColorFilters", varPosBase21, buf.readableBytes());
          }
 
+         int varPos21 = offset + 126 + varPosBase21;
+         int colorFiltersCount = VarInt.peek(buf, varPos21);
+         if (colorFiltersCount < 0) {
+            throw ProtocolException.invalidVarInt("ColorFilters");
+         }
+
+         int varIntLen = VarInt.size(colorFiltersCount);
          if (colorFiltersCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("ColorFilters", colorFiltersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos21);
          obj.colorFilters = new HashMap<>(colorFiltersCount);
          int dictPos = varPos21 + varIntLen;
 
@@ -715,17 +848,22 @@ public class Weather {
       }
 
       if ((nullBits[3] & 1) != 0) {
-         int varPos22 = offset + 126 + buf.getIntLE(offset + 118);
-         int waterTintsCount = VarInt.peek(buf, varPos22);
-         if (waterTintsCount < 0) {
-            throw ProtocolException.negativeLength("WaterTints", waterTintsCount);
+         int varPosBase22 = buf.getIntLE(offset + 118);
+         if (varPosBase22 < 0 || varPosBase22 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("WaterTints", varPosBase22, buf.readableBytes());
          }
 
+         int varPos22 = offset + 126 + varPosBase22;
+         int waterTintsCount = VarInt.peek(buf, varPos22);
+         if (waterTintsCount < 0) {
+            throw ProtocolException.invalidVarInt("WaterTints");
+         }
+
+         int varIntLen = VarInt.size(waterTintsCount);
          if (waterTintsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("WaterTints", waterTintsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos22);
          obj.waterTints = new HashMap<>(waterTintsCount);
          int dictPos = varPos22 + varIntLen;
 
@@ -741,7 +879,12 @@ public class Weather {
       }
 
       if ((nullBits[3] & 2) != 0) {
-         int varPos23 = offset + 126 + buf.getIntLE(offset + 122);
+         int varPosBase23 = buf.getIntLE(offset + 122);
+         if (varPosBase23 < 0 || varPosBase23 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Particle", varPosBase23, buf.readableBytes());
+         }
+
+         int varPos23 = offset + 126 + varPosBase23;
          obj.particle = WeatherParticle.deserialize(buf, varPos23);
       }
 
@@ -753,9 +896,13 @@ public class Weather {
       int maxEnd = 126;
       if ((nullBits[0] & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 30);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 126 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -763,9 +910,13 @@ public class Weather {
 
       if ((nullBits[0] & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 34);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("TagIndexes", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 126 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + arrLen * 4;
+         pos1 += VarInt.size(arrLen) + arrLen * 4;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -773,9 +924,13 @@ public class Weather {
 
       if ((nullBits[0] & 16) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 38);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Stars", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 126 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -783,14 +938,18 @@ public class Weather {
 
       if ((nullBits[0] & 32) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 42);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Moons", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 126 + fieldOffset3;
          int dictLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos3 += 4;
             int sl = VarInt.peek(buf, pos3);
-            pos3 += VarInt.length(buf, pos3) + sl;
+            pos3 += VarInt.size(sl) + sl;
          }
 
          if (pos3 - offset > maxEnd) {
@@ -800,9 +959,13 @@ public class Weather {
 
       if ((nullBits[0] & 64) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 46);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Clouds", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 126 + fieldOffset4;
          int arrLen = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4);
+         pos4 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos4 += Cloud.computeBytesConsumed(buf, pos4);
@@ -815,9 +978,13 @@ public class Weather {
 
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 50);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunlightDampingMultiplier", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 126 + fieldOffset5;
          int dictLen = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5);
+         pos5 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos5 += 4;
@@ -831,9 +998,13 @@ public class Weather {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 54);
+         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunlightColors", fieldOffset6, maxEnd);
+         }
+
          int pos6 = offset + 126 + fieldOffset6;
          int dictLen = VarInt.peek(buf, pos6);
-         pos6 += VarInt.length(buf, pos6);
+         pos6 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos6 += 4;
@@ -847,9 +1018,13 @@ public class Weather {
 
       if ((nullBits[1] & 2) != 0) {
          int fieldOffset7 = buf.getIntLE(offset + 58);
+         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SkyTopColors", fieldOffset7, maxEnd);
+         }
+
          int pos7 = offset + 126 + fieldOffset7;
          int dictLen = VarInt.peek(buf, pos7);
-         pos7 += VarInt.length(buf, pos7);
+         pos7 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos7 += 4;
@@ -863,9 +1038,13 @@ public class Weather {
 
       if ((nullBits[1] & 4) != 0) {
          int fieldOffset8 = buf.getIntLE(offset + 62);
+         if (fieldOffset8 < 0 || fieldOffset8 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SkyBottomColors", fieldOffset8, maxEnd);
+         }
+
          int pos8 = offset + 126 + fieldOffset8;
          int dictLen = VarInt.peek(buf, pos8);
-         pos8 += VarInt.length(buf, pos8);
+         pos8 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos8 += 4;
@@ -879,9 +1058,13 @@ public class Weather {
 
       if ((nullBits[1] & 8) != 0) {
          int fieldOffset9 = buf.getIntLE(offset + 66);
+         if (fieldOffset9 < 0 || fieldOffset9 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SkySunsetColors", fieldOffset9, maxEnd);
+         }
+
          int pos9 = offset + 126 + fieldOffset9;
          int dictLen = VarInt.peek(buf, pos9);
-         pos9 += VarInt.length(buf, pos9);
+         pos9 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos9 += 4;
@@ -895,9 +1078,13 @@ public class Weather {
 
       if ((nullBits[1] & 16) != 0) {
          int fieldOffset10 = buf.getIntLE(offset + 70);
+         if (fieldOffset10 < 0 || fieldOffset10 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunColors", fieldOffset10, maxEnd);
+         }
+
          int pos10 = offset + 126 + fieldOffset10;
          int dictLen = VarInt.peek(buf, pos10);
-         pos10 += VarInt.length(buf, pos10);
+         pos10 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos10 += 4;
@@ -911,9 +1098,13 @@ public class Weather {
 
       if ((nullBits[1] & 32) != 0) {
          int fieldOffset11 = buf.getIntLE(offset + 74);
+         if (fieldOffset11 < 0 || fieldOffset11 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunScales", fieldOffset11, maxEnd);
+         }
+
          int pos11 = offset + 126 + fieldOffset11;
          int dictLen = VarInt.peek(buf, pos11);
-         pos11 += VarInt.length(buf, pos11);
+         pos11 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos11 += 4;
@@ -927,9 +1118,13 @@ public class Weather {
 
       if ((nullBits[1] & 64) != 0) {
          int fieldOffset12 = buf.getIntLE(offset + 78);
+         if (fieldOffset12 < 0 || fieldOffset12 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("SunGlowColors", fieldOffset12, maxEnd);
+         }
+
          int pos12 = offset + 126 + fieldOffset12;
          int dictLen = VarInt.peek(buf, pos12);
-         pos12 += VarInt.length(buf, pos12);
+         pos12 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos12 += 4;
@@ -943,9 +1138,13 @@ public class Weather {
 
       if ((nullBits[1] & 128) != 0) {
          int fieldOffset13 = buf.getIntLE(offset + 82);
+         if (fieldOffset13 < 0 || fieldOffset13 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("MoonColors", fieldOffset13, maxEnd);
+         }
+
          int pos13 = offset + 126 + fieldOffset13;
          int dictLen = VarInt.peek(buf, pos13);
-         pos13 += VarInt.length(buf, pos13);
+         pos13 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos13 += 4;
@@ -959,9 +1158,13 @@ public class Weather {
 
       if ((nullBits[2] & 1) != 0) {
          int fieldOffset14 = buf.getIntLE(offset + 86);
+         if (fieldOffset14 < 0 || fieldOffset14 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("MoonScales", fieldOffset14, maxEnd);
+         }
+
          int pos14 = offset + 126 + fieldOffset14;
          int dictLen = VarInt.peek(buf, pos14);
-         pos14 += VarInt.length(buf, pos14);
+         pos14 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos14 += 4;
@@ -975,9 +1178,13 @@ public class Weather {
 
       if ((nullBits[2] & 2) != 0) {
          int fieldOffset15 = buf.getIntLE(offset + 90);
+         if (fieldOffset15 < 0 || fieldOffset15 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("MoonGlowColors", fieldOffset15, maxEnd);
+         }
+
          int pos15 = offset + 126 + fieldOffset15;
          int dictLen = VarInt.peek(buf, pos15);
-         pos15 += VarInt.length(buf, pos15);
+         pos15 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos15 += 4;
@@ -991,9 +1198,13 @@ public class Weather {
 
       if ((nullBits[2] & 4) != 0) {
          int fieldOffset16 = buf.getIntLE(offset + 94);
+         if (fieldOffset16 < 0 || fieldOffset16 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("FogColors", fieldOffset16, maxEnd);
+         }
+
          int pos16 = offset + 126 + fieldOffset16;
          int dictLen = VarInt.peek(buf, pos16);
-         pos16 += VarInt.length(buf, pos16);
+         pos16 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos16 += 4;
@@ -1007,9 +1218,13 @@ public class Weather {
 
       if ((nullBits[2] & 8) != 0) {
          int fieldOffset17 = buf.getIntLE(offset + 98);
+         if (fieldOffset17 < 0 || fieldOffset17 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("FogHeightFalloffs", fieldOffset17, maxEnd);
+         }
+
          int pos17 = offset + 126 + fieldOffset17;
          int dictLen = VarInt.peek(buf, pos17);
-         pos17 += VarInt.length(buf, pos17);
+         pos17 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos17 += 4;
@@ -1023,9 +1238,13 @@ public class Weather {
 
       if ((nullBits[2] & 16) != 0) {
          int fieldOffset18 = buf.getIntLE(offset + 102);
+         if (fieldOffset18 < 0 || fieldOffset18 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("FogDensities", fieldOffset18, maxEnd);
+         }
+
          int pos18 = offset + 126 + fieldOffset18;
          int dictLen = VarInt.peek(buf, pos18);
-         pos18 += VarInt.length(buf, pos18);
+         pos18 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos18 += 4;
@@ -1039,9 +1258,13 @@ public class Weather {
 
       if ((nullBits[2] & 32) != 0) {
          int fieldOffset19 = buf.getIntLE(offset + 106);
+         if (fieldOffset19 < 0 || fieldOffset19 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("ScreenEffect", fieldOffset19, maxEnd);
+         }
+
          int pos19 = offset + 126 + fieldOffset19;
          int sl = VarInt.peek(buf, pos19);
-         pos19 += VarInt.length(buf, pos19) + sl;
+         pos19 += VarInt.size(sl) + sl;
          if (pos19 - offset > maxEnd) {
             maxEnd = pos19 - offset;
          }
@@ -1049,9 +1272,13 @@ public class Weather {
 
       if ((nullBits[2] & 64) != 0) {
          int fieldOffset20 = buf.getIntLE(offset + 110);
+         if (fieldOffset20 < 0 || fieldOffset20 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("ScreenEffectColors", fieldOffset20, maxEnd);
+         }
+
          int pos20 = offset + 126 + fieldOffset20;
          int dictLen = VarInt.peek(buf, pos20);
-         pos20 += VarInt.length(buf, pos20);
+         pos20 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos20 += 4;
@@ -1065,9 +1292,13 @@ public class Weather {
 
       if ((nullBits[2] & 128) != 0) {
          int fieldOffset21 = buf.getIntLE(offset + 114);
+         if (fieldOffset21 < 0 || fieldOffset21 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("ColorFilters", fieldOffset21, maxEnd);
+         }
+
          int pos21 = offset + 126 + fieldOffset21;
          int dictLen = VarInt.peek(buf, pos21);
-         pos21 += VarInt.length(buf, pos21);
+         pos21 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos21 += 4;
@@ -1081,9 +1312,13 @@ public class Weather {
 
       if ((nullBits[3] & 1) != 0) {
          int fieldOffset22 = buf.getIntLE(offset + 118);
+         if (fieldOffset22 < 0 || fieldOffset22 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("WaterTints", fieldOffset22, maxEnd);
+         }
+
          int pos22 = offset + 126 + fieldOffset22;
          int dictLen = VarInt.peek(buf, pos22);
-         pos22 += VarInt.length(buf, pos22);
+         pos22 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos22 += 4;
@@ -1097,6 +1332,10 @@ public class Weather {
 
       if ((nullBits[3] & 2) != 0) {
          int fieldOffset23 = buf.getIntLE(offset + 122);
+         if (fieldOffset23 < 0 || fieldOffset23 > buf.writerIndex() - offset - 126) {
+            throw ProtocolException.invalidOffset("Particle", fieldOffset23, maxEnd);
+         }
+
          int pos23 = offset + 126 + fieldOffset23;
          pos23 += WeatherParticle.computeBytesConsumed(buf, pos23);
          if (pos23 - offset > maxEnd) {
@@ -1744,15 +1983,11 @@ public class Weather {
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 4);
       if ((nullBits[0] & 4) != 0) {
          int idOffset = buffer.getIntLE(offset + 30);
-         if (idOffset < 0) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
          int pos = offset + 126 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -1762,7 +1997,7 @@ public class Weather {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -1771,15 +2006,11 @@ public class Weather {
 
       if ((nullBits[0] & 8) != 0) {
          int tagIndexesOffset = buffer.getIntLE(offset + 34);
-         if (tagIndexesOffset < 0) {
+         if (tagIndexesOffset < 0 || tagIndexesOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for TagIndexes");
          }
 
          int pos = offset + 126 + tagIndexesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for TagIndexes");
-         }
-
          int tagIndexesCount = VarInt.peek(buffer, pos);
          if (tagIndexesCount < 0) {
             return ValidationResult.error("Invalid array count for TagIndexes");
@@ -1789,7 +2020,7 @@ public class Weather {
             return ValidationResult.error("TagIndexes exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(tagIndexesCount);
          pos += tagIndexesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading TagIndexes");
@@ -1798,15 +2029,11 @@ public class Weather {
 
       if ((nullBits[0] & 16) != 0) {
          int starsOffset = buffer.getIntLE(offset + 38);
-         if (starsOffset < 0) {
+         if (starsOffset < 0 || starsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for Stars");
          }
 
          int pos = offset + 126 + starsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Stars");
-         }
-
          int starsLen = VarInt.peek(buffer, pos);
          if (starsLen < 0) {
             return ValidationResult.error("Invalid string length for Stars");
@@ -1816,7 +2043,7 @@ public class Weather {
             return ValidationResult.error("Stars exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(starsLen);
          pos += starsLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Stars");
@@ -1825,15 +2052,11 @@ public class Weather {
 
       if ((nullBits[0] & 32) != 0) {
          int moonsOffset = buffer.getIntLE(offset + 42);
-         if (moonsOffset < 0) {
+         if (moonsOffset < 0 || moonsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for Moons");
          }
 
          int pos = offset + 126 + moonsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Moons");
-         }
-
          int moonsCount = VarInt.peek(buffer, pos);
          if (moonsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Moons");
@@ -1843,7 +2066,7 @@ public class Weather {
             return ValidationResult.error("Moons exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(moonsCount);
 
          for (int i = 0; i < moonsCount; i++) {
             pos += 4;
@@ -1860,7 +2083,7 @@ public class Weather {
                return ValidationResult.error("value exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(valueLen);
             pos += valueLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading value");
@@ -1870,15 +2093,11 @@ public class Weather {
 
       if ((nullBits[0] & 64) != 0) {
          int cloudsOffset = buffer.getIntLE(offset + 46);
-         if (cloudsOffset < 0) {
+         if (cloudsOffset < 0 || cloudsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for Clouds");
          }
 
          int pos = offset + 126 + cloudsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Clouds");
-         }
-
          int cloudsCount = VarInt.peek(buffer, pos);
          if (cloudsCount < 0) {
             return ValidationResult.error("Invalid array count for Clouds");
@@ -1888,7 +2107,7 @@ public class Weather {
             return ValidationResult.error("Clouds exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(cloudsCount);
 
          for (int i = 0; i < cloudsCount; i++) {
             ValidationResult structResult = Cloud.validateStructure(buffer, pos);
@@ -1902,15 +2121,11 @@ public class Weather {
 
       if ((nullBits[0] & 128) != 0) {
          int sunlightDampingMultiplierOffset = buffer.getIntLE(offset + 50);
-         if (sunlightDampingMultiplierOffset < 0) {
+         if (sunlightDampingMultiplierOffset < 0 || sunlightDampingMultiplierOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SunlightDampingMultiplier");
          }
 
          int pos = offset + 126 + sunlightDampingMultiplierOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SunlightDampingMultiplier");
-         }
-
          int sunlightDampingMultiplierCount = VarInt.peek(buffer, pos);
          if (sunlightDampingMultiplierCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SunlightDampingMultiplier");
@@ -1920,7 +2135,7 @@ public class Weather {
             return ValidationResult.error("SunlightDampingMultiplier exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(sunlightDampingMultiplierCount);
 
          for (int i = 0; i < sunlightDampingMultiplierCount; i++) {
             pos += 4;
@@ -1937,15 +2152,11 @@ public class Weather {
 
       if ((nullBits[1] & 1) != 0) {
          int sunlightColorsOffset = buffer.getIntLE(offset + 54);
-         if (sunlightColorsOffset < 0) {
+         if (sunlightColorsOffset < 0 || sunlightColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SunlightColors");
          }
 
          int pos = offset + 126 + sunlightColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SunlightColors");
-         }
-
          int sunlightColorsCount = VarInt.peek(buffer, pos);
          if (sunlightColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SunlightColors");
@@ -1955,7 +2166,7 @@ public class Weather {
             return ValidationResult.error("SunlightColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(sunlightColorsCount);
 
          for (int i = 0; i < sunlightColorsCount; i++) {
             pos += 4;
@@ -1969,15 +2180,11 @@ public class Weather {
 
       if ((nullBits[1] & 2) != 0) {
          int skyTopColorsOffset = buffer.getIntLE(offset + 58);
-         if (skyTopColorsOffset < 0) {
+         if (skyTopColorsOffset < 0 || skyTopColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SkyTopColors");
          }
 
          int pos = offset + 126 + skyTopColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SkyTopColors");
-         }
-
          int skyTopColorsCount = VarInt.peek(buffer, pos);
          if (skyTopColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SkyTopColors");
@@ -1987,7 +2194,7 @@ public class Weather {
             return ValidationResult.error("SkyTopColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(skyTopColorsCount);
 
          for (int i = 0; i < skyTopColorsCount; i++) {
             pos += 4;
@@ -2001,15 +2208,11 @@ public class Weather {
 
       if ((nullBits[1] & 4) != 0) {
          int skyBottomColorsOffset = buffer.getIntLE(offset + 62);
-         if (skyBottomColorsOffset < 0) {
+         if (skyBottomColorsOffset < 0 || skyBottomColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SkyBottomColors");
          }
 
          int pos = offset + 126 + skyBottomColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SkyBottomColors");
-         }
-
          int skyBottomColorsCount = VarInt.peek(buffer, pos);
          if (skyBottomColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SkyBottomColors");
@@ -2019,7 +2222,7 @@ public class Weather {
             return ValidationResult.error("SkyBottomColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(skyBottomColorsCount);
 
          for (int i = 0; i < skyBottomColorsCount; i++) {
             pos += 4;
@@ -2033,15 +2236,11 @@ public class Weather {
 
       if ((nullBits[1] & 8) != 0) {
          int skySunsetColorsOffset = buffer.getIntLE(offset + 66);
-         if (skySunsetColorsOffset < 0) {
+         if (skySunsetColorsOffset < 0 || skySunsetColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SkySunsetColors");
          }
 
          int pos = offset + 126 + skySunsetColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SkySunsetColors");
-         }
-
          int skySunsetColorsCount = VarInt.peek(buffer, pos);
          if (skySunsetColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SkySunsetColors");
@@ -2051,7 +2250,7 @@ public class Weather {
             return ValidationResult.error("SkySunsetColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(skySunsetColorsCount);
 
          for (int i = 0; i < skySunsetColorsCount; i++) {
             pos += 4;
@@ -2065,15 +2264,11 @@ public class Weather {
 
       if ((nullBits[1] & 16) != 0) {
          int sunColorsOffset = buffer.getIntLE(offset + 70);
-         if (sunColorsOffset < 0) {
+         if (sunColorsOffset < 0 || sunColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SunColors");
          }
 
          int pos = offset + 126 + sunColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SunColors");
-         }
-
          int sunColorsCount = VarInt.peek(buffer, pos);
          if (sunColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SunColors");
@@ -2083,7 +2278,7 @@ public class Weather {
             return ValidationResult.error("SunColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(sunColorsCount);
 
          for (int i = 0; i < sunColorsCount; i++) {
             pos += 4;
@@ -2097,15 +2292,11 @@ public class Weather {
 
       if ((nullBits[1] & 32) != 0) {
          int sunScalesOffset = buffer.getIntLE(offset + 74);
-         if (sunScalesOffset < 0) {
+         if (sunScalesOffset < 0 || sunScalesOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SunScales");
          }
 
          int pos = offset + 126 + sunScalesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SunScales");
-         }
-
          int sunScalesCount = VarInt.peek(buffer, pos);
          if (sunScalesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SunScales");
@@ -2115,7 +2306,7 @@ public class Weather {
             return ValidationResult.error("SunScales exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(sunScalesCount);
 
          for (int i = 0; i < sunScalesCount; i++) {
             pos += 4;
@@ -2132,15 +2323,11 @@ public class Weather {
 
       if ((nullBits[1] & 64) != 0) {
          int sunGlowColorsOffset = buffer.getIntLE(offset + 78);
-         if (sunGlowColorsOffset < 0) {
+         if (sunGlowColorsOffset < 0 || sunGlowColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for SunGlowColors");
          }
 
          int pos = offset + 126 + sunGlowColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for SunGlowColors");
-         }
-
          int sunGlowColorsCount = VarInt.peek(buffer, pos);
          if (sunGlowColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for SunGlowColors");
@@ -2150,7 +2337,7 @@ public class Weather {
             return ValidationResult.error("SunGlowColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(sunGlowColorsCount);
 
          for (int i = 0; i < sunGlowColorsCount; i++) {
             pos += 4;
@@ -2164,15 +2351,11 @@ public class Weather {
 
       if ((nullBits[1] & 128) != 0) {
          int moonColorsOffset = buffer.getIntLE(offset + 82);
-         if (moonColorsOffset < 0) {
+         if (moonColorsOffset < 0 || moonColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for MoonColors");
          }
 
          int pos = offset + 126 + moonColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for MoonColors");
-         }
-
          int moonColorsCount = VarInt.peek(buffer, pos);
          if (moonColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for MoonColors");
@@ -2182,7 +2365,7 @@ public class Weather {
             return ValidationResult.error("MoonColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(moonColorsCount);
 
          for (int i = 0; i < moonColorsCount; i++) {
             pos += 4;
@@ -2196,15 +2379,11 @@ public class Weather {
 
       if ((nullBits[2] & 1) != 0) {
          int moonScalesOffset = buffer.getIntLE(offset + 86);
-         if (moonScalesOffset < 0) {
+         if (moonScalesOffset < 0 || moonScalesOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for MoonScales");
          }
 
          int pos = offset + 126 + moonScalesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for MoonScales");
-         }
-
          int moonScalesCount = VarInt.peek(buffer, pos);
          if (moonScalesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for MoonScales");
@@ -2214,7 +2393,7 @@ public class Weather {
             return ValidationResult.error("MoonScales exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(moonScalesCount);
 
          for (int i = 0; i < moonScalesCount; i++) {
             pos += 4;
@@ -2231,15 +2410,11 @@ public class Weather {
 
       if ((nullBits[2] & 2) != 0) {
          int moonGlowColorsOffset = buffer.getIntLE(offset + 90);
-         if (moonGlowColorsOffset < 0) {
+         if (moonGlowColorsOffset < 0 || moonGlowColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for MoonGlowColors");
          }
 
          int pos = offset + 126 + moonGlowColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for MoonGlowColors");
-         }
-
          int moonGlowColorsCount = VarInt.peek(buffer, pos);
          if (moonGlowColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for MoonGlowColors");
@@ -2249,7 +2424,7 @@ public class Weather {
             return ValidationResult.error("MoonGlowColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(moonGlowColorsCount);
 
          for (int i = 0; i < moonGlowColorsCount; i++) {
             pos += 4;
@@ -2263,15 +2438,11 @@ public class Weather {
 
       if ((nullBits[2] & 4) != 0) {
          int fogColorsOffset = buffer.getIntLE(offset + 94);
-         if (fogColorsOffset < 0) {
+         if (fogColorsOffset < 0 || fogColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for FogColors");
          }
 
          int pos = offset + 126 + fogColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FogColors");
-         }
-
          int fogColorsCount = VarInt.peek(buffer, pos);
          if (fogColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for FogColors");
@@ -2281,7 +2452,7 @@ public class Weather {
             return ValidationResult.error("FogColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fogColorsCount);
 
          for (int i = 0; i < fogColorsCount; i++) {
             pos += 4;
@@ -2295,15 +2466,11 @@ public class Weather {
 
       if ((nullBits[2] & 8) != 0) {
          int fogHeightFalloffsOffset = buffer.getIntLE(offset + 98);
-         if (fogHeightFalloffsOffset < 0) {
+         if (fogHeightFalloffsOffset < 0 || fogHeightFalloffsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for FogHeightFalloffs");
          }
 
          int pos = offset + 126 + fogHeightFalloffsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FogHeightFalloffs");
-         }
-
          int fogHeightFalloffsCount = VarInt.peek(buffer, pos);
          if (fogHeightFalloffsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for FogHeightFalloffs");
@@ -2313,7 +2480,7 @@ public class Weather {
             return ValidationResult.error("FogHeightFalloffs exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fogHeightFalloffsCount);
 
          for (int i = 0; i < fogHeightFalloffsCount; i++) {
             pos += 4;
@@ -2330,15 +2497,11 @@ public class Weather {
 
       if ((nullBits[2] & 16) != 0) {
          int fogDensitiesOffset = buffer.getIntLE(offset + 102);
-         if (fogDensitiesOffset < 0) {
+         if (fogDensitiesOffset < 0 || fogDensitiesOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for FogDensities");
          }
 
          int pos = offset + 126 + fogDensitiesOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for FogDensities");
-         }
-
          int fogDensitiesCount = VarInt.peek(buffer, pos);
          if (fogDensitiesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for FogDensities");
@@ -2348,7 +2511,7 @@ public class Weather {
             return ValidationResult.error("FogDensities exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(fogDensitiesCount);
 
          for (int i = 0; i < fogDensitiesCount; i++) {
             pos += 4;
@@ -2365,15 +2528,11 @@ public class Weather {
 
       if ((nullBits[2] & 32) != 0) {
          int screenEffectOffset = buffer.getIntLE(offset + 106);
-         if (screenEffectOffset < 0) {
+         if (screenEffectOffset < 0 || screenEffectOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for ScreenEffect");
          }
 
          int pos = offset + 126 + screenEffectOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ScreenEffect");
-         }
-
          int screenEffectLen = VarInt.peek(buffer, pos);
          if (screenEffectLen < 0) {
             return ValidationResult.error("Invalid string length for ScreenEffect");
@@ -2383,7 +2542,7 @@ public class Weather {
             return ValidationResult.error("ScreenEffect exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(screenEffectLen);
          pos += screenEffectLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ScreenEffect");
@@ -2392,15 +2551,11 @@ public class Weather {
 
       if ((nullBits[2] & 64) != 0) {
          int screenEffectColorsOffset = buffer.getIntLE(offset + 110);
-         if (screenEffectColorsOffset < 0) {
+         if (screenEffectColorsOffset < 0 || screenEffectColorsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for ScreenEffectColors");
          }
 
          int pos = offset + 126 + screenEffectColorsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ScreenEffectColors");
-         }
-
          int screenEffectColorsCount = VarInt.peek(buffer, pos);
          if (screenEffectColorsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for ScreenEffectColors");
@@ -2410,7 +2565,7 @@ public class Weather {
             return ValidationResult.error("ScreenEffectColors exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(screenEffectColorsCount);
 
          for (int i = 0; i < screenEffectColorsCount; i++) {
             pos += 4;
@@ -2424,15 +2579,11 @@ public class Weather {
 
       if ((nullBits[2] & 128) != 0) {
          int colorFiltersOffset = buffer.getIntLE(offset + 114);
-         if (colorFiltersOffset < 0) {
+         if (colorFiltersOffset < 0 || colorFiltersOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for ColorFilters");
          }
 
          int pos = offset + 126 + colorFiltersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ColorFilters");
-         }
-
          int colorFiltersCount = VarInt.peek(buffer, pos);
          if (colorFiltersCount < 0) {
             return ValidationResult.error("Invalid dictionary count for ColorFilters");
@@ -2442,7 +2593,7 @@ public class Weather {
             return ValidationResult.error("ColorFilters exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(colorFiltersCount);
 
          for (int i = 0; i < colorFiltersCount; i++) {
             pos += 4;
@@ -2456,15 +2607,11 @@ public class Weather {
 
       if ((nullBits[3] & 1) != 0) {
          int waterTintsOffset = buffer.getIntLE(offset + 118);
-         if (waterTintsOffset < 0) {
+         if (waterTintsOffset < 0 || waterTintsOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for WaterTints");
          }
 
          int pos = offset + 126 + waterTintsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for WaterTints");
-         }
-
          int waterTintsCount = VarInt.peek(buffer, pos);
          if (waterTintsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for WaterTints");
@@ -2474,7 +2621,7 @@ public class Weather {
             return ValidationResult.error("WaterTints exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(waterTintsCount);
 
          for (int i = 0; i < waterTintsCount; i++) {
             pos += 4;
@@ -2488,15 +2635,11 @@ public class Weather {
 
       if ((nullBits[3] & 2) != 0) {
          int particleOffset = buffer.getIntLE(offset + 122);
-         if (particleOffset < 0) {
+         if (particleOffset < 0 || particleOffset > buffer.writerIndex() - offset - 126) {
             return ValidationResult.error("Invalid offset for Particle");
          }
 
          int pos = offset + 126 + particleOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Particle");
-         }
-
          ValidationResult particleResult = WeatherParticle.validateStructure(buffer, pos);
          if (!particleResult.isValid()) {
             return ValidationResult.error("Invalid Particle: " + particleResult.error());

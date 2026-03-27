@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -36,6 +37,10 @@ public class ModelTransform {
 
    @Nonnull
    public static ModelTransform deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 49) {
+         throw ProtocolException.bufferTooSmall("ModelTransform", 49, buf.readableBytes() - offset);
+      }
+
       ModelTransform obj = new ModelTransform();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
@@ -96,7 +101,12 @@ public class ModelTransform {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 49 ? ValidationResult.error("Buffer too small: expected at least 49 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 49) {
+         return ValidationResult.error("Buffer too small: expected at least 49 bytes");
+      }
+
+      byte nullBits = buffer.getByte(offset);
+      return ValidationResult.OK;
    }
 
    public ModelTransform clone() {

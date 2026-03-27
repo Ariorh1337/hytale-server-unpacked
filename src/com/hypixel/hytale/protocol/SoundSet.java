@@ -42,49 +42,72 @@ public class SoundSet {
 
    @Nonnull
    public static SoundSet deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("SoundSet", 10, buf.readableBytes() - offset);
+      }
+
       SoundSet obj = new SoundSet();
       byte nullBits = buf.getByte(offset);
       obj.category = SoundCategory.fromValue(buf.getByte(offset + 1));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 10 + buf.getIntLE(offset + 2);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+         int varPosBase0 = buf.getIntLE(offset + 2);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 10 + varPosBase0;
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.invalidVarInt("Id");
+         }
+
+         int idVarIntLen = VarInt.size(idLen);
          if (idLen > 4096000) {
             throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
          }
 
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 10 + buf.getIntLE(offset + 6);
-         int soundsCount = VarInt.peek(buf, varPos1);
-         if (soundsCount < 0) {
-            throw ProtocolException.negativeLength("Sounds", soundsCount);
+         int varPosBase1 = buf.getIntLE(offset + 6);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Sounds", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 10 + varPosBase1;
+         int soundsCount = VarInt.peek(buf, varPos1);
+         if (soundsCount < 0) {
+            throw ProtocolException.invalidVarInt("Sounds");
+         }
+
+         int varIntLen = VarInt.size(soundsCount);
          if (soundsCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Sounds", soundsCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.sounds = new HashMap<>(soundsCount);
          int dictPos = varPos1 + varIntLen;
 
          for (int i = 0; i < soundsCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             int val = buf.getIntLE(dictPos);
@@ -103,9 +126,13 @@ public class SoundSet {
       int maxEnd = 10;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 10 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -113,13 +140,17 @@ public class SoundSet {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Sounds", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 10 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1) + sl;
+            pos1 += VarInt.size(sl) + sl;
             pos1 += 4;
          }
 
@@ -198,17 +229,18 @@ public class SoundSet {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 5) {
+         return ValidationResult.error("Invalid SoundCategory value for Category");
+      }
+
       if ((nullBits & 1) != 0) {
-         int idOffset = buffer.getIntLE(offset + 2);
-         if (idOffset < 0) {
+         v = buffer.getIntLE(offset + 2);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 10 + idOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Id");
-         }
-
+         int pos = offset + 10 + v;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -218,7 +250,7 @@ public class SoundSet {
             return ValidationResult.error("Id exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(idLen);
          pos += idLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Id");
@@ -226,16 +258,12 @@ public class SoundSet {
       }
 
       if ((nullBits & 2) != 0) {
-         int soundsOffset = buffer.getIntLE(offset + 6);
-         if (soundsOffset < 0) {
+         v = buffer.getIntLE(offset + 6);
+         if (v < 0 || v > buffer.writerIndex() - offset - 10) {
             return ValidationResult.error("Invalid offset for Sounds");
          }
 
-         int pos = offset + 10 + soundsOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Sounds");
-         }
-
+         int pos = offset + 10 + v;
          int soundsCount = VarInt.peek(buffer, pos);
          if (soundsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Sounds");
@@ -245,7 +273,7 @@ public class SoundSet {
             return ValidationResult.error("Sounds exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(soundsCount);
 
          for (int i = 0; i < soundsCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -257,7 +285,7 @@ public class SoundSet {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");

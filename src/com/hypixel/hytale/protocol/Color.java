@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -32,6 +33,10 @@ public class Color {
 
    @Nonnull
    public static Color deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 3) {
+         throw ProtocolException.bufferTooSmall("Color", 3, buf.readableBytes() - offset);
+      }
+
       Color obj = new Color();
       obj.red = buf.getByte(offset + 0);
       obj.green = buf.getByte(offset + 1);

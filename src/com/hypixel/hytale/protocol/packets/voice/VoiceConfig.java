@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol.packets.voice;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -72,6 +73,10 @@ public class VoiceConfig implements Packet, ToClientPacket {
 
    @Nonnull
    public static VoiceConfig deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("VoiceConfig", 17, buf.readableBytes() - offset);
+      }
+
       VoiceConfig obj = new VoiceConfig();
       obj.voiceEnabled = buf.getByte(offset + 0) != 0;
       obj.codec = VoiceCodec.fromValue(buf.getByte(offset + 1));
@@ -106,7 +111,12 @@ public class VoiceConfig implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 17 ? ValidationResult.error("Buffer too small: expected at least 17 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 17) {
+         return ValidationResult.error("Buffer too small: expected at least 17 bytes");
+      }
+
+      int v = buffer.getByte(offset + 1) & 255;
+      return v >= 1 ? ValidationResult.error("Invalid VoiceCodec value for Codec") : ValidationResult.OK;
    }
 
    public VoiceConfig clone() {

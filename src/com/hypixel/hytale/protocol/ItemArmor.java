@@ -66,22 +66,31 @@ public class ItemArmor {
 
    @Nonnull
    public static ItemArmor deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 30) {
+         throw ProtocolException.bufferTooSmall("ItemArmor", 30, buf.readableBytes() - offset);
+      }
+
       ItemArmor obj = new ItemArmor();
       byte nullBits = buf.getByte(offset);
       obj.armorSlot = ItemArmorSlot.fromValue(buf.getByte(offset + 1));
       obj.baseDamageResistance = buf.getDoubleLE(offset + 2);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 30 + buf.getIntLE(offset + 10);
-         int cosmeticsToHideCount = VarInt.peek(buf, varPos0);
-         if (cosmeticsToHideCount < 0) {
-            throw ProtocolException.negativeLength("CosmeticsToHide", cosmeticsToHideCount);
+         int varPosBase0 = buf.getIntLE(offset + 10);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("CosmeticsToHide", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 30 + varPosBase0;
+         int cosmeticsToHideCount = VarInt.peek(buf, varPos0);
+         if (cosmeticsToHideCount < 0) {
+            throw ProtocolException.invalidVarInt("CosmeticsToHide");
+         }
+
+         int varIntLen = VarInt.size(cosmeticsToHideCount);
          if (cosmeticsToHideCount > 4096000) {
             throw ProtocolException.arrayTooLong("CosmeticsToHide", cosmeticsToHideCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          if (varPos0 + varIntLen + cosmeticsToHideCount * 1L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("CosmeticsToHide", varPos0 + varIntLen + cosmeticsToHideCount * 1, buf.readableBytes());
          }
@@ -96,17 +105,22 @@ public class ItemArmor {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 30 + buf.getIntLE(offset + 14);
-         int statModifiersCount = VarInt.peek(buf, varPos1);
-         if (statModifiersCount < 0) {
-            throw ProtocolException.negativeLength("StatModifiers", statModifiersCount);
+         int varPosBase1 = buf.getIntLE(offset + 14);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("StatModifiers", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 30 + varPosBase1;
+         int statModifiersCount = VarInt.peek(buf, varPos1);
+         if (statModifiersCount < 0) {
+            throw ProtocolException.invalidVarInt("StatModifiers");
+         }
+
+         int varIntLen = VarInt.size(statModifiersCount);
          if (statModifiersCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("StatModifiers", statModifiersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos1);
          obj.statModifiers = new HashMap<>(statModifiersCount);
          int dictPos = varPos1 + varIntLen;
 
@@ -115,14 +129,14 @@ public class ItemArmor {
             dictPos += 4;
             int valLen = VarInt.peek(buf, dictPos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 64) {
                throw ProtocolException.arrayTooLong("val", valLen, 64);
             }
 
-            int valVarLen = VarInt.length(buf, dictPos);
             if (dictPos + valVarLen + valLen * 6L > buf.readableBytes()) {
                throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 6, buf.readableBytes());
             }
@@ -142,43 +156,52 @@ public class ItemArmor {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 30 + buf.getIntLE(offset + 18);
-         int damageResistanceCount = VarInt.peek(buf, varPos2);
-         if (damageResistanceCount < 0) {
-            throw ProtocolException.negativeLength("DamageResistance", damageResistanceCount);
+         int varPosBase2 = buf.getIntLE(offset + 18);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("DamageResistance", varPosBase2, buf.readableBytes());
          }
 
+         int varPos2 = offset + 30 + varPosBase2;
+         int damageResistanceCount = VarInt.peek(buf, varPos2);
+         if (damageResistanceCount < 0) {
+            throw ProtocolException.invalidVarInt("DamageResistance");
+         }
+
+         int varIntLen = VarInt.size(damageResistanceCount);
          if (damageResistanceCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("DamageResistance", damageResistanceCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos2);
          obj.damageResistance = new HashMap<>(damageResistanceCount);
          int dictPos = varPos2 + varIntLen;
 
          for (int i = 0; i < damageResistanceCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             int valLen = VarInt.peek(buf, dictPos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 64) {
                throw ProtocolException.arrayTooLong("val", valLen, 64);
             }
 
-            int valVarLen = VarInt.length(buf, dictPos);
             if (dictPos + valVarLen + valLen * 6L > buf.readableBytes()) {
                throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 6, buf.readableBytes());
             }
@@ -198,43 +221,52 @@ public class ItemArmor {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 30 + buf.getIntLE(offset + 22);
-         int damageEnhancementCount = VarInt.peek(buf, varPos3);
-         if (damageEnhancementCount < 0) {
-            throw ProtocolException.negativeLength("DamageEnhancement", damageEnhancementCount);
+         int varPosBase3 = buf.getIntLE(offset + 22);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("DamageEnhancement", varPosBase3, buf.readableBytes());
          }
 
+         int varPos3 = offset + 30 + varPosBase3;
+         int damageEnhancementCount = VarInt.peek(buf, varPos3);
+         if (damageEnhancementCount < 0) {
+            throw ProtocolException.invalidVarInt("DamageEnhancement");
+         }
+
+         int varIntLen = VarInt.size(damageEnhancementCount);
          if (damageEnhancementCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("DamageEnhancement", damageEnhancementCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos3);
          obj.damageEnhancement = new HashMap<>(damageEnhancementCount);
          int dictPos = varPos3 + varIntLen;
 
          for (int i = 0; i < damageEnhancementCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             int valLen = VarInt.peek(buf, dictPos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 64) {
                throw ProtocolException.arrayTooLong("val", valLen, 64);
             }
 
-            int valVarLen = VarInt.length(buf, dictPos);
             if (dictPos + valVarLen + valLen * 6L > buf.readableBytes()) {
                throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 6, buf.readableBytes());
             }
@@ -254,43 +286,52 @@ public class ItemArmor {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 30 + buf.getIntLE(offset + 26);
-         int damageClassEnhancementCount = VarInt.peek(buf, varPos4);
-         if (damageClassEnhancementCount < 0) {
-            throw ProtocolException.negativeLength("DamageClassEnhancement", damageClassEnhancementCount);
+         int varPosBase4 = buf.getIntLE(offset + 26);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("DamageClassEnhancement", varPosBase4, buf.readableBytes());
          }
 
+         int varPos4 = offset + 30 + varPosBase4;
+         int damageClassEnhancementCount = VarInt.peek(buf, varPos4);
+         if (damageClassEnhancementCount < 0) {
+            throw ProtocolException.invalidVarInt("DamageClassEnhancement");
+         }
+
+         int varIntLen = VarInt.size(damageClassEnhancementCount);
          if (damageClassEnhancementCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("DamageClassEnhancement", damageClassEnhancementCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos4);
          obj.damageClassEnhancement = new HashMap<>(damageClassEnhancementCount);
          int dictPos = varPos4 + varIntLen;
 
          for (int i = 0; i < damageClassEnhancementCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             int valLen = VarInt.peek(buf, dictPos);
             if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+               throw ProtocolException.invalidVarInt("val");
             }
 
+            int valVarLen = VarInt.size(valLen);
             if (valLen > 64) {
                throw ProtocolException.arrayTooLong("val", valLen, 64);
             }
 
-            int valVarLen = VarInt.length(buf, dictPos);
             if (dictPos + valVarLen + valLen * 6L > buf.readableBytes()) {
                throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 6, buf.readableBytes());
             }
@@ -317,9 +358,13 @@ public class ItemArmor {
       int maxEnd = 30;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 10);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("CosmeticsToHide", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 30 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + arrLen * 1;
+         pos0 += VarInt.size(arrLen) + arrLen * 1;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -327,14 +372,18 @@ public class ItemArmor {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 14);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("StatModifiers", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 30 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 += 4;
             int al = VarInt.peek(buf, pos1);
-            pos1 += VarInt.length(buf, pos1);
+            pos1 += VarInt.size(al);
 
             for (int j = 0; j < al; j++) {
                pos1 += Modifier.computeBytesConsumed(buf, pos1);
@@ -348,15 +397,19 @@ public class ItemArmor {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 18);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("DamageResistance", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 30 + fieldOffset2;
          int dictLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos2);
-            pos2 += VarInt.length(buf, pos2) + sl;
+            pos2 += VarInt.size(sl) + sl;
             sl = VarInt.peek(buf, pos2);
-            pos2 += VarInt.length(buf, pos2);
+            pos2 += VarInt.size(sl);
 
             for (int j = 0; j < sl; j++) {
                pos2 += Modifier.computeBytesConsumed(buf, pos2);
@@ -370,15 +423,19 @@ public class ItemArmor {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 22);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("DamageEnhancement", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 30 + fieldOffset3;
          int dictLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3);
+         pos3 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos3);
-            pos3 += VarInt.length(buf, pos3) + sl;
+            pos3 += VarInt.size(sl) + sl;
             sl = VarInt.peek(buf, pos3);
-            pos3 += VarInt.length(buf, pos3);
+            pos3 += VarInt.size(sl);
 
             for (int j = 0; j < sl; j++) {
                pos3 += Modifier.computeBytesConsumed(buf, pos3);
@@ -392,15 +449,19 @@ public class ItemArmor {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 26);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 30) {
+            throw ProtocolException.invalidOffset("DamageClassEnhancement", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 30 + fieldOffset4;
          int dictLen = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4);
+         pos4 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos4);
-            pos4 += VarInt.length(buf, pos4) + sl;
+            pos4 += VarInt.size(sl) + sl;
             sl = VarInt.peek(buf, pos4);
-            pos4 += VarInt.length(buf, pos4);
+            pos4 += VarInt.size(sl);
 
             for (int j = 0; j < sl; j++) {
                pos4 += Modifier.computeBytesConsumed(buf, pos4);
@@ -603,17 +664,18 @@ public class ItemArmor {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 4) {
+         return ValidationResult.error("Invalid ItemArmorSlot value for ArmorSlot");
+      }
+
       if ((nullBits & 1) != 0) {
-         int cosmeticsToHideOffset = buffer.getIntLE(offset + 10);
-         if (cosmeticsToHideOffset < 0) {
+         v = buffer.getIntLE(offset + 10);
+         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for CosmeticsToHide");
          }
 
-         int pos = offset + 30 + cosmeticsToHideOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for CosmeticsToHide");
-         }
-
+         int pos = offset + 30 + v;
          int cosmeticsToHideCount = VarInt.peek(buffer, pos);
          if (cosmeticsToHideCount < 0) {
             return ValidationResult.error("Invalid array count for CosmeticsToHide");
@@ -623,24 +685,28 @@ public class ItemArmor {
             return ValidationResult.error("CosmeticsToHide exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
-         pos += cosmeticsToHideCount * 1;
-         if (pos > buffer.writerIndex()) {
+         pos += VarInt.size(cosmeticsToHideCount);
+         if (pos + cosmeticsToHideCount * 1L > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading CosmeticsToHide");
+         }
+
+         for (int i = 0; i < cosmeticsToHideCount; i++) {
+            int vx = buffer.getByte(pos) & 255;
+            if (vx >= 13) {
+               return ValidationResult.error("Invalid Cosmetic value for CosmeticsToHide[i]");
+            }
+
+            pos++;
          }
       }
 
       if ((nullBits & 2) != 0) {
-         int statModifiersOffset = buffer.getIntLE(offset + 14);
-         if (statModifiersOffset < 0) {
+         v = buffer.getIntLE(offset + 14);
+         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for StatModifiers");
          }
 
-         int pos = offset + 30 + statModifiersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for StatModifiers");
-         }
-
+         int pos = offset + 30 + v;
          int statModifiersCount = VarInt.peek(buffer, pos);
          if (statModifiersCount < 0) {
             return ValidationResult.error("Invalid dictionary count for StatModifiers");
@@ -650,7 +716,7 @@ public class ItemArmor {
             return ValidationResult.error("StatModifiers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(statModifiersCount);
 
          for (int i = 0; i < statModifiersCount; i++) {
             pos += 4;
@@ -663,7 +729,7 @@ public class ItemArmor {
                return ValidationResult.error("Invalid array count for value");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(valueArrCount);
 
             for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
                pos += 6;
@@ -672,16 +738,12 @@ public class ItemArmor {
       }
 
       if ((nullBits & 4) != 0) {
-         int damageResistanceOffset = buffer.getIntLE(offset + 18);
-         if (damageResistanceOffset < 0) {
+         v = buffer.getIntLE(offset + 18);
+         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for DamageResistance");
          }
 
-         int pos = offset + 30 + damageResistanceOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DamageResistance");
-         }
-
+         int pos = offset + 30 + v;
          int damageResistanceCount = VarInt.peek(buffer, pos);
          if (damageResistanceCount < 0) {
             return ValidationResult.error("Invalid dictionary count for DamageResistance");
@@ -691,7 +753,7 @@ public class ItemArmor {
             return ValidationResult.error("DamageResistance exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(damageResistanceCount);
 
          for (int i = 0; i < damageResistanceCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -703,7 +765,7 @@ public class ItemArmor {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -714,7 +776,7 @@ public class ItemArmor {
                return ValidationResult.error("Invalid array count for value");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(valueArrCount);
 
             for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
                pos += 6;
@@ -723,16 +785,12 @@ public class ItemArmor {
       }
 
       if ((nullBits & 8) != 0) {
-         int damageEnhancementOffset = buffer.getIntLE(offset + 22);
-         if (damageEnhancementOffset < 0) {
+         v = buffer.getIntLE(offset + 22);
+         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for DamageEnhancement");
          }
 
-         int pos = offset + 30 + damageEnhancementOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DamageEnhancement");
-         }
-
+         int pos = offset + 30 + v;
          int damageEnhancementCount = VarInt.peek(buffer, pos);
          if (damageEnhancementCount < 0) {
             return ValidationResult.error("Invalid dictionary count for DamageEnhancement");
@@ -742,7 +800,7 @@ public class ItemArmor {
             return ValidationResult.error("DamageEnhancement exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(damageEnhancementCount);
 
          for (int i = 0; i < damageEnhancementCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -754,7 +812,7 @@ public class ItemArmor {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -765,7 +823,7 @@ public class ItemArmor {
                return ValidationResult.error("Invalid array count for value");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(valueArrCount);
 
             for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
                pos += 6;
@@ -774,16 +832,12 @@ public class ItemArmor {
       }
 
       if ((nullBits & 16) != 0) {
-         int damageClassEnhancementOffset = buffer.getIntLE(offset + 26);
-         if (damageClassEnhancementOffset < 0) {
+         v = buffer.getIntLE(offset + 26);
+         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
             return ValidationResult.error("Invalid offset for DamageClassEnhancement");
          }
 
-         int pos = offset + 30 + damageClassEnhancementOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for DamageClassEnhancement");
-         }
-
+         int pos = offset + 30 + v;
          int damageClassEnhancementCount = VarInt.peek(buffer, pos);
          if (damageClassEnhancementCount < 0) {
             return ValidationResult.error("Invalid dictionary count for DamageClassEnhancement");
@@ -793,7 +847,7 @@ public class ItemArmor {
             return ValidationResult.error("DamageClassEnhancement exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(damageClassEnhancementCount);
 
          for (int i = 0; i < damageClassEnhancementCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -805,7 +859,7 @@ public class ItemArmor {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -816,7 +870,7 @@ public class ItemArmor {
                return ValidationResult.error("Invalid array count for value");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(valueArrCount);
 
             for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
                pos += 6;

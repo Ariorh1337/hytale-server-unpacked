@@ -69,26 +69,30 @@ public class PrefabPathSystems {
          WorldPathData worldPathData = store.getResource(STORE_WORLD_PATH_DATA_RESOURCE_TYPE);
          WorldGenId worldGenIdComponent = holder.getComponent(WORLD_GEN_ID_COMPONENT_TYPE);
          int worldgenId = worldGenIdComponent != null ? worldGenIdComponent.getWorldGenId() : 0;
-         String pathName = pathMarker.getPathName();
-         UUID pathId = pathMarker.getPathId();
-         if (pathId == null) {
-            pathId = UUID.nameUUIDFromBytes((pathName + worldgenId).getBytes(StandardCharsets.UTF_8));
-            pathMarker.setPathId(pathId);
-            int lastIndex = pathName.lastIndexOf(126);
-            if (lastIndex != -1) {
-               pathMarker.setPathName(pathName.substring(0, lastIndex));
+         if (pathMarker != null) {
+            String pathName = pathMarker.getPathName();
+            if (pathName != null) {
+               UUID pathId = pathMarker.getPathId();
+               if (pathId == null) {
+                  pathId = UUID.nameUUIDFromBytes((pathName + worldgenId).getBytes(StandardCharsets.UTF_8));
+                  pathMarker.setPathId(pathId);
+                  int lastIndex = pathName.lastIndexOf(126);
+                  if (lastIndex != -1) {
+                     pathMarker.setPathName(pathName.substring(0, lastIndex));
+                     pathMarker.markNeedsSave();
+                     LOGGER.at(Level.INFO).log("Migrating path marker from path %s to use new UUID %s", pathName, pathId);
+                  }
+               }
+
+               IPrefabPath path = worldPathData.getOrConstructPrefabPath(worldgenId, pathId, pathName, PatrolPath::new);
+               path.addLoadedWaypoint(pathMarker, pathMarker.getTempPathLength(), pathMarker.getOrder(), worldgenId);
+               pathMarker.setParentPath(path);
+               holder.putComponent(MODEL_COMPONENT_TYPE, new ModelComponent(PathPlugin.get().getPathMarkerModel()));
                pathMarker.markNeedsSave();
-               LOGGER.at(Level.INFO).log("Migrating path marker from path %s to use new UUID %s", pathName, pathId);
+               holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
+               holder.ensureComponent(PrefabCopyableComponent.getComponentType());
             }
          }
-
-         IPrefabPath path = worldPathData.getOrConstructPrefabPath(worldgenId, pathId, pathName, PatrolPath::new);
-         path.addLoadedWaypoint(pathMarker, pathMarker.getTempPathLength(), pathMarker.getOrder(), worldgenId);
-         pathMarker.setParentPath(path);
-         holder.putComponent(MODEL_COMPONENT_TYPE, new ModelComponent(PathPlugin.get().getPathMarkerModel()));
-         pathMarker.markNeedsSave();
-         holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
-         holder.ensureComponent(PrefabCopyableComponent.getComponentType());
       }
 
       @Override

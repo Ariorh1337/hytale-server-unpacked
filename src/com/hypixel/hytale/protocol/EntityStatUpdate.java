@@ -59,6 +59,10 @@ public class EntityStatUpdate {
 
    @Nonnull
    public static EntityStatUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("EntityStatUpdate", 21, buf.readableBytes() - offset);
+      }
+
       EntityStatUpdate obj = new EntityStatUpdate();
       byte nullBits = buf.getByte(offset);
       obj.op = EntityStatOp.fromValue(buf.getByte(offset + 1));
@@ -69,31 +73,40 @@ public class EntityStatUpdate {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 21 + buf.getIntLE(offset + 13);
-         int modifiersCount = VarInt.peek(buf, varPos0);
-         if (modifiersCount < 0) {
-            throw ProtocolException.negativeLength("Modifiers", modifiersCount);
+         int varPosBase0 = buf.getIntLE(offset + 13);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Modifiers", varPosBase0, buf.readableBytes());
          }
 
+         int varPos0 = offset + 21 + varPosBase0;
+         int modifiersCount = VarInt.peek(buf, varPos0);
+         if (modifiersCount < 0) {
+            throw ProtocolException.invalidVarInt("Modifiers");
+         }
+
+         int varIntLen = VarInt.size(modifiersCount);
          if (modifiersCount > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Modifiers", modifiersCount, 4096000);
          }
 
-         int varIntLen = VarInt.length(buf, varPos0);
          obj.modifiers = new HashMap<>(modifiersCount);
          int dictPos = varPos0 + varIntLen;
 
          for (int i = 0; i < modifiersCount; i++) {
             int keyLen = VarInt.peek(buf, dictPos);
             if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+               throw ProtocolException.invalidVarInt("key");
             }
 
+            int keyVarLen = VarInt.size(keyLen);
             if (keyLen > 4096000) {
                throw ProtocolException.stringTooLong("key", keyLen, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
+            if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+            }
+
             String key = PacketIO.readVarString(buf, dictPos);
             dictPos += keyVarLen + keyLen;
             Modifier val = Modifier.deserialize(buf, dictPos);
@@ -105,14 +118,24 @@ public class EntityStatUpdate {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 21 + buf.getIntLE(offset + 17);
-         int modifierKeyLen = VarInt.peek(buf, varPos1);
-         if (modifierKeyLen < 0) {
-            throw ProtocolException.negativeLength("ModifierKey", modifierKeyLen);
+         int varPosBase1 = buf.getIntLE(offset + 17);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("ModifierKey", varPosBase1, buf.readableBytes());
          }
 
+         int varPos1 = offset + 21 + varPosBase1;
+         int modifierKeyLen = VarInt.peek(buf, varPos1);
+         if (modifierKeyLen < 0) {
+            throw ProtocolException.invalidVarInt("ModifierKey");
+         }
+
+         int modifierKeyVarIntLen = VarInt.size(modifierKeyLen);
          if (modifierKeyLen > 4096000) {
             throw ProtocolException.stringTooLong("ModifierKey", modifierKeyLen, 4096000);
+         }
+
+         if (varPos1 + modifierKeyVarIntLen + modifierKeyLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ModifierKey", varPos1 + modifierKeyVarIntLen + modifierKeyLen, buf.readableBytes());
          }
 
          obj.modifierKey = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
@@ -126,13 +149,17 @@ public class EntityStatUpdate {
       int maxEnd = 21;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 13);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("Modifiers", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 21 + fieldOffset0;
          int dictLen = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0);
+         pos0 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos0);
-            pos0 += VarInt.length(buf, pos0) + sl;
+            pos0 += VarInt.size(sl) + sl;
             pos0 += Modifier.computeBytesConsumed(buf, pos0);
          }
 
@@ -143,9 +170,13 @@ public class EntityStatUpdate {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 17);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 21) {
+            throw ProtocolException.invalidOffset("ModifierKey", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 21 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -233,17 +264,18 @@ public class EntityStatUpdate {
       }
 
       byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 1) & 255;
+      if (v >= 9) {
+         return ValidationResult.error("Invalid EntityStatOp value for Op");
+      }
+
       if ((nullBits & 2) != 0) {
-         int modifiersOffset = buffer.getIntLE(offset + 13);
-         if (modifiersOffset < 0) {
+         v = buffer.getIntLE(offset + 13);
+         if (v < 0 || v > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for Modifiers");
          }
 
-         int pos = offset + 21 + modifiersOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for Modifiers");
-         }
-
+         int pos = offset + 21 + v;
          int modifiersCount = VarInt.peek(buffer, pos);
          if (modifiersCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Modifiers");
@@ -253,7 +285,7 @@ public class EntityStatUpdate {
             return ValidationResult.error("Modifiers exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modifiersCount);
 
          for (int i = 0; i < modifiersCount; i++) {
             int keyLen = VarInt.peek(buffer, pos);
@@ -265,7 +297,7 @@ public class EntityStatUpdate {
                return ValidationResult.error("key exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(keyLen);
             pos += keyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading key");
@@ -276,16 +308,12 @@ public class EntityStatUpdate {
       }
 
       if ((nullBits & 4) != 0) {
-         int modifierKeyOffset = buffer.getIntLE(offset + 17);
-         if (modifierKeyOffset < 0) {
+         v = buffer.getIntLE(offset + 17);
+         if (v < 0 || v > buffer.writerIndex() - offset - 21) {
             return ValidationResult.error("Invalid offset for ModifierKey");
          }
 
-         int pos = offset + 21 + modifierKeyOffset;
-         if (pos >= buffer.writerIndex()) {
-            return ValidationResult.error("Offset out of bounds for ModifierKey");
-         }
-
+         int pos = offset + 21 + v;
          int modifierKeyLen = VarInt.peek(buffer, pos);
          if (modifierKeyLen < 0) {
             return ValidationResult.error("Invalid string length for ModifierKey");
@@ -295,7 +323,7 @@ public class EntityStatUpdate {
             return ValidationResult.error("ModifierKey exceeds max length 4096000");
          }
 
-         pos += VarInt.length(buffer, pos);
+         pos += VarInt.size(modifierKeyLen);
          pos += modifierKeyLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading ModifierKey");

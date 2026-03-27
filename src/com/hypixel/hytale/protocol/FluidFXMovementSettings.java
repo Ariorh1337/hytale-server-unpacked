@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
@@ -43,6 +44,10 @@ public class FluidFXMovementSettings {
 
    @Nonnull
    public static FluidFXMovementSettings deserialize(@Nonnull ByteBuf buf, int offset) {
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("FluidFXMovementSettings", 24, buf.readableBytes() - offset);
+      }
+
       FluidFXMovementSettings obj = new FluidFXMovementSettings();
       obj.swimUpSpeed = buf.getFloatLE(offset + 0);
       obj.swimDownSpeed = buf.getFloatLE(offset + 4);

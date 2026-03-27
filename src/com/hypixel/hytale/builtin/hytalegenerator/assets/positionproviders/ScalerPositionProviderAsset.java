@@ -5,15 +5,16 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProv
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.ScalerPositionProvider;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ScalerPositionProviderAsset extends PositionProviderAsset {
    @Nonnull
    public static final BuilderCodec<ScalerPositionProviderAsset> CODEC = BuilderCodec.builder(
          ScalerPositionProviderAsset.class, ScalerPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Scale", Vector3d.CODEC, true), (asset, v) -> asset.scale = v, asset -> asset.scale)
+      .append(new KeyedCodec<>("Scale", Vector3dUtil.CODEC, true), (asset, v) -> asset.scale = v, asset -> asset.scale)
       .addValidator((vector, result) -> {
          if (!isValidScale(vector)) {
             String msg = "Scale Vector " + vector.toString() + " has one or more zero members.";
