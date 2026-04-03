@@ -135,7 +135,7 @@ public class DensityProp extends Prop {
                }
             }
 
-            for (this.rPosition.y = this.rIntersectingWriteBounds.max.y - 2; this.rPosition.y > this.rIntersectingWriteBounds.min.x; this.rPosition.y--) {
+            for (this.rPosition.y = this.rIntersectingWriteBounds.max.y - 2; this.rPosition.y > this.rIntersectingWriteBounds.min.y; this.rPosition.y--) {
                if (this.rIntersectingWriteBounds.contains(this.rPosition)) {
                   int i = this.rPosition.y - this.rIntersectingWriteBounds.min.y;
                   this.rMaterialProviderContext.position.set(this.rPosition);

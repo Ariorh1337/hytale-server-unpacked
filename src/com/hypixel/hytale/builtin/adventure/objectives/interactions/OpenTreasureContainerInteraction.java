@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
@@ -120,11 +121,14 @@ public class OpenTreasureContainerInteraction extends SimpleBlockInteraction {
                         treasureBlock.onOpen(ref, world, store);
                      }
                   } else {
-                     playerComponent.sendMessage(
-                        Message.translation("server.interactions.invalidBlockState")
-                           .param("interaction", this.getClass().getSimpleName())
-                           .param("blockState", chunkStore.getStore().getArchetype(blockRef).toString())
-                     );
+                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+                     if (playerRefComponent != null) {
+                        playerRefComponent.sendMessage(
+                           Message.translation("server.interactions.invalidBlockState")
+                              .param("interaction", this.getClass().getSimpleName())
+                              .param("blockState", chunkStore.getStore().getArchetype(blockRef).toString())
+                        );
+                     }
                   }
                }
             }

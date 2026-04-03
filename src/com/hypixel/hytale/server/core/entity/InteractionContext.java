@@ -12,7 +12,6 @@ import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.PrioritySlot;
 import com.hypixel.hytale.protocol.RootInteractionSettings;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
@@ -35,6 +34,7 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3f;
 import org.joml.Vector4d;
 
 public class InteractionContext {

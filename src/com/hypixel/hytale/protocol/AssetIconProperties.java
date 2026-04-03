@@ -1,11 +1,14 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2fc;
+import org.joml.Vector3fc;
 
 public class AssetIconProperties {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -15,14 +18,14 @@ public class AssetIconProperties {
    public static final int MAX_SIZE = 25;
    public float scale;
    @Nullable
-   public Vector2f translation;
+   public Vector2fc translation;
    @Nullable
-   public Vector3f rotation;
+   public Vector3fc rotation;
 
    public AssetIconProperties() {
    }
 
-   public AssetIconProperties(float scale, @Nullable Vector2f translation, @Nullable Vector3f rotation) {
+   public AssetIconProperties(float scale, @Nullable Vector2fc translation, @Nullable Vector3fc rotation) {
       this.scale = scale;
       this.translation = translation;
       this.rotation = rotation;
@@ -44,11 +47,11 @@ public class AssetIconProperties {
       byte nullBits = buf.getByte(offset);
       obj.scale = buf.getFloatLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         obj.translation = Vector2f.deserialize(buf, offset + 5);
+         obj.translation = PacketIO.readVector2f(buf, offset + 5);
       }
 
       if ((nullBits & 2) != 0) {
-         obj.rotation = Vector3f.deserialize(buf, offset + 13);
+         obj.rotation = PacketIO.readVector3f(buf, offset + 13);
       }
 
       return obj;
@@ -71,13 +74,13 @@ public class AssetIconProperties {
       buf.writeByte(nullBits);
       buf.writeFloatLE(this.scale);
       if (this.translation != null) {
-         this.translation.serialize(buf);
+         PacketIO.writeVector2f(buf, this.translation);
       } else {
          buf.writeZero(8);
       }
 
       if (this.rotation != null) {
-         this.rotation.serialize(buf);
+         PacketIO.writeVector3f(buf, this.rotation);
       } else {
          buf.writeZero(12);
       }
@@ -99,8 +102,8 @@ public class AssetIconProperties {
    public AssetIconProperties clone() {
       AssetIconProperties copy = new AssetIconProperties();
       copy.scale = this.scale;
-      copy.translation = this.translation != null ? this.translation.clone() : null;
-      copy.rotation = this.rotation != null ? this.rotation.clone() : null;
+      copy.translation = this.translation;
+      copy.rotation = this.rotation;
       return copy;
    }
 

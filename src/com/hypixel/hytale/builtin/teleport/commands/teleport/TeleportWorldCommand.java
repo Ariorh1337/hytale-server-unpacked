@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -23,7 +22,7 @@ import org.joml.Vector3d;
 
 public class TeleportWorldCommand extends AbstractPlayerCommand {
    @Nonnull
-   private final RequiredArg<String> worldNameArg = this.withRequiredArg("worldName", "server.commands.worldport.worldName.desc", ArgTypes.STRING);
+   private final RequiredArg<World> worldNameArg = this.withRequiredArg("worldName", "server.commands.worldport.worldName.desc", ArgTypes.WORLD);
 
    public TeleportWorldCommand() {
       super("world", "server.commands.worldport.desc");
@@ -35,35 +34,30 @@ public class TeleportWorldCommand extends AbstractPlayerCommand {
    protected void execute(
       @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
    ) {
-      String worldName = this.worldNameArg.get(context);
-      World targetWorld = Universe.get().getWorld(worldName);
-      if (targetWorld == null) {
-         context.sendMessage(Message.translation("server.world.notFound").param("worldName", worldName));
+      World targetWorld = this.worldNameArg.get(context);
+      Transform spawnPoint = targetWorld.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, store);
+      if (spawnPoint == null) {
+         context.sendMessage(Message.translation("server.world.spawn.notSet").param("worldName", targetWorld.getName()));
       } else {
-         Transform spawnPoint = targetWorld.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, store);
-         if (spawnPoint == null) {
-            context.sendMessage(Message.translation("server.world.spawn.notSet").param("worldName", worldName));
-         } else {
-            TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
-            HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
-            if (transformComponent != null && headRotationComponent != null) {
-               Vector3d previousPos = new Vector3d(transformComponent.getPosition());
-               Rotation3f previousRotation = new Rotation3f(headRotationComponent.getRotation());
-               TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
-               teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + targetWorld.getName());
-            }
-
-            Teleport teleportComponent = Teleport.createForPlayer(targetWorld, spawnPoint);
-            store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
-            Vector3d spawnPos = spawnPoint.getPosition();
-            context.sendMessage(
-               Message.translation("server.commands.teleport.teleportedToWorld")
-                  .param("worldName", worldName)
-                  .param("x", spawnPos.x())
-                  .param("y", spawnPos.y())
-                  .param("z", spawnPos.z())
-            );
+         TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+         HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
+         if (transformComponent != null && headRotationComponent != null) {
+            Vector3d previousPos = new Vector3d(transformComponent.getPosition());
+            Rotation3f previousRotation = new Rotation3f(headRotationComponent.getRotation());
+            TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
+            teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + targetWorld.getName());
          }
+
+         Teleport teleportComponent = Teleport.createForPlayer(targetWorld, spawnPoint);
+         store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+         Vector3d spawnPos = spawnPoint.getPosition();
+         context.sendMessage(
+            Message.translation("server.commands.teleport.teleportedToWorld")
+               .param("worldName", targetWorld.getName())
+               .param("x", spawnPos.x())
+               .param("y", spawnPos.y())
+               .param("z", spawnPos.z())
+         );
       }
    }
 }

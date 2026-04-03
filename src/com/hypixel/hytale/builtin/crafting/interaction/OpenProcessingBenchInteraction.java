@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
@@ -66,7 +67,9 @@ public class OpenProcessingBenchInteraction extends SimpleBlockInteraction {
                if (blockEntityRef != null && blockEntityRef.isValid()) {
                   ProcessingBenchBlock benchState = chunkStoreStore.getComponent(blockEntityRef, ProcessingBenchBlock.getComponentType());
                   if (benchState == null) {
-                     playerComponent.sendMessage(
+                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+                     assert playerRefComponent != null;
+                     playerRefComponent.sendMessage(
                         Message.translation("server.interactions.invalidBlockState")
                            .param("interaction", this.getClass().getSimpleName())
                            .param("blockState", "null")

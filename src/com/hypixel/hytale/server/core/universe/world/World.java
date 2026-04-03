@@ -884,7 +884,9 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       );
       CompletableFuture<Void> playerReadyFuture = clientReadyFuture.orTimeout(30L, TimeUnit.SECONDS);
       return CompletableFuture.allOf(setupPlayerFuture, playerReadyFuture, loadTargetChunkFuture)
-         .thenApplyAsync(aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.getJoinMessage()), this)
+         .thenApplyAsync(
+            aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.getJoinMessage(), event.shouldBroadcastJoinMessage()), this
+         )
          .exceptionally(
             throwable -> {
                this.logger.at(Level.WARNING).withCause(throwable).log("Exception when adding player to world!");
@@ -903,7 +905,11 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
 
    @Nonnull
    private PlayerRef onFinishPlayerJoining(
-      @Nonnull Player playerComponent, @Nonnull PlayerRef playerRefComponent, @Nonnull PacketHandler packetHandler, @Nullable Message joinMessage
+      @Nonnull Player playerComponent,
+      @Nonnull PlayerRef playerRefComponent,
+      @Nonnull PacketHandler packetHandler,
+      @Nullable Message joinMessage,
+      boolean shouldBroadcastJoinMessage
    ) {
       TimeResource timeResource = this.entityStore.getStore().getResource(TimeResource.getResourceType());
       float timeDilationModifier = timeResource.getTimeDilationModifier();
@@ -932,7 +938,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
          worldMapTracker.clear();
          worldMapTracker.sendSettings(world);
-         if (joinMessage != null) {
+         if (shouldBroadcastJoinMessage) {
             PlayerUtil.broadcastMessageToPlayers(playerUuid, joinMessage, store);
          }
 

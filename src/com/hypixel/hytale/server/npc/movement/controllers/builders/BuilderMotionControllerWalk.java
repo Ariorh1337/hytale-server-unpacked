@@ -47,6 +47,7 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
    private final DoubleHolder descentSteepness = new DoubleHolder();
    private final DoubleHolder descentBlending = new DoubleHolder();
    private final DoubleHolder maxDropHeight = new DoubleHolder();
+   private final DoubleHolder maxDropHeightRelaxedAdjustment = new DoubleHolder();
    private double maxVerticalSpeedFluid;
    private final NumberArrayHolder jumpRange = new NumberArrayHolder();
    private double minHover;
@@ -343,6 +344,16 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
          "Maximum height NPC considers drop safe",
          null
       );
+      this.getDouble(
+         data,
+         "MaxDropHeightRelaxedAdjustment",
+         this.maxDropHeightRelaxedAdjustment,
+         3.0,
+         DoubleSingleValidator.greaterEqual0(),
+         BuilderDescriptorState.WorkInProgress,
+         "Additional drop height when DROP constraint is relaxed",
+         null
+      );
       this.getAsset(
          data,
          "FenceBlockSet",
@@ -507,6 +518,10 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
 
    public double getMaxDropHeight(@Nonnull BuilderSupport support) {
       return this.maxDropHeight.get(support.getExecutionContext());
+   }
+
+   public double getMaxDropHeightRelaxedAdjustment(@Nonnull BuilderSupport support) {
+      return this.maxDropHeightRelaxedAdjustment.get(support.getExecutionContext());
    }
 
    public int getFenceBlockSet() {

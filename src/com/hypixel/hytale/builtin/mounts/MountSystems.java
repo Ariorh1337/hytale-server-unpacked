@@ -31,7 +31,6 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.MountController;
 import com.hypixel.hytale.protocol.MountedUpdate;
 import com.hypixel.hytale.protocol.MovementStates;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.mountpoints.BlockMountPoint;
 import com.hypixel.hytale.server.core.entity.AnimationUtils;
@@ -65,6 +64,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class MountSystems {
    private static void handleMountedRemoval(
@@ -867,7 +867,7 @@ public class MountSystems {
             Rotation3f rotationEuler = occupiedSeat.computeRotationEuler(blockMountComponent.getExpectedRotation());
             BlockMount blockMount = new BlockMount(
                blockMountComponent.getType(),
-               new com.hypixel.hytale.protocol.Vector3d(position.x, position.y, position.z),
+               new Vector3f((float)position.x, (float)position.y, (float)position.z),
                new Vector3f(rotationEuler.x, rotationEuler.y, rotationEuler.z),
                BlockType.getAssetMap().getIndex(blockType.getId())
             );

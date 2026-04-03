@@ -33,6 +33,7 @@ import com.hypixel.hytale.server.npc.instructions.BodyMotion;
 import com.hypixel.hytale.server.npc.instructions.Instruction;
 import com.hypixel.hytale.server.npc.movement.GroupSteeringAccumulator;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForceAvoidCollision;
 import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
@@ -54,6 +55,7 @@ import com.hypixel.hytale.server.npc.util.VisHelper;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,7 +103,6 @@ public class Role implements IAnnotatedComponentCollection {
    protected final double entityAvoidanceStrength;
    protected final Role.AvoidanceMode avoidanceMode;
    protected final boolean isAvoidingEntities;
-   protected final boolean avoidanceFallCheck;
    protected final Role.SeparationMode separationMode;
    protected final boolean useOrientationHint;
    protected final boolean alwaysApplySeparation;
@@ -195,7 +196,6 @@ public class Role implements IAnnotatedComponentCollection {
    protected final float spawnLockTime;
    protected final String nameTranslationKey;
    protected boolean backingAway;
-   protected boolean steeringChanged;
    protected boolean deathItemsDropped;
 
    public Role(@Nonnull BuilderRole builder, @Nonnull BuilderSupport builderSupport) {
@@ -230,7 +230,6 @@ public class Role implements IAnnotatedComponentCollection {
       this.positionCache.setOpaqueBlockSet(builder.getOpaqueBlockSet());
       this.dropListId = builder.getDropListId(builderSupport);
       this.isAvoidingEntities = builder.isAvoidingEntities();
-      this.avoidanceFallCheck = builder.isAvoidanceFallCheck(builderSupport);
       this.avoidanceMode = builder.getAvoidanceMode(builderSupport);
       this.collisionProbeDistance = builder.getCollisionDistance();
       this.collisionForceFalloff = builder.getCollisionForceFalloff();
@@ -314,10 +313,6 @@ public class Role implements IAnnotatedComponentCollection {
 
    public boolean isAvoidingEntities() {
       return this.isAvoidingEntities;
-   }
-
-   public boolean isAvoidanceFallCheck() {
-      return this.avoidanceFallCheck;
    }
 
    public double getCollisionProbeDistance() {
@@ -740,18 +735,6 @@ public class Role implements IAnnotatedComponentCollection {
       }
    }
 
-   public void clearSteeringChanged() {
-      this.steeringChanged = false;
-   }
-
-   public void setSteeringChanged() {
-      this.steeringChanged = true;
-   }
-
-   public boolean avoidanceFallCheckRequired() {
-      return this.avoidanceFallCheck && this.steeringChanged;
-   }
-
    public void blendSeparation(
       @Nonnull Ref<EntityStore> selfRef,
       @Nonnull Vector3d position,
@@ -795,8 +778,6 @@ public class Role implements IAnnotatedComponentCollection {
             if (this.useOrientationHint) {
                steering.setDirectionHint(rotation);
             }
-
-            this.setSteeringChanged();
          }
       }
    }
@@ -1023,9 +1004,7 @@ public class Role implements IAnnotatedComponentCollection {
             this.steeringForceAvoidCollision,
             commandBuffer
          );
-      if (this.steeringForceAvoidCollision.compute(steering)) {
-         this.setSteeringChanged();
-      }
+      this.steeringForceAvoidCollision.compute(steering);
    }
 
    @Nonnull
@@ -1305,6 +1284,12 @@ public class Role implements IAnnotatedComponentCollection {
 
       BodyMotion motion = this.lastBodyMotionStep.getBodyMotion();
       return motion == null ? null : motion.getSteeringMotion();
+   }
+
+   @Nullable
+   public EnumSet<RelaxedConstraint> getSteeringRelaxedConstraints() {
+      BodyMotion motion = this.getLastBodySteeringMotion();
+      return motion == null ? null : motion.getRelaxedConstraints();
    }
 
    @Override

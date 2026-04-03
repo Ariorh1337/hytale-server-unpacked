@@ -360,7 +360,7 @@ public class InteractionModule extends JavaPlugin {
          if (hotbarComponent != null) {
             byte activeHotbarSlot = hotbarComponent.getActiveSlot();
             if (activeHotbarSlot != packet.activeSlot) {
-               playerComponent.sendMessage(
+               playerRefComponent.sendMessage(
                   Message.translation("server.modules.interaction.failedGetActiveSlot").param("server", activeHotbarSlot).param("packet", packet.activeSlot)
                );
             } else {
@@ -428,7 +428,7 @@ public class InteractionModule extends JavaPlugin {
                      }
                   }
 
-                  cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x, packet.screenPoint.y));
+                  cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x(), packet.screenPoint.y()));
                   cameraManagerComponent.setLastBlockPosition(targetBlock);
                }
             }

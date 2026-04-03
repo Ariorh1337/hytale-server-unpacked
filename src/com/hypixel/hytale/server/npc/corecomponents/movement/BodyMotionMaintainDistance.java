@@ -303,7 +303,6 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
             this.lastTargetEntity = targetRef;
          }
 
-         motionController.requireDepthProbing();
          desiredSteering.setYaw(targetYaw);
          return false;
       } else {

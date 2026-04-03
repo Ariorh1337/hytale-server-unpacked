@@ -13,7 +13,6 @@ import com.hypixel.hytale.math.hitdetection.LineOfSightProvider;
 import com.hypixel.hytale.math.hitdetection.projection.FrustumProjectionProvider;
 import com.hypixel.hytale.math.hitdetection.view.DirectionViewProvider;
 import com.hypixel.hytale.math.iterator.BlockIterator;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
@@ -34,6 +33,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 import org.joml.Vector4d;
@@ -265,12 +265,11 @@ public class HorizontalSelector extends SelectorType {
          }
 
          if (SelectInteraction.SHOW_VISUAL_DEBUG) {
-            Matrix4d tmp = new Matrix4d();
             Matrix4d matrix = new Matrix4d();
             matrix.identity()
                .translate(posX, posY, posZ)
-               .rotateAxis(-headRotationComponent.getRotation().yaw(), 0.0, 1.0, 0.0, tmp)
-               .rotateAxis(-headRotationComponent.getRotation().pitch(), 1.0, 0.0, 0.0, tmp);
+               .rotate(headRotationComponent.getRotation().yaw(), 0.0, 1.0, 0.0)
+               .rotate(headRotationComponent.getRotation().pitch(), 1.0, 0.0, 0.0);
             Vector3f color = new Vector3f(
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 11L),

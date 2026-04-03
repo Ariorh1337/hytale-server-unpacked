@@ -1,26 +1,27 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.joml.Vector2fc;
 
 public class CombatTextEntityUIComponentAnimationEvent {
-   public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 34;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 33;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 34;
-   public static final int MAX_SIZE = 34;
+   public static final int VARIABLE_BLOCK_START = 33;
+   public static final int MAX_SIZE = 33;
    @Nonnull
    public CombatTextEntityUIAnimationEventType type = CombatTextEntityUIAnimationEventType.Scale;
    public float startAt;
    public float endAt;
    public float startScale;
    public float endScale;
-   @Nullable
-   public Vector2f positionOffset;
+   @Nonnull
+   public Vector2fc positionOffset = PacketIO.ZERO_VECTOR2;
    public float startOpacity;
    public float endOpacity;
 
@@ -33,7 +34,7 @@ public class CombatTextEntityUIComponentAnimationEvent {
       float endAt,
       float startScale,
       float endScale,
-      @Nullable Vector2f positionOffset,
+      @Nonnull Vector2fc positionOffset,
       float startOpacity,
       float endOpacity
    ) {
@@ -60,63 +61,47 @@ public class CombatTextEntityUIComponentAnimationEvent {
 
    @Nonnull
    public static CombatTextEntityUIComponentAnimationEvent deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 34) {
-         throw ProtocolException.bufferTooSmall("CombatTextEntityUIComponentAnimationEvent", 34, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 33) {
+         throw ProtocolException.bufferTooSmall("CombatTextEntityUIComponentAnimationEvent", 33, buf.readableBytes() - offset);
       }
 
       CombatTextEntityUIComponentAnimationEvent obj = new CombatTextEntityUIComponentAnimationEvent();
-      byte nullBits = buf.getByte(offset);
-      obj.type = CombatTextEntityUIAnimationEventType.fromValue(buf.getByte(offset + 1));
-      obj.startAt = buf.getFloatLE(offset + 2);
-      obj.endAt = buf.getFloatLE(offset + 6);
-      obj.startScale = buf.getFloatLE(offset + 10);
-      obj.endScale = buf.getFloatLE(offset + 14);
-      if ((nullBits & 1) != 0) {
-         obj.positionOffset = Vector2f.deserialize(buf, offset + 18);
-      }
-
-      obj.startOpacity = buf.getFloatLE(offset + 26);
-      obj.endOpacity = buf.getFloatLE(offset + 30);
+      obj.type = CombatTextEntityUIAnimationEventType.fromValue(buf.getByte(offset + 0));
+      obj.startAt = buf.getFloatLE(offset + 1);
+      obj.endAt = buf.getFloatLE(offset + 5);
+      obj.startScale = buf.getFloatLE(offset + 9);
+      obj.endScale = buf.getFloatLE(offset + 13);
+      obj.positionOffset = PacketIO.readVector2f(buf, offset + 17);
+      obj.startOpacity = buf.getFloatLE(offset + 25);
+      obj.endOpacity = buf.getFloatLE(offset + 29);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 34;
+      return 33;
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
-      byte nullBits = 0;
-      if (this.positionOffset != null) {
-         nullBits = (byte)(nullBits | 1);
-      }
-
-      buf.writeByte(nullBits);
       buf.writeByte(this.type.getValue());
       buf.writeFloatLE(this.startAt);
       buf.writeFloatLE(this.endAt);
       buf.writeFloatLE(this.startScale);
       buf.writeFloatLE(this.endScale);
-      if (this.positionOffset != null) {
-         this.positionOffset.serialize(buf);
-      } else {
-         buf.writeZero(8);
-      }
-
+      PacketIO.writeVector2f(buf, this.positionOffset);
       buf.writeFloatLE(this.startOpacity);
       buf.writeFloatLE(this.endOpacity);
    }
 
    public int computeSize() {
-      return 34;
+      return 33;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 34) {
-         return ValidationResult.error("Buffer too small: expected at least 34 bytes");
+      if (buffer.readableBytes() - offset < 33) {
+         return ValidationResult.error("Buffer too small: expected at least 33 bytes");
       }
 
-      byte nullBits = buffer.getByte(offset);
-      int v = buffer.getByte(offset + 1) & 255;
+      int v = buffer.getByte(offset + 0) & 255;
       return v >= 3 ? ValidationResult.error("Invalid CombatTextEntityUIAnimationEventType value for Type") : ValidationResult.OK;
    }
 
@@ -127,7 +112,7 @@ public class CombatTextEntityUIComponentAnimationEvent {
       copy.endAt = this.endAt;
       copy.startScale = this.startScale;
       copy.endScale = this.endScale;
-      copy.positionOffset = this.positionOffset != null ? this.positionOffset.clone() : null;
+      copy.positionOffset = this.positionOffset;
       copy.startOpacity = this.startOpacity;
       copy.endOpacity = this.endOpacity;
       return copy;

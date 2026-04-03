@@ -1,13 +1,13 @@
 package com.hypixel.hytale.math.hitdetection;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Quad4d;
 import com.hypixel.hytale.math.shape.Triangle4d;
 import com.hypixel.hytale.math.vector.Vector4dUtil;
 import java.util.Arrays;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
 import org.joml.Vector4d;
 
 public class HitDetectionExecutor {
@@ -80,9 +80,9 @@ public class HitDetectionExecutor {
    private void setupMatrices(@Nonnull Matrix4d modelMatrix) {
       Matrix4d projectionMatrix = this.projectionProvider.getMatrix();
       Matrix4d viewMatrix = this.viewProvider.getMatrix();
-      this.pvmMatrix.set(projectionMatrix).multiply(viewMatrix);
+      this.pvmMatrix.set(projectionMatrix).mul(viewMatrix);
       this.invPvMatrix.set(this.pvmMatrix).invert();
-      this.pvmMatrix.multiply(modelMatrix);
+      this.pvmMatrix.mul(modelMatrix);
    }
 
    public boolean test(@Nonnull Vector4d point, @Nonnull Matrix4d modelMatrix) {
@@ -105,13 +105,13 @@ public class HitDetectionExecutor {
    }
 
    private boolean testPoint(@Nonnull Vector4d point) {
-      this.pvmMatrix.multiply(point, this.buffer.transformedPoint);
+      this.pvmMatrix.transform(point, this.buffer.transformedPoint);
       if (!Vector4dUtil.isInsideFrustum(this.buffer.transformedPoint)) {
          return false;
       }
 
       Vector4d hit = this.buffer.transformedPoint;
-      this.invPvMatrix.multiply(hit);
+      this.invPvMatrix.transform(hit);
       Vector4dUtil.perspectiveTransform(hit);
       return this.losProvider.test(this.origin.x, this.origin.y, this.origin.z, hit.x, hit.y, hit.z);
    }
@@ -134,7 +134,7 @@ public class HitDetectionExecutor {
                this.buffer.visibleTriangle.getRandom(this.buffer.random, hit);
             }
 
-            this.invPvMatrix.multiply(hit);
+            this.invPvMatrix.transform(hit);
             Vector4dUtil.perspectiveTransform(hit);
             double dx = this.origin.x - hit.x;
             double dy = this.origin.y - hit.y;

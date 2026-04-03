@@ -111,7 +111,7 @@ public class PrefabEditSaveAsCommand extends AbstractAsyncPlayerCommand {
          }
 
          return PrefabSaver.savePrefab(
-               playerComponent,
+               playerRef,
                world,
                prefabSavePath,
                selectedPrefab.getAnchorPoint(),

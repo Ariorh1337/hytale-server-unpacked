@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import javax.annotation.Nonnull;
@@ -34,6 +35,7 @@ public class TintOperation extends ToolOperation {
    public TintOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -54,10 +56,10 @@ public class TintOperation extends ToolOperation {
             ItemStack newItemStack = builderTool.updateArgMetadata(itemStack, "bTintColor", hexColor);
             hotbar.getInventory().setItemStackForSlot(hotbar.getActiveSlot(), newItemStack);
             BuilderToolsPlugin.sendFeedback(
-               Message.translation("server.builderTools.pickedColor").param("color", hexColor), player, NotificationStyle.Success, componentAccessor
+               Message.translation("server.builderTools.pickedColor").param("color", hexColor), playerRef, NotificationStyle.Success, componentAccessor
             );
          } catch (ToolArgException e) {
-            player.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", hexColor));
+            playerRef.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", hexColor));
          }
       } else {
          String colorText = (String)this.args.tool().getOrDefault("bTintColor", "ffffff");
@@ -65,7 +67,7 @@ public class TintOperation extends ToolOperation {
          try {
             this.tintColor = ColorParseUtil.hexStringToRGBInt(colorText);
          } catch (NumberFormatException e) {
-            player.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", colorText));
+            playerRef.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", colorText));
             throw e;
          }
 

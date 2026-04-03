@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class InteractionSyncData {
    public static final int NULLABLE_BIT_FIELD_SIZE = 2;
@@ -50,7 +51,7 @@ public class InteractionSyncData {
    public Position raycastHit;
    public float raycastDistance;
    @Nullable
-   public Vector3f raycastNormal;
+   public Vector3fc raycastNormal;
    @Nonnull
    public MovementDirection movementDirection = MovementDirection.None;
    @Nonnull
@@ -83,7 +84,7 @@ public class InteractionSyncData {
       @Nullable Direction attackerRot,
       @Nullable Position raycastHit,
       float raycastDistance,
-      @Nullable Vector3f raycastNormal,
+      @Nullable Vector3fc raycastNormal,
       @Nonnull MovementDirection movementDirection,
       @Nonnull ApplyForceState applyForceState,
       int nextLabel,
@@ -186,7 +187,7 @@ public class InteractionSyncData {
 
       obj.raycastDistance = buf.getFloatLE(offset + 119);
       if ((nullBits[0] & 32) != 0) {
-         obj.raycastNormal = Vector3f.deserialize(buf, offset + 123);
+         obj.raycastNormal = PacketIO.readVector3f(buf, offset + 123);
       }
 
       obj.movementDirection = MovementDirection.fromValue(buf.getByte(offset + 135));
@@ -387,7 +388,7 @@ public class InteractionSyncData {
 
       buf.writeFloatLE(this.raycastDistance);
       if (this.raycastNormal != null) {
-         this.raycastNormal.serialize(buf);
+         PacketIO.writeVector3f(buf, this.raycastNormal);
       } else {
          buf.writeZero(12);
       }
@@ -556,7 +557,7 @@ public class InteractionSyncData {
       copy.attackerRot = this.attackerRot != null ? this.attackerRot.clone() : null;
       copy.raycastHit = this.raycastHit != null ? this.raycastHit.clone() : null;
       copy.raycastDistance = this.raycastDistance;
-      copy.raycastNormal = this.raycastNormal != null ? this.raycastNormal.clone() : null;
+      copy.raycastNormal = this.raycastNormal;
       copy.movementDirection = this.movementDirection;
       copy.applyForceState = this.applyForceState;
       copy.nextLabel = this.nextLabel;

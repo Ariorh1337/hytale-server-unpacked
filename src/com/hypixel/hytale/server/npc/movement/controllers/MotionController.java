@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.movement.MovementState;
 import com.hypixel.hytale.server.npc.movement.NavState;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
@@ -74,10 +75,10 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    boolean isValidPosition(Vector3d var1, ComponentAccessor<EntityStore> var2);
 
-   boolean canAct(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+   boolean canSteer(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
    @Nullable
-   String canActFailReason(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+   String canSteerFailReason(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
    boolean isInProgress();
 
@@ -135,23 +136,20 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    double getWanderVerticalMovementRatio();
 
-   void setAvoidingBlockDamage(boolean var1);
-
    boolean isAvoidingBlockDamage();
 
    boolean willReceiveBlockDamage();
 
    void requirePreciseMovement(Vector3d var1);
 
-   void requireDepthProbing();
-
    void enableHeadingBlending(double var1, Vector3d var3, double var4);
 
    void enableHeadingBlending();
 
-   void setRelaxedMoveConstraints(boolean var1);
+   void setRelaxedMoveConstraints(@Nonnull EnumSet<RelaxedConstraint> var1);
 
-   boolean isRelaxedMoveConstraints();
+   @Nonnull
+   EnumSet<RelaxedConstraint> getRelaxedConstraints();
 
    NavState getNavState();
 
@@ -229,7 +227,7 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
       public double min;
       public double max;
 
-      public void assign(double current, double min, double max) {
+      public void set(double current, double min, double max) {
          this.current = current;
          this.min = min;
          this.max = max;

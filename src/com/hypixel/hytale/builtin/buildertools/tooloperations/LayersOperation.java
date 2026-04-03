@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteract
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -38,6 +39,7 @@ public class LayersOperation extends ToolOperation {
    public LayersOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -97,7 +99,7 @@ public class LayersOperation extends ToolOperation {
 
       this.maxDepthNecessary = this.layerOneLength + (this.enableLayerTwo ? this.layerTwoLength : 0) + (this.enableLayerThree ? this.layerThreeLength : 0);
       if (this.enableLayerThree && !this.enableLayerTwo) {
-         player.sendMessage(Message.translation("server.builderTools.layerOperation.layerTwoRequired"));
+         playerRef.sendMessage(Message.translation("server.builderTools.layerOperation.layerTwoRequired"));
          this.failed = true;
       }
    }

@@ -167,6 +167,17 @@ public class InteractionSystems {
             interactionManager.tick(ref, commandBuffer, dt);
             ObjectList<SyncInteractionChain> syncPackets = interactionManager.getSyncPackets();
             if (playerRef != null && !syncPackets.isEmpty()) {
+               if (syncPackets.size() > 128) {
+                  LOGGER.at(Level.WARNING)
+                     .log(
+                        "Dropping %d excess interaction sync packets for %s (had %d, limit 128)",
+                        syncPackets.size() - 128,
+                        playerRef.getUuid(),
+                        syncPackets.size()
+                     );
+                  syncPackets.removeElements(128, syncPackets.size());
+               }
+
                playerRef.getPacketHandler().writeNoCache(new SyncInteractionChains(syncPackets.toArray(SyncInteractionChain[]::new)));
                syncPackets.clear();
             }

@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import javax.annotation.Nonnull;
@@ -23,6 +24,7 @@ public class SculptOperation extends ToolOperation {
    public SculptOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -42,7 +44,7 @@ public class SculptOperation extends ToolOperation {
    boolean execute0(int x, int y, int z) {
       int currentBlock = this.edit.getBlock(x, y, z);
       if (this.isAltPlaySculptBrushModDown) {
-         BuilderToolsPlugin.BuilderState.BlocksSampleData data = BuilderToolsPlugin.getState(this.player, this.player.getPlayerRef())
+         BuilderToolsPlugin.BuilderState.BlocksSampleData data = BuilderToolsPlugin.getState(this.player, this.playerRef)
             .getBlocksSampleData(this.edit.getAccessor(), x, y, z, 2);
          if (currentBlock != data.mainBlock && data.mainBlockCount > this.smoothVolume * 0.5F) {
             this.edit.setMaterial(x, y, z, Material.block(data.mainBlock));

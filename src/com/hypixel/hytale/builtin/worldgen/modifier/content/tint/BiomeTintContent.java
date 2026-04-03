@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.common.util.ArrayUtil;
@@ -68,6 +69,7 @@ public class BiomeTintContent implements Content {
          .documentation("The color value")
          .add()
          .<Double>append(new KeyedCodec<>("Weight", Codec.DOUBLE), (e, v) -> e.weight = v, e -> e.weight)
+         .addValidator(Validators.range(0.0, 100.0))
          .documentation("The relative weight of this color entry")
          .add()
          .build();

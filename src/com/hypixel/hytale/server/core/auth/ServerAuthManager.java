@@ -935,8 +935,9 @@ public class ServerAuthManager {
    }
 
    static {
-      AuthCredentialStoreProvider.CODEC.register(Priority.DEFAULT, "Memory", MemoryAuthCredentialStoreProvider.class, MemoryAuthCredentialStoreProvider.CODEC);
-      AuthCredentialStoreProvider.CODEC.register("Encrypted", EncryptedAuthCredentialStoreProvider.class, EncryptedAuthCredentialStoreProvider.CODEC);
+      AuthCredentialStoreProvider.CODEC.register("Memory", MemoryAuthCredentialStoreProvider.class, MemoryAuthCredentialStoreProvider.CODEC);
+      AuthCredentialStoreProvider.CODEC
+         .register(Priority.DEFAULT, "Encrypted", EncryptedAuthCredentialStoreProvider.class, EncryptedAuthCredentialStoreProvider.CODEC);
    }
 
    public enum AuthMode {

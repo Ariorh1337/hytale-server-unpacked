@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.consumer.TriIntConsumer;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -19,6 +18,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.joml.Vector4d;
 
@@ -85,7 +85,7 @@ public class AOECircleSelector extends SelectorType {
       public void tick(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> ref, float time, float runTime) {
          if (SelectInteraction.SHOW_VISUAL_DEBUG) {
             Vector3d position = AOECircleSelector.this.selectTargetPosition(commandBuffer, ref);
-            org.joml.Vector3f color = new org.joml.Vector3f(
+            Vector3f color = new Vector3f(
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 11L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 12L)

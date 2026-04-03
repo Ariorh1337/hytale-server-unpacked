@@ -48,7 +48,7 @@ public class CutCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
          boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
          boolean noEntities = this.noEntitiesFlag.get(context);
@@ -120,7 +120,7 @@ public class CutCommand extends AbstractPlayerCommand {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
             boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
             boolean noEntities = this.noEntitiesFlag.get(context);

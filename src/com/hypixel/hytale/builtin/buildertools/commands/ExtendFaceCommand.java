@@ -57,7 +57,7 @@ public class ExtendFaceCommand extends AbstractCommandCollection {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             int x = this.xArg.get(context);
             int y = this.yArg.get(context);
             int z = this.zArg.get(context);
@@ -127,7 +127,7 @@ public class ExtendFaceCommand extends AbstractCommandCollection {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             int x = this.xArg.get(context);
             int y = this.yArg.get(context);
             int z = this.zArg.get(context);

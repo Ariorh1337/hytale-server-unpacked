@@ -17,6 +17,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.schema.SchemaContext;
+import com.hypixel.hytale.codec.schema.config.Schema;
+import com.hypixel.hytale.codec.validation.ValidationResults;
+import com.hypixel.hytale.codec.validation.Validator;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
 import org.joml.Vector3i;
@@ -33,9 +37,15 @@ public class DensityPropAsset extends PropAsset {
       .append(new KeyedCodec<>("Bounds", IntegerBounds3dAsset.CODEC, true), (asset, v) -> asset.boundsAsset = v, asset -> asset.boundsAsset)
       .add()
       .<Vector3i>append(new KeyedCodec<>("Range", Vector3iUtil.CODEC, true), (asset, v) -> asset.range = v, asset -> asset.range)
-      .addValidator((v, r) -> {
-         if (v.x < 0 || v.y < 0 || v.z < 0) {
-            r.fail("Range has a value smaller than 0");
+      .addValidator(new Validator<Vector3i>() {
+         public void accept(Vector3i v, ValidationResults r) {
+            if (v.x < 0 || v.y < 0 || v.z < 0) {
+               r.fail("Range has a value smaller than 0");
+            }
+         }
+
+         @Override
+         public void updateSchema(SchemaContext context, Schema target) {
          }
       })
       .add()

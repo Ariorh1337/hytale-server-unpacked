@@ -4,11 +4,11 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.ItemPullbackConfiguration;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ItemPullbackConfig implements NetworkSerializable<ItemPullbackConfiguration> {
    public static final BuilderCodec<ItemPullbackConfig> CODEC = BuilderCodec.builder(ItemPullbackConfig.class, ItemPullbackConfig::new)

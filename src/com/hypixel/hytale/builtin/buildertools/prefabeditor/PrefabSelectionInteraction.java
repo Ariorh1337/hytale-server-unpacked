@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.UUID;
@@ -48,6 +49,8 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
       Ref<EntityStore> ref = context.getEntity();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
+         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+         assert playerRefComponent != null;
          if (type == InteractionType.Primary || type == InteractionType.Secondary) {
             UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
             assert uuidComponent != null;
@@ -55,7 +58,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
             PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
             PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(uuid);
             if (prefabEditSession == null) {
-               playerComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_NOT_IN_EDIT_SESSION);
+               playerRefComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_NOT_IN_EDIT_SESSION);
             } else {
                TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
                assert transformComponent != null;
@@ -79,7 +82,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
                } else {
                   Vector3i targetLocation = getTargetLocation(ref, commandBuffer);
                   if (targetLocation == null) {
-                     playerComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_TARGET_FOUND);
+                     playerRefComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_TARGET_FOUND);
                      return;
                   }
 
@@ -93,7 +96,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
                }
 
                if (prefabEditingMetadata == null) {
-                  playerComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_PREFAB_FOUND);
+                  playerRefComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_PREFAB_FOUND);
                } else {
                   prefabEditSession.setSelectedPrefab(ref, prefabEditingMetadata, commandBuffer);
                }

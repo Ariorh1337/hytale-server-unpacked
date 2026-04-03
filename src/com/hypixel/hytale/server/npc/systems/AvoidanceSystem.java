@@ -81,7 +81,6 @@ public class AvoidanceSystem extends SteppableTickingSystem {
          DebugSupport debugSupport = role.getDebugSupport();
          boolean debugVisSteeringPre = debugSupport.isDebugFlagSet(RoleDebugFlags.VisSteeringPre);
          Vector3d preBlendSteering = debugVisSteeringPre ? new Vector3d(role.getBodySteering().getTranslation()) : null;
-         role.clearSteeringChanged();
          if (!role.getActiveMotionController().isObstructed()) {
             TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
             assert transformComponent != null;

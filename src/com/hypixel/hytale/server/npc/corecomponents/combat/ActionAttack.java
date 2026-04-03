@@ -94,7 +94,7 @@ public class ActionAttack extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       return super.canExecute(ref, role, sensorInfo, dt, store) && !role.getCombatSupport().isExecutingAttack();
    }
 

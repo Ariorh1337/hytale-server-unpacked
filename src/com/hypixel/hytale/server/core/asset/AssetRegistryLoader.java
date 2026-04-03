@@ -75,6 +75,8 @@ import com.hypixel.hytale.server.core.asset.type.particle.ParticleSpawnerPacketG
 import com.hypixel.hytale.server.core.asset.type.particle.ParticleSystemPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSpawner;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
+import com.hypixel.hytale.server.core.asset.type.physicalmaterial.PhysicalMaterialPacketGenerator;
+import com.hypixel.hytale.server.core.asset.type.physicalmaterial.config.PhysicalMaterial;
 import com.hypixel.hytale.server.core.asset.type.portalworld.PortalType;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
 import com.hypixel.hytale.server.core.asset.type.responsecurve.config.ExponentialResponseCurve;
@@ -344,7 +346,8 @@ public class AssetRegistryLoader {
                      TagPattern.class,
                      AudioCategory.class,
                      ReverbEffect.class,
-                     EqualizerEffect.class
+                     EqualizerEffect.class,
+                     PhysicalMaterial.class
                   ))
                .preLoadAssets(Collections.singletonList(AmbienceFX.EMPTY)))
             .build()
@@ -384,6 +387,18 @@ public class AssetRegistryLoader {
                   .setPacketGenerator(new BlockSoundSetPacketGenerator())
                   .loadsAfter(SoundEvent.class))
                .preLoadAssets(Collections.singletonList(BlockSoundSet.EMPTY_BLOCK_SOUND_SET)))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                              PhysicalMaterial.class, new IndexedLookupTableAssetMap<>(PhysicalMaterial[]::new)
+                           )
+                           .setPath("Item/Block/PhysicalMaterials"))
+                        .setCodec(PhysicalMaterial.CODEC))
+                     .setKeyFunction(PhysicalMaterial::getId))
+                  .setReplaceOnRemove(PhysicalMaterial::new))
+               .setPacketGenerator(new PhysicalMaterialPacketGenerator())
+               .preLoadAssets(Collections.singletonList(PhysicalMaterial.EMPTY_PHYSICAL_MATERIAL)))
             .build()
       );
       AssetRegistry.register(
@@ -440,6 +455,7 @@ public class AssetRegistryLoader {
                         .loadsAfter(
                            BlockBoundingBoxes.class,
                            BlockSoundSet.class,
+                           PhysicalMaterial.class,
                            SoundEvent.class,
                            AmbienceFX.class,
                            BlockParticleSet.class,

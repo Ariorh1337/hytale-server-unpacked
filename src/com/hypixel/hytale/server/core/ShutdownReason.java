@@ -50,12 +50,6 @@ public class ShutdownReason {
       return new ShutdownReason(this.exitCode, message.getFormattedMessage());
    }
 
-   @Deprecated
-   @Nonnull
-   public ShutdownReason withMessage(@Nonnull String message) {
-      return this.withMessage(Message.raw(message));
-   }
-
    @Nonnull
    @Override
    public String toString() {

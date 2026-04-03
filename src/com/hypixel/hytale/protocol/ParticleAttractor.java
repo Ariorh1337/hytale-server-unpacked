@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class ParticleAttractor {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -14,37 +16,37 @@ public class ParticleAttractor {
    public static final int VARIABLE_BLOCK_START = 85;
    public static final int MAX_SIZE = 85;
    @Nullable
-   public Vector3f position;
+   public Vector3fc position;
    @Nullable
-   public Vector3f radialAxis;
+   public Vector3fc radialAxis;
    public float trailPositionMultiplier;
    public float radius;
    public float radialAcceleration;
    public float radialTangentAcceleration;
    @Nullable
-   public Vector3f linearAcceleration;
+   public Vector3fc linearAcceleration;
    public float radialImpulse;
    public float radialTangentImpulse;
    @Nullable
-   public Vector3f linearImpulse;
+   public Vector3fc linearImpulse;
    @Nullable
-   public Vector3f dampingMultiplier;
+   public Vector3fc dampingMultiplier;
 
    public ParticleAttractor() {
    }
 
    public ParticleAttractor(
-      @Nullable Vector3f position,
-      @Nullable Vector3f radialAxis,
+      @Nullable Vector3fc position,
+      @Nullable Vector3fc radialAxis,
       float trailPositionMultiplier,
       float radius,
       float radialAcceleration,
       float radialTangentAcceleration,
-      @Nullable Vector3f linearAcceleration,
+      @Nullable Vector3fc linearAcceleration,
       float radialImpulse,
       float radialTangentImpulse,
-      @Nullable Vector3f linearImpulse,
-      @Nullable Vector3f dampingMultiplier
+      @Nullable Vector3fc linearImpulse,
+      @Nullable Vector3fc dampingMultiplier
    ) {
       this.position = position;
       this.radialAxis = radialAxis;
@@ -82,11 +84,11 @@ public class ParticleAttractor {
       ParticleAttractor obj = new ParticleAttractor();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         obj.position = Vector3f.deserialize(buf, offset + 1);
+         obj.position = PacketIO.readVector3f(buf, offset + 1);
       }
 
       if ((nullBits & 2) != 0) {
-         obj.radialAxis = Vector3f.deserialize(buf, offset + 13);
+         obj.radialAxis = PacketIO.readVector3f(buf, offset + 13);
       }
 
       obj.trailPositionMultiplier = buf.getFloatLE(offset + 25);
@@ -94,17 +96,17 @@ public class ParticleAttractor {
       obj.radialAcceleration = buf.getFloatLE(offset + 33);
       obj.radialTangentAcceleration = buf.getFloatLE(offset + 37);
       if ((nullBits & 4) != 0) {
-         obj.linearAcceleration = Vector3f.deserialize(buf, offset + 41);
+         obj.linearAcceleration = PacketIO.readVector3f(buf, offset + 41);
       }
 
       obj.radialImpulse = buf.getFloatLE(offset + 53);
       obj.radialTangentImpulse = buf.getFloatLE(offset + 57);
       if ((nullBits & 8) != 0) {
-         obj.linearImpulse = Vector3f.deserialize(buf, offset + 61);
+         obj.linearImpulse = PacketIO.readVector3f(buf, offset + 61);
       }
 
       if ((nullBits & 16) != 0) {
-         obj.dampingMultiplier = Vector3f.deserialize(buf, offset + 73);
+         obj.dampingMultiplier = PacketIO.readVector3f(buf, offset + 73);
       }
 
       return obj;
@@ -138,13 +140,13 @@ public class ParticleAttractor {
 
       buf.writeByte(nullBits);
       if (this.position != null) {
-         this.position.serialize(buf);
+         PacketIO.writeVector3f(buf, this.position);
       } else {
          buf.writeZero(12);
       }
 
       if (this.radialAxis != null) {
-         this.radialAxis.serialize(buf);
+         PacketIO.writeVector3f(buf, this.radialAxis);
       } else {
          buf.writeZero(12);
       }
@@ -154,7 +156,7 @@ public class ParticleAttractor {
       buf.writeFloatLE(this.radialAcceleration);
       buf.writeFloatLE(this.radialTangentAcceleration);
       if (this.linearAcceleration != null) {
-         this.linearAcceleration.serialize(buf);
+         PacketIO.writeVector3f(buf, this.linearAcceleration);
       } else {
          buf.writeZero(12);
       }
@@ -162,13 +164,13 @@ public class ParticleAttractor {
       buf.writeFloatLE(this.radialImpulse);
       buf.writeFloatLE(this.radialTangentImpulse);
       if (this.linearImpulse != null) {
-         this.linearImpulse.serialize(buf);
+         PacketIO.writeVector3f(buf, this.linearImpulse);
       } else {
          buf.writeZero(12);
       }
 
       if (this.dampingMultiplier != null) {
-         this.dampingMultiplier.serialize(buf);
+         PacketIO.writeVector3f(buf, this.dampingMultiplier);
       } else {
          buf.writeZero(12);
       }
@@ -189,17 +191,17 @@ public class ParticleAttractor {
 
    public ParticleAttractor clone() {
       ParticleAttractor copy = new ParticleAttractor();
-      copy.position = this.position != null ? this.position.clone() : null;
-      copy.radialAxis = this.radialAxis != null ? this.radialAxis.clone() : null;
+      copy.position = this.position;
+      copy.radialAxis = this.radialAxis;
       copy.trailPositionMultiplier = this.trailPositionMultiplier;
       copy.radius = this.radius;
       copy.radialAcceleration = this.radialAcceleration;
       copy.radialTangentAcceleration = this.radialTangentAcceleration;
-      copy.linearAcceleration = this.linearAcceleration != null ? this.linearAcceleration.clone() : null;
+      copy.linearAcceleration = this.linearAcceleration;
       copy.radialImpulse = this.radialImpulse;
       copy.radialTangentImpulse = this.radialTangentImpulse;
-      copy.linearImpulse = this.linearImpulse != null ? this.linearImpulse.clone() : null;
-      copy.dampingMultiplier = this.dampingMultiplier != null ? this.dampingMultiplier.clone() : null;
+      copy.linearImpulse = this.linearImpulse;
+      copy.dampingMultiplier = this.dampingMultiplier;
       return copy;
    }
 

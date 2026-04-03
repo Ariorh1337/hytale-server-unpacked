@@ -12,8 +12,8 @@ import com.hypixel.hytale.protocol.CachedPacket;
 import com.hypixel.hytale.protocol.packets.world.SetFluids;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.EmptySectionPalette;
-import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.ISectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.PaletteTypeEnum;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
@@ -42,7 +42,7 @@ public class FluidSection implements Component<ChunkStore> {
    private int y;
    private int z;
    private boolean loaded = false;
-   private ISectionPalette typePalette = EmptySectionPalette.INSTANCE;
+   private AbstractSectionPalette typePalette = EmptySectionPalette.INSTANCE;
    @Nullable
    private byte[] levelData = null;
    private int nonZeroLevels = 0;
@@ -75,18 +75,18 @@ public class FluidSection implements Component<ChunkStore> {
    }
 
    private boolean setFluidRaw(int index, int fluidId) {
-      ISectionPalette.SetResult result = this.typePalette.set(index, fluidId);
-      if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
+      AbstractSectionPalette.SetResult result = this.typePalette.set(index, fluidId);
+      if (result == AbstractSectionPalette.SetResult.REQUIRES_PROMOTE) {
          this.typePalette = this.typePalette.promote();
          result = this.typePalette.set(index, fluidId);
-         if (result != ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+         if (result != AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
             throw new IllegalStateException("Promoted fluid section failed to correctly add the new fluid");
          }
       } else if (this.typePalette.shouldDemote()) {
          this.typePalette = this.typePalette.demote();
       }
 
-      return result != ISectionPalette.SetResult.UNCHANGED;
+      return result != AbstractSectionPalette.SetResult.UNCHANGED;
    }
 
    public boolean setFluid(int x, int y, int z, @Nonnull Fluid fluid, byte level) {

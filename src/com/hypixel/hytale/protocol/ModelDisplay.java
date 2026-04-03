@@ -8,6 +8,7 @@ import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class ModelDisplay {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -20,16 +21,18 @@ public class ModelDisplay {
    @Nullable
    public String attachTo;
    @Nullable
-   public Vector3f translation;
+   public Vector3fc translation;
    @Nullable
-   public Vector3f rotation;
+   public Vector3fc rotation;
    @Nullable
-   public Vector3f scale;
+   public Vector3fc scale;
 
    public ModelDisplay() {
    }
 
-   public ModelDisplay(@Nullable String node, @Nullable String attachTo, @Nullable Vector3f translation, @Nullable Vector3f rotation, @Nullable Vector3f scale) {
+   public ModelDisplay(
+      @Nullable String node, @Nullable String attachTo, @Nullable Vector3fc translation, @Nullable Vector3fc rotation, @Nullable Vector3fc scale
+   ) {
       this.node = node;
       this.attachTo = attachTo;
       this.translation = translation;
@@ -54,15 +57,15 @@ public class ModelDisplay {
       ModelDisplay obj = new ModelDisplay();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         obj.translation = Vector3f.deserialize(buf, offset + 1);
+         obj.translation = PacketIO.readVector3f(buf, offset + 1);
       }
 
       if ((nullBits & 2) != 0) {
-         obj.rotation = Vector3f.deserialize(buf, offset + 13);
+         obj.rotation = PacketIO.readVector3f(buf, offset + 13);
       }
 
       if ((nullBits & 4) != 0) {
-         obj.scale = Vector3f.deserialize(buf, offset + 25);
+         obj.scale = PacketIO.readVector3f(buf, offset + 25);
       }
 
       if ((nullBits & 8) != 0) {
@@ -175,19 +178,19 @@ public class ModelDisplay {
 
       buf.writeByte(nullBits);
       if (this.translation != null) {
-         this.translation.serialize(buf);
+         PacketIO.writeVector3f(buf, this.translation);
       } else {
          buf.writeZero(12);
       }
 
       if (this.rotation != null) {
-         this.rotation.serialize(buf);
+         PacketIO.writeVector3f(buf, this.rotation);
       } else {
          buf.writeZero(12);
       }
 
       if (this.scale != null) {
-         this.scale.serialize(buf);
+         PacketIO.writeVector3f(buf, this.scale);
       } else {
          buf.writeZero(12);
       }
@@ -284,9 +287,9 @@ public class ModelDisplay {
       ModelDisplay copy = new ModelDisplay();
       copy.node = this.node;
       copy.attachTo = this.attachTo;
-      copy.translation = this.translation != null ? this.translation.clone() : null;
-      copy.rotation = this.rotation != null ? this.rotation.clone() : null;
-      copy.scale = this.scale != null ? this.scale.clone() : null;
+      copy.translation = this.translation;
+      copy.rotation = this.rotation;
+      copy.scale = this.scale;
       return copy;
    }
 

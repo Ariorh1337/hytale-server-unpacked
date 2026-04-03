@@ -30,7 +30,6 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnControl
 import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.WorldSpawnPoint;
 import com.hypixel.hytale.server.core.asset.type.item.DroplistCommand;
 import com.hypixel.hytale.server.core.config.ModConfig;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.BootEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
@@ -169,22 +168,19 @@ public class AssetModule extends JavaPlugin {
                   AddPlayerToWorldEvent.class,
                   event -> {
                      PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
-                     Player player = event.getHolder().getComponent(Player.getComponentType());
-                     if (playerRef != null && player != null) {
-                        if (player.hasPermission("hytale.mods.outdated.notify")) {
-                           StringBuilder modsList = new StringBuilder();
+                     if (playerRef != null && playerRef.hasPermission("hytale.mods.outdated.notify")) {
+                        StringBuilder modsList = new StringBuilder();
 
-                           for (String packx : outdatedPacks) {
-                              modsList.append("\n - ").append(packx);
-                           }
-
-                           playerRef.sendMessage(
-                              Message.translation("server.assetModule.outOfDatePacks")
-                                 .param("count", outdatedPacks.size())
-                                 .param("mods", modsList.toString())
-                                 .color(Color.RED)
-                           );
+                        for (String packx : outdatedPacks) {
+                           modsList.append("\n - ").append(packx);
                         }
+
+                        playerRef.sendMessage(
+                           Message.translation("server.assetModule.outOfDatePacks")
+                              .param("count", outdatedPacks.size())
+                              .param("mods", modsList.toString())
+                              .color(Color.RED)
+                        );
                      }
                   }
                );

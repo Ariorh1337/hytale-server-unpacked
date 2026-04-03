@@ -24,12 +24,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
+import it.unimi.dsi.fastutil.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -199,10 +199,10 @@ public class PropStage implements Stage {
          }
       }
 
-      Map<PropRuntime, Biome> propRuntimeBiomeMap = new HashMap<>();
+      List<Pair<PropRuntime, Biome>> propRuntimeBiomeMap = new ArrayList<>(10);
 
       for (Biome biome : biomesInBuffer) {
-         biome.getRuntimesWithIndex(this.runtimeIndex, propRuntimex -> propRuntimeBiomeMap.put(propRuntimex, biome));
+         biome.getRuntimesWithIndex(this.runtimeIndex, propRuntimex -> propRuntimeBiomeMap.add(Pair.of(propRuntimex, biome)));
       }
 
       Prop.Context propContext = new Prop.Context(new Vector3i(), materialInputSpace, materialOutputSpace, entityOutputSpace, Double.MAX_VALUE);
@@ -211,9 +211,9 @@ public class PropStage implements Stage {
       Vector3i position2d_voxelGrid = new Vector3i();
       PropDistribution.Context distributionContext = new PropDistribution.Context(new Bounds3d(), Pipe.getEmptyTwo(), Double.MAX_VALUE);
 
-      for (Entry<PropRuntime, Biome> entry : propRuntimeBiomeMap.entrySet()) {
-         PropRuntime propRuntime = entry.getKey();
-         Biome biome = entry.getValue();
+      for (Pair<PropRuntime, Biome> entry : propRuntimeBiomeMap) {
+         PropRuntime propRuntime = entry.left();
+         Biome biome = entry.right();
          PropDistribution propDistribution = propRuntime.getPropDistribution();
          Pipe.Two<Vector3d, Prop> propDistributionPipe = (position_voxelGrid, prop, control) -> {
             int positionX_voxelGrid = (int)Math.floor(position_voxelGrid.x);

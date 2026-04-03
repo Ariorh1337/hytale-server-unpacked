@@ -89,6 +89,7 @@ import com.hypixel.hytale.protocol.packets.assets.UpdateModelvfxs;
 import com.hypixel.hytale.protocol.packets.assets.UpdateObjectiveTask;
 import com.hypixel.hytale.protocol.packets.assets.UpdateParticleSpawners;
 import com.hypixel.hytale.protocol.packets.assets.UpdateParticleSystems;
+import com.hypixel.hytale.protocol.packets.assets.UpdatePhysicalMaterials;
 import com.hypixel.hytale.protocol.packets.assets.UpdateProjectileConfigs;
 import com.hypixel.hytale.protocol.packets.assets.UpdateRecipes;
 import com.hypixel.hytale.protocol.packets.assets.UpdateRepulsionConfig;
@@ -161,7 +162,13 @@ import com.hypixel.hytale.protocol.packets.interaction.MountNPC;
 import com.hypixel.hytale.protocol.packets.interaction.PlayInteractionFor;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChains;
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
+import com.hypixel.hytale.protocol.packets.interface_.ArgCacheInvalidation;
+import com.hypixel.hytale.protocol.packets.interface_.ArgValuesRequest;
+import com.hypixel.hytale.protocol.packets.interface_.ArgValuesResponse;
 import com.hypixel.hytale.protocol.packets.interface_.ChatMessage;
+import com.hypixel.hytale.protocol.packets.interface_.CommandSuggestionsRequest;
+import com.hypixel.hytale.protocol.packets.interface_.CommandSuggestionsResponse;
+import com.hypixel.hytale.protocol.packets.interface_.CommandTreeSync;
 import com.hypixel.hytale.protocol.packets.interface_.CustomHud;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPage;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageEvent;
@@ -1241,6 +1248,18 @@ public final class PacketRegistry {
       register(
          PacketRegistry.PacketDirection.ToClient,
          NetworkChannel.Default,
+         87,
+         "UpdatePhysicalMaterials",
+         UpdatePhysicalMaterials.class,
+         6,
+         1677721600,
+         true,
+         UpdatePhysicalMaterials::validateStructure,
+         UpdatePhysicalMaterials::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
          100,
          "SetClientId",
          SetClientId.class,
@@ -2156,7 +2175,7 @@ public final class PacketRegistry {
          217,
          "CustomHud",
          CustomHud.class,
-         2,
+         6,
          1677721600,
          true,
          CustomHud::validateStructure,
@@ -2355,6 +2374,54 @@ public final class PacketRegistry {
          UpdateAnchorUI::deserialize
       );
       register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         236,
+         "CommandSuggestionsRequest",
+         CommandSuggestionsRequest.class,
+         9,
+         16384014,
+         false,
+         CommandSuggestionsRequest::validateStructure,
+         CommandSuggestionsRequest::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         237,
+         "CommandSuggestionsResponse",
+         CommandSuggestionsResponse.class,
+         17,
+         1677721600,
+         false,
+         CommandSuggestionsResponse::validateStructure,
+         CommandSuggestionsResponse::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         238,
+         "CommandTreeSync",
+         CommandTreeSync.class,
+         1,
+         1677721600,
+         true,
+         CommandTreeSync::validateStructure,
+         CommandTreeSync::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         239,
+         "ArgValuesRequest",
+         ArgValuesRequest.class,
+         1,
+         32768019,
+         false,
+         ArgValuesRequest::validateStructure,
+         ArgValuesRequest::deserialize
+      );
+      register(
          PacketRegistry.PacketDirection.ToClient,
          NetworkChannel.Default,
          240,
@@ -2437,6 +2504,30 @@ public final class PacketRegistry {
          false,
          CreateUserMarker::validateStructure,
          CreateUserMarker::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         247,
+         "ArgValuesResponse",
+         ArgValuesResponse.class,
+         2,
+         1677721600,
+         false,
+         ArgValuesResponse::validateStructure,
+         ArgValuesResponse::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         248,
+         "ArgCacheInvalidation",
+         ArgCacheInvalidation.class,
+         1,
+         1677721600,
+         false,
+         ArgCacheInvalidation::validateStructure,
+         ArgCacheInvalidation::deserialize
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3260,7 +3351,7 @@ public final class PacketRegistry {
          355,
          "AssetEditorUpdateModelPreview",
          AssetEditorUpdateModelPreview.class,
-         30,
+         29,
          1677721600,
          false,
          AssetEditorUpdateModelPreview::validateStructure,

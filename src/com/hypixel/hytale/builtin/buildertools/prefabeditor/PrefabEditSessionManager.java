@@ -605,7 +605,7 @@ public class PrefabEditSessionManager {
 
       for (int i = 0; i < context.getPrefabPaths().size(); i++) {
          Path prefabPath = context.getPrefabPaths().get(i);
-         CompletableFuture<IPrefabBuffer> prefabLoadingFuture = this.getPrefabBuffer(context.getEditor(), prefabPath);
+         CompletableFuture<IPrefabBuffer> prefabLoadingFuture = this.getPrefabBuffer(context.getEditorRef(), prefabPath);
          if (prefabLoadingFuture == null) {
             if (loadingState != null) {
                loadingState.addError("server.commands.editprefab.error.prefabLoadFailed", prefabPath.toString());

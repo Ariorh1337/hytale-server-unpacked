@@ -44,6 +44,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.MotionKind;
 import com.hypixel.hytale.server.npc.movement.NavState;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerBase;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
@@ -115,13 +116,12 @@ public abstract class MotionControllerBase implements MotionController {
    protected boolean enableTriggers = true;
    protected boolean enableBlockDamage = true;
    protected boolean isReceivingBlockDamage;
-   protected boolean isAvoidingBlockDamage = true;
    protected boolean requiresPreciseMovement;
-   protected boolean requiresDepthProbing;
    protected boolean havePreciseMovementTarget;
    @Nonnull
    protected Vector3d preciseMovementTarget = new Vector3d();
-   protected boolean isRelaxedMoveConstraints;
+   @Nonnull
+   protected EnumSet<RelaxedConstraint> relaxedConstraints = EnumSet.noneOf(RelaxedConstraint.class);
    protected boolean isBlendingHeading;
    protected double blendHeading;
    protected boolean haveBlendHeadingPosition;
@@ -436,7 +436,7 @@ public abstract class MotionControllerBase implements MotionController {
       NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
       this.effectHorizontalSpeedMultiplier = npcComponent.getCurrentHorizontalSpeedMultiplier(ref, componentAccessor);
-      this.setAvoidingBlockDamage(this.isAvoidingBlockDamage && !this.isReceivingBlockDamage);
+      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached());
       this.translation.zero();
       this.cachedMovementBlocked = this.isMovementBlocked(ref, componentAccessor);
       this.computeMove(ref, role, bodySteering, interval, this.translation, componentAccessor);
@@ -467,6 +467,7 @@ public abstract class MotionControllerBase implements MotionController {
          this.translation.zero();
       }
 
+      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached());
       this.executeMove(ref, role, interval, this.translation, componentAccessor);
       if (role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.VisTranslation)) {
          VisHelper.renderDebugVectorTo(this.position, this.translation, VisHelper.DEBUG_COLOR_STEERING_PRE, world);
@@ -474,10 +475,10 @@ public abstract class MotionControllerBase implements MotionController {
 
       this.postExecuteMove();
       this.clearRequirePreciseMovement();
-      this.clearRequireDepthProbing();
       this.clearBlendHeading();
-      this.setAvoidingBlockDamage(!this.isReceivingBlockDamage);
-      this.setRelaxedMoveConstraints(false);
+      boolean cannotBreathe = !role.couldBreatheCached();
+      this.relaxedConstraints.clear();
+      this.applyRuntimeRelaxedConstraints(cannotBreathe);
       float maxBodyRotation = (float)(interval * this.getCurrentMaxBodyRotationSpeed() * bodySteering.getRelativeTurnSpeed());
       float maxHeadRotation = (float)(interval * this.maxHeadRotationSpeed * headSteering.getRelativeTurnSpeed() * this.effectHorizontalSpeedMultiplier);
       this.calculateYaw(ref, bodySteering, headSteering, maxHeadRotation, maxBodyRotation, componentAccessor);
@@ -824,23 +825,22 @@ public abstract class MotionControllerBase implements MotionController {
       return speed == 0.0;
    }
 
+   protected boolean isForcePushed() {
+      return !this.forceVelocity.equals(Vector3dUtil.ZERO) || !this.appliedVelocities.isEmpty();
+   }
+
    @Override
-   public boolean canAct(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return this.isAlive(ref, componentAccessor)
-         && this.role.couldBreatheCached()
-         && this.forceVelocity.equals(Vector3dUtil.ZERO)
-         && this.appliedVelocities.isEmpty();
+   public boolean canSteer(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return this.isAlive(ref, componentAccessor) && !this.isForcePushed();
    }
 
    @Nullable
    @Override
-   public String canActFailReason(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public String canSteerFailReason(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.isAlive(ref, componentAccessor)) {
          return "DEAD";
-      } else if (!this.role.couldBreatheCached()) {
-         return "SUFFOCATING";
       } else {
-         return !this.forceVelocity.equals(Vector3dUtil.ZERO) && !this.appliedVelocities.isEmpty() ? "EXT_FORCE" : null;
+         return this.isForcePushed() ? "EXT_FORCE" : null;
       }
    }
 
@@ -1027,13 +1027,19 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public void setAvoidingBlockDamage(boolean avoid) {
-      this.isAvoidingBlockDamage = avoid;
+   public boolean isAvoidingBlockDamage() {
+      return !this.relaxedConstraints.contains(RelaxedConstraint.DAMAGE);
    }
 
-   @Override
-   public boolean isAvoidingBlockDamage() {
-      return this.isAvoidingBlockDamage;
+   protected void applyRuntimeRelaxedConstraints(boolean cannotBreathe) {
+      if (this.isReceivingBlockDamage) {
+         this.relaxedConstraints.add(RelaxedConstraint.DAMAGE);
+      }
+
+      if (cannotBreathe) {
+         this.relaxedConstraints.add(RelaxedConstraint.BREATHE);
+         this.relaxedConstraints.add(RelaxedConstraint.WADE);
+      }
    }
 
    public void processTriggers(
@@ -1262,19 +1268,6 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public void requireDepthProbing() {
-      this.requiresDepthProbing = true;
-   }
-
-   public void clearRequireDepthProbing() {
-      this.requiresDepthProbing = false;
-   }
-
-   public boolean isRequiresDepthProbing() {
-      return this.requiresDepthProbing;
-   }
-
-   @Override
    public void enableHeadingBlending(double heading, @Nullable Vector3d targetPosition, double blendLevel) {
       this.isBlendingHeading = true;
       this.blendHeading = heading;
@@ -1297,13 +1290,15 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public void setRelaxedMoveConstraints(boolean relax) {
-      this.isRelaxedMoveConstraints = relax;
+   public void setRelaxedMoveConstraints(@Nonnull EnumSet<RelaxedConstraint> constraints) {
+      this.relaxedConstraints.clear();
+      this.relaxedConstraints.addAll(constraints);
    }
 
+   @Nonnull
    @Override
-   public boolean isRelaxedMoveConstraints() {
-      return this.isRelaxedMoveConstraints;
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints() {
+      return this.relaxedConstraints;
    }
 
    @Override

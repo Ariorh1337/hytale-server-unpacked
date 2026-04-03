@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.protocol.ModelParticle;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -18,7 +17,9 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ActionSpawnParticles extends ActionBase {
    protected final String particleSystem;
@@ -40,7 +41,7 @@ public class ActionSpawnParticles extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;

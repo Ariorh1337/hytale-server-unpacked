@@ -5,13 +5,13 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.vector.Vector2dUtil;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
-import com.hypixel.hytale.protocol.Vector2f;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector2d;
+import org.joml.Vector2f;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class AssetIconProperties implements NetworkSerializable<com.hypixel.hytale.protocol.AssetIconProperties> {
    public static final BuilderCodec<AssetIconProperties> CODEC = BuilderCodec.<AssetIconProperties>builder(AssetIconProperties.class, AssetIconProperties::new)

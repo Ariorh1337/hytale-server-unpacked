@@ -9,7 +9,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,8 +59,8 @@ public class RunCommandOperation extends SequenceBrushOperation {
          commandString = commandString.replaceFirst(regexBracketPattern.pattern(), replacementValue);
       }
 
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
-      CommandManager.get().handleCommand(playerComponent, commandString);
+      PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+      assert playerRefComponent != null;
+      CommandManager.get().handleCommand(playerRefComponent, commandString);
    }
 }

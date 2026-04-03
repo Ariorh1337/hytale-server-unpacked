@@ -172,7 +172,7 @@ public class BlockPlaceUtils {
                   if (success) {
                      onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition, blockTypeAsset, targetRotation);
                   } else {
-                     onPlaceBlockFailure(itemStack, inventory, activeSlot, playerComponent, targetBlockSection, targetBlockPosition);
+                     onPlaceBlockFailure(itemStack, inventory, activeSlot, playerComponent, playerRefComponent, targetBlockSection, targetBlockPosition);
                   }
                }
             }
@@ -185,6 +185,7 @@ public class BlockPlaceUtils {
       @Nullable Inventory inventory,
       byte activeSlot,
       @Nullable Player playerComponent,
+      @Nullable PlayerRef playerRefComponent,
       @Nonnull BlockSection blockSection,
       @Nonnull Vector3i blockPosition
    ) {
@@ -194,8 +195,8 @@ public class BlockPlaceUtils {
          ItemStackSlotTransaction transaction = hotbar.addItemStackToSlot(activeSlot, itemStack);
          if (!transaction.succeeded()) {
             ItemStackTransaction itemStackTransaction = hotbar.addItemStack(itemStack);
-            if (!itemStackTransaction.succeeded() && playerComponent != null) {
-               playerComponent.sendMessage(MESSAGE_MODULES_INTERACTION_FAILED_ADD_BACK_AFTER_FAILED_PLACE);
+            if (!itemStackTransaction.succeeded() && playerRefComponent != null) {
+               playerRefComponent.sendMessage(MESSAGE_MODULES_INTERACTION_FAILED_ADD_BACK_AFTER_FAILED_PLACE);
             }
 
             return;

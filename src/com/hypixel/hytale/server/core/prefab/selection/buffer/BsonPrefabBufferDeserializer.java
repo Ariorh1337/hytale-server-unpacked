@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockMigration
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.prefab.config.SelectionPrefabSerializer;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBufferBlockEntry;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -42,15 +41,12 @@ public class BsonPrefabBufferDeserializer {
    public PrefabBuffer deserialize(Path path, @Nonnull BsonDocument document) {
       BsonValue versionValue = document.get("version");
       int version = versionValue != null ? versionValue.asInt32().getValue() : -1;
-      if (version > 8) {
-         throw new IllegalArgumentException("Prefab version is too new: " + version + " by expected 8");
+      if (version < 8) {
+         throw new IllegalArgumentException("Prefab version is too old: " + version);
       }
 
-      int worldVersion = version < 4 ? SelectionPrefabSerializer.readWorldVersion(document) : 0;
-      BsonValue entityVersionValue = document.get("entityVersion");
-      int entityVersion = entityVersionValue != null ? entityVersionValue.asInt32().getValue() : 0;
-      if (version < 1) {
-         throw new IllegalArgumentException("Prefab version " + version + " is no longer supported. Please re-save the prefab.");
+      if (version > 8) {
+         throw new IllegalArgumentException("Prefab version is too new: " + version + " by expected 8");
       }
 
       Vector3i anchor = new Vector3i();
@@ -105,7 +101,7 @@ public class BsonPrefabBufferDeserializer {
                throw new IllegalStateException("Failed to load block type for " + path + " at " + realX + ", " + realY + ", " + realZ, t);
             }
 
-            deserializeState(blockEntry, blockDocument, version, worldVersion);
+            deserializeState(blockEntry, blockDocument);
             blockEntry.supportValue = (byte)blockDocument.getInt32("support", DEFAULT_SUPPORT_VALUE).getValue();
             blockEntry.filler = blockDocument.getInt32("filler", DEFAULT_FILLER_VALUE).getValue();
             blockEntry.rotation = blockDocument.getInt32("rotation", DEFAULT_ROTATION_VALUE).getValue();
@@ -172,7 +168,7 @@ public class BsonPrefabBufferDeserializer {
          }
       }
 
-      Int2ObjectOpenHashMap<List<Holder<EntityStore>>> entityMap = deserializeEntityHolders(document, anchor, version, entityVersion);
+      Int2ObjectOpenHashMap<List<Holder<EntityStore>>> entityMap = deserializeEntityHolders(document, anchor);
       columnMap.int2ObjectEntrySet().fastForEach(entryx -> {
          int columnIndexx = entryx.getIntKey();
          int xx = MathUtil.unpackLeft(columnIndexx);
@@ -233,21 +229,15 @@ public class BsonPrefabBufferDeserializer {
       }
    }
 
-   private static void deserializeState(@Nonnull PrefabBufferBlockEntry blockEntry, @Nonnull BsonDocument blockDocument, int version, int worldVersion) {
+   private static void deserializeState(@Nonnull PrefabBufferBlockEntry blockEntry, @Nonnull BsonDocument blockDocument) {
       BsonValue stateValue = blockDocument.get("components");
       if (stateValue != null) {
-         if (version < 4) {
-            blockEntry.state = ChunkStore.REGISTRY.deserialize(stateValue.asDocument(), worldVersion);
-         } else {
-            blockEntry.state = ChunkStore.REGISTRY.deserialize(stateValue.asDocument());
-         }
+         blockEntry.state = ChunkStore.REGISTRY.deserialize(stateValue.asDocument());
       }
    }
 
    @Nonnull
-   private static Int2ObjectOpenHashMap<List<Holder<EntityStore>>> deserializeEntityHolders(
-      @Nonnull BsonDocument document, @Nonnull Vector3i anchor, int version, int entityVersion
-   ) {
+   private static Int2ObjectOpenHashMap<List<Holder<EntityStore>>> deserializeEntityHolders(@Nonnull BsonDocument document, @Nonnull Vector3i anchor) {
       BsonValue entitiesValue = document.get("entities");
       Int2ObjectOpenHashMap<List<Holder<EntityStore>>> entityMap = new Int2ObjectOpenHashMap<>();
       if (entitiesValue == null) {
@@ -261,13 +251,7 @@ public class BsonPrefabBufferDeserializer {
          BsonDocument entityDocument = entitiesArray.get(i).asDocument();
 
          try {
-            Holder<EntityStore> entityHolder;
-            if (version <= 1) {
-               entityHolder = SelectionPrefabSerializer.legacyEntityDecode(entityDocument, entityVersion);
-            } else {
-               entityHolder = EntityStore.REGISTRY.deserialize(entityDocument);
-            }
-
+            Holder<EntityStore> entityHolder = EntityStore.REGISTRY.deserialize(entityDocument);
             TransformComponent transformComponent = entityHolder.getComponent(TransformComponent.getComponentType());
             assert transformComponent != null;
             Vector3d position = transformComponent.getPosition();

@@ -8,12 +8,15 @@ import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.event.events.permissions.GroupPermissionChangeEvent;
 import com.hypixel.hytale.server.core.event.events.permissions.PlayerGroupEvent;
 import com.hypixel.hytale.server.core.event.events.permissions.PlayerPermissionChangeEvent;
+import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
 import com.hypixel.hytale.server.core.permissions.commands.PermCommand;
 import com.hypixel.hytale.server.core.permissions.commands.op.OpCommand;
 import com.hypixel.hytale.server.core.permissions.provider.HytalePermissionsProvider;
 import com.hypixel.hytale.server.core.permissions.provider.PermissionProvider;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMaps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Collections;
@@ -124,6 +127,7 @@ public class PermissionsModule extends JavaPlugin {
          .getEventBus()
          .<Void, PlayerGroupEvent.Added>dispatchFor(PlayerGroupEvent.Added.class)
          .dispatch(new PlayerGroupEvent.Added(uuid, group));
+      resendCommandTreeForPlayer(uuid);
    }
 
    public void removeUserFromGroup(@Nonnull UUID uuid, @Nonnull String group) {
@@ -132,6 +136,14 @@ public class PermissionsModule extends JavaPlugin {
          .getEventBus()
          .<Void, PlayerGroupEvent.Removed>dispatchFor(PlayerGroupEvent.Removed.class)
          .dispatch(new PlayerGroupEvent.Removed(uuid, group));
+      resendCommandTreeForPlayer(uuid);
+   }
+
+   private static void resendCommandTreeForPlayer(@Nonnull UUID uuid) {
+      PlayerRef playerRef = Universe.get().getPlayer(uuid);
+      if (playerRef != null && playerRef.getPacketHandler() instanceof GamePacketHandler gameHandler) {
+         gameHandler.sendCommandTree();
+      }
    }
 
    public void setVirtualGroups(@Nonnull Map<String, Set<String>> virtualGroups) {

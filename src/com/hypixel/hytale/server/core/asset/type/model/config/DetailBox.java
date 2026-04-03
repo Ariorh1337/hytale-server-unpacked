@@ -5,12 +5,12 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.io.NetworkSerializers;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.joml.Vector3f;
 
 public class DetailBox implements NetworkSerializable<com.hypixel.hytale.protocol.DetailBox> {
    public static final BuilderCodec<DetailBox> CODEC = BuilderCodec.builder(DetailBox.class, DetailBox::new)

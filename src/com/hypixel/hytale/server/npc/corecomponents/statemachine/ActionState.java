@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.ComponentInfo;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionState extends ActionBase {
    protected final int state;
@@ -29,7 +30,7 @@ public class ActionState extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       if (this.componentLocal) {
          role.getStateSupport().setComponentState(this.componentIndex, this.state);

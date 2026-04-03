@@ -29,7 +29,6 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gamemode.GameModeType;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
-import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -94,7 +93,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
-public class Player extends LivingEntity implements CommandSender, PermissionHolder, MetricProvider {
+public class Player extends LivingEntity implements PermissionHolder, MetricProvider {
    @Nonnull
    public static final MetricsRegistry<Player> METRICS_REGISTRY = new MetricsRegistry<Player>()
       .register("Uuid", Entity::getUuid, Codec.UUID_STRING)
@@ -399,16 +398,13 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       playerRefComponent.getPacketHandler().writeNoCache(new SetBlockPlacementOverride(overrideBlockPlacementRestrictions));
    }
 
-   @Override
-   public void sendMessage(@Nonnull Message message) {
-      this.playerRef.sendMessage(message);
-   }
-
+   @Deprecated(forRemoval = true)
    @Override
    public boolean hasPermission(@Nonnull String id) {
       return PermissionsModule.get().hasPermission(this.getUuid(), id);
    }
 
+   @Deprecated(forRemoval = true)
    @Override
    public boolean hasPermission(@Nonnull String id, boolean def) {
       return PermissionsModule.get().hasPermission(this.getUuid(), id, def);
@@ -513,9 +509,13 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
             return Double.compare(distA, distB);
          }).toList();
          BoundingBox playerBoundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
-         return playerBoundingBoxComponent == null
-            ? CompletableFuture.completedFuture(new Transform(sortedRespawnPoints.getFirst().getRespawnPosition()))
-            : tryUseSpawnPoint(world, sortedRespawnPoints, 0, ref, playerComponent, playerBoundingBoxComponent.getBoundingBox());
+         if (playerBoundingBoxComponent == null) {
+            return CompletableFuture.completedFuture(new Transform(sortedRespawnPoints.getFirst().getRespawnPosition()));
+         }
+
+         PlayerRef playerRef = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+         assert playerRef != null;
+         return tryUseSpawnPoint(world, sortedRespawnPoints, 0, ref, playerRef, playerBoundingBoxComponent.getBoundingBox());
       } else {
          Transform worldSpawnPoint = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, componentAccessor);
          return CompletableFuture.completedFuture(worldSpawnPoint);
@@ -524,7 +524,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
 
    @Nonnull
    private static CompletableFuture<Transform> tryUseSpawnPoint(
-      World world, List<PlayerRespawnPointData> sortedRespawnPoints, int index, Ref<EntityStore> ref, Player playerComponent, Box boundingBox
+      World world, List<PlayerRespawnPointData> sortedRespawnPoints, int index, Ref<EntityStore> ref, PlayerRef playerRef, Box boundingBox
    ) {
       if (sortedRespawnPoints != null && index < sortedRespawnPoints.size()) {
          PlayerRespawnPointData respawnPoint = sortedRespawnPoints.get(index);
@@ -568,7 +568,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
                   return new Transform(pos, new Rotation3f(Rotation3f.IDENTITY));
                }
 
-               playerComponent.sendMessage(Message.translation("server.general.respawnPointObstructed").param("respawnPointName", respawnPoint.getName()));
+               playerRef.sendMessage(Message.translation("server.general.respawnPointObstructed").param("respawnPointName", respawnPoint.getName()));
                return null;
             }, world)
             .whenComplete((unused, throwable) -> {
@@ -577,12 +577,10 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
                }
             })
             .thenCompose(
-               v -> v != null
-                  ? CompletableFuture.completedFuture(v)
-                  : tryUseSpawnPoint(world, sortedRespawnPoints, index + 1, ref, playerComponent, boundingBox)
+               v -> v != null ? CompletableFuture.completedFuture(v) : tryUseSpawnPoint(world, sortedRespawnPoints, index + 1, ref, playerRef, boundingBox)
             );
       } else {
-         playerComponent.sendMessage(Message.translation("server.general.allRespawnPointsObstructed"));
+         playerRef.sendMessage(Message.translation("server.general.allRespawnPointsObstructed"));
          return CompletableFuture.supplyAsync(() -> {
             if (!ref.isValid()) {
                return new Transform();
@@ -677,10 +675,10 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    ) {
       ItemStackSlotTransaction transaction = super.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
       if (transaction != null && transaction.getSlotAfter().isBroken() && !itemStack.isBroken()) {
-         Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
-         this.sendMessage(Message.translation("server.general.repair.itemBroken").param("itemName", itemNameMessage).color("#ff5555"));
          PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
          assert playerRefComponent != null;
+         Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
+         playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBroken").param("itemName", itemNameMessage).color("#ff5555"));
          int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
          SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
       }
@@ -866,10 +864,5 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    @Override
    public String toString() {
       return "Player{uuid=" + this.getUuid() + ", clientViewRadius='" + this.clientViewRadius + "', " + super.toString() + "}";
-   }
-
-   @Override
-   public String getDisplayName() {
-      return this.playerRef.getUsername();
    }
 }

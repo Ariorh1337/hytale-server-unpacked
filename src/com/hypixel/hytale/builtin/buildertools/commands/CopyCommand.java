@@ -55,7 +55,7 @@ public class CopyCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
          boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
          boolean noEntities = this.noEntitiesFlag.get(context);
@@ -133,7 +133,7 @@ public class CopyCommand extends AbstractPlayerCommand {
          try {
             BlockSelection selection = builderState.getSelection();
             if (selection == null || !selection.hasSelectionBounds()) {
-               playerComponent.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
+               playerRefComponent.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
                return;
             }
 
@@ -141,7 +141,7 @@ public class CopyCommand extends AbstractPlayerCommand {
             Vector3i max = selection.getSelectionMax();
             builderState.copyOrCut(r, min.x(), min.y(), min.z(), max.x(), max.y(), max.z(), settings, c);
          } catch (PrefabCopyException e) {
-            playerComponent.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));
+            playerRefComponent.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", e.getMessage()));
          }
       });
    }
@@ -180,7 +180,7 @@ public class CopyCommand extends AbstractPlayerCommand {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
             boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
             boolean noEntities = this.noEntitiesFlag.get(context);

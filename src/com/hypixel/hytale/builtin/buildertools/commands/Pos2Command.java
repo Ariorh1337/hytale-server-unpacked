@@ -39,7 +39,7 @@ public class Pos2Command extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          Vector3i intTriple;
          if (this.xArg.provided(context) && this.yArg.provided(context) && this.zArg.provided(context)) {
             intTriple = new Vector3i(this.xArg.get(context), this.yArg.get(context), this.zArg.get(context));

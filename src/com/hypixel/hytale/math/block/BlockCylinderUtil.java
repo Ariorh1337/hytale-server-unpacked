@@ -8,6 +8,12 @@ public class BlockCylinderUtil {
    public static <T> boolean forEachBlock(
       int originX, int originY, int originZ, int radiusX, int height, int radiusZ, T t, @Nonnull TriIntObjPredicate<T> consumer
    ) {
+      return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, false, false, t, consumer);
+   }
+
+   public static <T> boolean forEachBlock(
+      int originX, int originY, int originZ, int radiusX, int height, int radiusZ, boolean evenXZ, boolean evenH, T t, @Nonnull TriIntObjPredicate<T> consumer
+   ) {
       if (radiusX <= 0) {
          throw new IllegalArgumentException(String.valueOf(radiusX));
       }
@@ -20,20 +26,29 @@ public class BlockCylinderUtil {
          throw new IllegalArgumentException(String.valueOf(radiusZ));
       }
 
+      float offsetXZ = evenXZ ? 0.5F : 0.0F;
+      int maxX = evenXZ ? radiusX - 1 : radiusX;
+      int maxZBound = evenXZ ? radiusZ - 1 : radiusZ;
+      int sizeH = height;
       float radiusXAdjusted = radiusX + 0.41F;
       float radiusZAdjusted = radiusZ + 0.41F;
       double invRadiusXSqr = 1.0 / (radiusXAdjusted * radiusXAdjusted);
 
-      for (int x = -radiusX; x <= radiusX; x++) {
-         double qx = 1.0 - x * x * invRadiusXSqr;
-         double dz = Math.sqrt(qx) * radiusZAdjusted;
-         int maxZ;
-         int minZ = -(maxZ = (int)dz);
+      for (int x = -radiusX; x <= maxX; x++) {
+         double sx = x + offsetXZ;
+         double qx = 1.0 - sx * sx * invRadiusXSqr;
+         if (!(qx < 0.0)) {
+            double dz = Math.sqrt(qx) * radiusZAdjusted;
+            int minZi = (int)Math.ceil(-dz - offsetXZ);
+            int maxZi = (int)(dz - offsetXZ);
+            minZi = Math.max(minZi, -radiusZ);
+            maxZi = Math.min(maxZi, maxZBound);
 
-         for (int z = minZ; z <= maxZ; z++) {
-            for (int y = height - 1; y >= 0; y--) {
-               if (!consumer.test(originX + x, originY + y, originZ + z, t)) {
-                  return false;
+            for (int z = minZi; z <= maxZi; z++) {
+               for (int y = sizeH - 1; y >= 0; y--) {
+                  if (!consumer.test(originX + x, originY + y, originZ + z, t)) {
+                     return false;
+                  }
                }
             }
          }
@@ -51,8 +66,25 @@ public class BlockCylinderUtil {
    public static <T> boolean forEachBlock(
       int originX, int originY, int originZ, int radiusX, int height, int radiusZ, int thickness, boolean capped, T t, @Nonnull TriIntObjPredicate<T> consumer
    ) {
+      return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, thickness, capped, false, false, t, consumer);
+   }
+
+   public static <T> boolean forEachBlock(
+      int originX,
+      int originY,
+      int originZ,
+      int radiusX,
+      int height,
+      int radiusZ,
+      int thickness,
+      boolean capped,
+      boolean evenXZ,
+      boolean evenH,
+      T t,
+      @Nonnull TriIntObjPredicate<T> consumer
+   ) {
       if (thickness < 1) {
-         return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, t, consumer);
+         return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, evenXZ, evenH, t, consumer);
       }
 
       if (radiusX <= 0) {
@@ -67,6 +99,10 @@ public class BlockCylinderUtil {
          throw new IllegalArgumentException(String.valueOf(radiusZ));
       }
 
+      float offsetXZ = evenXZ ? 0.5F : 0.0F;
+      int maxX = evenXZ ? radiusX - 1 : radiusX;
+      int maxZBound = evenXZ ? radiusZ - 1 : radiusZ;
+      int sizeH = height;
       float radiusXAdjusted = radiusX + 0.41F;
       float radiusZAdjusted = radiusZ + 0.41F;
       float innerRadiusXAdjusted = radiusXAdjusted - thickness;
@@ -75,44 +111,38 @@ public class BlockCylinderUtil {
          double invRadiusXSqr = 1.0 / (radiusXAdjusted * radiusXAdjusted);
          double invInnerRadiusXSqr = 1.0 / (innerRadiusXAdjusted * innerRadiusXAdjusted);
          int innerMinY = thickness;
-         int innerMaxY = height - thickness;
+         int innerMaxY = sizeH - thickness;
 
-         for (int y = height - 1; y >= 0; y--) {
+         for (int y = sizeH - 1; y >= 0; y--) {
             boolean cap = capped && (y < innerMinY || y > innerMaxY);
 
-            for (int x = -radiusX; x <= radiusX; x++) {
-               double qx = 1.0 - x * x * invRadiusXSqr;
-               double dz = Math.sqrt(qx) * radiusZAdjusted;
-               int maxZ = (int)dz;
-               double innerQx = x < innerRadiusXAdjusted ? 1.0 - x * x * invInnerRadiusXSqr : 0.0;
-               double innerDZ = innerQx > 0.0 ? Math.sqrt(innerQx) * innerRadiusZAdjusted : 0.0;
-               int minZ = cap ? 0 : MathUtil.ceil(innerDZ);
-               int z = minZ;
-               if (z == 0) {
-                  if (!consumer.test(originX + x, originY + y, originZ, t)) {
-                     return false;
+            for (int x = -radiusX; x <= maxX; x++) {
+               double sx = x + offsetXZ;
+               double qx = 1.0 - sx * sx * invRadiusXSqr;
+               if (!(qx < 0.0)) {
+                  double dz = Math.sqrt(qx) * radiusZAdjusted;
+                  int minZi = (int)Math.ceil(-dz - offsetXZ);
+                  int maxZi = (int)(dz - offsetXZ);
+                  minZi = Math.max(minZi, -radiusZ);
+                  maxZi = Math.min(maxZi, maxZBound);
+                  if (minZi <= maxZi) {
+                     double innerQx = 1.0 - sx * sx * invInnerRadiusXSqr;
+                     double innerDZ = innerQx > 0.0 ? Math.sqrt(innerQx) * innerRadiusZAdjusted : 0.0;
+                     int innerBound = !cap && !(innerDZ <= 0.0) ? MathUtil.ceil(innerDZ - offsetXZ) : 0;
+
+                     for (int z = minZi; z <= maxZi; z++) {
+                        if ((cap || !(innerDZ > 0.0) || Math.abs(z) >= innerBound) && !consumer.test(originX + x, originY + y, originZ + z, t)) {
+                           return false;
+                        }
+                     }
                   }
-
-                  z++;
-               }
-
-               while (z <= maxZ) {
-                  if (!consumer.test(originX + x, originY + y, originZ + z, t)) {
-                     return false;
-                  }
-
-                  if (!consumer.test(originX + x, originY + y, originZ - z, t)) {
-                     return false;
-                  }
-
-                  z++;
                }
             }
          }
 
          return true;
       } else {
-         return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, t, consumer);
+         return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, evenXZ, evenH, t, consumer);
       }
    }
 }

@@ -12,13 +12,13 @@ import javax.annotation.Nullable;
 
 public interface ClipboardSnapshot<T extends SelectionSnapshot<?>> extends SelectionSnapshot<T> {
    @Nullable
-   T restoreClipboard(Ref<EntityStore> var1, Player var2, World var3, BuilderToolsPlugin.BuilderState var4, ComponentAccessor<EntityStore> var5);
+   T restoreClipboard(Ref<EntityStore> var1, PlayerRef var2, World var3, BuilderToolsPlugin.BuilderState var4, ComponentAccessor<EntityStore> var5);
 
    @Override
-   default T restore(Ref<EntityStore> ref, @Nonnull Player player, World world, ComponentAccessor<EntityStore> componentAccessor) {
-      PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-      assert playerRefComponent != null;
-      BuilderToolsPlugin.BuilderState state = BuilderToolsPlugin.getState(player, playerRefComponent);
-      return state == null ? null : this.restoreClipboard(ref, player, world, state, componentAccessor);
+   default T restore(Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, World world, ComponentAccessor<EntityStore> componentAccessor) {
+      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+      assert playerComponent != null;
+      BuilderToolsPlugin.BuilderState state = BuilderToolsPlugin.getState(playerComponent, playerRef);
+      return state == null ? null : this.restoreClipboard(ref, playerRef, world, state, componentAccessor);
    }
 }

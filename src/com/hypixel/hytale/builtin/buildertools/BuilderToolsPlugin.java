@@ -980,12 +980,12 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       @Nonnull
-      public BuilderToolsPlugin.ActionEntry restore(Ref<EntityStore> ref, Player player, World world, ComponentAccessor<EntityStore> componentAccessor) {
+      public BuilderToolsPlugin.ActionEntry restore(Ref<EntityStore> ref, PlayerRef playerRef, World world, ComponentAccessor<EntityStore> componentAccessor) {
          List<SelectionSnapshot<?>> collector = Collections.emptyList();
          List<Ref<EntityStore>> recreatedEntityRefs = null;
          boolean handledViaLastTransformRefs = false;
          if (this.action == BuilderToolsPlugin.Action.ROTATE) {
-            PrototypePlayerBuilderToolSettings protoSettings = ToolOperation.getOrCreatePrototypeSettings(player.getUuid());
+            PrototypePlayerBuilderToolSettings protoSettings = ToolOperation.getOrCreatePrototypeSettings(playerRef.getUuid());
             List<Ref<EntityStore>> currentRefs = protoSettings.getLastTransformEntityRefs();
             if (currentRefs != null) {
                handledViaLastTransformRefs = true;
@@ -1005,7 +1005,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          for (SelectionSnapshot<?> snapshot : this.snapshots) {
             if (!handledViaLastTransformRefs || !(snapshot instanceof EntityAddSnapshot)) {
-               SelectionSnapshot<?> nextSnapshot = snapshot.restore(ref, player, world, componentAccessor);
+               SelectionSnapshot<?> nextSnapshot = snapshot.restore(ref, playerRef, world, componentAccessor);
                if (nextSnapshot != null) {
                   collector = collector.isEmpty() ? new ObjectArrayList<>() : collector;
                   collector.add(nextSnapshot);
@@ -1023,7 +1023,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if ((this.action == BuilderToolsPlugin.Action.ROTATE || this.action == BuilderToolsPlugin.Action.CUT_REMOVE)
             && recreatedEntityRefs != null
             && !recreatedEntityRefs.isEmpty()) {
-            PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(player.getUuid());
+            PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerRef.getUuid());
             prototypeSettings.setLastTransformEntityRefs(recreatedEntityRefs);
          }
 
@@ -1033,7 +1033,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
    public static class BuilderState {
       private static final MetricsRegistry<BuilderToolsPlugin.BuilderState> STATE_METRICS_REGISTRY = new MetricsRegistry<BuilderToolsPlugin.BuilderState>()
-         .register("Uuid", state -> state.player.getUuid(), Codec.UUID_STRING)
+         .register("Uuid", state -> state.playerRef.getUuid(), Codec.UUID_STRING)
          .register("Username", BuilderToolsPlugin.BuilderState::getDisplayName, Codec.STRING)
          .register("ActivePrefabPath", BuilderToolsPlugin.BuilderState::getActivePrefabPath, Codec.UUID_STRING)
          .register("Selection", BuilderToolsPlugin.BuilderState::getSelection, BlockSelection.METRICS_REGISTRY)
@@ -1041,6 +1041,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          .register("TaskCount", BuilderToolsPlugin.BuilderState::getTaskCount, Codec.INTEGER)
          .register("UndoCount", BuilderToolsPlugin.BuilderState::getUndoCount, Codec.INTEGER)
          .register("RedoCount", BuilderToolsPlugin.BuilderState::getRedoCount, Codec.INTEGER);
+      @Deprecated(forRemoval = true)
       private Player player;
       private PlayerRef playerRef;
       @Nonnull
@@ -1148,7 +1149,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       public void runTask() {
-         Ref<EntityStore> ref = this.player.getReference();
+         Ref<EntityStore> ref = this.playerRef.getReference();
          if (ref != null && ref.isValid()) {
             Store<EntityStore> store = ref.getStore();
 
@@ -1286,21 +1287,21 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       private void sendFeedback(@Nonnull Message message, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-         BuilderToolsPlugin.sendFeedback(message, this.player, NotificationStyle.Default, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(message, this.playerRef, NotificationStyle.Default, componentAccessor);
       }
 
       private void sendFeedback(
          @Nonnull Message message, @Nonnull NotificationStyle notificationStyle, @Nonnull ComponentAccessor<EntityStore> componentAccessor
       ) {
-         BuilderToolsPlugin.sendFeedback(message, this.player, notificationStyle, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(message, this.playerRef, notificationStyle, componentAccessor);
       }
 
       private void sendFeedback(@Nonnull String key, int total, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-         BuilderToolsPlugin.sendFeedback(key, total, this.player, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(key, total, this.playerRef, componentAccessor);
       }
 
       private void sendFeedback(@Nonnull String key, int total, int num, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-         BuilderToolsPlugin.sendFeedback(key, total, num, this.player, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(key, total, num, this.playerRef, componentAccessor);
       }
 
       public void setActivePrefabPath(UUID path) {
@@ -1346,9 +1347,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          ToolOperation toolOperation;
          try {
-            toolOperation = ToolOperation.fromPacket(ref, this.player, packet, componentAccessor);
+            toolOperation = ToolOperation.fromPacket(ref, this.player, this.playerRef, packet, componentAccessor);
          } catch (Exception e) {
-            this.player.sendMessage(Message.translation("server.builderTools.interaction.toolParseError").param("error", e.getMessage()));
+            this.playerRef.sendMessage(Message.translation("server.builderTools.interaction.toolParseError").param("error", e.getMessage()));
             return 0;
          }
 
@@ -1378,7 +1379,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                      brushConfigCommandExecutor.getSequentialOperations().clear();
                      brushConfigCommandExecutor.getGlobalOperations().clear();
                      protoSettings.setLoadingBrush(true);
-                     CommandManager.get().handleCommand(this.player, brushConfigId).thenAccept(unused -> {
+                     CommandManager.get().handleCommand(this.playerRef, brushConfigId).thenAccept(unused -> {
                         PrototypePlayerBuilderToolSettings protoSettingsIntl = ToolOperation.PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
                         protoSettingsIntl.setLoadingBrush(false);
                         protoSettingsIntl.setUsePrototypeBrushConfigurations(false);
@@ -1421,7 +1422,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          BlockSelection after = edit.getAfter();
          int undoGroupSize = packet.undoGroupSize > 0 ? packet.undoGroupSize : 10;
          this.handleBrushUndoGrouping(before, edit.getSpawnedEntityRefs(), edit.getMovedEntitySnapshots(), undoGroupSize, packet.isHoldDownInteraction);
-         after.placeNoReturn("Use Builder Tool ?/?", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+         after.placeNoReturn("Use Builder Tool ?/?", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - start;
@@ -1454,7 +1455,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          int undoGroupSize = prototypePlayerBuilderToolSettings != null ? prototypePlayerBuilderToolSettings.getUndoGroupSize() : 10;
          boolean isHoldDown = brushConfig != null && brushConfig.isHoldDownInteraction();
          this.handleBrushUndoGrouping(before, Collections.emptyList(), Collections.emptyList(), undoGroupSize, isHoldDown);
-         after.placeNoReturn("Use Builder Tool ?/?", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+         after.placeNoReturn("Use Builder Tool ?/?", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - startTime;
@@ -1725,7 +1726,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
          }
 
-         after.placeNoReturn("Edit 1/1", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+         after.placeNoReturn("Edit 1/1", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - start;
@@ -2020,7 +2021,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                      Vector3i surfaceMin = new Vector3i(x - radiusAllowed * xMod, y - radiusAllowed * yMod, z - radiusAllowed * zMod);
                      Vector3i surfaceMax = new Vector3i(x + radiusAllowed * xMod, y + radiusAllowed * yMod, z + radiusAllowed * zMod);
                      this.extendFaceFindBlocks(accessor, before, after, normalX, normalY, normalZ, extrudeDepth, blockId, min, max, surfaceMin, surfaceMax);
-                     after.placeNoReturn("Set", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+                     after.placeNoReturn("Set", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
                      BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
                      long end = System.nanoTime();
                      long diff = end - start;
@@ -2229,7 +2230,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          long selectionVolume = (long)(width + 1) * (depth + 1) * (Math.abs(height) + 1);
          if (selectionVolume > 6600000L) {
             NotificationUtil.sendNotification(
-               this.player.getPlayerConnection(),
+               this.playerRef.getPacketHandler(),
                Message.translation("server.builderTools.copycut.tooLarge"),
                Message.translation("server.builderTools.copycut.tooLarge.detail").param("overCount", selectionVolume - 4000000L),
                NotificationStyle.Warning
@@ -2332,7 +2333,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if (count > 4000000) {
             this.selection = new BlockSelection();
             NotificationUtil.sendNotification(
-               this.player.getPlayerConnection(),
+               this.playerRef.getPacketHandler(),
                Message.translation("server.builderTools.copycut.tooLarge"),
                Message.translation("server.builderTools.copycut.tooLarge.detail").param("overCount", count - 4000000),
                NotificationStyle.Warning
@@ -2389,7 +2390,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             if (after != null) {
-               after.placeNoReturn("Cut 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+               after.placeNoReturn("Cut 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
                BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
             }
 
@@ -2403,7 +2404,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             if (cut) {
                this.sendUpdate();
             } else {
-               this.player.getPlayerConnection().write(Objects.requireNonNullElseGet(this.selection, BlockSelection::new).toPacketWithSelection());
+               this.playerRef.getPacketHandler().write(Objects.requireNonNullElseGet(this.selection, BlockSelection::new).toPacketWithSelection());
             }
 
             int entityCount = entities ? this.selection.getEntityCount() : 0;
@@ -2474,7 +2475,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
          }
 
-         after.placeNoReturn("Clear 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+         after.placeNoReturn("Clear 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - start;
@@ -2749,7 +2750,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          snapshots.add(new BlockSelectionSnapshot(before));
          this.pushHistory(BuilderToolsPlugin.Action.ROTATE, snapshots);
-         after.placeNoReturn("Transform 1/1", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+         after.placeNoReturn("Transform 1/1", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - start;
@@ -2855,7 +2856,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             }
 
-            after.placeNoReturn("Finished layer", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            after.placeNoReturn("Finished layer", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
             BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
             long end = System.nanoTime();
             long diff = end - start;
@@ -2933,7 +2934,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                collector = e -> snapshots.add(new EntityAddSnapshot(e));
             }
 
-            BlockSelection before = selectionToPlace.place(this.player, world, Vector3iUtil.ZERO, this.globalMask, collector);
+            BlockSelection before = selectionToPlace.place(this.playerRef, world, Vector3iUtil.ZERO, this.globalMask, collector);
             before.setSelectionArea(pasteMin, pasteMax);
             snapshots.add(new BlockSelectionSnapshot(before));
             this.pushHistory(BuilderToolsPlugin.Action.PASTE, snapshots);
@@ -3143,7 +3144,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             );
             this.pushHistory(BuilderToolsPlugin.Action.HOLLOW, new BlockSelectionSnapshot(before));
-            after.placeNoReturn("Hollow 1/1", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            after.placeNoReturn("Hollow 1/1", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
             BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
             long end = System.nanoTime();
             long diff = end - start;
@@ -3241,7 +3242,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                   }
                );
                this.pushHistory(BuilderToolsPlugin.Action.WALLS, new BlockSelectionSnapshot(before));
-               after.placeNoReturn("Walls 1/1", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+               after.placeNoReturn("Walls 1/1", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
                BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
                long end = System.nanoTime();
                long diff = end - start;
@@ -3327,7 +3328,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                   }
                }
 
-               after.placeNoReturn("Set 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+               after.placeNoReturn("Set 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
                BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
                long end = System.nanoTime();
                long diff = end - start;
@@ -3405,7 +3406,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                   }
                }
 
-               after.placeNoReturn("Fill 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+               after.placeNoReturn("Fill 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
                BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
                long end = System.nanoTime();
                long diff = end - start;
@@ -3519,7 +3520,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             }
 
-            after.placeNoReturn("Replace 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            after.placeNoReturn("Replace 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
             BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
             long end = System.nanoTime();
             long diff = end - start;
@@ -3717,7 +3718,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             }
 
-            after.placeNoReturn("Replace 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            after.placeNoReturn("Replace 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
             BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
             long end = System.nanoTime();
             long diff = end - start;
@@ -3799,7 +3800,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
          }
 
-         after.placeNoReturn("Replace 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+         after.placeNoReturn("Replace 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
          BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
          long end = System.nanoTime();
          long diff = end - start;
@@ -3909,9 +3910,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                }
             }
 
-            BlockSelection beforeCleared = cleared.place(this.player, world);
+            BlockSelection beforeCleared = cleared.place(this.playerRef, world);
             selected.setPosition(xPos + direction.x(), yPos + direction.y(), zPos + direction.z());
-            BlockSelection beforePlace = selected.place(this.player, world);
+            BlockSelection beforePlace = selected.place(this.playerRef, world);
             List<SelectionSnapshot<?>> snapshots = new ObjectArrayList<>();
             if (entities) {
                for (Ref<EntityStore> targetEntityRef : TargetUtil.getAllEntitiesInBox(
@@ -4055,7 +4056,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.selection.setSelectionArea(Vector3iUtil.ZERO, Vector3iUtil.ZERO);
             EditorBlocksChange packet = new EditorBlocksChange();
             packet.selection = null;
-            this.player.getPlayerConnection().write(packet);
+            this.playerRef.getPacketHandler().write(packet);
             this.sendFeedback(Message.translation("server.builderTools.deselected"), componentAccessor);
          } else {
             this.sendFeedback(Message.translation("server.builderTools.noSelectionToDeselect"), componentAccessor);
@@ -4130,7 +4131,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                   before.getY() + (size.y() + spacing) * direction.y() * i,
                   before.getZ() + (size.z() + spacing) * direction.z() * i
                );
-               before.add(selected.place(this.player, world));
+               before.add(selected.place(this.playerRef, world));
             }
 
             Vector3i stackOffset = new Vector3i(
@@ -4315,7 +4316,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             after.tryFixFiller(false);
-            after.placeNoReturn("Set 2/2", this.player, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            after.placeNoReturn("Set 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
             BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
             long end = System.nanoTime();
             long diff = end - start;
@@ -4702,16 +4703,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          EditorBlocksChange packet = Objects.requireNonNullElseGet(this.selection, BlockSelection::new).toPacket();
          packet.skipPreviewRebuild = this.skipNextPreviewRebuild;
          this.skipNextPreviewRebuild = false;
-         this.player.getPlayerConnection().write(packet);
+         this.playerRef.getPacketHandler().write(packet);
       }
 
       public void sendArea() {
          if (this.selection != null) {
-            this.player.getPlayerConnection().write(this.selection.toSelectionPacket());
+            this.playerRef.getPacketHandler().write(this.selection.toSelectionPacket());
          } else {
             EditorBlocksChange packet = new EditorBlocksChange();
             packet.selection = null;
-            this.player.getPlayerConnection().write(packet);
+            this.playerRef.getPacketHandler().write(packet);
          }
       }
 
@@ -4859,7 +4860,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             BuilderToolsPlugin.ActionEntry builderAction = from.dequeueLast();
-            to.enqueue(builderAction.restore(ref, this.player, componentAccessor.getExternalData().getWorld(), componentAccessor));
+            to.enqueue(builderAction.restore(ref, this.playerRef, componentAccessor.getExternalData().getWorld(), componentAccessor));
 
             while (to.size() > BuilderToolsPlugin.get().historyCount) {
                to.dequeue();

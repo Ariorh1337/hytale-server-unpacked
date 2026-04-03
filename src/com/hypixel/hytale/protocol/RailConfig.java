@@ -13,7 +13,7 @@ public class RailConfig {
    public static final int FIXED_BLOCK_SIZE = 1;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 1;
-   public static final int MAX_SIZE = 102400006;
+   public static final int MAX_SIZE = 98304006;
    @Nullable
    public RailPoint[] points;
 
@@ -48,8 +48,8 @@ public class RailConfig {
             throw ProtocolException.arrayTooLong("Points", pointsCount, 4096000);
          }
 
-         if (pos + pointsVarLen + pointsCount * 25L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Points", pos + pointsVarLen + pointsCount * 25, buf.readableBytes());
+         if (pos + pointsVarLen + pointsCount * 24L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Points", pos + pointsVarLen + pointsCount * 24, buf.readableBytes());
          }
 
          pos += pointsVarLen;
@@ -102,7 +102,7 @@ public class RailConfig {
    public int computeSize() {
       int size = 1;
       if (this.points != null) {
-         size += VarInt.size(this.points.length) + this.points.length * 25;
+         size += VarInt.size(this.points.length) + this.points.length * 24;
       }
 
       return size;
@@ -126,7 +126,7 @@ public class RailConfig {
          }
 
          pos += VarInt.size(pointsCount);
-         pos += pointsCount * 25;
+         pos += pointsCount * 24;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Points");
          }

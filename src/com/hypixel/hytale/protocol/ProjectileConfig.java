@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
@@ -10,6 +11,7 @@ import java.util.Objects;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class ProjectileConfig {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -23,7 +25,7 @@ public class ProjectileConfig {
    public Model model;
    public double launchForce;
    @Nullable
-   public Vector3f spawnOffset;
+   public Vector3fc spawnOffset;
    @Nullable
    public Direction rotationOffset;
    @Nullable
@@ -39,7 +41,7 @@ public class ProjectileConfig {
       @Nullable PhysicsConfig physicsConfig,
       @Nullable Model model,
       double launchForce,
-      @Nullable Vector3f spawnOffset,
+      @Nullable Vector3fc spawnOffset,
       @Nullable Direction rotationOffset,
       @Nullable Map<InteractionType, Integer> interactions,
       int launchLocalSoundEventIndex,
@@ -83,7 +85,7 @@ public class ProjectileConfig {
 
       obj.launchForce = buf.getDoubleLE(offset + 123);
       if ((nullBits & 2) != 0) {
-         obj.spawnOffset = Vector3f.deserialize(buf, offset + 131);
+         obj.spawnOffset = PacketIO.readVector3f(buf, offset + 131);
       }
 
       if ((nullBits & 4) != 0) {
@@ -206,7 +208,7 @@ public class ProjectileConfig {
 
       buf.writeDoubleLE(this.launchForce);
       if (this.spawnOffset != null) {
-         this.spawnOffset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.spawnOffset);
       } else {
          buf.writeZero(12);
       }
@@ -322,7 +324,7 @@ public class ProjectileConfig {
       copy.physicsConfig = this.physicsConfig != null ? this.physicsConfig.clone() : null;
       copy.model = this.model != null ? this.model.clone() : null;
       copy.launchForce = this.launchForce;
-      copy.spawnOffset = this.spawnOffset != null ? this.spawnOffset.clone() : null;
+      copy.spawnOffset = this.spawnOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       copy.interactions = this.interactions != null ? new HashMap<>(this.interactions) : null;
       copy.launchLocalSoundEventIndex = this.launchLocalSoundEventIndex;

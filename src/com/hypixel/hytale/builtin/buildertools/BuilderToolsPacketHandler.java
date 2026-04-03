@@ -224,33 +224,30 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         int targetId = packet.entityId;
-         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(targetId);
-         if (targetRef != null && targetRef.isValid()) {
-            Player targetPlayerComponent = store.getComponent(targetRef, Player.getComponentType());
-            if (targetPlayerComponent != null) {
-               playerComponent.sendMessage(Message.translation("server.builderTools.entityTool.cannotTargetPlayer"));
-            } else {
-               LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-               switch (packet.action) {
-                  case Freeze:
-                     UUIDComponent uuidComponent = store.getComponent(targetRef, UUIDComponent.getComponentType());
-                     if (uuidComponent != null) {
-                        CommandManager.get().handleCommand(playerComponent, "npc freeze --toggle --entity " + uuidComponent.getUuid());
-                     }
-                     break;
-                  case Clone:
-                     world.execute(() -> EntityCloneCommand.cloneEntity(playerComponent, targetRef, store));
-                     break;
-                  case Remove:
-                     world.execute(() -> EntityRemoveCommand.removeEntity(ref, targetRef, store));
-               }
-            }
+      int targetId = packet.entityId;
+      Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(targetId);
+      if (targetRef != null && targetRef.isValid()) {
+         Player targetPlayerComponent = store.getComponent(targetRef, Player.getComponentType());
+         if (targetPlayerComponent != null) {
+            playerRef.sendMessage(Message.translation("server.builderTools.entityTool.cannotTargetPlayer"));
          } else {
-            playerComponent.sendMessage(Message.translation("server.general.entityNotFound").param("id", targetId));
+            LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+            switch (packet.action) {
+               case Freeze:
+                  UUIDComponent uuidComponent = store.getComponent(targetRef, UUIDComponent.getComponentType());
+                  if (uuidComponent != null) {
+                     CommandManager.get().handleCommand(playerRef, "npc freeze --toggle --entity " + uuidComponent.getUuid());
+                  }
+                  break;
+               case Clone:
+                  world.execute(() -> EntityCloneCommand.cloneEntity(playerRef, targetRef, store));
+                  break;
+               case Remove:
+                  world.execute(() -> EntityRemoveCommand.removeEntity(ref, targetRef, store));
+            }
          }
+      } else {
+         playerRef.sendMessage(Message.translation("server.general.entityNotFound").param("id", targetId));
       }
    }
 
@@ -438,7 +435,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          Vector3i translationOffset = new Vector3i(packet.translationOffset.x, packet.translationOffset.y, packet.translationOffset.z);
          Vector3i initialSelectionMin = new Vector3i(packet.initialSelectionMin.x, packet.initialSelectionMin.y, packet.initialSelectionMin.z);
          Vector3i initialSelectionMax = new Vector3i(packet.initialSelectionMax.x, packet.initialSelectionMax.y, packet.initialSelectionMax.z);
-         Rotation3f rotationOrigin = new Rotation3f(packet.initialRotationOrigin.x, packet.initialRotationOrigin.y, packet.initialRotationOrigin.z);
+         Rotation3f rotationOrigin = new Rotation3f(packet.initialRotationOrigin.x(), packet.initialRotationOrigin.y(), packet.initialRotationOrigin.z());
          PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerRef.getUuid());
          BuilderToolsPlugin.addToQueue(
             playerComponent,
@@ -447,7 +444,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                int blockCount = s.getSelection().getSelectionVolume();
                boolean large = blockCount > 20000;
                if (large) {
-                  playerComponent.sendMessage(Message.translation("server.builderTools.selection.large.warning"));
+                  playerRef.sendMessage(Message.translation("server.builderTools.selection.large.warning"));
                }
 
                try {
@@ -547,13 +544,13 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                      }
 
                      if (large) {
-                        playerComponent.sendMessage(Message.translation("server.builderTools.selection.large.complete"));
+                        playerRef.sendMessage(Message.translation("server.builderTools.selection.large.complete"));
                      }
 
                      return;
                   }
 
-                  playerComponent.sendMessage(Message.translation("server.builderTools.selection.noBlockChangeOffsetOrigin"));
+                  playerRef.sendMessage(Message.translation("server.builderTools.selection.noBlockChangeOffsetOrigin"));
                } catch (Exception e) {
                   LOGGER.at(Level.WARNING).log("Error during selection transform", e);
                   return;
@@ -798,19 +795,16 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-         PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
-         PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
-         if (prefabEditSession == null) {
-            playerComponent.sendMessage(Message.translation("server.commands.editprefab.notInEditSession"));
+      LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+      PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
+      PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
+      if (prefabEditSession == null) {
+         playerRef.sendMessage(Message.translation("server.commands.editprefab.notInEditSession"));
+      } else {
+         if (prefabEditSession.clearSelectedPrefab(ref, store)) {
+            playerRef.sendMessage(Message.translation("server.commands.editprefab.unselected"));
          } else {
-            if (prefabEditSession.clearSelectedPrefab(ref, store)) {
-               playerComponent.sendMessage(Message.translation("server.commands.editprefab.unselected"));
-            } else {
-               playerComponent.sendMessage(Message.translation("server.commands.editprefab.noPrefabSelected"));
-            }
+            playerRef.sendMessage(Message.translation("server.commands.editprefab.noPrefabSelected"));
          }
       }
    }
@@ -818,31 +812,28 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
    public void handlePrefabSetAnchor(
       @Nonnull PrefabSetAnchor packet, @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-         PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
-         PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
-         if (prefabEditSession == null) {
-            playerComponent.sendMessage(Message.translation("server.commands.editprefab.notInEditSession"));
+      LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+      PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
+      PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(playerRef.getUuid());
+      if (prefabEditSession == null) {
+         playerRef.sendMessage(Message.translation("server.commands.editprefab.notInEditSession"));
+      } else {
+         PrefabEditingMetadata prefabEditingMetadata = null;
+         Vector3i targetBlockPos = new Vector3i(packet.x, packet.y, packet.z);
+
+         for (PrefabEditingMetadata value : prefabEditSession.getLoadedPrefabMetadata().values()) {
+            boolean isWithinPrefab = value.isLocationWithinPrefabBoundingBox(new Vector3i(packet.x, packet.y, packet.z));
+            if (isWithinPrefab) {
+               prefabEditingMetadata = value;
+               break;
+            }
+         }
+
+         if (prefabEditingMetadata == null) {
+            playerRef.sendMessage(Message.translation("server.commands.editprefab.select.error.noPrefabFound"));
          } else {
-            PrefabEditingMetadata prefabEditingMetadata = null;
-            Vector3i targetBlockPos = new Vector3i(packet.x, packet.y, packet.z);
-
-            for (PrefabEditingMetadata value : prefabEditSession.getLoadedPrefabMetadata().values()) {
-               boolean isWithinPrefab = value.isLocationWithinPrefabBoundingBox(new Vector3i(packet.x, packet.y, packet.z));
-               if (isWithinPrefab) {
-                  prefabEditingMetadata = value;
-                  break;
-               }
-            }
-
-            if (prefabEditingMetadata == null) {
-               playerRef.sendMessage(Message.translation("server.commands.editprefab.select.error.noPrefabFound"));
-            } else {
-               prefabEditingMetadata.setAnchorPoint(targetBlockPos, world);
-               prefabEditingMetadata.sendAnchorHighlightingPacket(playerRef.getPacketHandler());
-            }
+            prefabEditingMetadata.setAnchorPoint(targetBlockPos, world);
+            prefabEditingMetadata.sendAnchorHighlightingPacket(playerRef.getPacketHandler());
          }
       }
    }
@@ -933,18 +924,15 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
-         if (targetRef != null && targetRef.isValid()) {
-            NPCMarkerComponent npcMarkerComponent = store.getComponent(targetRef, NPCMarkerComponent.getComponentType());
-            if (npcMarkerComponent != null) {
-               UUIDComponent uuidComponent = store.getComponent(targetRef, UUIDComponent.getComponentType());
-               if (uuidComponent != null) {
-                  UUID uuid = uuidComponent.getUuid();
-                  String command = packet.enabled ? "npc debug set display --entity " + uuid : "npc debug clear --entity " + uuid;
-                  CommandManager.get().handleCommand(playerComponent, command);
-               }
+      Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+      if (targetRef != null && targetRef.isValid()) {
+         NPCMarkerComponent npcMarkerComponent = store.getComponent(targetRef, NPCMarkerComponent.getComponentType());
+         if (npcMarkerComponent != null) {
+            UUIDComponent uuidComponent = store.getComponent(targetRef, UUIDComponent.getComponentType());
+            if (uuidComponent != null) {
+               UUID uuid = uuidComponent.getUuid();
+               String command = packet.enabled ? "npc debug set display --entity " + uuid : "npc debug clear --entity " + uuid;
+               CommandManager.get().handleCommand(playerRef, command);
             }
          }
       }

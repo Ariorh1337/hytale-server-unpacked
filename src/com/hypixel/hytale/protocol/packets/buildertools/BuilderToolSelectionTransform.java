@@ -4,7 +4,6 @@ import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
@@ -13,6 +12,7 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Quaternionfc;
+import org.joml.Vector3fc;
 
 public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
    public static final int PACKET_ID = 405;
@@ -30,8 +30,8 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
    public BlockPosition initialSelectionMin;
    @Nullable
    public BlockPosition initialSelectionMax;
-   @Nullable
-   public Vector3f initialRotationOrigin;
+   @Nonnull
+   public Vector3fc initialRotationOrigin = PacketIO.ZERO_VECTOR3;
    public boolean cutOriginal;
    public boolean applyTransformationToSelectionMinMax;
    public boolean isExitingTransformMode;
@@ -56,7 +56,7 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
       @Nullable BlockPosition translationOffset,
       @Nullable BlockPosition initialSelectionMin,
       @Nullable BlockPosition initialSelectionMax,
-      @Nullable Vector3f initialRotationOrigin,
+      @Nonnull Vector3fc initialRotationOrigin,
       boolean cutOriginal,
       boolean applyTransformationToSelectionMinMax,
       boolean isExitingTransformMode,
@@ -109,14 +109,11 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
          obj.initialSelectionMax = BlockPosition.deserialize(buf, offset + 41);
       }
 
-      if ((nullBits & 16) != 0) {
-         obj.initialRotationOrigin = Vector3f.deserialize(buf, offset + 53);
-      }
-
+      obj.initialRotationOrigin = PacketIO.readVector3f(buf, offset + 53);
       obj.cutOriginal = buf.getByte(offset + 65) != 0;
       obj.applyTransformationToSelectionMinMax = buf.getByte(offset + 66) != 0;
       obj.isExitingTransformMode = buf.getByte(offset + 67) != 0;
-      if ((nullBits & 32) != 0) {
+      if ((nullBits & 16) != 0) {
          obj.initialPastePointForClipboardPaste = BlockPosition.deserialize(buf, offset + 68);
       }
 
@@ -146,12 +143,8 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.initialRotationOrigin != null) {
-         nullBits = (byte)(nullBits | 16);
-      }
-
       if (this.initialPastePointForClipboardPaste != null) {
-         nullBits = (byte)(nullBits | 32);
+         nullBits = (byte)(nullBits | 16);
       }
 
       buf.writeByte(nullBits);
@@ -179,12 +172,7 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
          buf.writeZero(12);
       }
 
-      if (this.initialRotationOrigin != null) {
-         this.initialRotationOrigin.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
-
+      PacketIO.writeVector3f(buf, this.initialRotationOrigin);
       buf.writeByte(this.cutOriginal ? 1 : 0);
       buf.writeByte(this.applyTransformationToSelectionMinMax ? 1 : 0);
       buf.writeByte(this.isExitingTransformMode ? 1 : 0);
@@ -215,7 +203,7 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
       copy.translationOffset = this.translationOffset != null ? this.translationOffset.clone() : null;
       copy.initialSelectionMin = this.initialSelectionMin != null ? this.initialSelectionMin.clone() : null;
       copy.initialSelectionMax = this.initialSelectionMax != null ? this.initialSelectionMax.clone() : null;
-      copy.initialRotationOrigin = this.initialRotationOrigin != null ? this.initialRotationOrigin.clone() : null;
+      copy.initialRotationOrigin = this.initialRotationOrigin;
       copy.cutOriginal = this.cutOriginal;
       copy.applyTransformationToSelectionMinMax = this.applyTransformationToSelectionMinMax;
       copy.isExitingTransformMode = this.isExitingTransformMode;

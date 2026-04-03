@@ -167,11 +167,11 @@ public class ModifyInventoryInteraction extends SimpleInstantInteraction {
                   boolean isTransformation = this.brokenItem != null && !this.brokenItem.equals(item.getItemId());
                   boolean shouldNotify = this.notifyOnBreak != null ? this.notifyOnBreak : !isTransformation;
                   if (justBroke && shouldNotify) {
-                     Message itemNameMessage = Message.translation(item.getItem().getTranslationKey());
-                     String messageKey = this.notifyOnBreakMessage != null ? this.notifyOnBreakMessage : "server.general.repair.itemBroken";
-                     playerComponent.sendMessage(Message.translation(messageKey).param("itemName", itemNameMessage).color("#ff5555"));
                      PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
                      if (playerRefComponent != null) {
+                        Message itemNameMessage = Message.translation(item.getItem().getTranslationKey());
+                        String messageKey = this.notifyOnBreakMessage != null ? this.notifyOnBreakMessage : "server.general.repair.itemBroken";
+                        playerRefComponent.sendMessage(Message.translation(messageKey).param("itemName", itemNameMessage).color("#ff5555"));
                         int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
                         SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
                      }

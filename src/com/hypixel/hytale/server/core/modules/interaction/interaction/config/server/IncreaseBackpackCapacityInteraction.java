@@ -10,10 +10,10 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -44,9 +44,9 @@ public class IncreaseBackpackCapacityInteraction extends SimpleInstantInteractio
       if (backpackInventoryComponent != null) {
          short newBackpackCapacity = (short)(backpackInventoryComponent.getInventory().getCapacity() + this.capacity);
          backpackInventoryComponent.resize(newBackpackCapacity, null);
-         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-         if (playerComponent != null) {
-            playerComponent.sendMessage(
+         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            playerRefComponent.sendMessage(
                Message.translation("server.commands.inventory.backpack.size").param("capacity", backpackInventoryComponent.getInventory().getCapacity())
             );
          }

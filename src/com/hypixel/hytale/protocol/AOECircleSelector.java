@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class AOECircleSelector extends Selector {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -15,12 +17,12 @@ public class AOECircleSelector extends Selector {
    public static final int MAX_SIZE = 17;
    public float range;
    @Nullable
-   public Vector3f offset;
+   public Vector3fc offset;
 
    public AOECircleSelector() {
    }
 
-   public AOECircleSelector(float range, @Nullable Vector3f offset) {
+   public AOECircleSelector(float range, @Nullable Vector3fc offset) {
       this.range = range;
       this.offset = offset;
    }
@@ -40,7 +42,7 @@ public class AOECircleSelector extends Selector {
       byte nullBits = buf.getByte(offset);
       obj.range = buf.getFloatLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         obj.offset = Vector3f.deserialize(buf, offset + 5);
+         obj.offset = PacketIO.readVector3f(buf, offset + 5);
       }
 
       return obj;
@@ -61,7 +63,7 @@ public class AOECircleSelector extends Selector {
       buf.writeByte(nullBits);
       buf.writeFloatLE(this.range);
       if (this.offset != null) {
-         this.offset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.offset);
       } else {
          buf.writeZero(12);
       }
@@ -86,7 +88,7 @@ public class AOECircleSelector extends Selector {
    public AOECircleSelector clone() {
       AOECircleSelector copy = new AOECircleSelector();
       copy.range = this.range;
-      copy.offset = this.offset != null ? this.offset.clone() : null;
+      copy.offset = this.offset;
       return copy;
    }
 

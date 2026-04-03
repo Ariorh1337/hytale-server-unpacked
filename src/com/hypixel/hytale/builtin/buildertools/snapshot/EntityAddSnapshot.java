@@ -3,7 +3,7 @@ package com.hypixel.hytale.builtin.buildertools.snapshot;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -19,7 +19,7 @@ public class EntityAddSnapshot implements EntitySnapshot<EntityRemoveSnapshot> {
       return this.entityRef;
    }
 
-   public EntityRemoveSnapshot restoreEntity(@Nonnull Player player, @Nonnull World world, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public EntityRemoveSnapshot restoreEntity(@Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.entityRef.isValid()) {
          return null;
       }

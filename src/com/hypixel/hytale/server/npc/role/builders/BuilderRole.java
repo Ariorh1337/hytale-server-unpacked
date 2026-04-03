@@ -493,7 +493,13 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       );
       this.getBoolean(data, "ApplyAvoidance", b -> this.applyAvoidance = b, false, BuilderDescriptorState.Experimental, "Apply avoidance steering force", null);
       this.getBoolean(
-         data, "AvoidanceFallCheck", this.avoidanceFallCheck, false, BuilderDescriptorState.Experimental, "Perform extra avoidance fall check", null
+         data,
+         "AvoidanceFallCheck",
+         this.avoidanceFallCheck,
+         false,
+         BuilderDescriptorState.Deprecated,
+         "Deprecated no-op retained for backwards compatibility",
+         null
       );
       this.getBoolean(data, "ApplySeparation", this.applySeparation, false, BuilderDescriptorState.Experimental, "Apply separation steering force", null);
       this.getEnum(

@@ -1,27 +1,28 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class RailPoint {
-   public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 25;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 24;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 25;
-   public static final int MAX_SIZE = 25;
-   @Nullable
-   public Vector3f point;
-   @Nullable
-   public Vector3f normal;
+   public static final int VARIABLE_BLOCK_START = 24;
+   public static final int MAX_SIZE = 24;
+   @Nonnull
+   public Vector3fc point = PacketIO.ZERO_VECTOR3;
+   @Nonnull
+   public Vector3fc normal = PacketIO.ZERO_VECTOR3;
 
    public RailPoint() {
    }
 
-   public RailPoint(@Nullable Vector3f point, @Nullable Vector3f normal) {
+   public RailPoint(@Nonnull Vector3fc point, @Nonnull Vector3fc normal) {
       this.point = point;
       this.normal = normal;
    }
@@ -33,68 +34,37 @@ public class RailPoint {
 
    @Nonnull
    public static RailPoint deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 25) {
-         throw ProtocolException.bufferTooSmall("RailPoint", 25, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("RailPoint", 24, buf.readableBytes() - offset);
       }
 
       RailPoint obj = new RailPoint();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         obj.point = Vector3f.deserialize(buf, offset + 1);
-      }
-
-      if ((nullBits & 2) != 0) {
-         obj.normal = Vector3f.deserialize(buf, offset + 13);
-      }
-
+      obj.point = PacketIO.readVector3f(buf, offset + 0);
+      obj.normal = PacketIO.readVector3f(buf, offset + 12);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 25;
+      return 24;
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
-      byte nullBits = 0;
-      if (this.point != null) {
-         nullBits = (byte)(nullBits | 1);
-      }
-
-      if (this.normal != null) {
-         nullBits = (byte)(nullBits | 2);
-      }
-
-      buf.writeByte(nullBits);
-      if (this.point != null) {
-         this.point.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
-
-      if (this.normal != null) {
-         this.normal.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
+      PacketIO.writeVector3f(buf, this.point);
+      PacketIO.writeVector3f(buf, this.normal);
    }
 
    public int computeSize() {
-      return 25;
+      return 24;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 25) {
-         return ValidationResult.error("Buffer too small: expected at least 25 bytes");
-      }
-
-      byte nullBits = buffer.getByte(offset);
-      return ValidationResult.OK;
+      return buffer.readableBytes() - offset < 24 ? ValidationResult.error("Buffer too small: expected at least 24 bytes") : ValidationResult.OK;
    }
 
    public RailPoint clone() {
       RailPoint copy = new RailPoint();
-      copy.point = this.point != null ? this.point.clone() : null;
-      copy.normal = this.normal != null ? this.normal.clone() : null;
+      copy.point = this.point;
+      copy.normal = this.normal;
       return copy;
    }
 

@@ -55,7 +55,7 @@ public class BuilderToolBrushOriginArg {
       }
 
       int v = buffer.getByte(offset + 0) & 255;
-      return v >= 3 ? ValidationResult.error("Invalid BrushOrigin value for Default") : ValidationResult.OK;
+      return v >= 5 ? ValidationResult.error("Invalid BrushOrigin value for Default") : ValidationResult.OK;
    }
 
    public BuilderToolBrushOriginArg clone() {

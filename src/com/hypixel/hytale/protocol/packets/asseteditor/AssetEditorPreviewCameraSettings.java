@@ -1,29 +1,29 @@
 package com.hypixel.hytale.protocol.packets.asseteditor;
 
-import com.hypixel.hytale.protocol.Vector3f;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class AssetEditorPreviewCameraSettings {
-   public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 29;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 28;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 29;
-   public static final int MAX_SIZE = 29;
+   public static final int VARIABLE_BLOCK_START = 28;
+   public static final int MAX_SIZE = 28;
    public float modelScale;
-   @Nullable
-   public Vector3f cameraPosition;
-   @Nullable
-   public Vector3f cameraOrientation;
+   @Nonnull
+   public Vector3fc cameraPosition = PacketIO.ZERO_VECTOR3;
+   @Nonnull
+   public Vector3fc cameraOrientation = PacketIO.ZERO_VECTOR3;
 
    public AssetEditorPreviewCameraSettings() {
    }
 
-   public AssetEditorPreviewCameraSettings(float modelScale, @Nullable Vector3f cameraPosition, @Nullable Vector3f cameraOrientation) {
+   public AssetEditorPreviewCameraSettings(float modelScale, @Nonnull Vector3fc cameraPosition, @Nonnull Vector3fc cameraOrientation) {
       this.modelScale = modelScale;
       this.cameraPosition = cameraPosition;
       this.cameraOrientation = cameraOrientation;
@@ -37,71 +37,40 @@ public class AssetEditorPreviewCameraSettings {
 
    @Nonnull
    public static AssetEditorPreviewCameraSettings deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 29) {
-         throw ProtocolException.bufferTooSmall("AssetEditorPreviewCameraSettings", 29, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 28) {
+         throw ProtocolException.bufferTooSmall("AssetEditorPreviewCameraSettings", 28, buf.readableBytes() - offset);
       }
 
       AssetEditorPreviewCameraSettings obj = new AssetEditorPreviewCameraSettings();
-      byte nullBits = buf.getByte(offset);
-      obj.modelScale = buf.getFloatLE(offset + 1);
-      if ((nullBits & 1) != 0) {
-         obj.cameraPosition = Vector3f.deserialize(buf, offset + 5);
-      }
-
-      if ((nullBits & 2) != 0) {
-         obj.cameraOrientation = Vector3f.deserialize(buf, offset + 17);
-      }
-
+      obj.modelScale = buf.getFloatLE(offset + 0);
+      obj.cameraPosition = PacketIO.readVector3f(buf, offset + 4);
+      obj.cameraOrientation = PacketIO.readVector3f(buf, offset + 16);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 29;
+      return 28;
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
-      byte nullBits = 0;
-      if (this.cameraPosition != null) {
-         nullBits = (byte)(nullBits | 1);
-      }
-
-      if (this.cameraOrientation != null) {
-         nullBits = (byte)(nullBits | 2);
-      }
-
-      buf.writeByte(nullBits);
       buf.writeFloatLE(this.modelScale);
-      if (this.cameraPosition != null) {
-         this.cameraPosition.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
-
-      if (this.cameraOrientation != null) {
-         this.cameraOrientation.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
+      PacketIO.writeVector3f(buf, this.cameraPosition);
+      PacketIO.writeVector3f(buf, this.cameraOrientation);
    }
 
    public int computeSize() {
-      return 29;
+      return 28;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 29) {
-         return ValidationResult.error("Buffer too small: expected at least 29 bytes");
-      }
-
-      byte nullBits = buffer.getByte(offset);
-      return ValidationResult.OK;
+      return buffer.readableBytes() - offset < 28 ? ValidationResult.error("Buffer too small: expected at least 28 bytes") : ValidationResult.OK;
    }
 
    public AssetEditorPreviewCameraSettings clone() {
       AssetEditorPreviewCameraSettings copy = new AssetEditorPreviewCameraSettings();
       copy.modelScale = this.modelScale;
-      copy.cameraPosition = this.cameraPosition != null ? this.cameraPosition.clone() : null;
-      copy.cameraOrientation = this.cameraOrientation != null ? this.cameraOrientation.clone() : null;
+      copy.cameraPosition = this.cameraPosition;
+      copy.cameraOrientation = this.cameraOrientation;
       return copy;
    }
 

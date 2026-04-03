@@ -102,7 +102,7 @@ public class PrefabProp extends Prop {
 
       for (List<IPrefabBuffer> prefabList : prefabPool.allElements()) {
          if (prefabList.isEmpty()) {
-            throw new IllegalArgumentException("prefab pool contains empty list");
+            return;
          }
 
          for (IPrefabBuffer prefab : prefabList) {
@@ -214,7 +214,7 @@ public class PrefabProp extends Prop {
       return list.get(randomIndex);
    }
 
-   private void place(@Nonnull RotatedPosition position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull EntityFunnel entityBuffer) {
+   public void place(@Nonnull RotatedPosition position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull EntityFunnel entityBuffer) {
       Random random = new Random(this.rngField.get(position.x, position.y, position.z));
       PrefabBufferCall callInstance = new PrefabBufferCall(random, position.rotation);
       IPrefabBuffer prefab = this.pickPrefab(random);

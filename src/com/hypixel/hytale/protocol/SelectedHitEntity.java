@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class SelectedHitEntity {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -15,7 +17,7 @@ public class SelectedHitEntity {
    public static final int MAX_SIZE = 53;
    public int networkId;
    @Nullable
-   public Vector3f hitLocation;
+   public Vector3fc hitLocation;
    @Nullable
    public Position position;
    @Nullable
@@ -24,7 +26,7 @@ public class SelectedHitEntity {
    public SelectedHitEntity() {
    }
 
-   public SelectedHitEntity(int networkId, @Nullable Vector3f hitLocation, @Nullable Position position, @Nullable Direction bodyRotation) {
+   public SelectedHitEntity(int networkId, @Nullable Vector3fc hitLocation, @Nullable Position position, @Nullable Direction bodyRotation) {
       this.networkId = networkId;
       this.hitLocation = hitLocation;
       this.position = position;
@@ -48,7 +50,7 @@ public class SelectedHitEntity {
       byte nullBits = buf.getByte(offset);
       obj.networkId = buf.getIntLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         obj.hitLocation = Vector3f.deserialize(buf, offset + 5);
+         obj.hitLocation = PacketIO.readVector3f(buf, offset + 5);
       }
 
       if ((nullBits & 2) != 0) {
@@ -83,7 +85,7 @@ public class SelectedHitEntity {
       buf.writeByte(nullBits);
       buf.writeIntLE(this.networkId);
       if (this.hitLocation != null) {
-         this.hitLocation.serialize(buf);
+         PacketIO.writeVector3f(buf, this.hitLocation);
       } else {
          buf.writeZero(12);
       }
@@ -117,7 +119,7 @@ public class SelectedHitEntity {
    public SelectedHitEntity clone() {
       SelectedHitEntity copy = new SelectedHitEntity();
       copy.networkId = this.networkId;
-      copy.hitLocation = this.hitLocation != null ? this.hitLocation.clone() : null;
+      copy.hitLocation = this.hitLocation;
       copy.position = this.position != null ? this.position.clone() : null;
       copy.bodyRotation = this.bodyRotation != null ? this.bodyRotation.clone() : null;
       return copy;

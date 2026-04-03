@@ -387,7 +387,7 @@ public class HytaleServer {
                return;
             }
 
-            this.sendSingleplayerSignal("-=|Enabled|0");
+            this.reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.enabled"));
          } catch (Throwable throwable) {
             LOGGER.at(Level.SEVERE).withCause(throwable).log("Failed to boot HytaleServer!");
             Throwable t = throwable;
@@ -530,13 +530,18 @@ public class HytaleServer {
    public void sendSingleplayerProgress() {
       List<PluginBase> plugins = this.pluginManager.getPlugins();
       if (this.shutdown.get() != null) {
-         this.sendSingleplayerSignal(
-            "-=|Shutdown Modules|" + (plugins.isEmpty() ? 100.0 : MathUtil.round((double)(plugins.size() - this.pluginsProgress) / plugins.size(), 2) * 100.0)
+         this.reportSingleplayerStatus(
+            Message.translation("client.gameLoadingView.status.shuttingDownModules"),
+            plugins.isEmpty() ? 100.0 : MathUtil.round((double)(plugins.size() - this.pluginsProgress) / plugins.size(), 2) * 100.0
          );
       } else if (this.pluginManager.getState() == PluginState.SETUP) {
-         this.sendSingleplayerSignal("-=|Setup|" + MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0);
+         this.reportSingleplayerStatus(
+            Message.translation("client.gameLoadingView.status.settingUp"), MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0
+         );
       } else if (this.pluginManager.getState() == PluginState.START) {
-         this.sendSingleplayerSignal("-=|Starting|" + MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0);
+         this.reportSingleplayerStatus(
+            Message.translation("client.gameLoadingView.status.starting"), MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0
+         );
       }
    }
 
@@ -591,7 +596,7 @@ public class HytaleServer {
       if (this.isShuttingDown()) {
          double progress = MathUtil.round((double)saved / total, 2) * 100.0;
          if (Constants.SINGLEPLAYER) {
-            this.sendSingleplayerSignal("-=|Saving world " + world.getName() + " chunks|" + progress);
+            this.reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.savingChunks").param("name", world.getName()), progress);
          } else if (total < 10 || saved % (total / 10) == 0) {
             world.getLogger().at(Level.INFO).log("Saving chunks: %.0f%%", progress);
          }

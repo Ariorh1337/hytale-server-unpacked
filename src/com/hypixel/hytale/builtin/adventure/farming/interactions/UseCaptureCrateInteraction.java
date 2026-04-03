@@ -35,6 +35,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.metadata.CapturedNPCMetadata;
+import com.hypixel.hytale.server.npc.storage.AlarmStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -147,6 +148,7 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                                     itemMetaData.setFullItemIcon(this.fullIcon);
                                  }
 
+                                 itemMetaData.setAlarmStore(npcComponent.getAlarmStore());
                                  ItemStack itemWithNPC = inHandItemStack.withMetadata(CapturedNPCMetadata.KEYED_CODEC, itemMetaData);
                                  hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
                                  commandBuffer.removeEntity(targetEntity, RemoveReason.REMOVE);
@@ -232,7 +234,12 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
 
                      String roleId = existingMeta.getNpcNameKey();
                      int roleIndex = NPCPlugin.get().getIndex(roleId);
-                     commandBuffer.run(_store -> NPCPlugin.get().spawnEntity(_store, roleIndex, spawnPos, Rotation3f.IDENTITY, null, null));
+                     AlarmStore savedAlarmStore = existingMeta.getAlarmStore();
+                     commandBuffer.run(_store -> NPCPlugin.get().spawnEntity(_store, roleIndex, spawnPos, Rotation3f.IDENTITY, null, (npc, _holder, _s) -> {
+                        if (savedAlarmStore != null) {
+                           npc.setAlarmStore(savedAlarmStore);
+                        }
+                     }, null));
                      hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
                   }
                }

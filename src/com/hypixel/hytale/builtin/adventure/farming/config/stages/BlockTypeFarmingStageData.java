@@ -34,6 +34,29 @@ public class BlockTypeFarmingStageData extends FarmingStageData {
    }
 
    @Override
+   public boolean canApply(
+      @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
+   ) {
+      BlockType blockType = BlockType.getAssetMap().getAsset(this.block);
+      if (blockType == null) {
+         return true;
+      }
+
+      ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+      if (chunkSectionComponent == null) {
+         return true;
+      }
+
+      WorldChunk worldChunkComponent = commandBuffer.getComponent(chunkSectionComponent.getChunkColumnReference(), WorldChunk.getComponentType());
+      if (worldChunkComponent == null) {
+         return true;
+      }
+
+      int blockId = BlockType.getAssetMap().getIndex(this.block);
+      return blockId == worldChunkComponent.getBlock(x, y, z) ? true : testFillerPositions(worldChunkComponent, blockType, x, y, z);
+   }
+
+   @Override
    public void apply(
       @Nonnull ComponentAccessor<ChunkStore> commandBuffer,
       @Nonnull Ref<ChunkStore> sectionRef,
@@ -66,7 +89,9 @@ public class BlockTypeFarmingStageData extends FarmingStageData {
                } else {
                   commandBuffer.getExternalData().getWorld().execute(() -> {
                      int rotationIndex = worldChunkComponent.getRotationIndex(x, y, z);
-                     worldChunkComponent.setBlock(x, y, z, blockId, blockType, rotationIndex, 0, 2);
+                     if (testFillerPositions(worldChunkComponent, blockType, x, y, z)) {
+                        worldChunkComponent.setBlock(x, y, z, blockId, blockType, rotationIndex, 0, 2);
+                     }
                   });
                }
             }

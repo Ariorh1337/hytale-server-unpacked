@@ -15,7 +15,6 @@ import com.hypixel.hytale.component.SystemType;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.block.BlockUtil;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
@@ -34,7 +33,6 @@ import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.VariantRotation;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.asset.type.fluid.FluidTicker;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
@@ -82,6 +80,7 @@ import java.util.function.IntUnaryOperator;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3i;
 import org.joml.Vector3ic;
@@ -1198,7 +1197,6 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
    @Nonnull
    public BlockSelection rotate(@Nonnull Axis axis, int angle) {
-      BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
       BlockSelection selection = new BlockSelection(this.getBlockCount(), this.getEntityCount());
       selection.copyPropertiesFrom(this);
       Vector3i mutable = new Vector3i(0, 0, 0);
@@ -1224,7 +1222,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             );
          }
       );
-      Matrix4d axisRot = new Matrix4d().setRotateAxis(Math.toRadians(angle), axis.getDirection().x(), axis.getDirection().y(), axis.getDirection().z());
+      Quaterniond axisRot = new Quaterniond().rotateAxis(Math.toRadians(angle), axis.getDirection().x(), axis.getDirection().y(), axis.getDirection().z());
       this.forEachEntity(entityHolder -> {
          Holder<EntityStore> copy = entityHolder.clone();
          TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
@@ -1281,7 +1279,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             );
          }
       );
-      Matrix4d axisRot2 = new Matrix4d().setRotateAxis(Math.toRadians(angle), axis.getDirection().x(), axis.getDirection().y(), axis.getDirection().z());
+      Quaterniond axisRot2 = new Quaterniond().rotateAxis(Math.toRadians(angle), axis.getDirection().x(), axis.getDirection().y(), axis.getDirection().z());
       this.forEachEntity(entityHolder -> {
          Holder<EntityStore> copy = entityHolder.clone();
          TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
@@ -1317,74 +1315,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       return selection;
    }
 
-   private static void composeAxisRotation(@Nonnull Matrix4d axisRotation, @Nonnull Rotation3f euler) {
-      double cy = Math.cos(euler.yaw() * 0.5);
-      double sy = Math.sin(euler.yaw() * 0.5);
-      double cp = Math.cos(euler.pitch() * 0.5);
-      double sp = Math.sin(euler.pitch() * 0.5);
-      double cr = Math.cos(euler.roll() * 0.5);
-      double sr = Math.sin(euler.roll() * 0.5);
-      double qw = cr * cp * cy + sr * sp * sy;
-      double qx = cr * sp * cy + sr * cp * sy;
-      double qy = cr * cp * sy - sr * sp * cy;
-      double qz = sr * cp * cy - cr * sp * sy;
-      double[] rotQuat = matrixToQuaternion(axisRotation);
-      double rqw = rotQuat[0] * qw - rotQuat[1] * qx - rotQuat[2] * qy - rotQuat[3] * qz;
-      double rqx = rotQuat[0] * qx + rotQuat[1] * qw + rotQuat[2] * qz - rotQuat[3] * qy;
-      double rqy = rotQuat[0] * qy - rotQuat[1] * qz + rotQuat[2] * qw + rotQuat[3] * qx;
-      double rqz = rotQuat[0] * qz + rotQuat[1] * qy - rotQuat[2] * qx + rotQuat[3] * qw;
-      double sinPitch = 2.0 * (rqw * rqx - rqy * rqz);
-      sinPitch = Math.max(-1.0, Math.min(1.0, sinPitch));
-      double newPitch = Math.asin(sinPitch);
-      double newYaw;
-      double newRoll;
-      if (Math.abs(sinPitch) < 0.9999) {
-         newYaw = Math.atan2(2.0 * (rqw * rqy + rqx * rqz), 1.0 - 2.0 * (rqx * rqx + rqy * rqy));
-         newRoll = Math.atan2(2.0 * (rqw * rqz + rqx * rqy), 1.0 - 2.0 * (rqx * rqx + rqz * rqz));
-      } else {
-         newYaw = Math.atan2(-2.0 * (rqx * rqz - rqw * rqy), 1.0 - 2.0 * (rqy * rqy + rqz * rqz));
-         newRoll = 0.0;
-      }
-
-      euler.setPitch((float)newPitch);
-      euler.setYaw((float)newYaw);
-      euler.setRoll((float)newRoll);
-   }
-
-   private static double[] matrixToQuaternion(Matrix4d m) {
-      double[] d = m.getData();
-      double trace = d[0] + d[5] + d[10];
-      double qw;
-      double qx;
-      double qy;
-      double qz;
-      if (trace > 0.0) {
-         double s = 0.5 / Math.sqrt(trace + 1.0);
-         qw = 0.25 / s;
-         qx = (d[9] - d[6]) * s;
-         qy = (d[2] - d[8]) * s;
-         qz = (d[4] - d[1]) * s;
-      } else if (d[0] > d[5] && d[0] > d[10]) {
-         double s = 2.0 * Math.sqrt(1.0 + d[0] - d[5] - d[10]);
-         qw = (d[9] - d[6]) / s;
-         qx = 0.25 * s;
-         qy = (d[1] + d[4]) / s;
-         qz = (d[2] + d[8]) / s;
-      } else if (d[5] > d[10]) {
-         double s = 2.0 * Math.sqrt(1.0 + d[5] - d[0] - d[10]);
-         qw = (d[2] - d[8]) / s;
-         qx = (d[1] + d[4]) / s;
-         qy = 0.25 * s;
-         qz = (d[6] + d[9]) / s;
-      } else {
-         double s = 2.0 * Math.sqrt(1.0 + d[10] - d[0] - d[5]);
-         qw = (d[4] - d[1]) / s;
-         qx = (d[2] + d[8]) / s;
-         qy = (d[6] + d[9]) / s;
-         qz = 0.25 * s;
-      }
-
-      return new double[]{qw, qx, qy, qz};
+   private static void composeAxisRotation(@Nonnull Quaterniond axisRotation, @Nonnull Rotation3f euler) {
+      euler.premul(axisRotation);
    }
 
    @Nonnull
@@ -1392,10 +1324,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       double pitchRad = Math.toRadians(pitchDegrees);
       double yawRad = Math.toRadians(yawDegrees);
       double rollRad = Math.toRadians(rollDegrees);
-      Matrix4d rotation = new Matrix4d();
-      rotation.setRotateEuler(pitchRad, yawRad, rollRad);
-      Matrix4d inverse = new Matrix4d(rotation);
-      inverse.invert();
+      Quaterniond rotation = new Quaterniond().rotateYXZ(yawRad, pitchRad, rollRad);
+      Quaterniond inverse = new Quaterniond(rotation).conjugate();
       Vector3d tempVec = new Vector3d();
       int destMinX = Integer.MAX_VALUE;
       int destMinY = Integer.MAX_VALUE;
@@ -1447,7 +1377,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
       for (int[] corner : corners) {
          tempVec.set(corner[0], corner[1], corner[2]);
-         rotation.multiplyDirection(tempVec);
+         rotation.transform(tempVec);
          int rx = MathUtil.floor(tempVec.x);
          int ry = MathUtil.floor(tempVec.y);
          int rz = MathUtil.floor(tempVec.z);
@@ -1464,6 +1394,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       Rotation snappedYaw = Rotation.ofDegrees(Math.round(yawDegrees / 90.0F) * 90);
       Rotation snappedPitch = Rotation.ofDegrees(Math.round(pitchDegrees / 90.0F) * 90);
       Rotation snappedRoll = Rotation.ofDegrees(Math.round(rollDegrees / 90.0F) * 90);
+      RotationTuple snappedRotation = RotationTuple.of(snappedYaw, snappedPitch, snappedRoll);
       this.blocksLock.readLock().lock();
 
       try {
@@ -1471,7 +1402,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             for (int dy = destMinY; dy <= destMaxY; dy++) {
                for (int dz = destMinZ; dz <= destMaxZ; dz++) {
                   tempVec.set(dx, dy, dz);
-                  inverse.multiplyDirection(tempVec);
+                  inverse.transform(tempVec);
                   int sx = (int)Math.round(tempVec.x);
                   int sy = (int)Math.round(tempVec.y);
                   int sz = (int)Math.round(tempVec.z);
@@ -1479,9 +1410,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                   BlockSelection.BlockHolder block = this.blocks.get(packedSource);
                   if (block != null) {
                      RotationTuple blockRotation = RotationTuple.get(block.rotation());
-                     RotationTuple rotatedRotation = RotationTuple.of(
-                        blockRotation.yaw().add(snappedYaw), blockRotation.pitch().add(snappedPitch), blockRotation.roll().add(snappedRoll)
-                     );
+                     RotationTuple rotatedRotation = RotationTuple.compose(snappedRotation, blockRotation);
                      if (rotatedRotation == null) {
                         rotatedRotation = blockRotation;
                      }
@@ -1492,7 +1421,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                         int fillerY = FillerBlockUtil.unpackY(rotatedFiller);
                         int fillerZ = FillerBlockUtil.unpackZ(rotatedFiller);
                         tempVec.set(fillerX, fillerY, fillerZ);
-                        rotation.multiplyDirection(tempVec);
+                        rotation.transform(tempVec);
                         rotatedFiller = FillerBlockUtil.pack((int)Math.round(tempVec.x), (int)Math.round(tempVec.y), (int)Math.round(tempVec.z));
                      }
 
@@ -1516,7 +1445,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             for (int dy = destMinY; dy <= destMaxY; dy++) {
                for (int dz = destMinZ; dz <= destMaxZ; dz++) {
                   tempVec.set(dx, dy, dz);
-                  inverse.multiplyDirection(tempVec);
+                  inverse.transform(tempVec);
                   int sx = (int)Math.round(tempVec.x);
                   int sy = (int)Math.round(tempVec.y);
                   int sz = (int)Math.round(tempVec.z);
@@ -1541,7 +1470,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          boolean isBlockEntity = entityHolder.getComponent(BlockEntity.getComponentType()) != null;
          Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
          position.sub(this.anchorX, this.anchorY, this.anchorZ).sub(offset);
-         rotation.multiplyDirection(position);
+         rotation.transform(position);
          position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
          composeAxisRotation(rotation, transformComponent.getRotation());
          if (headRotationComp != null) {
@@ -1568,28 +1497,23 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             int supportValue = block.supportValue();
             int filler = block.filler;
             BlockType blockType = assetMap.getAsset(blockId);
-            VariantRotation variantRotation = blockType.getVariantRotation();
-            if (variantRotation == VariantRotation.None) {
-               selection.addBlock0(mutable.x() + this.anchorX, mutable.y() + this.anchorY, mutable.z() + this.anchorZ, block);
-            } else {
-               RotationTuple blockRotation = RotationTuple.get(block.rotation);
-               RotationTuple rotatedRotation = BlockRotationUtil.getFlipped(blockRotation, blockType.getFlipType(), axis);
-               if (rotatedRotation == null) {
-                  rotatedRotation = blockRotation;
-               }
-
-               int rotatedFiller = BlockRotationUtil.getFlippedFiller(filler, axis);
-               selection.addBlock0(
-                  mutable.x() + this.anchorX,
-                  mutable.y() + this.anchorY,
-                  mutable.z() + this.anchorZ,
-                  blockId,
-                  rotatedRotation.index(),
-                  rotatedFiller,
-                  supportValue,
-                  holder != null ? holder.clone() : null
-               );
+            RotationTuple blockRotation = RotationTuple.get(block.rotation);
+            RotationTuple rotatedRotation = BlockRotationUtil.getFlipped(blockRotation, blockType.getFlipType(), axis);
+            if (rotatedRotation == null) {
+               rotatedRotation = blockRotation;
             }
+
+            int rotatedFiller = BlockRotationUtil.getFlippedFiller(filler, axis);
+            selection.addBlock0(
+               mutable.x() + this.anchorX,
+               mutable.y() + this.anchorY,
+               mutable.z() + this.anchorZ,
+               blockId,
+               rotatedRotation.index(),
+               rotatedFiller,
+               supportValue,
+               holder != null ? holder.clone() : null
+            );
          }
       );
       this.forEachEntity(entityHolder -> {

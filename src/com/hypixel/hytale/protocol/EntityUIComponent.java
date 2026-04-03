@@ -1,5 +1,6 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
@@ -8,17 +9,18 @@ import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2fc;
 
 public class EntityUIComponent {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 51;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 51;
-   public static final int MAX_SIZE = 139264056;
+   public static final int MAX_SIZE = 135168056;
    @Nonnull
    public EntityUIType type = EntityUIType.EntityStat;
-   @Nullable
-   public Vector2f hitboxOffset;
+   @Nonnull
+   public Vector2fc hitboxOffset = PacketIO.ZERO_VECTOR2;
    public boolean unknown;
    public int entityStatIndex;
    @Nullable
@@ -37,7 +39,7 @@ public class EntityUIComponent {
 
    public EntityUIComponent(
       @Nonnull EntityUIType type,
-      @Nullable Vector2f hitboxOffset,
+      @Nonnull Vector2fc hitboxOffset,
       boolean unknown,
       int entityStatIndex,
       @Nullable RangeVector2f combatTextRandomPositionOffsetRange,
@@ -84,13 +86,10 @@ public class EntityUIComponent {
       EntityUIComponent obj = new EntityUIComponent();
       byte nullBits = buf.getByte(offset);
       obj.type = EntityUIType.fromValue(buf.getByte(offset + 1));
-      if ((nullBits & 1) != 0) {
-         obj.hitboxOffset = Vector2f.deserialize(buf, offset + 2);
-      }
-
+      obj.hitboxOffset = PacketIO.readVector2f(buf, offset + 2);
       obj.unknown = buf.getByte(offset + 10) != 0;
       obj.entityStatIndex = buf.getIntLE(offset + 11);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          obj.combatTextRandomPositionOffsetRange = RangeVector2f.deserialize(buf, offset + 15);
       }
 
@@ -98,12 +97,12 @@ public class EntityUIComponent {
       obj.combatTextDuration = buf.getFloatLE(offset + 36);
       obj.combatTextHitAngleModifierStrength = buf.getFloatLE(offset + 40);
       obj.combatTextFontSize = buf.getFloatLE(offset + 44);
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.combatTextColor = Color.deserialize(buf, offset + 48);
       }
 
       int pos = offset + 51;
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          int combatTextAnimationEventsCount = VarInt.peek(buf, pos);
          if (combatTextAnimationEventsCount < 0) {
             throw ProtocolException.invalidVarInt("CombatTextAnimationEvents");
@@ -114,9 +113,9 @@ public class EntityUIComponent {
             throw ProtocolException.arrayTooLong("CombatTextAnimationEvents", combatTextAnimationEventsCount, 4096000);
          }
 
-         if (pos + combatTextAnimationEventsVarLen + combatTextAnimationEventsCount * 34L > buf.readableBytes()) {
+         if (pos + combatTextAnimationEventsVarLen + combatTextAnimationEventsCount * 33L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall(
-               "CombatTextAnimationEvents", pos + combatTextAnimationEventsVarLen + combatTextAnimationEventsCount * 34, buf.readableBytes()
+               "CombatTextAnimationEvents", pos + combatTextAnimationEventsVarLen + combatTextAnimationEventsCount * 33, buf.readableBytes()
             );
          }
 
@@ -135,7 +134,7 @@ public class EntityUIComponent {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int pos = offset + 51;
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          int arrLen = VarInt.peek(buf, pos);
          pos += VarInt.size(arrLen);
 
@@ -149,30 +148,21 @@ public class EntityUIComponent {
 
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
-      if (this.hitboxOffset != null) {
+      if (this.combatTextRandomPositionOffsetRange != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.combatTextRandomPositionOffsetRange != null) {
+      if (this.combatTextColor != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.combatTextColor != null) {
-         nullBits = (byte)(nullBits | 4);
-      }
-
       if (this.combatTextAnimationEvents != null) {
-         nullBits = (byte)(nullBits | 8);
+         nullBits = (byte)(nullBits | 4);
       }
 
       buf.writeByte(nullBits);
       buf.writeByte(this.type.getValue());
-      if (this.hitboxOffset != null) {
-         this.hitboxOffset.serialize(buf);
-      } else {
-         buf.writeZero(8);
-      }
-
+      PacketIO.writeVector2f(buf, this.hitboxOffset);
       buf.writeByte(this.unknown ? 1 : 0);
       buf.writeIntLE(this.entityStatIndex);
       if (this.combatTextRandomPositionOffsetRange != null) {
@@ -207,7 +197,7 @@ public class EntityUIComponent {
    public int computeSize() {
       int size = 51;
       if (this.combatTextAnimationEvents != null) {
-         size += VarInt.size(this.combatTextAnimationEvents.length) + this.combatTextAnimationEvents.length * 34;
+         size += VarInt.size(this.combatTextAnimationEvents.length) + this.combatTextAnimationEvents.length * 33;
       }
 
       return size;
@@ -225,7 +215,7 @@ public class EntityUIComponent {
       }
 
       v = offset + 51;
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          int combatTextAnimationEventsCount = VarInt.peek(buffer, v);
          if (combatTextAnimationEventsCount < 0) {
             return ValidationResult.error("Invalid array count for CombatTextAnimationEvents");
@@ -236,7 +226,7 @@ public class EntityUIComponent {
          }
 
          v += VarInt.size(combatTextAnimationEventsCount);
-         v += combatTextAnimationEventsCount * 34;
+         v += combatTextAnimationEventsCount * 33;
          if (v > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading CombatTextAnimationEvents");
          }
@@ -248,7 +238,7 @@ public class EntityUIComponent {
    public EntityUIComponent clone() {
       EntityUIComponent copy = new EntityUIComponent();
       copy.type = this.type;
-      copy.hitboxOffset = this.hitboxOffset != null ? this.hitboxOffset.clone() : null;
+      copy.hitboxOffset = this.hitboxOffset;
       copy.unknown = this.unknown;
       copy.entityStatIndex = this.entityStatIndex;
       copy.combatTextRandomPositionOffsetRange = this.combatTextRandomPositionOffsetRange != null ? this.combatTextRandomPositionOffsetRange.clone() : null;

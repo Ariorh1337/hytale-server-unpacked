@@ -9,6 +9,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -31,6 +32,7 @@ public abstract class CoverContent implements Content {
       .documentation("A mask used to filter which blocks can be covered")
       .add()
       .<Double>append(new KeyedCodec<>("Chance", Codec.DOUBLE), (c, v) -> c.chance = v, c -> c.chance)
+      .addValidator(Validators.range(0.0, 1.0))
       .documentation("The random chance that the cover will be placed at a given position")
       .add()
       .build();

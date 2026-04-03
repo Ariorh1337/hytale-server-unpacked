@@ -23,7 +23,6 @@ import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.RaycastMode;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -45,6 +44,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ApplyForceInteraction extends SimpleInteraction {
    @Nonnull

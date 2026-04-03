@@ -3,12 +3,12 @@ package com.hypixel.hytale.server.core.event.events.player;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.ICancellable;
 import com.hypixel.hytale.protocol.MouseMotionEvent;
-import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector2fc;
 import org.joml.Vector3i;
 
 public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancellable {
@@ -16,7 +16,7 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
    private final Item itemInHand;
    private final Vector3i targetBlock;
    private final Entity targetEntity;
-   private final Vector2f screenPoint;
+   private final Vector2fc screenPoint;
    private final MouseMotionEvent mouseMotion;
    private boolean cancelled;
 
@@ -27,7 +27,7 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
       Item itemInHand,
       Vector3i targetBlock,
       Entity targetEntity,
-      Vector2f screenPoint,
+      Vector2fc screenPoint,
       MouseMotionEvent mouseMotion
    ) {
       super(ref, player);
@@ -65,7 +65,7 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
       return this.targetEntity;
    }
 
-   public Vector2f getScreenPoint() {
+   public Vector2fc getScreenPoint() {
       return this.screenPoint;
    }
 

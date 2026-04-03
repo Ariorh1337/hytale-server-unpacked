@@ -8,6 +8,7 @@ import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class ModelTrail {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -22,7 +23,7 @@ public class ModelTrail {
    @Nullable
    public String targetNodeName;
    @Nullable
-   public Vector3f positionOffset;
+   public Vector3fc positionOffset;
    @Nullable
    public Direction rotationOffset;
    public boolean fixedRotation;
@@ -34,7 +35,7 @@ public class ModelTrail {
       @Nullable String trailId,
       @Nonnull EntityPart targetEntityPart,
       @Nullable String targetNodeName,
-      @Nullable Vector3f positionOffset,
+      @Nullable Vector3fc positionOffset,
       @Nullable Direction rotationOffset,
       boolean fixedRotation
    ) {
@@ -65,7 +66,7 @@ public class ModelTrail {
       byte nullBits = buf.getByte(offset);
       obj.targetEntityPart = EntityPart.fromValue(buf.getByte(offset + 1));
       if ((nullBits & 1) != 0) {
-         obj.positionOffset = Vector3f.deserialize(buf, offset + 2);
+         obj.positionOffset = PacketIO.readVector3f(buf, offset + 2);
       }
 
       if ((nullBits & 2) != 0) {
@@ -180,7 +181,7 @@ public class ModelTrail {
       buf.writeByte(nullBits);
       buf.writeByte(this.targetEntityPart.getValue());
       if (this.positionOffset != null) {
-         this.positionOffset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.positionOffset);
       } else {
          buf.writeZero(12);
       }
@@ -290,7 +291,7 @@ public class ModelTrail {
       copy.trailId = this.trailId;
       copy.targetEntityPart = this.targetEntityPart;
       copy.targetNodeName = this.targetNodeName;
-      copy.positionOffset = this.positionOffset != null ? this.positionOffset.clone() : null;
+      copy.positionOffset = this.positionOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       copy.fixedRotation = this.fixedRotation;
       return copy;

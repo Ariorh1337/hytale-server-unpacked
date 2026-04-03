@@ -51,7 +51,7 @@ public class MoveCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
          assert headRotationComponent != null;
          Vector3i directionVector = RelativeDirection.toDirectionVector(direction, headRotationComponent).mul(distance);

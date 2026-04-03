@@ -130,7 +130,7 @@ public class TeleportAllCommand extends CommandBase {
                            targetWorld,
                            previousPos,
                            previousHeadRotation,
-                           String.format("Teleport to (%s, %s, %s) by %s", x, y, z, context.sender().getDisplayName())
+                           String.format("Teleport to (%s, %s, %s) by %s", x, y, z, context.sender().getUsername())
                         );
                         if (hasRotation) {
                            float displayYaw = Float.isNaN(yaw) ? previousHeadRotation.yaw() * (180.0F / (float)Math.PI) : yaw * (180.0F / (float)Math.PI);
@@ -147,7 +147,7 @@ public class TeleportAllCommand extends CommandBase {
                                  .param("yaw", displayYaw)
                                  .param("pitch", displayPitch)
                                  .param("roll", displayRoll)
-                                 .param("sender", context.sender().getDisplayName()),
+                                 .param("sender", context.sender().getUsername()),
                               null,
                               "teleportation"
                            );
@@ -158,7 +158,7 @@ public class TeleportAllCommand extends CommandBase {
                                  .param("x", x)
                                  .param("y", y)
                                  .param("z", z)
-                                 .param("sender", context.sender().getDisplayName()),
+                                 .param("sender", context.sender().getUsername()),
                               null,
                               "teleportation"
                            );

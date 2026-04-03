@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.blocktype.BlockTypeModule;
 import com.hypixel.hytale.server.core.console.ConsoleModule;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
 import com.hypixel.hytale.server.core.io.ServerManager;
+import com.hypixel.hytale.server.core.liveconfig.LiveConfigModule;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.accesscontrol.AccessControlModule;
 import com.hypixel.hytale.server.core.modules.anchoraction.AnchorActionModule;
@@ -54,6 +55,7 @@ public final class Constants {
       ConsoleModule.MANIFEST,
       PermissionsModule.MANIFEST,
       UpdateModule.MANIFEST,
+      LiveConfigModule.MANIFEST,
       FlyCameraModule.MANIFEST,
       AssetModule.MANIFEST,
       CommonAssetModule.MANIFEST,

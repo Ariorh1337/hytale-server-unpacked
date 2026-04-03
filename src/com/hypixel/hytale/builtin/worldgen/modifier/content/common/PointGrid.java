@@ -32,7 +32,7 @@ public class PointGrid {
       .<Double>append(new KeyedCodec<>("Jitter", Codec.DOUBLE), (t, v) -> t.jitter = v, t -> t.jitter)
       .documentation("Jitter of the points in the grid")
       .add()
-      .<FloatRange>append(new KeyedCodec<>("Density", Codecs.FLOAT_RANGE), (t, v) -> t.density = v, t -> t.density)
+      .<FloatRange>append(new KeyedCodec<>("Density", Codecs.DENSITY_RANGE), (t, v) -> t.density = v, t -> t.density)
       .documentation("Density threshold for the point grid")
       .add()
       .build();

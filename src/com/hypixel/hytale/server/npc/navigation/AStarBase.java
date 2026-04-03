@@ -8,6 +8,7 @@ import com.hypixel.hytale.function.predicate.BiFloatPredicate;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -15,6 +16,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.util.EnumSet;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,8 +36,7 @@ public class AStarBase {
    protected int totalNodesLimit = 400;
    protected boolean canMoveDiagonal = true;
    protected boolean optimizedBuildPath = true;
-   protected boolean isAvoidingBlockDamage;
-   protected boolean isRelaxedMoveConstraints;
+   protected EnumSet<RelaxedConstraint> relaxedConstraints = EnumSet.noneOf(RelaxedConstraint.class);
    protected final Vector3d startPosition = new Vector3d();
    protected AStarEvaluator evaluator;
    protected double positionToIndexOffsetX;
@@ -166,8 +167,8 @@ public class AStarBase {
       this.iterations = 0;
       this.evaluator = evaluator;
       this.startPosition.set(start);
-      this.isAvoidingBlockDamage = probeMoveData.isAvoidingBlockDamage;
-      this.isRelaxedMoveConstraints = probeMoveData.isRelaxedMoveConstraints;
+      this.relaxedConstraints.clear();
+      this.relaxedConstraints.addAll(probeMoveData.getRelaxedConstraints());
       long startBlockX = MathUtil.fastFloor(this.startPosition.x);
       long startBlockY = MathUtil.fastFloor(this.startPosition.y);
       long startBlockZ = MathUtil.fastFloor(this.startPosition.z);
@@ -333,8 +334,7 @@ public class AStarBase {
          return this.progress;
       }
 
-      probeMoveData.isAvoidingBlockDamage = this.isAvoidingBlockDamage;
-      probeMoveData.isRelaxedMoveConstraints = this.isRelaxedMoveConstraints;
+      probeMoveData.setRelaxedConstraints(this.relaxedConstraints);
 
       while (!this.openNodes.isEmpty() && nodesToProcess-- > 0) {
          int idx = this.openNodes.size() - 1;

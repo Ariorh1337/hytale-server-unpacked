@@ -14,7 +14,6 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.protocol.Direction;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -27,6 +26,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class DeployablesSystem {
    private static void spawnParticleEffect(

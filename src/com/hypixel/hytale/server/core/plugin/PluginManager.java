@@ -23,7 +23,6 @@ import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.config.ModConfig;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.plugin.commands.PluginCommand;
 import com.hypixel.hytale.server.core.plugin.event.PluginSetupEvent;
@@ -195,9 +194,8 @@ public class PluginManager {
                AddPlayerToWorldEvent.class,
                event -> {
                   PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
-                  Player player = event.getHolder().getComponent(Player.getComponentType());
-                  if (playerRef != null && player != null) {
-                     if (player.hasPermission("hytale.mods.outdated.notify")) {
+                  if (playerRef != null) {
+                     if (playerRef.hasPermission("hytale.mods.outdated.notify")) {
                         StringBuilder modsList = new StringBuilder();
 
                         for (PluginIdentifier id : this.outdatedPlugins) {

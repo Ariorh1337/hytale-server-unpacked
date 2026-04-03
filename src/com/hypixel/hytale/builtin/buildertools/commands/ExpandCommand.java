@@ -39,7 +39,7 @@ public class ExpandCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          Integer distance = this.distanceArg.get(context);
          Vector3i direction;
          if (this.axisArg.provided(context)) {

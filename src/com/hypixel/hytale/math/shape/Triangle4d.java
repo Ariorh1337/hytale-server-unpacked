@@ -1,9 +1,9 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.vector.Vector4dUtil;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
 import org.joml.Vector4d;
 
 public class Triangle4d {
@@ -101,9 +101,9 @@ public class Triangle4d {
 
    @Nonnull
    public Triangle4d multiply(@Nonnull Matrix4d matrix, @Nonnull Triangle4d target) {
-      matrix.multiply(this.a, target.a);
-      matrix.multiply(this.b, target.b);
-      matrix.multiply(this.c, target.c);
+      matrix.transform(this.a, target.a);
+      matrix.transform(this.b, target.b);
+      matrix.transform(this.c, target.c);
       return target;
    }
 

@@ -10,7 +10,6 @@ import com.hypixel.hytale.function.consumer.TriIntConsumer;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.collision.CollisionMath;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
@@ -27,6 +26,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.joml.Vector4d;
 
@@ -118,7 +118,7 @@ public class RaycastSelector extends SelectorType {
          IntSet blockTags = RaycastSelector.this.blockTag == null ? null : BlockType.getAssetMap().getIndexesForTag(RaycastSelector.this.blockTagIndex);
          if (SelectInteraction.SHOW_VISUAL_DEBUG) {
             Vector3d dir = new Vector3d(direction).mul(RaycastSelector.this.distance);
-            org.joml.Vector3f color = new org.joml.Vector3f(
+            Vector3f color = new Vector3f(
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 11L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 12L)

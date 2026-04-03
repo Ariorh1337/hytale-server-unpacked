@@ -9,11 +9,20 @@ public class BlockCubeUtil {
    public static <T> boolean forEachBlock(
       int originX, int originY, int originZ, int radiusX, int height, int radiusZ, T t, @Nonnull TriIntObjPredicate<T> consumer
    ) {
-      int radiusY = height / 2;
+      return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, false, false, t, consumer);
+   }
 
-      for (int dx = -radiusX; dx <= radiusX; dx++) {
-         for (int dz = -radiusZ; dz <= radiusZ; dz++) {
-            for (int dy = -radiusY; dy <= radiusY; dy++) {
+   public static <T> boolean forEachBlock(
+      int originX, int originY, int originZ, int radiusX, int height, int radiusZ, boolean evenXZ, boolean evenY, T t, @Nonnull TriIntObjPredicate<T> consumer
+   ) {
+      int maxDx = evenXZ ? radiusX - 1 : radiusX;
+      int maxDz = evenXZ ? radiusZ - 1 : radiusZ;
+      int radiusY = height / 2;
+      int maxDy = evenY ? radiusY - 1 : radiusY;
+
+      for (int dx = -radiusX; dx <= maxDx; dx++) {
+         for (int dz = -radiusZ; dz <= maxDz; dz++) {
+            for (int dy = -radiusY; dy <= maxDy; dy++) {
                if (!consumer.test(originX + dx, originY + dy, originZ + dz, t)) {
                   return false;
                }
@@ -50,8 +59,27 @@ public class BlockCubeUtil {
       T t,
       @Nonnull TriIntObjPredicate<T> consumer
    ) {
+      return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, thickness, cappedTop, cappedBottom, hollow, false, false, t, consumer);
+   }
+
+   public static <T> boolean forEachBlock(
+      int originX,
+      int originY,
+      int originZ,
+      int radiusX,
+      int height,
+      int radiusZ,
+      int thickness,
+      boolean cappedTop,
+      boolean cappedBottom,
+      boolean hollow,
+      boolean evenXZ,
+      boolean evenY,
+      T t,
+      @Nonnull TriIntObjPredicate<T> consumer
+   ) {
       if (thickness < 1) {
-         return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, t, consumer);
+         return forEachBlock(originX, originY, originZ, radiusX, height, radiusZ, evenXZ, evenY, t, consumer);
       }
 
       int radiusY = height / 2;
@@ -61,10 +89,13 @@ public class BlockCubeUtil {
       int innerMaxZ = radiusZ - thickness;
       int innerMinY = cappedBottom ? -radiusY + thickness : -height;
       int innerMaxY = cappedTop ? radiusY - thickness : height;
+      int maxDx = evenXZ ? radiusX - 1 : radiusX;
+      int maxDz = evenXZ ? radiusZ - 1 : radiusZ;
+      int maxDy = evenY ? radiusY - 1 : radiusY;
 
-      for (int dx = -radiusX; dx <= radiusX; dx++) {
-         for (int dz = -radiusZ; dz <= radiusZ; dz++) {
-            for (int dy = -radiusY; dy <= radiusY; dy++) {
+      for (int dx = -radiusX; dx <= maxDx; dx++) {
+         for (int dz = -radiusZ; dz <= maxDz; dz++) {
+            for (int dy = -radiusY; dy <= maxDy; dy++) {
                if (dy < innerMinY || dy > innerMaxY || dx < innerMinX || dx > innerMaxX || dz < innerMinZ || dz > innerMaxZ) {
                   if (!consumer.test(originX + dx, originY + dy, originZ + dz, t)) {
                      return false;

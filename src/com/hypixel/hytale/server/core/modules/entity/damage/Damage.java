@@ -143,7 +143,7 @@ public class Damage extends CancellableEcsEvent implements IMetaStore<Damage> {
       @Override
       public Message getDeathMessage(@Nonnull Damage info, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
          return Message.translation("server.general.killedByCommand")
-            .param("displayName", this.commandSender.getDisplayName())
+            .param("displayName", this.commandSender.getUsername())
             .param("commandName", this.commandName != null ? this.commandName : "Unknown");
       }
    }

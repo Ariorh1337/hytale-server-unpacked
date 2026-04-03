@@ -128,7 +128,7 @@ public class MotionControllerFly extends MotionControllerBase {
             this.lastSpeed = 0.0;
          }
 
-         if (this.canAct(ref, componentAccessor)) {
+         if (this.canSteer(ref, componentAccessor)) {
             translation.set(steering.getTranslation());
             double steeringSpeed = steering.hasTranslation() ? translation.length() : 0.0;
             float yaw = PhysicsMath.normalizeAngle(this.getYaw());
@@ -344,14 +344,14 @@ public class MotionControllerFly extends MotionControllerBase {
                maxY = y;
             }
 
-            this.verticalRange.assign(y, minY, maxY);
+            this.verticalRange.set(y, minY, maxY);
             return this.verticalRange;
          } else {
-            this.verticalRange.assign(y, y, y);
+            this.verticalRange.set(y, y, y);
             return this.verticalRange;
          }
       } else {
-         this.verticalRange.assign(y, y, y);
+         this.verticalRange.set(y, y, y);
          return this.verticalRange;
       }
    }
@@ -371,7 +371,7 @@ public class MotionControllerFly extends MotionControllerBase {
    ) {
       boolean probeOnly = probeMoveData != null;
       boolean saveSegments = probeOnly && probeMoveData.startProbing();
-      boolean canAct = probeOnly || this.canAct(ref, componentAccessor);
+      boolean canSteer = probeOnly || this.canSteer(ref, componentAccessor);
       String debugPrefix = probeOnly ? "Probe" : "Move";
       if (this.debugModeMove) {
          LOGGER.at(Level.INFO)
@@ -400,7 +400,7 @@ public class MotionControllerFly extends MotionControllerBase {
          }
       }
 
-      this.collisionResult.setCollisionByMaterial(canAct ? 6 : 4);
+      this.collisionResult.setCollisionByMaterial(canSteer ? 6 : 4);
       CollisionModule.get();
       CollisionModule.findCollisions(this.collisionBoundingBox, position, translation, this.collisionResult, componentAccessor);
       if (this.debugModeBlockCollisions) {
@@ -539,8 +539,8 @@ public class MotionControllerFly extends MotionControllerBase {
    }
 
    @Override
-   public boolean canAct(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return super.canAct(ref, componentAccessor) && this.moveProbe.isInAir() && this.effectHorizontalSpeedMultiplier != 0.0;
+   public boolean canSteer(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return super.canSteer(ref, componentAccessor) && this.moveProbe.isInAir() && this.effectHorizontalSpeedMultiplier != 0.0;
    }
 
    @Override

@@ -134,7 +134,7 @@ public class MacroCommandBase extends AbstractAsyncCommand {
       List<String> commandsToExecute = new ObjectArrayList<>();
       CommandSender commandSender = context.sender();
       String macro = context.getCalledCommand().getName();
-      LOGGER.at(Level.INFO).log("%s expanding command macro: %s", commandSender.getDisplayName(), macro);
+      LOGGER.at(Level.INFO).log("%s expanding command macro: %s", commandSender.getUsername(), macro);
 
       for (Pair<String, List<MacroCommandReplacement>> stringListPair : this.commandReplacements) {
          String command = stringListPair.key();

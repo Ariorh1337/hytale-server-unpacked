@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.core.command.system;
 
 import com.hypixel.hytale.common.util.CompletableFutureUtil;
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
+import com.hypixel.hytale.protocol.packets.interface_.ArgCacheInvalidation;
+import com.hypixel.hytale.protocol.packets.interface_.CommandTreeSync;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.particle.commands.ParticleCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.AssetsCommand;
@@ -61,11 +61,14 @@ import com.hypixel.hytale.server.core.command.commands.world.SpawnBlockCommand;
 import com.hypixel.hytale.server.core.command.commands.world.chunk.ChunkCommand;
 import com.hypixel.hytale.server.core.command.commands.world.entity.EntityCommand;
 import com.hypixel.hytale.server.core.command.commands.world.worldgen.WorldGenCommand;
+import com.hypixel.hytale.server.core.command.system.arguments.system.AbstractOptionalArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.Argument;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
 import com.hypixel.hytale.server.core.command.system.exceptions.CommandException;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.Universe;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Deque;
 import java.util.HashSet;
@@ -86,6 +89,8 @@ public class CommandManager implements CommandOwner {
    private static CommandManager instance;
    private final Map<String, AbstractCommand> commandRegistration = new Object2ObjectOpenHashMap<>();
    private final Map<String, String> aliases = new Object2ObjectOpenHashMap<>();
+   private final Map<String, ArgumentType<?>> argTypeRegistry = new Object2ObjectOpenHashMap<>();
+   private final CommandTreeBuilder commandTreeBuilder = new CommandTreeBuilder();
 
    public static CommandManager get() {
       return instance;
@@ -97,6 +102,17 @@ public class CommandManager implements CommandOwner {
 
    public void shutdown() {
       this.aliases.clear();
+   }
+
+   @Nullable
+   public ArgumentType<?> getArgTypeById(@Nonnull String typeId) {
+      return this.argTypeRegistry.get(typeId);
+   }
+
+   public void broadcastArgCacheInvalidation(@Nonnull String... argTypeIds) {
+      ArgCacheInvalidation packet = new ArgCacheInvalidation();
+      packet.argTypeIds = argTypeIds;
+      Universe.get().broadcastPacket(packet);
    }
 
    @Nonnull
@@ -167,7 +183,7 @@ public class CommandManager implements CommandOwner {
 
       for (AbstractCommand command : this.commandRegistration.values()) {
          for (Entry<String, Set<String>> entry : command.getPermissionGroupsRecursive().entrySet()) {
-            Set<String> permissionsForGroup = permissionsByGroup.computeIfAbsent(entry.getKey(), k -> new HashSet<>());
+            Set<String> permissionsForGroup = permissionsByGroup.computeIfAbsent(entry.getKey(), groupName -> new HashSet<>());
             permissionsForGroup.addAll(entry.getValue());
          }
       }
@@ -188,9 +204,9 @@ public class CommandManager implements CommandOwner {
 
          try {
             command.completeRegistration();
-         } catch (Exception e) {
-            String errorMessage = e.getMessage();
-            if (e instanceof GeneralCommandException generalException) {
+         } catch (Exception exception) {
+            String errorMessage = exception.getMessage();
+            if (exception instanceof GeneralCommandException generalException) {
                String messageText = generalException.getMessageText();
                if (messageText != null) {
                   errorMessage = messageText;
@@ -199,7 +215,7 @@ public class CommandManager implements CommandOwner {
 
             HytaleLogger.getLogger()
                .at(Level.SEVERE)
-               .withCause(e)
+               .withCause(exception)
                .log("Failed to register command: %s%s", command.getName(), errorMessage != null ? " - " + errorMessage : "");
             return null;
          }
@@ -208,6 +224,7 @@ public class CommandManager implements CommandOwner {
             this.aliases.put(alias, name);
          }
 
+         this.registerArgTypes(command);
          return new CommandRegistration(command, () -> true, () -> {
             AbstractCommand remove = this.commandRegistration.remove(name);
             if (remove != null) {
@@ -221,16 +238,39 @@ public class CommandManager implements CommandOwner {
       }
    }
 
-   @Nonnull
-   public CompletableFuture<Void> handleCommand(@Nonnull PlayerRef playerRef, @Nonnull String command) {
-      Ref<EntityStore> ref = playerRef.getReference();
-      if (ref == null) {
-         return new CompletableFuture<>();
+   private void registerArgTypes(@Nonnull AbstractCommand command) {
+      for (RequiredArg<?> arg : command.getRequiredArguments()) {
+         ArgumentType<?> type = arg.getArgumentType();
+         this.argTypeRegistry.putIfAbsent(type.getSuggestionTypeId(), type);
       }
 
-      Store<EntityStore> store = ref.getStore();
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      return this.handleCommand(playerComponent, command);
+      for (Entry<String, AbstractOptionalArg<?, ?>> entry : command.getOptionalArguments().entrySet()) {
+         AbstractOptionalArg<? extends Argument<?, ?>, ?> arg = (AbstractOptionalArg<? extends Argument<?, ?>, ?>)entry.getValue();
+         if (!(arg instanceof FlagArg)) {
+            ArgumentType<?> type = arg.getArgumentType();
+            this.argTypeRegistry.putIfAbsent(type.getSuggestionTypeId(), type);
+         }
+      }
+
+      List<AbstractCommand.SuggestionOverrideEntry> overrides = command.getSuggestionOverrides();
+      if (overrides != null) {
+         for (AbstractCommand.SuggestionOverrideEntry override : overrides) {
+            this.argTypeRegistry.putIfAbsent(override.argTypeId(), override.overrideType());
+         }
+      }
+
+      for (AbstractCommand variant : command.getVariantCommands()) {
+         this.registerArgTypes(variant);
+      }
+
+      for (AbstractCommand subcommand : command.getSubCommands().values()) {
+         this.registerArgTypes(subcommand);
+      }
+   }
+
+   @Nonnull
+   public CommandTreeSync buildCommandTree(@Nonnull CommandSender sender) {
+      return this.commandTreeBuilder.build(sender, this.commandRegistration.values());
    }
 
    @Nonnull
@@ -244,7 +284,7 @@ public class CommandManager implements CommandOwner {
          thread.setName(oldName + " -- Running: " + commandString);
 
          try {
-            LOGGER.at(Level.FINE).log("%s sent command: %s", commandSender.getDisplayName(), commandString);
+            LOGGER.at(Level.FINE).log("%s sent command: %s", commandSender.getUsername(), commandString);
             int endIndex = commandString.indexOf(32);
             String commandName = (endIndex < 0 ? commandString : commandString.substring(0, endIndex)).toLowerCase();
             AbstractCommand command = this.commandRegistration.get(commandName);
@@ -273,7 +313,7 @@ public class CommandManager implements CommandOwner {
       @Nonnull CommandSender commandSender, @Nonnull String commandInput, @Nonnull AbstractCommand abstractCommand, @Nonnull CompletableFuture<Void> future
    ) {
       try {
-         LOGGER.at(Level.INFO).log("%s executed command: %s", commandSender.getDisplayName(), commandInput);
+         LOGGER.at(Level.INFO).log("%s executed command: %s", commandSender.getUsername(), commandInput);
          ParseResult parseResult = new ParseResult();
          List<String> tokens = Tokenizer.parseArguments(commandInput, parseResult);
          if (parseResult.failed()) {
@@ -303,7 +343,7 @@ public class CommandManager implements CommandOwner {
                      if (!CompletableFutureUtil.isCanceled(throwable) && !isInternalException(throwable)) {
                         LOGGER.at(Level.SEVERE)
                            .withCause(new SkipSentryException(throwable))
-                           .log("Failed to execute command %s for %s", commandInput, commandSender.getDisplayName());
+                           .log("Failed to execute command %s for %s", commandInput, commandSender.getUsername());
                         commandSender.sendMessage(
                            Message.translation("server.modules.command.error").param("cmd", commandInput).param("msg", throwable.getMessage())
                         );
@@ -318,16 +358,18 @@ public class CommandManager implements CommandOwner {
          } else {
             future.complete(null);
          }
-      } catch (Throwable t) {
-         if (t instanceof CommandException commandException) {
+      } catch (Throwable thrown) {
+         if (thrown instanceof CommandException commandException) {
             commandException.sendTranslatedMessage(commandSender);
          } else {
-            LOGGER.at(Level.SEVERE).withCause(t).log("Failed to execute command %s for %s", commandInput, commandSender.getDisplayName());
-            Message errorMsg = t.getMessage() == null ? Message.translation("server.modules.command.noProvidedExceptionMessage") : Message.raw(t.getMessage());
+            LOGGER.at(Level.SEVERE).withCause(thrown).log("Failed to execute command %s for %s", commandInput, commandSender.getUsername());
+            Message errorMsg = thrown.getMessage() == null
+               ? Message.translation("server.modules.command.noProvidedExceptionMessage")
+               : Message.raw(thrown.getMessage());
             commandSender.sendMessage(Message.translation("server.modules.command.error").param("cmd", commandInput).param("msg", errorMsg));
          }
 
-         future.completeExceptionally(t);
+         future.completeExceptionally(thrown);
       }
    }
 

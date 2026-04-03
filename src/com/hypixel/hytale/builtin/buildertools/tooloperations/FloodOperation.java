@@ -14,6 +14,7 @@ public class FloodOperation extends ToolOperation {
    public FloodOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -24,9 +25,9 @@ public class FloodOperation extends ToolOperation {
    public void execute(ComponentAccessor<EntityStore> componentAccessor) {
       BlockPattern targetPattern = (BlockPattern)this.args.tool().get("TargetBlock");
       int targetBlock = targetPattern.isEmpty() ? this.edit.getAccessor().getBlock(this.x, this.y, this.z) : targetPattern.firstBlock();
-      Player playerComponent = componentAccessor.getComponent(this.playerRef, Player.getComponentType());
+      Player playerComponent = componentAccessor.getComponent(this.playerEntityRef, Player.getComponentType());
       assert playerComponent != null;
-      PlayerRef playerRefComponent = componentAccessor.getComponent(this.playerRef, PlayerRef.getComponentType());
+      PlayerRef playerRefComponent = componentAccessor.getComponent(this.playerEntityRef, PlayerRef.getComponentType());
       assert playerRefComponent != null;
       BuilderToolsPlugin.getState(playerComponent, playerRefComponent)
          .flood(this.edit, this.x, this.y + this.originOffsetY, this.z, this.shapeRange, this.shapeHeight, this.pattern, targetBlock);

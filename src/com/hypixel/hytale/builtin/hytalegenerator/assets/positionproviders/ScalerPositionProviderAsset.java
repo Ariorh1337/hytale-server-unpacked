@@ -5,6 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProv
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.ScalerPositionProvider;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.schema.SchemaContext;
+import com.hypixel.hytale.codec.schema.config.Schema;
+import com.hypixel.hytale.codec.validation.ValidationResults;
+import com.hypixel.hytale.codec.validation.Validator;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
@@ -15,10 +19,16 @@ public class ScalerPositionProviderAsset extends PositionProviderAsset {
          ScalerPositionProviderAsset.class, ScalerPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
       .append(new KeyedCodec<>("Scale", Vector3dUtil.CODEC, true), (asset, v) -> asset.scale = v, asset -> asset.scale)
-      .addValidator((vector, result) -> {
-         if (!isValidScale(vector)) {
-            String msg = "Scale Vector " + vector.toString() + " has one or more zero members.";
-            result.fail(msg);
+      .addValidator(new Validator<Vector3d>() {
+         public void accept(Vector3d vector, ValidationResults results) {
+            if (!ScalerPositionProviderAsset.isValidScale(vector)) {
+               String msg = "Scale Vector " + vector.toString() + " has one or more zero members.";
+               results.fail(msg);
+            }
+         }
+
+         @Override
+         public void updateSchema(SchemaContext context, Schema target) {
          }
       })
       .add()

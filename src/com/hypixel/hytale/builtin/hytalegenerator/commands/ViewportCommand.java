@@ -56,9 +56,10 @@ public class ViewportCommand extends AbstractPlayerCommand {
       if (context.get(this.deleteFlag)) {
          playerRef.sendMessage(Message.translation("server.commands.viewport.removed"));
       } else {
-         Integer radius = context.get(this.radiusArg) << 5;
+         Integer radius = context.get(this.radiusArg);
          Bounds3i viewportBounds_voxelGrid;
          if (radius != null) {
+            radius = radius << 5;
             Vector3d playerPosition_voxelGrid = store.getComponent(ref, TransformComponent.getComponentType()).getPosition();
             Vector3i min_voxelGrid = Vector3dUtil.toVector3i(
                new Vector3d(playerPosition_voxelGrid).sub(radius.intValue(), radius.intValue(), radius.intValue())

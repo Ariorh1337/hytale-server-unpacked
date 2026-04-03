@@ -8,6 +8,7 @@ import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2fc;
 
 public class ModelVFX {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -23,7 +24,7 @@ public class ModelVFX {
    public EffectDirection effectDirection = EffectDirection.None;
    public float animationDuration;
    @Nullable
-   public Vector2f animationRange;
+   public Vector2fc animationRange;
    @Nonnull
    public LoopOption loopOption = LoopOption.PlayOnce;
    @Nonnull
@@ -34,9 +35,9 @@ public class ModelVFX {
    public boolean useBloomOnHighlight;
    public boolean useProgessiveHighlight;
    @Nullable
-   public Vector2f noiseScale;
+   public Vector2fc noiseScale;
    @Nullable
-   public Vector2f noiseScrollSpeed;
+   public Vector2fc noiseScrollSpeed;
    @Nullable
    public Color postColor;
    public float postColorOpacity;
@@ -49,15 +50,15 @@ public class ModelVFX {
       @Nonnull SwitchTo switchTo,
       @Nonnull EffectDirection effectDirection,
       float animationDuration,
-      @Nullable Vector2f animationRange,
+      @Nullable Vector2fc animationRange,
       @Nonnull LoopOption loopOption,
       @Nonnull CurveType curveType,
       @Nullable Color highlightColor,
       float highlightThickness,
       boolean useBloomOnHighlight,
       boolean useProgessiveHighlight,
-      @Nullable Vector2f noiseScale,
-      @Nullable Vector2f noiseScrollSpeed,
+      @Nullable Vector2fc noiseScale,
+      @Nullable Vector2fc noiseScrollSpeed,
       @Nullable Color postColor,
       float postColorOpacity
    ) {
@@ -108,7 +109,7 @@ public class ModelVFX {
       obj.effectDirection = EffectDirection.fromValue(buf.getByte(offset + 2));
       obj.animationDuration = buf.getFloatLE(offset + 3);
       if ((nullBits & 1) != 0) {
-         obj.animationRange = Vector2f.deserialize(buf, offset + 7);
+         obj.animationRange = PacketIO.readVector2f(buf, offset + 7);
       }
 
       obj.loopOption = LoopOption.fromValue(buf.getByte(offset + 15));
@@ -121,11 +122,11 @@ public class ModelVFX {
       obj.useBloomOnHighlight = buf.getByte(offset + 24) != 0;
       obj.useProgessiveHighlight = buf.getByte(offset + 25) != 0;
       if ((nullBits & 4) != 0) {
-         obj.noiseScale = Vector2f.deserialize(buf, offset + 26);
+         obj.noiseScale = PacketIO.readVector2f(buf, offset + 26);
       }
 
       if ((nullBits & 8) != 0) {
-         obj.noiseScrollSpeed = Vector2f.deserialize(buf, offset + 34);
+         obj.noiseScrollSpeed = PacketIO.readVector2f(buf, offset + 34);
       }
 
       if ((nullBits & 16) != 0) {
@@ -198,7 +199,7 @@ public class ModelVFX {
       buf.writeByte(this.effectDirection.getValue());
       buf.writeFloatLE(this.animationDuration);
       if (this.animationRange != null) {
-         this.animationRange.serialize(buf);
+         PacketIO.writeVector2f(buf, this.animationRange);
       } else {
          buf.writeZero(8);
       }
@@ -215,13 +216,13 @@ public class ModelVFX {
       buf.writeByte(this.useBloomOnHighlight ? 1 : 0);
       buf.writeByte(this.useProgessiveHighlight ? 1 : 0);
       if (this.noiseScale != null) {
-         this.noiseScale.serialize(buf);
+         PacketIO.writeVector2f(buf, this.noiseScale);
       } else {
          buf.writeZero(8);
       }
 
       if (this.noiseScrollSpeed != null) {
-         this.noiseScrollSpeed.serialize(buf);
+         PacketIO.writeVector2f(buf, this.noiseScrollSpeed);
       } else {
          buf.writeZero(8);
       }
@@ -300,15 +301,15 @@ public class ModelVFX {
       copy.switchTo = this.switchTo;
       copy.effectDirection = this.effectDirection;
       copy.animationDuration = this.animationDuration;
-      copy.animationRange = this.animationRange != null ? this.animationRange.clone() : null;
+      copy.animationRange = this.animationRange;
       copy.loopOption = this.loopOption;
       copy.curveType = this.curveType;
       copy.highlightColor = this.highlightColor != null ? this.highlightColor.clone() : null;
       copy.highlightThickness = this.highlightThickness;
       copy.useBloomOnHighlight = this.useBloomOnHighlight;
       copy.useProgessiveHighlight = this.useProgessiveHighlight;
-      copy.noiseScale = this.noiseScale != null ? this.noiseScale.clone() : null;
-      copy.noiseScrollSpeed = this.noiseScrollSpeed != null ? this.noiseScrollSpeed.clone() : null;
+      copy.noiseScale = this.noiseScale;
+      copy.noiseScrollSpeed = this.noiseScrollSpeed;
       copy.postColor = this.postColor != null ? this.postColor.clone() : null;
       copy.postColorOpacity = this.postColorOpacity;
       return copy;

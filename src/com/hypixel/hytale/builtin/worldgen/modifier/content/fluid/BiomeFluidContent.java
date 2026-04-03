@@ -2,12 +2,12 @@ package com.hypixel.hytale.builtin.worldgen.modifier.content.fluid;
 
 import com.hypixel.hytale.builtin.worldgen.modifier.content.Codecs;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.common.HeightMask;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.common.NoiseMask;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.range.IntRange;
 import com.hypixel.hytale.procedurallib.supplier.DoubleRange;
 import com.hypixel.hytale.procedurallib.supplier.DoubleRangeNoiseSupplier;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -24,13 +24,13 @@ public class BiomeFluidContent implements Content {
       .<String>append(new KeyedCodec<>("Block", Codecs.BLOCK_TYPE), (t, v) -> t.block = v, t -> t.block)
       .documentation("The block type to place in the fluid")
       .add()
-      .<IntRange>append(new KeyedCodec<>("MinY", Codecs.INT_RANGE), (t, v) -> t.minY = v, t -> t.minY)
+      .<HeightMask>append(new KeyedCodec<>("MinY", HeightMask.CODEC), (t, v) -> t.minY = v, t -> t.minY)
       .documentation("The minimum height that the fluid should generate at")
       .add()
       .<NoiseMask>append(new KeyedCodec<>("MinYNoise", NoiseMask.CODEC), (t, v) -> t.minYNoise = v, t -> t.minYNoise)
       .documentation("The noise used to modulate the min-y height")
       .add()
-      .<IntRange>append(new KeyedCodec<>("MaxY", Codecs.INT_RANGE), (t, v) -> t.maxY = v, t -> t.maxY)
+      .<HeightMask>append(new KeyedCodec<>("MaxY", HeightMask.CODEC), (t, v) -> t.maxY = v, t -> t.maxY)
       .documentation("The maximum height that the fluid should generate at")
       .add()
       .<NoiseMask>append(new KeyedCodec<>("MaxYNoise", NoiseMask.CODEC), (t, v) -> t.maxYNoise = v, t -> t.maxYNoise)
@@ -40,13 +40,11 @@ public class BiomeFluidContent implements Content {
       .documentation("The noise mask used to determine where the fluid should be placed")
       .add()
       .build();
-   protected static final IntRange DEFAULT_MIN = new IntRange(0, 0);
-   protected static final IntRange DEFAULT_MAX = new IntRange(115, 115);
    protected String fluid = "Empty";
    protected String block = "Empty";
-   protected IntRange minY = DEFAULT_MIN;
+   protected HeightMask minY = HeightMask.DEFAULT_ZERO;
    protected NoiseMask minYNoise = NoiseMask.ZERO;
-   protected IntRange maxY = DEFAULT_MAX;
+   protected HeightMask maxY = HeightMask.DEFAULT_FLUID;
    protected NoiseMask maxYNoise = NoiseMask.ZERO;
    protected NoiseMask noiseMask = NoiseMask.DEFAULT;
 
@@ -66,16 +64,10 @@ public class BiomeFluidContent implements Content {
                   blockId,
                   fluidId,
                   new DoubleRangeNoiseSupplier(
-                     new DoubleRange.Normal(
-                        Math.min(this.minY.getInclusiveMin(), this.minY.getInclusiveMax()), Math.max(this.minY.getInclusiveMin(), this.minY.getInclusiveMax())
-                     ),
-                     this.minYNoise.buildNoise(event.seed())
+                     new DoubleRange.Normal(this.minY.range().getInclusiveMin(), this.minY.range().getInclusiveMax()), this.minYNoise.buildNoise(event.seed())
                   ),
                   new DoubleRangeNoiseSupplier(
-                     new DoubleRange.Normal(
-                        Math.min(this.maxY.getInclusiveMin(), this.maxY.getInclusiveMax()), Math.max(this.maxY.getInclusiveMin(), this.maxY.getInclusiveMax())
-                     ),
-                     this.maxYNoise.buildNoise(event.seed())
+                     new DoubleRange.Normal(this.maxY.range().getInclusiveMin(), this.maxY.range().getInclusiveMax()), this.maxYNoise.buildNoise(event.seed())
                   ),
                   this.noiseMask.build(event.seed())
                )

@@ -1,14 +1,13 @@
 package com.hypixel.hytale.builtin.worldgen.modifier.content.layer;
 
-import com.hypixel.hytale.builtin.worldgen.modifier.content.Codecs;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.common.HeightMask;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.common.NoiseMask;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.math.range.FloatRange;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.procedurallib.supplier.DoubleRange;
 import com.hypixel.hytale.procedurallib.supplier.DoubleRangeNoiseSupplier;
@@ -27,7 +26,7 @@ public class BiomeDynamicLayerContent extends LayerContent {
       )
       .documentation("The entries contained within the layer")
       .add()
-      .<FloatRange>append(new KeyedCodec<>("Offset", Codecs.FLOAT_RANGE), (t, v) -> t.offset = v, t -> t.offset)
+      .<HeightMask>append(new KeyedCodec<>("Offset", HeightMask.CODEC), (t, v) -> t.offset = v, t -> t.offset)
       .documentation("The depth offset for the dynamic layer")
       .add()
       .<NoiseMask>append(new KeyedCodec<>("OffsetNoise", NoiseMask.CODEC), (t, v) -> t.offsetNoise = v, t -> t.offsetNoise)
@@ -35,7 +34,7 @@ public class BiomeDynamicLayerContent extends LayerContent {
       .add()
       .build();
    protected BiomeDynamicLayerContent.DynamicEntry[] entries = BiomeDynamicLayerContent.DynamicEntry.EMPTY_ARRAY;
-   protected FloatRange offset = new FloatRange(0.0F, 0.0F);
+   protected HeightMask offset = HeightMask.DEFAULT_ONE;
    protected NoiseMask offsetNoise = NoiseMask.ZERO;
 
    @Override
@@ -54,7 +53,8 @@ public class BiomeDynamicLayerContent extends LayerContent {
                      this.noiseMask.build(event.seed()),
                      0,
                      new DoubleRangeNoiseSupplier(
-                        new DoubleRange.Normal(this.offset.getInclusiveMin(), this.offset.getInclusiveMax()), this.offsetNoise.buildNoise(event.seed())
+                        new DoubleRange.Normal(this.offset.range().getInclusiveMin(), this.offset.range().getInclusiveMax()),
+                        this.offsetNoise.buildNoise(event.seed())
                      )
                   )
                );

@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class AOECylinderSelector extends Selector {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -16,12 +18,12 @@ public class AOECylinderSelector extends Selector {
    public float range;
    public float height;
    @Nullable
-   public Vector3f offset;
+   public Vector3fc offset;
 
    public AOECylinderSelector() {
    }
 
-   public AOECylinderSelector(float range, float height, @Nullable Vector3f offset) {
+   public AOECylinderSelector(float range, float height, @Nullable Vector3fc offset) {
       this.range = range;
       this.height = height;
       this.offset = offset;
@@ -44,7 +46,7 @@ public class AOECylinderSelector extends Selector {
       obj.range = buf.getFloatLE(offset + 1);
       obj.height = buf.getFloatLE(offset + 5);
       if ((nullBits & 1) != 0) {
-         obj.offset = Vector3f.deserialize(buf, offset + 9);
+         obj.offset = PacketIO.readVector3f(buf, offset + 9);
       }
 
       return obj;
@@ -66,7 +68,7 @@ public class AOECylinderSelector extends Selector {
       buf.writeFloatLE(this.range);
       buf.writeFloatLE(this.height);
       if (this.offset != null) {
-         this.offset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.offset);
       } else {
          buf.writeZero(12);
       }
@@ -92,7 +94,7 @@ public class AOECylinderSelector extends Selector {
       AOECylinderSelector copy = new AOECylinderSelector();
       copy.range = this.range;
       copy.height = this.height;
-      copy.offset = this.offset != null ? this.offset.clone() : null;
+      copy.offset = this.offset;
       return copy;
    }
 

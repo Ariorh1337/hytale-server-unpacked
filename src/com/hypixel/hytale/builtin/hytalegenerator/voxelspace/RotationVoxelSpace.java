@@ -25,7 +25,7 @@ public class RotationVoxelSpace implements VoxelSpace<Material> {
    @Nonnull
    private final Vector3i anchor;
    @Nonnull
-   private final Vector3i rPosition;
+   private final Vector3i rSourcePosition;
 
    public RotationVoxelSpace(@Nonnull RotationTuple rotation_fromViewToSource, @Nonnull MaterialCache materialCache) {
       this.rotation_fromViewToSource = rotation_fromViewToSource;
@@ -36,7 +36,7 @@ public class RotationVoxelSpace implements VoxelSpace<Material> {
       this.viewBounds = new Bounds3i();
       this.anchor = new Vector3i();
       this.setSource(NullSpace.instance(), Vector3iUtil.ZERO);
-      this.rPosition = new Vector3i();
+      this.rSourcePosition = new Vector3i();
    }
 
    public void setSource(@Nonnull VoxelSpace<Material> source, @Nonnull Vector3ic anchor) {
@@ -49,7 +49,7 @@ public class RotationVoxelSpace implements VoxelSpace<Material> {
    public void set(@NullableDecl Material material, int x, int y, int z) {
       this.loadPosition(x, y, z);
       Material rotatedMaterial = this.materialCache.getMaterialRotated(material, this.rotation_fromViewToSource);
-      this.source.set(rotatedMaterial, this.rPosition);
+      this.source.set(rotatedMaterial, this.rSourcePosition);
    }
 
    public void set(@NullableDecl Material material, @NonNullDecl Vector3i position) {
@@ -71,7 +71,7 @@ public class RotationVoxelSpace implements VoxelSpace<Material> {
    @NullableDecl
    public Material get(int x, int y, int z) {
       this.loadPosition(x, y, z);
-      Material material = this.source.get(this.rPosition);
+      Material material = this.source.get(this.rSourcePosition);
       return this.materialCache.getMaterialRotated(material, this.rotation_materialFromSourceToView);
    }
 
@@ -88,10 +88,10 @@ public class RotationVoxelSpace implements VoxelSpace<Material> {
 
    private void loadPosition(int x, int y, int z) {
       assert this.viewBounds.contains(x, y, z);
-      this.rPosition.set(x, y, z);
-      this.rPosition.sub(this.anchor);
-      this.rotation_fromViewToSource.applyRotationTo(this.rPosition);
-      this.rPosition.add(this.anchor);
-      assert this.source.getBounds().contains(this.rPosition);
+      this.rSourcePosition.set(x, y, z);
+      this.rSourcePosition.sub(this.anchor);
+      this.rotation_fromViewToSource.applyRotationTo(this.rSourcePosition);
+      this.rSourcePosition.add(this.anchor);
+      assert this.source.getBounds().contains(this.rSourcePosition);
    }
 }

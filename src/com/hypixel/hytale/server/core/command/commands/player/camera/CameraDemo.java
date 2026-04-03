@@ -14,7 +14,6 @@ import com.hypixel.hytale.protocol.MovementForceRotationType;
 import com.hypixel.hytale.protocol.PositionDistanceOffsetType;
 import com.hypixel.hytale.protocol.RotationType;
 import com.hypixel.hytale.protocol.ServerCameraSettings;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -28,6 +27,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 import org.joml.Vector3i;
 
 public class CameraDemo {

@@ -19,28 +19,22 @@ import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockMigration;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
-import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.EmptySectionPalette;
-import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.ISectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.PaletteTypeEnum;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import java.lang.ref.SoftReference;
 import java.time.Instant;
@@ -70,9 +64,9 @@ public class BlockSection implements Component<ChunkStore> {
    private IntOpenHashSet changedPositions = new IntOpenHashSet(0);
    @Nonnull
    private IntOpenHashSet swapChangedPositions = new IntOpenHashSet(0);
-   private ISectionPalette chunkSection;
-   private ISectionPalette fillerSection;
-   private ISectionPalette rotationSection;
+   private AbstractSectionPalette chunkSection;
+   private AbstractSectionPalette fillerSection;
+   private AbstractSectionPalette rotationSection;
    private ChunkLightData localLight;
    private short localChangeCounter;
    private ChunkLightData globalLight;
@@ -88,12 +82,6 @@ public class BlockSection implements Component<ChunkStore> {
    private double maximumHitboxExtent;
    @Nullable
    private transient SoftReference<CompletableFuture<CachedPacket<SetChunk>>> cachedChunkPacket;
-   @Nullable
-   @Deprecated(forRemoval = true)
-   private FluidSection migratedFluidSection;
-   @Nullable
-   @Deprecated(forRemoval = true)
-   private BlockPhysics migratedBlockPhysics;
    private static final Comparator<BlockSection.TickRequest> TICK_REQUEST_COMPARATOR = Comparator.comparing(t -> t.requestedGameTime);
 
    public static ComponentType<ChunkStore, BlockSection> getComponentType() {
@@ -104,7 +92,7 @@ public class BlockSection implements Component<ChunkStore> {
       this(EmptySectionPalette.INSTANCE, EmptySectionPalette.INSTANCE, EmptySectionPalette.INSTANCE);
    }
 
-   public BlockSection(ISectionPalette chunkSection, ISectionPalette fillerSection, ISectionPalette rotationSection) {
+   public BlockSection(AbstractSectionPalette chunkSection, AbstractSectionPalette fillerSection, AbstractSectionPalette rotationSection) {
       this.tickRequests = new ObjectHeapPriorityQueue<>(TICK_REQUEST_COMPARATOR);
       this.maximumHitboxExtent = -1.0;
       this.chunkSection = chunkSection;
@@ -121,11 +109,11 @@ public class BlockSection implements Component<ChunkStore> {
       this.globalChangeCounter = 0;
    }
 
-   public ISectionPalette getChunkSection() {
+   public AbstractSectionPalette getChunkSection() {
       return this.chunkSection;
    }
 
-   public void setChunkSection(ISectionPalette chunkSection) {
+   public void setChunkSection(AbstractSectionPalette chunkSection) {
       this.chunkSection = chunkSection;
    }
 
@@ -246,15 +234,15 @@ public class BlockSection implements Component<ChunkStore> {
 
          boolean changed;
          try {
-            ISectionPalette.SetResult result = this.chunkSection.set(blockIdx, blockId);
-            if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
+            AbstractSectionPalette.SetResult result = this.chunkSection.set(blockIdx, blockId);
+            if (result == AbstractSectionPalette.SetResult.REQUIRES_PROMOTE) {
                this.chunkSection = this.chunkSection.promote();
-               ISectionPalette.SetResult repeatResult = this.chunkSection.set(blockIdx, blockId);
-               if (repeatResult != ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               AbstractSectionPalette.SetResult repeatResult = this.chunkSection.set(blockIdx, blockId);
+               if (repeatResult != AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   throw new IllegalStateException("Promoted chunk section failed to correctly add the new block!");
                }
             } else {
-               if (result == ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               if (result == AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   this.maximumHitboxExtent = -1.0;
                }
 
@@ -263,31 +251,31 @@ public class BlockSection implements Component<ChunkStore> {
                }
             }
 
-            changed = result != ISectionPalette.SetResult.UNCHANGED;
+            changed = result != AbstractSectionPalette.SetResult.UNCHANGED;
             result = this.fillerSection.set(blockIdx, filler);
-            if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
+            if (result == AbstractSectionPalette.SetResult.REQUIRES_PROMOTE) {
                this.fillerSection = this.fillerSection.promote();
-               ISectionPalette.SetResult repeatResult = this.fillerSection.set(blockIdx, filler);
-               if (repeatResult != ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               AbstractSectionPalette.SetResult repeatResult = this.fillerSection.set(blockIdx, filler);
+               if (repeatResult != AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   throw new IllegalStateException("Promoted chunk section failed to correctly add the new block!");
                }
             } else if (this.fillerSection.shouldDemote()) {
                this.fillerSection = this.fillerSection.demote();
             }
 
-            changed |= result != ISectionPalette.SetResult.UNCHANGED;
+            changed |= result != AbstractSectionPalette.SetResult.UNCHANGED;
             result = this.rotationSection.set(blockIdx, rotation);
-            if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
+            if (result == AbstractSectionPalette.SetResult.REQUIRES_PROMOTE) {
                this.rotationSection = this.rotationSection.promote();
-               ISectionPalette.SetResult repeatResult = this.rotationSection.set(blockIdx, rotation);
-               if (repeatResult != ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               AbstractSectionPalette.SetResult repeatResult = this.rotationSection.set(blockIdx, rotation);
+               if (repeatResult != AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   throw new IllegalStateException("Promoted chunk section failed to correctly add the new block!");
                }
             } else if (this.rotationSection.shouldDemote()) {
                this.rotationSection = this.rotationSection.demote();
             }
 
-            changed |= result != ISectionPalette.SetResult.UNCHANGED;
+            changed |= result != AbstractSectionPalette.SetResult.UNCHANGED;
             if (changed && this.loaded) {
                this.changedPositions.add(blockIdx);
             }
@@ -679,22 +667,6 @@ public class BlockSection implements Component<ChunkStore> {
       }
    }
 
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public FluidSection takeMigratedFluid() {
-      FluidSection temp = this.migratedFluidSection;
-      this.migratedFluidSection = null;
-      return temp;
-   }
-
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public BlockPhysics takeMigratedDecoBlocks() {
-      BlockPhysics temp = this.migratedBlockPhysics;
-      this.migratedBlockPhysics = null;
-      return temp;
-   }
-
    public void serializeForPacket(@Nonnull ByteBuf buf) {
       long lock = this.chunkSectionLock.readLock();
 
@@ -716,7 +688,7 @@ public class BlockSection implements Component<ChunkStore> {
       }
    }
 
-   public void serialize(ISectionPalette.KeySerializer keySerializer, @Nonnull ByteBuf buf) {
+   public void serialize(AbstractSectionPalette.KeySerializer keySerializer, @Nonnull ByteBuf buf) {
       long lock = this.chunkSectionLock.readLock();
 
       try {
@@ -762,11 +734,11 @@ public class BlockSection implements Component<ChunkStore> {
    }
 
    public void deserialize(ToIntFunction<ByteBuf> keyDeserializer, @Nonnull ByteBuf buf, int version) {
-      int blockMigrationVersion = 0;
-      if (version >= 6) {
-         blockMigrationVersion = buf.readInt();
+      if (version < 6) {
+         throw new IllegalArgumentException("Version not supported: " + version);
       }
 
+      int blockMigrationVersion = buf.readInt();
       Function<String, String> blockMigration = null;
       Map<Integer, BlockMigration> blockMigrationMap = BlockMigration.getAssetMap().getAssetMap();
 
@@ -784,193 +756,12 @@ public class BlockSection implements Component<ChunkStore> {
       PaletteTypeEnum typeEnum = PaletteTypeEnum.get(buf.readByte());
       PaletteType paletteType = typeEnum.getPaletteType();
       this.chunkSection = typeEnum.getConstructor().get();
-      if (version <= 4) {
-         ISectionPalette tempSection = typeEnum.getConstructor().get();
-         boolean[] foundMigratable = new boolean[]{false};
-         boolean[] needsPhysics = new boolean[]{false};
-         int[] nextTempIndex = new int[]{-1};
-         Int2ObjectOpenHashMap<String> types = new Int2ObjectOpenHashMap<>();
-         Object2IntOpenHashMap<String> typesRev = new Object2IntOpenHashMap<>();
-         typesRev.defaultReturnValue(Integer.MIN_VALUE);
-         Function<String, String> finalBlockMigration = blockMigration;
-         tempSection.deserialize(
-            bytebuf -> {
-               String keyx = ByteBufUtil.readUTF(bytebuf);
-               if (finalBlockMigration != null) {
-                  keyx = finalBlockMigration.apply(keyx);
-               }
-
-               int indexx = typesRev.getInt(keyx);
-               if (indexx != Integer.MIN_VALUE) {
-                  return indexx;
-               }
-
-               boolean migratable = keyx.startsWith("Fluid_")
-                  || keyx.contains("|Fluid=")
-                  || keyx.contains("|Deco")
-                  || keyx.contains("|Support")
-                  || keyx.contains("|Filler")
-                  || keyx.contains("|Yaw=")
-                  || keyx.contains("|Pitch=")
-                  || keyx.contains("|Roll=");
-               foundMigratable[0] |= migratable;
-               if (migratable) {
-                  indexx = (int)(nextTempIndex[0]--);
-               } else {
-                  indexx = BlockType.getBlockIdOrUnknown(keyx, "Unknown BlockType %s", keyx);
-                  needsPhysics[0] |= BlockType.getAssetMap().getAsset(indexx).hasSupport();
-               }
-
-               types.put(indexx, keyx);
-               typesRev.put(keyx, indexx);
-               return indexx;
-            },
-            buf,
-            version
-         );
-         if (needsPhysics[0]) {
-            this.migratedBlockPhysics = new BlockPhysics();
-         }
-
-         if (foundMigratable[0]) {
-            for (int index = 0; index < 32768; index++) {
-               int id = tempSection.get(index);
-               if (id >= 0) {
-                  this.chunkSection.set(index, id);
-               } else {
-                  Rotation rotationYaw = Rotation.None;
-                  Rotation rotationPitch = Rotation.None;
-                  Rotation rotationRoll = Rotation.None;
-                  String key = types.get(id);
-                  if (key.startsWith("Fluid_") || key.contains("|Fluid=")) {
-                     if (this.migratedFluidSection == null) {
-                        this.migratedFluidSection = new FluidSection();
-                     }
-
-                     Fluid.ConversionResult result = Fluid.convertBlockToFluid(key);
-                     if (result == null) {
-                        throw new RuntimeException("Invalid Fluid Key " + key);
-                     }
-
-                     if (result.blockTypeStr == null) {
-                        this.migratedFluidSection.setFluid(index, result.fluidId, result.fluidLevel);
-                        continue;
-                     }
-
-                     key = result.blockTypeStr;
-                     this.migratedFluidSection.setFluid(index, result.fluidId, result.fluidLevel);
-                  }
-
-                  if (key.contains("|Deco")) {
-                     if (this.migratedBlockPhysics == null) {
-                        this.migratedBlockPhysics = new BlockPhysics();
-                     }
-
-                     this.migratedBlockPhysics.set(index, 15);
-                  }
-
-                  if (key.contains("|Support=")) {
-                     if (this.migratedBlockPhysics == null) {
-                        this.migratedBlockPhysics = new BlockPhysics();
-                     }
-
-                     int start = key.indexOf("|Support=") + "|Support=".length();
-                     int end = key.indexOf(124, start);
-                     if (end == -1) {
-                        end = key.length();
-                     }
-
-                     this.migratedBlockPhysics.set(index, Integer.parseInt(key, start, end, 10));
-                  }
-
-                  if (key.contains("|Filler=")) {
-                     int start = key.indexOf("|Filler=") + "|Filler=".length();
-                     int firstComma = key.indexOf(44, start);
-                     if (firstComma == -1) {
-                        throw new IllegalArgumentException("Invalid filler metadata! Missing comma");
-                     }
-
-                     int secondComma = key.indexOf(44, firstComma + 1);
-                     if (secondComma == -1) {
-                        throw new IllegalArgumentException("Invalid filler metadata! Missing second comma");
-                     }
-
-                     int end = key.indexOf(124, start);
-                     if (end == -1) {
-                        end = key.length();
-                     }
-
-                     int fillerX = Integer.parseInt(key, start, firstComma, 10);
-                     int fillerY = Integer.parseInt(key, firstComma + 1, secondComma, 10);
-                     int fillerZ = Integer.parseInt(key, secondComma + 1, end, 10);
-                     int filler = FillerBlockUtil.pack(fillerX, fillerY, fillerZ);
-                     ISectionPalette.SetResult result = this.fillerSection.set(index, filler);
-                     if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
-                        this.fillerSection = this.fillerSection.promote();
-                        this.fillerSection.set(index, filler);
-                     }
-                  }
-
-                  if (key.contains("|Yaw=")) {
-                     int start = key.indexOf("|Yaw=") + "|Yaw=".length();
-                     int end = key.indexOf(124, start);
-                     if (end == -1) {
-                        end = key.length();
-                     }
-
-                     rotationYaw = Rotation.ofDegrees(Integer.parseInt(key, start, end, 10));
-                  }
-
-                  if (key.contains("|Pitch=")) {
-                     int start = key.indexOf("|Pitch=") + "|Pitch=".length();
-                     int end = key.indexOf(124, start);
-                     if (end == -1) {
-                        end = key.length();
-                     }
-
-                     rotationPitch = Rotation.ofDegrees(Integer.parseInt(key, start, end, 10));
-                  }
-
-                  if (key.contains("|Roll=")) {
-                     int start = key.indexOf("|Roll=") + "|Roll=".length();
-                     int end = key.indexOf(124, start);
-                     if (end == -1) {
-                        end = key.length();
-                     }
-
-                     rotationRoll = Rotation.ofDegrees(Integer.parseInt(key, start, end, 10));
-                  }
-
-                  if (rotationYaw != Rotation.None || rotationPitch != Rotation.None || rotationRoll != Rotation.None) {
-                     int rotation = RotationTuple.index(rotationYaw, rotationPitch, rotationRoll);
-                     ISectionPalette.SetResult result = this.rotationSection.set(index, rotation);
-                     if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
-                        this.rotationSection = this.rotationSection.promote();
-                        this.rotationSection.set(index, rotation);
-                     }
-                  }
-
-                  int endOfName = key.indexOf(124);
-                  if (endOfName != -1) {
-                     key = key.substring(0, endOfName);
-                  }
-
-                  this.chunkSection.set(index, BlockType.getBlockIdOrUnknown(key, "Unknown BlockType: %s", key));
-               }
-            }
-
-            if (this.chunkSection.shouldDemote()) {
-               this.chunkSection.demote();
-            }
-         } else {
-            this.chunkSection = tempSection;
-         }
-      } else if (blockMigration != null) {
+      if (blockMigration != null) {
          Function<String, String> finalBlockMigration1 = blockMigration;
          this.chunkSection.deserialize(bytebuf -> {
-            String keyx = ByteBufUtil.readUTF(bytebuf);
-            keyx = finalBlockMigration1.apply(keyx);
-            return BlockType.getBlockIdOrUnknown(keyx, "Unknown BlockType %s", keyx);
+            String key = ByteBufUtil.readUTF(bytebuf);
+            key = finalBlockMigration1.apply(key);
+            return BlockType.getBlockIdOrUnknown(key, "Unknown BlockType %s", key);
          }, buf, version);
       } else {
          this.chunkSection.deserialize(keyDeserializer, buf, version);
@@ -989,18 +780,12 @@ public class BlockSection implements Component<ChunkStore> {
          this.tickingBlocksCount = this.tickingBlocks.cardinality();
       }
 
-      if (version >= 4) {
-         PaletteTypeEnum fillerTypeEnum = PaletteTypeEnum.get(buf.readByte());
-         this.fillerSection = fillerTypeEnum.getConstructor().get();
-         this.fillerSection.deserialize(ByteBuf::readUnsignedShort, buf, version);
-      }
-
-      if (version >= 5) {
-         PaletteTypeEnum rotationTypeEnum = PaletteTypeEnum.get(buf.readByte());
-         this.rotationSection = rotationTypeEnum.getConstructor().get();
-         this.rotationSection.deserialize(ByteBuf::readUnsignedByte, buf, version);
-      }
-
+      PaletteTypeEnum fillerTypeEnum = PaletteTypeEnum.get(buf.readByte());
+      this.fillerSection = fillerTypeEnum.getConstructor().get();
+      this.fillerSection.deserialize(ByteBuf::readUnsignedShort, buf, version);
+      PaletteTypeEnum rotationTypeEnum = PaletteTypeEnum.get(buf.readByte());
+      this.rotationSection = rotationTypeEnum.getConstructor().get();
+      this.rotationSection.deserialize(ByteBuf::readUnsignedByte, buf, version);
       this.localLight = ChunkLightData.deserialize(buf, version);
       this.globalLight = ChunkLightData.deserialize(buf, version);
       this.localChangeCounter = buf.readShort();

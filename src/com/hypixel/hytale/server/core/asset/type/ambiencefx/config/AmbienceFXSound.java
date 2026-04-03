@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.protocol.AmbienceFXAltitude;
 import com.hypixel.hytale.protocol.AmbienceFXSoundPlay3D;
 import com.hypixel.hytale.protocol.Range;
+import com.hypixel.hytale.protocol.Rangeb;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -58,6 +59,12 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
       .documentation(
          "Random radius within which to play the sound. When used in conjunction with LocationNameRandom for Play3D, acts as a distance bound on position selection. Ignored when Play3D is set to LocationName."
       )
+      .addField(
+         new KeyedCodec<>("SunlightRange", ProtocolCodecs.RANGEB),
+         (ambienceFXSound, o) -> ambienceFXSound.sunlightRange = o,
+         ambienceFXSound -> ambienceFXSound.sunlightRange
+      )
+      .documentation("Required sunlight range for finding positions at which to play the sound. High values can be considered to be \"exterior\".")
       .afterDecode(AmbienceFXSound::processConfig)
       .build();
    public static final Rangef DEFAULT_FREQUENCY = new Rangef(1.0F, 10.0F);
@@ -71,6 +78,7 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
    protected Rangef frequency = DEFAULT_FREQUENCY;
    protected Range radius = DEFAULT_RADIUS;
    protected int maxBodiesPerEmitter = 8;
+   protected Rangeb sunlightRange;
 
    public AmbienceFXSound(
       String soundEventId,
@@ -103,6 +111,7 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
       packet.frequency = this.frequency;
       packet.radius = this.radius;
       packet.maxBodiesPerEmitter = this.maxBodiesPerEmitter;
+      packet.sunlightRange = this.sunlightRange;
       return packet;
    }
 

@@ -58,6 +58,7 @@ import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeLis
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.PrefabListAsset;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
+import com.hypixel.hytale.server.core.asset.type.physicalmaterial.config.PhysicalMaterial;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
@@ -65,7 +66,7 @@ import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionTypeUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
-import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.ISectionPalette;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlockRuleSet;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
@@ -500,6 +501,15 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       .metadata(new UIEditorSectionStart("Sounds"))
       .add()
       .<String>appendInherited(
+         new KeyedCodec<>("PhysicalMaterialId", Codec.STRING),
+         (blockType, o) -> blockType.physicalMaterialId = o,
+         blockType -> blockType.physicalMaterialId,
+         (blockType, parent) -> blockType.physicalMaterialId = parent.physicalMaterialId
+      )
+      .documentation("Sets the PhysicalMaterial of the block. Currently used primarily for acoustic properties.")
+      .addValidator(PhysicalMaterial.VALIDATOR_CACHE.getValidator())
+      .add()
+      .<String>appendInherited(
          new KeyedCodec<>("AmbientSoundEventId", Codec.STRING),
          (blockType, s) -> blockType.ambientSoundEventId = s,
          blockType -> blockType.ambientSoundEventId,
@@ -786,7 +796,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    );
    public static final ShaderType[] DEFAULT_SHADER_EFFECTS = new ShaderType[]{ShaderType.None};
    public static final BlockType DEFAULT_BLOCK_TYPE = new BlockType();
-   public static final ISectionPalette.KeySerializer KEY_SERIALIZER = (buf, id) -> {
+   public static final AbstractSectionPalette.KeySerializer KEY_SERIALIZER = (buf, id) -> {
       String key = getAssetMap().getAssetOrDefault(id, BlockType.UNKNOWN).getId();
       ByteBufUtil.writeUTF(buf, key);
    };
@@ -859,6 +869,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected String prefabListAssetId;
    protected String blockSoundSetId = "EMPTY";
    protected transient int blockSoundSetIndex = 0;
+   protected String physicalMaterialId = "EMPTY";
+   protected transient int physicalMaterialIndex = 0;
    protected ModelParticle[] particles;
    protected String blockParticleSetId;
    protected String blockBreakingDecalId;
@@ -993,6 +1005,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.group = other.group;
       this.blockSoundSetId = other.blockSoundSetId;
       this.blockSoundSetIndex = other.blockSoundSetIndex;
+      this.physicalMaterialId = other.physicalMaterialId;
+      this.physicalMaterialIndex = other.physicalMaterialIndex;
       this.particles = other.particles;
       this.blockParticleSetId = other.blockParticleSetId;
       this.blockBreakingDecalId = other.blockBreakingDecalId;
@@ -1086,6 +1100,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       }
 
       packet.blockSoundSetIndex = this.blockSoundSetIndex;
+      packet.physicalMaterialIndex = this.physicalMaterialIndex;
       packet.blockParticleSetId = this.blockParticleSetId;
       packet.blockBreakingDecalId = this.blockBreakingDecalId;
       packet.particleColor = this.particleColor;
@@ -1767,16 +1782,10 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
             rotatedRail = this.railConfig.clone();
 
             for (RailPoint p : rotatedRail.points) {
-               Vector3f hyPoint = new Vector3f(p.point.x - 0.5F, p.point.y - 0.5F, p.point.z - 0.5F);
+               Vector3f hyPoint = new Vector3f(p.point.x() - 0.5F, p.point.y() - 0.5F, p.point.z() - 0.5F);
                hyPoint = Rotation.rotate(hyPoint, rotation.yaw(), rotation.pitch(), rotation.roll());
-               p.point.x = hyPoint.x + 0.5F;
-               p.point.y = hyPoint.y + 0.5F;
-               p.point.z = hyPoint.z + 0.5F;
-               Vector3f hyNormal = new Vector3f(p.normal.x, p.normal.y, p.normal.z);
-               hyNormal = Rotation.rotate(hyNormal, rotation.yaw(), rotation.pitch(), rotation.roll());
-               p.normal.x = hyNormal.x;
-               p.normal.y = hyNormal.y;
-               p.normal.z = hyNormal.z;
+               p.point = new Vector3f(hyPoint.x + 0.5F, hyPoint.y + 0.5F, hyPoint.z + 0.5F);
+               p.normal = Rotation.rotate(p.normal, rotation.yaw(), rotation.pitch(), rotation.roll());
             }
 
             this.rotatedRailConfig[rotationIndex] = rotatedRail;
@@ -1874,6 +1883,12 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       if (this.blockSoundSetIndex == Integer.MIN_VALUE) {
          HytaleLogger.getLogger().at(Level.WARNING).log("Unknown block sound set '%s' for block '%s', using empty", this.blockSoundSetId, this.getId());
          this.blockSoundSetIndex = 0;
+      }
+
+      this.physicalMaterialIndex = this.physicalMaterialId.equals("EMPTY") ? 0 : PhysicalMaterial.getAssetMap().getIndex(this.physicalMaterialId);
+      if (this.physicalMaterialIndex == Integer.MIN_VALUE) {
+         HytaleLogger.getLogger().at(Level.WARNING).log("Unknown physical material '%s' for block '%s', using empty", this.physicalMaterialId, this.getId());
+         this.physicalMaterialIndex = 0;
       }
 
       for (InteractionType type : this.interactions.keySet()) {

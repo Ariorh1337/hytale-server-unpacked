@@ -75,7 +75,7 @@ public class ActionPlaceBlock extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       World world = store.getExternalData().getWorld();
       WorldChunk chunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(this.target.x(), this.target.z()));

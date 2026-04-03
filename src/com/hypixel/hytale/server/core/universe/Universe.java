@@ -38,6 +38,7 @@ import com.hypixel.hytale.server.core.NameMatching;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.config.BackupConfig;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
@@ -429,7 +430,12 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                               HytaleServer.get()
                                  .shutdownServer(
                                     ShutdownReason.VERIFY_ERROR
-                                       .withMessage("Failed to verify world " + name + ", " + result.leftInt() + "/" + result.rightInt() + " chunks corrupted")
+                                       .withMessage(
+                                          Message.translation("client.disconnection.shutdownReason.verifyError.chunksCorrupted")
+                                             .param("world", name)
+                                             .param("corrupted", result.leftInt())
+                                             .param("total", result.rightInt())
+                                       )
                                  );
                               return;
                            }
@@ -438,7 +444,12 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                            HytaleServer.get()
                               .shutdownServer(
                                  ShutdownReason.VERIFY_ERROR
-                                    .withMessage("Failed to " + (isRecovery ? "recover" : "verify") + " world " + name + "\n" + e.getMessage())
+                                    .withMessage(
+                                       Message.translation("client.disconnection.shutdownReason.verifyError.detail")
+                                          .param("action", isRecovery ? "recover" : "verify")
+                                          .param("world", name)
+                                          .param("detail", e.getMessage())
+                                    )
                               );
                            return;
                         }
@@ -1046,7 +1057,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                   holder.putComponent(ModelComponent.getComponentType(), new ModelComponent(CosmeticsModule.get().createModel(skin)));
                }
 
-               playerConnection.setPlayerRef(playerRefComponent, playerComponent);
+               playerConnection.setPlayerRef(playerRefComponent);
                NettyUtil.setChannelHandler(channel, playerConnection);
                playerComponent.setClientViewRadius(clientViewRadiusChunks);
                EntityTrackerSystems.EntityViewer entityViewerComponent = holder.getComponent(EntityTrackerSystems.EntityViewer.getComponentType());
@@ -1085,7 +1096,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                }
 
                if (lastWorldName != null && lastWorld == null) {
-                  playerComponent.sendMessage(
+                  playerRefComponent.sendMessage(
                      Message.translation("server.universe.failedToFindWorld").param("lastWorldName", lastWorldName).param("name", world.getName())
                   );
                }
@@ -1112,6 +1123,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                         this.playersByUuid.remove(uuid, playerRefComponent);
                         return null;
                      } else {
+                        CommandManager.get().broadcastArgCacheInvalidation("player_ref");
                         return (PlayerRef)p;
                      }
                   }).exceptionally(throwable -> {
@@ -1178,6 +1190,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
 
    private void finalizePlayerRemoval(@Nonnull PlayerRef playerRef) {
       this.playersByUuid.remove(playerRef.getUuid());
+      CommandManager.get().broadcastArgCacheInvalidation("player_ref");
       if (Constants.SINGLEPLAYER) {
          if (this.playersByUuid.isEmpty()) {
             this.getLogger().at(Level.INFO).log("No players left on singleplayer server shutting down!");
@@ -1252,7 +1265,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
             holder.addComponent(EntityTrackerSystems.EntityViewer.getComponentType(), viewer);
          }
 
-         playerConnection.setPlayerRef(playerRef, newPlayer);
+         playerConnection.setPlayerRef(playerRef);
          playerRef.replaceHolder(holder);
          holder.putComponent(PlayerRef.getComponentType(), playerRef);
       }).thenCompose(v -> targetWorld.addPlayer(playerRef, transform));

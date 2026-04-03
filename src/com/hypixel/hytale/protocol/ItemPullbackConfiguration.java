@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class ItemPullbackConfiguration {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -14,22 +16,22 @@ public class ItemPullbackConfiguration {
    public static final int VARIABLE_BLOCK_START = 49;
    public static final int MAX_SIZE = 49;
    @Nullable
-   public Vector3f leftOffsetOverride;
+   public Vector3fc leftOffsetOverride;
    @Nullable
-   public Vector3f leftRotationOverride;
+   public Vector3fc leftRotationOverride;
    @Nullable
-   public Vector3f rightOffsetOverride;
+   public Vector3fc rightOffsetOverride;
    @Nullable
-   public Vector3f rightRotationOverride;
+   public Vector3fc rightRotationOverride;
 
    public ItemPullbackConfiguration() {
    }
 
    public ItemPullbackConfiguration(
-      @Nullable Vector3f leftOffsetOverride,
-      @Nullable Vector3f leftRotationOverride,
-      @Nullable Vector3f rightOffsetOverride,
-      @Nullable Vector3f rightRotationOverride
+      @Nullable Vector3fc leftOffsetOverride,
+      @Nullable Vector3fc leftRotationOverride,
+      @Nullable Vector3fc rightOffsetOverride,
+      @Nullable Vector3fc rightRotationOverride
    ) {
       this.leftOffsetOverride = leftOffsetOverride;
       this.leftRotationOverride = leftRotationOverride;
@@ -53,19 +55,19 @@ public class ItemPullbackConfiguration {
       ItemPullbackConfiguration obj = new ItemPullbackConfiguration();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         obj.leftOffsetOverride = Vector3f.deserialize(buf, offset + 1);
+         obj.leftOffsetOverride = PacketIO.readVector3f(buf, offset + 1);
       }
 
       if ((nullBits & 2) != 0) {
-         obj.leftRotationOverride = Vector3f.deserialize(buf, offset + 13);
+         obj.leftRotationOverride = PacketIO.readVector3f(buf, offset + 13);
       }
 
       if ((nullBits & 4) != 0) {
-         obj.rightOffsetOverride = Vector3f.deserialize(buf, offset + 25);
+         obj.rightOffsetOverride = PacketIO.readVector3f(buf, offset + 25);
       }
 
       if ((nullBits & 8) != 0) {
-         obj.rightRotationOverride = Vector3f.deserialize(buf, offset + 37);
+         obj.rightRotationOverride = PacketIO.readVector3f(buf, offset + 37);
       }
 
       return obj;
@@ -95,25 +97,25 @@ public class ItemPullbackConfiguration {
 
       buf.writeByte(nullBits);
       if (this.leftOffsetOverride != null) {
-         this.leftOffsetOverride.serialize(buf);
+         PacketIO.writeVector3f(buf, this.leftOffsetOverride);
       } else {
          buf.writeZero(12);
       }
 
       if (this.leftRotationOverride != null) {
-         this.leftRotationOverride.serialize(buf);
+         PacketIO.writeVector3f(buf, this.leftRotationOverride);
       } else {
          buf.writeZero(12);
       }
 
       if (this.rightOffsetOverride != null) {
-         this.rightOffsetOverride.serialize(buf);
+         PacketIO.writeVector3f(buf, this.rightOffsetOverride);
       } else {
          buf.writeZero(12);
       }
 
       if (this.rightRotationOverride != null) {
-         this.rightRotationOverride.serialize(buf);
+         PacketIO.writeVector3f(buf, this.rightRotationOverride);
       } else {
          buf.writeZero(12);
       }
@@ -134,10 +136,10 @@ public class ItemPullbackConfiguration {
 
    public ItemPullbackConfiguration clone() {
       ItemPullbackConfiguration copy = new ItemPullbackConfiguration();
-      copy.leftOffsetOverride = this.leftOffsetOverride != null ? this.leftOffsetOverride.clone() : null;
-      copy.leftRotationOverride = this.leftRotationOverride != null ? this.leftRotationOverride.clone() : null;
-      copy.rightOffsetOverride = this.rightOffsetOverride != null ? this.rightOffsetOverride.clone() : null;
-      copy.rightRotationOverride = this.rightRotationOverride != null ? this.rightRotationOverride.clone() : null;
+      copy.leftOffsetOverride = this.leftOffsetOverride;
+      copy.leftRotationOverride = this.leftRotationOverride;
+      copy.rightOffsetOverride = this.rightOffsetOverride;
+      copy.rightRotationOverride = this.rightRotationOverride;
       return copy;
    }
 

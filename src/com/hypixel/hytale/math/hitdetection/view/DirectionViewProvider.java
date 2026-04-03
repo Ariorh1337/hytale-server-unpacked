@@ -4,9 +4,9 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.hitdetection.MatrixProvider;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
 import org.joml.Vector3d;
 
 public class DirectionViewProvider implements MatrixProvider {
@@ -113,9 +113,8 @@ public class DirectionViewProvider implements MatrixProvider {
    public Matrix4d getMatrix() {
       if (this.invalid) {
          this.matrix
-            .viewDirection(
-               this.position.x, this.position.y, this.position.z, this.direction.x, this.direction.y, this.direction.z, this.up.x, this.up.y, this.up.z
-            );
+            .setLookAlong(this.direction.x, this.direction.y, this.direction.z, this.up.x, this.up.y, this.up.z)
+            .translate(-this.position.x, -this.position.y, -this.position.z);
          this.invalid = false;
       }
 

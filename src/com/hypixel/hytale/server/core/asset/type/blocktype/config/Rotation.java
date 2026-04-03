@@ -271,39 +271,39 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
 
    @Nonnull
    public static Vector3i rotate(@Nonnull Vector3ic vector3i, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      Vector3i rotated = rotate(vector3i, rotationYaw, rotationPitch);
-      rotationRoll.rotateRoll(rotated, rotated);
-      return rotated;
+      Vector3i vector = new Vector3i(vector3i);
+      applyRotationTo(vector, rotationYaw, rotationPitch, rotationRoll);
+      return vector;
    }
 
    @Nonnull
    public static Vector3f rotate(@Nonnull Vector3fc vector3f, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
       Vector3f rotated = new Vector3f(vector3f);
+      rotationRoll.rotateZ(rotated, rotated);
       rotationPitch.rotateX(rotated, rotated);
       rotationYaw.rotateY(rotated, rotated);
-      rotationRoll.rotateZ(rotated, rotated);
       return rotated;
    }
 
    @Nonnull
    public static Vector3d rotate(@Nonnull Vector3dc vector3d, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
       Vector3d rotated = new Vector3d(vector3d);
+      rotationRoll.rotateZ(rotated, rotated);
       rotationPitch.rotateX(rotated, rotated);
       rotationYaw.rotateY(rotated, rotated);
-      rotationRoll.rotateZ(rotated, rotated);
       return rotated;
    }
 
    public static void applyRotationTo(@Nonnull Vector3i vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.rotateZ(vector, vector);
       rotationPitch.rotateX(vector, vector);
       rotationYaw.rotateY(vector, vector);
-      rotationRoll.rotateZ(vector, vector);
    }
 
    public static void applyRotationTo(@Nonnull Vector3f vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.rotateZ(vector, vector);
       rotationPitch.rotateX(vector, vector);
       rotationYaw.rotateY(vector, vector);
-      rotationRoll.rotateZ(vector, vector);
    }
 
    public static void applyRotationTo(
@@ -314,27 +314,27 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
    }
 
    public static void applyRotationTo(@Nonnull Vector3d vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.rotateZ(vector, vector);
       rotationPitch.rotateX(vector, vector);
       rotationYaw.rotateY(vector, vector);
-      rotationRoll.rotateZ(vector, vector);
    }
 
    public static void undoRotationTo(@Nonnull Vector3i vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      rotationRoll.toInverse().rotateZ(vector, vector);
       rotationYaw.toInverse().rotateY(vector, vector);
       rotationPitch.toInverse().rotateX(vector, vector);
+      rotationRoll.toInverse().rotateZ(vector, vector);
    }
 
    public static void undoRotationTo(@Nonnull Vector3f vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      rotationRoll.toInverse().rotateZ(vector, vector);
       rotationYaw.toInverse().rotateY(vector, vector);
       rotationPitch.toInverse().rotateX(vector, vector);
+      rotationRoll.toInverse().rotateZ(vector, vector);
    }
 
    public static void undoRotationTo(@Nonnull Vector3d vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      rotationRoll.toInverse().rotateZ(vector, vector);
       rotationYaw.toInverse().rotateY(vector, vector);
       rotationPitch.toInverse().rotateX(vector, vector);
+      rotationRoll.toInverse().rotateZ(vector, vector);
    }
 
    public Rotation toInverse() {

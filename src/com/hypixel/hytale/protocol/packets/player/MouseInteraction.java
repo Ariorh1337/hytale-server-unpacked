@@ -5,7 +5,6 @@ import com.hypixel.hytale.protocol.MouseMotionEvent;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
-import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.protocol.WorldInteraction;
 import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
@@ -15,6 +14,7 @@ import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2fc;
 
 public class MouseInteraction implements Packet, ToServerPacket {
    public static final int PACKET_ID = 111;
@@ -28,8 +28,8 @@ public class MouseInteraction implements Packet, ToServerPacket {
    public int activeSlot;
    @Nullable
    public String itemInHandId;
-   @Nullable
-   public Vector2f screenPoint;
+   @Nonnull
+   public Vector2fc screenPoint = PacketIO.ZERO_VECTOR2;
    @Nullable
    public MouseButtonEvent mouseButton;
    @Nullable
@@ -54,7 +54,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
       long clientTimestamp,
       int activeSlot,
       @Nullable String itemInHandId,
-      @Nullable Vector2f screenPoint,
+      @Nonnull Vector2fc screenPoint,
       @Nullable MouseButtonEvent mouseButton,
       @Nullable MouseMotionEvent mouseMotion,
       @Nullable WorldInteraction worldInteraction
@@ -88,19 +88,16 @@ public class MouseInteraction implements Packet, ToServerPacket {
       byte nullBits = buf.getByte(offset);
       obj.clientTimestamp = buf.getLongLE(offset + 1);
       obj.activeSlot = buf.getIntLE(offset + 9);
+      obj.screenPoint = PacketIO.readVector2f(buf, offset + 13);
       if ((nullBits & 1) != 0) {
-         obj.screenPoint = Vector2f.deserialize(buf, offset + 13);
-      }
-
-      if ((nullBits & 2) != 0) {
          obj.mouseButton = MouseButtonEvent.deserialize(buf, offset + 21);
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          obj.worldInteraction = WorldInteraction.deserialize(buf, offset + 24);
       }
 
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          int varPosBase0 = buf.getIntLE(offset + 44);
          if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 52) {
             throw ProtocolException.invalidOffset("ItemInHandId", varPosBase0, buf.readableBytes());
@@ -124,7 +121,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
          obj.itemInHandId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 8) != 0) {
          int varPosBase1 = buf.getIntLE(offset + 48);
          if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 52) {
             throw ProtocolException.invalidOffset("MouseMotion", varPosBase1, buf.readableBytes());
@@ -140,7 +137,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 52;
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 44);
          if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 52) {
             throw ProtocolException.invalidOffset("ItemInHandId", fieldOffset0, maxEnd);
@@ -154,7 +151,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
          }
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 48);
          if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 52) {
             throw ProtocolException.invalidOffset("MouseMotion", fieldOffset1, maxEnd);
@@ -174,35 +171,26 @@ public class MouseInteraction implements Packet, ToServerPacket {
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
-      if (this.screenPoint != null) {
+      if (this.mouseButton != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.mouseButton != null) {
+      if (this.worldInteraction != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.worldInteraction != null) {
+      if (this.itemInHandId != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.itemInHandId != null) {
-         nullBits = (byte)(nullBits | 8);
-      }
-
       if (this.mouseMotion != null) {
-         nullBits = (byte)(nullBits | 16);
+         nullBits = (byte)(nullBits | 8);
       }
 
       buf.writeByte(nullBits);
       buf.writeLongLE(this.clientTimestamp);
       buf.writeIntLE(this.activeSlot);
-      if (this.screenPoint != null) {
-         this.screenPoint.serialize(buf);
-      } else {
-         buf.writeZero(8);
-      }
-
+      PacketIO.writeVector2f(buf, this.screenPoint);
       if (this.mouseButton != null) {
          this.mouseButton.serialize(buf);
       } else {
@@ -255,7 +243,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 8) != 0) {
+      if ((nullBits & 4) != 0) {
          int itemInHandIdOffset = buffer.getIntLE(offset + 44);
          if (itemInHandIdOffset < 0 || itemInHandIdOffset > buffer.writerIndex() - offset - 52) {
             return ValidationResult.error("Invalid offset for ItemInHandId");
@@ -278,7 +266,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
          }
       }
 
-      if ((nullBits & 16) != 0) {
+      if ((nullBits & 8) != 0) {
          int mouseMotionOffset = buffer.getIntLE(offset + 48);
          if (mouseMotionOffset < 0 || mouseMotionOffset > buffer.writerIndex() - offset - 52) {
             return ValidationResult.error("Invalid offset for MouseMotion");
@@ -301,7 +289,7 @@ public class MouseInteraction implements Packet, ToServerPacket {
       copy.clientTimestamp = this.clientTimestamp;
       copy.activeSlot = this.activeSlot;
       copy.itemInHandId = this.itemInHandId;
-      copy.screenPoint = this.screenPoint != null ? this.screenPoint.clone() : null;
+      copy.screenPoint = this.screenPoint;
       copy.mouseButton = this.mouseButton != null ? this.mouseButton.clone() : null;
       copy.mouseMotion = this.mouseMotion != null ? this.mouseMotion.clone() : null;
       copy.worldInteraction = this.worldInteraction != null ? this.worldInteraction.clone() : null;

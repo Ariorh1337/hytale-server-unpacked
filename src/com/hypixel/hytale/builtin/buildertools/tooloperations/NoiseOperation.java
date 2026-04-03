@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -11,6 +12,7 @@ public class NoiseOperation extends ToolOperation {
    public NoiseOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {

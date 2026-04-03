@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
@@ -53,72 +54,75 @@ public class OpenContainerInteraction extends SimpleBlockInteraction {
       Store<EntityStore> store = ref.getStore();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
-         ChunkStore chunkStore = world.getChunkStore();
-         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
-         if (chunkRef != null) {
-            BlockComponentChunk blockComponentChunk = chunkStore.getStore().getComponent(chunkRef, BlockComponentChunk.getComponentType());
-            if (blockComponentChunk != null) {
-               Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(ChunkUtil.indexBlockInColumn(pos.x, pos.y, pos.z));
-               if (blockRef != null) {
-                  ItemContainerBlock itemContainerBlock = chunkStore.getStore().getComponent(blockRef, ItemContainerBlock.getComponentType());
-                  if (itemContainerBlock == null) {
-                     playerComponent.sendMessage(
-                        Message.translation("server.interactions.invalidBlockState")
-                           .param("interaction", this.getClass().getSimpleName())
-                           .param("blockState", chunkStore.getStore().getArchetype(blockRef).toString())
-                     );
-                  } else {
-                     BlockType blockType = world.getBlockType(pos.x, pos.y, pos.z);
-                     UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-                     assert uuidComponent != null;
-                     UUID uuid = uuidComponent.getUuid();
-                     WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
-                     ContainerBlockWindow window = new ContainerBlockWindow(
-                        pos.x, pos.y, pos.z, chunk.getRotationIndex(pos.x, pos.y, pos.z), blockType, itemContainerBlock.getItemContainer()
-                     );
-                     Map<UUID, ContainerBlockWindow> windows = itemContainerBlock.getWindows();
-                     if (windows.putIfAbsent(uuid, window) == null) {
-                        if (playerComponent.getPageManager().setPageWithWindows(ref, store, Page.Bench, true, window)) {
-                           window.registerCloseEvent(event -> {
-                              windows.remove(uuid, window);
-                              BlockType currentBlockType = world.getBlockType(pos);
-                              if (windows.isEmpty()) {
-                                 world.setBlockInteractionState(pos, currentBlockType, "CloseWindow");
-                              }
-
-                              BlockType interactionStatex = currentBlockType.getBlockForState("CloseWindow");
-                              if (interactionStatex != null) {
-                                 int soundEventIndexx = interactionStatex.getInteractionSoundEventIndex();
-                                 if (soundEventIndexx != 0) {
-                                    int rotationIndexx = chunk.getRotationIndex(pos.x, pos.y, pos.z);
-                                    Vector3d soundPosx = new Vector3d();
-                                    blockType.getBlockCenter(rotationIndexx, soundPosx);
-                                    soundPosx.add(pos.x, pos.y, pos.z);
-                                    SoundUtil.playSoundEvent3d(ref, soundEventIndexx, soundPosx, commandBuffer);
+         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            ChunkStore chunkStore = world.getChunkStore();
+            Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
+            if (chunkRef != null) {
+               BlockComponentChunk blockComponentChunk = chunkStore.getStore().getComponent(chunkRef, BlockComponentChunk.getComponentType());
+               if (blockComponentChunk != null) {
+                  Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(ChunkUtil.indexBlockInColumn(pos.x, pos.y, pos.z));
+                  if (blockRef != null) {
+                     ItemContainerBlock itemContainerBlock = chunkStore.getStore().getComponent(blockRef, ItemContainerBlock.getComponentType());
+                     if (itemContainerBlock == null) {
+                        playerRefComponent.sendMessage(
+                           Message.translation("server.interactions.invalidBlockState")
+                              .param("interaction", this.getClass().getSimpleName())
+                              .param("blockState", chunkStore.getStore().getArchetype(blockRef).toString())
+                        );
+                     } else {
+                        BlockType blockType = world.getBlockType(pos.x, pos.y, pos.z);
+                        UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+                        assert uuidComponent != null;
+                        UUID uuid = uuidComponent.getUuid();
+                        WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
+                        ContainerBlockWindow window = new ContainerBlockWindow(
+                           pos.x, pos.y, pos.z, chunk.getRotationIndex(pos.x, pos.y, pos.z), blockType, itemContainerBlock.getItemContainer()
+                        );
+                        Map<UUID, ContainerBlockWindow> windows = itemContainerBlock.getWindows();
+                        if (windows.putIfAbsent(uuid, window) == null) {
+                           if (playerComponent.getPageManager().setPageWithWindows(ref, store, Page.Bench, true, window)) {
+                              window.registerCloseEvent(event -> {
+                                 windows.remove(uuid, window);
+                                 BlockType currentBlockType = world.getBlockType(pos);
+                                 if (windows.isEmpty()) {
+                                    world.setBlockInteractionState(pos, currentBlockType, "CloseWindow");
                                  }
+
+                                 BlockType interactionStatex = currentBlockType.getBlockForState("CloseWindow");
+                                 if (interactionStatex != null) {
+                                    int soundEventIndexx = interactionStatex.getInteractionSoundEventIndex();
+                                    if (soundEventIndexx != 0) {
+                                       int rotationIndexx = chunk.getRotationIndex(pos.x, pos.y, pos.z);
+                                       Vector3d soundPosx = new Vector3d();
+                                       blockType.getBlockCenter(rotationIndexx, soundPosx);
+                                       soundPosx.add(pos.x, pos.y, pos.z);
+                                       SoundUtil.playSoundEvent3d(ref, soundEventIndexx, soundPosx, commandBuffer);
+                                    }
+                                 }
+                              });
+                              if (windows.size() == 1) {
+                                 world.setBlockInteractionState(pos, blockType, "OpenWindow");
                               }
-                           });
-                           if (windows.size() == 1) {
-                              world.setBlockInteractionState(pos, blockType, "OpenWindow");
-                           }
 
-                           BlockType interactionState = blockType.getBlockForState("OpenWindow");
-                           if (interactionState == null) {
-                              return;
-                           }
+                              BlockType interactionState = blockType.getBlockForState("OpenWindow");
+                              if (interactionState == null) {
+                                 return;
+                              }
 
-                           int soundEventIndex = interactionState.getInteractionSoundEventIndex();
-                           if (soundEventIndex == 0) {
-                              return;
-                           }
+                              int soundEventIndex = interactionState.getInteractionSoundEventIndex();
+                              if (soundEventIndex == 0) {
+                                 return;
+                              }
 
-                           int rotationIndex = chunk.getRotationIndex(pos.x, pos.y, pos.z);
-                           Vector3d soundPos = new Vector3d();
-                           blockType.getBlockCenter(rotationIndex, soundPos);
-                           soundPos.add(pos.x, pos.y, pos.z);
-                           SoundUtil.playSoundEvent3d(ref, soundEventIndex, soundPos, commandBuffer);
-                        } else {
-                           windows.remove(uuid, window);
+                              int rotationIndex = chunk.getRotationIndex(pos.x, pos.y, pos.z);
+                              Vector3d soundPos = new Vector3d();
+                              blockType.getBlockCenter(rotationIndex, soundPos);
+                              soundPos.add(pos.x, pos.y, pos.z);
+                              SoundUtil.playSoundEvent3d(ref, soundEventIndex, soundPos, commandBuffer);
+                           } else {
+                              windows.remove(uuid, window);
+                           }
                         }
                      }
                   }

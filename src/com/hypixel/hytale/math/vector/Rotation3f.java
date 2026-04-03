@@ -239,7 +239,7 @@ public class Rotation3f implements Rotation3fc {
    @Override
    public Rotation3f premul(Quaterniondc q, Rotation3f dest) {
       Quaterniond resultQuat = this.getQuaternion(new Quaterniond());
-      Vector3d eulerAngles = resultQuat.getEulerAnglesYXZ(new Vector3d());
+      Vector3d eulerAngles = resultQuat.premul(q).getEulerAnglesYXZ(new Vector3d());
       return dest.set((float)eulerAngles.x, (float)eulerAngles.y, (float)eulerAngles.z);
    }
 

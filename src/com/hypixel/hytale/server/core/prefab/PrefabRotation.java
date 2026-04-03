@@ -40,6 +40,11 @@ public enum PrefabRotation {
       this.executor = executor;
    }
 
+   @Nonnull
+   public Rotation getRotation() {
+      return this.rotation;
+   }
+
    public PrefabRotation add(@Nonnull PrefabRotation other) {
       int val = this.rotation.getDegrees() + other.rotation.getDegrees();
       return VALUES[val % 360 / 90];

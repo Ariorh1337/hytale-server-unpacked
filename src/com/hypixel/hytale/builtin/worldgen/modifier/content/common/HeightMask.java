@@ -32,9 +32,36 @@ public class HeightMask {
          this.rebuild();
       }
    };
+   public static final HeightMask DEFAULT_ZERO = new HeightMask() {
+      {
+         this.range.setInclusiveMin(0);
+         this.range.setInclusiveMax(0);
+         this.rebuild();
+      }
+   };
+   public static final HeightMask DEFAULT_ONE = new HeightMask() {
+      {
+         this.range.setInclusiveMin(1);
+         this.range.setInclusiveMax(1);
+         this.rebuild();
+      }
+   };
+   public static final HeightMask DEFAULT_FLUID = new HeightMask() {
+      {
+         this.range.setInclusiveMin(114);
+         this.range.setInclusiveMax(114);
+         this.rebuild();
+      }
+   };
+   @Nonnull
    protected IntRange range = new IntRange(0, 319);
    @Nonnull
    protected transient ICoordinateRndCondition condition = DefaultCoordinateRndCondition.DEFAULT_TRUE;
+
+   @Nonnull
+   public IntRange range() {
+      return this.range;
+   }
 
    @Nonnull
    public ICoordinateRndCondition getCondition() {
@@ -42,6 +69,10 @@ public class HeightMask {
    }
 
    protected void rebuild() {
+      int min = Math.min(this.range.getInclusiveMin(), this.range.getInclusiveMax());
+      int max = Math.max(this.range.getInclusiveMin(), this.range.getInclusiveMax());
+      this.range.setInclusiveMin(min);
+      this.range.setInclusiveMax(max);
       IntRange range = this.range;
       this.condition = (seed, x, z, y, random) -> y >= range.getInclusiveMin() && y <= range.getInclusiveMax();
    }

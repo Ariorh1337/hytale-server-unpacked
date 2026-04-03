@@ -119,7 +119,7 @@ public class MotionControllerDive extends MotionControllerBase {
          maxY = y;
       }
 
-      this.verticalRange.assign(y, minY, maxY);
+      this.verticalRange.set(y, minY, maxY);
       return this.verticalRange;
    }
 
@@ -146,7 +146,7 @@ public class MotionControllerDive extends MotionControllerBase {
          this.appliedVelocities.clear();
       }
 
-      if (this.canAct(ref, componentAccessor)) {
+      if (this.canSteer(ref, componentAccessor)) {
          this.tempDirection.set(dir.x, 0.0, dir.z);
          double maxVerticalSpeed = this.maxVerticalSpeed * this.effectHorizontalSpeedMultiplier;
          double hSpeed = this.tempDirection.length() * this.getMaximumSpeed();
@@ -332,8 +332,8 @@ public class MotionControllerDive extends MotionControllerBase {
          throw new IllegalStateException("Invalid position");
       }
 
-      boolean canAct = this.canAct(ref, componentAccessor);
-      this.collisionResult.setCollisionByMaterial(canAct ? 5 : 4);
+      boolean canSteer = this.canSteer(ref, componentAccessor);
+      this.collisionResult.setCollisionByMaterial(canSteer ? 5 : 4);
       if (this.debugModeBlockCollisions) {
          this.collisionResult.setLogger(LOGGER);
       }
@@ -356,7 +356,7 @@ public class MotionControllerDive extends MotionControllerBase {
          double time = dt;
          this.position.add(translation);
          if (!this.moveProbe.probePosition(ref, this.collisionBoundingBox, this.position, this.collisionResult, this.swimDepth, componentAccessor)
-            || canAct && !this.moveProbe.isInWater()) {
+            || canSteer && !this.moveProbe.isInWater()) {
             time = this.bisect(ref, this.lastValidPosition, 0.0, this.position, dt, this.position, componentAccessor);
             this.isObstructed = true;
             if (this.debugModeMove) {
@@ -383,7 +383,7 @@ public class MotionControllerDive extends MotionControllerBase {
          this.isObstructed = true;
          this.collisionWithSolid = collision.blockMaterial == BlockMaterial.Solid;
          if (!this.moveProbe.probePosition(ref, this.collisionBoundingBox, this.position, this.collisionResult, this.swimDepth, componentAccessor)
-            || canAct && !this.moveProbe.isInWater()) {
+            || canSteer && !this.moveProbe.isInWater()) {
             collisionStart = this.bisect(ref, this.lastValidPosition, 0.0, this.position, collisionStart, this.position, componentAccessor);
             if (this.debugModeMove) {
                LOGGER.at(Level.INFO)
@@ -424,8 +424,8 @@ public class MotionControllerDive extends MotionControllerBase {
    }
 
    @Override
-   public boolean canAct(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return super.canAct(ref, componentAccessor) && this.moveProbe.isInWater();
+   public boolean canSteer(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return super.canSteer(ref, componentAccessor) && this.moveProbe.isInWater();
    }
 
    @Override

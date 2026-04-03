@@ -1,11 +1,14 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2fc;
+import org.joml.Vector3fc;
 
 public class ServerCameraSettings {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -52,15 +55,15 @@ public class ServerCameraSettings {
    @Nonnull
    public ApplyMovementType applyMovementType = ApplyMovementType.CharacterController;
    @Nullable
-   public Vector3f movementMultiplier;
+   public Vector3fc movementMultiplier;
    @Nonnull
    public ApplyLookType applyLookType = ApplyLookType.LocalPlayerLookOrientation;
    @Nullable
-   public Vector2f lookMultiplier;
+   public Vector2fc lookMultiplier;
    @Nonnull
    public MouseInputType mouseInputType = MouseInputType.LookAtTarget;
    @Nullable
-   public Vector3f planeNormal;
+   public Vector3fc planeNormal;
 
    public ServerCameraSettings() {
    }
@@ -91,11 +94,11 @@ public class ServerCameraSettings {
       @Nullable Direction rotation,
       @Nonnull CanMoveType canMoveType,
       @Nonnull ApplyMovementType applyMovementType,
-      @Nullable Vector3f movementMultiplier,
+      @Nullable Vector3fc movementMultiplier,
       @Nonnull ApplyLookType applyLookType,
-      @Nullable Vector2f lookMultiplier,
+      @Nullable Vector2fc lookMultiplier,
       @Nonnull MouseInputType mouseInputType,
-      @Nullable Vector3f planeNormal
+      @Nullable Vector3fc planeNormal
    ) {
       this.positionLerpSpeed = positionLerpSpeed;
       this.rotationLerpSpeed = rotationLerpSpeed;
@@ -211,17 +214,17 @@ public class ServerCameraSettings {
       obj.canMoveType = CanMoveType.fromValue(buf.getByte(offset + 118));
       obj.applyMovementType = ApplyMovementType.fromValue(buf.getByte(offset + 119));
       if ((nullBits & 32) != 0) {
-         obj.movementMultiplier = Vector3f.deserialize(buf, offset + 120);
+         obj.movementMultiplier = PacketIO.readVector3f(buf, offset + 120);
       }
 
       obj.applyLookType = ApplyLookType.fromValue(buf.getByte(offset + 132));
       if ((nullBits & 64) != 0) {
-         obj.lookMultiplier = Vector2f.deserialize(buf, offset + 133);
+         obj.lookMultiplier = PacketIO.readVector2f(buf, offset + 133);
       }
 
       obj.mouseInputType = MouseInputType.fromValue(buf.getByte(offset + 141));
       if ((nullBits & 128) != 0) {
-         obj.planeNormal = Vector3f.deserialize(buf, offset + 142);
+         obj.planeNormal = PacketIO.readVector3f(buf, offset + 142);
       }
 
       return obj;
@@ -317,21 +320,21 @@ public class ServerCameraSettings {
       buf.writeByte(this.canMoveType.getValue());
       buf.writeByte(this.applyMovementType.getValue());
       if (this.movementMultiplier != null) {
-         this.movementMultiplier.serialize(buf);
+         PacketIO.writeVector3f(buf, this.movementMultiplier);
       } else {
          buf.writeZero(12);
       }
 
       buf.writeByte(this.applyLookType.getValue());
       if (this.lookMultiplier != null) {
-         this.lookMultiplier.serialize(buf);
+         PacketIO.writeVector2f(buf, this.lookMultiplier);
       } else {
          buf.writeZero(8);
       }
 
       buf.writeByte(this.mouseInputType.getValue());
       if (this.planeNormal != null) {
-         this.planeNormal.serialize(buf);
+         PacketIO.writeVector3f(buf, this.planeNormal);
       } else {
          buf.writeZero(12);
       }
@@ -423,11 +426,11 @@ public class ServerCameraSettings {
       copy.rotation = this.rotation != null ? this.rotation.clone() : null;
       copy.canMoveType = this.canMoveType;
       copy.applyMovementType = this.applyMovementType;
-      copy.movementMultiplier = this.movementMultiplier != null ? this.movementMultiplier.clone() : null;
+      copy.movementMultiplier = this.movementMultiplier;
       copy.applyLookType = this.applyLookType;
-      copy.lookMultiplier = this.lookMultiplier != null ? this.lookMultiplier.clone() : null;
+      copy.lookMultiplier = this.lookMultiplier;
       copy.mouseInputType = this.mouseInputType;
-      copy.planeNormal = this.planeNormal != null ? this.planeNormal.clone() : null;
+      copy.planeNormal = this.planeNormal;
       return copy;
    }
 

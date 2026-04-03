@@ -8,7 +8,6 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.Position;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.particle.config.WorldParticle;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -18,6 +17,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ParticleUtil {
    public static final double DEFAULT_PARTICLE_DISTANCE = 75.0;

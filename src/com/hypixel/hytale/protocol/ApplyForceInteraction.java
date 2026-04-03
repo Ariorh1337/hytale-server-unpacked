@@ -261,8 +261,8 @@ public class ApplyForceInteraction extends SimpleInteraction {
             throw ProtocolException.arrayTooLong("Forces", forcesCount, 4096000);
          }
 
-         if (varPos5 + varIntLen + forcesCount * 18L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Forces", varPos5 + varIntLen + forcesCount * 18, buf.readableBytes());
+         if (varPos5 + varIntLen + forcesCount * 17L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Forces", varPos5 + varIntLen + forcesCount * 17, buf.readableBytes());
          }
 
          obj.forces = new AppliedForce[forcesCount];
@@ -547,7 +547,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
       }
 
       if (this.forces != null) {
-         size += VarInt.size(this.forces.length) + this.forces.length * 18;
+         size += VarInt.size(this.forces.length) + this.forces.length * 17;
       }
 
       return size;
@@ -688,7 +688,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          }
 
          pos += VarInt.size(forcesCount);
-         pos += forcesCount * 18;
+         pos += forcesCount * 17;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Forces");
          }

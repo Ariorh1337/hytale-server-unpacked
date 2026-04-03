@@ -18,7 +18,6 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.Position;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -35,6 +34,7 @@ import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3fc;
 
 public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -108,18 +108,16 @@ public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteract
             raycastHit = new Position((float)position.x, (float)position.y, (float)position.z);
          }
 
-         Vector3f raycastNormal = clientState.raycastNormal;
+         Vector3fc raycastNormal = clientState.raycastNormal;
          float correctedRaycastDistance = clientState.raycastDistance;
-         Vector3f spawnPosition = new Vector3f((float)raycastHit.x, (float)raycastHit.y, (float)raycastHit.z);
-         Rotation3f norm = new Rotation3f(raycastNormal.x, raycastNormal.y, raycastNormal.z);
+         Vector3d spawnPosition = new Vector3d(raycastHit.x, raycastHit.y, raycastHit.z);
+         Rotation3f norm = new Rotation3f(raycastNormal.x(), raycastNormal.y(), raycastNormal.z());
          if (correctedRaycastDistance > 0.0F
             && correctedRaycastDistance <= this.maxPlacementDistance
             && (this.config.getAllowPlaceOnWalls() || isSurface(norm))) {
             Direction attackerRot = clientState.attackerRot;
             Rotation3f rot = new Rotation3f(0.0F, attackerRot.yaw, 0.0F);
-            DeployablesUtils.spawnDeployable(
-               commandBuffer, store, this.config, entityRef, new Vector3d(spawnPosition.x, spawnPosition.y, spawnPosition.z), rot, "UP"
-            );
+            DeployablesUtils.spawnDeployable(commandBuffer, store, this.config, entityRef, spawnPosition, rot, "UP");
          }
       }
    }

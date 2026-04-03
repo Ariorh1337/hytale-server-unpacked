@@ -40,7 +40,7 @@ public class ClientSourcedSelector implements Selector {
          for (SelectedHitEntity info : hits) {
             Ref<EntityStore> targetRef = store.getRefFromNetworkId(info.networkId);
             if (targetRef != null) {
-               consumer.accept(targetRef, new Vector4d(info.hitLocation.x, info.hitLocation.y, info.hitLocation.z, 0.0));
+               consumer.accept(targetRef, new Vector4d(info.hitLocation.x(), info.hitLocation.y(), info.hitLocation.z(), 0.0));
             }
          }
       }

@@ -18,7 +18,6 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.RootInteractionSettings;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.protocol.packets.interaction.CancelInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChain;
@@ -60,6 +59,7 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 import org.joml.Vector4d;
 
 public class InteractionManager implements Component<EntityStore> {
@@ -914,8 +914,8 @@ public class InteractionManager implements Component<EntityStore> {
                   }
 
                   if (packet.data.hitLocation != null) {
-                     Vector3f hit = packet.data.hitLocation;
-                     context.getMetaStore().putMetaObject(Interaction.HIT_LOCATION, new Vector4d(hit.x, hit.y, hit.z, 1.0));
+                     Vector3fc hit = packet.data.hitLocation;
+                     context.getMetaStore().putMetaObject(Interaction.HIT_LOCATION, new Vector4d(hit.x(), hit.y(), hit.z(), 1.0));
                   }
 
                   if (packet.data.hitDetail != null) {

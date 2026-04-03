@@ -57,7 +57,7 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
                assert playerComponent != null;
                TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
                assert transformComponent != null;
-               if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+               if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
                   Vector3d position = transformComponent.getPosition();
                   RelativeIntPosition relativeIntPositionOne = this.positionOneArg.get(context);
                   RelativeIntPosition relativeIntPositionTwo = this.positionTwoArg.get(context);
@@ -81,7 +81,7 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
          if (builderState.getSelection() == null) {
             playerRef.sendMessage(MESSAGE_COMMANDS_CLEAR_NO_SELECTION);

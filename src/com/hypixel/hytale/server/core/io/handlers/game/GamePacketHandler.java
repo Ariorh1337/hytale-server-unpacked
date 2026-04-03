@@ -24,6 +24,8 @@ import com.hypixel.hytale.protocol.packets.entities.PlayEmote;
 import com.hypixel.hytale.protocol.packets.interaction.CancelInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChains;
+import com.hypixel.hytale.protocol.packets.interface_.ArgValuesRequest;
+import com.hypixel.hytale.protocol.packets.interface_.ArgValuesResponse;
 import com.hypixel.hytale.protocol.packets.interface_.ChatMessage;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageEvent;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -62,6 +64,8 @@ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
+import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
 import com.hypixel.hytale.server.core.console.ConsoleModule;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
 import com.hypixel.hytale.server.core.cosmetics.Emote;
@@ -115,6 +119,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -131,10 +136,9 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    private static final double RELATIVE_POSITION_DELTA_SCALE = 10000.0;
    private static final int MAX_INTERACTION_QUEUE_SIZE = 1000;
    private PlayerRef playerRef;
-   @Deprecated
-   private Player playerComponent;
    @Nonnull
    private final Deque<SyncInteractionChain> interactionPacketQueue = new ConcurrentLinkedDeque<>();
+   private final Map<String, Long> lastArgValuesRequestTimes = new HashMap<>();
 
    public GamePacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, @Nonnull PlayerAuthentication auth) {
       super(channel, protocolVersion);
@@ -154,9 +158,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       return this.playerRef;
    }
 
-   public void setPlayerRef(@Nonnull PlayerRef playerRef, @Nonnull Player playerComponent) {
+   public void setPlayerRef(@Nonnull PlayerRef playerRef) {
       this.playerRef = playerRef;
-      this.playerComponent = playerComponent;
    }
 
    @Nonnull
@@ -173,6 +176,16 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    protected void registered0(PacketHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       this.enterStage("play", timeouts.getPlay());
+      this.sendCommandTree();
+   }
+
+   public void sendCommandTree() {
+      if (this.playerRef != null) {
+         Ref<EntityStore> ref = this.playerRef.getReference();
+         if (ref != null && ref.isValid()) {
+            this.write(CommandManager.get().buildCommandTree(this.playerRef));
+         }
+      }
    }
 
    protected void registerHandlers() {
@@ -180,6 +193,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       this.registerHandler(4, p -> this.handlePong((Pong)p));
       this.registerHandler(108, p -> this.handle((ClientMovement)p));
       this.registerHandler(211, p -> this.handle((ChatMessage)p));
+      this.registerHandler(239, p -> this.handle((ArgValuesRequest)p));
       this.registerHandler(23, p -> this.handle((RequestAssets)p));
       this.registerHandler(219, p -> this.handle((CustomPageEvent)p));
       IWorldPacketHandler.registerHandler(this, 32, this::handleViewRadius);
@@ -362,7 +376,12 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          String message = packet.message;
          char firstChar = message.charAt(0);
          if (firstChar == '/') {
-            CommandManager.get().handleCommand(this.playerComponent, message.substring(1));
+            Ref<EntityStore> ref = this.playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+               return;
+            }
+
+            CommandManager.get().handleCommand(this.playerRef, message.substring(1));
          } else if (firstChar == '.') {
             this.playerRef.sendMessage(Message.translation("server.io.gamepackethandler.localCommandDenied").param("msg", message));
          } else {
@@ -404,6 +423,43 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                );
          }
       }
+   }
+
+   public void handle(@Nonnull ArgValuesRequest packet) {
+      if (packet.argTypeId != null && packet.argTypeId.length() <= 128) {
+         if (packet.partial == null || packet.partial.length() <= 256) {
+            long now = System.currentTimeMillis();
+            if (now - this.lastArgValuesRequestTimes.getOrDefault(packet.argTypeId, 0L) >= 50L) {
+               this.lastArgValuesRequestTimes.put(packet.argTypeId, now);
+               ArgumentType<?> argType = CommandManager.get().getArgTypeById(packet.argTypeId);
+               if (argType != null) {
+                  if (this.playerRef != null) {
+                     Ref<EntityStore> ref = this.playerRef.getReference();
+                     if (ref != null && ref.isValid()) {
+                        SuggestionResult result = new SuggestionResult();
+                        argType.suggest(this.playerRef, packet.partial != null ? packet.partial : "", 0, result);
+                        ArgValuesResponse response = new ArgValuesResponse();
+                        response.argTypeId = packet.argTypeId;
+                        response.values = result.getSuggestions().toArray(new String[0]);
+                        response.continuations = toBooleanArray(result.getContinuations());
+                        response.isComplete = (packet.partial == null || packet.partial.isEmpty()) && argType.getSuggestionValueCount() >= 0;
+                        this.write(response);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   private static boolean[] toBooleanArray(@Nonnull List<Boolean> list) {
+      boolean[] arr = new boolean[list.size()];
+
+      for (int i = 0; i < arr.length; i++) {
+         arr[i] = list.get(i);
+      }
+
+      return arr;
    }
 
    public void handle(@Nonnull RequestAssets packet) {
@@ -816,9 +872,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
-      if (playerComponent.hasPermission("hytale.camera.flycam")) {
+      if (playerRef.hasPermission("hytale.camera.flycam")) {
          this.writeNoCache(new SetFlyCameraMode(packet.entering));
          if (packet.entering) {
             playerRef.sendMessage(Message.translation("server.general.flyCamera.enabled"));

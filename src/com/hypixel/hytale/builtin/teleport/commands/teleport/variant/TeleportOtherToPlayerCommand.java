@@ -94,7 +94,7 @@ public class TeleportOtherToPlayerCommand extends CommandBase {
                                           sourceWorld,
                                           pos,
                                           rotation,
-                                          "Teleport to " + targetPlayerRefComponent.getUsername() + " by " + context.sender().getDisplayName()
+                                          "Teleport to " + targetPlayerRefComponent.getUsername() + " by " + context.sender().getUsername()
                                        );
                                  }
                               }

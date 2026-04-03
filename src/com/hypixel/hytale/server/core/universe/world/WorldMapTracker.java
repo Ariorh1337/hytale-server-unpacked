@@ -119,7 +119,15 @@ public class WorldMapTracker implements Tickable {
       World world = this.player.getWorld();
       if (world != null && this.player.getPlayerConnection().getChannel(NetworkChannel.WorldMap).isWritable()) {
          if (this.transformComponent == null) {
-            this.transformComponent = this.player.getTransformComponent();
+            this.transformComponent = CompletableFuture.<TransformComponent>supplyAsync(() -> {
+               Ref<EntityStore> playerRef = this.player.getReference();
+               if (playerRef != null && playerRef.isValid()) {
+                  Store<EntityStore> store = playerRef.getStore();
+                  return store.getComponent(playerRef, TransformComponent.getComponentType());
+               } else {
+                  return null;
+               }
+            }, world).join();
             if (this.transformComponent == null) {
                return;
             }

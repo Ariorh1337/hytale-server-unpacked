@@ -120,7 +120,7 @@ public class BodyMotionPath extends BodyMotionBase {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       desiredSteering.clear();
-      if (!role.getActiveMotionController().canAct(ref, componentAccessor)) {
+      if (!role.getActiveMotionController().canSteer(ref, componentAccessor)) {
          return true;
       }
 

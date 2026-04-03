@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.joml.Vector3i;
 
 public class VectorUtil {
@@ -99,7 +100,7 @@ public class VectorUtil {
       double magB = B.length();
       Vector3d _A = new Vector3d(A).mul(1.0 / magA);
       Vector3d _B = new Vector3d(B).mul(1.0 / magB);
-      Vector3d cross = _A.cross(_B);
+      Vector3d cross = _A.cross(_B, new Vector3d());
       double denom = Math.pow(cross.length(), 2.0);
       if (denom == 0.0) {
          flags[0] = true;
@@ -187,8 +188,8 @@ public class VectorUtil {
       }
    }
 
-   public static double determinant(@Nonnull Vector3d v1, @Nonnull Vector3d v2) {
-      Vector3d crossProduct = v1.cross(v2);
+   public static double determinant(@Nonnull Vector3dc v1, @Nonnull Vector3dc v2) {
+      Vector3d crossProduct = v1.cross(v2, new Vector3d());
       return crossProduct.length();
    }
 
@@ -235,7 +236,7 @@ public class VectorUtil {
    }
 
    public static void rotateVectorByAxisAngle(@Nonnull Vector3d vec, @Nonnull Vector3d axis, double angle) {
-      Vector3d crossProd = axis.cross(vec);
+      Vector3d crossProd = axis.cross(vec, new Vector3d());
       double cosAngle = Math.cos(angle);
       double sinAngle = Math.sin(angle);
       double x = vec.x * cosAngle + crossProd.x * sinAngle + axis.x * axis.dot(vec) * (1.0 - cosAngle);
@@ -380,6 +381,11 @@ public class VectorUtil {
          this.index = index;
       }
 
+      @Nonnull
+      public static VectorUtil.Retriever ofIndex(int index) {
+         return new VectorUtil.Retriever(index);
+      }
+
       public int getIndex() {
          return this.index;
       }
@@ -416,11 +422,6 @@ public class VectorUtil {
             case 1 -> vec.y;
             default -> throw new IllegalArgumentException();
          };
-      }
-
-      @Nonnull
-      public static VectorUtil.Retriever ofIndex(int index) {
-         return new VectorUtil.Retriever(index);
       }
    }
 }

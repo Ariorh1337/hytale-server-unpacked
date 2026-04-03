@@ -56,7 +56,7 @@ public class ReplaceCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          if (fromMask != null && fromMask.hasInvalidBlocks()) {
             context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("key", fromMask.toString()));
          } else {
@@ -123,7 +123,7 @@ public class ReplaceCommand extends AbstractPlayerCommand {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             String fromValue = this.fromArg.get(context);
             BlockPattern toPattern = this.toArg.get(context);
 
@@ -181,7 +181,7 @@ public class ReplaceCommand extends AbstractPlayerCommand {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             String fromValue = this.fromArg.get(context);
             String toValue = this.toArg.get(context);
             BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();

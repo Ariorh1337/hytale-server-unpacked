@@ -24,7 +24,9 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectBooleanPair;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -965,7 +967,47 @@ public abstract class AbstractCommand {
       return this.requiredArguments;
    }
 
+   @Nonnull
+   public Map<String, AbstractOptionalArg<?, ?>> getOptionalArguments() {
+      return this.optionalArguments;
+   }
+
+   @Nonnull
+   public Collection<AbstractCommand> getVariantCommands() {
+      return this.variantCommands.values();
+   }
+
+   @Nullable
+   public AbstractCommand getVariantByArgCount(int requiredArgCount) {
+      return this.variantCommands.get(requiredArgCount);
+   }
+
+   @Nullable
+   public List<AbstractCommand.SuggestionOverrideEntry> getSuggestionOverrides() {
+      List<AbstractCommand.SuggestionOverrideEntry> result = null;
+
+      for (int i = 0; i < this.requiredArguments.size(); i++) {
+         ArgumentType<?> overrideType = this.requiredArguments.get(i).getSuggestionOverrideType();
+         if (overrideType != null) {
+            if (result == null) {
+               result = new ArrayList<>();
+            }
+
+            result.add(new AbstractCommand.SuggestionOverrideEntry(i, overrideType.getNumberOfParameters(), overrideType));
+         }
+      }
+
+      return result;
+   }
+
    public boolean hasBeenRegistered() {
       return this.hasBeenRegistered;
+   }
+
+   public record SuggestionOverrideEntry(int argStart, int argCount, @Nonnull ArgumentType<?> overrideType) {
+      @Nonnull
+      public String argTypeId() {
+         return this.overrideType.getSuggestionTypeId();
+      }
    }
 }

@@ -3,23 +3,32 @@ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.se
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockGathering;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.PhysicsDropType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.SoftBlockDropType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
+import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
@@ -30,6 +39,7 @@ import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -88,8 +98,8 @@ public class DoorInteraction extends SimpleBlockInteraction {
          } else {
             newDoorState = checkResult;
             DoorInteraction.DoorState stateDoubleDoor = getOppositeDoorState(doorState);
-            BlockType interactionBlockState = activateDoor(world, blockType, targetBlock, doorState, newDoorState);
-            boolean doubleDoor = this.checkForDoubleDoor(world, targetBlock, blockType, rotation, newDoorState, stateDoubleDoor);
+            BlockType interactionBlockState = activateDoor(world, commandBuffer, blockType, targetBlock, doorState, newDoorState);
+            boolean doubleDoor = this.checkForDoubleDoor(world, commandBuffer, targetBlock, blockType, rotation, newDoorState, stateDoubleDoor);
             if (interactionBlockState != null) {
                Vector3d pos = new Vector3d();
                int hitboxTypeIndex = BlockType.getAssetMap().getAsset(blockType.getItem().getId()).getHitboxTypeIndex();
@@ -120,6 +130,7 @@ public class DoorInteraction extends SimpleBlockInteraction {
 
    private boolean checkForDoubleDoor(
       @Nonnull World world,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
       @Nonnull Vector3i blockPosition,
       @Nonnull BlockType blockType,
       int rotation,
@@ -133,7 +144,7 @@ public class DoorInteraction extends SimpleBlockInteraction {
 
       boolean otherDoorIsHorizontal = isHorizontalDoor(doorToOpen.blockType);
       DoorInteraction.DoorState stateForDoubleDoor = otherDoorIsHorizontal ? fromState : getOppositeDoorState(fromState);
-      activateDoor(world, doorToOpen.blockType, doorToOpen.blockPosition, doorToOpen.doorState, stateForDoubleDoor);
+      activateDoor(world, commandBuffer, doorToOpen.blockType, doorToOpen.blockPosition, doorToOpen.doorState, stateForDoubleDoor);
       return true;
    }
 
@@ -202,6 +213,7 @@ public class DoorInteraction extends SimpleBlockInteraction {
    @Nullable
    private static BlockType activateDoor(
       @Nonnull World world,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
       @Nonnull BlockType blockType,
       @Nonnull Vector3i blockPosition,
       @Nonnull DoorInteraction.DoorState fromState,
@@ -211,6 +223,14 @@ public class DoorInteraction extends SimpleBlockInteraction {
       int rotationIndex = chunk.getRotationIndex(blockPosition.x, blockPosition.y, blockPosition.z);
       BlockBoundingBoxes oldHitbox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
       String interactionStateToSend = getInteractionState(fromState, doorState);
+      BlockType newState = blockType.getBlockForState(interactionStateToSend);
+      if (newState != null) {
+         BlockBoundingBoxes newHitbox = BlockBoundingBoxes.getAssetMap().getAsset(newState.getHitboxTypeIndex());
+         if (newHitbox != null) {
+            breakSoftBlocksInHitbox(world, commandBuffer, blockPosition, newHitbox.get(rotationIndex));
+         }
+      }
+
       world.setBlockInteractionState(blockPosition, blockType, interactionStateToSend);
       BlockType currentBlockType = world.getBlockType(blockPosition);
       if (currentBlockType == null) {
@@ -234,6 +254,50 @@ public class DoorInteraction extends SimpleBlockInteraction {
       }
 
       return newBlockType;
+   }
+
+   private static void breakSoftBlocksInHitbox(
+      @Nonnull World world,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull Vector3i basePosition,
+      @Nonnull BlockBoundingBoxes.RotatedVariantBoxes hitbox
+   ) {
+      FillerBlockUtil.forEachFillerBlock(hitbox, (x, y, z) -> {
+         if (x != 0 || y != 0 || z != 0) {
+            int worldX = basePosition.x + x;
+            int worldY = basePosition.y + y;
+            int worldZ = basePosition.z + z;
+            WorldChunk existingChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
+            if (existingChunk != null) {
+               BlockType existingType = existingChunk.getBlockType(worldX, worldY, worldZ);
+               if (existingType != null && existingType != BlockType.EMPTY && existingType.getMaterial() == BlockMaterial.Empty) {
+                  int settings = 1312;
+                  existingChunk.breakBlock(worldX, worldY, worldZ, settings);
+                  String itemId = null;
+                  String dropListId = null;
+                  BlockGathering gathering = existingType.getGathering();
+                  if (gathering != null) {
+                     PhysicsDropType physics = gathering.getPhysics();
+                     SoftBlockDropType soft = gathering.getSoft();
+                     if (physics != null) {
+                        itemId = physics.getItemId();
+                        dropListId = physics.getDropListId();
+                     } else if (soft != null) {
+                        itemId = soft.getItemId();
+                        dropListId = soft.getDropListId();
+                     }
+                  }
+
+                  List<ItemStack> itemStacks = BlockHarvestUtils.getDrops(existingType, 1, itemId, dropListId);
+                  if (!itemStacks.isEmpty()) {
+                     Vector3d dropPosition = new Vector3d(worldX + 0.5, worldY, worldZ + 0.5);
+                     Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(commandBuffer, itemStacks, dropPosition, Rotation3f.IDENTITY);
+                     commandBuffer.addEntities(itemEntityHolders, AddReason.SPAWN);
+                  }
+               }
+            }
+         }
+      });
    }
 
    @Nullable

@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public interface SpawnEffect {
    String getSpawnParticles(@Nonnull BuilderSupport var1);

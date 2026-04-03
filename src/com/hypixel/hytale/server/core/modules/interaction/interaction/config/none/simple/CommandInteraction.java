@@ -7,9 +7,9 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -32,9 +32,9 @@ public class CommandInteraction extends SimpleInstantInteraction {
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       Ref<EntityStore> ref = context.getOwningEntity();
-      Player player = ref.getStore().getComponent(ref, Player.getComponentType());
-      if (player != null) {
-         CommandManager.get().handleCommand(player, this.command);
+      PlayerRef playerRef = ref.getStore().getComponent(ref, PlayerRef.getComponentType());
+      if (playerRef != null) {
+         CommandManager.get().handleCommand(playerRef, this.command);
       }
    }
 

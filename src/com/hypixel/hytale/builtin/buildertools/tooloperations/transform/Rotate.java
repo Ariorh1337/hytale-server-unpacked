@@ -45,6 +45,10 @@ public class Rotate implements Transform {
       }
    }
 
+   public Rotate inverse() {
+      return new Rotate(this.axis, (4 - this.rotations) * 90);
+   }
+
    @Nonnull
    @Override
    public String toString() {

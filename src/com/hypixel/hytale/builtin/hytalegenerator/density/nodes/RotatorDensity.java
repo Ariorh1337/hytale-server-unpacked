@@ -26,7 +26,7 @@ public class RotatorDensity extends Density {
       this.input = input;
       this.spinAngle = spinAngle * Math.PI / 180.0;
       Vector3d yAxis = new Vector3d(0.0, 1.0, 0.0);
-      this.rotationAxis = newYAxis.cross(yAxis);
+      this.rotationAxis = newYAxis.cross(yAxis, new Vector3d());
       if (this.rotationAxis.length() < 1.0E-8) {
          this.rotationAxis = yAxis;
          if (newYAxis.dot(yAxis) < 0.0) {
@@ -44,7 +44,7 @@ public class RotatorDensity extends Density {
          this.tiltAngle = 0.0;
       }
 
-      this.tiltAxis = yAxis.cross(newYAxis);
+      this.tiltAxis = yAxis.cross(newYAxis, new Vector3d());
       this.tiltAngle = Math.acos(newYAxis.dot(yAxis) / (newYAxis.length() * yAxis.length()));
       this.rChildPosition = new Vector3d();
       this.rChildContext = new Density.Context();

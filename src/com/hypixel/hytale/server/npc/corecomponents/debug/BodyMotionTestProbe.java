@@ -10,10 +10,12 @@ import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.debug.builders.BuilderBodyMotionTestProbe;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
+import java.util.EnumSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -23,6 +25,8 @@ public class BodyMotionTestProbe extends BodyMotionBase {
    protected final double adjustZ;
    protected final double adjustDistance;
    protected final float snapAngle;
+   @Nonnull
+   protected final EnumSet<RelaxedConstraint> cachedEffectiveConstraints;
    protected boolean displayText;
    protected final Vector3d direction = new Vector3d();
    protected final ProbeMoveData probeMoveData = new ProbeMoveData();
@@ -34,8 +38,19 @@ public class BodyMotionTestProbe extends BodyMotionBase {
       this.adjustZ = builderBodyMotionTestProbe.getAdjustZ();
       this.adjustDistance = builderBodyMotionTestProbe.getAdjustDistance();
       this.snapAngle = builderBodyMotionTestProbe.getSnapAngle() * (float) (Math.PI / 180.0);
-      this.probeMoveData.setAvoidingBlockDamage(builderBodyMotionTestProbe.isAvoidingBlockDamage());
-      this.probeMoveData.setRelaxedMoveConstraints(builderBodyMotionTestProbe.isRelaxedMoveConstraints());
+      boolean isLegacyRelaxedMoveConstraints = builderBodyMotionTestProbe.isLegacyRelaxedMoveConstraints();
+      boolean usesLegacyConstraintMode = !builderBodyMotionTestProbe.isRelaxedConstraintsPresent();
+      EnumSet<RelaxedConstraint> relaxedConstraints = builderBodyMotionTestProbe.getRelaxedConstraints();
+      boolean isLegacyAvoidingBlockDamage = builderBodyMotionTestProbe.isAvoidingBlockDamage();
+      this.cachedEffectiveConstraints = computeEffectiveRelaxedConstraints(
+         usesLegacyConstraintMode, relaxedConstraints, isLegacyRelaxedMoveConstraints, isLegacyAvoidingBlockDamage
+      );
+   }
+
+   @Nullable
+   @Override
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints() {
+      return this.cachedEffectiveConstraints;
    }
 
    @Override
@@ -72,6 +87,8 @@ public class BodyMotionTestProbe extends BodyMotionBase {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       desiredSteering.clear();
+      this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
+      applyEscapeConstraints(role, this.probeMoveData);
       if (sensorInfo != null && sensorInfo.getPositionProvider().providePosition(this.direction)) {
          TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
          if (transformComponent == null) {

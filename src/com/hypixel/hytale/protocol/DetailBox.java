@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class DetailBox {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -13,15 +15,15 @@ public class DetailBox {
    public static final int VARIABLE_FIELD_COUNT = 0;
    public static final int VARIABLE_BLOCK_START = 37;
    public static final int MAX_SIZE = 37;
-   @Nullable
-   public Vector3f offset;
+   @Nonnull
+   public Vector3fc offset = PacketIO.ZERO_VECTOR3;
    @Nullable
    public Hitbox box;
 
    public DetailBox() {
    }
 
-   public DetailBox(@Nullable Vector3f offset, @Nullable Hitbox box) {
+   public DetailBox(@Nonnull Vector3fc offset, @Nullable Hitbox box) {
       this.offset = offset;
       this.box = box;
    }
@@ -39,11 +41,8 @@ public class DetailBox {
 
       DetailBox obj = new DetailBox();
       byte nullBits = buf.getByte(offset);
+      obj.offset = PacketIO.readVector3f(buf, offset + 1);
       if ((nullBits & 1) != 0) {
-         obj.offset = Vector3f.deserialize(buf, offset + 1);
-      }
-
-      if ((nullBits & 2) != 0) {
          obj.box = Hitbox.deserialize(buf, offset + 13);
       }
 
@@ -56,21 +55,12 @@ public class DetailBox {
 
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
-      if (this.offset != null) {
+      if (this.box != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.box != null) {
-         nullBits = (byte)(nullBits | 2);
-      }
-
       buf.writeByte(nullBits);
-      if (this.offset != null) {
-         this.offset.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
-
+      PacketIO.writeVector3f(buf, this.offset);
       if (this.box != null) {
          this.box.serialize(buf);
       } else {
@@ -93,7 +83,7 @@ public class DetailBox {
 
    public DetailBox clone() {
       DetailBox copy = new DetailBox();
-      copy.offset = this.offset != null ? this.offset.clone() : null;
+      copy.offset = this.offset;
       copy.box = this.box != null ? this.box.clone() : null;
       return copy;
    }

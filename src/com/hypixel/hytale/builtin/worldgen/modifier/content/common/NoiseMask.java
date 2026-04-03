@@ -4,6 +4,7 @@ import com.hypixel.hytale.builtin.worldgen.modifier.content.Codecs;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.range.FloatRange;
 import com.hypixel.hytale.procedurallib.condition.DoubleThreshold;
 import com.hypixel.hytale.procedurallib.condition.DoubleThresholdCondition;
@@ -24,18 +25,22 @@ public class NoiseMask {
       .documentation("Seed for the mask noise")
       .add()
       .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE), (t, v) -> t.scale = v, t -> t.scale)
+      .addValidator(Validators.greaterThan(0.0))
       .documentation("The scale of the mask noise")
       .add()
       .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER), (t, v) -> t.octaves = v, t -> t.octaves)
+      .addValidator(Validators.range(0, 5))
       .documentation("The number of octaves of the noise to use")
       .add()
       .<Double>append(new KeyedCodec<>("Lacunarity", Codec.DOUBLE), (t, v) -> t.lacunarity = v, t -> t.lacunarity)
+      .addValidator(Validators.range(1.0, 10.0))
       .documentation("The cumulative frequency multiplier for each noise octave")
       .add()
       .<Double>append(new KeyedCodec<>("Persistence", Codec.DOUBLE), (t, v) -> t.persistence = v, t -> t.persistence)
+      .addValidator(Validators.range(0.0, 1.0))
       .documentation("The cumulative gain multiplier for each noise octave")
       .add()
-      .<FloatRange>append(new KeyedCodec<>("Density", Codecs.FLOAT_RANGE), (t, v) -> t.density = v, t -> t.density)
+      .<FloatRange>append(new KeyedCodec<>("Density", Codecs.DENSITY_RANGE), (t, v) -> t.density = v, t -> t.density)
       .documentation("Threshold range for the mask. Noise values outside the range result in the prefab position being occluded")
       .add()
       .build();

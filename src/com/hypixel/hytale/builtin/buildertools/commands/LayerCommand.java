@@ -56,7 +56,7 @@ public class LayerCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       assert playerComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          String direction = this.layerDirectionArg.get(context).toLowerCase();
          List<Pair<Integer, String>> layers = this.layersArg.get(context);
          if (layers != null && direction != null) {

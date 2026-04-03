@@ -1,8 +1,8 @@
 package com.hypixel.hytale.builtin.worldgen.modifier.content.cave;
 
-import com.hypixel.hytale.builtin.worldgen.modifier.content.Codecs;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.common.BlockMask;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.common.HeightMask;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.common.PointGrid;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
@@ -35,7 +35,7 @@ public class CaveTypeContent implements Content {
       .<PointGrid>append(new KeyedCodec<>("PointGrid", PointGrid.CODEC), (t, v) -> t.grid = v, t -> t.grid)
       .documentation("The point grid configuration controlling where the cave starting points are placed horizontally")
       .add()
-      .<IntRange>append(new KeyedCodec<>("HeightRange", Codecs.INT_RANGE), (t, v) -> t.height = v, t -> t.height)
+      .<HeightMask>append(new KeyedCodec<>("HeightRange", HeightMask.CODEC), (t, v) -> t.height = v, t -> t.height)
       .documentation("The height range within which the cave type can be placed")
       .add()
       .<BlockMask>append(new KeyedCodec<>("BlockMask", BlockMask.CODEC), (t, v) -> t.blockMask = v, t -> t.blockMask)
@@ -47,7 +47,7 @@ public class CaveTypeContent implements Content {
       .build();
    protected String name = "";
    protected PointGrid grid = new PointGrid();
-   protected IntRange height = new IntRange(0, 319);
+   protected HeightMask height = HeightMask.DEFAULT;
    protected BlockMask blockMask = BlockMask.REPLACE_SOLID;
    @Nullable
    protected CaveTypeGenerator generator = null;
@@ -65,7 +65,7 @@ public class CaveTypeContent implements Content {
    }
 
    public IntRange height() {
-      return this.height;
+      return this.height.range();
    }
 
    @Override

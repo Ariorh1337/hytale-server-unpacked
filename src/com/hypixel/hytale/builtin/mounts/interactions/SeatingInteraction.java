@@ -13,10 +13,10 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -44,8 +44,8 @@ public class SeatingInteraction extends SimpleBlockInteraction {
       @Nonnull CooldownHandler cooldownHandler
    ) {
       Ref<EntityStore> ref = context.getEntity();
-      Player player = commandBuffer.getComponent(ref, Player.getComponentType());
-      if (player != null) {
+      PlayerRef playerRef = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+      if (playerRef != null) {
          BlockPosition rawTarget = context.getMetaStore().getMetaObject(TARGET_BLOCK_RAW);
          Vector3d whereWasHit = new Vector3d(rawTarget.x + 0.5, rawTarget.y + 0.5, rawTarget.z + 0.5);
          BlockMountAPI.BlockMountResult result = BlockMountAPI.mountOnBlock(ref, commandBuffer, targetBlock, whereWasHit);
@@ -60,7 +60,7 @@ public class SeatingInteraction extends SimpleBlockInteraction {
                SoundUtil.playSoundEvent3dToPlayer(ref, soundEventIndex, SoundCategory.SFX, Vector3iUtil.toVector3d(targetBlock), commandBuffer);
             }
          } else {
-            player.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
+            playerRef.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
          }
       }
    }

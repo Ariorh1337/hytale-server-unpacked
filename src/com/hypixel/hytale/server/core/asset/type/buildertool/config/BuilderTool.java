@@ -182,8 +182,12 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    public BuilderTool.ArgData getItemArgData(@Nonnull ItemStack itemStack) {
       Map<String, Object> toolArgs = null;
       if (!this.args.isEmpty()) {
-         Map<String, Object> toolData = itemStack.getFromMetadataOrNull("ToolData", this.argsCodec);
-         toolArgs = toolData == null ? this.getDefaultToolArgs(itemStack) : toolData;
+         try {
+            Map<String, Object> toolData = itemStack.getFromMetadataOrNull("ToolData", this.argsCodec);
+            toolArgs = toolData == null ? this.getDefaultToolArgs(itemStack) : toolData;
+         } catch (Exception e) {
+            toolArgs = this.getDefaultToolArgs(itemStack);
+         }
       }
 
       return new BuilderTool.ArgData(toolArgs);

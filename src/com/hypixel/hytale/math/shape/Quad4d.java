@@ -1,9 +1,9 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.vector.Vector4dUtil;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
 import org.joml.Vector4d;
 
 public class Quad4d {
@@ -105,10 +105,10 @@ public class Quad4d {
 
    @Nonnull
    public Quad4d multiply(@Nonnull Matrix4d matrix, @Nonnull Quad4d target) {
-      matrix.multiply(this.a, target.a);
-      matrix.multiply(this.b, target.b);
-      matrix.multiply(this.c, target.c);
-      matrix.multiply(this.d, target.d);
+      matrix.transform(this.a, target.a);
+      matrix.transform(this.b, target.b);
+      matrix.transform(this.c, target.c);
+      matrix.transform(this.d, target.d);
       return target;
    }
 

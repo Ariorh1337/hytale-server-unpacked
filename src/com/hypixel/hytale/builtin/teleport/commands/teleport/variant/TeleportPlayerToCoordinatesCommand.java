@@ -29,7 +29,8 @@ public class TeleportPlayerToCoordinatesCommand extends CommandBase {
    @Nonnull
    private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.teleport.targetPlayer.desc", ArgTypes.PLAYER_REF);
    @Nonnull
-   private final RequiredArg<Coord> xArg = this.withRequiredArg("x", "server.commands.teleport.x.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
+   private final RequiredArg<Coord> xArg = this.withRequiredArg("x", "server.commands.teleport.x.desc", ArgTypes.RELATIVE_DOUBLE_COORD)
+      .withSuggestionOverride(ArgTypes.RELATIVE_POSITION);
    @Nonnull
    private final RequiredArg<Coord> yArg = this.withRequiredArg("y", "server.commands.teleport.y.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
    @Nonnull

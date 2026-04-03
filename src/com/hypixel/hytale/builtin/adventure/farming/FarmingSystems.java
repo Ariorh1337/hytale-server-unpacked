@@ -6,13 +6,11 @@ import com.hypixel.hytale.builtin.adventure.farming.config.stages.BlockStateFarm
 import com.hypixel.hytale.builtin.adventure.farming.config.stages.BlockTypeFarmingStageData;
 import com.hypixel.hytale.builtin.adventure.farming.states.CoopBlock;
 import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlock;
-import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlockState;
 import com.hypixel.hytale.builtin.adventure.farming.states.TilledSoilBlock;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
@@ -198,30 +196,6 @@ public class FarmingSystems {
          if (coopResidentComponent.getMarkedForDespawn()) {
             commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
          }
-      }
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class MigrateFarming extends BlockModule.MigrationSystem {
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         FarmingBlockState oldState = holder.getComponent(FarmingPlugin.get().getFarmingBlockStateComponentType());
-         FarmingBlock farming = new FarmingBlock();
-         farming.setGrowthProgress(oldState.getCurrentFarmingStageIndex());
-         farming.setCurrentStageSet(oldState.getCurrentFarmingStageSetName());
-         farming.setSpreadRate(oldState.getSpreadRate());
-         holder.putComponent(FarmingBlock.getComponentType(), farming);
-         holder.removeComponent(FarmingPlugin.get().getFarmingBlockStateComponentType());
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nullable
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return FarmingPlugin.get().getFarmingBlockStateComponentType();
       }
    }
 

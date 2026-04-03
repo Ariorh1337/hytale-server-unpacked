@@ -38,12 +38,12 @@ public class TetrahedronCaveNodeShape extends AbstractCaveNodeShape implements I
       this.a = new Vector3d(10.0, 0.0, 0.0);
       this.b = new Vector3d(0.0, 10.0, 0.0);
       this.c = new Vector3d(0.0, 0.0, 10.0);
-      this.n1 = this.c.cross(this.b);
-      this.n2 = this.b.cross(this.a);
-      this.n3 = this.a.cross(this.c);
+      this.n1 = this.c.cross(this.b, new Vector3d());
+      this.n2 = this.b.cross(this.a, new Vector3d());
+      this.n3 = this.a.cross(this.c, new Vector3d());
       Vector3d ba = new Vector3d(this.a).sub(this.b);
       Vector3d bc = new Vector3d(this.c).sub(this.b);
-      this.n4 = bc.cross(ba);
+      this.n4 = bc.cross(ba, new Vector3d());
       this.lowBoundX = (int)(o.x - 10.0);
       this.lowBoundY = (int)(o.y - 10.0);
       this.lowBoundZ = (int)(o.z - 10.0);

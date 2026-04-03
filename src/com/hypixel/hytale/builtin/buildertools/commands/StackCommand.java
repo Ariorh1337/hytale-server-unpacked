@@ -48,7 +48,7 @@ public class StackCommand extends AbstractPlayerCommand {
       assert playerComponent != null;
       PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
       assert playerRefComponent != null;
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRefComponent, store)) {
          HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
          assert headRotationComponent != null;
          Vector3i directionVector = RelativeDirection.toDirectionVector(direction, headRotationComponent);

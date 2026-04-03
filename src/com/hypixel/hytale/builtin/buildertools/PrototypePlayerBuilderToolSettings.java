@@ -10,7 +10,7 @@ import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.protocol.packets.interface_.BlockChange;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.LinkedList;
@@ -237,12 +237,12 @@ public class PrototypePlayerBuilderToolSettings {
       this.undoGroupSize = undoGroupSize > 0 ? undoGroupSize : 10;
    }
 
-   public static boolean isOkayToDoCommandsOnSelection(Ref<EntityStore> ref, @Nonnull Player player, ComponentAccessor<EntityStore> componentAccessor) {
+   public static boolean isOkayToDoCommandsOnSelection(Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, ComponentAccessor<EntityStore> componentAccessor) {
       UUIDComponent uuidComponent = componentAccessor.getComponent(ref, UUIDComponent.getComponentType());
       assert uuidComponent != null;
       PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(uuidComponent.getUuid());
       if (prototypeSettings.isInSelectionTransformationMode()) {
-         player.sendMessage(MESSAGE_BUILDER_TOOLS_CANNOT_PERFORM_COMMAND_IN_TRANSFORMATION_MODE);
+         playerRef.sendMessage(MESSAGE_BUILDER_TOOLS_CANNOT_PERFORM_COMMAND_IN_TRANSFORMATION_MODE);
          return false;
       } else {
          return true;

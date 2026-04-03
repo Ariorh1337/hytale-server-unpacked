@@ -35,7 +35,7 @@ import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionTypeUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
-import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.ISectionPalette;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -191,7 +191,7 @@ public class Fluid implements JsonAssetWithMap<String, IndexedLookupTableAssetMa
       )
    };
    public static final ShaderType[] DEFAULT_SHADER_EFFECTS = new ShaderType[]{ShaderType.None};
-   public static final ISectionPalette.KeySerializer KEY_SERIALIZER = (buf, id) -> {
+   public static final AbstractSectionPalette.KeySerializer KEY_SERIALIZER = (buf, id) -> {
       String key = getAssetMap().getAssetOrDefault(id, Fluid.UNKNOWN).getId();
       ByteBufUtil.writeUTF(buf, key);
    };

@@ -74,12 +74,12 @@ public class I18nModule extends JavaPlugin {
 
    @Override
    protected void setup() {
-      this.getEventRegistry().register(LoadAssetEvent.class, event -> {
+      this.getEventRegistry().register((short)-32, LoadAssetEvent.class, event -> {
          for (AssetPack pack : AssetModule.get().getAssetPacks()) {
             this.loadMessagesFromPack(pack);
          }
       });
-      this.getEventRegistry().register(AssetPackRegisterEvent.class, event -> this.loadMessagesFromPack(event.getAssetPack()));
+      this.getEventRegistry().register((short)-32, AssetPackRegisterEvent.class, event -> this.loadMessagesFromPack(event.getAssetPack()));
       this.getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {});
       this.getEventRegistry()
          .register(

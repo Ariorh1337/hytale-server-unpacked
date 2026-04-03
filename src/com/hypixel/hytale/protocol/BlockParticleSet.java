@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class BlockParticleSet {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -24,7 +25,7 @@ public class BlockParticleSet {
    public Color color;
    public float scale;
    @Nullable
-   public Vector3f positionOffset;
+   public Vector3fc positionOffset;
    @Nullable
    public Direction rotationOffset;
    @Nullable
@@ -37,7 +38,7 @@ public class BlockParticleSet {
       @Nullable String id,
       @Nullable Color color,
       float scale,
-      @Nullable Vector3f positionOffset,
+      @Nullable Vector3fc positionOffset,
       @Nullable Direction rotationOffset,
       @Nullable Map<BlockParticleEvent, String> particleSystemIds
    ) {
@@ -72,7 +73,7 @@ public class BlockParticleSet {
 
       obj.scale = buf.getFloatLE(offset + 4);
       if ((nullBits & 2) != 0) {
-         obj.positionOffset = Vector3f.deserialize(buf, offset + 8);
+         obj.positionOffset = PacketIO.readVector3f(buf, offset + 8);
       }
 
       if ((nullBits & 4) != 0) {
@@ -222,7 +223,7 @@ public class BlockParticleSet {
 
       buf.writeFloatLE(this.scale);
       if (this.positionOffset != null) {
-         this.positionOffset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.positionOffset);
       } else {
          buf.writeZero(12);
       }
@@ -359,7 +360,7 @@ public class BlockParticleSet {
       copy.id = this.id;
       copy.color = this.color != null ? this.color.clone() : null;
       copy.scale = this.scale;
-      copy.positionOffset = this.positionOffset != null ? this.positionOffset.clone() : null;
+      copy.positionOffset = this.positionOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       copy.particleSystemIds = this.particleSystemIds != null ? new HashMap<>(this.particleSystemIds) : null;
       return copy;

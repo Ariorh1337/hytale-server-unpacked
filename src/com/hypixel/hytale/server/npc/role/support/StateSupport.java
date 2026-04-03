@@ -281,8 +281,8 @@ public class StateSupport {
       return contextualInteraction == null ? false : contextualInteraction.equals(context);
    }
 
-   public void addInteraction(@Nonnull Player player) {
-      this.interactedPlayers.add(player.getReference());
+   public void addInteraction(@Nonnull Ref<EntityStore> playerReference) {
+      this.interactedPlayers.add(playerReference);
    }
 
    public boolean consumeInteraction(@Nonnull Ref<EntityStore> playerReference) {

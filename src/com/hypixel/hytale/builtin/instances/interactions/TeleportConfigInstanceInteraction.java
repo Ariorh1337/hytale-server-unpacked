@@ -29,6 +29,7 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -81,6 +82,8 @@ public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
       Ref<EntityStore> ref = context.getEntity();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null && !playerComponent.isWaitingForClientReady()) {
+         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+         assert playerRefComponent != null;
          Archetype<EntityStore> archetype = commandBuffer.getArchetype(ref);
          if (!archetype.contains(Teleport.getComponentType()) && !archetype.contains(PendingTeleport.getComponentType())) {
             InstancesPlugin module = InstancesPlugin.get();
@@ -96,7 +99,7 @@ public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
                      .getComponent(blockRef, ConfigurableInstanceBlock.getComponentType());
                   if (configurableInstanceBlock != null) {
                      if (configurableInstanceBlock.getInstanceName() == null) {
-                        playerComponent.sendMessage(MESSAGE_GENERAL_INTERACTION_CONFIGURE_INSTANCE_NO_INSTANCE_NAME);
+                        playerRefComponent.sendMessage(MESSAGE_GENERAL_INTERACTION_CONFIGURE_INSTANCE_NO_INSTANCE_NAME);
                      } else {
                         CompletableFuture<World> targetWorldFuture = null;
                         Transform returnPoint = null;

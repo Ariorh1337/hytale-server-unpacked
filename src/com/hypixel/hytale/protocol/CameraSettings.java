@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class CameraSettings {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -14,7 +16,7 @@ public class CameraSettings {
    public static final int VARIABLE_BLOCK_START = 21;
    public static final int MAX_SIZE = 8192049;
    @Nullable
-   public Vector3f positionOffset;
+   public Vector3fc positionOffset;
    @Nullable
    public CameraAxis yaw;
    @Nullable
@@ -23,7 +25,7 @@ public class CameraSettings {
    public CameraSettings() {
    }
 
-   public CameraSettings(@Nullable Vector3f positionOffset, @Nullable CameraAxis yaw, @Nullable CameraAxis pitch) {
+   public CameraSettings(@Nullable Vector3fc positionOffset, @Nullable CameraAxis yaw, @Nullable CameraAxis pitch) {
       this.positionOffset = positionOffset;
       this.yaw = yaw;
       this.pitch = pitch;
@@ -44,7 +46,7 @@ public class CameraSettings {
       CameraSettings obj = new CameraSettings();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         obj.positionOffset = Vector3f.deserialize(buf, offset + 1);
+         obj.positionOffset = PacketIO.readVector3f(buf, offset + 1);
       }
 
       if ((nullBits & 2) != 0) {
@@ -119,7 +121,7 @@ public class CameraSettings {
 
       buf.writeByte(nullBits);
       if (this.positionOffset != null) {
-         this.positionOffset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.positionOffset);
       } else {
          buf.writeZero(12);
       }
@@ -198,7 +200,7 @@ public class CameraSettings {
 
    public CameraSettings clone() {
       CameraSettings copy = new CameraSettings();
-      copy.positionOffset = this.positionOffset != null ? this.positionOffset.clone() : null;
+      copy.positionOffset = this.positionOffset;
       copy.yaw = this.yaw != null ? this.yaw.clone() : null;
       copy.pitch = this.pitch != null ? this.pitch.clone() : null;
       return copy;

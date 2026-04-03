@@ -8,6 +8,7 @@ import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class WorldParticle {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -21,14 +22,14 @@ public class WorldParticle {
    @Nullable
    public Color color;
    @Nullable
-   public Vector3f positionOffset;
+   public Vector3fc positionOffset;
    @Nullable
    public Direction rotationOffset;
 
    public WorldParticle() {
    }
 
-   public WorldParticle(@Nullable String systemId, float scale, @Nullable Color color, @Nullable Vector3f positionOffset, @Nullable Direction rotationOffset) {
+   public WorldParticle(@Nullable String systemId, float scale, @Nullable Color color, @Nullable Vector3fc positionOffset, @Nullable Direction rotationOffset) {
       this.systemId = systemId;
       this.scale = scale;
       this.color = color;
@@ -58,7 +59,7 @@ public class WorldParticle {
       }
 
       if ((nullBits & 2) != 0) {
-         obj.positionOffset = Vector3f.deserialize(buf, offset + 8);
+         obj.positionOffset = PacketIO.readVector3f(buf, offset + 8);
       }
 
       if ((nullBits & 4) != 0) {
@@ -126,7 +127,7 @@ public class WorldParticle {
       }
 
       if (this.positionOffset != null) {
-         this.positionOffset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.positionOffset);
       } else {
          buf.writeZero(12);
       }
@@ -183,7 +184,7 @@ public class WorldParticle {
       copy.systemId = this.systemId;
       copy.scale = this.scale;
       copy.color = this.color != null ? this.color.clone() : null;
-      copy.positionOffset = this.positionOffset != null ? this.positionOffset.clone() : null;
+      copy.positionOffset = this.positionOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       return copy;
    }

@@ -9,6 +9,7 @@ import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import javax.annotation.Nonnull;
@@ -21,6 +22,7 @@ public class PaintOperation extends ToolOperation {
    public PaintOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {

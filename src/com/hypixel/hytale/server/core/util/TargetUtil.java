@@ -157,6 +157,57 @@ public final class TargetUtil {
    }
 
    @Nullable
+   public static Vector3i getTargetBlockAvoidLocations(
+      @Nonnull World world,
+      @Nonnull IntPredicate blockIdPredicate,
+      double originX,
+      double originY,
+      double originZ,
+      double directionX,
+      double directionY,
+      double directionZ,
+      double maxDistance,
+      @Nonnull LinkedList<LongOpenHashSet> blocksToIgnore,
+      @Nonnull Vector3d hitPositionOut
+   ) {
+      TargetUtil.TargetBuffer buffer = new TargetUtil.TargetBuffer(world);
+      buffer.updateChunk((int)originX, (int)originZ);
+      boolean success = BlockIterator.iterate(
+         originX, originY, originZ, directionX, directionY, directionZ, maxDistance, (x, y, z, px, py, pz, qx, qy, qz, iBuffer) -> {
+            if (y >= 0 && y < 320) {
+               iBuffer.updateChunk(x, z);
+               if (iBuffer.currentBlockChunk == null) {
+                  return false;
+               }
+
+               iBuffer.x = x;
+               iBuffer.y = y;
+               iBuffer.z = z;
+               hitPositionOut.x = x + px;
+               hitPositionOut.y = y + py;
+               hitPositionOut.z = z + pz;
+               BlockSection blockSection = iBuffer.currentBlockChunk.getSectionAtBlockY(y);
+               int blockId = blockSection.get(x, y, z);
+               if (blockId != 0) {
+                  long packedBlockLocation = BlockUtil.pack(x, y, z);
+
+                  for (LongOpenHashSet locations : blocksToIgnore) {
+                     if (locations.contains(packedBlockLocation)) {
+                        return true;
+                     }
+                  }
+               }
+
+               return !blockIdPredicate.test(blockId);
+            } else {
+               return false;
+            }
+         }, buffer
+      );
+      return success ? null : new Vector3i(buffer.x, buffer.y, buffer.z);
+   }
+
+   @Nullable
    public static Vector3i getTargetBlock(@Nonnull Ref<EntityStore> ref, double maxDistance, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       return getTargetBlock(ref, blockId -> blockId != 0, maxDistance, componentAccessor);
    }

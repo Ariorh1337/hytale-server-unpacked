@@ -12,7 +12,7 @@ import java.util.function.IntConsumer;
 import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 
-public class EmptySectionPalette implements ISectionPalette {
+public final class EmptySectionPalette extends AbstractSectionPalette {
    public static final int EMPTY_ID = 0;
    public static final EmptySectionPalette INSTANCE = new EmptySectionPalette();
 
@@ -27,8 +27,8 @@ public class EmptySectionPalette implements ISectionPalette {
 
    @Nonnull
    @Override
-   public ISectionPalette.SetResult set(int index, int id) {
-      return id == 0 ? ISectionPalette.SetResult.UNCHANGED : ISectionPalette.SetResult.REQUIRES_PROMOTE;
+   public AbstractSectionPalette.SetResult set(int index, int id) {
+      return id == 0 ? AbstractSectionPalette.SetResult.UNCHANGED : AbstractSectionPalette.SetResult.REQUIRES_PROMOTE;
    }
 
    @Override
@@ -42,13 +42,13 @@ public class EmptySectionPalette implements ISectionPalette {
    }
 
    @Override
-   public ISectionPalette demote() {
+   public AbstractSectionPalette demote() {
       throw new UnsupportedOperationException("Cannot demote empty chunk section!");
    }
 
    @Nonnull
    @Override
-   public ISectionPalette promote() {
+   public AbstractSectionPalette promote() {
       return new HalfByteSectionPalette();
    }
 
@@ -121,7 +121,7 @@ public class EmptySectionPalette implements ISectionPalette {
    }
 
    @Override
-   public void serialize(ISectionPalette.KeySerializer keySerializer, ByteBuf buf) {
+   public void serialize(AbstractSectionPalette.KeySerializer keySerializer, ByteBuf buf) {
    }
 
    @Override

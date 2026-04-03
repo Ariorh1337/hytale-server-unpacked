@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.corecomponents.entity;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
@@ -26,6 +25,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
@@ -56,14 +56,14 @@ public class ActionBeacon extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       return !super.canExecute(ref, role, sensorInfo, dt, store)
          ? false
          : this.targetToSendSlot == Integer.MIN_VALUE || role.getMarkedEntitySupport().hasMarkedEntityInSlot(this.targetToSendSlot);
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       Ref<EntityStore> target = this.targetToSendSlot >= 0 ? role.getMarkedEntitySupport().getMarkedEntityRef(this.targetToSendSlot) : ref;
       PositionCache positionCache = role.getPositionCache();
@@ -125,7 +125,6 @@ public class ActionBeacon extends ActionBase {
          Vector3f color = new Vector3f(random.nextFloat(), random.nextFloat(), random.nextFloat());
          Matrix4d matrix = new Matrix4d();
          matrix.identity();
-         Matrix4d tmp = new Matrix4d();
          TransformComponent transformComponent = componentAccessor.getComponent(self, TransformComponent.getComponentType());
          assert transformComponent != null;
          Vector3d pos = transformComponent.getPosition();
@@ -145,9 +144,9 @@ public class ActionBeacon extends ActionBase {
          y -= targetPos.y() + targetEyeHeight;
          z -= targetPos.z();
          double angleY = Math.atan2(-z, -x);
-         matrix.rotateAxis(angleY + (float) (Math.PI / 2), 0.0, 1.0, 0.0, tmp);
+         matrix.rotate(-(angleY + (float) (Math.PI / 2)), 0.0, 1.0, 0.0);
          double angleX = Math.atan2(Math.sqrt(x * x + z * z), -y);
-         matrix.rotateAxis(angleX, 1.0, 0.0, 0.0, tmp);
+         matrix.rotate(-angleX, 1.0, 0.0, 0.0);
          DebugUtils.addArrow(componentAccessor.getExternalData().getWorld(), matrix, color, pos.distance(targetPos), 5.0F, DebugUtils.FLAG_FADE);
       }
 

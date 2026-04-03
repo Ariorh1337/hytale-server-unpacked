@@ -7,6 +7,8 @@ import com.hypixel.hytale.protocol.packets.interface_.UpdateVisibleHudComponents
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
@@ -38,20 +40,26 @@ public class HudManager {
    );
    private final Set<HudComponent> visibleHudComponents = ConcurrentHashMap.newKeySet();
    private final Set<HudComponent> unmodifiableVisibleHudComponents = Collections.unmodifiableSet(this.visibleHudComponents);
-   @Nullable
-   private CustomUIHud customHud;
+   private final Map<String, CustomUIHud> customHuds = new LinkedHashMap<>();
 
    public HudManager() {
       this.visibleHudComponents.addAll(DEFAULT_HUD_COMPONENTS);
    }
 
-   public HudManager(@Nonnull HudManager other) {
-      this.customHud = other.customHud;
+   @Nullable
+   public CustomUIHud getCustomHud(@Nonnull String key) {
+      return this.customHuds.get(key);
    }
 
+   @Nonnull
+   public Map<String, CustomUIHud> getCustomHuds() {
+      return Collections.unmodifiableMap(this.customHuds);
+   }
+
+   @Deprecated
    @Nullable
    public CustomUIHud getCustomHud() {
-      return this.customHud;
+      return this.customHuds.get("default");
    }
 
    @Nonnull
@@ -89,21 +97,42 @@ public class HudManager {
       this.sendVisibleHudComponents(ref.getPacketHandler());
    }
 
-   public void setCustomHud(@Nonnull PlayerRef ref, @Nullable CustomUIHud hud) {
-      CustomUIHud oldHud = this.getCustomHud();
+   public void addCustomHud(@Nonnull PlayerRef ref, @Nonnull CustomUIHud hud) {
+      String key = hud.getKey();
+      CustomUIHud oldHud = this.customHuds.get(key);
       if (oldHud != hud) {
-         this.customHud = hud;
-         if (hud == null) {
-            ref.getPacketHandler().writeNoCache(new CustomHud(true, null));
-         } else {
-            hud.show();
+         if (oldHud != null) {
+            ref.getPacketHandler().writeNoCache(new CustomHud(key, 0, true, null));
          }
+
+         this.customHuds.put(key, hud);
+         hud.show();
+      }
+   }
+
+   public void removeCustomHud(@Nonnull PlayerRef ref, @Nonnull String key) {
+      if (this.customHuds.remove(key) != null) {
+         ref.getPacketHandler().writeNoCache(new CustomHud(key, 0, true, null));
+      }
+   }
+
+   @Deprecated
+   public void setCustomHud(@Nonnull PlayerRef ref, @Nullable CustomUIHud hud) {
+      if (hud == null) {
+         this.removeCustomHud(ref, "default");
+      } else {
+         this.addCustomHud(ref, hud);
       }
    }
 
    public void resetHud(@Nonnull PlayerRef ref) {
       this.setVisibleHudComponents(ref, DEFAULT_HUD_COMPONENTS);
-      this.setCustomHud(ref, null);
+
+      for (String key : this.customHuds.keySet()) {
+         ref.getPacketHandler().writeNoCache(new CustomHud(key, 0, true, null));
+      }
+
+      this.customHuds.clear();
    }
 
    public void resetUserInterface(@Nonnull PlayerRef ref) {
@@ -117,12 +146,6 @@ public class HudManager {
    @Nonnull
    @Override
    public String toString() {
-      return "HudManager{visibleHudComponents="
-         + this.visibleHudComponents
-         + ", unmodifiableVisibleHudComponents="
-         + this.unmodifiableVisibleHudComponents
-         + ", customHud="
-         + this.customHud
-         + "}";
+      return "HudManager{visibleHudComponents=" + this.visibleHudComponents + ", customHuds=" + this.customHuds + "}";
    }
 }

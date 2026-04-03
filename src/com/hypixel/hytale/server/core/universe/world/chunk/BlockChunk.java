@@ -70,9 +70,6 @@ public class BlockChunk implements Component<ChunkStore> {
    private final IntBytePalette tint;
    @Deprecated(forRemoval = true)
    private BlockSection[] chunkSections;
-   @Nullable
-   @Deprecated(forRemoval = true)
-   private BlockSection[] migratedChunkSections;
    private EnvironmentChunk environments;
    private boolean needsPhysics = true;
    private boolean needsSaving = false;
@@ -203,9 +200,7 @@ public class BlockChunk implements Component<ChunkStore> {
 
          for (int i = 0; i < sections.length; i++) {
             Holder<ChunkStore> section = sections[i];
-            this.chunkSections[i] = this.migratedChunkSections != null
-               ? this.migratedChunkSections[i]
-               : section.ensureAndGetComponent(BlockSection.getComponentType());
+            this.chunkSections[i] = section.ensureAndGetComponent(BlockSection.getComponentType());
          }
       }
    }
@@ -464,20 +459,6 @@ public class BlockChunk implements Component<ChunkStore> {
       this.chunkSections[sectionIndex].invalidate();
    }
 
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public BlockSection[] takeMigratedSections() {
-      BlockSection[] temp = this.migratedChunkSections;
-      this.migratedChunkSections = null;
-      return temp;
-   }
-
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public BlockSection[] getMigratedSections() {
-      return this.migratedChunkSections;
-   }
-
    private byte[] serialize(ExtraInfo extraInfo) {
       ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
 
@@ -493,20 +474,14 @@ public class BlockChunk implements Component<ChunkStore> {
    }
 
    private void deserialize(@Nonnull byte[] bytes, @Nonnull ExtraInfo extraInfo) {
+      if (extraInfo.getVersion() < 3) {
+         throw new IllegalArgumentException("Version not supported");
+      }
+
       ByteBuf buf = Unpooled.wrappedBuffer(bytes);
       this.needsPhysics = buf.readBoolean();
       this.height.deserialize(buf);
       this.tint.deserialize(buf);
-      if (extraInfo.getVersion() <= 2) {
-         int sections = buf.readInt();
-         this.migratedChunkSections = new BlockSection[sections];
-
-         for (int y = 0; y < sections; y++) {
-            BlockSection section = new BlockSection();
-            section.deserialize(BlockType.KEY_DESERIALIZER, buf, extraInfo.getVersion());
-            this.migratedChunkSections[y] = section;
-         }
-      }
    }
 
    @Nonnull

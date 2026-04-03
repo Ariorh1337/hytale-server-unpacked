@@ -300,12 +300,6 @@ public class ObjectivePlugin extends JavaPlugin {
          .register("OpenTreasureContainer", OpenTreasureContainerInteraction.class, OpenTreasureContainerInteraction.CODEC);
       this.treasureChestComponentType = this.getChunkStoreRegistry().registerComponent(TreasureChestBlock.class, "TreasureChest", TreasureChestBlock.CODEC);
       this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(ObjectiveGameplayConfig.class, "Objective", ObjectiveGameplayConfig.CODEC);
-      entityStoreRegistry.registerSystem(
-         new EntityModule.TangibleMigrationSystem(Query.or(ObjectiveLocationMarker.getComponentType(), ReachLocationMarker.getComponentType())), true
-      );
-      entityStoreRegistry.registerSystem(
-         new EntityModule.HiddenFromPlayerMigrationSystem(Query.or(ObjectiveLocationMarker.getComponentType(), ReachLocationMarker.getComponentType())), true
-      );
    }
 
    @Override
@@ -428,11 +422,11 @@ public class ObjectivePlugin extends JavaPlugin {
          objective.forEachParticipant(participantReference -> {
             Player playerComponent = store.getComponent(participantReference, Player.getComponentType());
             if (playerComponent != null) {
+               PlayerRef playerRefComponent = store.getComponent(participantReference, PlayerRef.getComponentType());
+               assert playerRefComponent != null;
                if (!this.canPlayerDoObjective(playerComponent, objectiveAssetId)) {
-                  playerComponent.sendMessage(Message.translation("server.modules.objective.playerAlreadyDoingObjective").param("title", assetTitleMessage));
+                  playerRefComponent.sendMessage(Message.translation("server.modules.objective.playerAlreadyDoingObjective").param("title", assetTitleMessage));
                } else {
-                  PlayerRef playerRefComponent = store.getComponent(participantReference, PlayerRef.getComponentType());
-                  assert playerRefComponent != null;
                   UUIDComponent uuidComponent = store.getComponent(participantReference, UUIDComponent.getComponentType());
                   assert uuidComponent != null;
                   objective.addActivePlayerUUID(uuidComponent.getUuid());

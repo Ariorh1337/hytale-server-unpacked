@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class RaycastSelector extends Selector {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -14,7 +16,7 @@ public class RaycastSelector extends Selector {
    public static final int VARIABLE_BLOCK_START = 23;
    public static final int MAX_SIZE = 23;
    @Nullable
-   public Vector3f offset;
+   public Vector3fc offset;
    public int distance;
    public int blockTagIndex = Integer.MIN_VALUE;
    public boolean ignoreFluids;
@@ -23,7 +25,7 @@ public class RaycastSelector extends Selector {
    public RaycastSelector() {
    }
 
-   public RaycastSelector(@Nullable Vector3f offset, int distance, int blockTagIndex, boolean ignoreFluids, boolean ignoreEmptyCollisionMaterial) {
+   public RaycastSelector(@Nullable Vector3fc offset, int distance, int blockTagIndex, boolean ignoreFluids, boolean ignoreEmptyCollisionMaterial) {
       this.offset = offset;
       this.distance = distance;
       this.blockTagIndex = blockTagIndex;
@@ -48,7 +50,7 @@ public class RaycastSelector extends Selector {
       RaycastSelector obj = new RaycastSelector();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         obj.offset = Vector3f.deserialize(buf, offset + 1);
+         obj.offset = PacketIO.readVector3f(buf, offset + 1);
       }
 
       obj.distance = buf.getIntLE(offset + 13);
@@ -72,7 +74,7 @@ public class RaycastSelector extends Selector {
 
       buf.writeByte(nullBits);
       if (this.offset != null) {
-         this.offset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.offset);
       } else {
          buf.writeZero(12);
       }
@@ -100,7 +102,7 @@ public class RaycastSelector extends Selector {
 
    public RaycastSelector clone() {
       RaycastSelector copy = new RaycastSelector();
-      copy.offset = this.offset != null ? this.offset.clone() : null;
+      copy.offset = this.offset;
       copy.distance = this.distance;
       copy.blockTagIndex = this.blockTagIndex;
       copy.ignoreFluids = this.ignoreFluids;

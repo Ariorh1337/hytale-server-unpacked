@@ -19,7 +19,6 @@ import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.Opacity;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -50,6 +49,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.joml.Vector3f;
 import org.joml.Vector3i;
 
 public class DeployableTurretConfig extends DeployableConfig {
@@ -398,7 +398,7 @@ public class DeployableTurretConfig extends DeployableConfig {
       Vector3d testFromPos = new Vector3d(attackerPos).add(spawnOffset.x, spawnOffset.y + this.generatedModel.getEyeHeight(), spawnOffset.z);
       double distance = testFromPos.distance(targetPos);
       World world = commandBuffer.getExternalData().getWorld();
-      org.joml.Vector3f whiteColor = new org.joml.Vector3f(1.0F, 1.0F, 1.0F);
+      Vector3f whiteColor = new Vector3f(1.0F, 1.0F, 1.0F);
       if (this.getDebugVisuals()) {
          Vector3d increment = direction.mul(distance);
 
@@ -482,7 +482,7 @@ public class DeployableTurretConfig extends DeployableConfig {
                      scanPos.y = scanPos.y + increment.y * j;
                      scanPos.z = scanPos.z + increment.z * j;
                      if (this.getDebugVisuals()) {
-                        DebugUtils.addSphere(store.getExternalData().getWorld(), scanPos, new org.joml.Vector3f(1.0F, 1.0F, 1.0F), 0.1F, 5.0F);
+                        DebugUtils.addSphere(store.getExternalData().getWorld(), scanPos, new Vector3f(1.0F, 1.0F, 1.0F), 0.1F, 5.0F);
                      }
 
                      for (Ref<EntityStore> targetEntityRef : TargetUtil.getAllEntitiesInSphere(scanPos, 0.1, store)) {

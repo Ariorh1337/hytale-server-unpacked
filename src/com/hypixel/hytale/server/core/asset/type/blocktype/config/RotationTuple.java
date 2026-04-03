@@ -45,6 +45,20 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
       return rotations[(index + rotation.ordinal()) % Rotation.VALUES.length];
    }
 
+   public static RotationTuple compose(RotationTuple a, RotationTuple b) {
+      if (b == NONE) {
+         return a;
+      }
+
+      if (a == NONE) {
+         return b;
+      }
+
+      int[][] matrixA = eulerToMatrix(a.yaw, a.pitch, a.roll);
+      int[][] matrixB = eulerToMatrix(b.yaw, b.pitch, b.roll);
+      return matrixToRotationTuple(multiply3x3(matrixA, matrixB));
+   }
+
    public static RotationTuple flip(@Nonnull RotationTuple blockRotation, @Nullable BlockFlipType flipType, @Nonnull Axis axis, int[][][] flipCorrections) {
       int[][] matrix = eulerToMatrix(blockRotation.yaw, blockRotation.pitch, blockRotation.roll);
 
@@ -161,11 +175,6 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
       } else {
          throw new IllegalArgumentException("Invalid atan2 values for 90-degree rotation: sin=" + sinVal + " cos=" + cosVal);
       }
-   }
-
-   @Nonnull
-   public RotationTuple add(@Nonnull RotationTuple rotation) {
-      return of(rotation.yaw.add(this.yaw), rotation.pitch.add(this.pitch), rotation.roll.add(this.roll));
    }
 
    @Nonnull

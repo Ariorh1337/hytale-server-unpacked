@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
@@ -139,6 +140,7 @@ public class ProjectileComponent implements Component<EntityStore> {
       Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
       ProjectileComponent projectileComponent = new ProjectileComponent(projectileAssetName);
       holder.putComponent(getComponentType(), projectileComponent);
+      holder.ensureComponent(Intangible.getComponentType());
       holder.putComponent(DespawnComponent.getComponentType(), DespawnComponent.despawnInMilliseconds(time, 60000L));
       holder.putComponent(TransformComponent.getComponentType(), new TransformComponent(new Vector3d(position), rotation));
       holder.ensureComponent(Velocity.getComponentType());

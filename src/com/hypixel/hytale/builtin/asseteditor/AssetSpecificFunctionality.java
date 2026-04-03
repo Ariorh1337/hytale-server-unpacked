@@ -20,8 +20,6 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.Model;
-import com.hypixel.hytale.protocol.Vector2f;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotificationType;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPreviewCameraSettings;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateModelPreview;
@@ -62,6 +60,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 
 @Deprecated
 public class AssetSpecificFunctionality {

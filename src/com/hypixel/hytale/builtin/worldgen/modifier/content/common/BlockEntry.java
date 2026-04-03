@@ -5,6 +5,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -18,6 +19,7 @@ public class BlockEntry {
       .documentation("The block type to place")
       .add()
       .<Double>append(new KeyedCodec<>("Weight", Codec.DOUBLE), (t, v) -> t.weight = v, t -> t.weight)
+      .addValidator(Validators.range(0.0, 100.0))
       .documentation("The random chance of this block type being chosen")
       .add()
       .build();

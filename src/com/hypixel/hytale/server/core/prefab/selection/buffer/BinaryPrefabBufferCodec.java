@@ -8,7 +8,6 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockMigration;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
-import com.hypixel.hytale.server.core.prefab.config.SelectionPrefabSerializer;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBufferBlockEntry;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -40,162 +39,132 @@ public class BinaryPrefabBufferCodec {
    @Nonnull
    public PrefabBuffer deserialize(@Nonnull ByteBuffer buffer) {
       int version = Short.toUnsignedInt(buffer.getShort());
-      if (version == 18553) {
-         throw new UpdateBinaryPrefabException("Old prefab format!");
-      }
+      if (version != 18553 && version >= 21) {
+         if (21 < version) {
+            throw new IllegalStateException("Prefab version is newer than supported. Given: " + version);
+         }
 
-      if (21 < version) {
-         throw new IllegalStateException("Prefab version is newer than supported. Given: " + version);
-      }
-
-      int worldVersion = version < 17 ? Short.toUnsignedInt(buffer.getShort()) : 0;
-      if (version == 11) {
-         Short.toUnsignedInt(buffer.getShort());
-      }
-
-      int entityVersion = version >= 14 && version < 17 ? Short.toUnsignedInt(buffer.getShort()) : 0;
-      BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
-      int blockIdVersion = 8;
-      if (version >= 13) {
-         blockIdVersion = buffer.getShort();
-      }
-
-      Vector3i anchor = new Vector3i();
-      if (version >= 16) {
+         BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+         int blockIdVersion = buffer.getShort();
          long packedAnchor = buffer.getLong();
-         anchor.set(BlockUtil.unpackX(packedAnchor), BlockUtil.unpackY(packedAnchor), BlockUtil.unpackZ(packedAnchor));
-      }
+         Vector3i anchor = new Vector3i(BlockUtil.unpackX(packedAnchor), BlockUtil.unpackY(packedAnchor), BlockUtil.unpackZ(packedAnchor));
+         Function<String, String> blockMigration = null;
+         Map<Integer, BlockMigration> blockMigrationMap = BlockMigration.getAssetMap().getAssetMap();
+         int v = blockIdVersion;
 
-      Function<String, String> blockMigration = null;
-      Map<Integer, BlockMigration> blockMigrationMap = BlockMigration.getAssetMap().getAssetMap();
-      int v = blockIdVersion;
-
-      for (BlockMigration migration = blockMigrationMap.get(v); migration != null; migration = blockMigrationMap.get(++v)) {
-         if (blockMigration == null) {
-            blockMigration = migration::getMigration;
-         } else {
-            blockMigration = blockMigration.andThen(migration::getMigration);
+         for (BlockMigration migration = blockMigrationMap.get(v); migration != null; migration = blockMigrationMap.get(++v)) {
+            if (blockMigration == null) {
+               blockMigration = migration::getMigration;
+            } else {
+               blockMigration = blockMigration.andThen(migration::getMigration);
+            }
          }
-      }
 
-      int blockNameCount = buffer.getInt();
-      Int2ObjectOpenHashMap<BinaryPrefabBufferCodec.BlockIdEntry> blockIdMapping = new Int2ObjectOpenHashMap<>(blockNameCount);
+         int blockNameCount = buffer.getInt();
+         Int2ObjectOpenHashMap<BinaryPrefabBufferCodec.BlockIdEntry> blockIdMapping = new Int2ObjectOpenHashMap<>(blockNameCount);
 
-      for (int i = 0; i < blockNameCount; i++) {
-         try {
-            int readId = buffer.getInt();
-            BinaryPrefabBufferCodec.BlockIdEntry block = this.deserializeBlock(buffer, assetMap, blockMigration);
-            blockIdMapping.put(readId, block);
-         } catch (Exception e) {
-            throw new IllegalStateException("Failed to deserialize block name #" + i, e);
+         for (int i = 0; i < blockNameCount; i++) {
+            try {
+               int readId = buffer.getInt();
+               BinaryPrefabBufferCodec.BlockIdEntry block = this.deserializeBlock(buffer, assetMap, blockMigration);
+               blockIdMapping.put(readId, block);
+            } catch (Exception e) {
+               throw new IllegalStateException("Failed to deserialize block name #" + i, e);
+            }
          }
-      }
 
-      IndexedLookupTableAssetMap<String, Fluid> fluidMap = Fluid.getAssetMap();
-      int fluidNameCount = version >= 18 ? buffer.getInt() : 0;
-      Int2ObjectOpenHashMap<BinaryPrefabBufferCodec.FluidIdEntry> fluidIdMapping = new Int2ObjectOpenHashMap<>(fluidNameCount);
+         IndexedLookupTableAssetMap<String, Fluid> fluidMap = Fluid.getAssetMap();
+         int fluidNameCount = buffer.getInt();
+         Int2ObjectOpenHashMap<BinaryPrefabBufferCodec.FluidIdEntry> fluidIdMapping = new Int2ObjectOpenHashMap<>(fluidNameCount);
 
-      for (int i = 0; i < fluidNameCount; i++) {
-         try {
-            int readId = buffer.getInt();
-            BinaryPrefabBufferCodec.FluidIdEntry fluid = this.deserializeFluid(buffer, fluidMap);
-            fluidIdMapping.put(readId, fluid);
-         } catch (Exception e) {
-            throw new IllegalStateException("Failed to deserialize block name #" + i, e);
+         for (int i = 0; i < fluidNameCount; i++) {
+            try {
+               int readId = buffer.getInt();
+               BinaryPrefabBufferCodec.FluidIdEntry fluid = this.deserializeFluid(buffer, fluidMap);
+               fluidIdMapping.put(readId, fluid);
+            } catch (Exception e) {
+               throw new IllegalStateException("Failed to deserialize block name #" + i, e);
+            }
          }
-      }
 
-      PrefabBuffer.Builder builder = PrefabBuffer.newBuilder();
-      builder.setAnchor(anchor);
-      int columnCount = buffer.getInt();
+         PrefabBuffer.Builder builder = PrefabBuffer.newBuilder();
+         builder.setAnchor(anchor);
+         int columnCount = buffer.getInt();
 
-      for (int i = 0; i < columnCount; i++) {
-         int columnIndex = buffer.getInt();
-         int blocks = buffer.getInt();
-         PrefabBufferBlockEntry[] blockEntries = new PrefabBufferBlockEntry[blocks];
+         for (int i = 0; i < columnCount; i++) {
+            int columnIndex = buffer.getInt();
+            int blocks = buffer.getInt();
+            PrefabBufferBlockEntry[] blockEntries = new PrefabBufferBlockEntry[blocks];
 
-         for (int j = 0; j < blocks; j++) {
-            int y = buffer.getShort();
-            int readId = buffer.getInt();
-            BinaryPrefabBufferCodec.BlockIdEntry block = blockIdMapping.get(readId);
-            int mask = Byte.toUnsignedInt(buffer.get());
-            boolean hasChance = (mask & 1) == 1;
-            boolean hasState = (mask & 2) == 2;
-            boolean hasFluid = (mask & 4) == 4;
-            boolean hasSupportValue = (mask & 8) == 8;
-            boolean hasFiller = (mask & 16) == 16;
-            boolean hasRotation = (mask & 32) == 32;
-            float chance = hasChance ? buffer.getFloat() : 1.0F;
-            Holder<ChunkStore> holder = null;
-            if (hasState) {
-               BsonDocument doc = BsonUtil.readFromBinaryStream(buffer);
-               if (version < 17) {
-                  holder = ChunkStore.REGISTRY.deserialize(doc, worldVersion);
-               } else {
+            for (int j = 0; j < blocks; j++) {
+               int y = buffer.getShort();
+               int readId = buffer.getInt();
+               BinaryPrefabBufferCodec.BlockIdEntry block = blockIdMapping.get(readId);
+               int mask = Byte.toUnsignedInt(buffer.get());
+               boolean hasChance = (mask & 1) == 1;
+               boolean hasState = (mask & 2) == 2;
+               boolean hasFluid = (mask & 4) == 4;
+               boolean hasSupportValue = (mask & 8) == 8;
+               boolean hasFiller = (mask & 16) == 16;
+               boolean hasRotation = (mask & 32) == 32;
+               float chance = hasChance ? buffer.getFloat() : 1.0F;
+               Holder<ChunkStore> holder = null;
+               if (hasState) {
+                  BsonDocument doc = BsonUtil.readFromBinaryStream(buffer);
                   holder = ChunkStore.REGISTRY.deserialize(doc);
                }
+
+               byte supportValue = 0;
+               if (hasSupportValue) {
+                  supportValue = (byte)(buffer.get() & 15);
+               }
+
+               int filler = 0;
+               if (hasFiller) {
+                  filler = Short.toUnsignedInt(buffer.getShort());
+               }
+
+               int rotation = 0;
+               if (hasRotation) {
+                  rotation = Byte.toUnsignedInt(buffer.get());
+               }
+
+               int fluidId = 0;
+               byte fluidLevel = 0;
+               if (hasFluid) {
+                  int id = buffer.getInt();
+                  fluidId = fluidIdMapping.get(id).id;
+                  fluidLevel = buffer.get();
+               }
+
+               blockEntries[j] = new PrefabBufferBlockEntry(y, block.id, block.key, chance, holder, fluidId, fluidLevel, supportValue, rotation, filler);
             }
 
-            byte supportValue = 0;
-            if (hasSupportValue) {
-               supportValue = (byte)(buffer.get() & 15);
-            }
+            int entityCount = Short.toUnsignedInt(buffer.getShort());
+            Holder<EntityStore>[] entityHolders = null;
+            if (entityCount > 0) {
+               entityHolders = new Holder[entityCount];
 
-            int filler = 0;
-            if (hasFiller) {
-               filler = Short.toUnsignedInt(buffer.getShort());
-            }
-
-            int rotation = 0;
-            if (hasRotation) {
-               rotation = Byte.toUnsignedInt(buffer.get());
-            }
-
-            int fluidId = 0;
-            byte fluidLevel = 0;
-            if (hasFluid) {
-               int id = buffer.getInt();
-               fluidId = fluidIdMapping.get(id).id;
-               fluidLevel = buffer.get();
-            }
-
-            blockEntries[j] = new PrefabBufferBlockEntry(y, block.id, block.key, chance, holder, fluidId, fluidLevel, supportValue, rotation, filler);
-         }
-
-         int entityCount = Short.toUnsignedInt(buffer.getShort());
-         Holder<EntityStore>[] entityHolders = null;
-         if (entityCount > 0) {
-            entityHolders = new Holder[entityCount];
-
-            for (int j = 0; j < entityCount; j++) {
-               try {
-                  if (version >= 12 && version < 14) {
-                     entityVersion = Short.toUnsignedInt(buffer.getShort());
+               for (int j = 0; j < entityCount; j++) {
+                  try {
+                     BsonDocument entityDocument = BsonUtil.readFromBinaryStream(buffer);
+                     Holder<EntityStore> entityHolder = EntityStore.REGISTRY.deserialize(entityDocument);
+                     entityHolders[j] = entityHolder;
+                  } catch (Exception e) {
+                     throw new IllegalStateException("Failed to deserialize entity wrapper #" + i, e);
                   }
-
-                  BsonDocument entityDocument = BsonUtil.readFromBinaryStream(buffer);
-                  Holder<EntityStore> entityHolder;
-                  if (version < 14) {
-                     entityHolder = SelectionPrefabSerializer.legacyEntityDecode(entityDocument, entityVersion);
-                  } else if (version < 17) {
-                     entityHolder = EntityStore.REGISTRY.deserialize(entityDocument, entityVersion);
-                  } else {
-                     entityHolder = EntityStore.REGISTRY.deserialize(entityDocument);
-                  }
-
-                  entityHolders[j] = entityHolder;
-               } catch (Exception e) {
-                  throw new IllegalStateException("Failed to deserialize entity wrapper #" + i, e);
                }
             }
+
+            int x = MathUtil.unpackLeft(columnIndex);
+            int z = MathUtil.unpackRight(columnIndex);
+            builder.addColumn(x, z, blockEntries, entityHolders);
          }
 
-         int x = MathUtil.unpackLeft(columnIndex);
-         int z = MathUtil.unpackRight(columnIndex);
-         builder.addColumn(x, z, blockEntries, entityHolders);
+         return builder.build();
+      } else {
+         throw new UpdateBinaryPrefabException("Old prefab format!");
       }
-
-      return builder.build();
    }
 
    @Nonnull

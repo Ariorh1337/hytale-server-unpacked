@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class InteractionChainData {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -20,14 +21,14 @@ public class InteractionChainData {
    @Nonnull
    public UUID proxyId = new UUID(0L, 0L);
    @Nullable
-   public Vector3f hitLocation;
+   public Vector3fc hitLocation;
    @Nullable
    public String hitDetail;
    @Nullable
    public BlockPosition blockPosition;
    public int targetSlot = Integer.MIN_VALUE;
    @Nullable
-   public Vector3f hitNormal;
+   public Vector3fc hitNormal;
 
    public InteractionChainData() {
    }
@@ -35,11 +36,11 @@ public class InteractionChainData {
    public InteractionChainData(
       int entityId,
       @Nonnull UUID proxyId,
-      @Nullable Vector3f hitLocation,
+      @Nullable Vector3fc hitLocation,
       @Nullable String hitDetail,
       @Nullable BlockPosition blockPosition,
       int targetSlot,
-      @Nullable Vector3f hitNormal
+      @Nullable Vector3fc hitNormal
    ) {
       this.entityId = entityId;
       this.proxyId = proxyId;
@@ -71,7 +72,7 @@ public class InteractionChainData {
       obj.entityId = buf.getIntLE(offset + 1);
       obj.proxyId = PacketIO.readUUID(buf, offset + 5);
       if ((nullBits & 1) != 0) {
-         obj.hitLocation = Vector3f.deserialize(buf, offset + 21);
+         obj.hitLocation = PacketIO.readVector3f(buf, offset + 21);
       }
 
       if ((nullBits & 2) != 0) {
@@ -80,7 +81,7 @@ public class InteractionChainData {
 
       obj.targetSlot = buf.getIntLE(offset + 45);
       if ((nullBits & 4) != 0) {
-         obj.hitNormal = Vector3f.deserialize(buf, offset + 49);
+         obj.hitNormal = PacketIO.readVector3f(buf, offset + 49);
       }
 
       int pos = offset + 61;
@@ -139,7 +140,7 @@ public class InteractionChainData {
       buf.writeIntLE(this.entityId);
       PacketIO.writeUUID(buf, this.proxyId);
       if (this.hitLocation != null) {
-         this.hitLocation.serialize(buf);
+         PacketIO.writeVector3f(buf, this.hitLocation);
       } else {
          buf.writeZero(12);
       }
@@ -152,7 +153,7 @@ public class InteractionChainData {
 
       buf.writeIntLE(this.targetSlot);
       if (this.hitNormal != null) {
-         this.hitNormal.serialize(buf);
+         PacketIO.writeVector3f(buf, this.hitNormal);
       } else {
          buf.writeZero(12);
       }
@@ -202,11 +203,11 @@ public class InteractionChainData {
       InteractionChainData copy = new InteractionChainData();
       copy.entityId = this.entityId;
       copy.proxyId = this.proxyId;
-      copy.hitLocation = this.hitLocation != null ? this.hitLocation.clone() : null;
+      copy.hitLocation = this.hitLocation;
       copy.hitDetail = this.hitDetail;
       copy.blockPosition = this.blockPosition != null ? this.blockPosition.clone() : null;
       copy.targetSlot = this.targetSlot;
-      copy.hitNormal = this.hitNormal != null ? this.hitNormal.clone() : null;
+      copy.hitNormal = this.hitNormal;
       return copy;
    }
 

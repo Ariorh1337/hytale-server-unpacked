@@ -165,9 +165,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
    ) {
       commandBuilder.clear("#CommandList");
       Map<String, AbstractCommand> commands = new Object2ObjectOpenHashMap<>(CommandManager.get().getCommandRegistration());
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
-      commands.values().removeIf(commandx -> !commandx.hasPermission(playerComponent));
+      PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+      assert playerRefComponent != null;
+      commands.values().removeIf(commandx -> !commandx.hasPermission(playerRefComponent));
       if (this.searchQuery.isEmpty()) {
          this.visibleCommands.clear();
          this.visibleCommands.addAll(commands.keySet());
@@ -236,12 +236,12 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
       }
 
       commandBuilder.set("#CommandName.TextSpans", Message.raw(commandName));
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+      PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
       this.selectedSubcommand = null;
       this.selectedVariantIndex = null;
       this.subcommandBreadcrumb.clear();
-      this.buildSubcommandTabs(command, playerComponent, commandBuilder, eventBuilder);
-      this.displayCommandInfo(command, playerComponent, commandBuilder, eventBuilder);
+      this.buildSubcommandTabs(command, playerRefComponent, commandBuilder, eventBuilder);
+      this.displayCommandInfo(command, playerRefComponent, commandBuilder, eventBuilder);
       if (this.selectedCommand != null && this.visibleCommands.contains(this.selectedCommand)) {
          commandBuilder.set("#CommandList[" + this.visibleCommands.indexOf(this.selectedCommand) + "].Style", BUTTON_LABEL_STYLE);
       }
@@ -267,8 +267,8 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
             }
          }
 
-         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-         if (playerComponent != null) {
+         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
             Map<String, AbstractCommand> subcommands = currentContext.getSubCommands();
             AbstractCommand subcommand = subcommands.get(subcommandName);
             if (subcommand != null) {
@@ -276,9 +276,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                this.selectedSubcommand = subcommandName;
                this.selectedVariantIndex = null;
                this.updateTitleWithBreadcrumb(commandBuilder);
-               this.buildSubcommandTabs(subcommand, playerComponent, commandBuilder, eventBuilder);
+               this.buildSubcommandTabs(subcommand, playerRefComponent, commandBuilder, eventBuilder);
                commandBuilder.set("#BackButton.Visible", true);
-               this.displayCommandInfo(subcommand, playerComponent, commandBuilder, eventBuilder);
+               this.displayCommandInfo(subcommand, playerRefComponent, commandBuilder, eventBuilder);
             }
          }
       }
@@ -301,14 +301,14 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
             }
          }
 
-         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
 
          try {
             Field variantsField = AbstractCommand.class.getDeclaredField("variantCommands");
             variantsField.setAccessible(true);
             Int2ObjectMap<AbstractCommand> variants = (Int2ObjectMap<AbstractCommand>)variantsField.get(currentContext);
             AbstractCommand variant = variants.get(variantIndex);
-            if (variant == null || !variant.hasPermission(playerComponent)) {
+            if (variant == null || !variant.hasPermission(playerRefComponent)) {
                return;
             }
 
@@ -318,9 +318,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
             commandBuilder.set("#BackButton.Visible", true);
             String variantDescription = variant.getDescription();
             commandBuilder.set("#CommandDescription.TextSpans", variantDescription != null ? Message.translation(variantDescription) : Message.empty());
-            commandBuilder.set("#CommandUsageLabel.TextSpans", this.getSimplifiedUsage(variant, playerComponent));
-            this.buildParametersSection(variant, playerComponent, commandBuilder);
-            this.buildArgumentTypesSection(variant, playerComponent, commandBuilder);
+            commandBuilder.set("#CommandUsageLabel.TextSpans", this.getSimplifiedUsage(variant, playerRefComponent));
+            this.buildParametersSection(variant, playerRefComponent, commandBuilder);
+            this.buildArgumentTypesSection(variant, playerRefComponent, commandBuilder);
          } catch (Exception var12) {
          }
       }
@@ -344,9 +344,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                }
             }
 
-            Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+            PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
             this.updateTitleWithBreadcrumb(commandBuilder);
-            this.displayCommandInfo(currentContext, playerComponent, commandBuilder, eventBuilder);
+            this.displayCommandInfo(currentContext, playerRefComponent, commandBuilder, eventBuilder);
             commandBuilder.set("#BackButton.Visible", !this.subcommandBreadcrumb.isEmpty());
          }
       } else if (!this.subcommandBreadcrumb.isEmpty()) {
@@ -361,17 +361,17 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                }
             }
 
-            Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+            PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
             this.selectedSubcommand = this.subcommandBreadcrumb.isEmpty() ? null : this.subcommandBreadcrumb.get(this.subcommandBreadcrumb.size() - 1);
             this.updateTitleWithBreadcrumb(commandBuilder);
-            this.buildSubcommandTabs(currentContext, playerComponent, commandBuilder, eventBuilder);
-            this.displayCommandInfo(currentContext, playerComponent, commandBuilder, eventBuilder);
+            this.buildSubcommandTabs(currentContext, playerRefComponent, commandBuilder, eventBuilder);
+            this.displayCommandInfo(currentContext, playerRefComponent, commandBuilder, eventBuilder);
          }
       }
    }
 
    private void buildSubcommandTabs(
-      @Nonnull AbstractCommand command, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder
+      @Nonnull AbstractCommand command, @Nonnull PlayerRef playerRefComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder
    ) {
       commandBuilder.clear("#SubcommandCards");
       Map<String, AbstractCommand> subcommands = command.getSubCommands();
@@ -385,7 +385,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
 
          for (Entry<String, AbstractCommand> entry : subcommands.entrySet()) {
             AbstractCommand subcommand = entry.getValue();
-            if (subcommand.hasPermission(playerComponent)) {
+            if (subcommand.hasPermission(playerRefComponent)) {
                if (cardsInCurrentRow == 0) {
                   commandBuilder.appendInline("#SubcommandCards", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
                }
@@ -395,7 +395,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandName.TextSpans", Message.raw(entry.getKey()));
                commandBuilder.set(
                   "#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandUsage.TextSpans",
-                  this.getSimplifiedUsage(subcommand, playerComponent)
+                  this.getSimplifiedUsage(subcommand, playerRefComponent)
                );
                commandBuilder.set(
                   "#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandDescription.TextSpans",
@@ -462,7 +462,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
    }
 
    private void buildVariantsSection(
-      @Nonnull AbstractCommand command, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder
+      @Nonnull AbstractCommand command, @Nonnull PlayerRef playerRefComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder
    ) {
       commandBuilder.clear("#VariantsList");
 
@@ -481,9 +481,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
          for (Int2ObjectMap.Entry<AbstractCommand> entry : variants.int2ObjectEntrySet()) {
             AbstractCommand variant = entry.getValue();
             int variantIndex = entry.getIntKey();
-            if (variant.hasPermission(playerComponent)) {
+            if (variant.hasPermission(playerRefComponent)) {
                commandBuilder.append("#VariantsList", "Pages/VariantCard.ui");
-               commandBuilder.set("#VariantsList[" + displayIndex + "] #VariantUsage.TextSpans", this.getSimplifiedUsage(variant, playerComponent));
+               commandBuilder.set("#VariantsList[" + displayIndex + "] #VariantUsage.TextSpans", this.getSimplifiedUsage(variant, playerRefComponent));
                eventBuilder.addEventBinding(
                   CustomUIEventBindingType.Activating, "#VariantsList[" + displayIndex + "]", EventData.of("Variant", String.valueOf(variantIndex))
                );
@@ -500,19 +500,19 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
    }
 
    private void displayCommandInfo(
-      @Nonnull AbstractCommand command, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder
+      @Nonnull AbstractCommand command, @Nonnull PlayerRef playerRefComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder
    ) {
       String description = command.getDescription();
       commandBuilder.set("#CommandDescription.TextSpans", description != null ? Message.translation(description) : Message.empty());
-      this.buildVariantsSection(command, playerComponent, commandBuilder, eventBuilder);
+      this.buildVariantsSection(command, playerRefComponent, commandBuilder, eventBuilder);
       this.buildAliasesSection(command, commandBuilder);
       this.buildPermissionSection(command, commandBuilder);
-      commandBuilder.set("#CommandUsageLabel.TextSpans", this.getSimplifiedUsage(command, playerComponent));
-      this.buildParametersSection(command, playerComponent, commandBuilder);
-      this.buildArgumentTypesSection(command, playerComponent, commandBuilder);
+      commandBuilder.set("#CommandUsageLabel.TextSpans", this.getSimplifiedUsage(command, playerRefComponent));
+      this.buildParametersSection(command, playerRefComponent, commandBuilder);
+      this.buildArgumentTypesSection(command, playerRefComponent, commandBuilder);
    }
 
-   private Message getSimplifiedUsage(@Nonnull AbstractCommand command, @Nonnull Player playerComponent) {
+   private Message getSimplifiedUsage(@Nonnull AbstractCommand command, @Nonnull PlayerRef playerRefComponent) {
       Message message = Message.raw("/").insert(command.getFullyQualifiedName());
 
       try {
@@ -538,7 +538,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
       return message;
    }
 
-   private void buildParametersSection(@Nonnull AbstractCommand command, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder) {
+   private void buildParametersSection(@Nonnull AbstractCommand command, @Nonnull PlayerRef playerRefComponent, @Nonnull UICommandBuilder commandBuilder) {
       commandBuilder.clear("#RequiredArgumentsList");
       commandBuilder.clear("#OptionalArgumentsList");
       commandBuilder.clear("#DefaultArgumentsList");
@@ -587,7 +587,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
          for (Entry<String, ?> entry : optionalArgs.entrySet()) {
             Object arg = entry.getValue();
             if (arg instanceof OptionalArg<?> optArg) {
-               if (optArg.getPermission() == null || playerComponent.hasPermission(optArg.getPermission())) {
+               if (optArg.getPermission() == null || playerRefComponent.hasPermission(optArg.getPermission())) {
                   commandBuilder.append("#OptionalArgumentsList", "Pages/ParameterItem.ui");
                   commandBuilder.set(
                      "#OptionalArgumentsList[" + optIndex + "] #ParamName.TextSpans", Message.raw("--" + optArg.getName() + " <" + optArg.getName() + ">")
@@ -608,7 +608,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                   optIndex++;
                }
             } else if (arg instanceof DefaultArg<?> defArg) {
-               if (defArg.getPermission() == null || playerComponent.hasPermission(defArg.getPermission())) {
+               if (defArg.getPermission() == null || playerRefComponent.hasPermission(defArg.getPermission())) {
                   commandBuilder.append("#DefaultArgumentsList", "Pages/ParameterItem.ui");
                   commandBuilder.set(
                      "#DefaultArgumentsList[" + defIndex + "] #ParamName.TextSpans", Message.raw("--" + defArg.getName() + " <" + defArg.getName() + ">")
@@ -630,7 +630,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                   );
                   defIndex++;
                }
-            } else if (arg instanceof FlagArg flagArg && (flagArg.getPermission() == null || playerComponent.hasPermission(flagArg.getPermission()))) {
+            } else if (arg instanceof FlagArg flagArg && (flagArg.getPermission() == null || playerRefComponent.hasPermission(flagArg.getPermission()))) {
                commandBuilder.append("#FlagArgumentsList", "Pages/ParameterItem.ui");
                commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamName.TextSpans", Message.raw("--" + flagArg.getName()));
                commandBuilder.set("#FlagArgumentsList[" + flagIndex + "] #ParamTag.TextSpans", Message.translation("server.customUI.commandListPage.flag"));
@@ -652,7 +652,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
       commandBuilder.set("#ParametersSection.Visible", hasAnyParameters);
    }
 
-   private void buildArgumentTypesSection(@Nonnull AbstractCommand command, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder) {
+   private void buildArgumentTypesSection(@Nonnull AbstractCommand command, @Nonnull PlayerRef playerRefComponent, @Nonnull UICommandBuilder commandBuilder) {
       commandBuilder.clear("#ArgumentTypesList");
       HashSet<ArgumentType<?>> allArgumentTypes = new HashSet<>();
 

@@ -16,7 +16,6 @@ import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.RailConfig;
 import com.hypixel.hytale.protocol.RailPoint;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -42,6 +41,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3fc;
 import org.joml.Vector3i;
 
 public class SpawnMinecartInteraction extends SimpleBlockInteraction {
@@ -132,14 +132,14 @@ public class SpawnMinecartInteraction extends SimpleBlockInteraction {
       double fz = -TrigMathUtil.cos(yaw);
 
       for (int index = 0; index < points.length - 1; index++) {
-         Vector3f p = points[index].point;
-         Vector3f p2 = points[index + 1].point;
-         double p1x = targetBlock.x + p.x;
-         double p1y = targetBlock.y + p.y;
-         double p1z = targetBlock.z + p.z;
-         double p2x = targetBlock.x + p2.x;
-         double p2y = targetBlock.y + p2.y;
-         double p2z = targetBlock.z + p2.z;
+         Vector3fc p = points[index].point;
+         Vector3fc p2 = points[index + 1].point;
+         double p1x = targetBlock.x + p.x();
+         double p1y = targetBlock.y + p.y();
+         double p1z = targetBlock.z + p.z();
+         double p2x = targetBlock.x + p2.x();
+         double p2y = targetBlock.y + p2.y();
+         double p2z = targetBlock.z + p2.z();
          double dx = p2x - p1x;
          double dy = p2y - p1y;
          double dz = p2z - p1z;

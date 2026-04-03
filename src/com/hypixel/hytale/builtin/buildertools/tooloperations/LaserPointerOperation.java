@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.PlayerUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
@@ -21,6 +22,7 @@ public class LaserPointerOperation extends ToolOperation {
    public LaserPointerOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -31,7 +33,7 @@ public class LaserPointerOperation extends ToolOperation {
       try {
          laserColor = ColorParseUtil.hexStringToRGBInt(colorText);
       } catch (NumberFormatException e) {
-         player.sendMessage(Message.translation("server.builderTools.laserPointer.colorParseError").param("value", colorText));
+         playerRef.sendMessage(Message.translation("server.builderTools.laserPointer.colorParseError").param("value", colorText));
          throw e;
       }
 
@@ -43,7 +45,7 @@ public class LaserPointerOperation extends ToolOperation {
          try {
             duration = Integer.parseInt((String)durationObj);
          } catch (NumberFormatException e) {
-            player.sendMessage(Message.translation("server.builderTools.laserPointer.durationParseError").param("value", String.valueOf(durationObj)));
+            playerRef.sendMessage(Message.translation("server.builderTools.laserPointer.durationParseError").param("value", String.valueOf(durationObj)));
             throw e;
          }
       } else {

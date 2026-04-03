@@ -58,18 +58,17 @@ public class RevolveOperation extends ToolOperation {
    public RevolveOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       super(ref, packet, componentAccessor);
-      PlayerRef playerRefComponent = componentAccessor.getComponent(this.playerRef, PlayerRef.getComponentType());
-      assert playerRefComponent != null;
-      BuilderToolsPlugin.BuilderState state = BuilderToolsPlugin.getState(player, playerRefComponent);
+      BuilderToolsPlugin.BuilderState state = BuilderToolsPlugin.getState(player, playerRef);
       BlockSelection selection = state.getSelection();
       if (selection == null) {
-         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelection"), player, NotificationStyle.Warning, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelection"), playerRef, NotificationStyle.Warning, componentAccessor);
       } else if (!selection.hasSelectionBounds()) {
-         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), player, NotificationStyle.Warning, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), playerRef, NotificationStyle.Warning, componentAccessor);
       } else {
          OverridableChunkAccessor accessor = this.edit.getAccessor();
          switch ((String)this.args.tool().getOrDefault("aSampling", "neighbor")) {
@@ -89,7 +88,7 @@ public class RevolveOperation extends ToolOperation {
          boolean copyEntities = (Boolean)this.args.tool().getOrDefault("eCopyEntities", false);
          switch ((String)this.args.tool().getOrDefault("dCenter", "target")) {
             case "player":
-               Vector3d position = playerRefComponent.getTransform().getPosition();
+               Vector3d position = playerRef.getTransform().getPosition();
                this.center = new Vector3f((float)position.x, (float)position.y, (float)position.z).floor().add(0.5F, 0.5F, 0.5F);
                break;
             default:
@@ -179,7 +178,7 @@ public class RevolveOperation extends ToolOperation {
                }
             } else {
                BuilderToolsPlugin.sendFeedback(
-                  Message.translation("server.builderTools.errorTooManyEntities").param("count", 1000), player, NotificationStyle.Warning, componentAccessor
+                  Message.translation("server.builderTools.errorTooManyEntities").param("count", 1000), playerRef, NotificationStyle.Warning, componentAccessor
                );
             }
          }

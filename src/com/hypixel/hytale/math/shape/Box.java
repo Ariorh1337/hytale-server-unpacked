@@ -446,16 +446,21 @@ public class Box implements Shape {
    }
 
    public boolean intersectsLine(@Nonnull Vector3d start, @Nonnull Vector3d end) {
-      Vector3d direction = new Vector3d(end).sub(start);
+      double ox = start.x;
+      double oy = start.y;
+      double oz = start.z;
+      double dx = end.x - ox;
+      double dy = end.y - oy;
+      double dz = end.z - oz;
       double tmin = 0.0;
       double tmax = 1.0;
-      if (Math.abs(direction.x) < 1.0E-10) {
+      if (Math.abs(dx) < 1.0E-10) {
          if (start.x < this.min.x || start.x > this.max.x) {
             return false;
          }
       } else {
-         double t1 = (this.min.x - start.x) / direction.x;
-         double t2 = (this.max.x - start.x) / direction.x;
+         double t1 = (this.min.x - start.x) / dx;
+         double t2 = (this.max.x - start.x) / dx;
          if (t1 > t2) {
             double temp = t1;
             t1 = t2;
@@ -469,13 +474,13 @@ public class Box implements Shape {
          }
       }
 
-      if (Math.abs(direction.y) < 1.0E-10) {
+      if (Math.abs(dy) < 1.0E-10) {
          if (start.y < this.min.y || start.y > this.max.y) {
             return false;
          }
       } else {
-         double t1 = (this.min.y - start.y) / direction.y;
-         double t2 = (this.max.y - start.y) / direction.y;
+         double t1 = (this.min.y - start.y) / dy;
+         double t2 = (this.max.y - start.y) / dy;
          if (t1 > t2) {
             double temp = t1;
             t1 = t2;
@@ -489,9 +494,9 @@ public class Box implements Shape {
          }
       }
 
-      if (!(Math.abs(direction.z) < 1.0E-10)) {
-         double t1 = (this.min.z - start.z) / direction.z;
-         double t2 = (this.max.z - start.z) / direction.z;
+      if (!(Math.abs(dz) < 1.0E-10)) {
+         double t1 = (this.min.z - start.z) / dz;
+         double t2 = (this.max.z - start.z) / dz;
          if (t1 > t2) {
             double temp = t1;
             t1 = t2;

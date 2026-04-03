@@ -3,8 +3,8 @@ package com.hypixel.hytale.builtin.buildertools.snapshot;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -33,7 +33,7 @@ public class ClipboardBoundsSnapshot implements ClipboardSnapshot<ClipboardBound
    }
 
    public ClipboardBoundsSnapshot restoreClipboard(
-      Ref<EntityStore> ref, Player player, World world, @Nonnull BuilderToolsPlugin.BuilderState state, ComponentAccessor<EntityStore> componentAccessor
+      Ref<EntityStore> ref, PlayerRef playerRef, World world, @Nonnull BuilderToolsPlugin.BuilderState state, ComponentAccessor<EntityStore> componentAccessor
    ) {
       ClipboardBoundsSnapshot snapshot = new ClipboardBoundsSnapshot(state.getSelection());
       state.getSelection().setSelectionArea(this.min, this.max);

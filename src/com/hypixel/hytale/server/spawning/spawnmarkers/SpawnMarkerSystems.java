@@ -1,7 +1,5 @@
 package com.hypixel.hytale.server.spawning.spawnmarkers;
 
-import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ArchetypeChunk;
@@ -13,11 +11,9 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
-import com.hypixel.hytale.component.data.unknown.UnknownComponents;
 import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.OrderPriority;
-import com.hypixel.hytale.component.dependency.RootDependency;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
@@ -27,21 +23,15 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
-import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
-import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.entity.reference.InvalidatablePersistentRef;
 import com.hypixel.hytale.server.core.entity.reference.PersistentRefCount;
-import com.hypixel.hytale.server.core.modules.entity.AllLegacyEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
-import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
 import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
-import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.WorldGenId;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
@@ -59,12 +49,10 @@ import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bson.BsonDocument;
 import org.joml.Vector3d;
 
 public class SpawnMarkerSystems {
@@ -280,69 +268,6 @@ public class SpawnMarkerSystems {
       @Override
       public SystemGroup<EntityStore> getGroup() {
          return EntityModule.get().getPreClearMarkersGroup();
-      }
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class LegacyEntityMigration extends EntityModule.MigrationSystem {
-      @Nonnull
-      private final ComponentType<EntityStore, PersistentModel> persistentModelComponentType = PersistentModel.getComponentType();
-      @Nonnull
-      private final ComponentType<EntityStore, Nameplate> nameplateComponentType = Nameplate.getComponentType();
-      @Nonnull
-      private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
-      @Nonnull
-      private final ComponentType<EntityStore, UnknownComponents<EntityStore>> unknownComponentsComponentType = EntityStore.REGISTRY.getUnknownComponentType();
-      @Nonnull
-      private final Query<EntityStore> query = Query.and(this.unknownComponentsComponentType, Query.not(AllLegacyEntityTypesQuery.INSTANCE));
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         UnknownComponents<EntityStore> unknownComponentsComponent = holder.getComponent(this.unknownComponentsComponentType);
-         assert unknownComponentsComponent != null;
-         Map<String, BsonDocument> unknownComponents = unknownComponentsComponent.getUnknownComponents();
-         BsonDocument spawnMarker = unknownComponents.remove("SpawnMarker");
-         if (spawnMarker != null) {
-            Archetype<EntityStore> archetype = holder.getArchetype();
-            assert archetype != null;
-            if (!archetype.contains(this.persistentModelComponentType)) {
-               Model.ModelReference modelReference = Entity.MODEL.get(spawnMarker).get();
-               holder.addComponent(this.persistentModelComponentType, new PersistentModel(modelReference));
-            }
-
-            if (!archetype.contains(this.nameplateComponentType)) {
-               holder.addComponent(this.nameplateComponentType, new Nameplate(Entity.DISPLAY_NAME.get(spawnMarker).get()));
-            }
-
-            if (!archetype.contains(this.uuidComponentType)) {
-               holder.addComponent(this.uuidComponentType, new UUIDComponent(Entity.UUID.get(spawnMarker).get()));
-            }
-
-            holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
-            int worldGenId = Codec.INTEGER.decode(spawnMarker.get("WorldgenId"));
-            if (worldGenId != 0) {
-               holder.addComponent(WorldGenId.getComponentType(), new WorldGenId(worldGenId));
-            }
-
-            SpawnMarkerEntity marker = SpawnMarkerEntity.CODEC.decode(spawnMarker, new ExtraInfo(5));
-            holder.addComponent(SpawnMarkerEntity.getComponentType(), marker);
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<EntityStore>> getDependencies() {
-         return RootDependency.firstSet();
       }
    }
 

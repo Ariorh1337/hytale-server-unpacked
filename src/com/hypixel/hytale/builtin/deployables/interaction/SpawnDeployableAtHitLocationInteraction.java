@@ -10,7 +10,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.InteractionChainData;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
+import org.joml.Vector3fc;
 
 public class SpawnDeployableAtHitLocationInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -40,19 +40,19 @@ public class SpawnDeployableAtHitLocationInteraction extends SimpleInstantIntera
       InteractionChain contextChain = context.getChain();
       assert contextChain != null;
       InteractionChainData chainData = contextChain.getChainData();
-      Vector3f hitLocation = chainData.hitLocation;
+      Vector3fc hitLocation = chainData.hitLocation;
       if (hitLocation != null) {
          CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
          assert commandBuffer != null;
          Store<EntityStore> store = commandBuffer.getStore();
-         Vector3f hitNormal = chainData.hitNormal;
-         Vector3d hitNormalVec = new Vector3d(hitNormal.x, hitNormal.y, hitNormal.z);
+         Vector3fc hitNormal = chainData.hitNormal;
+         Vector3d hitNormalVec = new Vector3d(hitNormal.x(), hitNormal.y(), hitNormal.z());
          DeployablesUtils.spawnDeployable(
             commandBuffer,
             store,
             this.config,
             context.getEntity(),
-            new Vector3d(hitLocation.x, hitLocation.y, hitLocation.z),
+            new Vector3d(hitLocation.x(), hitLocation.y(), hitLocation.z()),
             MathUtil.getRotationForHitNormal(hitNormalVec),
             MathUtil.getNameForHitNormal(hitNormalVec)
          );

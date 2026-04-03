@@ -174,6 +174,10 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
       return this.alarmStore;
    }
 
+   public void setAlarmStore(@Nonnull AlarmStore alarmStore) {
+      this.alarmStore = alarmStore;
+   }
+
    @Nullable
    public Role getRole() {
       return this.role;

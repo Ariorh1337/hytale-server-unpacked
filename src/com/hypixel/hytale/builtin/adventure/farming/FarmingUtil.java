@@ -44,6 +44,16 @@ public class FarmingUtil {
    private static final int MAX_SECONDS_BETWEEN_TICKS = 15;
    private static final int BETWEEN_RANDOM = 10;
 
+   private static long cappedTickNanos(long desiredNanos, @Nonnull World world, @Nonnull FarmingBlock farmingBlock, int worldX, int worldY, int worldZ) {
+      long maxNanos = (long)(
+         (15.0 + 10.0 * HashUtil.random(farmingBlock.getGeneration() ^ 3405692655L, worldX, worldY, worldZ))
+            * world.getTps()
+            * WorldTimeResource.getSecondsPerTick(world)
+            * 1.0E9
+      );
+      return Math.min(desiredNanos, maxNanos);
+   }
+
    public static void tickFarming(
       @Nonnull CommandBuffer<ChunkStore> commandBuffer,
       @Nonnull BlockChunk blockChunk,
@@ -133,19 +143,25 @@ public class FarmingUtil {
                               currentProgress += (float)(remainingTimeSeconds / (baseDuration / growthMultiplier));
                               farmingBlock.setGrowthProgress(currentProgress);
                               long nextGrowthInNanos = (remainingDurationSeconds - remainingTimeSeconds) * 1000000000L;
-                              long randCap = (long)(
-                                 (15.0 + 10.0 * HashUtil.random(farmingBlock.getGeneration() ^ 3405692655L, worldX, worldY, worldZ))
-                                    * world.getTps()
-                                    * WorldTimeResource.getSecondsPerTick(world)
-                                    * 1.0E9
+                              blockSection.scheduleTick(
+                                 ChunkUtil.indexBlock(x, y, z),
+                                 currentTime.plusNanos(cappedTickNanos(nextGrowthInNanos, world, farmingBlock, worldX, worldY, worldZ))
                               );
-                              long cappedNextGrowthInNanos = Math.min(nextGrowthInNanos, randCap);
-                              blockSection.scheduleTick(ChunkUtil.indexBlock(x, y, z), currentTime.plusNanos(cappedNextGrowthInNanos));
                               break;
                            }
 
                            remainingTimeSeconds -= remainingDurationSeconds;
-                           currentProgress = ++currentStage;
+                           int nextStage = currentStage + 1;
+                           if (nextStage < stages.length && !stages[nextStage].canApply(commandBuffer, sectionRef, blockRef, x, y, z)) {
+                              farmingBlock.setGrowthProgress(currentStage);
+                              blockChunk.markNeedsSaving();
+                              long regrowNanos = Math.round(baseDuration / growthMultiplier) * 1000000000L;
+                              blockSection.scheduleTick(ChunkUtil.indexBlock(x, y, z), currentTime.plusNanos(regrowNanos));
+                              break;
+                           }
+
+                           currentStage = nextStage;
+                           currentProgress = currentStage;
                            farmingBlock.setGrowthProgress(currentProgress);
                            blockChunk.markNeedsSaving();
                            farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);

@@ -514,7 +514,7 @@ public class DeathSystems {
             if (deathInfo != null && deathInfo.getSource() instanceof Damage.EntitySource entitySource) {
                Ref<EntityStore> sourceRef = entitySource.getRef();
                if (sourceRef.isValid()) {
-                  Player attacker = store.getComponent(sourceRef, Player.getComponentType());
+                  PlayerRef attacker = store.getComponent(sourceRef, PlayerRef.getComponentType());
                   if (attacker != null) {
                      attacker.sendMessage(Message.translation("server.general.killedEntity").param("entityName", nameplateComponent.getText()));
                   }

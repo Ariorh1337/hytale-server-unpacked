@@ -185,7 +185,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -195,9 +194,6 @@ import javax.annotation.Nullable;
 
 public class EntityModule extends JavaPlugin {
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(EntityModule.class).depends(Universe.class).depends(CollisionModule.class).build();
-   public static final String[] LEGACY_ENTITY_CLASS_NAMES = new String[]{
-      "SpawnSuppressor", "Block", "LegacySpawnBeacon", "PatrolPathMarker", "Player", "SpawnBeacon", "SpawnMarker"
-   };
    public static final String MOUNT_MOVEMENT_SETTINGS_ASSET_ID = "Mount";
    private static EntityModule instance;
    private final Map<String, Class<? extends Entity>> idMap = new ConcurrentHashMap<>();
@@ -362,7 +358,6 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new SnapshotSystems.Resize());
       entityStoreRegistry.registerSystem(new SnapshotSystems.Capture());
       entityStoreRegistry.registerSystem(new UpdateEntitySeedSystem());
-      entityStoreRegistry.registerSystem(new EntityModule.LegacyTransformSystem());
       entityStoreRegistry.registerSystem(new EntityModule.LegacyUUIDSystem());
       entityStoreRegistry.registerSystem(new EntityModule.LegacyUUIDUpdateSystem());
       entityStoreRegistry.registerSystem(new EntitySystems.UnloadEntityFromChunk());
@@ -514,7 +509,6 @@ public class EntityModule extends JavaPlugin {
       this.intangibleQueueResourceType = entityStoreRegistry.registerResource(IntangibleSystems.QueueResource.class, IntangibleSystems.QueueResource::new);
       entityStoreRegistry.registerSystem(new IntangibleSystems.EntityTrackerUpdate(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new IntangibleSystems.EntityTrackerAddAndRemove(this.visibleComponentType));
-      entityStoreRegistry.registerSystem(new EntityModule.TangibleMigrationSystem(ProjectileComponent.getComponentType()), true);
       this.invulnerableQueueResourceType = entityStoreRegistry.registerResource(InvulnerableSystems.QueueResource.class, InvulnerableSystems.QueueResource::new);
       entityStoreRegistry.registerSystem(new InvulnerableSystems.EntityTrackerUpdate(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new InvulnerableSystems.EntityTrackerAddAndRemove(this.visibleComponentType));
@@ -1174,32 +1168,6 @@ public class EntityModule extends JavaPlugin {
       return entity != null && this.getConstructor(entity.getClass()) != null;
    }
 
-   @Deprecated(forRemoval = true)
-   public static class HiddenFromPlayerMigrationSystem extends EntityModule.MigrationSystem {
-      private final ComponentType<EntityStore, HiddenFromAdventurePlayers> hiddenFromAdventurePlayersComponentType = HiddenFromAdventurePlayers.getComponentType();
-      @Nonnull
-      private final Query<EntityStore> query;
-
-      public HiddenFromPlayerMigrationSystem(Query<EntityStore> query) {
-         this.query = Query.and(query, Query.not(this.hiddenFromAdventurePlayersComponentType));
-      }
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         holder.ensureComponent(this.hiddenFromAdventurePlayersComponentType);
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
-   }
-
    public static class LegacyEntityHolderSystem<T extends Entity> extends HolderSystem<EntityStore> {
       private final ComponentType<EntityStore, T> componentType;
 
@@ -1295,32 +1263,6 @@ public class EntityModule extends JavaPlugin {
       }
    }
 
-   public static class LegacyTransformSystem extends EntityModule.MigrationSystem {
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         TransformComponent transformComponent = holder.getComponent(TransformComponent.getComponentType());
-         Objects.requireNonNull(transformComponent);
-         Entity entity = EntityUtils.getEntity(holder);
-         entity.setTransformComponent(transformComponent);
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<EntityStore>> getDependencies() {
-         return RootDependency.firstSet();
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return AllLegacyEntityTypesQuery.INSTANCE;
-      }
-   }
-
    public static class LegacyUUIDSystem extends EntityModule.MigrationSystem {
       private final Set<Dependency<EntityStore>> dependencies = Set.of(
          new SystemDependency<>(Order.BEFORE, EntityStore.UUIDSystem.class), RootDependency.first()
@@ -1394,32 +1336,6 @@ public class EntityModule extends JavaPlugin {
    }
 
    public abstract static class MigrationSystem extends HolderSystem<EntityStore> {
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class TangibleMigrationSystem extends EntityModule.MigrationSystem {
-      private final ComponentType<EntityStore, Intangible> intangibleComponentType = Intangible.getComponentType();
-      @Nonnull
-      private final Query<EntityStore> query;
-
-      public TangibleMigrationSystem(Query<EntityStore> query) {
-         this.query = Query.and(query, Query.not(this.intangibleComponentType));
-      }
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         holder.ensureComponent(this.intangibleComponentType);
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
    }
 
    public enum Type {

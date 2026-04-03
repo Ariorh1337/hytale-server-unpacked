@@ -4,7 +4,7 @@ import com.hypixel.hytale.protocol.DebugShape;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
-import com.hypixel.hytale.protocol.Vector3f;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class DisplayDebug implements Packet, ToClientPacket {
    public static final int PACKET_ID = 114;
@@ -26,8 +27,8 @@ public class DisplayDebug implements Packet, ToClientPacket {
    public DebugShape shape = DebugShape.Sphere;
    @Nullable
    public float[] matrix;
-   @Nullable
-   public Vector3f color;
+   @Nonnull
+   public Vector3fc color = PacketIO.ZERO_VECTOR3;
    public float time;
    public byte flags;
    @Nullable
@@ -48,7 +49,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
    }
 
    public DisplayDebug(
-      @Nonnull DebugShape shape, @Nullable float[] matrix, @Nullable Vector3f color, float time, byte flags, @Nullable float[] frustumProjection, float opacity
+      @Nonnull DebugShape shape, @Nullable float[] matrix, @Nonnull Vector3fc color, float time, byte flags, @Nullable float[] frustumProjection, float opacity
    ) {
       this.shape = shape;
       this.matrix = matrix;
@@ -78,14 +79,11 @@ public class DisplayDebug implements Packet, ToClientPacket {
       DisplayDebug obj = new DisplayDebug();
       byte nullBits = buf.getByte(offset);
       obj.shape = DebugShape.fromValue(buf.getByte(offset + 1));
-      if ((nullBits & 1) != 0) {
-         obj.color = Vector3f.deserialize(buf, offset + 2);
-      }
-
+      obj.color = PacketIO.readVector3f(buf, offset + 2);
       obj.time = buf.getFloatLE(offset + 14);
       obj.flags = buf.getByte(offset + 18);
       obj.opacity = buf.getFloatLE(offset + 19);
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          int varPosBase0 = buf.getIntLE(offset + 23);
          if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 31) {
             throw ProtocolException.invalidOffset("Matrix", varPosBase0, buf.readableBytes());
@@ -113,7 +111,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          int varPosBase1 = buf.getIntLE(offset + 27);
          if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 31) {
             throw ProtocolException.invalidOffset("FrustumProjection", varPosBase1, buf.readableBytes());
@@ -147,7 +145,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 31;
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 23);
          if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 31) {
             throw ProtocolException.invalidOffset("Matrix", fieldOffset0, maxEnd);
@@ -161,7 +159,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 27);
          if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 31) {
             throw ProtocolException.invalidOffset("FrustumProjection", fieldOffset1, maxEnd);
@@ -182,26 +180,17 @@ public class DisplayDebug implements Packet, ToClientPacket {
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
-      if (this.color != null) {
+      if (this.matrix != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.matrix != null) {
-         nullBits = (byte)(nullBits | 2);
-      }
-
       if (this.frustumProjection != null) {
-         nullBits = (byte)(nullBits | 4);
+         nullBits = (byte)(nullBits | 2);
       }
 
       buf.writeByte(nullBits);
       buf.writeByte(this.shape.getValue());
-      if (this.color != null) {
-         this.color.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
-
+      PacketIO.writeVector3f(buf, this.color);
       buf.writeFloatLE(this.time);
       buf.writeByte(this.flags);
       buf.writeFloatLE(this.opacity);
@@ -266,7 +255,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
          return ValidationResult.error("Invalid DebugShape value for Shape");
       }
 
-      if ((nullBits & 2) != 0) {
+      if ((nullBits & 1) != 0) {
          v = buffer.getIntLE(offset + 23);
          if (v < 0 || v > buffer.writerIndex() - offset - 31) {
             return ValidationResult.error("Invalid offset for Matrix");
@@ -289,7 +278,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 4) != 0) {
+      if ((nullBits & 2) != 0) {
          v = buffer.getIntLE(offset + 27);
          if (v < 0 || v > buffer.writerIndex() - offset - 31) {
             return ValidationResult.error("Invalid offset for FrustumProjection");
@@ -319,7 +308,7 @@ public class DisplayDebug implements Packet, ToClientPacket {
       DisplayDebug copy = new DisplayDebug();
       copy.shape = this.shape;
       copy.matrix = this.matrix != null ? Arrays.copyOf(this.matrix, this.matrix.length) : null;
-      copy.color = this.color != null ? this.color.clone() : null;
+      copy.color = this.color;
       copy.time = this.time;
       copy.flags = this.flags;
       copy.frustumProjection = this.frustumProjection != null ? Arrays.copyOf(this.frustumProjection, this.frustumProjection.length) : null;

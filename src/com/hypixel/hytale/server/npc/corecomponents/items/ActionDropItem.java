@@ -22,6 +22,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.AimingHelper;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
 public class ActionDropItem extends ActionWithDelay {
@@ -56,12 +57,12 @@ public class ActionDropItem extends ActionWithDelay {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       return super.canExecute(ref, role, sensorInfo, dt, store) && !this.isDelaying();
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       this.prepareDelay();
       this.startDelay(role.getEntitySupport());

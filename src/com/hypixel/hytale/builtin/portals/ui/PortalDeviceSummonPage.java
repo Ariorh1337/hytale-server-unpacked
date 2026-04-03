@@ -235,6 +235,8 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                   Transform transform = new Transform(x + 0.5, y + 1.0, z + 0.5);
                   UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
                   assert uuidComponent != null;
+                  PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+                  assert playerRefComponent != null;
                   PortalType portalType = canSpawn.portalType;
                   UUID playerUUID = uuidComponent.getUuid();
                   PortalGameplayConfig gameplayConfig = canSpawn.portalGameplayConfig;
@@ -279,7 +281,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                         HytaleLogger.getLogger().at(Level.SEVERE).withCause(t).log("Error creating instance for Portal Device " + portalKey, t);
 
                         try {
-                           playerComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
+                           playerRefComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
                            combinedInventoryHotbarFirst.addItemStack(removedItem);
                            worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(offType.getId()), offType, rotation, 0, 6);
                         } catch (Throwable t2) {

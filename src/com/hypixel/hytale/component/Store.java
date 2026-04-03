@@ -115,13 +115,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    @Nonnull
    private Ref<ECS_TYPE>[] refs = new Ref[16];
    @Nonnull
-   private int[] entityToArchetypeChunk = new int[16];
-   @Nonnull
-   private int[] entityChunkIndex = new int[16];
-   @Nonnull
    private BitSet[] systemIndexToArchetypeChunkIndexes = ArrayUtil.EMPTY_BITSET_ARRAY;
-   @Nonnull
-   private BitSet[] archetypeChunkIndexesToSystemIndex = ArrayUtil.EMPTY_BITSET_ARRAY;
    @Nonnull
    private final Object2IntMap<Archetype<ECS_TYPE>> archetypeToIndexMap = new Object2IntOpenHashMap<>();
    private int archetypeSize;
@@ -142,8 +136,6 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       this.externalData = externalData;
       this.resourceStorage = resourceStorage;
       this.archetypeToIndexMap.defaultReturnValue(Integer.MIN_VALUE);
-      Arrays.fill(this.entityToArchetypeChunk, Integer.MIN_VALUE);
-      Arrays.fill(this.entityChunkIndex, Integer.MIN_VALUE);
    }
 
    @Nonnull
@@ -361,7 +353,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
 
    protected void setEntityChunkIndex(@Nonnull Ref<ECS_TYPE> ref, int newEntityChunkIndex) {
       if (ref.isValid()) {
-         this.entityChunkIndex[ref.getIndex()] = newEntityChunkIndex;
+         ref.setChunkEntityIndex(newEntityChunkIndex);
       }
    }
 
@@ -426,10 +418,6 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          if (oldLength <= entityIndex) {
             systemIndex = ArrayUtil.grow(entityIndex);
             this.refs = Arrays.copyOf(this.refs, systemIndex);
-            this.entityToArchetypeChunk = Arrays.copyOf(this.entityToArchetypeChunk, systemIndex);
-            this.entityChunkIndex = Arrays.copyOf(this.entityChunkIndex, systemIndex);
-            Arrays.fill(this.entityToArchetypeChunk, oldLength, systemIndex, Integer.MIN_VALUE);
-            Arrays.fill(this.entityChunkIndex, oldLength, systemIndex, Integer.MIN_VALUE);
          }
 
          this.refs[entityIndex] = ref;
@@ -437,11 +425,11 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          systemIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
          ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[systemIndex];
          int chunkEntityRef = archetypeChunk.addEntity(ref, holder);
-         this.entityToArchetypeChunk[entityIndex] = systemIndex;
-         this.entityChunkIndex[entityIndex] = chunkEntityRef;
+         ref.setArchetypeChunk(archetypeChunk);
+         ref.setChunkEntityIndex(chunkEntityRef);
          SystemType<ECS_TYPE, RefSystem<ECS_TYPE>> systemTypex = this.registry.getRefSystemType();
          BitSet systemIndexesx = data.getSystemIndexesForType(systemTypex);
-         BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[systemIndex];
+         BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
          commandBuffer.track(ref);
          int systemIndexx = -1;
 
@@ -542,10 +530,6 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          if (oldLength <= this.entitiesSize) {
             systemIndex = ArrayUtil.grow(this.entitiesSize);
             this.refs = Arrays.copyOf(this.refs, systemIndex);
-            this.entityToArchetypeChunk = Arrays.copyOf(this.entityToArchetypeChunk, systemIndex);
-            this.entityChunkIndex = Arrays.copyOf(this.entityChunkIndex, systemIndex);
-            Arrays.fill(this.entityToArchetypeChunk, oldLength, systemIndex, Integer.MIN_VALUE);
-            Arrays.fill(this.entityChunkIndex, oldLength, systemIndex, Integer.MIN_VALUE);
          }
 
          System.arraycopy(refs, refStart, this.refs, firstIndex, length);
@@ -564,8 +548,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
             int archetypeIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
             ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
             int chunkEntityRef = archetypeChunk.addEntity(ref, holder);
-            this.entityToArchetypeChunk[entityIndex] = archetypeIndex;
-            this.entityChunkIndex[entityIndex] = chunkEntityRef;
+            ref.setArchetypeChunk(archetypeChunk);
+            ref.setChunkEntityIndex(chunkEntityRef);
             systemIndex++;
          }
 
@@ -576,8 +560,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          while ((systemIndexx = systemIndexesx.nextSetBit(systemIndexx + 1)) >= 0) {
             for (int i = refStart; i < refEnd; i++) {
                Ref<ECS_TYPE> ref = refs[i];
-               int archetypeIndex = this.entityToArchetypeChunk[ref.getIndex()];
-               BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
+               BitSet entityProcessedBySystemIndexes = ref.getArchetypeChunk().getSystemIndexes();
                if (entityProcessedBySystemIndexes.get(systemIndexx)) {
                   RefSystem<ECS_TYPE> system = data.getSystem(systemIndexx, systemTypex);
                   boolean oldDisableProcessingAssert = this.disableProcessingAssert;
@@ -615,9 +598,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    @Nonnull
    public Holder<ECS_TYPE> copyEntity(@Nonnull Ref<ECS_TYPE> ref, @Nonnull Holder<ECS_TYPE> holder) {
       this.assertThread();
-      int refIndex = ref.validate(this);
-      int archetypeIndex = this.entityToArchetypeChunk[refIndex];
-      return this.archetypeChunks[archetypeIndex].copyEntity(this.entityChunkIndex[refIndex], holder);
+      ref.validate(this);
+      return ref.getArchetypeChunk().copyEntity(ref.getChunkEntityIndex(), holder);
    }
 
    @Nonnull
@@ -628,25 +610,22 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    @Nonnull
    public Holder<ECS_TYPE> copySerializableEntity(@Nonnull Ref<ECS_TYPE> ref, @Nonnull Holder<ECS_TYPE> holder) {
       this.assertThread();
-      int refIndex = ref.validate(this);
-      int archetypeIndex = this.entityToArchetypeChunk[refIndex];
-      return this.archetypeChunks[archetypeIndex].copySerializableEntity(this.registry.getData(), this.entityChunkIndex[refIndex], holder);
+      ref.validate(this);
+      return ref.getArchetypeChunk().copySerializableEntity(this.registry.getData(), ref.getChunkEntityIndex(), holder);
    }
 
    @Nonnull
    @Override
    public Archetype<ECS_TYPE> getArchetype(@Nonnull Ref<ECS_TYPE> ref) {
       this.assertThread();
-      int entityIndex = ref.validate(this);
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
-      return this.archetypeChunks[archetypeIndex].getArchetype();
+      ref.validate(this);
+      return ref.getArchetypeChunk().getArchetype();
    }
 
    @Nonnull
    protected Archetype<ECS_TYPE> __internal_getArchetype(@Nonnull Ref<ECS_TYPE> ref) {
-      int entityIndex = ref.validate(this);
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
-      return this.archetypeChunks[archetypeIndex].getArchetype();
+      ref.validate(this);
+      return ref.getArchetypeChunk().getArchetype();
    }
 
    @Nonnull
@@ -666,15 +645,15 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       this.assertWriteProcessing();
       int entityIndex = ref.validate(this);
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
-      int chunkEntityRef = this.entityChunkIndex[entityIndex];
+      ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+      int chunkEntityRef = ref.getChunkEntityIndex();
       ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
       this.processing.lock();
 
       try {
          SystemType<ECS_TYPE, RefSystem<ECS_TYPE>> systemType = this.registry.getRefSystemType();
          BitSet systemIndexes = data.getSystemIndexesForType(systemType);
-         BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
+         BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
          int systemIndex = -1;
 
          while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
@@ -686,22 +665,15 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          int lastIndex = this.entitiesSize - 1;
          if (entityIndex != lastIndex) {
             Ref<ECS_TYPE> lastEntityRef = this.refs[lastIndex];
-            int lastSelfEntityRef = this.entityToArchetypeChunk[lastIndex];
-            systemIndex = this.entityChunkIndex[lastIndex];
             lastEntityRef.setIndex(entityIndex);
             this.refs[entityIndex] = lastEntityRef;
-            this.entityToArchetypeChunk[entityIndex] = lastSelfEntityRef;
-            this.entityChunkIndex[entityIndex] = systemIndex;
          }
 
          this.refs[lastIndex] = null;
-         this.entityToArchetypeChunk[lastIndex] = Integer.MIN_VALUE;
-         this.entityChunkIndex[lastIndex] = Integer.MIN_VALUE;
          this.entitiesSize = lastIndex;
-         ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
          archetypeChunk.removeEntity(chunkEntityRef, holder);
          if (archetypeChunk.size() == 0) {
-            this.removeArchetypeChunk(archetypeIndex);
+            this.removeArchetypeChunk(archetypeChunk);
          }
 
          ref.invalidate(proxyReason);
@@ -787,8 +759,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
             for (int i = refStart; i < refEnd; i++) {
                Ref<ECS_TYPE> ref = refArr[i];
-               int archetypeIndex = this.entityToArchetypeChunk[ref.getIndex()];
-               BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
+               ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+               BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
                if (entityProcessedBySystemIndexes.get(systemIndex)) {
                   data.getSystem(systemIndex, systemType).onEntityRemove(refArr[i], reason, this, commandBuffer);
                }
@@ -796,29 +768,23 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          }
 
          for (int i = 0; i < length; i++) {
-            int entityIndex = refArr[refStart + i].getIndex();
-            systemIndex = this.entityToArchetypeChunk[entityIndex];
-            int chunkEntityRef = this.entityChunkIndex[entityIndex];
+            Ref<ECS_TYPE> ref = refArr[refStart + i];
+            systemIndex = ref.getIndex();
+            ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+            int chunkEntityRef = ref.getChunkEntityIndex();
             int lastIndex = this.entitiesSize - 1;
-            if (entityIndex != lastIndex) {
+            if (systemIndex != lastIndex) {
                Ref<ECS_TYPE> lastEntityRef = this.refs[lastIndex];
-               int lastSelfEntityRef = this.entityToArchetypeChunk[lastIndex];
-               int lastEntityChunkIndex = this.entityChunkIndex[lastIndex];
-               lastEntityRef.setIndex(entityIndex);
-               this.refs[entityIndex] = lastEntityRef;
-               this.entityToArchetypeChunk[entityIndex] = lastSelfEntityRef;
-               this.entityChunkIndex[entityIndex] = lastEntityChunkIndex;
+               lastEntityRef.setIndex(systemIndex);
+               this.refs[systemIndex] = lastEntityRef;
             }
 
             this.refs[lastIndex] = null;
-            this.entityToArchetypeChunk[lastIndex] = Integer.MIN_VALUE;
-            this.entityChunkIndex[lastIndex] = Integer.MIN_VALUE;
             this.entitiesSize = lastIndex;
             Holder<ECS_TYPE> holder = holders[holderStart + i];
-            ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[systemIndex];
             archetypeChunk.removeEntity(chunkEntityRef, holder);
             if (archetypeChunk.size() == 0) {
-               this.removeArchetypeChunk(systemIndex);
+               this.removeArchetypeChunk(archetypeChunk);
             }
          }
 
@@ -859,14 +825,13 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       componentType.validateRegistry(this.registry);
       componentType.validate();
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int archetypeIndex = this.entityToArchetypeChunk[ref.getIndex()];
       this.processing.lock();
 
       try {
-         ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
+         ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
          if (!archetypeChunk.getArchetype().contains(componentType)) {
             T component = this.registry._internal_getData().createComponent(componentType);
-            this.datachunk_addComponent(ref, archetypeIndex, componentType, component, commandBuffer);
+            this.datachunk_addComponent(ref, archetypeChunk, componentType, component, commandBuffer);
          }
       } finally {
          this.processing.unlock();
@@ -880,20 +845,18 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    public <T extends Component<ECS_TYPE>> T ensureAndGetComponent(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
       this.assertThread();
       this.assertWriteProcessing();
-      int refIndex = ref.getIndex();
       componentType.validateRegistry(this.registry);
       componentType.validate();
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int archetypeIndex = this.entityToArchetypeChunk[refIndex];
       this.processing.lock();
 
       T component;
       try {
-         ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
-         component = archetypeChunk.getComponent(this.entityChunkIndex[refIndex], componentType);
+         ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+         component = archetypeChunk.getComponent(ref.getChunkEntityIndex(), componentType);
          if (component == null) {
             component = this.registry._internal_getData().createComponent(componentType);
-            this.datachunk_addComponent(ref, archetypeIndex, componentType, component, commandBuffer);
+            this.datachunk_addComponent(ref, archetypeChunk, componentType, component, commandBuffer);
          }
       } finally {
          this.processing.unlock();
@@ -917,16 +880,15 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    public <T extends Component<ECS_TYPE>> void addComponent(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {
       this.assertThread();
       this.assertWriteProcessing();
-      int entityIndex = ref.validate(this);
+      ref.validate(this);
       componentType.validateRegistry(this.registry);
       componentType.validate();
       Objects.requireNonNull(component);
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
       this.processing.lock();
 
       try {
-         this.datachunk_addComponent(ref, archetypeIndex, componentType, component, commandBuffer);
+         this.datachunk_addComponent(ref, ref.getArchetypeChunk(), componentType, component, commandBuffer);
       } finally {
          this.processing.unlock();
       }
@@ -939,20 +901,19 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    ) {
       this.assertThread();
       this.assertWriteProcessing();
-      int entityIndex = ref.validate(this);
+      ref.validate(this);
       componentType.validateRegistry(this.registry);
       componentType.validate();
       Objects.requireNonNull(component);
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
       this.processing.lock();
 
       try {
-         ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
-         int chunkEntityRef = this.entityChunkIndex[entityIndex];
+         ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+         int chunkEntityRef = ref.getChunkEntityIndex();
          T oldComponent = archetypeChunk.getComponent(chunkEntityRef, componentType);
          archetypeChunk.setComponent(chunkEntityRef, componentType, component);
-         BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
+         BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
          ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
          BitSet systemIndexes = data.getSystemIndexesForType(this.registry.getRefChangeSystemType());
          int systemIndex = -1;
@@ -976,21 +937,20 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    public <T extends Component<ECS_TYPE>> void putComponent(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {
       this.assertThread();
       this.assertWriteProcessing();
-      int entityIndex = ref.validate(this);
+      ref.validate(this);
       componentType.validateRegistry(this.registry);
       componentType.validate();
       Objects.requireNonNull(component);
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
       this.processing.lock();
 
       try {
-         ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
+         ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
          if (archetypeChunk.getArchetype().contains(componentType)) {
-            int chunkEntityRef = this.entityChunkIndex[entityIndex];
+            int chunkEntityRef = ref.getChunkEntityIndex();
             T oldComponent = archetypeChunk.getComponent(chunkEntityRef, componentType);
             archetypeChunk.setComponent(chunkEntityRef, componentType, component);
-            BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
+            BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
             ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
             BitSet systemIndexes = data.getSystemIndexesForType(this.registry.getRefChangeSystemType());
             int systemIndex = -1;
@@ -1004,7 +964,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
                }
             }
          } else {
-            this.datachunk_addComponent(ref, archetypeIndex, componentType, component, commandBuffer);
+            this.datachunk_addComponent(ref, archetypeChunk, componentType, component, commandBuffer);
          }
       } finally {
          this.processing.unlock();
@@ -1021,38 +981,36 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
 
    @Nullable
    protected <T extends Component<ECS_TYPE>> T __internal_getComponent(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
-      int entityIndex = ref.validate(this);
+      ref.validate(this);
       componentType.validateRegistry(this.registry);
       componentType.validate();
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
-      ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
-      return archetypeChunk.getComponent(this.entityChunkIndex[entityIndex], componentType);
+      ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+      return archetypeChunk.getComponent(ref.getChunkEntityIndex(), componentType);
    }
 
    @Override
    public <T extends Component<ECS_TYPE>> void removeComponent(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
       this.assertThread();
       this.assertWriteProcessing();
-      int entityIndex = ref.validate(this);
+      ref.validate(this);
       componentType.validateRegistry(this.registry);
       componentType.validate();
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int fromArchetypeIndex = this.entityToArchetypeChunk[entityIndex];
       this.processing.lock();
 
       try {
-         ArchetypeChunk<ECS_TYPE> fromArchetypeChunk = this.archetypeChunks[fromArchetypeIndex];
+         ArchetypeChunk<ECS_TYPE> fromArchetypeChunk = ref.getArchetypeChunk();
          Holder<ECS_TYPE> holder = this.registry._internal_newEntityHolder();
-         fromArchetypeChunk.removeEntity(this.entityChunkIndex[entityIndex], holder);
+         fromArchetypeChunk.removeEntity(ref.getChunkEntityIndex(), holder);
          T component = holder.getComponent(componentType);
          assert component != null;
          holder.removeComponent(componentType);
          int toArchetypeIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
          ArchetypeChunk<ECS_TYPE> toArchetypeChunk = this.archetypeChunks[toArchetypeIndex];
          int chunkEntityRef = toArchetypeChunk.addEntity(ref, holder);
-         this.entityToArchetypeChunk[entityIndex] = toArchetypeIndex;
-         this.entityChunkIndex[entityIndex] = chunkEntityRef;
-         BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[fromArchetypeIndex];
+         ref.setArchetypeChunk(toArchetypeChunk);
+         ref.setChunkEntityIndex(chunkEntityRef);
+         BitSet entityProcessedBySystemIndexes = fromArchetypeChunk.getSystemIndexes();
          ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
          BitSet systemIndexes = data.getSystemIndexesForType(this.registry.getRefChangeSystemType());
          int systemIndex = -1;
@@ -1067,7 +1025,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          }
 
          if (fromArchetypeChunk.size() == 0) {
-            this.removeArchetypeChunk(fromArchetypeIndex);
+            this.removeArchetypeChunk(fromArchetypeChunk);
          }
       } finally {
          this.processing.unlock();
@@ -1084,30 +1042,29 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    public <T extends Component<ECS_TYPE>> boolean removeComponentIfExists(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
       this.assertThread();
       this.assertWriteProcessing();
-      int entityIndex = ref.validate(this);
+      ref.validate(this);
       componentType.validateRegistry(this.registry);
       componentType.validate();
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      int fromArchetypeIndex = this.entityToArchetypeChunk[entityIndex];
       this.processing.lock();
 
       boolean result;
       try {
-         ArchetypeChunk<ECS_TYPE> fromArchetypeChunk = this.archetypeChunks[fromArchetypeIndex];
+         ArchetypeChunk<ECS_TYPE> fromArchetypeChunk = ref.getArchetypeChunk();
          if (!fromArchetypeChunk.getArchetype().contains(componentType)) {
             result = false;
          } else {
             Holder<ECS_TYPE> holder = this.registry._internal_newEntityHolder();
-            fromArchetypeChunk.removeEntity(this.entityChunkIndex[entityIndex], holder);
+            fromArchetypeChunk.removeEntity(ref.getChunkEntityIndex(), holder);
             T component = holder.getComponent(componentType);
             assert component != null;
             holder.removeComponent(componentType);
             int toArchetypeIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
             ArchetypeChunk<ECS_TYPE> toArchetypeChunk = this.archetypeChunks[toArchetypeIndex];
             int chunkEntityRef = toArchetypeChunk.addEntity(ref, holder);
-            this.entityToArchetypeChunk[entityIndex] = toArchetypeIndex;
-            this.entityChunkIndex[entityIndex] = chunkEntityRef;
-            BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[fromArchetypeIndex];
+            ref.setArchetypeChunk(toArchetypeChunk);
+            ref.setChunkEntityIndex(chunkEntityRef);
+            BitSet entityProcessedBySystemIndexes = fromArchetypeChunk.getSystemIndexes();
             ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
             BitSet systemIndexes = data.getSystemIndexesForType(this.registry.getRefChangeSystemType());
             int systemIndex = -1;
@@ -1122,7 +1079,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
             }
 
             if (fromArchetypeChunk.size() == 0) {
-               this.removeArchetypeChunk(fromArchetypeIndex);
+               this.removeArchetypeChunk(fromArchetypeChunk);
             }
 
             result = true;
@@ -1459,12 +1416,10 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
             T system = (T)data.getSystem(systemIndex, systemType);
 
             for (Ref<ECS_TYPE> ref : refs) {
-               int entityIndex = ref.getIndex();
-               int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
-               BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
+               ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+               BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
                if (entityProcessedBySystemIndexes.get(systemIndex)) {
-                  int index = this.entityChunkIndex[entityIndex];
-                  ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
+                  int index = ref.getChunkEntityIndex();
                   system.fetch(index, archetypeChunk, this, commandBuffer, query, results);
                }
             }
@@ -1500,11 +1455,9 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       this.processing.lock();
 
       try {
-         int entityIndex = ref.getIndex();
-         int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
-         BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
-         ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
-         int index = this.entityChunkIndex[entityIndex];
+         ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+         BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
+         int index = ref.getChunkEntityIndex();
          int systemIndex = -1;
 
          while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
@@ -1615,11 +1568,9 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       CommandBuffer<ECS_TYPE> commandBuffer = sourceCommandBuffer.fork();
       commandBuffer.track(ref);
       BitSet systemIndexes = data.getSystemIndexesForType(systemType);
-      int entityIndex = ref.getIndex();
-      int archetypeIndex = this.entityToArchetypeChunk[entityIndex];
-      BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
-      ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
-      int index = this.entityChunkIndex[entityIndex];
+      ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
+      BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
+      int index = ref.getChunkEntityIndex();
       int systemIndex = -1;
 
       while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
@@ -1855,30 +1806,30 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
                               Component<ECS_TYPE> component = unknownComponents.removeComponent(componentId, componentCodec);
                               entity.addComponent(componentType, component);
                            }, (newChunkEntityRef, ref) -> {
-                              this.entityToArchetypeChunk[ref.getIndex()] = toArchetypeIndex;
-                              this.entityChunkIndex[ref.getIndex()] = newChunkEntityRef;
+                              ref.setArchetypeChunk(toArchetypeChunk);
+                              ref.setChunkEntityIndex(newChunkEntityRef);
                            });
                            if (archetypeChunk.size() == 0) {
-                              this.archetypeToIndexMap.removeInt(this.archetypeChunks[archetypeIndex].getArchetype());
+                              this.archetypeToIndexMap.removeInt(archetypeChunk.getArchetype());
                               this.archetypeChunks[archetypeIndex] = null;
 
                               for (int systemIndex = 0; systemIndex < oldData.getSystemSize(); systemIndex++) {
                                  this.systemIndexToArchetypeChunkIndexes[systemIndex].clear(archetypeIndex);
                               }
 
-                              this.archetypeChunkIndexesToSystemIndex[archetypeIndex].clear();
+                              archetypeChunk.getSystemIndexes().clear();
                               this.archetypeChunkReuse.set(archetypeIndex);
                            }
 
                            if (toArchetypeChunk.size() == 0) {
-                              this.archetypeToIndexMap.removeInt(this.archetypeChunks[toArchetypeIndex].getArchetype());
+                              this.archetypeToIndexMap.removeInt(toArchetypeChunk.getArchetype());
                               this.archetypeChunks[toArchetypeIndex] = null;
 
                               for (int systemIndex = 0; systemIndex < oldData.getSystemSize(); systemIndex++) {
                                  this.systemIndexToArchetypeChunkIndexes[systemIndex].clear(toArchetypeIndex);
                               }
 
-                              this.archetypeChunkIndexesToSystemIndex[toArchetypeIndex].clear();
+                              toArchetypeChunk.getSystemIndexes().clear();
                               this.archetypeChunkReuse.set(toArchetypeIndex);
                            }
                         }
@@ -1897,14 +1848,14 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
                   if (archetypeChunk != null) {
                      Archetype<ECS_TYPE> archetype = archetypeChunk.getArchetype();
                      if (archetype.contains(componentType)) {
-                        this.archetypeToIndexMap.removeInt(this.archetypeChunks[archetypeIndex].getArchetype());
+                        this.archetypeToIndexMap.removeInt(archetypeChunk.getArchetype());
                         this.archetypeChunks[archetypeIndex] = null;
 
                         for (int systemIndex = 0; systemIndex < oldData.getSystemSize(); systemIndex++) {
                            this.systemIndexToArchetypeChunkIndexes[systemIndex].clear(archetypeIndex);
                         }
 
-                        this.archetypeChunkIndexesToSystemIndex[archetypeIndex].clear();
+                        archetypeChunk.getSystemIndexes().clear();
                         this.archetypeChunkReuse.set(archetypeIndex);
                         Archetype<ECS_TYPE> newArchetype = Archetype.remove(archetype, componentType);
                         if (componentCodec != null && !newArchetype.contains(unknownComponentType)) {
@@ -1930,8 +1881,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
 
                            entity.removeComponent(componentType);
                         }, (newChunkEntityRef, ref) -> {
-                           this.entityToArchetypeChunk[ref.getIndex()] = toArchetypeIndex;
-                           this.entityChunkIndex[ref.getIndex()] = newChunkEntityRef;
+                           ref.setArchetypeChunk(toArchetypeChunk);
+                           ref.setChunkEntityIndex(newChunkEntityRef);
                         });
                      }
                   }
@@ -1983,7 +1934,10 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       }
 
       for (int archetypeIndex = 0; archetypeIndex < this.archetypeSize; archetypeIndex++) {
-         this.archetypeChunkIndexesToSystemIndex[archetypeIndex].clear();
+         ArchetypeChunk<ECS_TYPE> chunk = this.archetypeChunks[archetypeIndex];
+         if (chunk != null) {
+            chunk.getSystemIndexes().clear();
+         }
       }
 
       SystemType<ECS_TYPE, QuerySystem<ECS_TYPE>> entityQuerySystemType = this.registry.getQuerySystemType();
@@ -1998,7 +1952,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
             ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
             if (archetypeChunk != null && system.test(this.registry, archetypeChunk.getArchetype())) {
                archetypeChunkIndexes.set(archetypeIndex);
-               this.archetypeChunkIndexesToSystemIndex[archetypeIndex].set(systemIndex);
+               archetypeChunk.getSystemIndexes().set(systemIndex);
             }
          }
       }
@@ -2056,29 +2010,27 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
 
    private <T extends Component<ECS_TYPE>> void datachunk_addComponent(
       @Nonnull Ref<ECS_TYPE> ref,
-      int fromArchetypeIndex,
+      @Nonnull ArchetypeChunk<ECS_TYPE> fromArchetypeChunk,
       @Nonnull ComponentType<ECS_TYPE, T> componentType,
       @Nonnull T component,
       @Nonnull CommandBuffer<ECS_TYPE> commandBuffer
    ) {
-      int entityIndex = ref.getIndex();
-      ArchetypeChunk<ECS_TYPE> fromArchetypeChunk = this.archetypeChunks[fromArchetypeIndex];
-      int oldChunkEntityRef = this.entityChunkIndex[entityIndex];
+      int oldChunkEntityRef = ref.getChunkEntityIndex();
       Holder<ECS_TYPE> holder = this.registry._internal_newEntityHolder();
       fromArchetypeChunk.removeEntity(oldChunkEntityRef, holder);
       if (!holder.addComponentInternal(componentType, component)) {
          int chunkEntityRef = fromArchetypeChunk.addEntity(ref, holder);
-         this.entityToArchetypeChunk[entityIndex] = fromArchetypeIndex;
-         this.entityChunkIndex[entityIndex] = chunkEntityRef;
+         ref.setArchetypeChunk(fromArchetypeChunk);
+         ref.setChunkEntityIndex(chunkEntityRef);
          throw new IllegalArgumentException("Entity already contains component type: " + componentType);
       }
 
       int toArchetypeIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
       ArchetypeChunk<ECS_TYPE> toArchetypeChunk = this.archetypeChunks[toArchetypeIndex];
       int chunkEntityRef = toArchetypeChunk.addEntity(ref, holder);
-      this.entityToArchetypeChunk[entityIndex] = toArchetypeIndex;
-      this.entityChunkIndex[entityIndex] = chunkEntityRef;
-      BitSet entityProcessedBySystemIndexes = this.archetypeChunkIndexesToSystemIndex[toArchetypeIndex];
+      ref.setArchetypeChunk(toArchetypeChunk);
+      ref.setChunkEntityIndex(chunkEntityRef);
+      BitSet entityProcessedBySystemIndexes = toArchetypeChunk.getSystemIndexes();
       ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
       BitSet systemIndexes = data.getSystemIndexesForType(this.registry.getRefChangeSystemType());
       int systemIndex = -1;
@@ -2093,7 +2045,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       }
 
       if (fromArchetypeChunk.size() == 0) {
-         this.removeArchetypeChunk(fromArchetypeIndex);
+         this.removeArchetypeChunk(fromArchetypeChunk);
       }
    }
 
@@ -2115,18 +2067,13 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       if (oldLength <= archetypeIndex) {
          int newLength = ArrayUtil.grow(archetypeIndex);
          this.archetypeChunks = Arrays.copyOf(this.archetypeChunks, newLength);
-         this.archetypeChunkIndexesToSystemIndex = Arrays.copyOf(this.archetypeChunkIndexesToSystemIndex, newLength);
-         int systemSize = data.getSystemSize();
-
-         for (int i = oldLength; i < newLength; i++) {
-            this.archetypeChunkIndexesToSystemIndex[i] = new BitSet(systemSize);
-         }
       }
 
       ArchetypeChunk<ECS_TYPE> archetypeChunk = new ArchetypeChunk<>(this, archetype);
+      archetypeChunk.setArchetypeIndex(archetypeIndex);
       this.archetypeChunks[archetypeIndex] = archetypeChunk;
       this.archetypeToIndexMap.put(archetype, archetypeIndex);
-      BitSet archetypeChunkToSystemIndex = this.archetypeChunkIndexesToSystemIndex[archetypeIndex];
+      BitSet archetypeChunkToSystemIndex = archetypeChunk.getSystemIndexes();
       SystemType<ECS_TYPE, QuerySystem<ECS_TYPE>> entityQuerySystemType = this.registry.getQuerySystemType();
       BitSet systemIndexes = data.getSystemIndexesForType(entityQuerySystemType);
       int systemIndex = -1;
@@ -2145,12 +2092,12 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       return archetypeIndex;
    }
 
-   private void removeArchetypeChunk(int archetypeIndex) {
-      ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
+   private void removeArchetypeChunk(@Nonnull ArchetypeChunk<ECS_TYPE> archetypeChunk) {
+      int archetypeIndex = archetypeChunk.getArchetypeIndex();
       Archetype<ECS_TYPE> archetype = archetypeChunk.getArchetype();
       this.archetypeToIndexMap.removeInt(archetype);
       this.archetypeChunks[archetypeIndex] = null;
-      this.archetypeChunkIndexesToSystemIndex[archetypeIndex].clear();
+      archetypeChunk.getSystemIndexes().clear();
       ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
       BitSet systemIndexes = data.getSystemIndexesForType(this.registry.getQuerySystemType());
       int systemIndex = -1;

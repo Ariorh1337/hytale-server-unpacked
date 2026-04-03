@@ -8,6 +8,7 @@ import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class ModelParticle {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -25,7 +26,7 @@ public class ModelParticle {
    @Nullable
    public String targetNodeName;
    @Nullable
-   public Vector3f positionOffset;
+   public Vector3fc positionOffset;
    @Nullable
    public Direction rotationOffset;
    public boolean detachedFromModel;
@@ -39,7 +40,7 @@ public class ModelParticle {
       @Nullable Color color,
       @Nonnull EntityPart targetEntityPart,
       @Nullable String targetNodeName,
-      @Nullable Vector3f positionOffset,
+      @Nullable Vector3fc positionOffset,
       @Nullable Direction rotationOffset,
       boolean detachedFromModel
    ) {
@@ -79,7 +80,7 @@ public class ModelParticle {
 
       obj.targetEntityPart = EntityPart.fromValue(buf.getByte(offset + 8));
       if ((nullBits & 2) != 0) {
-         obj.positionOffset = Vector3f.deserialize(buf, offset + 9);
+         obj.positionOffset = PacketIO.readVector3f(buf, offset + 9);
       }
 
       if ((nullBits & 4) != 0) {
@@ -205,7 +206,7 @@ public class ModelParticle {
 
       buf.writeByte(this.targetEntityPart.getValue());
       if (this.positionOffset != null) {
-         this.positionOffset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.positionOffset);
       } else {
          buf.writeZero(12);
       }
@@ -317,7 +318,7 @@ public class ModelParticle {
       copy.color = this.color != null ? this.color.clone() : null;
       copy.targetEntityPart = this.targetEntityPart;
       copy.targetNodeName = this.targetNodeName;
-      copy.positionOffset = this.positionOffset != null ? this.positionOffset.clone() : null;
+      copy.positionOffset = this.positionOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       copy.detachedFromModel = this.detachedFromModel;
       return copy;

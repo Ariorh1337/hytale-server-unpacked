@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class ParticleSpawnerGroup {
    public static final int NULLABLE_BIT_FIELD_SIZE = 2;
@@ -19,7 +20,7 @@ public class ParticleSpawnerGroup {
    @Nullable
    public String spawnerId;
    @Nullable
-   public Vector3f positionOffset;
+   public Vector3fc positionOffset;
    @Nullable
    public Direction rotationOffset;
    public boolean fixedRotation;
@@ -44,7 +45,7 @@ public class ParticleSpawnerGroup {
 
    public ParticleSpawnerGroup(
       @Nullable String spawnerId,
-      @Nullable Vector3f positionOffset,
+      @Nullable Vector3fc positionOffset,
       @Nullable Direction rotationOffset,
       boolean fixedRotation,
       float startDelay,
@@ -97,7 +98,7 @@ public class ParticleSpawnerGroup {
       ParticleSpawnerGroup obj = new ParticleSpawnerGroup();
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
       if ((nullBits[0] & 1) != 0) {
-         obj.positionOffset = Vector3f.deserialize(buf, offset + 2);
+         obj.positionOffset = PacketIO.readVector3f(buf, offset + 2);
       }
 
       if ((nullBits[0] & 2) != 0) {
@@ -265,7 +266,7 @@ public class ParticleSpawnerGroup {
 
       buf.writeBytes(nullBits);
       if (this.positionOffset != null) {
-         this.positionOffset.serialize(buf);
+         PacketIO.writeVector3f(buf, this.positionOffset);
       } else {
          buf.writeZero(12);
       }
@@ -409,7 +410,7 @@ public class ParticleSpawnerGroup {
    public ParticleSpawnerGroup clone() {
       ParticleSpawnerGroup copy = new ParticleSpawnerGroup();
       copy.spawnerId = this.spawnerId;
-      copy.positionOffset = this.positionOffset != null ? this.positionOffset.clone() : null;
+      copy.positionOffset = this.positionOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       copy.fixedRotation = this.fixedRotation;
       copy.startDelay = this.startDelay;

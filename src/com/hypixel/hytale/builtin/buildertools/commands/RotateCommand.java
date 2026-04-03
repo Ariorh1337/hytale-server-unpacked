@@ -46,7 +46,7 @@ public class RotateCommand extends AbstractCommandCollection {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             float yaw = this.yawArg.get(context);
             float pitch = this.pitchArg.get(context);
             float roll = this.rollArg.get(context);
@@ -80,7 +80,7 @@ public class RotateCommand extends AbstractCommandCollection {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             int angle = this.angleArg.get(context);
             Axis axis = this.axisArg.get(context);
             if (angle % 90 != 0) {

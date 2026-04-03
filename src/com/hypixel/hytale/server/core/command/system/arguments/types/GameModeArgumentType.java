@@ -3,8 +3,10 @@ package com.hypixel.hytale.server.core.command.system.arguments.types;
 import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.CommandUtil;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
+import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.List;
@@ -32,6 +34,22 @@ public class GameModeArgumentType extends SingleArgumentType<GameMode> {
          Message.translation("server.commands.parsing.argtype.gamemode.invalid").param("input", input).param("suggestions", validModes.toString())
       );
       return null;
+   }
+
+   @Override
+   public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+      String lowerInput = textAlreadyEntered.toLowerCase();
+
+      for (String key : GAMEMODE_MAP.keySet()) {
+         if (key.startsWith(lowerInput)) {
+            result.suggest(key);
+         }
+      }
+   }
+
+   @Override
+   public int getSuggestionValueCount() {
+      return GAMEMODE_MAP.size();
    }
 
    static {

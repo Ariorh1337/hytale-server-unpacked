@@ -36,10 +36,10 @@ public class RespawnSystems {
       public void onComponentRemoved(
          @Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-         assert playerComponent != null;
+         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+         assert playerRefComponent != null;
          if (Inventory.containsBrokenItem(ref, commandBuffer)) {
-            playerComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
+            playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
          }
       }
    }

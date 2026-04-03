@@ -1,32 +1,91 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
 import com.hypixel.hytale.common.util.BitUtil;
+import com.hypixel.hytale.function.consumer.BiIntConsumer;
+import com.hypixel.hytale.math.util.NumberUtil;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
+import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.bytes.Byte2ByteMap;
 import it.unimi.dsi.fastutil.bytes.Byte2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.bytes.Byte2IntMap;
+import it.unimi.dsi.fastutil.bytes.Byte2IntOpenHashMap;
 import it.unimi.dsi.fastutil.bytes.Byte2ShortMap;
+import it.unimi.dsi.fastutil.bytes.Byte2ShortOpenHashMap;
+import it.unimi.dsi.fastutil.bytes.ByteSet;
 import it.unimi.dsi.fastutil.ints.Int2ByteMap;
+import it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
+import it.unimi.dsi.fastutil.ints.Int2ShortMaps;
+import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.BitSet;
+import java.util.function.IntConsumer;
+import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 
-public class HalfByteSectionPalette extends AbstractByteSectionPalette {
+public final class HalfByteSectionPalette extends AbstractSectionPalette {
    private static final int KEY_MASK = 15;
    public static final int MAX_SIZE = 16;
+   final Int2ByteMap externalToInternal;
+   final Byte2IntMap internalToExternal;
+   final BitSet internalIdSet;
+   final Byte2ShortMap internalIdCount;
+   final byte[] blocks;
 
    public HalfByteSectionPalette() {
-      super(new byte[16384]);
+      this.externalToInternal = new Int2ByteOpenHashMap();
+      this.internalToExternal = new Byte2IntOpenHashMap();
+      this.internalIdSet = new BitSet(16);
+      this.internalIdCount = new Byte2ShortOpenHashMap();
+      this.blocks = new byte[16384];
+      this.externalToInternal.put(0, (byte)0);
+      this.internalToExternal.put((byte)0, 0);
+      this.internalIdSet.set(0);
+      this.internalIdCount.put((byte)0, (short)-32768);
    }
 
-   public HalfByteSectionPalette(
-      Int2ByteMap externalToInternal, Byte2IntMap internalToExternal, BitSet internalIdSet, Byte2ShortMap internalIdCount, byte[] blocks
-   ) {
-      super(externalToInternal, internalToExternal, internalIdSet, internalIdCount, blocks);
+   HalfByteSectionPalette(Int2ByteMap externalToInternal, Byte2IntMap internalToExternal, BitSet internalIdSet, Byte2ShortMap internalIdCount, byte[] blocks) {
+      this.externalToInternal = externalToInternal;
+      this.internalToExternal = internalToExternal;
+      this.internalIdSet = internalIdSet;
+      this.internalIdCount = internalIdCount;
+      this.blocks = blocks;
    }
 
    public HalfByteSectionPalette(@Nonnull int[] data, @Nonnull Int2ShortMap externalIdCounts) {
-      super(new byte[16384], data, externalIdCounts);
+      this.blocks = new byte[16384];
+      this.externalToInternal = new Int2ByteOpenHashMap(externalIdCounts.size());
+      this.internalToExternal = new Byte2IntOpenHashMap(externalIdCounts.size());
+      this.internalIdSet = new BitSet(externalIdCounts.size());
+      this.internalIdCount = new Byte2ShortOpenHashMap(externalIdCounts.size());
+      byte internalIdCounter = 0;
+
+      for (Int2ShortMap.Entry entry : Int2ShortMaps.fastIterable(externalIdCounts)) {
+         this.internalToExternal.put(internalIdCounter, entry.getIntKey());
+         this.externalToInternal.put(entry.getIntKey(), internalIdCounter);
+         this.internalIdSet.set(this.unsignedInternalId(internalIdCounter));
+         this.internalIdCount.put(internalIdCounter, entry.getShortValue());
+         internalIdCounter++;
+      }
+
+      int index = 0;
+
+      while (index < data.length) {
+         int externalId = data[index];
+         int start = index;
+
+         do {
+            index++;
+         } while (index < data.length && data[index] == externalId);
+
+         byte internalId = this.externalToInternal.get(externalId);
+
+         for (int i = start; i < index; i++) {
+            BitUtil.setNibble(this.blocks, i, internalId);
+         }
+      }
    }
 
    @Nonnull
@@ -36,13 +95,124 @@ public class HalfByteSectionPalette extends AbstractByteSectionPalette {
    }
 
    @Override
-   protected void set0(int idx, byte b) {
-      BitUtil.setNibble(this.blocks, idx, b);
+   public int get(int index) {
+      return this.internalToExternal.get(BitUtil.getNibble(this.blocks, index));
+   }
+
+   @Nonnull
+   @Override
+   public AbstractSectionPalette.SetResult set(int index, int id) {
+      byte oldInternalId = BitUtil.getNibble(this.blocks, index);
+      if (this.externalToInternal.containsKey(id)) {
+         byte newInternalId = this.externalToInternal.get(id);
+         if (newInternalId == oldInternalId) {
+            return AbstractSectionPalette.SetResult.UNCHANGED;
+         }
+
+         boolean removed = this.decrementBlockCount(oldInternalId);
+         this.incrementBlockCount(newInternalId);
+         BitUtil.setNibble(this.blocks, index, newInternalId);
+         return removed ? AbstractSectionPalette.SetResult.ADDED_OR_REMOVED : AbstractSectionPalette.SetResult.CHANGED;
+      } else {
+         int nextInternalId = this.nextInternalId(oldInternalId);
+         if (!this.isValidInternalId(nextInternalId)) {
+            return AbstractSectionPalette.SetResult.REQUIRES_PROMOTE;
+         }
+
+         this.decrementBlockCount(oldInternalId);
+         byte newInternalId = (byte)nextInternalId;
+         this.createBlockId(newInternalId, id);
+         BitUtil.setNibble(this.blocks, index, newInternalId);
+         return AbstractSectionPalette.SetResult.ADDED_OR_REMOVED;
+      }
+   }
+
+   private int nextInternalId(byte oldInternalId) {
+      return this.internalIdCount.get(oldInternalId) == 1 ? this.unsignedInternalId(oldInternalId) : this.internalIdSet.nextClearBit(0);
+   }
+
+   private void createBlockId(byte internalId, int blockId) {
+      this.internalToExternal.put(internalId, blockId);
+      this.externalToInternal.put(blockId, internalId);
+      this.internalIdSet.set(this.unsignedInternalId(internalId));
+      this.internalIdCount.put(internalId, (short)1);
+   }
+
+   private boolean decrementBlockCount(byte internalId) {
+      short oldCount = this.internalIdCount.get(internalId);
+      if (oldCount == 1) {
+         this.internalIdCount.remove(internalId);
+         int externalId = this.internalToExternal.remove(internalId);
+         this.externalToInternal.remove(externalId);
+         this.internalIdSet.clear(this.unsignedInternalId(internalId));
+         return true;
+      } else {
+         this.internalIdCount.mergeShort(internalId, (short)1, NumberUtil::subtract);
+         return false;
+      }
+   }
+
+   private void incrementBlockCount(byte internalId) {
+      this.internalIdCount.mergeShort(internalId, (short)1, NumberUtil::sum);
    }
 
    @Override
-   protected byte get0(int idx) {
-      return BitUtil.getNibble(this.blocks, idx);
+   public boolean contains(int id) {
+      return this.externalToInternal.containsKey(id);
+   }
+
+   @Override
+   public boolean containsAny(@Nonnull IntList ids) {
+      int itr = 0;
+
+      for (int len = ids.size(); itr < len; itr++) {
+         if (this.externalToInternal.containsKey(ids.getInt(itr))) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   @Override
+   public int count() {
+      return this.internalIdCount.size();
+   }
+
+   @Override
+   public int count(int id) {
+      if (this.externalToInternal.containsKey(id)) {
+         byte internalId = this.externalToInternal.get(id);
+         return this.internalIdCount.get(internalId);
+      } else {
+         return 0;
+      }
+   }
+
+   @Nonnull
+   @Override
+   public IntSet values() {
+      return new IntOpenHashSet(this.externalToInternal.keySet());
+   }
+
+   @Override
+   public void forEachValue(@Nonnull IntConsumer consumer) {
+      this.externalToInternal.keySet().forEach(consumer);
+   }
+
+   @Nonnull
+   @Override
+   public Int2ShortMap valueCounts() {
+      Int2ShortMap map = new Int2ShortOpenHashMap();
+
+      for (Byte2ShortMap.Entry entry : this.internalIdCount.byte2ShortEntrySet()) {
+         byte internalId = entry.getByteKey();
+         short count = entry.getShortValue();
+         int externalId = this.internalToExternal.get(internalId);
+         map.put(externalId, count);
+      }
+
+      return map;
    }
 
    @Override
@@ -52,7 +222,7 @@ public class HalfByteSectionPalette extends AbstractByteSectionPalette {
 
    @Nonnull
    @Override
-   public ISectionPalette demote() {
+   public AbstractSectionPalette demote() {
       return EmptySectionPalette.INSTANCE;
    }
 
@@ -61,18 +231,149 @@ public class HalfByteSectionPalette extends AbstractByteSectionPalette {
       return ByteSectionPalette.fromHalfBytePalette(this);
    }
 
-   @Override
-   protected boolean isValidInternalId(int internalId) {
+   private boolean isValidInternalId(int internalId) {
       return (internalId & 15) == internalId;
    }
 
-   @Override
-   protected int unsignedInternalId(byte internalId) {
+   private int unsignedInternalId(byte internalId) {
       return internalId & 15;
    }
 
    private static int sUnsignedInternalId(byte internalId) {
       return internalId & 15;
+   }
+
+   @Override
+   public void find(@Nonnull IntList ids, @Nonnull IntConsumer indexConsumer) {
+      ByteSet internalIds = this.buildInternalByteSet(ids);
+      if (!internalIds.isEmpty()) {
+         int index = 0;
+         byte type = BitUtil.getNibble(this.blocks, 0);
+
+         while (index < 32768) {
+            int start = index;
+            byte runType = type;
+
+            do {
+               index++;
+            } while (index < 32768 && (type = BitUtil.getNibble(this.blocks, index)) == runType);
+
+            if (internalIds.contains(runType)) {
+               for (int i = start; i < index; i++) {
+                  indexConsumer.accept(i);
+               }
+            }
+         }
+      }
+   }
+
+   @Override
+   public void find(@Nonnull IntList ids, @Nonnull BiIntConsumer indexBlockConsumer) {
+      ByteSet internalIds = this.buildInternalByteSet(ids);
+      if (!internalIds.isEmpty()) {
+         int index = 0;
+         byte type = BitUtil.getNibble(this.blocks, 0);
+
+         while (index < 32768) {
+            int start = index;
+            byte runType = type;
+
+            do {
+               index++;
+            } while (index < 32768 && (type = BitUtil.getNibble(this.blocks, index)) == runType);
+
+            if (internalIds.contains(runType)) {
+               int external = this.internalToExternal.get(runType);
+
+               for (int i = start; i < index; i++) {
+                  indexBlockConsumer.accept(i, external);
+               }
+            }
+         }
+      }
+   }
+
+   private ByteSet buildInternalByteSet(IntList ids) {
+      ByteSet internalIds = PaletteSetProvider.get().getByteSet(ids.size());
+
+      for (int i = 0; i < ids.size(); i++) {
+         byte internal = this.externalToInternal.getOrDefault(ids.getInt(i), (byte)-128);
+         if (internal != -128) {
+            internalIds.add(internal);
+         }
+      }
+
+      return internalIds;
+   }
+
+   @Override
+   public void serializeForPacket(@Nonnull ByteBuf buf) {
+      buf.writeShortLE(this.internalToExternal.size());
+
+      for (Byte2IntMap.Entry entry : this.internalToExternal.byte2IntEntrySet()) {
+         byte internalId = entry.getByteKey();
+         int externalId = entry.getIntValue();
+         buf.writeByte(internalId);
+         buf.writeIntLE(externalId);
+         buf.writeShortLE(this.internalIdCount.get(internalId));
+      }
+
+      buf.writeBytes(this.blocks);
+   }
+
+   @Override
+   public void serialize(@Nonnull AbstractSectionPalette.KeySerializer keySerializer, @Nonnull ByteBuf buf) {
+      buf.writeShort(this.internalToExternal.size());
+
+      for (Byte2IntMap.Entry entry : this.internalToExternal.byte2IntEntrySet()) {
+         byte internalId = entry.getByteKey();
+         int externalId = entry.getIntValue();
+         buf.writeByte(internalId);
+         keySerializer.serialize(buf, externalId);
+         buf.writeShort(this.internalIdCount.get(internalId));
+      }
+
+      buf.writeBytes(this.blocks);
+   }
+
+   @Override
+   public void deserialize(@Nonnull ToIntFunction<ByteBuf> deserializer, @Nonnull ByteBuf buf, int version) {
+      this.externalToInternal.clear();
+      this.internalToExternal.clear();
+      this.internalIdSet.clear();
+      this.internalIdCount.clear();
+      Byte2ByteMap internalIdRemapping = null;
+      int blockCount = buf.readShort();
+
+      for (int i = 0; i < blockCount; i++) {
+         byte internalId = buf.readByte();
+         int externalId = deserializer.applyAsInt(buf);
+         short count = buf.readShort();
+         if (this.externalToInternal.containsKey(externalId)) {
+            byte existingInternalId = this.externalToInternal.get(externalId);
+            if (internalIdRemapping == null) {
+               internalIdRemapping = new Byte2ByteOpenHashMap();
+            }
+
+            internalIdRemapping.put(internalId, existingInternalId);
+            this.internalIdCount.mergeShort(existingInternalId, count, NumberUtil::sum);
+         } else {
+            this.externalToInternal.put(externalId, internalId);
+            this.internalToExternal.put(internalId, externalId);
+            this.internalIdSet.set(this.unsignedInternalId(internalId));
+            this.internalIdCount.put(internalId, count);
+         }
+      }
+
+      buf.readBytes(this.blocks);
+      if (internalIdRemapping != null) {
+         for (int i = 0; i < 32768; i++) {
+            byte old = BitUtil.getNibble(this.blocks, i);
+            if (internalIdRemapping.containsKey(old)) {
+               BitUtil.setNibble(this.blocks, i, internalIdRemapping.get(old));
+            }
+         }
+      }
    }
 
    @Nonnull
@@ -81,37 +382,34 @@ public class HalfByteSectionPalette extends AbstractByteSectionPalette {
          throw new IllegalStateException("Cannot demote byte palette to half byte palette. Too many blocks! Count: " + section.count());
       }
 
-      HalfByteSectionPalette halfByteSection = new HalfByteSectionPalette();
       Byte2ByteMap internalIdRemapping = new Byte2ByteOpenHashMap();
-      halfByteSection.internalToExternal.clear();
-      halfByteSection.externalToInternal.clear();
-      halfByteSection.internalIdSet.clear();
+      Int2ByteMap externalToInternal = new Int2ByteOpenHashMap();
+      Byte2IntMap internalToExternal = new Byte2IntOpenHashMap();
+      BitSet internalIdSet = new BitSet(16);
+      Byte2ShortMap internalIdCount = new Byte2ShortOpenHashMap();
 
       for (Byte2IntMap.Entry entry : section.internalToExternal.byte2IntEntrySet()) {
          byte oldInternalId = entry.getByteKey();
          int externalId = entry.getIntValue();
-         byte newInternalId = (byte)halfByteSection.internalIdSet.nextClearBit(0);
-         halfByteSection.internalIdSet.set(sUnsignedInternalId(newInternalId));
+         byte newInternalId = (byte)internalIdSet.nextClearBit(0);
+         internalIdSet.set(sUnsignedInternalId(newInternalId));
          internalIdRemapping.put(oldInternalId, newInternalId);
-         halfByteSection.internalToExternal.put(newInternalId, externalId);
-         halfByteSection.externalToInternal.put(externalId, newInternalId);
+         internalToExternal.put(newInternalId, externalId);
+         externalToInternal.put(externalId, newInternalId);
       }
-
-      halfByteSection.internalIdCount.clear();
 
       for (Byte2ShortMap.Entry entry : section.internalIdCount.byte2ShortEntrySet()) {
-         byte internalId = entry.getByteKey();
-         short count = entry.getShortValue();
-         byte newInternalId = internalIdRemapping.get(internalId);
-         halfByteSection.internalIdCount.put(newInternalId, count);
+         internalIdCount.put(internalIdRemapping.get(entry.getByteKey()), entry.getShortValue());
       }
+
+      byte[] newBlocks = new byte[16384];
 
       for (int i = 0; i < section.blocks.length; i++) {
          byte internalId = section.blocks[i];
          byte byteInternalId = internalIdRemapping.get(internalId);
-         halfByteSection.set0(i, byteInternalId);
+         BitUtil.setNibble(newBlocks, i, byteInternalId);
       }
 
-      return halfByteSection;
+      return new HalfByteSectionPalette(externalToInternal, internalToExternal, internalIdSet, internalIdCount, newBlocks);
    }
 }

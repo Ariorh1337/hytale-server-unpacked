@@ -15,7 +15,6 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.component.system.tick.TickingSystem;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.GameMode;
@@ -52,6 +51,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
@@ -614,9 +614,8 @@ public class RoleSystems {
          Matrix4d matrix = new Matrix4d();
          matrix.identity();
          matrix.translate(x, y, z);
-         Matrix4d tmp = new Matrix4d();
-         matrix.rotateAxis(yawAngle, 0.0, 1.0, 0.0, tmp);
-         matrix.rotateAxis(pitchAngle, 0.0, 0.0, 1.0, tmp);
+         matrix.rotate(-yawAngle, 0.0, 1.0, 0.0);
+         matrix.rotate(-pitchAngle, 0.0, 0.0, 1.0);
          DebugUtils.addDisc(world, matrix, outerRadius, innerRadius, color, 0.8F, 0.1F, 0);
       }
 

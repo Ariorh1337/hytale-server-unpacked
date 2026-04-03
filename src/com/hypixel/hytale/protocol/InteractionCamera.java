@@ -1,11 +1,13 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
 
 public class InteractionCamera {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
@@ -14,15 +16,15 @@ public class InteractionCamera {
    public static final int VARIABLE_BLOCK_START = 29;
    public static final int MAX_SIZE = 29;
    public float time;
-   @Nullable
-   public Vector3f position;
+   @Nonnull
+   public Vector3fc position = PacketIO.ZERO_VECTOR3;
    @Nullable
    public Direction rotation;
 
    public InteractionCamera() {
    }
 
-   public InteractionCamera(float time, @Nullable Vector3f position, @Nullable Direction rotation) {
+   public InteractionCamera(float time, @Nonnull Vector3fc position, @Nullable Direction rotation) {
       this.time = time;
       this.position = position;
       this.rotation = rotation;
@@ -43,11 +45,8 @@ public class InteractionCamera {
       InteractionCamera obj = new InteractionCamera();
       byte nullBits = buf.getByte(offset);
       obj.time = buf.getFloatLE(offset + 1);
+      obj.position = PacketIO.readVector3f(buf, offset + 5);
       if ((nullBits & 1) != 0) {
-         obj.position = Vector3f.deserialize(buf, offset + 5);
-      }
-
-      if ((nullBits & 2) != 0) {
          obj.rotation = Direction.deserialize(buf, offset + 17);
       }
 
@@ -60,22 +59,13 @@ public class InteractionCamera {
 
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
-      if (this.position != null) {
-         nullBits = (byte)(nullBits | 1);
-      }
-
       if (this.rotation != null) {
-         nullBits = (byte)(nullBits | 2);
+         nullBits = (byte)(nullBits | 1);
       }
 
       buf.writeByte(nullBits);
       buf.writeFloatLE(this.time);
-      if (this.position != null) {
-         this.position.serialize(buf);
-      } else {
-         buf.writeZero(12);
-      }
-
+      PacketIO.writeVector3f(buf, this.position);
       if (this.rotation != null) {
          this.rotation.serialize(buf);
       } else {
@@ -99,7 +89,7 @@ public class InteractionCamera {
    public InteractionCamera clone() {
       InteractionCamera copy = new InteractionCamera();
       copy.time = this.time;
-      copy.position = this.position != null ? this.position.clone() : null;
+      copy.position = this.position;
       copy.rotation = this.rotation != null ? this.rotation.clone() : null;
       return copy;
    }

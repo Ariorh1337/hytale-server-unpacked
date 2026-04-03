@@ -45,13 +45,12 @@ public abstract class Evaluator<OptionType extends Option> {
    public Evaluator<OptionType>.OptionHolder evaluate(
       int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, CommandBuffer<EntityStore> commandBuffer, @Nonnull EvaluationContext context
    ) {
-      NPCEntity npcComponent = archetypeChunk.getComponent(index, NPCEntity.getComponentType());
-      assert npcComponent != null;
-      UUIDComponent uuidComponent = archetypeChunk.getComponent(index, UUIDComponent.getComponentType());
-      assert uuidComponent != null;
+      NPCEntity npcComponent = null;
+      UUIDComponent uuidComponent = null;
       Evaluator<OptionType>.OptionHolder bestOption = null;
       double minimumWeight = context.getMinimumWeightCoefficient();
       int nonMatchingIndex = this.options.size();
+      HytaleLogger.Api logContext = LOGGER.at(Level.FINE);
 
       for (int i = 0; i < this.options.size(); i++) {
          Evaluator<OptionType>.OptionHolder optionHolder = this.options.get(i);
@@ -61,8 +60,17 @@ public abstract class Evaluator<OptionType extends Option> {
          }
 
          double utility = optionHolder.calculateUtility(index, archetypeChunk, commandBuffer, context);
-         HytaleLogger.Api logContext = LOGGER.at(Level.FINE);
          if (logContext.isEnabled()) {
+            if (npcComponent == null) {
+               npcComponent = archetypeChunk.getComponent(index, NPCEntity.getComponentType());
+               assert npcComponent != null;
+            }
+
+            if (uuidComponent == null) {
+               uuidComponent = archetypeChunk.getComponent(index, UUIDComponent.getComponentType());
+               assert uuidComponent != null;
+            }
+
             logContext.log("%s with uuid %s: Scored option %s at %s", npcComponent.getRoleName(), uuidComponent.getUuid(), optionHolder.option, utility);
          }
 

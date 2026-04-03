@@ -16,9 +16,9 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
    public static final int PACKET_ID = 355;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 30;
+   public static final int FIXED_BLOCK_SIZE = 29;
    public static final int VARIABLE_FIELD_COUNT = 3;
-   public static final int VARIABLE_BLOCK_START = 42;
+   public static final int VARIABLE_BLOCK_START = 41;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public AssetPath assetPath;
@@ -60,8 +60,8 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorUpdateModelPreview deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 42) {
-         throw ProtocolException.bufferTooSmall("AssetEditorUpdateModelPreview", 42, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 41) {
+         throw ProtocolException.bufferTooSmall("AssetEditorUpdateModelPreview", 41, buf.readableBytes() - offset);
       }
 
       AssetEditorUpdateModelPreview obj = new AssetEditorUpdateModelPreview();
@@ -71,32 +71,32 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 30);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 42) {
+         int varPosBase0 = buf.getIntLE(offset + 29);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 41) {
             throw ProtocolException.invalidOffset("AssetPath", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 42 + varPosBase0;
+         int varPos0 = offset + 41 + varPosBase0;
          obj.assetPath = AssetPath.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 4) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 34);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 42) {
+         int varPosBase1 = buf.getIntLE(offset + 33);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 41) {
             throw ProtocolException.invalidOffset("Model", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 42 + varPosBase1;
+         int varPos1 = offset + 41 + varPosBase1;
          obj.model = Model.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 8) != 0) {
-         int varPosBase2 = buf.getIntLE(offset + 38);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 42) {
+         int varPosBase2 = buf.getIntLE(offset + 37);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 41) {
             throw ProtocolException.invalidOffset("Block", varPosBase2, buf.readableBytes());
          }
 
-         int varPos2 = offset + 42 + varPosBase2;
+         int varPos2 = offset + 41 + varPosBase2;
          obj.block = BlockType.deserialize(buf, varPos2);
       }
 
@@ -105,14 +105,14 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 42;
+      int maxEnd = 41;
       if ((nullBits & 2) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 30);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 42) {
+         int fieldOffset0 = buf.getIntLE(offset + 29);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 41) {
             throw ProtocolException.invalidOffset("AssetPath", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 42 + fieldOffset0;
+         int pos0 = offset + 41 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
@@ -120,12 +120,12 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 34);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 42) {
+         int fieldOffset1 = buf.getIntLE(offset + 33);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 41) {
             throw ProtocolException.invalidOffset("Model", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 42 + fieldOffset1;
+         int pos1 = offset + 41 + fieldOffset1;
          pos1 += Model.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
@@ -133,12 +133,12 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 8) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 38);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 42) {
+         int fieldOffset2 = buf.getIntLE(offset + 37);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 41) {
             throw ProtocolException.invalidOffset("Block", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 42 + fieldOffset2;
+         int pos2 = offset + 41 + fieldOffset2;
          pos2 += BlockType.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
@@ -172,7 +172,7 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       if (this.camera != null) {
          this.camera.serialize(buf);
       } else {
-         buf.writeZero(29);
+         buf.writeZero(28);
       }
 
       int assetPathOffsetSlot = buf.writerIndex();
@@ -206,7 +206,7 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
    @Override
    public int computeSize() {
-      int size = 42;
+      int size = 41;
       if (this.assetPath != null) {
          size += this.assetPath.computeSize();
       }
@@ -223,18 +223,18 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 42) {
-         return ValidationResult.error("Buffer too small: expected at least 42 bytes");
+      if (buffer.readableBytes() - offset < 41) {
+         return ValidationResult.error("Buffer too small: expected at least 41 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
-         int assetPathOffset = buffer.getIntLE(offset + 30);
-         if (assetPathOffset < 0 || assetPathOffset > buffer.writerIndex() - offset - 42) {
+         int assetPathOffset = buffer.getIntLE(offset + 29);
+         if (assetPathOffset < 0 || assetPathOffset > buffer.writerIndex() - offset - 41) {
             return ValidationResult.error("Invalid offset for AssetPath");
          }
 
-         int pos = offset + 42 + assetPathOffset;
+         int pos = offset + 41 + assetPathOffset;
          ValidationResult assetPathResult = AssetPath.validateStructure(buffer, pos);
          if (!assetPathResult.isValid()) {
             return ValidationResult.error("Invalid AssetPath: " + assetPathResult.error());
@@ -244,12 +244,12 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int modelOffset = buffer.getIntLE(offset + 34);
-         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 42) {
+         int modelOffset = buffer.getIntLE(offset + 33);
+         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 41) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
-         int pos = offset + 42 + modelOffset;
+         int pos = offset + 41 + modelOffset;
          ValidationResult modelResult = Model.validateStructure(buffer, pos);
          if (!modelResult.isValid()) {
             return ValidationResult.error("Invalid Model: " + modelResult.error());
@@ -259,12 +259,12 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 8) != 0) {
-         int blockOffset = buffer.getIntLE(offset + 38);
-         if (blockOffset < 0 || blockOffset > buffer.writerIndex() - offset - 42) {
+         int blockOffset = buffer.getIntLE(offset + 37);
+         if (blockOffset < 0 || blockOffset > buffer.writerIndex() - offset - 41) {
             return ValidationResult.error("Invalid offset for Block");
          }
 
-         int pos = offset + 42 + blockOffset;
+         int pos = offset + 41 + blockOffset;
          ValidationResult blockResult = BlockType.validateStructure(buffer, pos);
          if (!blockResult.isValid()) {
             return ValidationResult.error("Invalid Block: " + blockResult.error());

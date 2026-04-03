@@ -93,13 +93,13 @@ public class BedInteraction extends SimpleBlockInteraction {
                               Vector3d whereWasHit = new Vector3d(targetBlockPosition.x + 0.5, targetBlockPosition.y + 0.5, targetBlockPosition.z + 0.5);
                               BlockMountAPI.BlockMountResult result = BlockMountAPI.mountOnBlock(ref, commandBuffer, pos, whereWasHit);
                               if (result instanceof BlockMountAPI.DidNotMount) {
-                                 playerComponent.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
+                                 playerRefComponent.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
                               } else if (result instanceof BlockMountAPI.Mounted) {
                                  commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.NoddingOff.createComponent());
                                  commandBuffer.run(s -> SleepNotificationSystem.maybeDoNotification(s, false));
                               }
                            } else if (ownerUUID != null) {
-                              playerComponent.sendMessage(MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED);
+                              playerRefComponent.sendMessage(MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED);
                            } else {
                               PlayerRespawnPointData[] respawnPoints = playerComponent.getPlayerConfigData()
                                  .getPerWorldData(world.getName())
