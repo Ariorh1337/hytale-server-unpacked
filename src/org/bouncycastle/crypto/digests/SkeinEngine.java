@@ -340,7 +340,7 @@ public class SkeinEngine implements Memoable {
    private static class Configuration {
       private byte[] bytes = new byte[32];
 
-      public Configuration(long var1) {
+      Configuration(long var1) {
          this.bytes[0] = 83;
          this.bytes[1] = 72;
          this.bytes[2] = 65;
@@ -350,7 +350,7 @@ public class SkeinEngine implements Memoable {
          Pack.longToLittleEndian(var1, this.bytes, 8);
       }
 
-      public byte[] getBytes() {
+      byte[] getBytes() {
          return this.bytes;
       }
    }
@@ -379,25 +379,25 @@ public class SkeinEngine implements Memoable {
       private int currentOffset;
       private long[] message;
 
-      public UBI(int nullx) {
+      UBI(int nullx) {
          this.currentBlock = new byte[nullx];
          this.message = new long[this.currentBlock.length / 8];
       }
 
-      public void reset(SkeinEngine.UBI var1) {
+      void reset(SkeinEngine.UBI var1) {
          this.currentBlock = Arrays.clone(var1.currentBlock, this.currentBlock);
          this.currentOffset = var1.currentOffset;
          this.message = Arrays.clone(var1.message, this.message);
          this.tweak.reset(var1.tweak);
       }
 
-      public void reset(int var1) {
+      void reset(int var1) {
          this.tweak.reset();
          this.tweak.setType(var1);
          this.currentOffset = 0;
       }
 
-      public void update(byte[] var1, int var2, int var3, long[] var4) {
+      void update(byte[] var1, int var2, int var3, long[] var4) {
          int var5 = 0;
 
          while (var3 > var5) {
@@ -425,7 +425,7 @@ public class SkeinEngine implements Memoable {
          }
       }
 
-      public void doFinal(long[] var1) {
+      void doFinal(long[] var1) {
          for (int var2 = this.currentOffset; var2 < this.currentBlock.length; var2++) {
             this.currentBlock[var2] = 0;
          }
@@ -442,31 +442,31 @@ public class SkeinEngine implements Memoable {
       private long[] tweak = new long[2];
       private boolean extendedPosition;
 
-      public UbiTweak() {
+      UbiTweak() {
          this.reset();
       }
 
-      public void reset(SkeinEngine.UbiTweak var1) {
+      void reset(SkeinEngine.UbiTweak var1) {
          this.tweak = Arrays.clone(var1.tweak, this.tweak);
          this.extendedPosition = var1.extendedPosition;
       }
 
-      public void reset() {
+      void reset() {
          this.tweak[0] = 0L;
          this.tweak[1] = 0L;
          this.extendedPosition = false;
          this.setFirst(true);
       }
 
-      public void setType(int var1) {
+      void setType(int var1) {
          this.tweak[1] = this.tweak[1] & -274877906944L | (var1 & 63L) << 56;
       }
 
-      public int getType() {
+      int getType() {
          return (int)(this.tweak[1] >>> 56 & 63L);
       }
 
-      public void setFirst(boolean var1) {
+      void setFirst(boolean var1) {
          if (var1) {
             this.tweak[1] = this.tweak[1] | 4611686018427387904L;
          } else {
@@ -474,11 +474,11 @@ public class SkeinEngine implements Memoable {
          }
       }
 
-      public boolean isFirst() {
+      boolean isFirst() {
          return (this.tweak[1] & 4611686018427387904L) != 0L;
       }
 
-      public void setFinal(boolean var1) {
+      void setFinal(boolean var1) {
          if (var1) {
             this.tweak[1] = this.tweak[1] | Long.MIN_VALUE;
          } else {
@@ -486,11 +486,11 @@ public class SkeinEngine implements Memoable {
          }
       }
 
-      public boolean isFinal() {
+      boolean isFinal() {
          return (this.tweak[1] & Long.MIN_VALUE) != 0L;
       }
 
-      public void advancePosition(int var1) {
+      void advancePosition(int var1) {
          if (this.extendedPosition) {
             long[] var2 = new long[]{this.tweak[0] & 4294967295L, this.tweak[0] >>> 32 & 4294967295L, this.tweak[1] & 4294967295L};
             long var3 = var1;
@@ -513,7 +513,7 @@ public class SkeinEngine implements Memoable {
          }
       }
 
-      public long[] getWords() {
+      long[] getWords() {
          return this.tweak;
       }
 

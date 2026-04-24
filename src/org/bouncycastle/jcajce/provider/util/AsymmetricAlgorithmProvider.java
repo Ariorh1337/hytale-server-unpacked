@@ -8,14 +8,12 @@ public abstract class AsymmetricAlgorithmProvider extends AlgorithmProvider {
    protected void addSignatureAlgorithm(ConfigurableProvider var1, String var2, String var3, ASN1ObjectIdentifier var4) {
       var1.addAlgorithm("Signature." + var2, var3);
       if (var4 != null) {
-         var1.addAlgorithm("Alg.Alias.Signature." + var4, var2);
-         var1.addAlgorithm("Alg.Alias.Signature.OID." + var4, var2);
+         this.registerSignatureOid(var1, var4, var2);
       }
    }
 
    protected void addSignatureAlias(ConfigurableProvider var1, String var2, ASN1ObjectIdentifier var3) {
-      var1.addAlgorithm("Alg.Alias.Signature." + var3, var2);
-      var1.addAlgorithm("Alg.Alias.Signature.OID." + var3, var2);
+      this.registerSignatureOid(var1, var3, var2);
    }
 
    protected void addSignatureAlgorithm(ConfigurableProvider var1, String var2, String var3, String var4) {
@@ -32,8 +30,7 @@ public abstract class AsymmetricAlgorithmProvider extends AlgorithmProvider {
       var1.addAlgorithm("Alg.Alias.Signature." + var8, var6);
       var1.addAlgorithm("Alg.Alias.Signature." + var9, var6);
       if (var5 != null) {
-         var1.addAlgorithm("Alg.Alias.Signature." + var5, var6);
-         var1.addAlgorithm("Alg.Alias.Signature.OID." + var5, var6);
+         this.registerSignatureOid(var1, var5, var6);
       }
    }
 
@@ -47,8 +44,7 @@ public abstract class AsymmetricAlgorithmProvider extends AlgorithmProvider {
       var1.addAlgorithm("Alg.Alias.Signature." + var9, var7);
       var1.addAlgorithm("Alg.Alias.Signature." + var10, var7);
       if (var5 != null) {
-         var1.addAlgorithm("Alg.Alias.Signature." + var5, var7);
-         var1.addAlgorithm("Alg.Alias.Signature.OID." + var5, var7);
+         this.registerSignatureOid(var1, var5, var7);
       }
 
       var1.addAttributes("Signature." + var7, var6);
@@ -57,17 +53,14 @@ public abstract class AsymmetricAlgorithmProvider extends AlgorithmProvider {
    protected void addKeyPairGeneratorAlgorithm(ConfigurableProvider var1, String var2, String var3, ASN1ObjectIdentifier var4) {
       var1.addAlgorithm("KeyPairGenerator." + var2, var3);
       if (var4 != null) {
-         var1.addAlgorithm("Alg.Alias.KeyPairGenerator." + var4, var2);
-         var1.addAlgorithm("Alg.Alias.KeyPairGenerator.OID." + var4, var2);
+         this.registerKeyPairGeneratorOid(var1, var4, var2);
       }
    }
 
    protected void addKeyFactoryAlgorithm(ConfigurableProvider var1, String var2, String var3, ASN1ObjectIdentifier var4, AsymmetricKeyInfoConverter var5) {
       var1.addAlgorithm("KeyFactory." + var2, var3);
       if (var4 != null) {
-         var1.addAlgorithm("Alg.Alias.KeyFactory." + var4, var2);
-         var1.addAlgorithm("Alg.Alias.KeyFactory.OID." + var4, var2);
-         var1.addKeyInfoConverter(var4, var5);
+         this.registerKeyFactoryOid(var1, var4, var2, var5);
       }
    }
 
@@ -87,16 +80,28 @@ public abstract class AsymmetricAlgorithmProvider extends AlgorithmProvider {
       }
    }
 
+   protected void addKEMAlgorithm(ConfigurableProvider var1, String var2, String var3, ASN1ObjectIdentifier var4) {
+      var1.addAlgorithm("KEM." + var2, var3);
+      if (var4 != null) {
+         var1.addAlgorithm("Alg.Alias.KEM." + var4, var2);
+         var1.addAlgorithm("Alg.Alias.KEM.OID." + var4, var2);
+      }
+   }
+
    protected void registerKeyFactoryOid(ConfigurableProvider var1, ASN1ObjectIdentifier var2, String var3, AsymmetricKeyInfoConverter var4) {
       var1.addAlgorithm("Alg.Alias.KeyFactory." + var2, var3);
       var1.addAlgorithm("Alg.Alias.KeyFactory.OID." + var2, var3);
       var1.addKeyInfoConverter(var2, var4);
    }
 
-   protected void registerOid(ConfigurableProvider var1, ASN1ObjectIdentifier var2, String var3, AsymmetricKeyInfoConverter var4) {
-      var1.addAlgorithm("Alg.Alias.KeyFactory." + var2, var3);
+   protected void registerKeyPairGeneratorOid(ConfigurableProvider var1, ASN1ObjectIdentifier var2, String var3) {
       var1.addAlgorithm("Alg.Alias.KeyPairGenerator." + var2, var3);
-      var1.addKeyInfoConverter(var2, var4);
+      var1.addAlgorithm("Alg.Alias.KeyPairGenerator.OID." + var2, var3);
+   }
+
+   protected void registerOid(ConfigurableProvider var1, ASN1ObjectIdentifier var2, String var3, AsymmetricKeyInfoConverter var4) {
+      this.registerKeyFactoryOid(var1, var2, var3, var4);
+      this.registerKeyPairGeneratorOid(var1, var2, var3);
    }
 
    protected void registerOidAlgorithmParameters(ConfigurableProvider var1, ASN1ObjectIdentifier var2, String var3) {
@@ -106,5 +111,10 @@ public abstract class AsymmetricAlgorithmProvider extends AlgorithmProvider {
    protected void registerOidAlgorithmParameterGenerator(ConfigurableProvider var1, ASN1ObjectIdentifier var2, String var3) {
       var1.addAlgorithm("Alg.Alias.AlgorithmParameterGenerator." + var2, var3);
       var1.addAlgorithm("Alg.Alias.AlgorithmParameters." + var2, var3);
+   }
+
+   protected void registerSignatureOid(ConfigurableProvider var1, ASN1ObjectIdentifier var2, String var3) {
+      var1.addAlgorithm("Alg.Alias.Signature." + var2, var3);
+      var1.addAlgorithm("Alg.Alias.Signature.OID." + var2, var3);
    }
 }

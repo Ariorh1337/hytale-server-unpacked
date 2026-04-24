@@ -1,8 +1,43 @@
 package org.bouncycastle.asn1;
 
 import java.io.IOException;
+import org.bouncycastle.util.Arrays;
 
 public class DEROctetString extends ASN1OctetString {
+   public static final DEROctetString EMPTY = new DEROctetString(EMPTY_OCTETS);
+
+   public static DEROctetString fromContents(byte[] var0) {
+      if (var0 == null) {
+         throw new NullPointerException("'contents' cannot be null");
+      } else {
+         return internalFromContents(var0);
+      }
+   }
+
+   public static DEROctetString fromContentsOptional(byte[] var0) {
+      return var0 == null ? null : internalFromContents(var0);
+   }
+
+   public static DEROctetString withContents(byte[] var0) {
+      if (var0 == null) {
+         throw new NullPointerException("'contents' cannot be null");
+      } else {
+         return internalWithContents(var0);
+      }
+   }
+
+   public static DEROctetString withContentsOptional(byte[] var0) {
+      return var0 == null ? null : internalWithContents(var0);
+   }
+
+   static DEROctetString internalFromContents(byte[] var0) {
+      return var0.length < 1 ? EMPTY : new DEROctetString(Arrays.clone(var0));
+   }
+
+   static DEROctetString internalWithContents(byte[] var0) {
+      return var0.length < 1 ? EMPTY : new DEROctetString(var0);
+   }
+
    public DEROctetString(byte[] var1) {
       super(var1);
    }

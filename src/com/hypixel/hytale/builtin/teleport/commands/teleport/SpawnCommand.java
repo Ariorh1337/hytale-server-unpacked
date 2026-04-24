@@ -32,6 +32,7 @@ public class SpawnCommand extends AbstractPlayerCommand {
    public SpawnCommand() {
       super("spawn", "server.commands.spawn.desc");
       this.requirePermission(HytalePermissions.fromCommand("spawn.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new SpawnCommand.SpawnOtherCommand());
       this.addSubCommand(new SpawnSetCommand());
       this.addSubCommand(new SpawnSetDefaultCommand());

@@ -31,6 +31,6 @@ public class PacketEncoder extends MessageToByteEncoder<Packet> {
          statsRecorder = PacketStatsRecorder.NOOP;
       }
 
-      PacketIO.writeFramedPacket(packet, packetClass, out, statsRecorder);
+      PacketIO.writeFramedPacket(packet, packetClass, out, ctx.alloc(), statsRecorder);
    }
 }

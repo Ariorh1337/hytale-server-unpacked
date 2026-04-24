@@ -1,7 +1,6 @@
 package org.bouncycastle.asn1.cms;
 
 import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
@@ -31,23 +30,28 @@ public class ContentInfo extends ASN1Object implements CMSObjectIdentifiers {
       return new ContentInfo(ASN1Sequence.getInstance(var0, var1));
    }
 
+   public static ContentInfo getTagged(ASN1TaggedObject var0, boolean var1) {
+      return new ContentInfo(ASN1Sequence.getTagged(var0, var1));
+   }
+
    private ContentInfo(ASN1Sequence var1) {
-      if (var1.size() >= 1 && var1.size() <= 2) {
-         this.contentType = (ASN1ObjectIdentifier)var1.getObjectAt(0);
-         if (var1.size() > 1) {
-            ASN1TaggedObject var2 = ASN1TaggedObject.getInstance(var1.getObjectAt(1), 128);
-            if (!var2.isExplicit() || var2.getTagNo() != 0) {
+      int var2 = var1.size();
+      if (var2 >= 1 && var2 <= 2) {
+         this.contentType = ASN1ObjectIdentifier.getInstance(var1.getObjectAt(0));
+         ASN1Object var3 = null;
+         if (var2 > 1) {
+            ASN1TaggedObject var4 = ASN1TaggedObject.getContextInstance(var1.getObjectAt(1));
+            if (!var4.isExplicit() || var4.getTagNo() != 0) {
                throw new IllegalArgumentException("Bad tag for 'content'");
             }
 
-            this.content = var2.getExplicitBaseObject();
-         } else {
-            this.content = null;
+            var3 = var4.getExplicitBaseObject();
          }
 
+         this.content = var3;
          this.isDefiniteLength = !(var1 instanceof BERSequence);
       } else {
-         throw new IllegalArgumentException("Bad sequence size: " + var1.size());
+         throw new IllegalArgumentException("Bad sequence size: " + var2);
       }
    }
 
@@ -80,16 +84,10 @@ public class ContentInfo extends ASN1Object implements CMSObjectIdentifiers {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      ASN1EncodableVector var1 = new ASN1EncodableVector(2);
-      var1.add(this.contentType);
-      if (this.content != null) {
-         if (this.isDefiniteLength) {
-            var1.add(new DLTaggedObject(0, this.content));
-         } else {
-            var1.add(new BERTaggedObject(0, this.content));
-         }
+      if (this.isDefiniteLength) {
+         return this.content == null ? new DLSequence(this.contentType) : new DLSequence(this.contentType, new DLTaggedObject(0, this.content));
+      } else {
+         return this.content == null ? new BERSequence(this.contentType) : new BERSequence(this.contentType, new BERTaggedObject(0, this.content));
       }
-
-      return this.isDefiniteLength ? new DLSequence(var1) : new BERSequence(var1);
    }
 }

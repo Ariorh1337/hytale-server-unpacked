@@ -21,7 +21,7 @@ public class WNafL2RMultiplier extends AbstractECMultiplier {
          int var14 = Math.abs(var12);
          ECPoint[] var15 = var12 < 0 ? var6 : var5;
          if (var14 << 2 < 1 << var7) {
-            int var16 = 32 - Integers.numberOfLeadingZeros(var14);
+            int var16 = Integers.bitLength(var14);
             int var17 = var7 - var16;
             int var18 = var14 ^ 1 << var16 - 1;
             int var19 = (1 << var7 - 1) - 1;

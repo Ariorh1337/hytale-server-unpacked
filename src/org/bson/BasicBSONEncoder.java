@@ -8,6 +8,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
+import org.bson.assertions.Assertions;
+import org.bson.internal.UuidHelper;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 import org.bson.types.BSONTimestamp;
@@ -21,8 +23,17 @@ import org.bson.types.ObjectId;
 import org.bson.types.Symbol;
 
 public class BasicBSONEncoder implements BSONEncoder {
+   private static volatile UuidRepresentation defaultUuidRepresentation = UuidRepresentation.JAVA_LEGACY;
    private BsonBinaryWriter bsonWriter;
    private OutputBuffer outputBuffer;
+
+   public static void setDefaultUuidRepresentation(UuidRepresentation uuidRepresentation) {
+      defaultUuidRepresentation = Assertions.notNull("uuidRepresentation", uuidRepresentation);
+   }
+
+   public static UuidRepresentation getDefaultUuidRepresentation() {
+      return defaultUuidRepresentation;
+   }
 
    @Override
    public byte[] encode(BSONObject document) {
@@ -213,10 +224,12 @@ public class BasicBSONEncoder implements BSONEncoder {
 
    protected void putUUID(String name, UUID uuid) {
       this.putName(name);
-      byte[] bytes = new byte[16];
-      writeLongToArrayLittleEndian(bytes, 0, uuid.getMostSignificantBits());
-      writeLongToArrayLittleEndian(bytes, 8, uuid.getLeastSignificantBits());
-      this.bsonWriter.writeBinaryData(new BsonBinary(BsonBinarySubType.UUID_LEGACY, bytes));
+      UuidRepresentation uuidRepresentation = defaultUuidRepresentation;
+      byte[] bytes = UuidHelper.encodeUuidToBinary(uuid, uuidRepresentation);
+      this.bsonWriter
+         .writeBinaryData(
+            new BsonBinary(uuidRepresentation == UuidRepresentation.STANDARD ? BsonBinarySubType.UUID_STANDARD : BsonBinarySubType.UUID_LEGACY, bytes)
+         );
    }
 
    protected void putSymbol(String name, Symbol symbol) {

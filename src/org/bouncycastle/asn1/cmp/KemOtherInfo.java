@@ -34,7 +34,7 @@ public class KemOtherInfo extends ASN1Object {
    }
 
    public KemOtherInfo(ASN1OctetString var1, ASN1OctetString var2, ASN1OctetString var3, long var4, AlgorithmIdentifier var6, ASN1OctetString var7) {
-      this(var1, var2, var3, new ASN1Integer(var4), var6, var7);
+      this(var1, var2, var3, ASN1Integer.valueOf(var4), var6, var7);
    }
 
    private KemOtherInfo(ASN1Sequence var1) {

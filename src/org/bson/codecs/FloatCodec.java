@@ -1,8 +1,8 @@
 package org.bson.codecs;
 
-import org.bson.BsonInvalidOperationException;
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
+import org.bson.internal.NumberCodecHelper;
 
 public class FloatCodec implements Codec<Float> {
    public void encode(BsonWriter writer, Float value, EncoderContext encoderContext) {
@@ -10,12 +10,7 @@ public class FloatCodec implements Codec<Float> {
    }
 
    public Float decode(BsonReader reader, DecoderContext decoderContext) {
-      double value = NumberCodecHelper.decodeDouble(reader);
-      if (!(value < -Float.MAX_VALUE) && !(value > Float.MAX_VALUE)) {
-         return (float)value;
-      } else {
-         throw new BsonInvalidOperationException(String.format("%s can not be converted into a Float.", value));
-      }
+      return NumberCodecHelper.decodeFloat(reader);
    }
 
    @Override

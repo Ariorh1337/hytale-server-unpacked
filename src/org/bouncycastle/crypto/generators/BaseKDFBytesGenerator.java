@@ -48,41 +48,37 @@ public class BaseKDFBytesGenerator implements DigestDerivationFunction {
          throw new OutputLengthException("output buffer too small");
       }
 
-      long var4 = var3;
-      int var6 = this.digest.getDigestSize();
-      if (var4 > 8589934591L) {
+      this.digest.reset();
+      int var4 = var3;
+      int var5 = this.digest.getDigestSize();
+      if (var4 > 4294967295L * var5) {
          throw new IllegalArgumentException("Output length too large");
       }
 
-      int var7 = (int)((var4 + var6 - 1L) / var6);
-      byte[] var8 = new byte[this.digest.getDigestSize()];
-      byte[] var9 = new byte[4];
-      Pack.intToBigEndian(this.counterStart, var9, 0);
-      int var10 = this.counterStart & -256;
+      int var6 = this.counterStart;
+      byte[] var7 = new byte[4];
 
-      for (int var11 = 0; var11 < var7; var11++) {
+      while (var3 > 0) {
+         Pack.intToBigEndian(var6, var7);
          this.digest.update(this.shared, 0, this.shared.length);
-         this.digest.update(var9, 0, var9.length);
+         this.digest.update(var7, 0, 4);
          if (this.iv != null) {
             this.digest.update(this.iv, 0, this.iv.length);
          }
 
-         this.digest.doFinal(var8, 0);
-         if (var3 > var6) {
-            System.arraycopy(var8, 0, var1, var2, var6);
-            var2 += var6;
-            var3 -= var6;
-         } else {
+         if (var3 < var5) {
+            byte[] var8 = new byte[var5];
+            this.digest.doFinal(var8, 0);
             System.arraycopy(var8, 0, var1, var2, var3);
+            break;
          }
 
-         if (++var9[3] == 0) {
-            var10 += 256;
-            Pack.intToBigEndian(var10, var9, 0);
-         }
+         this.digest.doFinal(var1, var2);
+         var2 += var5;
+         var3 -= var5;
+         var6++;
       }
 
-      this.digest.reset();
-      return (int)var4;
+      return var4;
    }
 }

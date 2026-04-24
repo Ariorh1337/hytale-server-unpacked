@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
 
 public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSnapshot> {
    @Nonnull
-   private final Ref<EntityStore> ref;
+   private Ref<EntityStore> ref;
    @Nonnull
    private final Transform transform;
    @Nonnull
@@ -27,6 +27,27 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
       assert headRotationComponent != null;
       this.transform = new Transform(transformComponent.getTransform());
       this.headRotation = new Rotation3f(headRotationComponent.getRotation());
+   }
+
+   @Override
+   public void updateEntityRef(@Nonnull Ref<EntityStore> oldRef, @Nonnull Ref<EntityStore> newRef) {
+      if (this.ref == oldRef) {
+         this.ref = newRef;
+      }
+   }
+
+   public void applyTransform(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      if (this.ref.isValid()) {
+         TransformComponent transformComponent = componentAccessor.getComponent(this.ref, TransformComponent.getComponentType());
+         if (transformComponent != null) {
+            transformComponent.setPosition(this.transform.getPosition());
+            transformComponent.setRotation(this.transform.getRotation());
+            HeadRotation headRotationComponent = componentAccessor.getComponent(this.ref, HeadRotation.getComponentType());
+            if (headRotationComponent != null) {
+               headRotationComponent.setRotation(this.headRotation);
+            }
+         }
+      }
    }
 
    public EntityTransformSnapshot restoreEntity(@Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {

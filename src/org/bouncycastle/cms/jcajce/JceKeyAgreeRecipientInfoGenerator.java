@@ -109,9 +109,9 @@ public class JceKeyAgreeRecipientInfoGenerator extends KeyAgreeRecipientInfoGene
          throw new CMSException("No recipients associated with generator - use addRecipient()");
       }
 
-      this.init(var1.getAlgorithm());
-      PrivateKey var4 = this.senderPrivateKey;
-      ASN1ObjectIdentifier var5 = var1.getAlgorithm();
+      ASN1ObjectIdentifier var4 = var1.getAlgorithm();
+      this.init(var4);
+      PrivateKey var5 = this.senderPrivateKey;
       ASN1EncodableVector var6 = new ASN1EncodableVector();
 
       for (int var7 = 0; var7 != this.recipientIDs.size(); var7++) {
@@ -121,24 +121,24 @@ public class JceKeyAgreeRecipientInfoGenerator extends KeyAgreeRecipientInfoGene
          try {
             ASN1ObjectIdentifier var11 = var2.getAlgorithm();
             AlgorithmParameterSpec var10;
-            if (CMSUtils.isMQV(var5)) {
+            if (CMSUtils.isMQV(var4)) {
                var10 = new MQVParameterSpec(this.ephemeralKP, var8, this.userKeyingMaterial);
-            } else if (CMSUtils.isEC(var5)) {
+            } else if (CMSUtils.isEC(var4)) {
                byte[] var12 = ecc_cms_Generator.generateKDFMaterial(var2, this.keySizeProvider.getKeySize(var11), this.userKeyingMaterial);
                var10 = new UserKeyingMaterialSpec(var12);
-            } else if (CMSUtils.isRFC2631(var5)) {
+            } else if (CMSUtils.isRFC2631(var4)) {
                if (this.userKeyingMaterial != null) {
                   var10 = new UserKeyingMaterialSpec(this.userKeyingMaterial);
                } else {
-                  if (var5.equals(PKCSObjectIdentifiers.id_alg_SSDH)) {
+                  if (var4.equals(PKCSObjectIdentifiers.id_alg_SSDH)) {
                      throw new CMSException("User keying material must be set for static keys.");
                   }
 
                   var10 = null;
                }
             } else {
-               if (!CMSUtils.isGOST(var5)) {
-                  throw new CMSException("Unknown key agreement algorithm: " + var5);
+               if (!CMSUtils.isGOST(var4)) {
+                  throw new CMSException("Unknown key agreement algorithm: " + var4);
                }
 
                if (this.userKeyingMaterial == null) {
@@ -148,28 +148,27 @@ public class JceKeyAgreeRecipientInfoGenerator extends KeyAgreeRecipientInfoGene
                var10 = new UserKeyingMaterialSpec(this.userKeyingMaterial);
             }
 
-            KeyAgreement var21 = this.helper.createKeyAgreement(var5);
-            var21.init(var4, var10, this.random);
+            KeyAgreement var21 = this.helper.createKeyAgreement(var4);
+            var21.init(var5, var10, this.random);
             var21.doPhase(var8, true);
             SecretKey var13 = var21.generateSecret(var11.getId());
             EnvelopedDataHelper var14 = this.wrappingHelper != null ? this.wrappingHelper : this.helper;
             Cipher var15 = var14.createCipher(var11);
-            DEROctetString var16;
-            if (!var11.equals(CryptoProObjectIdentifiers.id_Gost28147_89_None_KeyWrap)
-               && !var11.equals(CryptoProObjectIdentifiers.id_Gost28147_89_CryptoPro_KeyWrap)) {
+            byte[] var16;
+            if (!CryptoProObjectIdentifiers.id_Gost28147_89_None_KeyWrap.equals(var11)
+               && !CryptoProObjectIdentifiers.id_Gost28147_89_CryptoPro_KeyWrap.equals(var11)) {
                var15.init(3, var13, this.random);
-               byte[] var22 = var15.wrap(var14.getJceKey(var3));
-               var16 = new DEROctetString(var22);
+               var16 = var15.wrap(var14.getJceKey(var3));
             } else {
                var15.init(3, var13, new GOST28147WrapParameterSpec(CryptoProObjectIdentifiers.id_Gost28147_89_CryptoPro_A_ParamSet, this.userKeyingMaterial));
                byte[] var17 = var15.wrap(var14.getJceKey(var3));
                Gost2814789EncryptedKey var18 = new Gost2814789EncryptedKey(
                   Arrays.copyOfRange(var17, 0, var17.length - 4), Arrays.copyOfRange(var17, var17.length - 4, var17.length)
                );
-               var16 = new DEROctetString(var18.getEncoded("DER"));
+               var16 = var18.getEncoded("DER");
             }
 
-            var6.add(new RecipientEncryptedKey(var9, var16));
+            var6.add(new RecipientEncryptedKey(var9, new DEROctetString(var16)));
          } catch (GeneralSecurityException var19) {
             throw new CMSException("cannot perform agreement step: " + var19.getMessage(), var19);
          } catch (IOException var20) {
@@ -187,9 +186,8 @@ public class JceKeyAgreeRecipientInfoGenerator extends KeyAgreeRecipientInfoGene
          OriginatorPublicKey var2 = this.createOriginatorPublicKey(SubjectPublicKeyInfo.getInstance(this.ephemeralKP.getPublic().getEncoded()));
 
          try {
-            return this.userKeyingMaterial != null
-               ? new MQVuserKeyingMaterial(var2, new DEROctetString(this.userKeyingMaterial)).getEncoded()
-               : new MQVuserKeyingMaterial(var2, null).getEncoded();
+            DEROctetString var3 = DEROctetString.fromContentsOptional(this.userKeyingMaterial);
+            return new MQVuserKeyingMaterial(var2, var3).getEncoded();
          } catch (IOException var4) {
             throw new CMSException("unable to encode user keying material: " + var4.getMessage(), var4);
          }

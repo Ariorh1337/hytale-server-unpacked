@@ -2,6 +2,8 @@ package org.bson.codecs.pojo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.BsonWriter;
@@ -16,16 +18,13 @@ class LazyPropertyModelCodec<T> implements Codec<T> {
    private final PropertyModel<T> propertyModel;
    private final CodecRegistry registry;
    private final PropertyCodecRegistry propertyCodecRegistry;
-   private final DiscriminatorLookup discriminatorLookup;
-   private Codec<T> codec;
+   private final Lock codecLock = new ReentrantLock();
+   private volatile Codec<T> codec;
 
-   LazyPropertyModelCodec(
-      PropertyModel<T> propertyModel, CodecRegistry registry, PropertyCodecRegistry propertyCodecRegistry, DiscriminatorLookup discriminatorLookup
-   ) {
+   LazyPropertyModelCodec(PropertyModel<T> propertyModel, CodecRegistry registry, PropertyCodecRegistry propertyCodecRegistry) {
       this.propertyModel = propertyModel;
       this.registry = registry;
       this.propertyCodecRegistry = propertyCodecRegistry;
-      this.discriminatorLookup = discriminatorLookup;
    }
 
    @Override
@@ -43,19 +42,34 @@ class LazyPropertyModelCodec<T> implements Codec<T> {
       return this.propertyModel.getTypeData().getType();
    }
 
-   private synchronized Codec<T> getPropertyModelCodec() {
-      if (this.codec == null) {
-         Codec<T> localCodec = this.getCodecFromPropertyRegistry(this.propertyModel);
-         if (localCodec instanceof PojoCodec) {
-            PojoCodec<T> pojoCodec = (PojoCodec<T>)localCodec;
-            ClassModel<T> specialized = this.getSpecializedClassModel(pojoCodec.getClassModel(), this.propertyModel);
-            localCodec = new PojoCodecImpl<>(specialized, this.registry, this.propertyCodecRegistry, pojoCodec.getDiscriminatorLookup(), true);
-         }
+   private Codec<T> getPropertyModelCodec() {
+      Codec<T> codec = this.codec;
+      if (codec == null) {
+         this.codecLock.lock();
 
-         this.codec = localCodec;
+         try {
+            codec = this.codec;
+            if (codec == null) {
+               codec = this.createCodec();
+               this.codec = codec;
+            }
+         } finally {
+            this.codecLock.unlock();
+         }
       }
 
-      return this.codec;
+      return codec;
+   }
+
+   private Codec<T> createCodec() {
+      Codec<T> localCodec = this.getCodecFromPropertyRegistry(this.propertyModel);
+      if (localCodec instanceof PojoCodec) {
+         PojoCodec<T> pojoCodec = (PojoCodec<T>)localCodec;
+         ClassModel<T> specialized = this.getSpecializedClassModel(pojoCodec.getClassModel(), this.propertyModel);
+         localCodec = new PojoCodecImpl<>(specialized, this.registry, this.propertyCodecRegistry, pojoCodec.getDiscriminatorLookup());
+      }
+
+      return localCodec;
    }
 
    private Codec<T> getCodecFromPropertyRegistry(PropertyModel<T> propertyModel) {
@@ -140,5 +154,80 @@ class LazyPropertyModelCodec<T> implements Codec<T> {
             propertyModel.getError(),
             propertyModel.getBsonRepresentation()
          );
+   }
+
+   static final class NeedSpecializationCodec<T> extends PojoCodec<T> {
+      private final ClassModel<T> classModel;
+      private final DiscriminatorLookup discriminatorLookup;
+      private final CodecRegistry codecRegistry;
+
+      NeedSpecializationCodec(ClassModel<T> classModel, DiscriminatorLookup discriminatorLookup, CodecRegistry codecRegistry) {
+         this.classModel = classModel;
+         this.discriminatorLookup = discriminatorLookup;
+         this.codecRegistry = codecRegistry;
+      }
+
+      @Override
+      public void encode(BsonWriter writer, T value, EncoderContext encoderContext) {
+         if (value.getClass().equals(this.classModel.getType())) {
+            throw this.exception();
+         }
+
+         this.tryEncode(this.codecRegistry.get(value.getClass()), writer, value, encoderContext);
+      }
+
+      @Override
+      public T decode(BsonReader reader, DecoderContext decoderContext) {
+         return this.tryDecode(reader, decoderContext);
+      }
+
+      private <A> void tryEncode(Codec<A> codec, BsonWriter writer, T value, EncoderContext encoderContext) {
+         try {
+            codec.encode(writer, (A)value, encoderContext);
+         } catch (Exception e) {
+            throw this.exception();
+         }
+      }
+
+      public T tryDecode(BsonReader reader, DecoderContext decoderContext) {
+         Codec<T> codec = PojoCodecImpl.getCodecFromDocument(
+            reader,
+            this.classModel.useDiscriminator(),
+            this.classModel.getDiscriminatorKey(),
+            this.codecRegistry,
+            this.discriminatorLookup,
+            null,
+            this.classModel.getName()
+         );
+         if (codec != null) {
+            return codec.decode(reader, decoderContext);
+         } else {
+            throw this.exception();
+         }
+      }
+
+      @Override
+      public Class<T> getEncoderClass() {
+         return this.classModel.getType();
+      }
+
+      private CodecConfigurationException exception() {
+         return new CodecConfigurationException(
+            String.format(
+               "%s contains generic types that have not been specialised.%nTop level classes with generic types are not supported by the PojoCodec.",
+               this.classModel.getName()
+            )
+         );
+      }
+
+      @Override
+      ClassModel<T> getClassModel() {
+         return this.classModel;
+      }
+
+      @Override
+      DiscriminatorLookup getDiscriminatorLookup() {
+         return this.discriminatorLookup;
+      }
    }
 }

@@ -18,14 +18,15 @@ public class Jsr310CodecProvider implements CodecProvider {
       return (Codec<T>)JSR310_CODEC_MAP.get(clazz);
    }
 
+   @Override
+   public String toString() {
+      return "Jsr310CodecProvider{}";
+   }
+
    static {
-      try {
-         Class.forName("java.time.Instant");
-         putCodec(new InstantCodec());
-         putCodec(new LocalDateCodec());
-         putCodec(new LocalDateTimeCodec());
-         putCodec(new LocalTimeCodec());
-      } catch (ClassNotFoundException var1) {
-      }
+      putCodec(new InstantCodec());
+      putCodec(new LocalDateCodec());
+      putCodec(new LocalDateTimeCodec());
+      putCodec(new LocalTimeCodec());
    }
 }

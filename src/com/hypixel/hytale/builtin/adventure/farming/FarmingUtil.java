@@ -177,6 +177,9 @@ public class FarmingUtil {
                            } else {
                               farmingBlock.setExecutions(0);
                               stages[currentStage].apply(commandBuffer, sectionRef, blockRef, x, y, z, stages[currentStage - 1]);
+                              if (stages[currentStage].consumesRemainingTime()) {
+                                 remainingTimeSeconds = 0L;
+                              }
                            }
                         }
 

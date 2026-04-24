@@ -31,6 +31,7 @@ public class PKCS12 {
          var1.addAlgorithm(
             "KeyStore.PKCS12-DEF-AES256-AES128-GCM", "org.bouncycastle.jcajce.provider.keystore.pkcs12.PKCS12KeyStoreSpi$DefPKCS12KeyStoreAES256GCM"
          );
+         var1.addAlgorithm("KeyStore.PKCS12-PBMAC1", "org.bouncycastle.jcajce.provider.keystore.pkcs12.PKCS12PBMAC1KeyStoreSpi$BCPKCS12KeyStore");
       }
    }
 }

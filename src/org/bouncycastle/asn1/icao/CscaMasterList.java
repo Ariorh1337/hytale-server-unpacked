@@ -10,7 +10,7 @@ import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.x509.Certificate;
 
 public class CscaMasterList extends ASN1Object {
-   private ASN1Integer version = new ASN1Integer(0L);
+   private ASN1Integer version = ASN1Integer.ZERO;
    private Certificate[] certList;
 
    public static CscaMasterList getInstance(Object var0) {

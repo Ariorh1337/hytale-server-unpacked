@@ -39,7 +39,7 @@ class Bits {
 
    static int readInt(byte[] buffer, int offset) {
       int x = 0;
-      x |= (255 & buffer[offset + 0]) << 0;
+      x |= (255 & buffer[offset]) << 0;
       x |= (255 & buffer[offset + 1]) << 8;
       x |= (255 & buffer[offset + 2]) << 16;
       return x | (0xFF & buffer[offset + 3]) << 24;
@@ -60,7 +60,7 @@ class Bits {
 
    static long readLong(byte[] buffer, int offset) {
       long x = 0L;
-      x |= (255L & buffer[offset + 0]) << 0;
+      x |= (255L & buffer[offset]) << 0;
       x |= (255L & buffer[offset + 1]) << 8;
       x |= (255L & buffer[offset + 2]) << 16;
       x |= (255L & buffer[offset + 3]) << 24;

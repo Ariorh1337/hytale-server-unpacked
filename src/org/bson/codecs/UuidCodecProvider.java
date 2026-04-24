@@ -6,7 +6,7 @@ import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 
 public class UuidCodecProvider implements CodecProvider {
-   private UuidRepresentation uuidRepresentation;
+   private final UuidRepresentation uuidRepresentation;
 
    public UuidCodecProvider(UuidRepresentation uuidRepresentation) {
       this.uuidRepresentation = uuidRepresentation;

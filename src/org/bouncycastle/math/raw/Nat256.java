@@ -375,8 +375,8 @@ public abstract class Nat256 {
 
    public static boolean gte(int[] var0, int[] var1) {
       for (int var2 = 7; var2 >= 0; var2--) {
-         int var3 = var0[var2] ^ Integer.MIN_VALUE;
-         int var4 = var1[var2] ^ Integer.MIN_VALUE;
+         int var3 = var0[var2] + Integer.MIN_VALUE;
+         int var4 = var1[var2] + Integer.MIN_VALUE;
          if (var3 < var4) {
             return false;
          }
@@ -391,8 +391,8 @@ public abstract class Nat256 {
 
    public static boolean gte(int[] var0, int var1, int[] var2, int var3) {
       for (int var4 = 7; var4 >= 0; var4--) {
-         int var5 = var0[var1 + var4] ^ Integer.MIN_VALUE;
-         int var6 = var2[var3 + var4] ^ Integer.MIN_VALUE;
+         int var5 = var0[var1 + var4] + Integer.MIN_VALUE;
+         int var6 = var2[var3 + var4] + Integer.MIN_VALUE;
          if (var5 < var6) {
             return false;
          }

@@ -38,7 +38,7 @@ public class LoggerBatchProcessor implements ILoggerBatchProcessor {
    @Nullable
    private volatile Future<?> scheduledFlush;
    @NotNull
-   private static final AutoClosableReentrantLock scheduleLock = new AutoClosableReentrantLock();
+   private final AutoClosableReentrantLock scheduleLock = new AutoClosableReentrantLock();
    private volatile boolean hasScheduled = false;
    @NotNull
    private final ReusableCountLatch pendingCount = new ReusableCountLatch();
@@ -55,7 +55,7 @@ public class LoggerBatchProcessor implements ILoggerBatchProcessor {
       if (this.pendingCount.getCount() >= 1000) {
          this.options.getClientReportRecorder().recordLostEvent(DiscardReason.QUEUE_OVERFLOW, DataCategory.LogItem);
          long lostBytes = JsonSerializationUtils.byteSizeOf(this.options.getSerializer(), this.options.getLogger(), logEvent);
-         this.options.getClientReportRecorder().recordLostEvent(DiscardReason.QUEUE_OVERFLOW, DataCategory.Attachment, lostBytes);
+         this.options.getClientReportRecorder().recordLostEvent(DiscardReason.QUEUE_OVERFLOW, DataCategory.LogByte, lostBytes);
       } else {
          this.pendingCount.increment();
          this.queue.offer(logEvent);
@@ -79,7 +79,7 @@ public class LoggerBatchProcessor implements ILoggerBatchProcessor {
 
    private void maybeSchedule(boolean forceSchedule, boolean immediately) {
       if (!this.hasScheduled || forceSchedule) {
-         ISentryLifecycleToken ignored = scheduleLock.acquire();
+         ISentryLifecycleToken ignored = this.scheduleLock.acquire();
 
          try {
             Future<?> latestScheduledFlush = this.scheduledFlush;
@@ -126,7 +126,7 @@ public class LoggerBatchProcessor implements ILoggerBatchProcessor {
 
    private void flush() {
       this.flushInternal();
-      ISentryLifecycleToken ignored = scheduleLock.acquire();
+      ISentryLifecycleToken ignored = this.scheduleLock.acquire();
 
       try {
          if (!this.queue.isEmpty()) {

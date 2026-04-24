@@ -94,14 +94,20 @@ public class G3413CTRBlockCipher extends StreamBlockCipher {
       this.byteCount++;
       if (this.byteCount == this.s) {
          this.byteCount = 0;
-         this.generateCRT();
+         this.generateCTR();
       }
 
       return var2;
    }
 
-   private void generateCRT() {
-      this.CTR[this.CTR.length - 1]++;
+   private void generateCTR() {
+      int var1 = this.CTR.length - 1;
+
+      while (++this.CTR[var1] == 0) {
+         if (--var1 == this.IV.length - 1) {
+            throw new IllegalStateException("attempt to process too many blocks");
+         }
+      }
    }
 
    private byte[] generateBuf() {

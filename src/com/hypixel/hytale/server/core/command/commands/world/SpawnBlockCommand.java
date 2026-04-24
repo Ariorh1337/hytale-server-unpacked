@@ -35,6 +35,7 @@ public class SpawnBlockCommand extends AbstractWorldCommand {
 
    public SpawnBlockCommand() {
       super("spawnblock", "server.commands.spawnblock.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

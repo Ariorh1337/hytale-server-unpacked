@@ -2,6 +2,7 @@ package org.bson.codecs;
 
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
+import org.bson.internal.NumberCodecHelper;
 
 public class IntegerCodec implements Codec<Integer> {
    public void encode(BsonWriter writer, Integer value, EncoderContext encoderContext) {

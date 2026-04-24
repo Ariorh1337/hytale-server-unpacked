@@ -65,7 +65,7 @@ public class TimeStampReq extends ASN1Object {
    }
 
    public TimeStampReq(MessageImprint var1, ASN1ObjectIdentifier var2, ASN1Integer var3, ASN1Boolean var4, Extensions var5) {
-      this.version = new ASN1Integer(1L);
+      this.version = ASN1Integer.ONE;
       this.messageImprint = var1;
       this.tsaPolicy = var2;
       this.nonce = var3;

@@ -256,7 +256,7 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
                   holder.putComponent(this.modelComponentType, new ModelComponent(scaledModel));
                }
 
-               role.spawned(holder, npcComponent);
+               role.spawned(holder, npcComponent, store);
                if (roleBuilder instanceof SpawnEffect spawnEffect) {
                   TransformComponent transformComponent = holder.getComponent(this.transformComponentType);
                   assert transformComponent != null;

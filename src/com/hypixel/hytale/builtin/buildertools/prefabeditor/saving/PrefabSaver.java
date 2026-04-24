@@ -271,6 +271,10 @@ public class PrefabSaver {
          selection.sortEntitiesByPosition();
       }
 
+      for (PrefabSaveContributor contributor : BuilderToolsPlugin.get().getPrefabSaveContributors()) {
+         contributor.contribute(selection, world, minPoint, maxPoint);
+      }
+
       long end = System.nanoTime();
       long diff = end - start;
       BuilderToolsPlugin.get()

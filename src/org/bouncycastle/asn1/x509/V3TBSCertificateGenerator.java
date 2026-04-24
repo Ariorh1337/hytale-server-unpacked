@@ -10,7 +10,7 @@ import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.x500.X500Name;
 
 public class V3TBSCertificateGenerator {
-   private static final DERTaggedObject VERSION = new DERTaggedObject(true, 0, new ASN1Integer(2L));
+   private static final DERTaggedObject VERSION = new DERTaggedObject(true, 0, ASN1Integer.TWO);
    ASN1Integer serialNumber;
    AlgorithmIdentifier signature;
    X500Name issuer;
@@ -144,7 +144,7 @@ public class V3TBSCertificateGenerator {
          && (this.subject != null || this.altNamePresentAndCritical)
          && this.subjectPublicKeyInfo != null) {
          return new TBSCertificate(
-            new ASN1Integer(2L),
+            ASN1Integer.TWO,
             this.serialNumber,
             this.signature,
             this.issuer,

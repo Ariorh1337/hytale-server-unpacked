@@ -71,6 +71,9 @@ import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.modelvfx.ModelVFXPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.modelvfx.config.ModelVFX;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.MusicContainerPacketGenerator;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.SingleTrackMusicContainer;
 import com.hypixel.hytale.server.core.asset.type.particle.ParticleSpawnerPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.particle.ParticleSystemPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSpawner;
@@ -328,6 +331,20 @@ public class AssetRegistryLoader {
    }
 
    static {
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                                    MusicContainer.class, new IndexedAssetMap()
+                                 )
+                                 .setPath("Audio/MusicContainers"))
+                              .setCodec(MusicContainer.CODEC))
+                           .setKeyFunction(MusicContainer::getId))
+                        .setReplaceOnRemove(id -> new SingleTrackMusicContainer(id)))
+                     .setPacketGenerator(new MusicContainerPacketGenerator())
+                     .loadsBefore(AmbienceFX.class))
+                  .loadsAfter(AudioCategory.class))
+               .preLoadAssets(Collections.singletonList(MusicContainer.EMPTY)))
+            .build()
+      );
       AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
                                  AmbienceFX.class, new IndexedAssetMap()
@@ -743,7 +760,7 @@ public class AssetRegistryLoader {
                   DamageCause.class,
                   RepulsionConfig.class,
                   ParticleSystem.class,
-                  AmbienceFX.class
+                  MusicContainer.class
                ))
             .build()
       );

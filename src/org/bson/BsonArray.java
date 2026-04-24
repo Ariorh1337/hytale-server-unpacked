@@ -21,6 +21,10 @@ public class BsonArray extends BsonValue implements List<BsonValue>, Cloneable {
       this(new ArrayList<>(), false);
    }
 
+   public BsonArray(int initialCapacity) {
+      this(new ArrayList<>(initialCapacity), false);
+   }
+
    BsonArray(List<? extends BsonValue> values, boolean copy) {
       if (copy) {
          this.values = new ArrayList<>(values);
@@ -173,11 +177,11 @@ public class BsonArray extends BsonValue implements List<BsonValue>, Cloneable {
 
    @Override
    public String toString() {
-      return "BsonArray{values=" + this.values + '}';
+      return "BsonArray{values=" + this.getValues() + '}';
    }
 
    public BsonArray clone() {
-      BsonArray to = new BsonArray();
+      BsonArray to = new BsonArray(this.size());
 
       for (BsonValue cur : this) {
          switch (cur.getBsonType()) {

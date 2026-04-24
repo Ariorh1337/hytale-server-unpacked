@@ -68,7 +68,7 @@ public class KMACwithSHAKE256_params extends ASN1Object {
    public ASN1Primitive toASN1Primitive() {
       ASN1EncodableVector var1 = new ASN1EncodableVector();
       if (this.outputLength != 512) {
-         var1.add(new ASN1Integer(this.outputLength));
+         var1.add(ASN1Integer.valueOf(this.outputLength));
       }
 
       if (this.customizationString.length != 0) {

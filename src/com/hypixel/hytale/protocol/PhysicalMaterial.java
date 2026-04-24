@@ -18,26 +18,26 @@ public class PhysicalMaterial {
    @Nullable
    public String id;
    public float reflectionCoeff;
-   public float gainPerBlock;
-   public float hFGainPerBlock;
+   public float attenuationPerBlock;
+   public float hFAttenuationPerBlock;
    public float shelterOpacity;
 
    public PhysicalMaterial() {
    }
 
-   public PhysicalMaterial(@Nullable String id, float reflectionCoeff, float gainPerBlock, float hFGainPerBlock, float shelterOpacity) {
+   public PhysicalMaterial(@Nullable String id, float reflectionCoeff, float attenuationPerBlock, float hFAttenuationPerBlock, float shelterOpacity) {
       this.id = id;
       this.reflectionCoeff = reflectionCoeff;
-      this.gainPerBlock = gainPerBlock;
-      this.hFGainPerBlock = hFGainPerBlock;
+      this.attenuationPerBlock = attenuationPerBlock;
+      this.hFAttenuationPerBlock = hFAttenuationPerBlock;
       this.shelterOpacity = shelterOpacity;
    }
 
    public PhysicalMaterial(@Nonnull PhysicalMaterial other) {
       this.id = other.id;
       this.reflectionCoeff = other.reflectionCoeff;
-      this.gainPerBlock = other.gainPerBlock;
-      this.hFGainPerBlock = other.hFGainPerBlock;
+      this.attenuationPerBlock = other.attenuationPerBlock;
+      this.hFAttenuationPerBlock = other.hFAttenuationPerBlock;
       this.shelterOpacity = other.shelterOpacity;
    }
 
@@ -50,8 +50,8 @@ public class PhysicalMaterial {
       PhysicalMaterial obj = new PhysicalMaterial();
       byte nullBits = buf.getByte(offset);
       obj.reflectionCoeff = buf.getFloatLE(offset + 1);
-      obj.gainPerBlock = buf.getFloatLE(offset + 5);
-      obj.hFGainPerBlock = buf.getFloatLE(offset + 9);
+      obj.attenuationPerBlock = buf.getFloatLE(offset + 5);
+      obj.hFAttenuationPerBlock = buf.getFloatLE(offset + 9);
       obj.shelterOpacity = buf.getFloatLE(offset + 13);
       int pos = offset + 17;
       if ((nullBits & 1) != 0) {
@@ -95,8 +95,8 @@ public class PhysicalMaterial {
 
       buf.writeByte(nullBits);
       buf.writeFloatLE(this.reflectionCoeff);
-      buf.writeFloatLE(this.gainPerBlock);
-      buf.writeFloatLE(this.hFGainPerBlock);
+      buf.writeFloatLE(this.attenuationPerBlock);
+      buf.writeFloatLE(this.hFAttenuationPerBlock);
       buf.writeFloatLE(this.shelterOpacity);
       if (this.id != null) {
          PacketIO.writeVarString(buf, this.id, 4096000);
@@ -143,8 +143,8 @@ public class PhysicalMaterial {
       PhysicalMaterial copy = new PhysicalMaterial();
       copy.id = this.id;
       copy.reflectionCoeff = this.reflectionCoeff;
-      copy.gainPerBlock = this.gainPerBlock;
-      copy.hFGainPerBlock = this.hFGainPerBlock;
+      copy.attenuationPerBlock = this.attenuationPerBlock;
+      copy.hFAttenuationPerBlock = this.hFAttenuationPerBlock;
       copy.shelterOpacity = this.shelterOpacity;
       return copy;
    }
@@ -158,14 +158,14 @@ public class PhysicalMaterial {
             ? false
             : Objects.equals(this.id, other.id)
                && this.reflectionCoeff == other.reflectionCoeff
-               && this.gainPerBlock == other.gainPerBlock
-               && this.hFGainPerBlock == other.hFGainPerBlock
+               && this.attenuationPerBlock == other.attenuationPerBlock
+               && this.hFAttenuationPerBlock == other.hFAttenuationPerBlock
                && this.shelterOpacity == other.shelterOpacity;
       }
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(this.id, this.reflectionCoeff, this.gainPerBlock, this.hFGainPerBlock, this.shelterOpacity);
+      return Objects.hash(this.id, this.reflectionCoeff, this.attenuationPerBlock, this.hFAttenuationPerBlock, this.shelterOpacity);
    }
 }

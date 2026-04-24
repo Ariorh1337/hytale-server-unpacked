@@ -7,8 +7,10 @@ public class AmbienceCommands extends AbstractCommandCollection {
       super("ambience", "server.commands.ambience.desc");
       this.addAliases("ambiance");
       this.addAliases("ambient");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new AmbienceCommands.AmbienceEmitterCommands());
       this.addSubCommand(new AmbienceSetMusicCommand());
+      this.addSubCommand(new AmbienceSetMusicStateCommand());
       this.addSubCommand(new AmbienceClearCommand());
    }
 

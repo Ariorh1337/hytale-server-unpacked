@@ -233,7 +233,7 @@ public class IEEE1609dot2 {
       )
       .typeName("CounterSignature");
    public static final OERDefinition.Builder Ieee1609Dot2Data = OERDefinition.seq(
-         Ieee1609Dot2BaseTypes.UINT8.validSwitchValue(new ASN1Integer(3L)).label("protocolVersion"), Ieee1609Dot2Content.label("content")
+         Ieee1609Dot2BaseTypes.UINT8.validSwitchValue(ASN1Integer.THREE).label("protocolVersion"), Ieee1609Dot2Content.label("content")
       )
       .typeName("Ieee1609Dot2Data");
    public static final OERDefinition.Builder SignedDataPayload = OERDefinition.seq(

@@ -26,6 +26,11 @@ public interface EventProcessor {
    }
 
    @Nullable
+   default SentryMetricsEvent process(@NotNull SentryMetricsEvent event, @NotNull Hint hint) {
+      return event;
+   }
+
+   @Nullable
    default Long getOrder() {
       return null;
    }

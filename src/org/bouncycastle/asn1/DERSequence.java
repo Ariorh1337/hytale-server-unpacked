@@ -3,10 +3,19 @@ package org.bouncycastle.asn1;
 import java.io.IOException;
 
 public class DERSequence extends ASN1Sequence {
+   public static final DERSequence EMPTY = new DERSequence();
    private int contentsLength = -1;
 
    public static DERSequence convert(ASN1Sequence var0) {
       return (DERSequence)var0.toDERObject();
+   }
+
+   public static DERSequence fromElementsOptional(ASN1Encodable[] var0) {
+      if (var0 == null) {
+         return null;
+      } else {
+         return var0.length < 1 ? EMPTY : new DERSequence(var0);
+      }
    }
 
    public DERSequence() {
@@ -91,7 +100,7 @@ public class DERSequence extends ASN1Sequence {
 
    @Override
    ASN1External toASN1External() {
-      return new DERExternal(this);
+      return DERExternal.fromSequence(this);
    }
 
    @Override

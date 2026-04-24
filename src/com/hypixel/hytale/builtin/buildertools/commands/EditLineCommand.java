@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushOrigin;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushShape;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -49,7 +48,7 @@ public class EditLineCommand extends AbstractPlayerCommand {
 
    public EditLineCommand() {
       super("editline", "server.commands.editline.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

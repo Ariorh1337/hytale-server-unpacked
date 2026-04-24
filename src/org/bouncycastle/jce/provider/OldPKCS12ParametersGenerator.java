@@ -89,7 +89,7 @@ class OldPKCS12ParametersGenerator extends PBEParametersGenerator {
          this.digest.update(var15, 0, var15.length);
          this.digest.doFinal(var11, 0);
 
-         for (int var12 = 1; var12 != this.iterationCount; var12++) {
+         for (int var12 = 1; var12 < this.iterationCount; var12++) {
             this.digest.update(var11, 0, var11.length);
             this.digest.doFinal(var11, 0);
          }

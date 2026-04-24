@@ -15,11 +15,11 @@ import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1SequenceParser;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.ASN1SetParser;
 import org.bouncycastle.asn1.ASN1TaggedObject;
-import org.bouncycastle.asn1.BEROctetString;
 import org.bouncycastle.asn1.BEROctetStringGenerator;
 import org.bouncycastle.asn1.BERSequenceGenerator;
 import org.bouncycastle.asn1.BERSet;
@@ -50,13 +50,12 @@ import org.bouncycastle.operator.GenericKey;
 import org.bouncycastle.operator.OutputAEADEncryptor;
 import org.bouncycastle.operator.OutputEncryptor;
 import org.bouncycastle.util.Store;
-import org.bouncycastle.util.Strings;
 import org.bouncycastle.util.io.Streams;
 import org.bouncycastle.util.io.TeeInputStream;
 import org.bouncycastle.util.io.TeeOutputStream;
 
 class CMSUtils {
-   private static final Set<String> des = new HashSet<>();
+   private static final Set desAlgs = new HashSet();
    private static final Set mqvAlgs = new HashSet();
    private static final Set ecAlgs = new HashSet();
    private static final Set gostAlgs = new HashSet();
@@ -74,12 +73,11 @@ class CMSUtils {
    }
 
    static boolean isRFC2631(ASN1ObjectIdentifier var0) {
-      return var0.equals(PKCSObjectIdentifiers.id_alg_ESDH) || var0.equals(PKCSObjectIdentifiers.id_alg_SSDH);
+      return PKCSObjectIdentifiers.id_alg_ESDH.equals(var0) || PKCSObjectIdentifiers.id_alg_SSDH.equals(var0);
    }
 
-   static boolean isDES(String var0) {
-      String var1 = Strings.toUpperCase(var0);
-      return des.contains(var1);
+   static boolean isDES(ASN1ObjectIdentifier var0) {
+      return desAlgs.contains(var0);
    }
 
    static boolean isEquivalent(AlgorithmIdentifier var0, AlgorithmIdentifier var1) {
@@ -279,13 +277,8 @@ class CMSUtils {
       return var0 == null ? getSafeOutputStream(var1) : (var1 == null ? getSafeOutputStream(var0) : new TeeOutputStream(var0, var1));
    }
 
-   static EncryptedContentInfo getEncryptedContentInfo(CMSTypedData var0, OutputEncryptor var1, byte[] var2) {
-      return getEncryptedContentInfo(var0.getContentType(), var1.getAlgorithmIdentifier(), var2);
-   }
-
-   static EncryptedContentInfo getEncryptedContentInfo(ASN1ObjectIdentifier var0, AlgorithmIdentifier var1, byte[] var2) {
-      BEROctetString var3 = new BEROctetString(var2);
-      return new EncryptedContentInfo(var0, var1, var3);
+   static EncryptedContentInfo getEncryptedContentInfo(CMSTypedData var0, OutputEncryptor var1, ASN1OctetString var2) {
+      return new EncryptedContentInfo(var0.getContentType(), var1.getAlgorithmIdentifier(), var2);
    }
 
    static ASN1EncodableVector getRecipentInfos(GenericKey var0, List var1) throws CMSException {
@@ -300,9 +293,9 @@ class CMSUtils {
 
    static void addRecipientInfosToGenerator(ASN1EncodableVector var0, BERSequenceGenerator var1, boolean var2) throws IOException {
       if (var2) {
-         var1.getRawOutputStream().write(new BERSet(var0).getEncoded());
+         new BERSet(var0).encodeTo(var1.getRawOutputStream());
       } else {
-         var1.getRawOutputStream().write(new DERSet(var0).getEncoded());
+         new DERSet(var0).encodeTo(var1.getRawOutputStream());
       }
    }
 
@@ -321,7 +314,7 @@ class CMSUtils {
    static ASN1Set processAuthAttrSet(CMSAttributeTableGenerator var0, OutputAEADEncryptor var1) throws IOException {
       DERSet var2 = null;
       if (var0 != null) {
-         AttributeTable var3 = var0.getAttributes(Collections.EMPTY_MAP);
+         AttributeTable var3 = var0.getAttributes(getEmptyParameters());
          var2 = new DERSet(var3.toASN1EncodableVector());
          var1.getAADStream().write(var2.getEncoded("DER"));
       }
@@ -346,23 +339,25 @@ class CMSUtils {
    }
 
    static ASN1Set getAttrDLSet(CMSAttributeTableGenerator var0) {
-      return var0 != null ? new DLSet(var0.getAttributes(Collections.EMPTY_MAP).toASN1EncodableVector()) : null;
+      return var0 != null ? new DLSet(var0.getAttributes(getEmptyParameters()).toASN1EncodableVector()) : null;
    }
 
    static ASN1Set getAttrBERSet(CMSAttributeTableGenerator var0) {
-      return var0 != null ? new BERSet(var0.getAttributes(Collections.EMPTY_MAP).toASN1EncodableVector()) : null;
+      return var0 != null ? new BERSet(var0.getAttributes(getEmptyParameters()).toASN1EncodableVector()) : null;
    }
 
    static byte[] encodeObj(ASN1Encodable var0) throws IOException {
       return var0 != null ? var0.toASN1Primitive().getEncoded() : null;
    }
 
+   static Map getEmptyParameters() {
+      return Collections.EMPTY_MAP;
+   }
+
    static {
-      des.add("DES");
-      des.add("DESEDE");
-      des.add(OIWObjectIdentifiers.desCBC.getId());
-      des.add(PKCSObjectIdentifiers.des_EDE3_CBC.getId());
-      des.add(PKCSObjectIdentifiers.id_alg_CMS3DESwrap.getId());
+      desAlgs.add(OIWObjectIdentifiers.desCBC);
+      desAlgs.add(PKCSObjectIdentifiers.des_EDE3_CBC);
+      desAlgs.add(PKCSObjectIdentifiers.id_alg_CMS3DESwrap);
       mqvAlgs.add(X9ObjectIdentifiers.mqvSinglePass_sha1kdf_scheme);
       mqvAlgs.add(SECObjectIdentifiers.mqvSinglePass_sha224kdf_scheme);
       mqvAlgs.add(SECObjectIdentifiers.mqvSinglePass_sha256kdf_scheme);

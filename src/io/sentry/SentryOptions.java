@@ -16,6 +16,8 @@ import io.sentry.internal.modules.NoOpModulesLoader;
 import io.sentry.internal.viewhierarchy.ViewHierarchyExporter;
 import io.sentry.logger.DefaultLoggerBatchProcessorFactory;
 import io.sentry.logger.ILoggerBatchProcessorFactory;
+import io.sentry.metrics.DefaultMetricsBatchProcessorFactory;
+import io.sentry.metrics.IMetricsBatchProcessorFactory;
 import io.sentry.protocol.SdkVersion;
 import io.sentry.protocol.SentryTransaction;
 import io.sentry.transport.ITransportGate;
@@ -55,6 +57,7 @@ public class SentryOptions {
    @Internal
    @NotNull
    public static final String DEFAULT_PROPAGATION_TARGETS = ".*";
+   public static final long MAX_EVENT_SIZE_BYTES = 1048576L;
    static final SentryLevel DEFAULT_DIAGNOSTIC_LEVEL = SentryLevel.DEBUG;
    private static final String DEFAULT_ENVIRONMENT = "production";
    @NotNull
@@ -287,6 +290,8 @@ public class SentryOptions {
    private long deadlineTimeout = 30000L;
    @NotNull
    private SentryOptions.Logs logs = new SentryOptions.Logs();
+   @NotNull
+   private SentryOptions.Metrics metrics = new SentryOptions.Metrics();
    @NotNull
    private ISocketTagger socketTagger = NoOpSocketTagger.getInstance();
    @NotNull
@@ -1737,7 +1742,7 @@ public class SentryOptions {
             this.eventProcessors.add(new SentryRuntimeEventProcessor());
          }
 
-         this.setSentryClientName("sentry.java/8.29.0");
+         this.setSentryClientName("sentry.java/8.30.0");
          this.setSdkVersion(sdkVersion);
          this.addPackageInfo();
       }
@@ -1924,6 +1929,10 @@ public class SentryOptions {
          this.getLogs().setEnabled(options.isEnableLogs());
       }
 
+      if (options.isEnableMetrics() != null) {
+         this.getMetrics().setEnabled(options.isEnableMetrics());
+      }
+
       if (options.getProfileSessionSampleRate() != null) {
          this.setProfileSessionSampleRate(options.getProfileSessionSampleRate());
       }
@@ -1939,14 +1948,14 @@ public class SentryOptions {
 
    @NotNull
    private SdkVersion createSdkVersion() {
-      String version = "8.29.0";
-      SdkVersion sdkVersion = new SdkVersion("sentry.java", "8.29.0");
-      sdkVersion.setVersion("8.29.0");
+      String version = "8.30.0";
+      SdkVersion sdkVersion = new SdkVersion("sentry.java", "8.30.0");
+      sdkVersion.setVersion("8.30.0");
       return sdkVersion;
    }
 
    private void addPackageInfo() {
-      SentryIntegrationPackageStorage.getInstance().addPackage("maven:io.sentry:sentry", "8.29.0");
+      SentryIntegrationPackageStorage.getInstance().addPackage("maven:io.sentry:sentry", "8.30.0");
    }
 
    @Internal
@@ -1971,6 +1980,15 @@ public class SentryOptions {
       this.logs = logs;
    }
 
+   @NotNull
+   public SentryOptions.Metrics getMetrics() {
+      return this.metrics;
+   }
+
+   public void setMetrics(@NotNull SentryOptions.Metrics metrics) {
+      this.metrics = metrics;
+   }
+
    @Experimental
    @NotNull
    public SentryOptions.DistributionOptions getDistribution() {
@@ -1985,11 +2003,6 @@ public class SentryOptions {
    public interface BeforeBreadcrumbCallback {
       @Nullable
       Breadcrumb execute(@NotNull Breadcrumb var1, @NotNull Hint var2);
-   }
-
-   @Experimental
-   public interface BeforeEmitMetricCallback {
-      boolean execute(@NotNull String var1, @Nullable Map<String, String> var2);
    }
 
    @Internal
@@ -2118,6 +2131,47 @@ public class SentryOptions {
       public interface BeforeSendLogCallback {
          @Nullable
          SentryLogEvent execute(@NotNull SentryLogEvent var1);
+      }
+   }
+
+   public static final class Metrics {
+      private boolean enable = true;
+      @Nullable
+      private SentryOptions.Metrics.BeforeSendMetricCallback beforeSend;
+      @NotNull
+      private IMetricsBatchProcessorFactory metricsBatchProcessorFactory = new DefaultMetricsBatchProcessorFactory();
+
+      public boolean isEnabled() {
+         return this.enable;
+      }
+
+      public void setEnabled(boolean enableMetrics) {
+         this.enable = enableMetrics;
+      }
+
+      @Nullable
+      public SentryOptions.Metrics.BeforeSendMetricCallback getBeforeSend() {
+         return this.beforeSend;
+      }
+
+      public void setBeforeSend(@Nullable SentryOptions.Metrics.BeforeSendMetricCallback beforeSend) {
+         this.beforeSend = beforeSend;
+      }
+
+      @Internal
+      @NotNull
+      public IMetricsBatchProcessorFactory getMetricsBatchProcessorFactory() {
+         return this.metricsBatchProcessorFactory;
+      }
+
+      @Internal
+      public void setMetricsBatchProcessorFactory(@NotNull IMetricsBatchProcessorFactory metricsBatchProcessorFactory) {
+         this.metricsBatchProcessorFactory = metricsBatchProcessorFactory;
+      }
+
+      public interface BeforeSendMetricCallback {
+         @Nullable
+         SentryMetricsEvent execute(@NotNull SentryMetricsEvent var1, @NotNull Hint var2);
       }
    }
 

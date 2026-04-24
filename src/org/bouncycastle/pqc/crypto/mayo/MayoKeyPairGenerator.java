@@ -5,9 +5,9 @@ import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPairGenerator;
 import org.bouncycastle.crypto.KeyGenerationParameters;
 import org.bouncycastle.crypto.digests.SHAKEDigest;
+import org.bouncycastle.math.raw.Nat;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.GF16;
-import org.bouncycastle.util.Longs;
 
 public class MayoKeyPairGenerator implements AsymmetricCipherKeyPairGenerator {
    private MayoParameters p;
@@ -59,7 +59,7 @@ public class MayoKeyPairGenerator implements AsymmetricCipherKeyPairGenerator {
          for (int var25 = var22; var23 < var4; var25 += var19) {
             System.arraycopy(var14, var22 + var24, var17, var18, var1);
             if (var20 != var23) {
-               Longs.xorTo(var1, var14, var25 + var21, var17, var18);
+               Nat.xorTo64(var1, var14, var25 + var21, var17, var18);
             }
 
             var18 += var1;

@@ -64,7 +64,7 @@ public class RecipientInfo extends ASN1Object implements ASN1Choice {
             case 3:
                return PasswordRecipientInfo.getInstance(var1, false).getVersion();
             case 4:
-               return new ASN1Integer(0L);
+               return ASN1Integer.ZERO;
          }
       }
 

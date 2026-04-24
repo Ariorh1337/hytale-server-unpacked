@@ -182,6 +182,10 @@ public class PluginClassLoader extends URLClassLoader {
             }
          }
 
+         if (throwable.getClass().getClassLoader() instanceof PluginClassLoader pcl && !pcl.isInServerClassPath()) {
+            return true;
+         }
+
          if (throwable.getCause() == throwable) {
             break;
          }

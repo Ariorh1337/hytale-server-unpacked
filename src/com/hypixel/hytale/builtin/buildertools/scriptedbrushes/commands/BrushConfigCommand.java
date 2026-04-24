@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -16,7 +17,7 @@ public class BrushConfigCommand extends AbstractCommandCollection {
    public BrushConfigCommand() {
       super("scriptedbrushes", "server.commands.scriptedbrushes.desc");
       this.addAliases("scriptbrush", "scriptedbrush", "sb");
-      this.requirePermission("hytale.editor.brush.config");
+      this.requirePermission(HytalePermissions.EDITOR_BRUSH_CONFIG);
       this.addSubCommand(new BrushConfigClearCommand());
       this.addSubCommand(new BrushConfigListCommand());
       this.addSubCommand(new BrushConfigDebugStepCommand());

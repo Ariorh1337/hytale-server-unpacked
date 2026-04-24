@@ -74,6 +74,48 @@ public final class TargetUtil {
    }
 
    @Nullable
+   public static Vector3i getTargetBlockOrigin(
+      @Nonnull World world,
+      @Nonnull BiIntPredicate blockIdPredicate,
+      double originX,
+      double originY,
+      double originZ,
+      double directionX,
+      double directionY,
+      double directionZ,
+      double maxDistance
+   ) {
+      TargetUtil.TargetBuffer buffer = new TargetUtil.TargetBuffer(world);
+      buffer.updateChunk((int)originX, (int)originZ);
+      boolean success = BlockIterator.iterate(
+         originX, originY, originZ, directionX, directionY, directionZ, maxDistance, (x, y, z, px, py, pz, qx, qy, qz, iBuffer) -> {
+            if (y >= 0 && y < 320) {
+               iBuffer.updateChunk(x, z);
+               if (iBuffer.currentBlockChunk != null && iBuffer.currentChunkColumn != null) {
+                  BlockSection blockSection = iBuffer.currentBlockChunk.getSectionAtBlockY(y);
+                  int blockId = blockSection.get(x, y, z);
+                  int fluidId = WorldUtil.getFluidIdAtPosition(iBuffer.chunkStoreAccessor, iBuffer.currentChunkColumn, x, y, z);
+                  if (blockIdPredicate.test(blockId, fluidId)) {
+                     return true;
+                  }
+
+                  int filler = blockSection.getFiller(x, y, z);
+                  iBuffer.x = x - FillerBlockUtil.unpackX(filler);
+                  iBuffer.y = y - FillerBlockUtil.unpackY(filler);
+                  iBuffer.z = z - FillerBlockUtil.unpackZ(filler);
+                  return false;
+               } else {
+                  return false;
+               }
+            } else {
+               return false;
+            }
+         }, buffer
+      );
+      return success ? null : new Vector3i(buffer.x, buffer.y, buffer.z);
+   }
+
+   @Nullable
    public static Vector3d getTargetLocation(
       @Nonnull World world,
       @Nonnull IntPredicate blockIdPredicate,
@@ -221,6 +263,22 @@ public final class TargetUtil {
       Vector3d pos = transform.getPosition();
       Vector3d dir = transform.getDirection();
       return getTargetBlock(world, (id, _fluidId) -> blockIdPredicate.test(id), pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, maxDistance);
+   }
+
+   @Nullable
+   public static Vector3i getTargetBlockOrigin(@Nonnull Ref<EntityStore> ref, double maxDistance, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return getTargetBlockOrigin(ref, blockId -> blockId != 0, maxDistance, componentAccessor);
+   }
+
+   @Nullable
+   public static Vector3i getTargetBlockOrigin(
+      @Nonnull Ref<EntityStore> ref, @Nonnull IntPredicate blockIdPredicate, double maxDistance, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      World world = componentAccessor.getExternalData().getWorld();
+      Transform transform = getLook(ref, componentAccessor);
+      Vector3d pos = transform.getPosition();
+      Vector3d dir = transform.getDirection();
+      return getTargetBlockOrigin(world, (id, _fluidId) -> blockIdPredicate.test(id), pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, maxDistance);
    }
 
    @Nullable

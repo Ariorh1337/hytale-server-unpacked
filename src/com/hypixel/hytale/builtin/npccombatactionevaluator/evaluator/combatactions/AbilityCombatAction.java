@@ -240,8 +240,8 @@ public class AbilityCombatAction extends CombatActionOption {
       }
 
       Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-      InventoryHelper.setHotbarSlot(ref, npcComponent.getInventory(), (byte)this.weaponSlot, commandBuffer);
-      InventoryHelper.setOffHandSlot(ref, npcComponent.getInventory(), (byte)this.offhandSlot, commandBuffer);
+      InventoryHelper.setHotbarSlot(ref, (byte)this.weaponSlot, commandBuffer);
+      InventoryHelper.setOffHandSlot(ref, (byte)this.offhandSlot, commandBuffer);
       if (this.subState != null) {
          role.getStateSupport().setSubState(this.subState);
          ctx = CombatActionEvaluator.LOGGER.at(Level.FINEST);

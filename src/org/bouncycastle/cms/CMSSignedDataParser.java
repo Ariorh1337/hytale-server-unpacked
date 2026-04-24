@@ -24,6 +24,7 @@ import org.bouncycastle.asn1.BERSetParser;
 import org.bouncycastle.asn1.BERTaggedObject;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.CMSObjectIdentifiers;
 import org.bouncycastle.asn1.cms.ContentInfoParser;
 import org.bouncycastle.asn1.cms.SignedDataParser;
@@ -207,27 +208,25 @@ public class CMSSignedDataParser extends CMSContentInfoParser {
       BERSequenceGenerator var7 = new BERSequenceGenerator(var6.getRawOutputStream(), 0, true);
       var7.addObject(var5.getVersion());
       var5.getDigestAlgorithms().toASN1Primitive();
-      ASN1EncodableVector var8 = new ASN1EncodableVector();
+      HashSet var8 = new HashSet();
 
       for (SignerInformation var10 : var1.getSigners()) {
+         CMSUtils.addDigestAlgs(var8, var10, dgstAlgFinder);
          var8.add(HELPER.fixDigestAlgID(var10.getDigestAlgorithmID(), dgstAlgFinder));
       }
 
-      var7.getRawOutputStream().write(new DERSet(var8).getEncoded());
-      ContentInfoParser var14 = var5.getEncapContentInfo();
-      BERSequenceGenerator var15 = new BERSequenceGenerator(var7.getRawOutputStream());
-      var15.addObject(var14.getContentType());
-      pipeEncapsulatedOctetString(var14, var15.getRawOutputStream());
-      var15.close();
+      AlgorithmIdentifier[] var13 = var8.toArray(new AlgorithmIdentifier[var8.size()]);
+      var7.addObject(new DLSet(var13));
+      writeEncapContentInfoToGenerator(var5, var7);
       writeSetToGeneratorTagged(var7, var5.getCertificates(), 0);
       writeSetToGeneratorTagged(var7, var5.getCrls(), 1);
-      ASN1EncodableVector var11 = new ASN1EncodableVector();
+      ASN1EncodableVector var14 = new ASN1EncodableVector();
 
-      for (SignerInformation var13 : var1.getSigners()) {
-         var11.add(var13.toASN1Structure());
+      for (SignerInformation var12 : var1.getSigners()) {
+         var14.add(var12.toASN1Structure());
       }
 
-      var7.getRawOutputStream().write(new DERSet(var11).getEncoded());
+      var7.addObject(new DERSet(var14));
       var7.close();
       var6.close();
       return var2;
@@ -241,50 +240,46 @@ public class CMSSignedDataParser extends CMSContentInfoParser {
       var8.addObject(CMSObjectIdentifiers.signedData);
       BERSequenceGenerator var9 = new BERSequenceGenerator(var8.getRawOutputStream(), 0, true);
       var9.addObject(var7.getVersion());
-      var9.getRawOutputStream().write(var7.getDigestAlgorithms().toASN1Primitive().getEncoded());
-      ContentInfoParser var10 = var7.getEncapContentInfo();
-      BERSequenceGenerator var11 = new BERSequenceGenerator(var9.getRawOutputStream());
-      var11.addObject(var10.getContentType());
-      pipeEncapsulatedOctetString(var10, var11.getRawOutputStream());
-      var11.close();
+      var9.addObject(var7.getDigestAlgorithms());
+      writeEncapContentInfoToGenerator(var7, var9);
       getASN1Set(var7.getCertificates());
       getASN1Set(var7.getCrls());
       if (var1 != null || var3 != null) {
-         ArrayList var12 = new ArrayList();
+         ArrayList var10 = new ArrayList();
          if (var1 != null) {
-            var12.addAll(CMSUtils.getCertificatesFromStore(var1));
+            var10.addAll(CMSUtils.getCertificatesFromStore(var1));
          }
 
          if (var3 != null) {
-            var12.addAll(CMSUtils.getAttributeCertificatesFromStore(var3));
+            var10.addAll(CMSUtils.getAttributeCertificatesFromStore(var3));
          }
 
-         ASN1Set var13 = CMSUtils.createBerSetFromList(var12);
-         if (var13.size() > 0) {
-            var9.getRawOutputStream().write(new DERTaggedObject(false, 0, var13).getEncoded());
+         ASN1Set var11 = CMSUtils.createBerSetFromList(var10);
+         if (var11.size() > 0) {
+            var9.addObject(new DERTaggedObject(false, 0, var11));
          }
       }
 
       if (var2 != null) {
-         ASN1Set var14 = CMSUtils.createBerSetFromList(CMSUtils.getCRLsFromStore(var2));
-         if (var14.size() > 0) {
-            var9.getRawOutputStream().write(new DERTaggedObject(false, 1, var14).getEncoded());
+         ASN1Set var12 = CMSUtils.createBerSetFromList(CMSUtils.getCRLsFromStore(var2));
+         if (var12.size() > 0) {
+            var9.addObject(new DERTaggedObject(false, 1, var12));
          }
       }
 
-      var9.getRawOutputStream().write(var7.getSignerInfos().toASN1Primitive().getEncoded());
+      var9.addObject(var7.getSignerInfos());
       var9.close();
       var8.close();
       return var4;
    }
 
-   private static void writeSetToGeneratorTagged(ASN1Generator var0, ASN1SetParser var1, int var2) throws IOException {
+   static void writeSetToGeneratorTagged(ASN1Generator var0, ASN1SetParser var1, int var2) throws IOException {
       ASN1Set var3 = getASN1Set(var1);
       if (var3 != null) {
          if (var1 instanceof BERSetParser) {
-            var0.getRawOutputStream().write(new BERTaggedObject(false, var2, var3).getEncoded());
+            new BERTaggedObject(false, var2, var3).encodeTo(var0.getRawOutputStream());
          } else {
-            var0.getRawOutputStream().write(new DERTaggedObject(false, var2, var3).getEncoded());
+            new DERTaggedObject(false, var2, var3).encodeTo(var0.getRawOutputStream());
          }
       }
    }
@@ -304,5 +299,13 @@ public class CMSSignedDataParser extends CMSContentInfoParser {
       OutputStream var2 = CMSUtils.createBEROctetOutputStream(var1, 0, true, 0);
       Streams.pipeAll(var0.getOctetStream(), var2);
       var2.close();
+   }
+
+   static void writeEncapContentInfoToGenerator(SignedDataParser var0, BERSequenceGenerator var1) throws IOException {
+      ContentInfoParser var2 = var0.getEncapContentInfo();
+      BERSequenceGenerator var3 = new BERSequenceGenerator(var1.getRawOutputStream());
+      var3.addObject(var2.getContentType());
+      pipeEncapsulatedOctetString(var2, var3.getRawOutputStream());
+      var3.close();
    }
 }

@@ -39,12 +39,14 @@ import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.MotionKind;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerWalk;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.EnumSet;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -55,12 +57,14 @@ import org.joml.Vector3dc;
 
 public class MotionControllerWalk extends MotionControllerBase {
    public static final String TYPE = "Walk";
+   public static final Set<MovementMode> SUPPORTED_MOVEMENT_MODES = Set.of(MovementMode.WALK, MovementMode.WADE, MovementMode.UNDERWATER_WALK);
    public static final double CLIMB_FORWARD_DISTANCE = 0.1;
    public static final double CLIMB_FORWARD_DISTANCE_SQUARED = 0.010000000000000002;
    public static final double JUMP_FORWARD_DISTANCE = 0.5;
    public static final double ONE_PLUS_THRESHOLD = 1.00001;
    public static final double MIN_SAFETY_DISTANCE = 0.05;
-   private static final double EDGE_MARGIN_BBOX_FACTOR = 0.1;
+   public static final double EDGE_MARGIN_BBOX_FACTOR = 0.1;
+   public static final double MIN_SEPARATION_STEERING = 1.0E-5;
    protected static final EnumSet<MotionKind> STATE_CAN_HOVER = EnumSet.of(MotionKind.MOVING, MotionKind.STANDING);
    protected static final EnumSet<MotionKind> VALID_MOTIONS = EnumSet.of(
       MotionKind.ASCENDING, MotionKind.DESCENDING, MotionKind.DROPPING, MotionKind.STANDING, MotionKind.MOVING
@@ -189,6 +193,24 @@ public class MotionControllerWalk extends MotionControllerBase {
    @Override
    public String getType() {
       return "Walk";
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getSupportedMovementModes() {
+      return SUPPORTED_MOVEMENT_MODES;
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getDefaultSpawnMovementModes() {
+      assert this.role != null;
+      if (this.role.isBreathesInAir()) {
+         return Set.of(MovementMode.WALK);
+      }
+
+      assert this.role.isBreathesInWater();
+      return Set.of(MovementMode.UNDERWATER_WALK);
    }
 
    @Override
@@ -1569,7 +1591,6 @@ public class MotionControllerWalk extends MotionControllerBase {
             endSlide = Double.MAX_VALUE;
          }
 
-         boolean tryClimb = false;
          boolean needsRotation = this.isRequiresPreciseMovement() && !this.isFullyRotated;
          this.lastValidPosition.set(this.position);
          boolean wasOnGround = this.onGround;
@@ -1697,13 +1718,6 @@ public class MotionControllerWalk extends MotionControllerBase {
 
             double triggerScale = collision.collisionStart;
             this.position.set(collision.collisionPoint);
-            this.tmpMovePosition.set(this.lastValidPosition).add(translation).sub(collision.collisionPoint);
-            if (!this.tmpMovePosition.equals(Vector3dUtil.ZERO)) {
-               double t = this.tmpMovePosition.dot(collision.collisionNormal);
-               this.tmpMovePosition.fma(-t, collision.collisionNormal);
-               this.position.add(this.tmpMovePosition);
-            }
-
             if (!this.isValidPosition(this.position, this.collisionResult, componentAccessor)) {
                double scale = this.bisect(this.lastValidPosition, this.position, this.position, componentAccessor);
                triggerScale *= scale;
@@ -1800,7 +1814,7 @@ public class MotionControllerWalk extends MotionControllerBase {
 
                return dt;
             } else {
-               this.setMotionKind(MotionKind.STANDING);
+               boolean tryClimb;
                if (!shortMove
                   && !needsRotation
                   && this.isOnSolidGround()
@@ -1863,6 +1877,46 @@ public class MotionControllerWalk extends MotionControllerBase {
                   if (this.debugModeValidatePositions && !this.isValidPosition(this.position, this.collisionResult, componentAccessor)) {
                      throw new IllegalStateException("Invalid position");
                   }
+               } else if (role.getLastAvoidanceSteering().lengthSquared() < 1.0E-5 && role.getLastSeparationSteering().lengthSquared() < 1.0E-5) {
+                  this.tmpMovePosition.set(this.lastValidPosition).add(translation).sub(collision.collisionPoint);
+                  if (!this.tmpMovePosition.equals(Vector3dUtil.ZERO)) {
+                     double t = this.tmpMovePosition.dot(collision.collisionNormal);
+                     this.tmpMovePosition.fma(-t, collision.collisionNormal);
+                     this.position.add(this.tmpMovePosition);
+                  }
+
+                  if (this.debugModeMove) {
+                     LOGGER.at(Level.INFO)
+                        .log(
+                           "Move: No ext force, collision horz, sliding at wall h=%s forw=%s state=%s",
+                           Vector3dUtil.formatShortString(this.tmpMovePosition),
+                           this.getMotionKind()
+                        );
+                  }
+
+                  if (!this.isValidPosition(this.position, this.collisionResult, componentAccessor)) {
+                     double scale = this.bisect(this.lastValidPosition, this.position, this.position, componentAccessor);
+                     if (this.debugModeMove) {
+                        LOGGER.at(Level.INFO).log("Move: Collision slide bisect=%s dt=%s", (double)scale, (double)dt);
+                     }
+                  }
+
+                  if (this.lastValidPosition.distanceSquared(this.position) > this.getEpsilonSpeed()) {
+                     this.setMotionKind(MotionKind.MOVING);
+                  } else {
+                     this.setMotionKind(MotionKind.STANDING);
+                  }
+               } else {
+                  if (this.debugModeMove) {
+                     LOGGER.at(Level.INFO)
+                        .log(
+                           "Move: No ext force, collision horz, no sliding at wall, avoidance/separation, state=%s",
+                           Vector3dUtil.formatShortString(this.tmpMovePosition),
+                           this.getMotionKind()
+                        );
+                  }
+
+                  this.setMotionKind(MotionKind.STANDING);
                }
 
                if (this.debugModeValidatePositions && !this.isValidPosition(this.position, this.collisionResult, componentAccessor)) {
@@ -2276,7 +2330,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                )
             );
          }
-      } else if (translation.lengthSquared() > 1000000.0) {
+      } else if (!NPCPhysicsMath.isValid(translation) || translation.lengthSquared() > 1000000.0) {
          translation.zero();
       }
    }

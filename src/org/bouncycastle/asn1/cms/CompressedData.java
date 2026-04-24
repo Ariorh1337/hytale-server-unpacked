@@ -15,7 +15,7 @@ public class CompressedData extends ASN1Object {
    private ContentInfo encapContentInfo;
 
    public CompressedData(AlgorithmIdentifier var1, ContentInfo var2) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.compressionAlgorithm = var1;
       this.encapContentInfo = var2;
    }

@@ -429,7 +429,7 @@ public class Argon2BytesGenerator {
          }
       }
 
-      public Argon2BytesGenerator.Block clear() {
+      private Argon2BytesGenerator.Block clear() {
          Arrays.fill(this.v, 0L);
          return this;
       }

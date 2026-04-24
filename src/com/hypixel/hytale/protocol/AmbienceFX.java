@@ -12,18 +12,17 @@ import javax.annotation.Nullable;
 
 public class AmbienceFX {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 18;
-   public static final int VARIABLE_FIELD_COUNT = 6;
+   public static final int FIXED_BLOCK_SIZE = 22;
+   public static final int VARIABLE_FIELD_COUNT = 5;
    public static final int VARIABLE_BLOCK_START = 42;
-   public static final int MAX_SIZE = 1677721600;
+   public static final int MAX_SIZE = 405504250;
    @Nullable
    public String id;
    @Nullable
    public AmbienceFXConditions conditions;
    @Nullable
    public AmbienceFXSound[] sounds;
-   @Nullable
-   public AmbienceFXMusic music;
+   public int musicContainerIndex;
    @Nullable
    public AmbienceFXAmbientBed ambientBed;
    @Nullable
@@ -40,7 +39,7 @@ public class AmbienceFX {
       @Nullable String id,
       @Nullable AmbienceFXConditions conditions,
       @Nullable AmbienceFXSound[] sounds,
-      @Nullable AmbienceFXMusic music,
+      int musicContainerIndex,
       @Nullable AmbienceFXAmbientBed ambientBed,
       @Nullable AmbienceFXSoundEffect soundEffect,
       int priority,
@@ -50,7 +49,7 @@ public class AmbienceFX {
       this.id = id;
       this.conditions = conditions;
       this.sounds = sounds;
-      this.music = music;
+      this.musicContainerIndex = musicContainerIndex;
       this.ambientBed = ambientBed;
       this.soundEffect = soundEffect;
       this.priority = priority;
@@ -62,7 +61,7 @@ public class AmbienceFX {
       this.id = other.id;
       this.conditions = other.conditions;
       this.sounds = other.sounds;
-      this.music = other.music;
+      this.musicContainerIndex = other.musicContainerIndex;
       this.ambientBed = other.ambientBed;
       this.soundEffect = other.soundEffect;
       this.priority = other.priority;
@@ -78,14 +77,15 @@ public class AmbienceFX {
 
       AmbienceFX obj = new AmbienceFX();
       byte nullBits = buf.getByte(offset);
+      obj.musicContainerIndex = buf.getIntLE(offset + 1);
       if ((nullBits & 1) != 0) {
-         obj.soundEffect = AmbienceFXSoundEffect.deserialize(buf, offset + 1);
+         obj.soundEffect = AmbienceFXSoundEffect.deserialize(buf, offset + 5);
       }
 
-      obj.priority = buf.getIntLE(offset + 10);
-      obj.audioCategoryIndex = buf.getIntLE(offset + 14);
+      obj.priority = buf.getIntLE(offset + 14);
+      obj.audioCategoryIndex = buf.getIntLE(offset + 18);
       if ((nullBits & 2) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 18);
+         int varPosBase0 = buf.getIntLE(offset + 22);
          if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 42) {
             throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
@@ -109,7 +109,7 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 22);
+         int varPosBase1 = buf.getIntLE(offset + 26);
          if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 42) {
             throw ProtocolException.invalidOffset("Conditions", varPosBase1, buf.readableBytes());
          }
@@ -119,7 +119,7 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPosBase2 = buf.getIntLE(offset + 26);
+         int varPosBase2 = buf.getIntLE(offset + 30);
          if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 42) {
             throw ProtocolException.invalidOffset("Sounds", varPosBase2, buf.readableBytes());
          }
@@ -149,33 +149,23 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPosBase3 = buf.getIntLE(offset + 30);
+         int varPosBase3 = buf.getIntLE(offset + 34);
          if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 42) {
-            throw ProtocolException.invalidOffset("Music", varPosBase3, buf.readableBytes());
+            throw ProtocolException.invalidOffset("AmbientBed", varPosBase3, buf.readableBytes());
          }
 
          int varPos3 = offset + 42 + varPosBase3;
-         obj.music = AmbienceFXMusic.deserialize(buf, varPos3);
+         obj.ambientBed = AmbienceFXAmbientBed.deserialize(buf, varPos3);
       }
 
       if ((nullBits & 32) != 0) {
-         int varPosBase4 = buf.getIntLE(offset + 34);
+         int varPosBase4 = buf.getIntLE(offset + 38);
          if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 42) {
-            throw ProtocolException.invalidOffset("AmbientBed", varPosBase4, buf.readableBytes());
+            throw ProtocolException.invalidOffset("BlockedAmbienceFxIndices", varPosBase4, buf.readableBytes());
          }
 
          int varPos4 = offset + 42 + varPosBase4;
-         obj.ambientBed = AmbienceFXAmbientBed.deserialize(buf, varPos4);
-      }
-
-      if ((nullBits & 64) != 0) {
-         int varPosBase5 = buf.getIntLE(offset + 38);
-         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 42) {
-            throw ProtocolException.invalidOffset("BlockedAmbienceFxIndices", varPosBase5, buf.readableBytes());
-         }
-
-         int varPos5 = offset + 42 + varPosBase5;
-         int blockedAmbienceFxIndicesCount = VarInt.peek(buf, varPos5);
+         int blockedAmbienceFxIndicesCount = VarInt.peek(buf, varPos4);
          if (blockedAmbienceFxIndicesCount < 0) {
             throw ProtocolException.invalidVarInt("BlockedAmbienceFxIndices");
          }
@@ -185,14 +175,14 @@ public class AmbienceFX {
             throw ProtocolException.arrayTooLong("BlockedAmbienceFxIndices", blockedAmbienceFxIndicesCount, 4096000);
          }
 
-         if (varPos5 + varIntLen + blockedAmbienceFxIndicesCount * 4L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("BlockedAmbienceFxIndices", varPos5 + varIntLen + blockedAmbienceFxIndicesCount * 4, buf.readableBytes());
+         if (varPos4 + varIntLen + blockedAmbienceFxIndicesCount * 4L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("BlockedAmbienceFxIndices", varPos4 + varIntLen + blockedAmbienceFxIndicesCount * 4, buf.readableBytes());
          }
 
          obj.blockedAmbienceFxIndices = new int[blockedAmbienceFxIndicesCount];
 
          for (int i = 0; i < blockedAmbienceFxIndicesCount; i++) {
-            obj.blockedAmbienceFxIndices[i] = buf.getIntLE(varPos5 + varIntLen + i * 4);
+            obj.blockedAmbienceFxIndices[i] = buf.getIntLE(varPos4 + varIntLen + i * 4);
          }
       }
 
@@ -203,7 +193,7 @@ public class AmbienceFX {
       byte nullBits = buf.getByte(offset);
       int maxEnd = 42;
       if ((nullBits & 2) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 18);
+         int fieldOffset0 = buf.getIntLE(offset + 22);
          if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 42) {
             throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
          }
@@ -217,7 +207,7 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 4) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 22);
+         int fieldOffset1 = buf.getIntLE(offset + 26);
          if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 42) {
             throw ProtocolException.invalidOffset("Conditions", fieldOffset1, maxEnd);
          }
@@ -230,7 +220,7 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 8) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 26);
+         int fieldOffset2 = buf.getIntLE(offset + 30);
          if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 42) {
             throw ProtocolException.invalidOffset("Sounds", fieldOffset2, maxEnd);
          }
@@ -249,42 +239,29 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 16) != 0) {
-         int fieldOffset3 = buf.getIntLE(offset + 30);
+         int fieldOffset3 = buf.getIntLE(offset + 34);
          if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 42) {
-            throw ProtocolException.invalidOffset("Music", fieldOffset3, maxEnd);
+            throw ProtocolException.invalidOffset("AmbientBed", fieldOffset3, maxEnd);
          }
 
          int pos3 = offset + 42 + fieldOffset3;
-         pos3 += AmbienceFXMusic.computeBytesConsumed(buf, pos3);
+         pos3 += AmbienceFXAmbientBed.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
       }
 
       if ((nullBits & 32) != 0) {
-         int fieldOffset4 = buf.getIntLE(offset + 34);
+         int fieldOffset4 = buf.getIntLE(offset + 38);
          if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 42) {
-            throw ProtocolException.invalidOffset("AmbientBed", fieldOffset4, maxEnd);
+            throw ProtocolException.invalidOffset("BlockedAmbienceFxIndices", fieldOffset4, maxEnd);
          }
 
          int pos4 = offset + 42 + fieldOffset4;
-         pos4 += AmbienceFXAmbientBed.computeBytesConsumed(buf, pos4);
+         int arrLen = VarInt.peek(buf, pos4);
+         pos4 += VarInt.size(arrLen) + arrLen * 4;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
-         }
-      }
-
-      if ((nullBits & 64) != 0) {
-         int fieldOffset5 = buf.getIntLE(offset + 38);
-         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 42) {
-            throw ProtocolException.invalidOffset("BlockedAmbienceFxIndices", fieldOffset5, maxEnd);
-         }
-
-         int pos5 = offset + 42 + fieldOffset5;
-         int arrLen = VarInt.peek(buf, pos5);
-         pos5 += VarInt.size(arrLen) + arrLen * 4;
-         if (pos5 - offset > maxEnd) {
-            maxEnd = pos5 - offset;
          }
       }
 
@@ -310,19 +287,16 @@ public class AmbienceFX {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.music != null) {
+      if (this.ambientBed != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.ambientBed != null) {
+      if (this.blockedAmbienceFxIndices != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
-      if (this.blockedAmbienceFxIndices != null) {
-         nullBits = (byte)(nullBits | 64);
-      }
-
       buf.writeByte(nullBits);
+      buf.writeIntLE(this.musicContainerIndex);
       if (this.soundEffect != null) {
          this.soundEffect.serialize(buf);
       } else {
@@ -336,8 +310,6 @@ public class AmbienceFX {
       int conditionsOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int soundsOffsetSlot = buf.writerIndex();
-      buf.writeIntLE(0);
-      int musicOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int ambientBedOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
@@ -371,13 +343,6 @@ public class AmbienceFX {
          }
       } else {
          buf.setIntLE(soundsOffsetSlot, -1);
-      }
-
-      if (this.music != null) {
-         buf.setIntLE(musicOffsetSlot, buf.writerIndex() - varBlockStart);
-         this.music.serialize(buf);
-      } else {
-         buf.setIntLE(musicOffsetSlot, -1);
       }
 
       if (this.ambientBed != null) {
@@ -417,10 +382,6 @@ public class AmbienceFX {
          size += VarInt.size(this.sounds.length) + this.sounds.length * 33;
       }
 
-      if (this.music != null) {
-         size += this.music.computeSize();
-      }
-
       if (this.ambientBed != null) {
          size += this.ambientBed.computeSize();
       }
@@ -439,7 +400,7 @@ public class AmbienceFX {
 
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
-         int idOffset = buffer.getIntLE(offset + 18);
+         int idOffset = buffer.getIntLE(offset + 22);
          if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for Id");
          }
@@ -462,7 +423,7 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 4) != 0) {
-         int conditionsOffset = buffer.getIntLE(offset + 22);
+         int conditionsOffset = buffer.getIntLE(offset + 26);
          if (conditionsOffset < 0 || conditionsOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for Conditions");
          }
@@ -477,7 +438,7 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 8) != 0) {
-         int soundsOffset = buffer.getIntLE(offset + 26);
+         int soundsOffset = buffer.getIntLE(offset + 30);
          if (soundsOffset < 0 || soundsOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for Sounds");
          }
@@ -500,21 +461,6 @@ public class AmbienceFX {
       }
 
       if ((nullBits & 16) != 0) {
-         int musicOffset = buffer.getIntLE(offset + 30);
-         if (musicOffset < 0 || musicOffset > buffer.writerIndex() - offset - 42) {
-            return ValidationResult.error("Invalid offset for Music");
-         }
-
-         int pos = offset + 42 + musicOffset;
-         ValidationResult musicResult = AmbienceFXMusic.validateStructure(buffer, pos);
-         if (!musicResult.isValid()) {
-            return ValidationResult.error("Invalid Music: " + musicResult.error());
-         }
-
-         pos += AmbienceFXMusic.computeBytesConsumed(buffer, pos);
-      }
-
-      if ((nullBits & 32) != 0) {
          int ambientBedOffset = buffer.getIntLE(offset + 34);
          if (ambientBedOffset < 0 || ambientBedOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for AmbientBed");
@@ -529,7 +475,7 @@ public class AmbienceFX {
          pos += AmbienceFXAmbientBed.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits & 64) != 0) {
+      if ((nullBits & 32) != 0) {
          int blockedAmbienceFxIndicesOffset = buffer.getIntLE(offset + 38);
          if (blockedAmbienceFxIndicesOffset < 0 || blockedAmbienceFxIndicesOffset > buffer.writerIndex() - offset - 42) {
             return ValidationResult.error("Invalid offset for BlockedAmbienceFxIndices");
@@ -560,7 +506,7 @@ public class AmbienceFX {
       copy.id = this.id;
       copy.conditions = this.conditions != null ? this.conditions.clone() : null;
       copy.sounds = this.sounds != null ? Arrays.stream(this.sounds).map(e -> e.clone()).toArray(AmbienceFXSound[]::new) : null;
-      copy.music = this.music != null ? this.music.clone() : null;
+      copy.musicContainerIndex = this.musicContainerIndex;
       copy.ambientBed = this.ambientBed != null ? this.ambientBed.clone() : null;
       copy.soundEffect = this.soundEffect != null ? this.soundEffect.clone() : null;
       copy.priority = this.priority;
@@ -581,7 +527,7 @@ public class AmbienceFX {
             : Objects.equals(this.id, other.id)
                && Objects.equals(this.conditions, other.conditions)
                && Arrays.equals(this.sounds, other.sounds)
-               && Objects.equals(this.music, other.music)
+               && this.musicContainerIndex == other.musicContainerIndex
                && Objects.equals(this.ambientBed, other.ambientBed)
                && Objects.equals(this.soundEffect, other.soundEffect)
                && this.priority == other.priority
@@ -596,7 +542,7 @@ public class AmbienceFX {
       result = 31 * result + Objects.hashCode(this.id);
       result = 31 * result + Objects.hashCode(this.conditions);
       result = 31 * result + Arrays.hashCode(this.sounds);
-      result = 31 * result + Objects.hashCode(this.music);
+      result = 31 * result + Integer.hashCode(this.musicContainerIndex);
       result = 31 * result + Objects.hashCode(this.ambientBed);
       result = 31 * result + Objects.hashCode(this.soundEffect);
       result = 31 * result + Integer.hashCode(this.priority);

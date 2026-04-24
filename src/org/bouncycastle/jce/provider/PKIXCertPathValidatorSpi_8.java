@@ -19,13 +19,11 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.TBSCertificate;
 import org.bouncycastle.jcajce.PKIXCertRevocationChecker;
+import org.bouncycastle.jcajce.PKIXCertStoreSelector;
 import org.bouncycastle.jcajce.PKIXExtendedBuilderParameters;
 import org.bouncycastle.jcajce.PKIXExtendedParameters;
 import org.bouncycastle.jcajce.interfaces.BCX509Certificate;
@@ -76,9 +74,9 @@ public class PKIXCertPathValidatorSpi_8 extends CertPathValidatorSpi {
          throw new InvalidAlgorithmParameterException("trustAnchors is null, this is not allowed for certification path validation.");
       }
 
-      List var40 = var1.getCertificates();
-      int var41 = var40.size();
-      if (var40.isEmpty()) {
+      List var39 = var1.getCertificates();
+      int var40 = var39.size();
+      if (var39.isEmpty()) {
          throw new CertPathValidatorException("Certification path is empty.", null, var1, -1);
       }
 
@@ -88,14 +86,14 @@ public class PKIXCertPathValidatorSpi_8 extends CertPathValidatorSpi {
 
       TrustAnchor var9;
       try {
-         var9 = CertPathValidatorUtilities.findTrustAnchor((X509Certificate)var40.get(var40.size() - 1), var3.getTrustAnchors(), var3.getSigProvider());
+         var9 = CertPathValidatorUtilities.findTrustAnchor((X509Certificate)var39.get(var39.size() - 1), var3.getTrustAnchors(), var3.getSigProvider());
          if (var9 == null) {
             throw new CertPathValidatorException("Trust anchor for certification path not found.", null, var1, -1);
          }
 
          checkCertificate(var9.getTrustedCert());
-      } catch (AnnotatedException var38) {
-         throw new CertPathValidatorException(var38.getMessage(), var38.getUnderlyingException(), var1, var40.size() - 1);
+      } catch (AnnotatedException var37) {
+         throw new CertPathValidatorException(var37.getMessage(), var37.getUnderlyingException(), var1, var39.size() - 1);
       }
 
       var3 = new PKIXExtendedParameters.Builder(var3).setTrustAnchor(var9).build();
@@ -119,16 +117,16 @@ public class PKIXCertPathValidatorSpi_8 extends CertPathValidatorSpi {
          var10 = new ProvRevocationChecker(this.helper);
       }
 
-      int var42 = 0;
-      ArrayList[] var15 = new ArrayList[var41 + 1];
+      int var41 = 0;
+      ArrayList[] var15 = new ArrayList[var40 + 1];
 
       for (int var16 = 0; var16 < var15.length; var16++) {
          var15[var16] = new ArrayList();
       }
 
-      HashSet var44 = new HashSet();
-      var44.add("2.5.29.32.0");
-      PKIXPolicyNode var17 = new PKIXPolicyNode(new ArrayList(), 0, var44, null, new HashSet(), "2.5.29.32.0", false);
+      HashSet var43 = new HashSet();
+      var43.add("2.5.29.32.0");
+      PKIXPolicyNode var17 = new PKIXPolicyNode(new ArrayList(), 0, var43, null, new HashSet(), "2.5.29.32.0", false);
       var15[0].add(var17);
       PKIXNameConstraintValidator var18 = new PKIXNameConstraintValidator();
       HashSet var20 = new HashSet();
@@ -136,21 +134,21 @@ public class PKIXCertPathValidatorSpi_8 extends CertPathValidatorSpi {
       if (var3.isExplicitPolicyRequired()) {
          var19 = 0;
       } else {
-         var19 = var41 + 1;
+         var19 = var40 + 1;
       }
 
       int var21;
       if (var3.isAnyPolicyInhibited()) {
          var21 = 0;
       } else {
-         var21 = var41 + 1;
+         var21 = var40 + 1;
       }
 
       int var22;
       if (var3.isPolicyMappingInhibited()) {
          var22 = 0;
       } else {
-         var22 = var41 + 1;
+         var22 = var40 + 1;
       }
 
       X509Certificate var25 = var9.getTrustedCert();
@@ -165,123 +163,120 @@ public class PKIXCertPathValidatorSpi_8 extends CertPathValidatorSpi {
             var24 = PrincipalUtils.getCA(var9);
             var23 = var9.getCAPublicKey();
          }
-      } catch (RuntimeException var37) {
-         throw new ExtCertPathValidatorException("Subject of trust anchor could not be (re)encoded.", var37, var1, -1);
+      } catch (RuntimeException var36) {
+         throw new ExtCertPathValidatorException("Subject of trust anchor could not be (re)encoded.", var36, var1, -1);
       }
 
-      AlgorithmIdentifier var26 = null;
+      Object var26 = null;
 
       try {
          var26 = CertPathValidatorUtilities.getAlgorithmIdentifier(var23);
-      } catch (CertPathValidatorException var36) {
-         throw new ExtCertPathValidatorException("Algorithm identifier of public key of trust anchor could not be read.", var36, var1, -1);
+      } catch (CertPathValidatorException var35) {
+         throw new ExtCertPathValidatorException("Algorithm identifier of public key of trust anchor could not be read.", var35, var1, -1);
       }
 
-      ASN1ObjectIdentifier var27 = var26.getAlgorithm();
-      ASN1Encodable var28 = var26.getParameters();
-      int var29 = var41;
-      if (var3.getTargetConstraints() != null && !var3.getTargetConstraints().match((X509Certificate)var40.get(0))) {
+      int var27 = var40;
+      PKIXCertStoreSelector var28 = var3.getTargetConstraints();
+      if (var28 != null && !var28.match((X509Certificate)var39.get(0))) {
          throw new ExtCertPathValidatorException("Target certificate in certification path does not match targetConstraints.", null, var1, 0);
       }
 
-      X509Certificate var30 = null;
+      X509Certificate var29 = null;
 
-      for (var42 = var40.size() - 1; var42 >= 0; var42--) {
-         int var14 = var41 - var42;
-         var30 = (X509Certificate)var40.get(var42);
-         boolean var31 = var42 == var40.size() - 1;
+      for (var41 = var39.size() - 1; var41 >= 0; var41--) {
+         int var14 = var40 - var41;
+         var29 = (X509Certificate)var39.get(var41);
+         boolean var30 = var41 == var39.size() - 1;
 
          try {
-            checkCertificate(var30);
-         } catch (AnnotatedException var34) {
-            throw new CertPathValidatorException(var34.getMessage(), var34.getUnderlyingException(), var1, var42);
+            checkCertificate(var29);
+         } catch (AnnotatedException var33) {
+            throw new CertPathValidatorException(var33.getMessage(), var33.getUnderlyingException(), var1, var41);
          }
 
-         RFC3280CertPathUtilities.processCertA(var1, var3, var7, var10, var42, var23, var31, var24, var25);
-         RFC3280CertPathUtilities.processCertBC(var1, var42, var18, this.isForCRLCheck);
-         PKIXPolicyNode var45 = RFC3280CertPathUtilities.processCertD(var1, var42, var20, var17, var15, var21, this.isForCRLCheck);
-         var17 = RFC3280CertPathUtilities.processCertE(var1, var42, var45);
-         RFC3280CertPathUtilities.processCertF(var1, var42, var17, var19);
-         if (var14 != var41) {
-            if (var30 != null && var30.getVersion() == 1) {
-               if (var14 != 1 || !var30.equals(var9.getTrustedCert())) {
-                  throw new CertPathValidatorException("Version 1 certificates can't be used as CA ones.", null, var1, var42);
+         RFC3280CertPathUtilities.processCertA(var1, var3, var7, var10, var41, var23, var30, var24, var25);
+         RFC3280CertPathUtilities.processCertBC(var1, var41, var18, this.isForCRLCheck);
+         PKIXPolicyNode var44 = RFC3280CertPathUtilities.processCertD(var1, var41, var20, var17, var15, var21, this.isForCRLCheck);
+         var17 = RFC3280CertPathUtilities.processCertE(var1, var41, var44);
+         RFC3280CertPathUtilities.processCertF(var1, var41, var17, var19);
+         if (var14 != var40) {
+            if (var29 != null && var29.getVersion() == 1) {
+               if (var14 != 1 || !var29.equals(var9.getTrustedCert())) {
+                  throw new CertPathValidatorException("Version 1 certificates can't be used as CA ones.", null, var1, var41);
                }
             } else {
-               RFC3280CertPathUtilities.prepareNextCertA(var1, var42);
-               var17 = RFC3280CertPathUtilities.prepareCertB(var1, var42, var15, var17, var22);
-               RFC3280CertPathUtilities.prepareNextCertG(var1, var42, var18);
-               var19 = RFC3280CertPathUtilities.prepareNextCertH1(var1, var42, var19);
-               var22 = RFC3280CertPathUtilities.prepareNextCertH2(var1, var42, var22);
-               var21 = RFC3280CertPathUtilities.prepareNextCertH3(var1, var42, var21);
-               var19 = RFC3280CertPathUtilities.prepareNextCertI1(var1, var42, var19);
-               var22 = RFC3280CertPathUtilities.prepareNextCertI2(var1, var42, var22);
-               var21 = RFC3280CertPathUtilities.prepareNextCertJ(var1, var42, var21);
-               RFC3280CertPathUtilities.prepareNextCertK(var1, var42);
-               var29 = RFC3280CertPathUtilities.prepareNextCertL(var1, var42, var29);
-               var29 = RFC3280CertPathUtilities.prepareNextCertM(var1, var42, var29);
-               RFC3280CertPathUtilities.prepareNextCertN(var1, var42);
-               HashSet var32 = var30.getCriticalExtensionOIDs();
-               if (var32 != null) {
-                  var32 = new HashSet(var32);
-                  var32.remove(RFC3280CertPathUtilities.KEY_USAGE);
-                  var32.remove(RFC3280CertPathUtilities.CERTIFICATE_POLICIES);
-                  var32.remove(RFC3280CertPathUtilities.POLICY_MAPPINGS);
-                  var32.remove(RFC3280CertPathUtilities.INHIBIT_ANY_POLICY);
-                  var32.remove(RFC3280CertPathUtilities.ISSUING_DISTRIBUTION_POINT);
-                  var32.remove(RFC3280CertPathUtilities.DELTA_CRL_INDICATOR);
-                  var32.remove(RFC3280CertPathUtilities.POLICY_CONSTRAINTS);
-                  var32.remove(RFC3280CertPathUtilities.BASIC_CONSTRAINTS);
-                  var32.remove(RFC3280CertPathUtilities.SUBJECT_ALTERNATIVE_NAME);
-                  var32.remove(RFC3280CertPathUtilities.NAME_CONSTRAINTS);
+               RFC3280CertPathUtilities.prepareNextCertA(var1, var41);
+               var17 = RFC3280CertPathUtilities.prepareCertB(var1, var41, var15, var17, var22);
+               RFC3280CertPathUtilities.prepareNextCertG(var1, var41, var18);
+               var19 = RFC3280CertPathUtilities.prepareNextCertH1(var1, var41, var19);
+               var22 = RFC3280CertPathUtilities.prepareNextCertH2(var1, var41, var22);
+               var21 = RFC3280CertPathUtilities.prepareNextCertH3(var1, var41, var21);
+               var19 = RFC3280CertPathUtilities.prepareNextCertI1(var1, var41, var19);
+               var22 = RFC3280CertPathUtilities.prepareNextCertI2(var1, var41, var22);
+               var21 = RFC3280CertPathUtilities.prepareNextCertJ(var1, var41, var21);
+               RFC3280CertPathUtilities.prepareNextCertK(var1, var41);
+               var27 = RFC3280CertPathUtilities.prepareNextCertL(var1, var41, var27);
+               var27 = RFC3280CertPathUtilities.prepareNextCertM(var1, var41, var27);
+               RFC3280CertPathUtilities.prepareNextCertN(var1, var41);
+               HashSet var31 = var29.getCriticalExtensionOIDs();
+               if (var31 != null) {
+                  var31 = new HashSet(var31);
+                  var31.remove(RFC3280CertPathUtilities.KEY_USAGE);
+                  var31.remove(RFC3280CertPathUtilities.CERTIFICATE_POLICIES);
+                  var31.remove(RFC3280CertPathUtilities.POLICY_MAPPINGS);
+                  var31.remove(RFC3280CertPathUtilities.INHIBIT_ANY_POLICY);
+                  var31.remove(RFC3280CertPathUtilities.ISSUING_DISTRIBUTION_POINT);
+                  var31.remove(RFC3280CertPathUtilities.DELTA_CRL_INDICATOR);
+                  var31.remove(RFC3280CertPathUtilities.POLICY_CONSTRAINTS);
+                  var31.remove(RFC3280CertPathUtilities.BASIC_CONSTRAINTS);
+                  var31.remove(RFC3280CertPathUtilities.SUBJECT_ALTERNATIVE_NAME);
+                  var31.remove(RFC3280CertPathUtilities.NAME_CONSTRAINTS);
                } else {
-                  var32 = new HashSet();
+                  var31 = new HashSet();
                }
 
-               RFC3280CertPathUtilities.prepareNextCertO(var1, var42, var32, var11);
-               var25 = var30;
+               RFC3280CertPathUtilities.prepareNextCertO(var1, var41, var31, var11);
+               var25 = var29;
                var24 = PrincipalUtils.getSubjectPrincipal(var25);
 
                try {
-                  var23 = CertPathValidatorUtilities.getNextWorkingKey(var1.getCertificates(), var42, this.helper);
-               } catch (CertPathValidatorException var35) {
-                  throw new CertPathValidatorException("Next working key could not be retrieved.", var35, var1, var42);
+                  var23 = CertPathValidatorUtilities.getNextWorkingKey(var1.getCertificates(), var41, this.helper);
+               } catch (CertPathValidatorException var34) {
+                  throw new CertPathValidatorException("Next working key could not be retrieved.", var34, var1, var41);
                }
 
                var26 = CertPathValidatorUtilities.getAlgorithmIdentifier(var23);
-               var27 = var26.getAlgorithm();
-               var28 = var26.getParameters();
             }
          }
       }
 
-      var19 = RFC3280CertPathUtilities.wrapupCertA(var19, var30);
-      var19 = RFC3280CertPathUtilities.wrapupCertB(var1, var42 + 1, var19);
-      HashSet var56 = var30.getCriticalExtensionOIDs();
-      if (var56 != null) {
-         var56 = new HashSet(var56);
-         var56.remove(RFC3280CertPathUtilities.KEY_USAGE);
-         var56.remove(RFC3280CertPathUtilities.CERTIFICATE_POLICIES);
-         var56.remove(RFC3280CertPathUtilities.POLICY_MAPPINGS);
-         var56.remove(RFC3280CertPathUtilities.INHIBIT_ANY_POLICY);
-         var56.remove(RFC3280CertPathUtilities.ISSUING_DISTRIBUTION_POINT);
-         var56.remove(RFC3280CertPathUtilities.DELTA_CRL_INDICATOR);
-         var56.remove(RFC3280CertPathUtilities.POLICY_CONSTRAINTS);
-         var56.remove(RFC3280CertPathUtilities.BASIC_CONSTRAINTS);
-         var56.remove(RFC3280CertPathUtilities.SUBJECT_ALTERNATIVE_NAME);
-         var56.remove(RFC3280CertPathUtilities.NAME_CONSTRAINTS);
-         var56.remove(RFC3280CertPathUtilities.CRL_DISTRIBUTION_POINTS);
-         var56.remove(Extension.extendedKeyUsage.getId());
+      var19 = RFC3280CertPathUtilities.wrapupCertA(var19, var29);
+      var19 = RFC3280CertPathUtilities.wrapupCertB(var1, var41 + 1, var19);
+      HashSet var53 = var29.getCriticalExtensionOIDs();
+      if (var53 != null) {
+         var53 = new HashSet(var53);
+         var53.remove(RFC3280CertPathUtilities.KEY_USAGE);
+         var53.remove(RFC3280CertPathUtilities.CERTIFICATE_POLICIES);
+         var53.remove(RFC3280CertPathUtilities.POLICY_MAPPINGS);
+         var53.remove(RFC3280CertPathUtilities.INHIBIT_ANY_POLICY);
+         var53.remove(RFC3280CertPathUtilities.ISSUING_DISTRIBUTION_POINT);
+         var53.remove(RFC3280CertPathUtilities.DELTA_CRL_INDICATOR);
+         var53.remove(RFC3280CertPathUtilities.POLICY_CONSTRAINTS);
+         var53.remove(RFC3280CertPathUtilities.BASIC_CONSTRAINTS);
+         var53.remove(RFC3280CertPathUtilities.SUBJECT_ALTERNATIVE_NAME);
+         var53.remove(RFC3280CertPathUtilities.NAME_CONSTRAINTS);
+         var53.remove(RFC3280CertPathUtilities.CRL_DISTRIBUTION_POINTS);
+         var53.remove(Extension.extendedKeyUsage.getId());
       } else {
-         var56 = new HashSet();
+         var53 = new HashSet();
       }
 
-      RFC3280CertPathUtilities.wrapupCertF(var1, var42 + 1, var11, var56);
-      PKIXPolicyNode var59 = RFC3280CertPathUtilities.wrapupCertG(var1, var3, var8, var42 + 1, var15, var17, var20);
-      if (var19 <= 0 && var59 == null) {
-         throw new CertPathValidatorException("Path processing failed on policy.", null, var1, var42);
+      RFC3280CertPathUtilities.wrapupCertF(var1, var41 + 1, var11, var53);
+      PKIXPolicyNode var56 = RFC3280CertPathUtilities.wrapupCertG(var1, var3, var8, var41 + 1, var15, var17, var20);
+      if (var19 <= 0 && var56 == null) {
+         throw new CertPathValidatorException("Path processing failed on policy.", null, var1, var41);
       } else {
-         return new PKIXCertPathValidatorResult(var9, var59, var30.getPublicKey());
+         return new PKIXCertPathValidatorResult(var9, var56, var29.getPublicKey());
       }
    }
 

@@ -29,9 +29,9 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemContainerWindow;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
-import com.hypixel.hytale.server.core.event.events.ecs.SwitchActiveSlotEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.event.events.ecs.InventoryActiveSlotRequestEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -89,7 +89,6 @@ public class InventoryPacketHandler implements SubPacketHandler {
                      playerRefComponent.getPacketHandler(), Message.translation("server.general.setCreativeItem.notInCreativeMode")
                   );
                } else {
-                  Inventory inventory = playerComponent.getInventory();
                   int quantity = packet.item.quantity;
                   if (quantity > 0) {
                      ItemStack itemStack = ItemStack.fromPacket(packet.item);
@@ -101,20 +100,25 @@ public class InventoryPacketHandler implements SubPacketHandler {
                            ItemUtils.dropItem(ref, remainder, store);
                         }
                      } else {
-                        ItemContainer sectionById = inventory.getSectionById(packet.inventorySectionId);
-                        if (packet.override) {
-                           sectionById.setItemStackForSlot((short)packet.slotId, itemStack);
-                        } else {
-                           ItemStack existing = sectionById.getItemStack((short)packet.slotId);
-                           if (existing != null && !existing.isEmpty() && existing.isStackableWith(itemStack)) {
-                              sectionById.addItemStackToSlot((short)packet.slotId, itemStack);
-                           } else {
+                        ItemContainer sectionById = InventoryUtils.getSectionById(ref, packet.inventorySectionId, store);
+                        if (sectionById != null) {
+                           if (packet.override) {
                               sectionById.setItemStackForSlot((short)packet.slotId, itemStack);
+                           } else {
+                              ItemStack existing = sectionById.getItemStack((short)packet.slotId);
+                              if (existing != null && !existing.isEmpty() && existing.isStackableWith(itemStack)) {
+                                 sectionById.addItemStackToSlot((short)packet.slotId, itemStack);
+                              } else {
+                                 sectionById.setItemStackForSlot((short)packet.slotId, itemStack);
+                              }
                            }
                         }
                      }
                   } else if (packet.override) {
-                     inventory.getSectionById(packet.inventorySectionId).setItemStackForSlot((short)packet.slotId, null);
+                     ItemContainer sectionById = InventoryUtils.getSectionById(ref, packet.inventorySectionId, store);
+                     if (sectionById != null) {
+                        sectionById.setItemStackForSlot((short)packet.slotId, null);
+                     }
                   }
                }
             }
@@ -201,7 +205,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                                  if (maxSelectorTool != null) {
                                     BlockSelectorToolData toolData = maxSelectorTool.getItem().getBlockSelectorToolData();
                                     if (ItemUtils.canDecreaseItemStackDurability(ref, store) && !maxSelectorTool.isUnbreakable()) {
-                                       playerComponent.updateItemStackDurability(
+                                       ItemUtils.updateItemStackDurability(
                                           ref, maxSelectorTool, combinedInventory, maxSlot, -toolData.getDurabilityLossOnUse(), store
                                        );
                                     }
@@ -247,7 +251,6 @@ public class InventoryPacketHandler implements SubPacketHandler {
                      playerRefComponent.getPacketHandler(), Message.translation("server.general.setCreativeItem.notInCreativeMode")
                   );
                } else {
-                  Inventory inventory = playerComponent.getInventory();
                   ItemStack itemStack = ItemStack.fromPacket(packet.item);
                   if (itemStack != null) {
                      switch (packet.moveType) {
@@ -255,23 +258,28 @@ public class InventoryPacketHandler implements SubPacketHandler {
                            Item item = itemStack.getItem();
                            ItemArmor itemArmor = item.getArmor();
                            if (itemArmor != null) {
-                              inventory.getArmor().setItemStackForSlot((short)itemArmor.getArmorSlot().ordinal(), itemStack);
+                              InventoryComponent.Armor armorComponent = store.getComponent(ref, InventoryComponent.Armor.getComponentType());
+                              if (armorComponent != null) {
+                                 armorComponent.getInventory().setItemStackForSlot((short)itemArmor.getArmorSlot().ordinal(), itemStack);
+                              }
+
                               return;
                            }
 
                            int quantity = itemStack.getQuantity();
                            if (item.getUtility().isUsable()) {
-                              ItemStackTransaction transaction = inventory.getUtility().addItemStack(itemStack);
-                              ItemStack remainder = transaction.getRemainder();
-                              if (ItemStack.isEmpty(remainder) || remainder.getQuantity() != quantity) {
-                                 for (ItemStackSlotTransaction slotTransaction : transaction.getSlotTransactions()) {
-                                    if (slotTransaction.succeeded()) {
-                                       inventory.setActiveUtilitySlot(ref, (byte)slotTransaction.getSlot(), store);
+                              InventoryComponent.Utility utilityComponent = store.getComponent(ref, InventoryComponent.Utility.getComponentType());
+                              if (utilityComponent != null) {
+                                 ItemStackTransaction transaction = utilityComponent.getInventory().addItemStack(itemStack);
+                                 ItemStack remainder = transaction.getRemainder();
+                                 if (ItemStack.isEmpty(remainder) || remainder.getQuantity() != quantity) {
+                                    for (ItemStackSlotTransaction slotTransaction : transaction.getSlotTransactions()) {
+                                       if (slotTransaction.succeeded()) {
+                                          utilityComponent.setActiveSlot((byte)slotTransaction.getSlot(), ref, store);
+                                       }
                                     }
                                  }
                               }
-
-                              return;
                            }
                            break;
                         case PutInHotbarOrWindow:
@@ -294,12 +302,16 @@ public class InventoryPacketHandler implements SubPacketHandler {
             () -> {
                DropItemEvent.PlayerRequest event = new DropItemEvent.PlayerRequest(packet.inventorySectionId, (short)packet.slotId);
                store.invoke(ref, event);
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               assert playerComponent != null;
-               Inventory inventory = playerComponent.getInventory();
                if (!event.isCancelled()) {
-                  ItemStackSlotTransaction transaction = inventory.getSectionById(event.getInventorySectionId())
-                     .removeItemStackFromSlot(event.getSlotId(), packet.quantity);
+                  ItemContainer sectionById = InventoryUtils.getSectionById(ref, event.getInventorySectionId(), store);
+                  if (sectionById == null) {
+                     HytaleLogger.getLogger()
+                        .at(Level.WARNING)
+                        .log("%s attempted to drop an ItemStack from an invalid inventory section! %s", playerRef.getUsername(), event.getInventorySectionId());
+                     return;
+                  }
+
+                  ItemStackSlotTransaction transaction = sectionById.removeItemStackFromSlot(event.getSlotId(), packet.quantity);
                   ItemStack item = transaction.getOutput();
                   if (item == null || item.isEmpty()) {
                      HytaleLogger.getLogger().at(Level.WARNING).log("%s attempted to drop an empty ItemStack!", playerRef.getUsername());
@@ -339,26 +351,23 @@ public class InventoryPacketHandler implements SubPacketHandler {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
          world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            assert playerComponent != null;
-            Inventory inventory = playerComponent.getInventory();
-            inventory.moveItem(packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.toSectionId, packet.toSlotId);
+            InventoryUtils.moveItem(ref, packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.toSectionId, packet.toSlotId, store);
             if (packet.toSectionId != packet.fromSectionId && packet.toSectionId == -5) {
                byte newSlot = (byte)packet.toSlotId;
                int inventorySectionId = packet.toSectionId;
-               byte currentSlot = inventory.getActiveSlot(inventorySectionId);
+               byte currentSlot = InventoryUtils.getActiveSlot(ref, inventorySectionId, store);
                if (currentSlot == newSlot) {
                   return;
                }
 
-               SwitchActiveSlotEvent event = new SwitchActiveSlotEvent(inventorySectionId, currentSlot, newSlot, true);
+               InventoryActiveSlotRequestEvent event = new InventoryActiveSlotRequestEvent(inventorySectionId, currentSlot, newSlot, true);
                store.invoke(ref, event);
                if (event.isCancelled() || event.getNewSlot() == currentSlot) {
                   return;
                }
 
                newSlot = event.getNewSlot();
-               Inventory.setActiveSlot(ref, inventorySectionId, newSlot, store);
+               InventoryUtils.setActiveSlot(ref, inventorySectionId, newSlot, store);
                playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(inventorySectionId, newSlot));
             }
          });
@@ -372,15 +381,12 @@ public class InventoryPacketHandler implements SubPacketHandler {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
          world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            assert playerComponent != null;
-            Inventory inventory = playerComponent.getInventory();
             PlayerSettings settings = store.getComponent(ref, PlayerSettings.getComponentType());
             if (settings == null) {
                settings = PlayerSettings.defaults();
             }
 
-            inventory.smartMoveItem(ref, packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.moveType, settings, store);
+            InventoryUtils.smartMoveItem(ref, packet.fromSectionId, packet.fromSlotId, packet.quantity, packet.moveType, settings, store);
          });
       }
    }
@@ -393,35 +399,39 @@ public class InventoryPacketHandler implements SubPacketHandler {
          World world = store.getExternalData().getWorld();
          world.execute(
             () -> {
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               assert playerComponent != null;
-               Inventory inventory = playerComponent.getInventory();
                PacketHandler packetHandler = playerRef.getPacketHandler();
                if (packet.inventorySectionId == -1) {
                   packetHandler.disconnect(Message.translation("server.general.disconnect.hotbarChangeWithoutInteraction"));
-               } else if (packet.activeSlot < -1 || packet.activeSlot >= inventory.getSectionById(packet.inventorySectionId).getCapacity()) {
-                  packetHandler.disconnect(
-                     Message.translation("server.general.disconnect.hotbarSlotOutOfRange").param("inventorySectionId", packet.inventorySectionId)
-                  );
-               } else if (packet.activeSlot == inventory.getActiveSlot(packet.inventorySectionId)) {
-                  packetHandler.disconnect(Message.translation("server.general.disconnect.hotbarSlotAlreadySelected"));
                } else {
-                  byte previousSlot = inventory.getActiveSlot(packet.inventorySectionId);
-                  byte targetSlot = (byte)packet.activeSlot;
-                  SwitchActiveSlotEvent event = new SwitchActiveSlotEvent(packet.inventorySectionId, previousSlot, targetSlot, false);
-                  store.invoke(ref, event);
-                  if (event.isCancelled()) {
-                     targetSlot = previousSlot;
-                  } else if (targetSlot != event.getNewSlot()) {
-                     targetSlot = event.getNewSlot();
-                  }
+                  ItemContainer sectionById = InventoryUtils.getSectionById(ref, packet.inventorySectionId, store);
+                  if (sectionById == null) {
+                     packetHandler.disconnect(
+                        Message.translation("server.general.disconnect.invalidInventorySection").param("inventorySectionId", packet.inventorySectionId)
+                     );
+                  } else if (packet.activeSlot < -1 || packet.activeSlot >= sectionById.getCapacity()) {
+                     packetHandler.disconnect(
+                        Message.translation("server.general.disconnect.hotbarSlotOutOfRange").param("inventorySectionId", packet.inventorySectionId)
+                     );
+                  } else if (packet.activeSlot == InventoryUtils.getActiveSlot(ref, packet.inventorySectionId, store)) {
+                     packetHandler.disconnect(Message.translation("server.general.disconnect.hotbarSlotAlreadySelected"));
+                  } else {
+                     byte previousSlot = InventoryUtils.getActiveSlot(ref, packet.inventorySectionId, store);
+                     byte targetSlot = (byte)packet.activeSlot;
+                     InventoryActiveSlotRequestEvent event = new InventoryActiveSlotRequestEvent(packet.inventorySectionId, previousSlot, targetSlot, false);
+                     store.invoke(ref, event);
+                     if (event.isCancelled()) {
+                        targetSlot = previousSlot;
+                     } else if (targetSlot != event.getNewSlot()) {
+                        targetSlot = event.getNewSlot();
+                     }
 
-                  if (targetSlot != packet.activeSlot) {
-                     packetHandler.writeNoCache(new SetActiveSlot(packet.inventorySectionId, targetSlot));
-                  }
+                     if (targetSlot != packet.activeSlot) {
+                        packetHandler.writeNoCache(new SetActiveSlot(packet.inventorySectionId, targetSlot));
+                     }
 
-                  if (targetSlot != previousSlot) {
-                     Inventory.setActiveSlot(ref, packet.inventorySectionId, targetSlot, store);
+                     if (targetSlot != previousSlot) {
+                        InventoryUtils.setActiveSlot(ref, packet.inventorySectionId, targetSlot, store);
+                     }
                   }
                }
             }
@@ -440,7 +450,6 @@ public class InventoryPacketHandler implements SubPacketHandler {
                () -> {
                   Player playerComponent = store.getComponent(ref, Player.getComponentType());
                   assert playerComponent != null;
-                  Inventory inventory = playerComponent.getInventory();
                   PlayerSettings settings = store.getComponent(ref, PlayerSettings.getComponentType());
                   if (settings == null) {
                      settings = PlayerSettings.defaults();
@@ -449,7 +458,7 @@ public class InventoryPacketHandler implements SubPacketHandler {
                   switch (packet.inventoryActionType) {
                      case TakeAll:
                         if (packet.inventorySectionId == -9) {
-                           inventory.takeAll(ref, packet.inventorySectionId, settings, store);
+                           InventoryUtils.takeAll(ref, packet.inventorySectionId, settings, store);
                            return;
                         }
 
@@ -459,41 +468,42 @@ public class InventoryPacketHandler implements SubPacketHandler {
                               if (itemContainerWindow.getItemContainer() instanceof CombinedItemContainer combinedItemContainer
                                  && combinedItemContainer.getContainersSize() >= 3) {
                                  ItemContainer outputContainer = combinedItemContainer.getContainer(2);
-                                 Inventory.takeAllWithPriority(ref, outputContainer, settings, store);
+                                 InventoryUtils.takeAllWithPriority(ref, outputContainer, settings, store);
                               }
                            } else {
-                              inventory.takeAll(ref, packet.inventorySectionId, settings, store);
+                              InventoryUtils.takeAll(ref, packet.inventorySectionId, settings, store);
                            }
                         }
                         break;
                      case PutAll:
                         if (packet.inventorySectionId == -9) {
-                           inventory.putAll(packet.inventorySectionId);
+                           InventoryUtils.putAll(ref, packet.inventorySectionId, store);
                            return;
                         }
 
                         Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
                         if (window instanceof ItemContainerWindow) {
-                           inventory.putAll(packet.inventorySectionId);
+                           InventoryUtils.putAll(ref, packet.inventorySectionId, store);
                         }
                         break;
                      case QuickStack:
                         if (packet.inventorySectionId == -9) {
-                           inventory.quickStack(ref, packet.inventorySectionId, store);
+                           InventoryUtils.quickStack(ref, packet.inventorySectionId, store);
                            return;
                         }
 
                         Window window = playerComponent.getWindowManager().getWindow(packet.inventorySectionId);
                         if (window instanceof ItemContainerWindow) {
-                           inventory.quickStack(ref, packet.inventorySectionId, store);
+                           InventoryUtils.quickStack(ref, packet.inventorySectionId, store);
                         }
                         break;
                      case Sort:
                         if (packet.inventorySectionId == 0) {
-                           inventory.sortStorage();
+                           InventoryUtils.sortStorage(ref, store);
                         } else {
-                           if (packet.inventorySectionId == -9 && inventory.getBackpack() != null) {
-                              inventory.getBackpack().sortItems(SortType.TYPE);
+                           InventoryComponent.Backpack backpackComponent = store.getComponent(ref, InventoryComponent.Backpack.getComponentType());
+                           if (packet.inventorySectionId == -9 && backpackComponent != null) {
+                              backpackComponent.getInventory().sortItems(SortType.TYPE);
                               return;
                            }
 

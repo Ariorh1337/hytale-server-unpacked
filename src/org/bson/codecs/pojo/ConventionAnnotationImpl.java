@@ -7,16 +7,23 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.bson.BsonType;
 import org.bson.codecs.configuration.CodecConfigurationException;
 import org.bson.codecs.pojo.annotations.BsonCreator;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
+import org.bson.codecs.pojo.annotations.BsonExtraElements;
 import org.bson.codecs.pojo.annotations.BsonId;
 import org.bson.codecs.pojo.annotations.BsonIgnore;
 import org.bson.codecs.pojo.annotations.BsonProperty;
 import org.bson.codecs.pojo.annotations.BsonRepresentation;
+import org.bson.diagnostics.Logger;
+import org.bson.diagnostics.Loggers;
 
 final class ConventionAnnotationImpl implements Convention {
+   private static final Logger LOGGER = Loggers.getLogger("ConventionAnnotation");
+
    @Override
    public void apply(ClassModelBuilder<?> classModelBuilder) {
       for (Annotation annotation : classModelBuilder.getAnnotations()) {
@@ -68,6 +75,8 @@ final class ConventionAnnotationImpl implements Convention {
             BsonRepresentation bsonRepresentation = (BsonRepresentation)annotation;
             BsonType bsonRep = bsonRepresentation.value();
             propertyModelBuilder.bsonRepresentation(bsonRep);
+         } else if (annotation instanceof BsonExtraElements) {
+            this.processBsonExtraElementsAnnotation(propertyModelBuilder);
          }
       }
 
@@ -143,6 +152,12 @@ final class ConventionAnnotationImpl implements Convention {
             Type genericType = parameterGenericTypes.get(i);
             PropertyModelBuilder<?> propertyModelBuilder = null;
             if (isIdProperty) {
+               if (classModelBuilder.getIdPropertyName() == null) {
+                  throw new CodecConfigurationException(
+                     "A @BsonId annotation has been used with @BsonCreator but there is no known Id property.\nPlease either use the @BsonProperty annotation in the creator or annotate the corresponding property in the class with the @BsonId."
+                  );
+               }
+
                propertyModelBuilder = classModelBuilder.getProperty(classModelBuilder.getIdPropertyName());
             } else {
                BsonProperty bsonProperty = properties.get(i);
@@ -213,10 +228,41 @@ final class ConventionAnnotationImpl implements Convention {
          if (!propertyModelBuilder.isReadable() && !propertyModelBuilder.isWritable()) {
             propertiesToRemove.add(propertyModelBuilder.getName());
          }
+
+         if (classModelBuilder.useDiscriminator() && Objects.equals(classModelBuilder.getDiscriminatorKey(), propertyModelBuilder.getReadName())) {
+            propertiesToRemove.add(propertyModelBuilder.getName());
+            LOGGER.warn(
+               String.format("Removed the property '%s' from the model because the discriminator has the same key", classModelBuilder.getDiscriminatorKey())
+            );
+         }
       }
 
       for (String propertyName : propertiesToRemove) {
          classModelBuilder.removeProperty(propertyName);
       }
+   }
+
+   private <T> void processBsonExtraElementsAnnotation(PropertyModelBuilder<T> propertyModelBuilder) {
+      PropertyAccessor<T> propertyAccessor = propertyModelBuilder.getPropertyAccessor();
+      if (!(propertyAccessor instanceof PropertyAccessorImpl)) {
+         throw new CodecConfigurationException(
+            String.format(
+               "The @BsonExtraElements annotation is not compatible with propertyModelBuilder instances that have custom implementations of org.bson.codecs.pojo.PropertyAccessor: %s",
+               propertyModelBuilder.getPropertyAccessor().getClass().getName()
+            )
+         );
+      }
+
+      if (!Map.class.isAssignableFrom(propertyModelBuilder.getTypeData().getType())) {
+         throw new CodecConfigurationException(
+            String.format(
+               "The @BsonExtraElements annotation is not compatible with propertyModelBuilder with the following type: %s. Please use a Document, BsonDocument or Map<String, Object> type.",
+               propertyModelBuilder.getTypeData()
+            )
+         );
+      }
+
+      propertyModelBuilder.propertySerialization(new PropertyModelSerializationInlineImpl<>(propertyModelBuilder.getPropertySerialization()));
+      propertyModelBuilder.propertyAccessor(new FieldPropertyAccessor<>((PropertyAccessorImpl<T>)propertyAccessor));
    }
 }

@@ -9,4 +9,9 @@ public class BsonCodecProvider implements CodecProvider {
    public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
       return Bson.class.isAssignableFrom(clazz) ? new BsonCodec(registry) : null;
    }
+
+   @Override
+   public String toString() {
+      return "BsonCodecProvider{}";
+   }
 }

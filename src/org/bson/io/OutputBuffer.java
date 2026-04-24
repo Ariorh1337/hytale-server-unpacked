@@ -19,6 +19,11 @@ public abstract class OutputBuffer extends OutputStream implements BsonOutput {
    }
 
    @Override
+   public void flush() throws IOException {
+      super.flush();
+   }
+
+   @Override
    public void write(byte[] bytes, int offset, int length) {
       this.writeBytes(bytes, offset, length);
    }
@@ -36,6 +41,7 @@ public abstract class OutputBuffer extends OutputStream implements BsonOutput {
       this.write(value >> 24);
    }
 
+   @Deprecated
    @Override
    public void writeInt32(int position, int value) {
       this.write(position, value >> 0);
@@ -119,7 +125,7 @@ public abstract class OutputBuffer extends OutputStream implements BsonOutput {
       this.writeInt64(value);
    }
 
-   private int writeCharacters(String str, boolean checkForNullCharacters) {
+   protected int writeCharacters(String str, boolean checkForNullCharacters) {
       int len = str.length();
       int total = 0;
       int i = 0;

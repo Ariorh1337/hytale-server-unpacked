@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.command.system.arguments.types;
 
 import com.hypixel.hytale.common.util.StringCompareUtil;
 import com.hypixel.hytale.common.util.StringUtil;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.GameMode;
@@ -14,6 +15,7 @@ import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffec
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
@@ -37,6 +39,7 @@ import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.Pair;
 import java.util.Collection;
 import java.util.Iterator;
@@ -407,10 +410,10 @@ public final class ArgTypes {
          }
 
          Universe universe = Universe.get();
-         if (sender instanceof PlayerRef playerRef) {
-            UUID worldUuid = playerRef.getWorldUuid();
-            if (worldUuid != null) {
-               return universe.getWorld(playerRef.getWorldUuid());
+         if (context.isPlayer()) {
+            Ref<EntityStore> playerRef = context.senderAsPlayerRef();
+            if (playerRef != null && playerRef.isValid()) {
+               return playerRef.getStore().getExternalData().getWorld();
             }
          }
 
@@ -464,6 +467,9 @@ public final class ArgTypes {
    );
    public static final SingleArgumentType<AmbienceFX> AMBIENCE_FX_ASSET = new AssetArgumentType(
       "server.commands.parsing.argtype.asset.ambiencefx.name", AmbienceFX.class, "server.commands.parsing.argtype.asset.ambiencefx.usage"
+   );
+   public static final SingleArgumentType<MusicContainer> MUSIC_CONTAINER_ASSET = new AssetArgumentType(
+      "server.commands.parsing.argtype.asset.musiccontainer.name", MusicContainer.class, "server.commands.parsing.argtype.asset.musiccontainer.usage"
    );
    public static final SingleArgumentType<SoundCategory> SOUND_CATEGORY = forEnum("server.commands.parsing.argtype.soundcategory.name", SoundCategory.class);
    public static final ArgWrapper<EntityWrappedArg, UUID> ENTITY_ID = new ArgWrapper<>(

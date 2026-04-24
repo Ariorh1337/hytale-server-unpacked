@@ -5,13 +5,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.crypto.params.MLKEMPrivateKeyParameters;
+import org.bouncycastle.crypto.util.PrivateKeyFactory;
+import org.bouncycastle.crypto.util.PrivateKeyInfoFactory;
 import org.bouncycastle.jcajce.interfaces.BCKey;
 import org.bouncycastle.jcajce.interfaces.MLKEMPrivateKey;
 import org.bouncycastle.jcajce.interfaces.MLKEMPublicKey;
 import org.bouncycastle.jcajce.spec.MLKEMParameterSpec;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMPrivateKeyParameters;
-import org.bouncycastle.pqc.crypto.util.PrivateKeyFactory;
-import org.bouncycastle.pqc.crypto.util.PrivateKeyInfoFactory;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Fingerprint;
 import org.bouncycastle.util.Strings;
@@ -96,11 +96,11 @@ public class BCMLKEMPrivateKey implements MLKEMPrivateKey, BCKey {
       if (var1) {
          byte[] var2 = this.params.getSeed();
          if (var2 != null) {
-            return new BCMLKEMPrivateKey(this.params.getParametersWithFormat(1));
+            return new BCMLKEMPrivateKey(this.params.withPreferredFormat(1));
          }
       }
 
-      return new BCMLKEMPrivateKey(this.params.getParametersWithFormat(2));
+      return new BCMLKEMPrivateKey(this.params.withPreferredFormat(2));
    }
 
    @Override

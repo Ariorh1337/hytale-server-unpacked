@@ -5,11 +5,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.crypto.CipherParameters;
-import org.bouncycastle.pqc.crypto.sphincsplus.SPHINCSPlusPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.util.PublicKeyFactory;
 import org.bouncycastle.pqc.crypto.util.SubjectPublicKeyInfoFactory;
 import org.bouncycastle.pqc.jcajce.interfaces.SPHINCSPlusPublicKey;
 import org.bouncycastle.pqc.jcajce.spec.SPHINCSPlusParameterSpec;
+import org.bouncycastle.pqc.legacy.sphincsplus.SPHINCSPlusPublicKeyParameters;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Strings;
 

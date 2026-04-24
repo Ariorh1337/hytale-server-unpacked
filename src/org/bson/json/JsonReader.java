@@ -5,6 +5,7 @@ import java.text.DateFormat;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
@@ -21,7 +22,6 @@ import org.bson.BsonRegularExpression;
 import org.bson.BsonTimestamp;
 import org.bson.BsonType;
 import org.bson.BsonUndefined;
-import org.bson.internal.Base64;
 import org.bson.types.Decimal128;
 import org.bson.types.MaxKey;
 import org.bson.types.MinKey;
@@ -686,7 +686,7 @@ public class JsonReader extends AbstractBsonReader {
       }
 
       this.verifyToken(JsonTokenType.RIGHT_PAREN);
-      byte[] bytes = Base64.decode(bytesToken.getValue(String.class));
+      byte[] bytes = Base64.getDecoder().decode(bytesToken.getValue(String.class));
       return new BsonBinary(subTypeToken.getValue(Integer.class).byteValue(), bytes);
    }
 
@@ -945,7 +945,7 @@ public class JsonReader extends AbstractBsonReader {
                byte type;
                if (firstNestedKey.equals("base64")) {
                   this.verifyToken(JsonTokenType.COLON);
-                  data = Base64.decode(this.readStringFromExtendedJson());
+                  data = Base64.getDecoder().decode(this.readStringFromExtendedJson());
                   this.verifyToken(JsonTokenType.COMMA);
                   this.verifyString("subType");
                   this.verifyToken(JsonTokenType.COLON);
@@ -960,7 +960,7 @@ public class JsonReader extends AbstractBsonReader {
                   this.verifyToken(JsonTokenType.COMMA);
                   this.verifyString("base64");
                   this.verifyToken(JsonTokenType.COLON);
-                  data = Base64.decode(this.readStringFromExtendedJson());
+                  data = Base64.getDecoder().decode(this.readStringFromExtendedJson());
                }
 
                this.verifyToken(JsonTokenType.END_OBJECT);
@@ -987,7 +987,7 @@ public class JsonReader extends AbstractBsonReader {
          byte[] data;
          byte type;
          if (firstKey.equals("$binary")) {
-            data = Base64.decode(this.readStringFromExtendedJson());
+            data = Base64.getDecoder().decode(this.readStringFromExtendedJson());
             this.verifyToken(JsonTokenType.COMMA);
             this.verifyString("$type");
             this.verifyToken(JsonTokenType.COLON);
@@ -997,15 +997,12 @@ public class JsonReader extends AbstractBsonReader {
             this.verifyToken(JsonTokenType.COMMA);
             this.verifyString("$binary");
             this.verifyToken(JsonTokenType.COLON);
-            data = Base64.decode(this.readStringFromExtendedJson());
+            data = Base64.getDecoder().decode(this.readStringFromExtendedJson());
          }
 
          this.verifyToken(JsonTokenType.END_OBJECT);
          return new BsonBinary(type, data);
-      } catch (JsonParseException e) {
-         mark.reset();
-         return null;
-      } catch (NumberFormatException e) {
+      } catch (JsonParseException | NumberFormatException e) {
          mark.reset();
          return null;
       } finally {
@@ -1085,7 +1082,7 @@ public class JsonReader extends AbstractBsonReader {
       this.verifyToken(JsonTokenType.COLON);
       this.verifyToken(JsonTokenType.BEGIN_OBJECT);
       String options = "";
-      String firstKey = this.readStringFromExtendedJson();
+      String firstKey = this.readStringKeyFromExtendedJson();
       String pattern;
       if (firstKey.equals("pattern")) {
          this.verifyToken(JsonTokenType.COLON);
@@ -1096,7 +1093,7 @@ public class JsonReader extends AbstractBsonReader {
          options = this.readStringFromExtendedJson();
       } else {
          if (!firstKey.equals("options")) {
-            throw new JsonParseException("Expected 't' and 'i' fields in $timestamp document but found " + firstKey);
+            throw new JsonParseException("Expected 'pattern' and 'options' fields in $regularExpression document but found " + firstKey);
          }
 
          this.verifyToken(JsonTokenType.COLON);
@@ -1162,7 +1159,7 @@ public class JsonReader extends AbstractBsonReader {
    private BsonTimestamp visitTimestampExtendedJson() {
       this.verifyToken(JsonTokenType.COLON);
       this.verifyToken(JsonTokenType.BEGIN_OBJECT);
-      String firstKey = this.readStringFromExtendedJson();
+      String firstKey = this.readStringKeyFromExtendedJson();
       int time;
       int increment;
       if (firstKey.equals("t")) {
@@ -1212,6 +1209,7 @@ public class JsonReader extends AbstractBsonReader {
       this.verifyToken(JsonTokenType.END_OBJECT);
 
       try {
+         UuidStringValidator.validate(uuidString);
          return new BsonBinary(UUID.fromString(uuidString));
       } catch (IllegalArgumentException e) {
          throw new JsonParseException(e);
@@ -1374,6 +1372,15 @@ public class JsonReader extends AbstractBsonReader {
       }
 
       return out;
+   }
+
+   private String readStringKeyFromExtendedJson() {
+      JsonToken patternToken = this.popToken();
+      if (patternToken.getType() != JsonTokenType.STRING && patternToken.getType() != JsonTokenType.UNQUOTED_STRING) {
+         throw new JsonParseException("JSON reader expected a string but found '%s'.", patternToken.getValue());
+      } else {
+         return patternToken.getValue(String.class);
+      }
    }
 
    protected class Context extends AbstractBsonReader.Context {

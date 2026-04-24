@@ -85,6 +85,9 @@ public class TransformSystems {
             PositionUtil.assign(sentBodyOrientation, bodyRotation);
             queueUpdatesFor(archetypeChunk.getReferenceTo(index), sentTransform, visibleComponent.visibleTo, false);
          } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
+            PositionUtil.assign(sentPosition, position);
+            PositionUtil.assign(sentLookOrientation, headRotation);
+            PositionUtil.assign(sentBodyOrientation, bodyRotation);
             queueUpdatesFor(archetypeChunk.getReferenceTo(index), sentTransform, visibleComponent.newlyVisibleTo, true);
          }
       }

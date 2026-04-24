@@ -134,25 +134,47 @@ public class RawBsonArray extends BsonArray implements Serializable {
          int curIndex = 0;
          BsonBinaryReader bsonReader = this.createReader();
 
-         try {
-            bsonReader.readStartDocument();
+         BsonValue var4;
+         label54: {
+            try {
+               bsonReader.readStartDocument();
 
-            while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-               bsonReader.skipName();
-               if (curIndex == index) {
-                  return RawBsonValueHelper.decode(this.bytes, bsonReader);
+               while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+                  bsonReader.skipName();
+                  if (curIndex == index) {
+                     var4 = RawBsonValueHelper.decode(this.bytes, bsonReader);
+                     break label54;
+                  }
+
+                  bsonReader.skipValue();
+                  curIndex++;
                }
 
-               bsonReader.skipValue();
-               curIndex++;
+               bsonReader.readEndDocument();
+            } catch (Throwable var7) {
+               if (bsonReader != null) {
+                  try {
+                     bsonReader.close();
+                  } catch (Throwable var6) {
+                     var7.addSuppressed(var6);
+                  }
+               }
+
+               throw var7;
             }
 
-            bsonReader.readEndDocument();
-         } finally {
+            if (bsonReader != null) {
+               bsonReader.close();
+            }
+
+            throw new IndexOutOfBoundsException();
+         }
+
+         if (bsonReader != null) {
             bsonReader.close();
          }
 
-         throw new IndexOutOfBoundsException();
+         return var4;
       }
 
       @Override
@@ -174,7 +196,19 @@ public class RawBsonArray extends BsonArray implements Serializable {
             }
 
             bsonReader.readEndDocument();
-         } finally {
+         } catch (Throwable var6) {
+            if (bsonReader != null) {
+               try {
+                  bsonReader.close();
+               } catch (Throwable var5) {
+                  var6.addSuppressed(var5);
+               }
+            }
+
+            throw var6;
+         }
+
+         if (bsonReader != null) {
             bsonReader.close();
          }
 

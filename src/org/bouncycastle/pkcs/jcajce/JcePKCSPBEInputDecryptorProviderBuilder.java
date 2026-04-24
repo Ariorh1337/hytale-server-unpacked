@@ -136,7 +136,8 @@ public class JcePKCSPBEInputDecryptorProviderBuilder {
                   if (var12 instanceof ASN1OctetString) {
                      this.cipher.init(2, var2, new IvParameterSpec(ASN1OctetString.getInstance(var12).getOctets()));
                   } else if (var12 instanceof ASN1Sequence && JcePKCSPBEInputDecryptorProviderBuilder.this.isCCMorGCM(var9.getEncryptionScheme())) {
-                     AlgorithmParameters var15 = AlgorithmParameters.getInstance(var9.getEncryptionScheme().getAlgorithm().getId());
+                     AlgorithmParameters var15 = JcePKCSPBEInputDecryptorProviderBuilder.this.helper
+                        .createAlgorithmParameters(var9.getEncryptionScheme().getAlgorithm().getId());
                      var15.init(((ASN1Sequence)var12).getEncoded());
                      this.cipher.init(2, var2, var15);
                   } else if (var12 == null) {

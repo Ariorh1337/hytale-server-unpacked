@@ -90,6 +90,11 @@ public class BsonValueCodecProvider implements CodecProvider {
       this.codecs.put(codec.getEncoderClass(), codec);
    }
 
+   @Override
+   public String toString() {
+      return "BsonValueCodecProvider{}";
+   }
+
    static {
       Map<BsonType, Class<?>> map = new HashMap<>();
       map.put(BsonType.NULL, BsonNull.class);

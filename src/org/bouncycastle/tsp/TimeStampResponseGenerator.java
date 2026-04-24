@@ -54,7 +54,7 @@ public class TimeStampResponseGenerator {
 
    private PKIStatusInfo getPKIStatusInfo() {
       ASN1EncodableVector var1 = new ASN1EncodableVector();
-      var1.add(new ASN1Integer(this.status));
+      var1.add(ASN1Integer.valueOf(this.status));
       if (this.statusStrings.size() > 0) {
          var1.add(PKIFreeText.getInstance(new DERSequence(this.statusStrings)));
       }
@@ -157,7 +157,7 @@ public class TimeStampResponseGenerator {
 
    static class FailInfo extends DERBitString {
       FailInfo(int var1) {
-         super(getBytes(var1), getPadBits(var1));
+         super(var1);
       }
    }
 }

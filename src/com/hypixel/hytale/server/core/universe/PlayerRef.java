@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.PacketStatsRecorderImpl;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
+import com.hypixel.hytale.server.core.permissions.PermissionHolder;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -40,7 +41,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class PlayerRef implements Component<EntityStore>, MetricProvider, CommandSender {
+public class PlayerRef implements Component<EntityStore>, MetricProvider, CommandSender, PermissionHolder {
    @Nonnull
    public static final MetricsRegistry<PlayerRef> METRICS_REGISTRY = new MetricsRegistry<PlayerRef>()
       .register("Username", PlayerRef::getUsername, Codec.STRING)
@@ -109,8 +110,8 @@ public class PlayerRef implements Component<EntityStore>, MetricProvider, Comman
    private Holder<EntityStore> holder;
    @Nullable
    private UUID worldUuid;
-   private Transform transform = new Transform(0.0, 0.0, 0.0, 0.0F, 0.0F, 0.0F);
-   private Rotation3f headRotation = new Rotation3f(0.0F, 0.0F, 0.0F);
+   private final Transform transform = new Transform(0.0, 0.0, 0.0, 0.0F, 0.0F, 0.0F);
+   private final Rotation3f headRotation = new Rotation3f(0.0F, 0.0F, 0.0F);
 
    @Nonnull
    public static ComponentType<EntityStore, PlayerRef> getComponentType() {
@@ -206,12 +207,12 @@ public class PlayerRef implements Component<EntityStore>, MetricProvider, Comman
 
    @Override
    public boolean hasPermission(@Nonnull String id) {
-      return PermissionsModule.get().hasPermission(this.getUuid(), id);
+      return PermissionsModule.get().hasPermission(this.uuid, id);
    }
 
    @Override
    public boolean hasPermission(@Nonnull String id, boolean def) {
-      return PermissionsModule.get().hasPermission(this.getUuid(), id, def);
+      return PermissionsModule.get().hasPermission(this.uuid, id, def);
    }
 
    @Nonnull

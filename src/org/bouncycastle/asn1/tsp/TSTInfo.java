@@ -79,7 +79,7 @@ public class TSTInfo extends ASN1Object {
       GeneralName var8,
       Extensions var9
    ) {
-      this.version = new ASN1Integer(1L);
+      this.version = ASN1Integer.ONE;
       this.tsaPolicyId = var1;
       this.messageImprint = var2;
       this.serialNumber = var3;

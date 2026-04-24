@@ -52,7 +52,7 @@ public class IdentifiedRegion extends ASN1Object implements ASN1Choice, RegionIn
       if (var0 instanceof IdentifiedRegion) {
          return (IdentifiedRegion)var0;
       } else {
-         return var0 != null ? new IdentifiedRegion(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new IdentifiedRegion(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

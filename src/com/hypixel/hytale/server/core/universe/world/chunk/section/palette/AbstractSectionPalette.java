@@ -2,12 +2,11 @@ package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
 import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
-import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.lang.foreign.MemorySegment;
 import java.util.function.IntConsumer;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 
 public abstract sealed class AbstractSectionPalette permits EmptySectionPalette, HalfByteSectionPalette, ByteSectionPalette, ShortSectionPalette {
@@ -50,11 +49,15 @@ public abstract sealed class AbstractSectionPalette permits EmptySectionPalette,
 
    public abstract AbstractSectionPalette promote();
 
-   public abstract void serializeForPacket(ByteBuf var1);
+   public abstract int serializedPacketByteSize();
 
-   public abstract void serialize(AbstractSectionPalette.KeySerializer var1, ByteBuf var2);
+   public abstract int serializeForPacket(MemorySegment var1, int var2);
 
-   public abstract void deserialize(ToIntFunction<ByteBuf> var1, ByteBuf var2, int var3);
+   public abstract int serializedByteSize(AbstractSectionPalette.KeyMemorySerializer var1);
+
+   public abstract int serialize(AbstractSectionPalette.KeyMemorySerializer var1, MemorySegment var2, int var3);
+
+   public abstract int deserialize(AbstractSectionPalette.KeyMemoryDeserializer var1, MemorySegment var2, int var3);
 
    @Nonnull
    public static AbstractSectionPalette from(@Nonnull int[] data, @Nonnull Int2ShortMap idCounts) {
@@ -71,9 +74,16 @@ public abstract sealed class AbstractSectionPalette permits EmptySectionPalette,
       }
    }
 
-   @FunctionalInterface
-   public interface KeySerializer {
-      void serialize(ByteBuf var1, int var2);
+   public interface KeyMemoryDeserializer {
+      int deserialize(MemorySegment var1, int var2);
+
+      int keySize(MemorySegment var1, int var2);
+   }
+
+   public interface KeyMemorySerializer {
+      int serialize(MemorySegment var1, int var2, int var3);
+
+      int keySize(int var1);
    }
 
    public enum SetResult {

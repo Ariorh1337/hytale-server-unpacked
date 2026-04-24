@@ -71,6 +71,10 @@ public abstract class FarmingStageData {
       return false;
    }
 
+   public boolean consumesRemainingTime() {
+      return false;
+   }
+
    public boolean shouldStop(
       @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
    ) {

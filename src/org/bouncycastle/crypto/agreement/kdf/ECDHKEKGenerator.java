@@ -1,7 +1,6 @@
 package org.bouncycastle.crypto.agreement.kdf;
 
 import java.io.IOException;
-import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DERNull;
 import org.bouncycastle.asn1.DEROctetString;
@@ -45,14 +44,15 @@ public class ECDHKEKGenerator implements DigestDerivationFunction {
          throw new DataLengthException("output buffer too small");
       }
 
-      ASN1EncodableVector var4 = new ASN1EncodableVector();
-      var4.add(new AlgorithmIdentifier(this.algorithm, DERNull.INSTANCE));
-      var4.add(new DERTaggedObject(true, 2, new DEROctetString(Pack.intToBigEndian(this.keySize))));
+      AlgorithmIdentifier var4 = new AlgorithmIdentifier(this.algorithm, DERNull.INSTANCE);
+      DEROctetString var5 = DEROctetString.withContents(Pack.intToBigEndian(this.keySize));
+      DERSequence var6 = new DERSequence(var4, new DERTaggedObject(2, var5));
 
       try {
-         this.kdf.init(new KDFParameters(this.z, new DERSequence(var4).getEncoded("DER")));
-      } catch (IOException var6) {
-         throw new IllegalArgumentException("unable to initialise kdf: " + var6.getMessage());
+         byte[] var7 = var6.getEncoded("DER");
+         this.kdf.init(new KDFParameters(this.z, var7));
+      } catch (IOException var8) {
+         throw new IllegalArgumentException("unable to initialise kdf: " + var8.getMessage());
       }
 
       return this.kdf.generateBytes(var1, var2, var3);

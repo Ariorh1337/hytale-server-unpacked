@@ -3,7 +3,6 @@ package org.bouncycastle.asn1;
 import java.io.IOException;
 import java.io.InputStream;
 
-@Deprecated
 public class DLBitStringParser implements ASN1BitStringParser {
    private final DefiniteLengthInputStream stream;
    private int padBits = 0;

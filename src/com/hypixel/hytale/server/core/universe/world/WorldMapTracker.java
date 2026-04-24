@@ -32,6 +32,7 @@ import com.hypixel.hytale.server.core.event.events.permissions.GroupPermissionCh
 import com.hypixel.hytale.server.core.event.events.permissions.PlayerGroupEvent;
 import com.hypixel.hytale.server.core.event.events.permissions.PlayerPermissionChangeEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -524,8 +525,8 @@ public class WorldMapTracker implements Tickable {
             assert playerComponent != null;
             PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
             assert playerRefComponent != null;
-            worldMapSettingsPacket.allowTeleportToCoordinates = this.isAllowTeleportToCoordinates();
-            worldMapSettingsPacket.allowTeleportToMarkers = this.isAllowTeleportToMarkers();
+            worldMapSettingsPacket.allowTeleportToCoordinates = isAllowTeleportToCoordinates(playerRefComponent, playerComponent);
+            worldMapSettingsPacket.allowTeleportToMarkers = this.isAllowTeleportToMarkers(playerRefComponent, playerComponent);
             WorldMapConfig worldMapConfig = world.getGameplayConfig().getWorldMapConfig();
             worldMapSettingsPacket.allowCreatingMapMarkers = worldMapConfig.getUserMapMarkerConfig().isAllowCreatingMarkers();
             worldMapSettingsPacket.allowShowOnMapToggle = worldMapConfig.canTogglePlayersInMap();
@@ -592,12 +593,12 @@ public class WorldMapTracker implements Tickable {
       }
    }
 
-   public boolean isAllowTeleportToCoordinates() {
-      return this.player.hasPermission("hytale.world_map.teleport.coordinate") && this.player.getGameMode() != GameMode.Adventure;
+   public static boolean isAllowTeleportToCoordinates(@Nonnull PlayerRef playerRef, @Nonnull Player player) {
+      return playerRef.hasPermission(HytalePermissions.WORLD_MAP_COORDINATE_TELEPORT) && player.getGameMode() != GameMode.Adventure;
    }
 
-   public boolean isAllowTeleportToMarkers() {
-      return this.player.hasPermission("hytale.world_map.teleport.marker") && this.player.getGameMode() != GameMode.Adventure;
+   public boolean isAllowTeleportToMarkers(@Nonnull PlayerRef playerRef, @Nonnull Player player) {
+      return playerRef.hasPermission(HytalePermissions.WORLD_MAP_MARKER_TELEPORT) && player.getGameMode() != GameMode.Adventure;
    }
 
    public void setPlayerMapFilter(Predicate<PlayerRef> playerMapFilter) {

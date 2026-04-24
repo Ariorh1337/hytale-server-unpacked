@@ -1,5 +1,7 @@
 package org.bson;
 
+import java.util.UUID;
+import org.bson.internal.UuidHelper;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
 
@@ -9,10 +11,6 @@ class BSONCallbackAdapter extends AbstractBsonWriter {
    protected BSONCallbackAdapter(BsonWriterSettings settings, BSONCallback bsonCallback) {
       super(settings);
       this.bsonCallback = bsonCallback;
-   }
-
-   @Override
-   public void flush() {
    }
 
    @Override
@@ -53,8 +51,18 @@ class BSONCallbackAdapter extends AbstractBsonWriter {
 
    @Override
    protected void doWriteBinaryData(BsonBinary value) {
-      if (value.getType() == BsonBinarySubType.UUID_LEGACY.getValue()) {
-         this.bsonCallback.gotUUID(this.getName(), Bits.readLong(value.getData(), 0), Bits.readLong(value.getData(), 8));
+      if (BsonBinarySubType.isUuid(value.getType())) {
+         this.doWriteUuid(value);
+      } else {
+         this.bsonCallback.gotBinary(this.getName(), value.getType(), value.getData());
+      }
+   }
+
+   private void doWriteUuid(BsonBinary value) {
+      UuidRepresentation defaultUuidRepresentation = BasicBSONDecoder.getDefaultUuidRepresentation();
+      if (value.getType() == defaultUuidRepresentation.getSubtype().getValue()) {
+         UUID uuid = UuidHelper.decodeBinaryToUuid(value.getData(), value.getType(), defaultUuidRepresentation);
+         this.bsonCallback.gotUUID(this.getName(), uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
       } else {
          this.bsonCallback.gotBinary(this.getName(), value.getType(), value.getData());
       }

@@ -321,6 +321,11 @@ public class RoleSystems {
          role.updateMotionControllers(null, modelComponent.getModel(), boundingBoxComponent.getBoundingBox(), null);
          role.clearOnce();
          role.getActiveMotionController().activate();
+         String activeMC = npcComponent.getActiveMotionControllerName();
+         if (activeMC != null) {
+            role.setActiveMotionController(null, npcComponent, activeMC, null);
+         }
+
          holder.ensureComponent(InteractionModule.get().getChainingDataComponent());
       }
 

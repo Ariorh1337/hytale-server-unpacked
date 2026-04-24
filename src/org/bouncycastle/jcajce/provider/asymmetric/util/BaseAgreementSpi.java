@@ -163,16 +163,14 @@ public abstract class BaseAgreementSpi extends KeyAgreementSpi {
             throw new NoSuchAlgorithmException("unknown algorithm encountered: " + var2);
          }
 
-         byte[] var8 = new byte[var3 / 8];
+         byte[] var7 = new byte[var3 / 8];
          if (this.kdf instanceof DHKEKGenerator) {
             if (var2 == null) {
                throw new NoSuchAlgorithmException("algorithm OID is null");
             }
 
-            ASN1ObjectIdentifier var5;
-            try {
-               var5 = new ASN1ObjectIdentifier(var2);
-            } catch (IllegalArgumentException var7) {
+            ASN1ObjectIdentifier var5 = ASN1ObjectIdentifier.tryFromID(var2);
+            if (var5 == null) {
                throw new NoSuchAlgorithmException("no OID for algorithm: " + var2);
             }
 
@@ -181,13 +179,13 @@ public abstract class BaseAgreementSpi extends KeyAgreementSpi {
          } else if (this.kdf instanceof HKDFBytesGenerator) {
             this.kdf.init(new HKDFParameters(var1, this.ukmParametersSalt, this.ukmParameters));
          } else {
-            KDFParameters var9 = new KDFParameters(var1, this.ukmParameters);
-            this.kdf.init(var9);
+            KDFParameters var8 = new KDFParameters(var1, this.ukmParameters);
+            this.kdf.init(var8);
          }
 
-         this.kdf.generateBytes(var8, 0, var8.length);
+         this.kdf.generateBytes(var7, 0, var7.length);
          Arrays.clear(var1);
-         return var8;
+         return var7;
       } else if (var3 > 0) {
          byte[] var4 = new byte[var3 / 8];
          System.arraycopy(var1, 0, var4, 0, var4.length);

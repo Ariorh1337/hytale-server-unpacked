@@ -17,7 +17,6 @@ import org.jetbrains.annotations.ApiStatus.Internal;
 
 @Internal
 public final class EventSizeLimitingUtils {
-   private static final long MAX_EVENT_SIZE_BYTES = 1048576L;
    private static final int MAX_FRAMES_PER_STACK = 500;
    private static final int FRAMES_PER_SIDE = 250;
 

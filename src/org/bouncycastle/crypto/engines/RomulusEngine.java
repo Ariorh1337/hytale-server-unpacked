@@ -550,7 +550,7 @@ public class RomulusEngine extends AEADBaseEngine {
       private int offset;
       private boolean twist = true;
 
-      public RomulusM() {
+      RomulusM() {
       }
 
       @Override
@@ -726,7 +726,7 @@ public class RomulusEngine extends AEADBaseEngine {
       private final byte[] s = new byte[16];
       boolean twist;
 
-      public RomulusN() {
+      RomulusN() {
       }
 
       @Override

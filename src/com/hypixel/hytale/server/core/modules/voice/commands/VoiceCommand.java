@@ -36,7 +36,7 @@ public class VoiceCommand extends AbstractCommandCollection {
 
       public VoiceEnabledCommand() {
          super("enabled", "server.commands.voice.enabled.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -56,7 +56,7 @@ public class VoiceCommand extends AbstractCommandCollection {
 
       public VoiceFullVolumeDistanceCommand() {
          super("fullvolumedistance", "server.commands.voice.fullvolumedistance.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -80,7 +80,7 @@ public class VoiceCommand extends AbstractCommandCollection {
 
       public VoiceMaxDistanceCommand() {
          super("maxdistance", "server.commands.voice.maxdistance.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -106,7 +106,7 @@ public class VoiceCommand extends AbstractCommandCollection {
 
       public VoiceMuteCommand() {
          super("mute", "server.commands.voice.mute.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nonnull
@@ -133,7 +133,7 @@ public class VoiceCommand extends AbstractCommandCollection {
    private class VoiceMutedListCommand extends AbstractCommand {
       public VoiceMutedListCommand() {
          super("muted", "server.commands.voice.muted.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -157,7 +157,7 @@ public class VoiceCommand extends AbstractCommandCollection {
    private class VoiceStatusCommand extends AbstractCommand {
       public VoiceStatusCommand() {
          super("status", "server.commands.voice.status.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -184,7 +184,7 @@ public class VoiceCommand extends AbstractCommandCollection {
 
       public VoiceUnmuteCommand() {
          super("unmute", "server.commands.voice.unmute.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nonnull

@@ -22,6 +22,7 @@ import com.hypixel.hytale.protocol.Opacity;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.entity.group.EntityGroup;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
@@ -288,7 +289,7 @@ public class DeployableTurretConfig extends DeployableConfig {
          HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
          assert headRotationComponent != null;
          Vector3d pos = new Vector3d(spawnPos).add(transformComponent.getPosition());
-         this.updateProjectiles(store, commandBuffer, shooterComponent);
+         this.updateProjectiles(ref, store, commandBuffer, shooterComponent);
          boolean hasTarget = false;
          Ref<EntityStore> target = shooterComponent.getActiveTarget();
          if (target != null && target.isValid()) {
@@ -302,6 +303,7 @@ public class DeployableTurretConfig extends DeployableConfig {
          }
 
          if (!hasTarget) {
+            shooterComponent.setActiveTarget(null);
             Ref<EntityStore> closestTarget = null;
             Vector3d closestTargetPos = new Vector3d(Vector3dUtil.MAX);
 
@@ -361,12 +363,7 @@ public class DeployableTurretConfig extends DeployableConfig {
 
             projectileSpawnPos.add(new Vector3d(fwdDirection).normalize());
             projectileSpawnPos.add(rootPos);
-            UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-            if (uuidComponent != null) {
-               UUID uuid = uuidComponent.getUuid();
-               shooterComponent.spawnProjectile(ref, commandBuffer, this.projectileConfig, uuid, projectileSpawnPos, new Vector3d(fwdDirection));
-            }
-
+            shooterComponent.spawnProjectile(ref, commandBuffer, this.projectileConfig, projectileSpawnPos, new Vector3d(fwdDirection));
             playAnimation(store, ref, this, "Shoot");
             component.setTimeSinceLastAttack(0.0F);
          }
@@ -379,12 +376,32 @@ public class DeployableTurretConfig extends DeployableConfig {
    }
 
    private boolean isValidTarget(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> targetRef) {
-      if (targetRef.equals(ref)) {
+      if (targetRef == ref) {
          return false;
       }
 
       DeployableComponent deployableComponent = store.getComponent(ref, DeployableComponent.getComponentType());
-      return deployableComponent == null ? true : this.canShootOwner || !targetRef.equals(deployableComponent.getOwner());
+      if (deployableComponent != null) {
+         if (!this.canShootOwner) {
+            UUID ownerUUID = deployableComponent.getOwnerUUID();
+            if (ownerUUID != null) {
+               UUIDComponent targetUUID = store.getComponent(targetRef, UUIDComponent.getComponentType());
+               if (targetUUID != null && ownerUUID.equals(targetUUID.getUuid())) {
+                  return false;
+               }
+            }
+         }
+
+         if (this.respectTeams) {
+            Ref<EntityStore> ownerRef = deployableComponent.getOwner();
+            if (ownerRef != null && ownerRef.isValid()) {
+               EntityGroup ownerGroup = store.getComponent(ownerRef, EntityGroup.getComponentType());
+               return ownerGroup == null || !ownerGroup.isMember(targetRef);
+            }
+         }
+      }
+
+      return true;
    }
 
    private boolean testLineOfSight(
@@ -432,14 +449,17 @@ public class DeployableTurretConfig extends DeployableConfig {
    }
 
    private void updateProjectiles(
-      @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull DeployableProjectileShooterComponent shooterComponent
+      @Nonnull Ref<EntityStore> turretRef,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull DeployableProjectileShooterComponent shooterComponent
    ) {
       List<Ref<EntityStore>> projectiles = shooterComponent.getProjectiles();
       List<Ref<EntityStore>> projectilesForRemoval = shooterComponent.getProjectilesForRemoval();
       projectiles.removeAll(Collections.singleton(null));
 
       for (Ref<EntityStore> projectile : projectiles) {
-         this.updateProjectile(projectile, shooterComponent, store, commandBuffer);
+         this.updateProjectile(turretRef, projectile, shooterComponent, store, commandBuffer);
       }
 
       for (Ref<EntityStore> projectile : projectilesForRemoval) {
@@ -454,6 +474,7 @@ public class DeployableTurretConfig extends DeployableConfig {
    }
 
    private void updateProjectile(
+      @Nonnull Ref<EntityStore> turretRef,
       @Nonnull Ref<EntityStore> projectileRef,
       @Nonnull DeployableProjectileShooterComponent shooterComponent,
       @Nonnull Store<EntityStore> store,
@@ -467,40 +488,48 @@ public class DeployableTurretConfig extends DeployableConfig {
             shooterComponent.getProjectilesForRemoval().add(projectileRef);
          } else {
             Vector3d projPos = projTransformComponent.getPosition();
-            AtomicReference<Boolean> hit = new AtomicReference<>(Boolean.FALSE);
             DeployableProjectileComponent deployableProjectileComponent = store.getComponent(projectileRef, DeployableProjectileComponent.getComponentType());
             if (deployableProjectileComponent == null) {
                shooterComponent.getProjectilesForRemoval().add(projectileRef);
             } else {
-               Vector3d prevPos = deployableProjectileComponent.getPreviousTickPosition();
-               Vector3d increment = new Vector3d((projPos.x - prevPos.x) * 0.1F, (projPos.y - prevPos.y) * 0.1F, (projPos.z - prevPos.z) * 0.1F);
+               Ref<EntityStore> physicsHitRef = deployableProjectileComponent.takeHitEntityRef();
+               if (physicsHitRef != null && physicsHitRef.isValid() && this.isValidTarget(turretRef, store, physicsHitRef)) {
+                  this.projectileHit(turretRef, physicsHitRef, projectileRef, shooterComponent, store, commandBuffer);
+               } else {
+                  AtomicReference<Boolean> hit = new AtomicReference<>(Boolean.FALSE);
+                  Vector3d prevPos = deployableProjectileComponent.getPreviousTickPosition();
+                  Vector3d increment = new Vector3d((projPos.x - prevPos.x) * 0.1F, (projPos.y - prevPos.y) * 0.1F, (projPos.z - prevPos.z) * 0.1F);
 
-               for (int j = 0; j < 10; j++) {
-                  if (!hit.get()) {
-                     Vector3d scanPos = new Vector3d(deployableProjectileComponent.getPreviousTickPosition());
-                     scanPos.x = scanPos.x + increment.x * j;
-                     scanPos.y = scanPos.y + increment.y * j;
-                     scanPos.z = scanPos.z + increment.z * j;
-                     if (this.getDebugVisuals()) {
-                        DebugUtils.addSphere(store.getExternalData().getWorld(), scanPos, new Vector3f(1.0F, 1.0F, 1.0F), 0.1F, 5.0F);
-                     }
-
-                     for (Ref<EntityStore> targetEntityRef : TargetUtil.getAllEntitiesInSphere(scanPos, 0.1, store)) {
-                        if (hit.get()) {
-                           return;
+                  for (int j = 0; j < 10; j++) {
+                     if (!hit.get()) {
+                        Vector3d scanPos = new Vector3d(deployableProjectileComponent.getPreviousTickPosition());
+                        scanPos.x = scanPos.x + increment.x * j;
+                        scanPos.y = scanPos.y + increment.y * j;
+                        scanPos.z = scanPos.z + increment.z * j;
+                        if (this.getDebugVisuals()) {
+                           DebugUtils.addSphere(store.getExternalData().getWorld(), scanPos, new Vector3f(1.0F, 1.0F, 1.0F), 0.1F, 5.0F);
                         }
 
-                        this.projectileHit(targetEntityRef, projectileRef, shooterComponent, store, commandBuffer);
-                        hit.set(Boolean.TRUE);
+                        for (Ref<EntityStore> targetEntityRef : TargetUtil.getAllEntitiesInSphere(scanPos, 0.1, store)) {
+                           if (hit.get()) {
+                              return;
+                           }
+
+                           boolean isSelf = targetEntityRef == projectileRef;
+                           if (!isSelf && this.isValidTarget(turretRef, store, targetEntityRef)) {
+                              this.projectileHit(turretRef, targetEntityRef, projectileRef, shooterComponent, store, commandBuffer);
+                              hit.set(Boolean.TRUE);
+                           }
+                        }
                      }
                   }
-               }
 
-               deployableProjectileComponent.setPreviousTickPosition(projPos);
-               if (!hit.get()) {
-                  StandardPhysicsProvider physicsComponent = store.getComponent(projectileRef, StandardPhysicsProvider.getComponentType());
-                  if (physicsComponent != null && physicsComponent.getState() != StandardPhysicsProvider.STATE.ACTIVE) {
-                     shooterComponent.getProjectilesForRemoval().add(projectileRef);
+                  deployableProjectileComponent.setPreviousTickPosition(projPos);
+                  if (!hit.get()) {
+                     StandardPhysicsProvider physicsComponent = store.getComponent(projectileRef, StandardPhysicsProvider.getComponentType());
+                     if (physicsComponent != null && physicsComponent.getState() != StandardPhysicsProvider.STATE.ACTIVE) {
+                        shooterComponent.getProjectilesForRemoval().add(projectileRef);
+                     }
                   }
                }
             }
@@ -509,13 +538,14 @@ public class DeployableTurretConfig extends DeployableConfig {
    }
 
    private void projectileHit(
+      @Nonnull Ref<EntityStore> turretRef,
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Ref<EntityStore> projectileRef,
       @Nonnull DeployableProjectileShooterComponent shooterComponent,
       @Nonnull Store<EntityStore> store,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      Damage damageEntry = new Damage(new Damage.EntitySource(ref), DamageCause.PHYSICAL, this.projectileDamage);
+      Damage damageEntry = new Damage(new Damage.EntitySource(turretRef), DamageCause.PHYSICAL, this.projectileDamage);
       DamageSystems.executeDamage(ref, commandBuffer, damageEntry);
       TransformComponent projectileTransformComponent = store.getComponent(projectileRef, TransformComponent.getComponentType());
       assert projectileTransformComponent != null;

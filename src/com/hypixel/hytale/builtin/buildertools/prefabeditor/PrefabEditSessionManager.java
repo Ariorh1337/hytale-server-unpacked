@@ -30,7 +30,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -119,7 +119,7 @@ public class PrefabEditSessionManager {
                MovementStates movementStates = movementStatesComponent.getMovementStates();
                Player playerComponent = store.getComponent(ref, Player.getComponentType());
                assert playerComponent != null;
-               playerComponent.applyMovementStates(ref, new SavedMovementStates(true), movementStates, store);
+               Player.applyMovementStates(ref, new SavedMovementStates(true), movementStates, store);
                PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
                if (playerRefComponent != null) {
                   givePrefabSelectorTool(ref, playerComponent, playerRefComponent, store);
@@ -132,36 +132,38 @@ public class PrefabEditSessionManager {
    private static void givePrefabSelectorTool(
       @Nonnull Ref<EntityStore> ref, @Nonnull Player playerComponent, @Nonnull PlayerRef playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      Inventory inventory = playerComponent.getInventory();
-      ItemContainer hotbar = inventory.getHotbar();
-      int hotbarSize = hotbar.getCapacity();
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent != null) {
+         ItemContainer hotbarInventory = hotbarComponent.getInventory();
+         int hotbarSize = hotbarInventory.getCapacity();
 
-      for (short slot = 0; slot < hotbarSize; slot++) {
-         ItemStack itemStack = hotbar.getItemStack(slot);
-         if (itemStack != null && !itemStack.isEmpty() && "EditorTool_PrefabEditing_SelectPrefab".equals(itemStack.getItemId())) {
-            inventory.setActiveHotbarSlot(ref, (byte)slot, componentAccessor);
-            playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
-            return;
+         for (short slot = 0; slot < hotbarSize; slot++) {
+            ItemStack itemStack = hotbarInventory.getItemStack(slot);
+            if (itemStack != null && !itemStack.isEmpty() && "EditorTool_PrefabEditing_SelectPrefab".equals(itemStack.getItemId())) {
+               hotbarComponent.setActiveSlot((byte)slot, ref, componentAccessor);
+               playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
+               return;
+            }
          }
-      }
 
-      short emptySlot = -1;
+         short emptySlot = -1;
 
-      for (short slot = 0; slot < hotbarSize; slot++) {
-         ItemStack itemStack = hotbar.getItemStack(slot);
-         if (itemStack == null || itemStack.isEmpty()) {
-            emptySlot = slot;
-            break;
+         for (short slot = 0; slot < hotbarSize; slot++) {
+            ItemStack itemStack = hotbarInventory.getItemStack(slot);
+            if (itemStack == null || itemStack.isEmpty()) {
+               emptySlot = slot;
+               break;
+            }
          }
-      }
 
-      if (emptySlot == -1) {
-         emptySlot = 0;
-      }
+         if (emptySlot == -1) {
+            emptySlot = 0;
+         }
 
-      hotbar.setItemStackForSlot(emptySlot, new ItemStack("EditorTool_PrefabEditing_SelectPrefab"));
-      inventory.setActiveHotbarSlot(ref, (byte)emptySlot, componentAccessor);
-      playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
+         hotbarInventory.setItemStackForSlot(emptySlot, new ItemStack("EditorTool_PrefabEditing_SelectPrefab"));
+         hotbarComponent.setActiveSlot((byte)emptySlot, ref, componentAccessor);
+         playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
+      }
    }
 
    public void onPlayerAddedToWorld(@Nonnull AddPlayerToWorldEvent event) {

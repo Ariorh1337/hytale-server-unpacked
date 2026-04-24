@@ -48,7 +48,7 @@ public class CtlEntry extends ASN1Object implements ASN1Choice {
       if (var0 instanceof CtlEntry) {
          return (CtlEntry)var0;
       } else {
-         return var0 != null ? new CtlEntry(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new CtlEntry(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

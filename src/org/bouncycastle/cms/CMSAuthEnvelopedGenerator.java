@@ -29,9 +29,4 @@ public class CMSAuthEnvelopedGenerator extends CMSEnvelopedGenerator {
    public void setOriginatorInfo(OriginatorInformation var1) {
       this.originatorInfo = var1.toASN1Structure();
    }
-
-   @Override
-   public void addRecipientInfoGenerator(RecipientInfoGenerator var1) {
-      this.recipientInfoGenerators.add(var1);
-   }
 }

@@ -1,7 +1,5 @@
 package org.bouncycastle.pqc.crypto.hqc;
 
-import org.bouncycastle.util.Arrays;
-
 class ReedMuller {
    static void encodeSub(ReedMuller.Codeword var0, int var1) {
       int var2 = Bit0Mask(var1 >> 7);
@@ -20,22 +18,18 @@ class ReedMuller {
    }
 
    private static void hadamardTransform(int[] var0, int[] var1) {
-      int[] var2 = Arrays.clone(var0);
-      int[] var3 = Arrays.clone(var1);
-
-      for (int var4 = 0; var4 < 7; var4++) {
-         for (int var5 = 0; var5 < 64; var5++) {
-            var3[var5] = var2[2 * var5] + var2[2 * var5 + 1];
-            var3[var5 + 64] = var2[2 * var5] - var2[2 * var5 + 1];
+      for (int var2 = 0; var2 < 7; var2++) {
+         for (int var3 = 0; var3 < 64; var3++) {
+            int var4 = var0[2 * var3];
+            int var5 = var0[2 * var3 + 1];
+            var1[var3] = var4 + var5;
+            var1[var3 + 64] = var4 - var5;
          }
 
-         int[] var6 = var2;
-         var2 = var3;
-         var3 = var6;
+         int[] var6 = var0;
+         var0 = var1;
+         var1 = var6;
       }
-
-      System.arraycopy(var3, 0, var0, 0, var0.length);
-      System.arraycopy(var2, 0, var1, 0, var1.length);
    }
 
    private static void expandThenSum(int[] var0, ReedMuller.Codeword[] var1, int var2, int var3) {
@@ -45,10 +39,12 @@ class ReedMuller {
          }
       }
 
-      for (int var7 = 1; var7 < var3; var7++) {
-         for (int var8 = 0; var8 < 4; var8++) {
-            for (int var6 = 0; var6 < 32; var6++) {
-               var0[var8 * 32 + var6] = var0[var8 * 32 + var6] + (var1[var7 + var2].type32[var8] >> var6 & 1);
+      for (int var8 = 1; var8 < var3; var8++) {
+         int[] var9 = var1[var2 + var8].type32;
+
+         for (int var6 = 0; var6 < 4; var6++) {
+            for (int var7 = 0; var7 < 32; var7++) {
+               var0[var6 * 32 + var7] = var0[var6 * 32 + var7] + (var9[var6] >> var7 & 1);
             }
          }
       }
@@ -77,60 +73,57 @@ class ReedMuller {
    }
 
    public static void encode(long[] var0, byte[] var1, int var2, int var3) {
-      byte[] var4 = Arrays.clone(var1);
-      ReedMuller.Codeword[] var5 = new ReedMuller.Codeword[var2 * var3];
+      ReedMuller.Codeword[] var4 = new ReedMuller.Codeword[var2 * var3];
 
-      for (int var6 = 0; var6 < var5.length; var6++) {
-         var5[var6] = new ReedMuller.Codeword();
+      for (int var5 = 0; var5 < var4.length; var5++) {
+         var4[var5] = new ReedMuller.Codeword();
       }
 
-      for (int var9 = 0; var9 < var2; var9++) {
-         int var7 = var9 * var3;
-         encodeSub(var5[var7], var4[var9]);
+      for (int var8 = 0; var8 < var2; var8++) {
+         int var6 = var8 * var3;
+         encodeSub(var4[var6], var1[var8]);
 
-         for (int var8 = 1; var8 < var3; var8++) {
-            var5[var7 + var8] = var5[var7];
+         for (int var7 = 1; var7 < var3; var7++) {
+            var4[var6 + var7] = var4[var6];
          }
       }
 
-      CopyCWD(var0, var5);
+      copyCodeword(var0, var4);
    }
 
-   private static void CopyCWD(long[] var0, ReedMuller.Codeword[] var1) {
+   public static void decode(byte[] var0, long[] var1, int var2, int var3) {
+      ReedMuller.Codeword[] var4 = new ReedMuller.Codeword[var1.length / 2];
+      int[] var5 = new int[var1.length * 2];
+      Utils.fromLongArrayToByte32Array(var5, var1);
+
+      for (int var6 = 0; var6 < var4.length; var6++) {
+         var4[var6] = new ReedMuller.Codeword();
+         System.arraycopy(var5, var6 * 4, var4[var6].type32, 0, 4);
+      }
+
+      int[] var9 = new int[128];
+      int[] var7 = new int[128];
+
+      for (int var8 = 0; var8 < var2; var8++) {
+         expandThenSum(var9, var4, var8 * var3, var3);
+         hadamardTransform(var9, var7);
+         var7[0] -= 64 * var3;
+         var0[var8] = (byte)findPeaks(var7);
+      }
+
+      copyCodeword(var1, var4);
+   }
+
+   private static void copyCodeword(long[] var0, ReedMuller.Codeword[] var1) {
       int[] var2 = new int[var1.length * 4];
       byte var3 = 0;
 
       for (int var4 = 0; var4 < var1.length; var4++) {
-         System.arraycopy(var1[var4].type32, 0, var2, var3, var1[var4].type32.length);
+         System.arraycopy(var1[var4].type32, 0, var2, var3, 4);
          var3 += 4;
       }
 
       Utils.fromByte32ArrayToLongArray(var0, var2);
-   }
-
-   public static void decode(byte[] var0, long[] var1, int var2, int var3) {
-      byte[] var4 = Arrays.clone(var0);
-      ReedMuller.Codeword[] var5 = new ReedMuller.Codeword[var1.length / 2];
-      int[] var6 = new int[var1.length * 2];
-      Utils.fromLongArrayToByte32Array(var6, var1);
-
-      for (int var7 = 0; var7 < var5.length; var7++) {
-         var5[var7] = new ReedMuller.Codeword();
-         System.arraycopy(var6, var7 * 4, var5[var7].type32, 0, 4);
-      }
-
-      int[] var10 = new int[128];
-      int[] var8 = new int[128];
-
-      for (int var9 = 0; var9 < var2; var9++) {
-         expandThenSum(var10, var5, var9 * var3, var3);
-         hadamardTransform(var10, var8);
-         var8[0] -= 64 * var3;
-         var4[var9] = (byte)findPeaks(var8);
-      }
-
-      CopyCWD(var1, var5);
-      System.arraycopy(var4, 0, var0, 0, var0.length);
    }
 
    static class Codeword {

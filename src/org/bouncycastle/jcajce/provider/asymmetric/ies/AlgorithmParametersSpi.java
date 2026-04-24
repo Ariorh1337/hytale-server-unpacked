@@ -45,11 +45,11 @@ public class AlgorithmParametersSpi extends java.security.AlgorithmParametersSpi
             var1.add(new DERTaggedObject(false, 1, new DEROctetString(this.currentSpec.getEncodingV())));
          }
 
-         var1.add(new ASN1Integer(this.currentSpec.getMacKeySize()));
+         var1.add(ASN1Integer.valueOf(this.currentSpec.getMacKeySize()));
          byte[] var2 = this.currentSpec.getNonce();
          if (var2 != null) {
             ASN1EncodableVector var3 = new ASN1EncodableVector();
-            var3.add(new ASN1Integer(this.currentSpec.getCipherKeySize()));
+            var3.add(ASN1Integer.valueOf(this.currentSpec.getCipherKeySize()));
             var3.add(new DEROctetString(var2));
             var1.add(new DERSequence(var3));
          }

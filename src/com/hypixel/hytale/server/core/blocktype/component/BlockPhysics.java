@@ -14,11 +14,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.blocktype.BlockTypeModule;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.Arrays;
 import java.util.concurrent.locks.StampedLock;
 import javax.annotation.Nonnull;
@@ -116,26 +113,21 @@ public class BlockPhysics implements Component<ChunkStore> {
    }
 
    private byte[] serialize(ExtraInfo extraInfo) {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
-
-      try {
-         buf.writeBoolean(this.supportData != null);
-         if (this.supportData != null) {
-            buf.writeBytes(this.supportData);
-         }
-
-         return ByteBufUtil.getBytesRelease(buf);
-      } catch (Throwable e) {
-         buf.release();
-         throw SneakyThrow.sneakyThrow(e);
+      byte[] result = new byte[1 + (this.supportData != null ? 16384 : 0)];
+      MemorySegment data = MemorySegment.ofArray(result);
+      data.set(ValueLayout.JAVA_BOOLEAN, 0L, this.supportData != null);
+      if (this.supportData != null) {
+         MemorySegment.copy(this.supportData, 0, data, ValueLayout.JAVA_BYTE, 1L, this.supportData.length);
       }
+
+      return result;
    }
 
    private void deserialize(@Nonnull byte[] bytes, ExtraInfo extraInfo) {
-      ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-      if (buf.readBoolean()) {
+      MemorySegment data = MemorySegment.ofArray(bytes);
+      if (data.get(ValueLayout.JAVA_BOOLEAN, 0L)) {
          this.supportData = new byte[16384];
-         buf.readBytes(this.supportData);
+         MemorySegment.copy(data, ValueLayout.JAVA_BYTE, 1L, this.supportData, 0, 16384);
          this.nonZeroCount = 0;
 
          for (int i = 0; i < 16384; i++) {

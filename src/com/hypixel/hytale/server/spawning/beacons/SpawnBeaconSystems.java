@@ -692,6 +692,7 @@ public class SpawnBeaconSystems {
          Vector3d position = spawningContext.newPosition();
          Rotation3f rotation = spawningContext.newRotation();
          int roleIndex = spawnJob.getRoleIndex();
+         String mcType = spawningContext.activeMotionControllerType;
          commandBuffer.run(
             _store -> {
                try {
@@ -702,7 +703,7 @@ public class SpawnBeaconSystems {
                         position,
                         rotation,
                         spawningContext.getModel(),
-                        (npc, ref, store) -> postSpawn(npc, ref, roleIndex, spawnController.isDebugSpawnFrozen(), store)
+                        (npc, ref, store) -> postSpawn(npc, ref, roleIndex, mcType, spawnController.isDebugSpawnFrozen(), store)
                      );
                   Ref<EntityStore> npcRef = npcPair.first();
                   FlockPlugin.trySpawnFlock(
@@ -714,7 +715,7 @@ public class SpawnBeaconSystems {
                      spawnJob.getFlockSize(),
                      spawnJob.getFlockAsset(),
                      null,
-                     (npc, ref, store) -> postSpawn(npc, ref, roleIndex, spawnController.isDebugSpawnFrozen(), store),
+                     (npc, ref, store) -> postSpawn(npc, ref, roleIndex, mcType, spawnController.isDebugSpawnFrozen(), store),
                      _store
                   );
                   this.onSpawn(npcRef, spawnController, spawnJob, _store);
@@ -756,9 +757,15 @@ public class SpawnBeaconSystems {
       }
 
       private static void postSpawn(
-         @Nonnull NPCEntity entity, @Nonnull Ref<EntityStore> ref, int roleIndex, boolean spawnFrozen, @Nonnull Store<EntityStore> store
+         @Nonnull NPCEntity entity,
+         @Nonnull Ref<EntityStore> ref,
+         int roleIndex,
+         @Nullable String activeMotionControllerName,
+         boolean spawnFrozen,
+         @Nonnull Store<EntityStore> store
       ) {
          entity.setSpawnRoleIndex(roleIndex);
+         entity.setActiveMotionControllerName(activeMotionControllerName);
          if (spawnFrozen) {
             store.ensureComponent(ref, Frozen.getComponentType());
          }

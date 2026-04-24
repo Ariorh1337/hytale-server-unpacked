@@ -40,6 +40,7 @@ import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.StoredFlock;
 import com.hypixel.hytale.server.npc.components.SpawnMarkerReference;
@@ -333,6 +334,7 @@ public class SpawnMarkerSystems {
          TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
          assert transformComponent != null;
          World world = store.getExternalData().getWorld();
+         WorldConfig worldConfig = world.getWorldConfig();
          SpawnMarker cachedMarker = spawnMarkerEntityComponent.getCachedMarker();
          if (spawnMarkerEntityComponent.getSpawnCount() > 0) {
             StoredFlock storedFlock = spawnMarkerEntityComponent.getStoredFlock();
@@ -454,7 +456,7 @@ public class SpawnMarkerSystems {
                }
             }
 
-            if (spawnMarkerEntityComponent.tickSpawnLostTimeout(dt)) {
+            if (spawnMarkerEntityComponent.tickSpawnLostTimeout(dt) && worldConfig.isSpawningNPC()) {
                PersistentRefCount refId = archetypeChunk.getComponent(index, this.referenceIdComponentType);
                if (refId != null) {
                   refId.increment();
@@ -464,7 +466,8 @@ public class SpawnMarkerSystems {
                Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, _store));
             }
-         } else if (world.getWorldConfig().isSpawnMarkersEnabled()
+         } else if (world.getWorldConfig().isSpawningNPC()
+            && world.getWorldConfig().isSpawnMarkersEnabled()
             && !cachedMarker.isManualTrigger()
             && (spawnMarkerEntityComponent.getSuppressedBy() == null || spawnMarkerEntityComponent.getSuppressedBy().isEmpty())) {
             Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);

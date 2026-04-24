@@ -1,6 +1,7 @@
 package com.hypixel.hytale.event;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -26,6 +27,7 @@ public class SyncEventBusRegistry<KeyType, EventType extends IEvent<KeyType>>
 
       return event;
    };
+   private static final String THIRD_PARTY_CLASSLOADER_PREFIX = "ThirdParty";
 
    public SyncEventBusRegistry(HytaleLogger logger, Class<EventType> eventClass) {
       super(logger, eventClass, new SyncEventBusRegistry.SyncEventConsumerMap<>(null), new SyncEventBusRegistry.SyncEventConsumerMap<>(null));
@@ -142,13 +144,19 @@ public class SyncEventBusRegistry<KeyType, EventType extends IEvent<KeyType>>
 
                   handled = true;
                } catch (Throwable t) {
-                  this.logger.at(Level.SEVERE).withCause(t).log("%s %s to %s", s, event, consumer);
+                  Throwable cause = isThirdPartyConsumer(consumer.getConsumer()) ? new SkipSentryException(t) : t;
+                  this.logger.at(Level.SEVERE).withCause(cause).log("%s %s to %s", s, event, consumer);
                }
             }
          }
       }
 
       return handled;
+   }
+
+   private static boolean isThirdPartyConsumer(@Nonnull Consumer<?> consumer) {
+      ClassLoader classLoader = consumer.getClass().getClassLoader();
+      return classLoader != null && classLoader.getName() != null && classLoader.getName().startsWith("ThirdParty");
    }
 
    protected static class SyncEventConsumer<EventType extends IEvent> extends EventBusRegistry.EventConsumer {

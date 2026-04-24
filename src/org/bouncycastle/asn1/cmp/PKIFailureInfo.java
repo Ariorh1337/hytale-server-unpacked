@@ -63,7 +63,7 @@ public class PKIFailureInfo extends DERBitString {
    public static final int SYSTEM_FAILURE = 1073741824;
 
    public PKIFailureInfo(int var1) {
-      super(getBytes(var1), getPadBits(var1));
+      super(var1);
    }
 
    public PKIFailureInfo(ASN1BitString var1) {

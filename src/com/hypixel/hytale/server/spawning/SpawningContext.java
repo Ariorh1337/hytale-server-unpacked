@@ -1,6 +1,8 @@
 package com.hypixel.hytale.server.spawning;
 
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -15,12 +17,20 @@ import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.environment.EnvironmentColumn;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.util.expression.Scope;
 import com.hypixel.hytale.server.spawning.suppression.SuppressionSpanHelper;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -45,6 +55,11 @@ public class SpawningContext {
    public int groundFluidId;
    @Nullable
    public Fluid groundFluid;
+   @Nullable
+   public MovementMode movementMode;
+   public boolean enableSafeSpawning = true;
+   @Nullable
+   public String activeMotionControllerType;
    public int ySpanMin;
    public int ySpanMax;
    public int yBlock;
@@ -59,6 +74,10 @@ public class SpawningContext {
    public double yaw;
    public double pitch;
    public double roll;
+   public boolean breathesInAir = true;
+   public boolean breathesInWater = false;
+   public int invalidMaterials = -1;
+   public double swimDepth = Double.NaN;
    @Nullable
    private ISpawnableWithModel spawnable;
    @Nullable
@@ -98,6 +117,11 @@ public class SpawningContext {
       try {
          this.executionContext.setScope(spawnable.createExecutionScope());
          this.modifierScope = this.spawnable.createModifierScope(this.executionContext);
+         this.breathesInAir = spawnable.breathesInAir(this.executionContext, this.modifierScope);
+         this.breathesInWater = spawnable.breathesInWater(this.executionContext, this.modifierScope);
+         this.movementMode = null;
+         this.invalidMaterials = -1;
+         this.swimDepth = Double.NaN;
          modelName = spawnable.getSpawnModelName(this.executionContext, this.modifierScope);
       } catch (Throwable t) {
          LOGGER.at(Level.WARNING).log("Can't set role in spawning context %s: %s", spawnable.getIdentifier(), t.getMessage());
@@ -158,6 +182,23 @@ public class SpawningContext {
    @Nullable
    public Model getModel() {
       return this.spawnModel;
+   }
+
+   public boolean setMovementMode(MovementMode movementMode, boolean safeSpawning) {
+      if (this.spawnable == null) {
+         return false;
+      }
+
+      this.movementMode = movementMode;
+      this.enableSafeSpawning = safeSpawning;
+      if (!safeSpawning) {
+         return true;
+      }
+
+      return switch (movementMode) {
+         case WALK, WADE, FLY -> this.breathesInAir;
+         case UNDERWATER_WALK, DIVE -> this.breathesInWater;
+      };
    }
 
    public void setChunk(@Nonnull WorldChunk worldChunk, int environmentIndex) {
@@ -284,6 +325,30 @@ public class SpawningContext {
       }
 
       return this.selectSpawnSpan(chosenIndex);
+   }
+
+   public boolean setExact(@Nonnull World world, double x, double y, double z) {
+      if (this.spawnModel == null) {
+         throw new IllegalStateException("spawnModel not set - forgot to set model or role?");
+      }
+
+      this.xBlock = MathUtil.floor(x);
+      this.zBlock = MathUtil.floor(z);
+      this.ySpawnHint = y;
+      this.worldChunk = world.getChunkIfLoaded(ChunkUtil.indexChunkFromBlock(this.xBlock, this.zBlock));
+      if (this.worldChunk == null) {
+         return false;
+      }
+
+      this.xBlock = ChunkUtil.localCoordinate(this.xBlock);
+      this.zBlock = ChunkUtil.localCoordinate(this.zBlock);
+      this.environmentIndex = Integer.MIN_VALUE;
+      this.world = world;
+      this.commonInit();
+      this.xSpawn = x;
+      this.ySpawn = y;
+      this.zSpawn = z;
+      return true;
    }
 
    public void deleteCurrentSpawnSpan() {
@@ -443,6 +508,29 @@ public class SpawningContext {
       return this.canSpawn(true, true);
    }
 
+   public boolean canSpawnOnBlock(@Nullable IntSet spawnBlockSet, int spawnFluidTag) {
+      if (spawnBlockSet != null && !spawnBlockSet.contains(this.groundBlockId)) {
+         return false;
+      }
+
+      if (this.waterLevel == -1 || spawnFluidTag == Integer.MIN_VALUE) {
+         return true;
+      }
+
+      assert this.world != null;
+      assert this.worldChunk != null;
+      ChunkStore chunkStore = this.world.getChunkStore();
+      Store<ChunkStore> chunkStoreAccessor = chunkStore.getStore();
+      Ref<ChunkStore> chunkRef = this.worldChunk.getReference();
+      ChunkColumn chunkColumnComponent = chunkStoreAccessor.getComponent(chunkRef, ChunkColumn.getComponentType());
+      if (chunkColumnComponent == null) {
+         return false;
+      }
+
+      int fluidId = WorldUtil.getFluidIdAtPosition(chunkStoreAccessor, chunkColumnComponent, this.xBlock, this.waterLevel, this.zBlock);
+      return Fluid.getAssetMap().getIndexesForTag(spawnFluidTag).contains(fluidId);
+   }
+
    @Nonnull
    private SpawnTestResult intersectsEntity() {
       return SpawnTestResult.TEST_OK;
@@ -494,7 +582,7 @@ public class SpawningContext {
    }
 
    public boolean isOnSolidGround() {
-      if (isWaterBlock(this.groundFluidId)) {
+      if (this.waterLevel == -1 && isWaterBlock(this.groundFluidId)) {
          return false;
       }
 
@@ -544,11 +632,18 @@ public class SpawningContext {
    public boolean canBreathe(boolean breathesInAir, boolean breathesInWater) {
       if (this.spawnModel == null) {
          return false;
-      } else {
-         return !breathesInAir && this.ySpawn + this.spawnModel.getEyeHeight() >= this.airHeight
-            ? false
-            : breathesInWater || !(this.waterLevel + 1 - this.ySpawn >= this.spawnModel.getEyeHeight());
       }
+
+      if (breathesInAir && breathesInWater) {
+         return true;
+      }
+
+      if (!breathesInAir && !breathesInWater) {
+         return false;
+      }
+
+      float eyeHeight = this.spawnModel.getEyeHeight();
+      return breathesInAir ? this.waterLevel + 1 - this.ySpawn < eyeHeight : this.ySpawn + eyeHeight < this.airHeight;
    }
 
    public void release() {
@@ -560,9 +655,69 @@ public class SpawningContext {
    public void releaseFull() {
       this.release();
       this.spawnable = null;
+      this.movementMode = null;
+      this.enableSafeSpawning = true;
+      this.activeMotionControllerType = null;
+      this.breathesInAir = true;
+      this.breathesInWater = false;
+      this.invalidMaterials = -1;
+      this.swimDepth = Double.NaN;
       this.modifierScope = null;
       this.spawnModel = null;
       this.executionContext.setScope(null);
+   }
+
+   @Nullable
+   public static double[] buildMovementModeWeights(
+      @Nullable Map<MovementMode, Double> userWeights,
+      @Nonnull Set<MovementMode> supportedMovementModes,
+      @Nonnull Set<MovementMode> defaultMovementModes,
+      @Nullable Set<MovementMode> safeMovementModes
+   ) {
+      double[] weights = new double[MovementMode.values().length];
+      return fillMovementModeWeights(weights, userWeights, supportedMovementModes, defaultMovementModes, safeMovementModes) ? weights : null;
+   }
+
+   private static boolean fillMovementModeWeights(
+      @Nonnull double[] weights,
+      @Nullable Map<MovementMode, Double> userWeights,
+      @Nonnull Set<MovementMode> supportedMovementModes,
+      @Nonnull Set<MovementMode> defaultMovementModes,
+      @Nullable Set<MovementMode> safeMovementModes
+   ) {
+      assert weights.length == MovementMode.values().length : "weights array length must match number of MovementMode values";
+      Arrays.fill(weights, 0.0);
+      if (userWeights != null && !userWeights.isEmpty()) {
+         for (Entry<MovementMode, Double> entry : userWeights.entrySet()) {
+            weights[entry.getKey().ordinal()] = entry.getValue();
+         }
+      } else {
+         for (MovementMode mode : defaultMovementModes) {
+            weights[mode.ordinal()] = 1.0;
+         }
+      }
+
+      for (MovementMode mode : MovementMode.values()) {
+         if (!supportedMovementModes.contains(mode)) {
+            weights[mode.ordinal()] = 0.0;
+         }
+      }
+
+      if (safeMovementModes != null) {
+         for (MovementMode mode : MovementMode.values()) {
+            if (!safeMovementModes.contains(mode)) {
+               weights[mode.ordinal()] = 0.0;
+            }
+         }
+      }
+
+      for (double w : weights) {
+         if (w != 0.0) {
+            return true;
+         }
+      }
+
+      return false;
    }
 
    @Nonnull

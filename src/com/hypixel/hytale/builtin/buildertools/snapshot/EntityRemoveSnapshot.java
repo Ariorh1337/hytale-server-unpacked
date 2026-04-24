@@ -11,10 +11,18 @@ import javax.annotation.Nonnull;
 
 public class EntityRemoveSnapshot implements EntitySnapshot<EntityAddSnapshot> {
    @Nonnull
+   private final Ref<EntityStore> originalRef;
+   @Nonnull
    private final Holder<EntityStore> holder;
 
    public EntityRemoveSnapshot(@Nonnull Ref<EntityStore> ref) {
+      this.originalRef = ref;
       this.holder = ref.getStore().copyEntity(ref);
+   }
+
+   @Nonnull
+   public Ref<EntityStore> getOriginalRef() {
+      return this.originalRef;
    }
 
    @Nonnull

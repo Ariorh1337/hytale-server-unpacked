@@ -48,7 +48,7 @@ public class DefaultDigestAlgorithmIdentifierFinder implements DigestAlgorithmId
       if (shake256oids.contains(var2)) {
          return !var2.equals(EdECObjectIdentifiers.id_Ed448)
             ? new AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256)
-            : new AlgorithmIdentifier(NISTObjectIdentifiers.id_shake256_len, new ASN1Integer(512L));
+            : new AlgorithmIdentifier(NISTObjectIdentifiers.id_shake256_len, ASN1Integer.valueOf(512));
       }
 
       ASN1ObjectIdentifier var3;

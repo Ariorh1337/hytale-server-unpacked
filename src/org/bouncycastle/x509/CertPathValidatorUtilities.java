@@ -67,10 +67,11 @@ class CertPathValidatorUtilities {
    protected static final String DELTA_CRL_INDICATOR = Extension.deltaCRLIndicator.getId();
    protected static final String POLICY_CONSTRAINTS = Extension.policyConstraints.getId();
    protected static final String CRL_NUMBER = Extension.cRLNumber.getId();
+   protected static final String REASON_CODE = Extension.reasonCode.getId();
    protected static final String ANY_POLICY = "2.5.29.32.0";
    protected static final int KEY_CERT_SIGN = 5;
    protected static final int CRL_SIGN = 6;
-   protected static final String[] crlReasons = new String[]{
+   static final String[] crlReasons = new String[]{
       "unspecified",
       "keyCompromise",
       "cACompromise",
@@ -441,18 +442,24 @@ class CertPathValidatorUtilities {
       }
 
       ASN1Enumerated var11 = null;
-      if (var4.hasExtensions()) {
+      label64:
+      if (!var4.hasExtensions()) {
+         int var7 = null == var11 ? 0 : var11.intValueExact();
+         if (var0.getTime() >= var4.getRevocationDate().getTime() || var7 == 0 || var7 == 1 || var7 == 2 || var7 == 10) {
+            var3.setCertStatus(var7);
+            var3.setRevocationDate(var4.getRevocationDate());
+         }
+      } else {
+         if (var4.hasUnsupportedCriticalExtension()) {
+            throw new AnnotatedException("CRL entry has unsupported critical extensions.");
+         }
+
          try {
-            var11 = ASN1Enumerated.getInstance(getExtensionValue(var4, org.bouncycastle.asn1.x509.X509Extension.reasonCode.getId()));
+            var11 = ASN1Enumerated.getInstance(getExtensionValue(var4, REASON_CODE));
+            break label64;
          } catch (Exception var8) {
             throw new AnnotatedException("Reason code CRL entry extension could not be decoded.", var8);
          }
-      }
-
-      int var7 = null == var11 ? 0 : var11.intValueExact();
-      if (var0.getTime() >= var4.getRevocationDate().getTime() || var7 == 0 || var7 == 1 || var7 == 2 || var7 == 10) {
-         var3.setCertStatus(var7);
-         var3.setRevocationDate(var4.getRevocationDate());
       }
    }
 
@@ -502,7 +509,7 @@ class CertPathValidatorUtilities {
 
    static boolean isIndirectCRL(X509CRL var0) throws CRLException {
       try {
-         byte[] var1 = var0.getExtensionValue(Extension.issuingDistributionPoint.getId());
+         byte[] var1 = var0.getExtensionValue(ISSUING_DISTRIBUTION_POINT);
          return var1 != null && IssuingDistributionPoint.getInstance(ASN1OctetString.getInstance(var1).getOctets()).isIndirectCRL();
       } catch (Exception var2) {
          throw new CRLException("Exception reading IssuingDistributionPoint: " + var2);

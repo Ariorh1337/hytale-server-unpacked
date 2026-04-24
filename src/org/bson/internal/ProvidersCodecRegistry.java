@@ -1,13 +1,16 @@
 package org.bson.internal;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.bson.assertions.Assertions;
 import org.bson.codecs.Codec;
+import org.bson.codecs.configuration.CodecConfigurationException;
 import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public final class ProvidersCodecRegistry implements CodecRegistry, CycleDetectingCodecRegistry {
+public final class ProvidersCodecRegistry implements CycleDetectingCodecRegistry {
    private final List<CodecProvider> codecProviders;
    private final CodecCache codecCache = new CodecCache();
 
@@ -18,13 +21,28 @@ public final class ProvidersCodecRegistry implements CodecRegistry, CycleDetecti
 
    @Override
    public <T> Codec<T> get(Class<T> clazz) {
-      return this.get(new ChildCodecRegistry<>(this, clazz));
+      return this.get(new ChildCodecRegistry<>(this, clazz, null));
+   }
+
+   @Override
+   public <T> Codec<T> get(Class<T> clazz, List<Type> typeArguments) {
+      Assertions.notNull("typeArguments", typeArguments);
+      Assertions.isTrueArgument(
+         String.format("typeArguments size should equal the number of type parameters in class %s, but is %d", clazz, typeArguments.size()),
+         clazz.getTypeParameters().length == typeArguments.size()
+      );
+      return this.get(new ChildCodecRegistry<>(this, clazz, typeArguments));
    }
 
    @Override
    public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
+      return this.get(clazz, Collections.emptyList(), registry);
+   }
+
+   @Override
+   public <T> Codec<T> get(Class<T> clazz, List<Type> typeArguments, CodecRegistry registry) {
       for (CodecProvider provider : this.codecProviders) {
-         Codec<T> codec = provider.get(clazz, registry);
+         Codec<T> codec = provider.get(clazz, typeArguments, registry);
          if (codec != null) {
             return codec;
          }
@@ -35,18 +53,17 @@ public final class ProvidersCodecRegistry implements CodecRegistry, CycleDetecti
 
    @Override
    public <T> Codec<T> get(ChildCodecRegistry<T> context) {
-      if (!this.codecCache.containsKey(context.getCodecClass())) {
+      CodecCache.CodecCacheKey codecCacheKey = new CodecCache.CodecCacheKey(context.getCodecClass(), context.getTypes().orElse(null));
+      return this.codecCache.<T>get(codecCacheKey).orElseGet(() -> {
          for (CodecProvider provider : this.codecProviders) {
-            Codec<T> codec = provider.get(context.getCodecClass(), context);
+            Codec<T> codec = provider.get(context.getCodecClass(), context.getTypes().orElse(Collections.emptyList()), context);
             if (codec != null) {
-               return this.codecCache.putIfMissing(context.getCodecClass(), codec);
+               return this.codecCache.putIfAbsent(codecCacheKey, codec);
             }
          }
 
-         this.codecCache.put(context.getCodecClass(), null);
-      }
-
-      return this.codecCache.getOrThrow(context.getCodecClass());
+         throw new CodecConfigurationException(String.format("Can't find a codec for %s.", codecCacheKey));
+      });
    }
 
    @Override
@@ -76,5 +93,10 @@ public final class ProvidersCodecRegistry implements CodecRegistry, CycleDetecti
    @Override
    public int hashCode() {
       return this.codecProviders.hashCode();
+   }
+
+   @Override
+   public String toString() {
+      return "ProvidersCodecRegistry{codecProviders=" + this.codecProviders + '}';
    }
 }

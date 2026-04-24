@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.BEROctetString;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.cms.CMSObjectIdentifiers;
 import org.bouncycastle.asn1.cms.ContentInfo;
@@ -26,15 +27,16 @@ public class CMSEnvelopedDataGenerator extends CMSEnvelopedGenerator {
             byte[] var6 = ((OutputAEADEncryptor)var2).getMAC();
             var4.write(var6, 0, var6.length);
          }
-      } catch (IOException var9) {
+      } catch (IOException var10) {
          throw new CMSException("");
       }
 
-      byte[] var10 = var4.toByteArray();
-      EncryptedContentInfo var11 = CMSUtils.getEncryptedContentInfo(var1, var2, var10);
+      BEROctetString var11 = new BEROctetString(var4.toByteArray());
+      EncryptedContentInfo var12 = CMSUtils.getEncryptedContentInfo(var1, var2, var11);
       ASN1Set var7 = CMSUtils.getAttrBERSet(this.unprotectedAttributeGenerator);
-      ContentInfo var8 = new ContentInfo(CMSObjectIdentifiers.envelopedData, new EnvelopedData(this.originatorInfo, new DERSet(var3), var11, var7));
-      return new CMSEnvelopedData(var8);
+      EnvelopedData var8 = new EnvelopedData(this.originatorInfo, new DERSet(var3), var12, var7);
+      ContentInfo var9 = new ContentInfo(CMSObjectIdentifiers.envelopedData, var8);
+      return new CMSEnvelopedData(var9);
    }
 
    public CMSEnvelopedData generate(CMSTypedData var1, OutputEncryptor var2) throws CMSException {

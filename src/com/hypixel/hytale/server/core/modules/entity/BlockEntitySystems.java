@@ -16,6 +16,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockUpdate;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
@@ -49,12 +50,25 @@ public class BlockEntitySystems {
          }
 
          BlockEntity blockEntityComponent = holder.getComponent(this.blockEntityComponentType);
-         BoundingBox boundingBoxComponent = blockEntityComponent.createBoundingBoxComponent();
-         if (boundingBoxComponent == null) {
-            BlockEntitySystems.LOGGER
-               .at(Level.SEVERE)
-               .log("Bounding box could not be initialized properly, defaulting to 1x1x1 dimensions for Block Entity bounding box");
-            boundingBoxComponent = new BoundingBox(Box.horizontallyCentered(1.0, 1.0, 1.0));
+         BoundingBox boundingBoxComponent;
+         if (!holder.getArchetype().contains(BoundingBox.getComponentType())) {
+            boundingBoxComponent = blockEntityComponent.createBoundingBoxComponent();
+            if (boundingBoxComponent == null) {
+               BlockEntitySystems.LOGGER
+                  .at(Level.SEVERE)
+                  .log("Bounding box could not be initialized properly, defaulting to 1x1x1 dimensions for Block Entity bounding box");
+               boundingBoxComponent = new BoundingBox(Box.horizontallyCentered(1.0, 1.0, 1.0));
+            }
+
+            holder.putComponent(BoundingBox.getComponentType(), boundingBoxComponent);
+         } else {
+            boundingBoxComponent = holder.getComponent(BoundingBox.getComponentType());
+         }
+
+         TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+         if (transform != null) {
+            Rotation3f rotation = transform.getRotation();
+            boundingBoxComponent.applyRotation(rotation.pitch(), rotation.yaw(), rotation.roll());
          }
 
          holder.putComponent(BoundingBox.getComponentType(), boundingBoxComponent);
@@ -136,13 +150,13 @@ public class BlockEntitySystems {
          String key = entity.getBlockTypeKey();
          int index = BlockType.getAssetMap().getIndex(key);
          if (index == Integer.MIN_VALUE) {
-            throw new IllegalArgumentException("Unknown key! " + key);
-         }
+            BlockEntitySystems.LOGGER.at(Level.WARNING).log("Skipping block entity update for unknown block type key: %s", key);
+         } else {
+            BlockUpdate update = new BlockUpdate(index, entityScale);
 
-         BlockUpdate update = new BlockUpdate(index, entityScale);
-
-         for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
-            viewer.queueUpdate(ref, update);
+            for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
+               viewer.queueUpdate(ref, update);
+            }
          }
       }
    }

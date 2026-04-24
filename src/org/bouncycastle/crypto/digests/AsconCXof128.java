@@ -45,7 +45,7 @@ public class AsconCXof128 extends AsconXofBase {
 
    @Override
    protected long loadBytes(byte[] var1, int var2, int var3) {
-      return Pack.littleEndianToLong(var1, var2, var3);
+      return var3 <= 0 ? 0L : Pack.littleEndianToLong_Low(var1, var2, var3);
    }
 
    @Override
@@ -55,7 +55,9 @@ public class AsconCXof128 extends AsconXofBase {
 
    @Override
    protected void setBytes(long var1, byte[] var3, int var4, int var5) {
-      Pack.longToLittleEndian(var1, var3, var4, var5);
+      if (var5 > 0) {
+         Pack.longToLittleEndian_Low(var1, var3, var4, var5);
+      }
    }
 
    @Override

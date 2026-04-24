@@ -4,6 +4,7 @@ import com.github.luben.zstd.Zstd;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.PacketRegistry;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -113,17 +114,36 @@ public final class PacketIO {
    }
 
    @Nonnull
-   public static String readVarAsciiString(@Nonnull ByteBuf buf, int offset) {
-      return readVarString(buf, offset, StandardCharsets.US_ASCII);
-   }
-
-   @Nonnull
    public static String readVarString(@Nonnull ByteBuf buf, int offset, Charset charset) {
       int len = VarInt.peek(buf, offset);
       int varIntLen = VarInt.length(buf, offset);
       byte[] bytes = new byte[len];
       buf.getBytes(offset + varIntLen, bytes);
       return new String(bytes, charset);
+   }
+
+   @Nonnull
+   public static String readValidatedAsciiString(@Nonnull ByteBuf buf, int offset, int length, @Nonnull String fieldName) {
+      byte[] bytes = new byte[length];
+      buf.getBytes(offset, bytes);
+
+      for (int i = 0; i < length; i++) {
+         if ((bytes[i] & 255) > 127) {
+            throw ProtocolException.invalidAsciiString(fieldName);
+         }
+      }
+
+      return new String(bytes, StandardCharsets.US_ASCII);
+   }
+
+   public static boolean isValidAscii(@Nonnull ByteBuf buf, int offset, int length) {
+      for (int i = 0; i < length; i++) {
+         if ((buf.getByte(offset + i) & 255) > 127) {
+            return false;
+         }
+      }
+
+      return true;
    }
 
    public static int utf8ByteLength(@Nonnull String s) {
@@ -366,7 +386,7 @@ public final class PacketIO {
    }
 
    @Nonnull
-   private static ByteBuf decompressFromBuffer(@Nonnull ByteBuf src, int srcOffset, int srcLength, int maxDecompressedSize) {
+   private static ByteBuf decompressFromBuffer(@Nonnull ByteBufAllocator allocator, @Nonnull ByteBuf src, int srcOffset, int srcLength, int maxDecompressedSize) {
       if (srcLength > maxDecompressedSize) {
          throw new ProtocolException("Compressed size " + srcLength + " exceeds max decompressed size " + maxDecompressedSize);
       }
@@ -376,19 +396,26 @@ public final class PacketIO {
          long decompressedSize = Zstd.getFrameContentSize(srcNio);
          if (decompressedSize < 0L) {
             throw new ProtocolException("Invalid Zstd frame or unknown content size");
-         } else if (decompressedSize > maxDecompressedSize) {
+         }
+
+         if (decompressedSize > maxDecompressedSize) {
             throw new ProtocolException("Decompressed size " + decompressedSize + " exceeds maximum " + maxDecompressedSize);
-         } else {
-            ByteBuf dst = Unpooled.directBuffer((int)decompressedSize);
+         }
+
+         ByteBuf dst = allocator.directBuffer((int)decompressedSize);
+
+         try {
             ByteBuffer dstNio = dst.nioBuffer(0, (int)decompressedSize);
             int result = Zstd.decompress(dstNio, srcNio);
             if (Zstd.isError(result)) {
-               dst.release();
                throw new ProtocolException("Zstd decompression failed: " + Zstd.getErrorName(result));
-            } else {
-               dst.writerIndex(result);
-               return dst;
             }
+
+            dst.writerIndex(result);
+            return dst;
+         } catch (Exception e) {
+            dst.release();
+            throw e;
          }
       } else {
          byte[] srcBytes = new byte[srcLength];
@@ -408,7 +435,11 @@ public final class PacketIO {
    }
 
    public static void writeFramedPacket(
-      @Nonnull Packet packet, @Nonnull Class<? extends Packet> packetClass, @Nonnull ByteBuf out, @Nonnull PacketStatsRecorder statsRecorder
+      @Nonnull Packet packet,
+      @Nonnull Class<? extends Packet> packetClass,
+      @Nonnull ByteBuf out,
+      @Nonnull ByteBufAllocator allocator,
+      @Nonnull PacketStatsRecorder statsRecorder
    ) {
       Integer id = PacketRegistry.getId(packetClass);
       if (id == null) {
@@ -419,7 +450,23 @@ public final class PacketIO {
       int lengthIndex = out.writerIndex();
       out.writeIntLE(0);
       out.writeIntLE(id);
-      ByteBuf payloadBuf = Unpooled.buffer(Math.min(info.maxSize(), 65536));
+      if (info.compressed()) {
+         writeCompressed(packet, info, id, out, allocator, statsRecorder, lengthIndex);
+      } else {
+         writeUncompressed(packet, info, id, out, statsRecorder, lengthIndex);
+      }
+   }
+
+   private static void writeCompressed(
+      @Nonnull Packet packet,
+      @Nonnull PacketRegistry.PacketInfo info,
+      int id,
+      @Nonnull ByteBuf out,
+      @Nonnull ByteBufAllocator allocator,
+      @Nonnull PacketStatsRecorder statsRecorder,
+      int lengthIndex
+   ) {
+      ByteBuf payloadBuf = allocator.buffer(Math.min(info.maxSize(), 65536));
 
       try {
          packet.serialize(payloadBuf);
@@ -428,7 +475,7 @@ public final class PacketIO {
             throw new ProtocolException("Packet " + info.name() + " serialized to " + serializedSize + " bytes, exceeds max size " + info.maxSize());
          }
 
-         if (info.compressed() && serializedSize > 0) {
+         if (serializedSize != 0) {
             int compressBound = (int)Zstd.compressBound(serializedSize);
             out.ensureWritable(compressBound);
             int compressedSize = compressToBuffer(payloadBuf, out, out.writerIndex(), compressBound);
@@ -443,42 +490,69 @@ public final class PacketIO {
             out.writerIndex(out.writerIndex() + compressedSize);
             out.setIntLE(lengthIndex, compressedSize);
             statsRecorder.recordSend(id, serializedSize, compressedSize);
-         } else {
-            if (serializedSize > 1677721600) {
-               throw new ProtocolException("Packet " + info.name() + " payload size " + serializedSize + " exceeds protocol maximum");
-            }
-
-            out.writeBytes(payloadBuf);
-            out.setIntLE(lengthIndex, serializedSize);
-            statsRecorder.recordSend(id, serializedSize, 0);
+            return;
          }
+
+         out.setIntLE(lengthIndex, 0);
+         statsRecorder.recordSend(id, 0, 0);
       } finally {
          payloadBuf.release();
       }
    }
 
+   private static void writeUncompressed(
+      @Nonnull Packet packet,
+      @Nonnull PacketRegistry.PacketInfo info,
+      int id,
+      @Nonnull ByteBuf out,
+      @Nonnull PacketStatsRecorder statsRecorder,
+      int lengthIndex
+   ) {
+      int payloadStart = out.writerIndex();
+      packet.serialize(out);
+      int serializedSize = out.writerIndex() - payloadStart;
+      if (serializedSize > info.maxSize()) {
+         out.writerIndex(lengthIndex);
+         throw new ProtocolException("Packet " + info.name() + " serialized to " + serializedSize + " bytes, exceeds max size " + info.maxSize());
+      }
+
+      if (serializedSize > 1677721600) {
+         out.writerIndex(lengthIndex);
+         throw new ProtocolException("Packet " + info.name() + " payload size " + serializedSize + " exceeds protocol maximum");
+      }
+
+      out.setIntLE(lengthIndex, serializedSize);
+      statsRecorder.recordSend(id, serializedSize, 0);
+   }
+
    @Nonnull
-   public static Packet readFramedPacket(@Nonnull ByteBuf in, int payloadLength, @Nonnull PacketStatsRecorder statsRecorder) {
+   public static Packet readFramedPacket(
+      @Nonnull ByteBuf in, int payloadLength, @Nonnull ByteBufAllocator allocator, @Nonnull PacketStatsRecorder statsRecorder
+   ) {
       int packetId = in.readIntLE();
       PacketRegistry.PacketInfo info = PacketRegistry.getToServerPacketById(packetId);
       if (info == null) {
          in.skipBytes(payloadLength);
          throw new ProtocolException("Unknown packet ID: " + packetId);
       } else {
-         return readFramedPacketWithInfo(in, payloadLength, info, statsRecorder);
+         return readFramedPacketWithInfo(in, payloadLength, allocator, info, statsRecorder);
       }
    }
 
    @Nonnull
    public static Packet readFramedPacketWithInfo(
-      @Nonnull ByteBuf in, int payloadLength, @Nonnull PacketRegistry.PacketInfo info, @Nonnull PacketStatsRecorder statsRecorder
+      @Nonnull ByteBuf in,
+      int payloadLength,
+      @Nonnull ByteBufAllocator allocator,
+      @Nonnull PacketRegistry.PacketInfo info,
+      @Nonnull PacketStatsRecorder statsRecorder
    ) {
       int compressedSize = 0;
       ByteBuf payload;
       int uncompressedSize;
       if (info.compressed() && payloadLength > 0) {
          try {
-            payload = decompressFromBuffer(in, in.readerIndex(), payloadLength, info.maxSize());
+            payload = decompressFromBuffer(allocator, in, in.readerIndex(), payloadLength, info.maxSize());
          } catch (ProtocolException e) {
             in.skipBytes(payloadLength);
             throw e;

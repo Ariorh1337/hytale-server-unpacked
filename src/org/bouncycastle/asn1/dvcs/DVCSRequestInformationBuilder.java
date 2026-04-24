@@ -48,7 +48,7 @@ public class DVCSRequestInformationBuilder {
    public DVCSRequestInformation build() {
       ASN1EncodableVector var1 = new ASN1EncodableVector(9);
       if (this.version != 1) {
-         var1.add(new ASN1Integer(this.version));
+         var1.add(ASN1Integer.valueOf(this.version));
       }
 
       var1.add(this.service);

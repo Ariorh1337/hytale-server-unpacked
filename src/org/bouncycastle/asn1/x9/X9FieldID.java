@@ -25,14 +25,14 @@ public class X9FieldID extends ASN1Object implements X9ObjectIdentifiers {
    public X9FieldID(int var1, int var2, int var3, int var4) {
       this.id = characteristic_two_field;
       ASN1EncodableVector var5 = new ASN1EncodableVector(3);
-      var5.add(new ASN1Integer(var1));
+      var5.add(ASN1Integer.valueOf(var1));
       if (var3 == 0) {
          if (var4 != 0) {
             throw new IllegalArgumentException("inconsistent k values");
          }
 
          var5.add(tpBasis);
-         var5.add(new ASN1Integer(var2));
+         var5.add(ASN1Integer.valueOf(var2));
       } else {
          if (var3 <= var2 || var4 <= var3) {
             throw new IllegalArgumentException("inconsistent k values");
@@ -40,9 +40,9 @@ public class X9FieldID extends ASN1Object implements X9ObjectIdentifiers {
 
          var5.add(ppBasis);
          ASN1EncodableVector var6 = new ASN1EncodableVector(3);
-         var6.add(new ASN1Integer(var2));
-         var6.add(new ASN1Integer(var3));
-         var6.add(new ASN1Integer(var4));
+         var6.add(ASN1Integer.valueOf(var2));
+         var6.add(ASN1Integer.valueOf(var3));
+         var6.add(ASN1Integer.valueOf(var4));
          var5.add(new DERSequence(var6));
       }
 

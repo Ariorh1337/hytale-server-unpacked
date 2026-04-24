@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.io.netty;
 
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
 import io.netty.channel.ChannelHandlerContext;
@@ -20,7 +21,7 @@ public class PlayerChannelHandler extends ChannelInboundHandlerAdapter {
    @Override
    public void channelInactive(ChannelHandlerContext ctx) {
       this.handler.logCloseMessage();
-      this.handler.closed(ctx);
+      this.handler.closed(ctx.channel().attr(ProtocolUtil.STREAM_CHANNEL_KEY).get());
    }
 
    @Override

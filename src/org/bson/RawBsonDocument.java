@@ -63,9 +63,17 @@ public final class RawBsonDocument extends BsonDocument {
          this.bytes = buffer.getInternalBuffer();
          this.offset = 0;
          this.length = buffer.getPosition();
-      } finally {
-         writer.close();
+      } catch (Throwable var8) {
+         try {
+            writer.close();
+         } catch (Throwable var7) {
+            var8.addSuppressed(var7);
+         }
+
+         throw var8;
       }
+
+      writer.close();
    }
 
    public ByteBuf getByteBuffer() {
@@ -81,11 +89,26 @@ public final class RawBsonDocument extends BsonDocument {
    public <T> T decode(Decoder<T> decoder) {
       BsonBinaryReader reader = this.createReader();
 
+      Object var3;
       try {
-         return decoder.decode(reader, DecoderContext.builder().build());
-      } finally {
+         var3 = decoder.decode(reader, DecoderContext.builder().build());
+      } catch (Throwable var6) {
+         if (reader != null) {
+            try {
+               reader.close();
+            } catch (Throwable var5) {
+               var6.addSuppressed(var5);
+            }
+         }
+
+         throw var6;
+      }
+
+      if (reader != null) {
          reader.close();
       }
+
+      return (T)var3;
    }
 
    @Override
@@ -117,18 +140,40 @@ public final class RawBsonDocument extends BsonDocument {
    public boolean isEmpty() {
       BsonBinaryReader bsonReader = this.createReader();
 
-      try {
-         bsonReader.readStartDocument();
-         if (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-            return false;
+      boolean var2;
+      label43: {
+         try {
+            bsonReader.readStartDocument();
+            if (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+               var2 = false;
+               break label43;
+            }
+
+            bsonReader.readEndDocument();
+         } catch (Throwable var5) {
+            if (bsonReader != null) {
+               try {
+                  bsonReader.close();
+               } catch (Throwable var4) {
+                  var5.addSuppressed(var4);
+               }
+            }
+
+            throw var5;
          }
 
-         bsonReader.readEndDocument();
-      } finally {
+         if (bsonReader != null) {
+            bsonReader.close();
+         }
+
+         return true;
+      }
+
+      if (bsonReader != null) {
          bsonReader.close();
       }
 
-      return true;
+      return var2;
    }
 
    @Override
@@ -146,7 +191,19 @@ public final class RawBsonDocument extends BsonDocument {
          }
 
          bsonReader.readEndDocument();
-      } finally {
+      } catch (Throwable var6) {
+         if (bsonReader != null) {
+            try {
+               bsonReader.close();
+            } catch (Throwable var5) {
+               var6.addSuppressed(var5);
+            }
+         }
+
+         throw var6;
+      }
+
+      if (bsonReader != null) {
          bsonReader.close();
       }
 
@@ -172,17 +229,32 @@ public final class RawBsonDocument extends BsonDocument {
    public String getFirstKey() {
       BsonBinaryReader bsonReader = this.createReader();
 
+      String e;
       try {
          bsonReader.readStartDocument();
 
          try {
-            return bsonReader.readName();
-         } catch (BsonInvalidOperationException e) {
+            e = bsonReader.readName();
+         } catch (BsonInvalidOperationException ex) {
             throw new NoSuchElementException();
          }
-      } finally {
+      } catch (Throwable var6) {
+         if (bsonReader != null) {
+            try {
+               bsonReader.close();
+            } catch (Throwable var4) {
+               var6.addSuppressed(var4);
+            }
+         }
+
+         throw var6;
+      }
+
+      if (bsonReader != null) {
          bsonReader.close();
       }
+
+      return e;
    }
 
    @Override
@@ -193,45 +265,89 @@ public final class RawBsonDocument extends BsonDocument {
 
       BsonBinaryReader bsonReader = this.createReader();
 
-      try {
-         bsonReader.readStartDocument();
+      boolean var3;
+      label54: {
+         try {
+            bsonReader.readStartDocument();
 
-         while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-            if (bsonReader.readName().equals(key)) {
-               return true;
+            while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+               if (bsonReader.readName().equals(key)) {
+                  var3 = true;
+                  break label54;
+               }
+
+               bsonReader.skipValue();
             }
 
-            bsonReader.skipValue();
+            bsonReader.readEndDocument();
+         } catch (Throwable var6) {
+            if (bsonReader != null) {
+               try {
+                  bsonReader.close();
+               } catch (Throwable var5) {
+                  var6.addSuppressed(var5);
+               }
+            }
+
+            throw var6;
          }
 
-         bsonReader.readEndDocument();
-      } finally {
+         if (bsonReader != null) {
+            bsonReader.close();
+         }
+
+         return false;
+      }
+
+      if (bsonReader != null) {
          bsonReader.close();
       }
 
-      return false;
+      return var3;
    }
 
    @Override
    public boolean containsValue(Object value) {
       BsonBinaryReader bsonReader = this.createReader();
 
-      try {
-         bsonReader.readStartDocument();
+      boolean var3;
+      label48: {
+         try {
+            bsonReader.readStartDocument();
 
-         while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-            bsonReader.skipName();
-            if (RawBsonValueHelper.decode(this.bytes, bsonReader).equals(value)) {
-               return true;
+            while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+               bsonReader.skipName();
+               if (RawBsonValueHelper.decode(this.bytes, bsonReader).equals(value)) {
+                  var3 = true;
+                  break label48;
+               }
             }
+
+            bsonReader.readEndDocument();
+         } catch (Throwable var6) {
+            if (bsonReader != null) {
+               try {
+                  bsonReader.close();
+               } catch (Throwable var5) {
+                  var6.addSuppressed(var5);
+               }
+            }
+
+            throw var6;
          }
 
-         bsonReader.readEndDocument();
-      } finally {
+         if (bsonReader != null) {
+            bsonReader.close();
+         }
+
+         return false;
+      }
+
+      if (bsonReader != null) {
          bsonReader.close();
       }
 
-      return false;
+      return var3;
    }
 
    @Override
@@ -239,23 +355,45 @@ public final class RawBsonDocument extends BsonDocument {
       Assertions.notNull("key", key);
       BsonBinaryReader bsonReader = this.createReader();
 
-      try {
-         bsonReader.readStartDocument();
+      BsonValue var3;
+      label50: {
+         try {
+            bsonReader.readStartDocument();
 
-         while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-            if (bsonReader.readName().equals(key)) {
-               return RawBsonValueHelper.decode(this.bytes, bsonReader);
+            while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+               if (bsonReader.readName().equals(key)) {
+                  var3 = RawBsonValueHelper.decode(this.bytes, bsonReader);
+                  break label50;
+               }
+
+               bsonReader.skipValue();
             }
 
-            bsonReader.skipValue();
+            bsonReader.readEndDocument();
+         } catch (Throwable var6) {
+            if (bsonReader != null) {
+               try {
+                  bsonReader.close();
+               } catch (Throwable var5) {
+                  var6.addSuppressed(var5);
+               }
+            }
+
+            throw var6;
          }
 
-         bsonReader.readEndDocument();
-      } finally {
+         if (bsonReader != null) {
+            bsonReader.close();
+         }
+
+         return null;
+      }
+
+      if (bsonReader != null) {
          bsonReader.close();
       }
 
-      return null;
+      return var3;
    }
 
    @Override
@@ -292,11 +430,26 @@ public final class RawBsonDocument extends BsonDocument {
    private BsonDocument toBaseBsonDocument() {
       BsonBinaryReader bsonReader = this.createReader();
 
+      BsonDocument var2;
       try {
-         return new BsonDocumentCodec().decode(bsonReader, DecoderContext.builder().build());
-      } finally {
+         var2 = new BsonDocumentCodec().decode(bsonReader, DecoderContext.builder().build());
+      } catch (Throwable var5) {
+         if (bsonReader != null) {
+            try {
+               bsonReader.close();
+            } catch (Throwable var4) {
+               var5.addSuppressed(var4);
+            }
+         }
+
+         throw var5;
+      }
+
+      if (bsonReader != null) {
          bsonReader.close();
       }
+
+      return var2;
    }
 
    private Object writeReplace() {

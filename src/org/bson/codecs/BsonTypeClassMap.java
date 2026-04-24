@@ -1,11 +1,10 @@
 package org.bson.codecs;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.bson.BsonDbPointer;
 import org.bson.BsonRegularExpression;
 import org.bson.BsonTimestamp;
@@ -23,46 +22,42 @@ import org.bson.types.Symbol;
 
 public class BsonTypeClassMap {
    static final BsonTypeClassMap DEFAULT_BSON_TYPE_CLASS_MAP = new BsonTypeClassMap();
-   private final Map<BsonType, Class<?>> map = new HashMap<>();
+   private final Class<?>[] bsonTypeOrdinalToClassMap = new Class[256];
 
    public BsonTypeClassMap(Map<BsonType, Class<?>> replacementsForDefaults) {
       this.addDefaults();
-      this.map.putAll(replacementsForDefaults);
+      replacementsForDefaults.forEach((key, value) -> this.bsonTypeOrdinalToClassMap[key.getValue()] = (Class<?>)value);
    }
 
    public BsonTypeClassMap() {
       this(Collections.emptyMap());
    }
 
-   Set<BsonType> keys() {
-      return this.map.keySet();
-   }
-
    public Class<?> get(BsonType bsonType) {
-      return this.map.get(bsonType);
+      return this.bsonTypeOrdinalToClassMap[bsonType.getValue()];
    }
 
    private void addDefaults() {
-      this.map.put(BsonType.ARRAY, List.class);
-      this.map.put(BsonType.BINARY, Binary.class);
-      this.map.put(BsonType.BOOLEAN, Boolean.class);
-      this.map.put(BsonType.DATE_TIME, Date.class);
-      this.map.put(BsonType.DB_POINTER, BsonDbPointer.class);
-      this.map.put(BsonType.DOCUMENT, Document.class);
-      this.map.put(BsonType.DOUBLE, Double.class);
-      this.map.put(BsonType.INT32, Integer.class);
-      this.map.put(BsonType.INT64, Long.class);
-      this.map.put(BsonType.DECIMAL128, Decimal128.class);
-      this.map.put(BsonType.MAX_KEY, MaxKey.class);
-      this.map.put(BsonType.MIN_KEY, MinKey.class);
-      this.map.put(BsonType.JAVASCRIPT, Code.class);
-      this.map.put(BsonType.JAVASCRIPT_WITH_SCOPE, CodeWithScope.class);
-      this.map.put(BsonType.OBJECT_ID, ObjectId.class);
-      this.map.put(BsonType.REGULAR_EXPRESSION, BsonRegularExpression.class);
-      this.map.put(BsonType.STRING, String.class);
-      this.map.put(BsonType.SYMBOL, Symbol.class);
-      this.map.put(BsonType.TIMESTAMP, BsonTimestamp.class);
-      this.map.put(BsonType.UNDEFINED, BsonUndefined.class);
+      this.bsonTypeOrdinalToClassMap[BsonType.ARRAY.getValue()] = List.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.BINARY.getValue()] = Binary.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.BOOLEAN.getValue()] = Boolean.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.DATE_TIME.getValue()] = Date.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.DB_POINTER.getValue()] = BsonDbPointer.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.DOCUMENT.getValue()] = Document.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.DOUBLE.getValue()] = Double.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.INT32.getValue()] = Integer.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.INT64.getValue()] = Long.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.DECIMAL128.getValue()] = Decimal128.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.MAX_KEY.getValue()] = MaxKey.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.MIN_KEY.getValue()] = MinKey.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.JAVASCRIPT.getValue()] = Code.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.JAVASCRIPT_WITH_SCOPE.getValue()] = CodeWithScope.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.OBJECT_ID.getValue()] = ObjectId.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.REGULAR_EXPRESSION.getValue()] = BsonRegularExpression.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.STRING.getValue()] = String.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.SYMBOL.getValue()] = Symbol.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.TIMESTAMP.getValue()] = BsonTimestamp.class;
+      this.bsonTypeOrdinalToClassMap[BsonType.UNDEFINED.getValue()] = BsonUndefined.class;
    }
 
    @Override
@@ -71,7 +66,7 @@ public class BsonTypeClassMap {
          return true;
       } else if (o != null && this.getClass() == o.getClass()) {
          BsonTypeClassMap that = (BsonTypeClassMap)o;
-         return this.map.equals(that.map);
+         return Arrays.equals(this.bsonTypeOrdinalToClassMap, that.bsonTypeOrdinalToClassMap);
       } else {
          return false;
       }
@@ -79,6 +74,6 @@ public class BsonTypeClassMap {
 
    @Override
    public int hashCode() {
-      return this.map.hashCode();
+      return Arrays.hashCode(this.bsonTypeOrdinalToClassMap);
    }
 }

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.blockphysics;
 
+import com.hypixel.hytale.builtin.fallingblocks.FallingBlock;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -94,7 +95,7 @@ public class BlockPhysicsUtil {
             int blockHeight = Math.max(maxY - minY, 1);
             int blockDepth = Math.max(maxZ - minZ, 1);
 
-            label136:
+            label137:
             for (int x = 0; x < blockWidth; x++) {
                for (int y = 0; y < blockHeight; y++) {
                   for (int z = 0; z < blockDepth; z++) {
@@ -140,7 +141,7 @@ public class BlockPhysicsUtil {
                            case Any:
                               if (fillerSupportDistance == -2) {
                                  supportDistance = -2;
-                                 break label136;
+                                 break label137;
                               }
 
                               if (fillerSupportDistance == 0) {
@@ -152,7 +153,7 @@ public class BlockPhysicsUtil {
                            case All:
                               if (fillerSupportDistance == 0) {
                                  supportDistance = 0;
-                                 break label136;
+                                 break label137;
                               }
 
                               if (fillerSupportDistance == -2) {
@@ -183,6 +184,9 @@ public class BlockPhysicsUtil {
                BlockHarvestUtils.naturallyRemoveBlockByPhysics(
                   new Vector3i(blockX, blockY, blockZ), blockType, filler, 2304, chunkReference, componentAccessor, chunkStore
                );
+               break;
+            case FALL:
+               FallingBlock.fallBlock(world, componentAccessor.getExternalData().getStore(), blockX, blockY, blockZ);
          }
 
          return BlockPhysicsUtil.Result.INVALID;

@@ -1,7 +1,7 @@
 package org.bouncycastle.pqc.crypto.mlkem;
 
 class Ntt {
-   public static final short[] nttZetas = new short[]{
+   static final short[] ZETAS = new short[]{
       2285,
       2571,
       2970,
@@ -131,7 +131,7 @@ class Ntt {
       1522,
       1628
    };
-   public static final short[] nttZetasInv = new short[]{
+   static final short[] ZETAS_INV = new short[]{
       1701,
       1807,
       1460,
@@ -262,72 +262,65 @@ class Ntt {
       1441
    };
 
-   public static short[] ntt(short[] var0) {
-      short[] var1 = new short[256];
-      System.arraycopy(var0, 0, var1, 0, var1.length);
-      int var5 = 1;
-
-      for (short var2 = 128; var2 >= 2; var2 >>= 1) {
-         int var3 = 0;
-
-         while (var3 < 256) {
-            short var7 = nttZetas[var5++];
-
-            int var4;
-            for (var4 = var3; var4 < var3 + var2; var4++) {
-               short var6 = factorQMulMont(var7, var1[var4 + var2]);
-               var1[var4 + var2] = (short)(var1[var4] - var6);
-               var1[var4] += var6;
-            }
-
-            var3 = var4 + var2;
-         }
-      }
-
-      return var1;
+   static short mulMont(short var0, short var1) {
+      return Reduce.montgomeryReduce(var0 * var1);
    }
 
-   public static short[] invNtt(short[] var0) {
-      short[] var1 = new short[256];
-      System.arraycopy(var0, 0, var1, 0, 256);
-      int var5 = 0;
+   static void ntt(short[] var0) {
+      int var2 = 1;
 
-      for (byte var2 = 2; var2 <= 128; var2 <<= 1) {
-         int var3 = 0;
+      for (short var3 = 128; var3 >= 2; var3 >>= 1) {
+         int var4 = 0;
 
-         while (var3 < 256) {
-            short var7 = nttZetasInv[var5++];
+         while (var4 < 256) {
+            short var5 = ZETAS[var2++];
 
-            int var4;
-            for (var4 = var3; var4 < var3 + var2; var4++) {
-               short var6 = var1[var4];
-               var1[var4] = Reduce.barretReduce((short)(var6 + var1[var4 + var2]));
-               var1[var4 + var2] = (short)(var6 - var1[var4 + var2]);
-               var1[var4 + var2] = factorQMulMont(var7, var1[var4 + var2]);
+            int var1;
+            for (var1 = var4; var1 < var4 + var3; var1++) {
+               short var6 = var0[var1];
+               short var7 = mulMont(var5, var0[var1 + var3]);
+               var0[var1 + var3] = (short)(var6 - var7);
+               var0[var1] = (short)(var6 + var7);
             }
 
-            var3 = var4 + var2;
+            var4 = var1 + var3;
+         }
+      }
+   }
+
+   static void invNtt(short[] var0) {
+      int var2 = 0;
+
+      for (byte var3 = 2; var3 <= 128; var3 <<= 1) {
+         int var4 = 0;
+
+         while (var4 < 256) {
+            short var5 = ZETAS_INV[var2++];
+
+            int var1;
+            for (var1 = var4; var1 < var4 + var3; var1++) {
+               short var6 = var0[var1];
+               short var7 = var0[var1 + var3];
+               var0[var1] = Reduce.barrettReduce((short)(var6 + var7));
+               var0[var1 + var3] = mulMont(var5, (short)(var6 - var7));
+            }
+
+            var4 = var1 + var3;
          }
       }
 
       for (int var8 = 0; var8 < 256; var8++) {
-         var1[var8] = factorQMulMont(var1[var8], nttZetasInv[127]);
+         var0[var8] = mulMont(var0[var8], ZETAS_INV[127]);
       }
-
-      return var1;
    }
 
-   public static short factorQMulMont(short var0, short var1) {
-      return Reduce.montgomeryReduce(var0 * var1);
-   }
-
-   public static void baseMult(Poly var0, int var1, short var2, short var3, short var4, short var5, short var6) {
-      short var7 = factorQMulMont(var3, var5);
-      var7 = factorQMulMont(var7, var6);
-      var7 = (short)(var7 + factorQMulMont(var2, var4));
-      var0.setCoeffIndex(var1, var7);
-      short var8 = factorQMulMont(var2, var5);
-      var8 = (short)(var8 + factorQMulMont(var3, var4));
-      var0.setCoeffIndex(var1 + 1, var8);
+   static void baseMult(short[] var0, int var1, short var2, short var3, short var4, short var5, short var6) {
+      short var7 = mulMont(var3, var5);
+      var7 = mulMont(var7, var6);
+      var7 = (short)(var7 + mulMont(var2, var4));
+      var0[var1] = var7;
+      short var8 = mulMont(var2, var5);
+      var8 = (short)(var8 + mulMont(var3, var4));
+      var0[var1 + 1] = var8;
    }
 }

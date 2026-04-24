@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -29,7 +28,7 @@ public class StackCommand extends AbstractPlayerCommand {
 
    public StackCommand() {
       super("stack", "server.commands.stack.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new StackCommand.StackWithCountCommand());
       this.addUsageVariant(new StackCommand.StackWithDirectionAndCountCommand());
    }
@@ -68,7 +67,7 @@ public class StackCommand extends AbstractPlayerCommand {
 
       public StackWithCountCommand() {
          super("server.commands.stack.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override
@@ -95,7 +94,7 @@ public class StackCommand extends AbstractPlayerCommand {
 
       public StackWithDirectionAndCountCommand() {
          super("server.commands.stack.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

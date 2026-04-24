@@ -140,38 +140,42 @@ public class KeyAgreementSpi extends BaseAgreementSpi {
                var6 = (ECPublicKeyParameters)ECUtils.generatePublicKeyParameter(var7.getEphemeralPublicKey());
             }
          } else {
-            MQVParameterSpec var13 = (MQVParameterSpec)var2;
+            MQVParameterSpec var14 = (MQVParameterSpec)var2;
             var4 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter((PrivateKey)var1);
-            var5 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter(var13.getEphemeralPrivateKey());
+            var5 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter(var14.getEphemeralPrivateKey());
             var6 = null;
-            if (var13.getEphemeralPublicKey() != null) {
-               var6 = (ECPublicKeyParameters)ECUtils.generatePublicKeyParameter(var13.getEphemeralPublicKey());
+            if (var14.getEphemeralPublicKey() != null) {
+               var6 = (ECPublicKeyParameters)ECUtils.generatePublicKeyParameter(var14.getEphemeralPublicKey());
             }
 
-            this.mqvParameters = var13;
-            this.ukmParameters = var13.getUserKeyingMaterial();
+            this.mqvParameters = var14;
+            this.ukmParameters = var14.getUserKeyingMaterial();
          }
 
-         MQVPrivateParameters var14 = new MQVPrivateParameters(var4, var5, var6);
-         this.parameters = var4.getParameters();
-         ((ECMQVBasicAgreement)this.agreement).init(var14);
+         try {
+            MQVPrivateParameters var15 = new MQVPrivateParameters(var4, var5, var6);
+            this.parameters = var4.getParameters();
+            ((ECMQVBasicAgreement)this.agreement).init(var15);
+         } catch (IllegalArgumentException var9) {
+            throw new InvalidAlgorithmParameterException(var9.getMessage());
+         }
       } else if (var2 instanceof DHUParameterSpec) {
          if (!(this.agreement instanceof ECDHCUnifiedAgreement)) {
             throw new InvalidAlgorithmParameterException(this.kaAlgorithm + " key agreement cannot be used with " + getSimpleName(DHUParameterSpec.class));
          }
 
-         DHUParameterSpec var9 = (DHUParameterSpec)var2;
-         ECPrivateKeyParameters var11 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter((PrivateKey)var1);
-         ECPrivateKeyParameters var12 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter(var9.getEphemeralPrivateKey());
-         ECPublicKeyParameters var15 = null;
-         if (var9.getEphemeralPublicKey() != null) {
-            var15 = (ECPublicKeyParameters)ECUtils.generatePublicKeyParameter(var9.getEphemeralPublicKey());
+         DHUParameterSpec var10 = (DHUParameterSpec)var2;
+         ECPrivateKeyParameters var12 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter((PrivateKey)var1);
+         ECPrivateKeyParameters var13 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter(var10.getEphemeralPrivateKey());
+         ECPublicKeyParameters var16 = null;
+         if (var10.getEphemeralPublicKey() != null) {
+            var16 = (ECPublicKeyParameters)ECUtils.generatePublicKeyParameter(var10.getEphemeralPublicKey());
          }
 
-         this.dheParameters = var9;
-         this.ukmParameters = var9.getUserKeyingMaterial();
-         ECDHUPrivateParameters var8 = new ECDHUPrivateParameters(var11, var12, var15);
-         this.parameters = var11.getParameters();
+         this.dheParameters = var10;
+         this.ukmParameters = var10.getUserKeyingMaterial();
+         ECDHUPrivateParameters var8 = new ECDHUPrivateParameters(var12, var13, var16);
+         this.parameters = var12.getParameters();
          ((ECDHCUnifiedAgreement)this.agreement).init(var8);
       } else {
          if (!(var1 instanceof PrivateKey)) {
@@ -182,10 +186,10 @@ public class KeyAgreementSpi extends BaseAgreementSpi {
             throw new InvalidAlgorithmParameterException("no KDF specified for UserKeyingMaterialSpec");
          }
 
-         ECPrivateKeyParameters var10 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter((PrivateKey)var1);
-         this.parameters = var10.getParameters();
+         ECPrivateKeyParameters var11 = (ECPrivateKeyParameters)ECUtils.generatePrivateKeyParameter((PrivateKey)var1);
+         this.parameters = var11.getParameters();
          this.ukmParameters = var2 instanceof UserKeyingMaterialSpec ? ((UserKeyingMaterialSpec)var2).getUserKeyingMaterial() : null;
-         ((BasicAgreement)this.agreement).init(var10);
+         ((BasicAgreement)this.agreement).init(var11);
       }
    }
 

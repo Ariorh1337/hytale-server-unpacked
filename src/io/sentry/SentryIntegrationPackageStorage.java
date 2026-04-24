@@ -106,16 +106,16 @@ public final class SentryIntegrationPackageStorage {
 
       boolean var10;
       try {
-         String sdkVersion = "8.29.0";
+         String sdkVersion = "8.30.0";
          boolean mixedVersionsDetectedThisCheck = false;
 
          for (SentryPackage pkg : this.packages) {
-            if (pkg.getName().startsWith("maven:io.sentry:") && !"8.29.0".equalsIgnoreCase(pkg.getVersion())) {
+            if (pkg.getName().startsWith("maven:io.sentry:") && !"8.30.0".equalsIgnoreCase(pkg.getVersion())) {
                logger.log(
                   SentryLevel.ERROR,
                   "The Sentry SDK has been configured with mixed versions. Expected %s to match core SDK version %s but was %s",
                   pkg.getName(),
-                  "8.29.0",
+                  "8.30.0",
                   pkg.getVersion()
                );
                mixedVersionsDetectedThisCheck = true;

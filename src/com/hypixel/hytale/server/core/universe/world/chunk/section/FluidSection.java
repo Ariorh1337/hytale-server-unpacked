@@ -16,12 +16,9 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.Abstr
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.EmptySectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.PaletteTypeEnum;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.lang.ref.SoftReference;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.StampedLock;
@@ -273,54 +270,55 @@ public class FluidSection implements Component<ChunkStore> {
       return this;
    }
 
-   private void serializeForPacket(@Nonnull ByteBuf buf) {
+   private byte[] serializeForPacket() {
       long stamp = this.lock.readLock();
 
       try {
-         buf.writeByte(this.typePalette.getPaletteType().ordinal());
-         this.typePalette.serializeForPacket(buf);
+         byte[] result = new byte[1 + this.typePalette.serializedPacketByteSize() + 1 + (this.levelData != null ? this.levelData.length : 0)];
+         MemorySegment data = MemorySegment.ofArray(result);
+         data.set(ValueLayout.JAVA_BYTE, 0L, (byte)this.typePalette.getPaletteType().ordinal());
+         int offset = 1 + this.typePalette.serializeForPacket(data, 1);
          if (this.levelData != null) {
-            buf.writeBoolean(true);
-            buf.writeBytes(this.levelData);
+            data.set(ValueLayout.JAVA_BOOLEAN, offset, true);
+            MemorySegment.copy(this.levelData, 0, data, ValueLayout.JAVA_BYTE, offset + 1, this.levelData.length);
          } else {
-            buf.writeBoolean(false);
+            data.set(ValueLayout.JAVA_BOOLEAN, offset, false);
          }
+
+         return result;
       } finally {
          this.lock.unlockRead(stamp);
       }
    }
 
    private byte[] serialize(ExtraInfo extraInfo) {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+      byte[] buf = new byte[1 + this.typePalette.serializedByteSize(Fluid.KEY_MEMORY_SERIALIZER) + 1 + (this.levelData != null ? this.levelData.length : 0)];
+      MemorySegment data = MemorySegment.ofArray(buf);
       long stamp = this.lock.readLock();
 
       try {
-         buf.writeByte(this.typePalette.getPaletteType().ordinal());
-         this.typePalette.serialize(Fluid.KEY_SERIALIZER, buf);
+         data.set(ValueLayout.JAVA_BYTE, 0L, (byte)this.typePalette.getPaletteType().ordinal());
+         int offset = 1 + this.typePalette.serialize(Fluid.KEY_MEMORY_SERIALIZER, data, 1);
          if (this.levelData != null) {
-            buf.writeBoolean(true);
-            buf.writeBytes(this.levelData);
+            data.set(ValueLayout.JAVA_BOOLEAN, offset, true);
+            MemorySegment.copy(this.levelData, 0, data, ValueLayout.JAVA_BYTE, offset + 1, this.levelData.length);
          } else {
-            buf.writeBoolean(false);
+            data.set(ValueLayout.JAVA_BOOLEAN, offset, false);
          }
-
-         return ByteBufUtil.getBytesRelease(buf);
-      } catch (Throwable e) {
-         buf.release();
-         throw SneakyThrow.sneakyThrow(e);
       } finally {
          this.lock.unlockRead(stamp);
       }
+
+      return buf;
    }
 
    private void deserialize(@Nonnull byte[] bytes, ExtraInfo extraInfo) {
-      ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-      PaletteTypeEnum type = PaletteTypeEnum.get(buf.readByte());
+      MemorySegment data = MemorySegment.ofArray(bytes);
+      PaletteTypeEnum type = PaletteTypeEnum.get(data.get(ValueLayout.JAVA_BYTE, 0L));
       this.typePalette = type.getConstructor().get();
-      this.typePalette.deserialize(Fluid.KEY_DESERIALIZER, buf, 0);
-      if (buf.readBoolean()) {
-         this.levelData = new byte[16384];
-         buf.readBytes(this.levelData);
+      int offset = 1 + this.typePalette.deserialize(Fluid.KEY_MEMORY_DESERIALIZER, data, 1);
+      if (data.get(ValueLayout.JAVA_BOOLEAN, offset)) {
+         this.levelData = data.asSlice(offset + 1, 16384L).toArray(ValueLayout.JAVA_BYTE);
          this.nonZeroLevels = 0;
 
          for (int i = 0; i < 16384; i++) {
@@ -347,9 +345,7 @@ public class FluidSection implements Component<ChunkStore> {
       }
 
       future = CompletableFuture.supplyAsync(() -> {
-         ByteBuf buf = Unpooled.buffer(65536);
-         this.serializeForPacket(buf);
-         byte[] data = ByteBufUtil.getBytesRelease(buf);
+         byte[] data = this.serializeForPacket();
          SetFluids packet = new SetFluids(this.x, this.y, this.z, data);
          return CachedPacket.cache(packet);
       });

@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import org.bouncycastle.util.Arrays;
+import org.bouncycastle.util.Integers;
 
 public abstract class ASN1BitString extends ASN1Primitive implements ASN1String, ASN1BitStringParser {
    static final ASN1UniversalType TYPE = new ASN1UniversalType(ASN1BitString.class, 3) {
@@ -17,6 +18,7 @@ public abstract class ASN1BitString extends ASN1Primitive implements ASN1String,
          return var1.toASN1BitString();
       }
    };
+   static final byte[] EMPTY_OCTETS_CONTENTS = new byte[]{0};
    private static final char[] table = new char[]{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
    final byte[] contents;
 
@@ -49,6 +51,7 @@ public abstract class ASN1BitString extends ASN1Primitive implements ASN1String,
       return (ASN1BitString)TYPE.getTagged(var0, var1);
    }
 
+   /** @deprecated */
    protected static int getPadBits(int var0) {
       int var1 = 0;
 
@@ -77,6 +80,7 @@ public abstract class ASN1BitString extends ASN1Primitive implements ASN1String,
       return 8 - var3;
    }
 
+   /** @deprecated */
    protected static byte[] getBytes(int var0) {
       if (var0 == 0) {
          return new byte[0];
@@ -110,14 +114,34 @@ public abstract class ASN1BitString extends ASN1Primitive implements ASN1String,
          throw new NullPointerException("'data' cannot be null");
       }
 
+      if (var2 > 7 || var2 < 0) {
+         throw new IllegalArgumentException("pad bits cannot be greater than 7 or less than 0");
+      }
+
       if (var1.length == 0 && var2 != 0) {
          throw new IllegalArgumentException("zero length data with non-zero pad bits");
       }
 
-      if (var2 <= 7 && var2 >= 0) {
-         this.contents = Arrays.prepend(var1, (byte)var2);
+      this.contents = Arrays.prepend(var1, (byte)var2);
+   }
+
+   ASN1BitString(int var1) {
+      if (var1 == 0) {
+         this.contents = EMPTY_OCTETS_CONTENTS;
       } else {
-         throw new IllegalArgumentException("pad bits cannot be greater than 7 or less than 0");
+         int var2 = Integers.bitLength(var1);
+         int var3 = (var2 + 7) / 8;
+         byte[] var4 = new byte[1 + var3];
+
+         for (int var5 = 1; var5 < var3; var5++) {
+            var4[var5] = (byte)var1;
+            var1 >>>= 8;
+         }
+
+         var4[var3] = (byte)var1;
+         int var6 = Integers.numberOfTrailingZeros(var1);
+         var4[0] = (byte)var6;
+         this.contents = var4;
       }
    }
 
@@ -207,7 +231,7 @@ public abstract class ASN1BitString extends ASN1Primitive implements ASN1String,
       if (this.contents[0] != 0) {
          throw new IllegalStateException("attempt to get non-octet aligned data from BIT STRING");
       } else {
-         return Arrays.copyOfRange(this.contents, 1, this.contents.length);
+         return this.contents.length == 1 ? ASN1OctetString.EMPTY_OCTETS : Arrays.copyOfRange(this.contents, 1, this.contents.length);
       }
    }
 

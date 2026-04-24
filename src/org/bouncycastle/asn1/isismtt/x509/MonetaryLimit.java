@@ -39,8 +39,8 @@ public class MonetaryLimit extends ASN1Object {
 
    public MonetaryLimit(String var1, int var2, int var3) {
       this.currency = new DERPrintableString(var1, true);
-      this.amount = new ASN1Integer(var2);
-      this.exponent = new ASN1Integer(var3);
+      this.amount = ASN1Integer.valueOf(var2);
+      this.exponent = ASN1Integer.valueOf(var3);
    }
 
    public String getCurrency() {

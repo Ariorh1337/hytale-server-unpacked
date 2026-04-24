@@ -15,35 +15,34 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.DestroyFailedException;
-import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.SecretWithEncapsulation;
 import org.bouncycastle.crypto.Wrapper;
+import org.bouncycastle.crypto.kems.MLKEMExtractor;
+import org.bouncycastle.crypto.kems.MLKEMGenerator;
+import org.bouncycastle.crypto.params.MLKEMParameters;
+import org.bouncycastle.jcajce.provider.asymmetric.util.WrapUtil;
 import org.bouncycastle.jcajce.spec.KTSParameterSpec;
 import org.bouncycastle.jcajce.spec.MLKEMParameterSpec;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMExtractor;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMGenerator;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters;
-import org.bouncycastle.pqc.jcajce.provider.util.WrapUtil;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Exceptions;
 
-class MLKEMCipherSpi extends CipherSpi {
+public class MLKEMCipherSpi extends CipherSpi {
+   private final MLKEMParameters mlkemParameters;
    private final String algorithmName;
    private MLKEMGenerator kemGen;
    private KTSParameterSpec kemParameterSpec;
    private BCMLKEMPublicKey wrapKey;
    private BCMLKEMPrivateKey unwrapKey;
    private AlgorithmParameters engineParams;
-   private MLKEMParameters mlkemParamters;
 
-   MLKEMCipherSpi(String var1) {
+   public MLKEMCipherSpi(String var1) {
+      this.mlkemParameters = null;
       this.algorithmName = var1;
-      this.mlkemParamters = null;
    }
 
-   MLKEMCipherSpi(MLKEMParameters var1) {
-      this.mlkemParamters = var1;
+   public MLKEMCipherSpi(MLKEMParameters var1) {
+      this.mlkemParameters = var1;
       this.algorithmName = var1.getName();
    }
 
@@ -118,7 +117,7 @@ class MLKEMCipherSpi extends CipherSpi {
          }
 
          this.wrapKey = (BCMLKEMPublicKey)var2;
-         this.kemGen = new MLKEMGenerator(CryptoServicesRegistrar.getSecureRandom(var4));
+         this.kemGen = new MLKEMGenerator(var4);
       } else {
          if (var1 != 4) {
             throw new InvalidParameterException("Cipher only valid for wrapping/unwrapping");
@@ -131,8 +130,8 @@ class MLKEMCipherSpi extends CipherSpi {
          this.unwrapKey = (BCMLKEMPrivateKey)var2;
       }
 
-      if (this.mlkemParamters != null) {
-         String var5 = MLKEMParameterSpec.fromName(this.mlkemParamters.getName()).getName();
+      if (this.mlkemParameters != null) {
+         String var5 = MLKEMParameterSpec.fromName(this.mlkemParameters.getName()).getName();
          if (!var5.equals(var2.getAlgorithm())) {
             throw new InvalidKeyException("cipher locked to " + var5);
          }
@@ -187,18 +186,20 @@ class MLKEMCipherSpi extends CipherSpi {
          Wrapper var4 = WrapUtil.getKeyWrapper(this.kemParameterSpec, var3.getSecret());
          byte[] var5 = var3.getEncapsulation();
          byte[] var6 = var1.getEncoded();
-         byte[] var7 = Arrays.concatenate(var5, var4.wrap(var6, 0, var6.length));
-         Arrays.clear(var6);
-         return var7;
-      } catch (IllegalArgumentException var16) {
-         throw new IllegalBlockSizeException("unable to generate KTS secret: " + var16.getMessage());
+
+         try {
+            return Arrays.concatenate(var5, var4.wrap(var6, 0, var6.length));
+         } finally {
+            Arrays.clear(var6);
+         }
+      } catch (IllegalArgumentException var23) {
+         throw new IllegalBlockSizeException("unable to generate KTS secret: " + var23.getMessage());
       } finally {
          try {
             if (var3 != null) {
                var3.destroy();
             }
-         } catch (DestroyFailedException var17) {
-            throw new IllegalBlockSizeException("unable to destroy interim values: " + var17.getMessage());
+         } catch (DestroyFailedException var21) {
          }
       }
    }
@@ -222,14 +223,12 @@ class MLKEMCipherSpi extends CipherSpi {
       } catch (InvalidCipherTextException var15) {
          throw new InvalidKeyException("unable to extract KTS secret: " + var15.getMessage());
       } finally {
-         if (var4 != null) {
-            Arrays.clear(var4);
-         }
+         Arrays.clear(var4);
       }
    }
 
    public static class Base extends MLKEMCipherSpi {
-      public Base() throws NoSuchAlgorithmException {
+      public Base() {
          super("MLKEM");
       }
    }

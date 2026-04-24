@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mldsa;
 
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 
+@Deprecated
 public class MLDSAKeyParameters extends AsymmetricKeyParameter {
    private final MLDSAParameters params;
 

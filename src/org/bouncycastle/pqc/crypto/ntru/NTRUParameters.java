@@ -24,6 +24,10 @@ public class NTRUParameters implements KEMParameters {
       this.parameterSet = var2;
    }
 
+   public int getEncapsulationLength() {
+      return this.getParameterSet().ntruCiphertextBytes();
+   }
+
    public String getName() {
       return this.name;
    }

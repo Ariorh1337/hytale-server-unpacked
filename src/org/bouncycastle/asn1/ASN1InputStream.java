@@ -5,12 +5,16 @@ import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import org.bouncycastle.util.Properties;
 import org.bouncycastle.util.io.Streams;
 
 public class ASN1InputStream extends FilterInputStream implements BERTags {
+   static final String MAX_CONS_DEPTH = "org.bouncycastle.asn1.max_cons_depth";
    private final int limit;
    private final boolean lazyEvaluate;
    private final byte[][] tmpBuffers;
+   private final int level;
+   private final int maxLevel;
 
    public ASN1InputStream(InputStream var1) {
       this(var1, StreamUtil.findLimit(var1));
@@ -41,9 +45,20 @@ public class ASN1InputStream extends FilterInputStream implements BERTags {
       this.limit = var2;
       this.lazyEvaluate = var3;
       this.tmpBuffers = var4;
+      this.level = 0;
+      this.maxLevel = Properties.asInteger("org.bouncycastle.asn1.max_cons_depth", 32);
    }
 
-   int getLimit() {
+   private ASN1InputStream(InputStream var1, int var2, boolean var3, byte[][] var4, int var5, int var6) {
+      super(var1);
+      this.limit = var2;
+      this.lazyEvaluate = var3;
+      this.tmpBuffers = var4;
+      this.level = var5;
+      this.maxLevel = var6;
+   }
+
+   protected int getLimit() {
       return this.limit;
    }
 
@@ -217,7 +232,13 @@ public class ASN1InputStream extends FilterInputStream implements BERTags {
 
    ASN1EncodableVector readVector(DefiniteLengthInputStream var1) throws IOException {
       int var2 = var1.getRemaining();
-      return var2 < 1 ? new ASN1EncodableVector(0) : new ASN1InputStream(var1, var2, this.lazyEvaluate, this.tmpBuffers).readVector();
+      if (var2 < 1) {
+         return new ASN1EncodableVector(0);
+      } else if (this.level == this.maxLevel) {
+         throw new IOException("maximum nested construction level reached - increase org.bouncycastle.asn1.max_cons_depth (currently " + this.maxLevel + ")");
+      } else {
+         return new ASN1InputStream(var1, var2, this.lazyEvaluate, this.tmpBuffers, this.level + 1, this.maxLevel).readVector();
+      }
    }
 
    static int readTagNumber(InputStream var0, int var1) throws IOException {

@@ -1,5 +1,6 @@
 package org.bouncycastle.pqc.crypto.slhdsa;
 
+@Deprecated
 public class SLHDSAParameters {
    public static final int TYPE_PURE = 0;
    public static final int TYPE_SHA2_256 = 1;
@@ -55,10 +56,10 @@ public class SLHDSAParameters {
       "shake-256s-with-shake256", new SLHDSAParameters.Shake256EngineProvider(32, 16, 8, 14, 22, 64), 4
    );
    private final String name;
-   private final SLHDSAEngineProvider engineProvider;
+   private final SLHDSAParameters.SLHDSAEngineProvider engineProvider;
    private final int preHashDigest;
 
-   private SLHDSAParameters(String var1, SLHDSAEngineProvider var2, int var3) {
+   private SLHDSAParameters(String var1, SLHDSAParameters.SLHDSAEngineProvider var2, int var3) {
       this.name = var1;
       this.engineProvider = var2;
       this.preHashDigest = var3;
@@ -84,7 +85,13 @@ public class SLHDSAParameters {
       return this.preHashDigest != 0;
    }
 
-   private static class Sha2EngineProvider implements SLHDSAEngineProvider {
+   interface SLHDSAEngineProvider {
+      int getN();
+
+      SLHDSAEngine get();
+   }
+
+   private static class Sha2EngineProvider implements SLHDSAParameters.SLHDSAEngineProvider {
       private final int n;
       private final int w;
       private final int d;
@@ -92,7 +99,7 @@ public class SLHDSAParameters {
       private final int k;
       private final int h;
 
-      public Sha2EngineProvider(int var1, int var2, int var3, int var4, int var5, int var6) {
+      Sha2EngineProvider(int var1, int var2, int var3, int var4, int var5, int var6) {
          this.n = var1;
          this.w = var2;
          this.d = var3;
@@ -112,7 +119,7 @@ public class SLHDSAParameters {
       }
    }
 
-   private static class Shake256EngineProvider implements SLHDSAEngineProvider {
+   private static class Shake256EngineProvider implements SLHDSAParameters.SLHDSAEngineProvider {
       private final int n;
       private final int w;
       private final int d;
@@ -120,7 +127,7 @@ public class SLHDSAParameters {
       private final int k;
       private final int h;
 
-      public Shake256EngineProvider(int var1, int var2, int var3, int var4, int var5, int var6) {
+      Shake256EngineProvider(int var1, int var2, int var3, int var4, int var5, int var6) {
          this.n = var1;
          this.w = var2;
          this.d = var3;

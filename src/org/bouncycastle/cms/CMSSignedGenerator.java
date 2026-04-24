@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +62,7 @@ public class CMSSignedGenerator {
    protected List signerGens = new ArrayList();
    protected Map digests = new HashMap();
    protected DigestAlgorithmIdentifierFinder digestAlgIdFinder;
+   protected Set<AlgorithmIdentifier> extraDigestAlgorithms = new LinkedHashSet<>();
 
    protected CMSSignedGenerator() {
       this(new DefaultDigestAlgorithmIdentifierFinder());
@@ -126,6 +128,10 @@ public class CMSSignedGenerator {
 
    public Map getGeneratedDigests() {
       return new HashMap(this.digests);
+   }
+
+   public void addDigestAlgorithms(Set<AlgorithmIdentifier> var1) {
+      this.extraDigestAlgorithms.addAll(var1);
    }
 
    static {

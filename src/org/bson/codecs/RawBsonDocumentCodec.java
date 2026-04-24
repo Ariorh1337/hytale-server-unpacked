@@ -14,9 +14,17 @@ public class RawBsonDocumentCodec implements Codec<RawBsonDocument> {
 
       try {
          writer.pipe(reader);
-      } finally {
-         reader.close();
+      } catch (Throwable var8) {
+         try {
+            reader.close();
+         } catch (Throwable var7) {
+            var8.addSuppressed(var7);
+         }
+
+         throw var8;
       }
+
+      reader.close();
    }
 
    public RawBsonDocument decode(BsonReader reader, DecoderContext decoderContext) {

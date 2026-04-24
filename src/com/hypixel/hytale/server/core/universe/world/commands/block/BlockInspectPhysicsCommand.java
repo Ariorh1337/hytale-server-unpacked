@@ -31,7 +31,7 @@ public class BlockInspectPhysicsCommand extends AbstractPlayerCommand {
 
    public BlockInspectPhysicsCommand() {
       super("inspectphys", "server.commands.block.inspectphys.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

@@ -147,6 +147,18 @@ public abstract class Nat {
       return (int)var5;
    }
 
+   public static int addTo(int var0, int[] var1, int[] var2, int var3) {
+      long var4 = var3 & 4294967295L;
+
+      for (int var6 = 0; var6 < var0; var6++) {
+         var4 += (var1[var6] & 4294967295L) + (var2[var6] & 4294967295L);
+         var2[var6] = (int)var4;
+         var4 >>>= 32;
+      }
+
+      return (int)var4;
+   }
+
    public static int addTo(int var0, int[] var1, int var2, int[] var3, int var4, int var5) {
       long var6 = var5 & 4294967295L;
 
@@ -157,6 +169,19 @@ public abstract class Nat {
       }
 
       return (int)var6;
+   }
+
+   public static int addToEachOther(int var0, int[] var1, int[] var2) {
+      long var3 = 0L;
+
+      for (int var5 = 0; var5 < var0; var5++) {
+         var3 += (var1[var5] & 4294967295L) + (var2[var5] & 4294967295L);
+         var1[var5] = (int)var3;
+         var2[var5] = (int)var3;
+         var3 >>>= 32;
+      }
+
+      return (int)var3;
    }
 
    public static int addToEachOther(int var0, int[] var1, int var2, int[] var3, int var4) {
@@ -239,8 +264,8 @@ public abstract class Nat {
 
    public static int compare(int var0, int[] var1, int[] var2) {
       for (int var3 = var0 - 1; var3 >= 0; var3--) {
-         int var4 = var1[var3] ^ Integer.MIN_VALUE;
-         int var5 = var2[var3] ^ Integer.MIN_VALUE;
+         int var4 = var1[var3] + Integer.MIN_VALUE;
+         int var5 = var2[var3] + Integer.MIN_VALUE;
          if (var4 < var5) {
             return -1;
          }
@@ -255,8 +280,8 @@ public abstract class Nat {
 
    public static int compare(int var0, int[] var1, int var2, int[] var3, int var4) {
       for (int var5 = var0 - 1; var5 >= 0; var5--) {
-         int var6 = var1[var2 + var5] ^ Integer.MIN_VALUE;
-         int var7 = var3[var4 + var5] ^ Integer.MIN_VALUE;
+         int var6 = var1[var2 + var5] + Integer.MIN_VALUE;
+         int var7 = var3[var4 + var5] + Integer.MIN_VALUE;
          if (var6 < var7) {
             return -1;
          }
@@ -329,6 +354,14 @@ public abstract class Nat {
       }
 
       return (int)var10;
+   }
+
+   public static int czero(int var0) {
+      return (var0 - 1 & ~var0) >> 31;
+   }
+
+   public static long czero64(long var0) {
+      return (var0 - 1L & ~var0) >> 63;
    }
 
    public static int dec(int var0, int[] var1) {
@@ -409,8 +442,7 @@ public abstract class Nat {
          var3 |= var1[var4];
       }
 
-      var3 = var3 >>> 1 | var3 & 1;
-      return var3 - 1 >> 31;
+      return czero(var3);
    }
 
    public static int equalTo(int var0, int[] var1, int var2, int var3) {
@@ -420,8 +452,7 @@ public abstract class Nat {
          var4 |= var1[var2 + var5];
       }
 
-      var4 = var4 >>> 1 | var4 & 1;
-      return var4 - 1 >> 31;
+      return czero(var4);
    }
 
    public static int equalTo(int var0, int[] var1, int[] var2) {
@@ -431,8 +462,7 @@ public abstract class Nat {
          var3 |= var1[var4] ^ var2[var4];
       }
 
-      var3 = var3 >>> 1 | var3 & 1;
-      return var3 - 1 >> 31;
+      return czero(var3);
    }
 
    public static int equalTo(int var0, int[] var1, int var2, int[] var3, int var4) {
@@ -442,8 +472,47 @@ public abstract class Nat {
          var5 |= var1[var2 + var6] ^ var3[var4 + var6];
       }
 
-      var5 = var5 >>> 1 | var5 & 1;
-      return var5 - 1 >> 31;
+      return czero(var5);
+   }
+
+   public static long equalTo64(int var0, long[] var1, long var2) {
+      long var4 = var1[0] ^ var2;
+
+      for (int var6 = 1; var6 < var0; var6++) {
+         var4 |= var1[var6];
+      }
+
+      return czero64(var4);
+   }
+
+   public static long equalTo64(int var0, long[] var1, int var2, long var3) {
+      long var5 = var1[var2] ^ var3;
+
+      for (int var7 = 1; var7 < var0; var7++) {
+         var5 |= var1[var2 + var7];
+      }
+
+      return czero64(var5);
+   }
+
+   public static long equalTo64(int var0, long[] var1, long[] var2) {
+      long var3 = 0L;
+
+      for (int var5 = 0; var5 < var0; var5++) {
+         var3 |= var1[var5] ^ var2[var5];
+      }
+
+      return czero64(var3);
+   }
+
+   public static long equalTo64(int var0, long[] var1, int var2, long[] var3, int var4) {
+      long var5 = 0L;
+
+      for (int var7 = 0; var7 < var0; var7++) {
+         var5 |= var1[var2 + var7] ^ var3[var4 + var7];
+      }
+
+      return czero64(var5);
    }
 
    public static int equalToZero(int var0, int[] var1) {
@@ -453,8 +522,7 @@ public abstract class Nat {
          var2 |= var1[var3];
       }
 
-      var2 = var2 >>> 1 | var2 & 1;
-      return var2 - 1 >> 31;
+      return czero(var2);
    }
 
    public static int equalToZero(int var0, int[] var1, int var2) {
@@ -464,8 +532,27 @@ public abstract class Nat {
          var3 |= var1[var2 + var4];
       }
 
-      var3 = var3 >>> 1 | var3 & 1;
-      return var3 - 1 >> 31;
+      return czero(var3);
+   }
+
+   public static long equalToZero64(int var0, long[] var1) {
+      long var2 = 0L;
+
+      for (int var4 = 0; var4 < var0; var4++) {
+         var2 |= var1[var4];
+      }
+
+      return czero64(var2);
+   }
+
+   public static long equalToZero64(int var0, long[] var1, int var2) {
+      long var3 = 0L;
+
+      for (int var5 = 0; var5 < var0; var5++) {
+         var3 |= var1[var2 + var5];
+      }
+
+      return czero64(var3);
    }
 
    public static int[] fromBigInteger(int var0, BigInteger var1) {
@@ -518,7 +605,7 @@ public abstract class Nat {
       for (int var2 = var0 - 1; var2 >= 0; var2--) {
          int var3 = var1[var2];
          if (var3 != 0) {
-            return var2 * 32 + 32 - Integers.numberOfLeadingZeros(var3);
+            return var2 * 32 + Integers.bitLength(var3);
          }
       }
 
@@ -529,7 +616,7 @@ public abstract class Nat {
       for (int var3 = var0 - 1; var3 >= 0; var3--) {
          int var4 = var1[var2 + var3];
          if (var4 != 0) {
-            return var3 * 32 + 32 - Integers.numberOfLeadingZeros(var4);
+            return var3 * 32 + Integers.bitLength(var4);
          }
       }
 
@@ -538,8 +625,8 @@ public abstract class Nat {
 
    public static boolean gte(int var0, int[] var1, int[] var2) {
       for (int var3 = var0 - 1; var3 >= 0; var3--) {
-         int var4 = var1[var3] ^ Integer.MIN_VALUE;
-         int var5 = var2[var3] ^ Integer.MIN_VALUE;
+         int var4 = var1[var3] + Integer.MIN_VALUE;
+         int var5 = var2[var3] + Integer.MIN_VALUE;
          if (var4 < var5) {
             return false;
          }
@@ -554,8 +641,8 @@ public abstract class Nat {
 
    public static boolean gte(int var0, int[] var1, int var2, int[] var3, int var4) {
       for (int var5 = var0 - 1; var5 >= 0; var5--) {
-         int var6 = var1[var2 + var5] ^ Integer.MIN_VALUE;
-         int var7 = var3[var4 + var5] ^ Integer.MIN_VALUE;
+         int var6 = var1[var2 + var5] + Integer.MIN_VALUE;
+         int var7 = var3[var4 + var5] + Integer.MIN_VALUE;
          if (var6 < var7) {
             return false;
          }
@@ -1287,6 +1374,134 @@ public abstract class Nat {
       return new BigInteger(1, var2);
    }
 
+   public static void xor(int var0, int[] var1, int var2, int[] var3) {
+      for (int var4 = 0; var4 < var0; var4++) {
+         var3[var4] = var1[var4] ^ var2;
+      }
+   }
+
+   public static void xor(int var0, int[] var1, int var2, int var3, int[] var4, int var5) {
+      for (int var6 = 0; var6 < var0; var6++) {
+         var4[var5 + var6] = var1[var2 + var6] ^ var3;
+      }
+   }
+
+   public static void xor(int var0, int[] var1, int[] var2, int[] var3) {
+      for (int var4 = 0; var4 < var0; var4++) {
+         var3[var4] = var1[var4] ^ var2[var4];
+      }
+   }
+
+   public static void xor(int var0, int[] var1, int var2, int[] var3, int var4, int[] var5, int var6) {
+      for (int var7 = 0; var7 < var0; var7++) {
+         var5[var6 + var7] = var1[var2 + var7] ^ var3[var4 + var7];
+      }
+   }
+
+   public static void xor64(int var0, long[] var1, long var2, long[] var4) {
+      for (int var5 = 0; var5 < var0; var5++) {
+         var4[var5] = var1[var5] ^ var2;
+      }
+   }
+
+   public static void xor64(int var0, long[] var1, int var2, long var3, long[] var5, int var6) {
+      for (int var7 = 0; var7 < var0; var7++) {
+         var5[var6 + var7] = var1[var2 + var7] ^ var3;
+      }
+   }
+
+   public static void xor64(int var0, long[] var1, long[] var2, long[] var3) {
+      for (int var4 = 0; var4 < var0; var4++) {
+         var3[var4] = var1[var4] ^ var2[var4];
+      }
+   }
+
+   public static void xor64(int var0, long[] var1, int var2, long[] var3, int var4, long[] var5, int var6) {
+      for (int var7 = 0; var7 < var0; var7++) {
+         var5[var6 + var7] = var1[var2 + var7] ^ var3[var4 + var7];
+      }
+   }
+
+   public static void xorBothTo(int var0, int[] var1, int[] var2, int[] var3) {
+      for (int var4 = 0; var4 < var0; var4++) {
+         var3[var4] ^= var1[var4] ^ var2[var4];
+      }
+   }
+
+   public static void xorBothTo(int var0, int[] var1, int var2, int[] var3, int var4, int[] var5, int var6) {
+      for (int var7 = 0; var7 < var0; var7++) {
+         var5[var6 + var7] = var5[var6 + var7] ^ var1[var2 + var7] ^ var3[var4 + var7];
+      }
+   }
+
+   public static void xorBothTo64(int var0, long[] var1, long[] var2, long[] var3) {
+      for (int var4 = 0; var4 < var0; var4++) {
+         var3[var4] ^= var1[var4] ^ var2[var4];
+      }
+   }
+
+   public static void xorBothTo64(int var0, long[] var1, int var2, long[] var3, int var4, long[] var5, int var6) {
+      for (int var7 = 0; var7 < var0; var7++) {
+         var5[var6 + var7] = var5[var6 + var7] ^ var1[var2 + var7] ^ var3[var4 + var7];
+      }
+   }
+
+   public static void xorTo(int var0, int[] var1, int[] var2) {
+      for (int var3 = 0; var3 < var0; var3++) {
+         var2[var3] ^= var1[var3];
+      }
+   }
+
+   public static void xorTo(int var0, int[] var1, int var2, int[] var3, int var4) {
+      for (int var5 = 0; var5 < var0; var5++) {
+         var3[var4 + var5] = var3[var4 + var5] ^ var1[var2 + var5];
+      }
+   }
+
+   public static void xorTo64(int var0, long[] var1, long[] var2) {
+      for (int var3 = 0; var3 < var0; var3++) {
+         var2[var3] ^= var1[var3];
+      }
+   }
+
+   public static void xorTo64(int var0, long[] var1, int var2, long[] var3, int var4) {
+      for (int var5 = 0; var5 < var0; var5++) {
+         var3[var4 + var5] = var3[var4 + var5] ^ var1[var2 + var5];
+      }
+   }
+
+   public static void xorToEachOther(int var0, int[] var1, int[] var2) {
+      for (int var3 = 0; var3 < var0; var3++) {
+         int var4 = var1[var3] ^ var2[var3];
+         var1[var3] = var4;
+         var2[var3] = var4;
+      }
+   }
+
+   public static void xorToEachOther(int var0, int[] var1, int var2, int[] var3, int var4) {
+      for (int var5 = 0; var5 < var0; var5++) {
+         int var6 = var1[var2 + var5] ^ var3[var4 + var5];
+         var1[var2 + var5] = var6;
+         var3[var4 + var5] = var6;
+      }
+   }
+
+   public static void xorToEachOther64(int var0, long[] var1, long[] var2) {
+      for (int var3 = 0; var3 < var0; var3++) {
+         long var4 = var1[var3] ^ var2[var3];
+         var1[var3] = var4;
+         var2[var3] = var4;
+      }
+   }
+
+   public static void xorToEachOther64(int var0, long[] var1, int var2, long[] var3, int var4) {
+      for (int var5 = 0; var5 < var0; var5++) {
+         long var6 = var1[var2 + var5] ^ var3[var4 + var5];
+         var1[var2 + var5] = var6;
+         var3[var4 + var5] = var6;
+      }
+   }
+
    public static void zero(int var0, int[] var1) {
       for (int var2 = 0; var2 < var0; var2++) {
          var1[var2] = 0;
@@ -1302,6 +1517,12 @@ public abstract class Nat {
    public static void zero64(int var0, long[] var1) {
       for (int var2 = 0; var2 < var0; var2++) {
          var1[var2] = 0L;
+      }
+   }
+
+   public static void zero64(int var0, long[] var1, int var2) {
+      for (int var3 = 0; var3 < var0; var3++) {
+         var1[var2 + var3] = 0L;
       }
    }
 }

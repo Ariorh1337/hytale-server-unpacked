@@ -3,9 +3,20 @@ package org.bson;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import org.bson.assertions.Assertions;
 import org.bson.io.ByteBufferBsonInput;
 
 public class BasicBSONDecoder implements BSONDecoder {
+   private static volatile UuidRepresentation defaultUuidRepresentation = UuidRepresentation.JAVA_LEGACY;
+
+   public static void setDefaultUuidRepresentation(UuidRepresentation uuidRepresentation) {
+      defaultUuidRepresentation = Assertions.notNull("uuidRepresentation", uuidRepresentation);
+   }
+
+   public static UuidRepresentation getDefaultUuidRepresentation() {
+      return defaultUuidRepresentation;
+   }
+
    @Override
    public BSONObject readObject(byte[] bytes) {
       BSONCallback bsonCallback = new BasicBSONCallback();
@@ -22,13 +33,23 @@ public class BasicBSONDecoder implements BSONDecoder {
    public int decode(byte[] bytes, BSONCallback callback) {
       BsonBinaryReader reader = new BsonBinaryReader(new ByteBufferBsonInput(new ByteBufNIO(ByteBuffer.wrap(bytes))));
 
+      int var5;
       try {
          BsonWriter writer = new BSONCallbackAdapter(new BsonWriterSettings(), callback);
          writer.pipe(reader);
-         return reader.getBsonInput().getPosition();
-      } finally {
-         reader.close();
+         var5 = reader.getBsonInput().getPosition();
+      } catch (Throwable var7) {
+         try {
+            reader.close();
+         } catch (Throwable var6) {
+            var7.addSuppressed(var6);
+         }
+
+         throw var7;
       }
+
+      reader.close();
+      return var5;
    }
 
    @Override

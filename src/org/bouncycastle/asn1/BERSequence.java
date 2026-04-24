@@ -3,6 +3,16 @@ package org.bouncycastle.asn1;
 import java.io.IOException;
 
 public class BERSequence extends ASN1Sequence {
+   public static final BERSequence EMPTY = new BERSequence();
+
+   public static BERSequence fromElementsOptional(ASN1Encodable[] var0) {
+      if (var0 == null) {
+         return null;
+      } else {
+         return var0.length < 1 ? EMPTY : new BERSequence(var0);
+      }
+   }
+
    public BERSequence() {
    }
 

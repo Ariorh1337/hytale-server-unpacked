@@ -448,7 +448,7 @@ public class ElephantEngine extends AEADBaseEngine {
    }
 
    private class Dumbo extends ElephantEngine.Spongent {
-      public Dumbo() {
+      Dumbo() {
          super(160, 20, 80, (byte)117);
       }
 
@@ -469,7 +469,7 @@ public class ElephantEngine extends AEADBaseEngine {
    }
 
    private class Jumbo extends ElephantEngine.Spongent {
-      public Jumbo() {
+      Jumbo() {
          super(176, 22, 90, (byte)69);
       }
 
@@ -753,7 +753,7 @@ public class ElephantEngine extends AEADBaseEngine {
          102
       };
 
-      public Spongent(int var1, int var2, int var3, byte var4) {
+      Spongent(int var1, int var2, int var3, byte var4) {
          this.nRounds = var3;
          this.nSBox = var2;
          this.lfsrIV = var4;

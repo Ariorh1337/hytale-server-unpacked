@@ -8,6 +8,18 @@ public class Integers {
       return Integer.bitCount(var0);
    }
 
+   public static int bitLength(int var0) {
+      return 32 - numberOfLeadingZeros(var0);
+   }
+
+   public static int compare(int var0, int var1) {
+      return var0 < var1 ? -1 : (var0 == var1 ? 0 : 1);
+   }
+
+   public static int compareUnsigned(int var0, int var1) {
+      return compare(var0 + Integer.MIN_VALUE, var1 + Integer.MIN_VALUE);
+   }
+
    public static int highestOneBit(int var0) {
       return Integer.highestOneBit(var0);
    }

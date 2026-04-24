@@ -111,6 +111,10 @@ public class ExecutionContext {
       return this.scope;
    }
 
+   public boolean hasScope() {
+      return this.scope != null;
+   }
+
    public String getCombatConfig() {
       return this.combatConfig;
    }

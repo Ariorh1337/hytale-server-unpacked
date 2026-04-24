@@ -15,7 +15,6 @@ import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -271,8 +270,8 @@ public class Role implements IAnnotatedComponentCollection {
       this.flockWeightCohesion = builder.getFlockWeightCohesion();
       this.flockInfluenceRange = builder.getFlockInfluenceRange();
       this.invulnerable = builder.isInvulnerable(builderSupport);
-      this.breathesInAir = builder.isBreathesInAir(builderSupport);
-      this.breathesInWater = builder.isBreathesInWater(builderSupport);
+      this.breathesInAir = builder.breathesInAir(builderSupport.getExecutionContext(), null);
+      this.breathesInWater = builder.breathesInWater(builderSupport.getExecutionContext(), null);
       this.pickupDropOnDeath = builder.isPickupDropOnDeath();
       this.deathAnimationTime = builder.getDeathAnimationTime(builderSupport);
       this.deathParticles = builder.getDeathParticles(builderSupport);
@@ -417,8 +416,8 @@ public class Role implements IAnnotatedComponentCollection {
       }
    }
 
-   public void spawned(@Nonnull Holder<EntityStore> holder, @Nonnull NPCEntity npcComponent) {
-      MotionController activeMotionController = this.getActiveMotionController();
+   public void spawned(@Nonnull Holder<EntityStore> holder, @Nonnull NPCEntity npcComponent, @Nonnull Store<EntityStore> store) {
+      MotionController activeMotionController = this.activeMotionController;
       if (activeMotionController != null) {
          activeMotionController.spawned();
       }
@@ -438,7 +437,7 @@ public class Role implements IAnnotatedComponentCollection {
          stateTransitions.spawned(this);
       }
 
-      this.initialiseInventories(npcComponent, holder);
+      this.initialiseInventories(npcComponent, holder, store);
    }
 
    public void unloaded() {
@@ -552,7 +551,7 @@ public class Role implements IAnnotatedComponentCollection {
          NPCPlugin.get()
             .getLogger()
             .at(Level.SEVERE)
-            .log("Failed to set MotionController for NPC of type '%s': MotionController '%s' not found! ", this.getRoleName(), name);
+            .log("Failed to set MotionController for NPC of type '%s': MotionController '%s' not found! ", this.roleName, name);
          return false;
       } else {
          this.setActiveMotionController(ref, npcComponent, motionController, componentAccessor);
@@ -583,6 +582,7 @@ public class Role implements IAnnotatedComponentCollection {
       @Nullable MotionController motionController,
       @Nullable ComponentAccessor<EntityStore> componentAccessor
    ) {
+      npcComponent.setActiveMotionControllerName(motionController != null ? motionController.getType() : null);
       this.rootInstruction.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
       if (this.deathInstruction != null) {
          this.deathInstruction.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
@@ -687,17 +687,25 @@ public class Role implements IAnnotatedComponentCollection {
             this.entitySupport.clearTargetPlayerActiveTasks();
          }
 
-         this.getActiveMotionController().beforeInstructionSensorsAndActions(tickTime);
-         this.entitySupport.clearNextBodyMotionStep();
-         this.entitySupport.clearNextHeadMotionStep();
+         this.activeMotionController.beforeInstructionSensorsAndActions(tickTime);
          if (!this.stateSupport.runTransitionActions(ref, this, tickTime, store)) {
+            this.entitySupport.clearNextBodyMotionStep();
+            this.entitySupport.clearNextHeadMotionStep();
             this.rootInstruction.execute(ref, this, tickTime, store);
+         } else {
+            if (this.stateSupport.isClearHeadMotion()) {
+               this.entitySupport.clearNextHeadMotionStep();
+            }
+
+            if (this.stateSupport.isClearBodyMotion()) {
+               this.entitySupport.clearNextBodyMotionStep();
+            }
          }
 
          NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
          assert npcComponent != null;
          if (!npcComponent.isPlayingDespawnAnim()) {
-            this.getActiveMotionController().beforeInstructionMotion(tickTime);
+            this.activeMotionController.beforeInstructionMotion(tickTime);
             Instruction nextBodyMotionStep = this.entitySupport.getNextBodyMotionStep();
             if (nextBodyMotionStep != this.lastBodyMotionStep) {
                if (this.lastBodyMotionStep != null) {
@@ -983,7 +991,7 @@ public class Role implements IAnnotatedComponentCollection {
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       this.steeringForceAvoidCollision.setDebug(this.debugSupport.isDebugRoleSteering());
-      this.steeringForceAvoidCollision.setAvoidanceMode(this.getAvoidanceMode());
+      this.steeringForceAvoidCollision.setAvoidanceMode(this.avoidanceMode);
       this.steeringForceAvoidCollision.setSelf(ref, position, commandBuffer);
       if (!this.activeMotionController.estimateVelocity(steering, this.steeringForceAvoidCollision.getSelfVelocity())) {
          this.steeringForceAvoidCollision.setVelocityFromEntity(ref, commandBuffer);
@@ -1050,7 +1058,7 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    public boolean canBreathe(@Nonnull BlockMaterial breathingMaterial, int fluidId) {
-      return this.isInvulnerable() ? true : this.couldBreathe(breathingMaterial, fluidId);
+      return this.invulnerable ? true : this.couldBreathe(breathingMaterial, fluidId);
    }
 
    public boolean couldBreathe(@Nonnull BlockMaterial breathingMaterial, int fluidId) {
@@ -1091,16 +1099,11 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    public boolean isOnGround() {
-      return this.getActiveMotionController() != null && this.getActiveMotionController().onGround();
+      return this.activeMotionController != null && this.activeMotionController.onGround();
    }
 
    public void setArmor(@Nonnull NPCEntity npcComponent, @Nullable String[] armor) {
       this.armor = armor;
-      if (armor != null) {
-         for (String s : armor) {
-            RoleUtils.setArmor(npcComponent, s);
-         }
-      }
    }
 
    public boolean isPickupDropOnDeath() {
@@ -1160,9 +1163,10 @@ public class Role implements IAnnotatedComponentCollection {
       this.flockSpawnTypeIndices = new int[length];
 
       for (int i = 0; i < length; i++) {
-         int index = NPCPlugin.get().getIndex(this.flockSpawnTypes[i]);
+         String flockSpawnType = this.flockSpawnTypes[i];
+         int index = NPCPlugin.get().getIndex(flockSpawnType);
          if (index == Integer.MIN_VALUE) {
-            throw new IllegalStateException(String.format("Role %s contains unknown FlockSpawnTypes NPC %s", this.roleName, this.flockSpawnTypes[i]));
+            throw new IllegalStateException(String.format("Role %s contains unknown FlockSpawnTypes NPC %s", this.roleName, flockSpawnType));
          }
 
          this.flockSpawnTypeIndices[i] = index;
@@ -1228,7 +1232,7 @@ public class Role implements IAnnotatedComponentCollection {
 
    public void setFlag(int index, boolean value) {
       if (this.flags == null) {
-         throw new NullPointerException(String.format("Trying to set a flag in role %s but flags are null", this.getRoleName()));
+         throw new NullPointerException(String.format("Trying to set a flag in role %s but flags are null", this.roleName));
       }
 
       if (index >= 0 && index < this.flags.length) {
@@ -1327,7 +1331,7 @@ public class Role implements IAnnotatedComponentCollection {
       return this.roleName;
    }
 
-   private void initialiseInventories(@Nonnull NPCEntity npcComponent, @Nonnull Holder<EntityStore> holder) {
+   private void initialiseInventories(@Nonnull NPCEntity npcComponent, @Nonnull Holder<EntityStore> holder, @Nonnull Store<EntityStore> store) {
       List<ItemStack> inventoryItems = null;
       if (this.inventoryContentsDropList != null) {
          ItemModule itemModule = ItemModule.get();
@@ -1339,33 +1343,39 @@ public class Role implements IAnnotatedComponentCollection {
       int inventorySlots = inventoryItems != null && inventoryItems.size() > this.inventorySlots ? inventoryItems.size() : this.inventorySlots;
       if (inventorySlots > 0 || this.hotbarSlots > 3 || this.offHandSlots > 0) {
          ObjectArrayList<ItemStack> remainder = new ObjectArrayList<>();
-         InventoryComponent.Hotbar hotbar = holder.getComponent(InventoryComponent.Hotbar.getComponentType());
-         if (hotbar != null) {
-            hotbar.ensureCapacity((short)this.hotbarSlots, remainder);
+         InventoryComponent.Hotbar hotbarComponent = holder.getComponent(InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null) {
+            hotbarComponent.ensureCapacity((short)this.hotbarSlots, remainder);
          }
 
-         InventoryComponent.Utility utility = holder.getComponent(InventoryComponent.Utility.getComponentType());
-         if (utility != null) {
-            utility.ensureCapacity((short)this.offHandSlots, remainder);
+         InventoryComponent.Utility utilityComponent = holder.getComponent(InventoryComponent.Utility.getComponentType());
+         if (utilityComponent != null) {
+            utilityComponent.ensureCapacity((short)this.offHandSlots, remainder);
          }
 
-         InventoryComponent.Storage storage = holder.getComponent(InventoryComponent.Storage.getComponentType());
-         if (storage != null) {
-            storage.ensureCapacity((short)inventorySlots, remainder);
+         InventoryComponent.Storage storageComponent = holder.getComponent(InventoryComponent.Storage.getComponentType());
+         if (storageComponent != null) {
+            storageComponent.ensureCapacity((short)inventorySlots, remainder);
          }
       }
 
       if (inventoryItems != null) {
-         ItemContainer inventory = npcComponent.getInventory().getStorage();
-
-         for (ItemStack item : inventoryItems) {
-            inventory.addItemStack(item);
+         InventoryComponent.Storage storageComponent = holder.getComponent(InventoryComponent.Storage.getComponentType());
+         if (storageComponent != null) {
+            for (ItemStack item : inventoryItems) {
+               storageComponent.getInventory().addItemStack(item);
+            }
          }
       }
 
-      this.initialiseItemsAndArmor(npcComponent);
+      this.initialiseItemsAndArmor(holder, npcComponent);
       if (this.defaultOffHandSlot >= 0) {
-         InventoryHelper.setOffHandSlot(holder, npcComponent.getInventory(), this.defaultOffHandSlot);
+         InventoryComponent.Utility utilityComponent = holder.getComponent(InventoryComponent.Utility.getComponentType());
+         if (utilityComponent != null
+            && this.defaultOffHandSlot != utilityComponent.getActiveSlot()
+            && this.defaultOffHandSlot < utilityComponent.getInventory().getCapacity()) {
+            utilityComponent.setActiveSlot(this.defaultOffHandSlot, holder, store);
+         }
       }
    }
 
@@ -1381,65 +1391,132 @@ public class Role implements IAnnotatedComponentCollection {
       int inventorySlots = inventoryItems != null && inventoryItems.size() > this.inventorySlots ? inventoryItems.size() : this.inventorySlots;
       if (inventorySlots > 0 || this.hotbarSlots > 3 || this.offHandSlots > 0) {
          ObjectArrayList<ItemStack> remainder = new ObjectArrayList<>();
-         InventoryComponent.Hotbar hotbar = accessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
-         if (hotbar != null) {
-            hotbar.ensureCapacity((short)this.hotbarSlots, remainder);
+         InventoryComponent.Hotbar hotbarComponent = accessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null) {
+            hotbarComponent.ensureCapacity((short)this.hotbarSlots, remainder);
          }
 
-         InventoryComponent.Utility utility = accessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
-         if (utility != null) {
-            utility.ensureCapacity((short)this.offHandSlots, remainder);
+         InventoryComponent.Utility utilityComponent = accessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+         if (utilityComponent != null) {
+            utilityComponent.ensureCapacity((short)this.offHandSlots, remainder);
          }
 
-         InventoryComponent.Storage storage = accessor.getComponent(ref, InventoryComponent.Storage.getComponentType());
-         if (storage != null) {
-            storage.ensureCapacity((short)inventorySlots, remainder);
+         InventoryComponent.Storage storageComponent = accessor.getComponent(ref, InventoryComponent.Storage.getComponentType());
+         if (storageComponent != null) {
+            storageComponent.ensureCapacity((short)inventorySlots, remainder);
          }
       }
 
       if (inventoryItems != null) {
-         ItemContainer inventory = npcComponent.getInventory().getStorage();
-
-         for (ItemStack item : inventoryItems) {
-            inventory.addItemStack(item);
+         InventoryComponent.Storage storageComponent = accessor.getComponent(ref, InventoryComponent.Storage.getComponentType());
+         if (storageComponent != null) {
+            for (ItemStack item : inventoryItems) {
+               storageComponent.getInventory().addItemStack(item);
+            }
          }
       }
 
       this.initialiseInventories(ref, npcComponent, accessor);
    }
 
-   private void initialiseItemsAndArmor(@Nonnull NPCEntity npcComponent) {
-      if (this.hotbarItems != null && this.hotbarItems.length > 0 && npcComponent.getInventory().getHotbar().isEmpty()) {
-         Inventory inventory = npcComponent.getInventory();
-         ItemContainer hotbar = inventory.getHotbar();
+   private void initialiseItemsAndArmor(@Nonnull Holder<EntityStore> holder, @Nonnull NPCEntity npcComponent) {
+      if (this.hotbarItems != null && this.hotbarItems.length > 0) {
+         InventoryComponent.Hotbar hotbarComponent = holder.getComponent(InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null && hotbarComponent.getInventory().isEmpty()) {
+            ItemContainer hotbarContainer = hotbarComponent.getInventory();
 
-         for (byte i = 0; i < this.hotbarItems.length; i++) {
-            if (this.hotbarItems[i] != null) {
-               if (this.hotbarItems[i].startsWith("Droplist:")) {
-                  if (!InventoryHelper.checkHotbarSlot(inventory, i)) {
-                     continue;
+            for (byte i = 0; i < this.hotbarItems.length; i++) {
+               String hotbarItem = this.hotbarItems[i];
+               if (hotbarItem != null) {
+                  if (hotbarItem.startsWith("Droplist:")) {
+                     if (i >= hotbarContainer.getCapacity()) {
+                        NPCPlugin.get().getLogger().at(Level.WARNING).log("Invalid hotbar slot %s. Max is %s", i, (int)(hotbarContainer.getCapacity() - 1));
+                     } else {
+                        List<ItemStack> items = ItemModule.get().getRandomItemDrops(hotbarItem.substring("Droplist:".length()));
+                        hotbarContainer.setItemStackForSlot(i, items.get(RandomExtra.randomRange(items.size())));
+                     }
+                  } else if (InventoryHelper.itemKeyExists(hotbarItem)
+                     && i < hotbarContainer.getCapacity()
+                     && !InventoryHelper.matchesItem(hotbarItem, hotbarContainer.getItemStack(i))) {
+                     hotbarContainer.setItemStackForSlot(i, InventoryHelper.createItem(hotbarItem));
                   }
-
-                  List<ItemStack> items = ItemModule.get().getRandomItemDrops(this.hotbarItems[i].substring("Droplist:".length()));
-                  hotbar.setItemStackForSlot(i, items.get(RandomExtra.randomRange(items.size())));
                }
-
-               InventoryHelper.setHotbarItem(inventory, this.hotbarItems[i], i);
             }
          }
       }
 
       if (this.offHandItems != null && this.offHandItems.length > 0) {
-         RoleUtils.setOffHandItems(npcComponent, this.offHandItems);
+         InventoryComponent.Utility utilityComponent = holder.getComponent(InventoryComponent.Utility.getComponentType());
+         if (utilityComponent != null) {
+            ItemContainer utilityContainer = utilityComponent.getInventory();
+
+            for (byte i = 0; i < this.offHandItems.length; i++) {
+               String offHandItem = this.offHandItems[i];
+               if (InventoryHelper.itemKeyExists(offHandItem)
+                  && i < utilityContainer.getCapacity()
+                  && !InventoryHelper.matchesItem(offHandItem, utilityContainer.getItemStack(i))) {
+                  utilityContainer.setItemStackForSlot(i, InventoryHelper.createItem(offHandItem));
+               }
+            }
+         }
       }
 
-      this.setArmor(npcComponent, this.armor);
+      if (this.armor != null) {
+         InventoryComponent.Armor armorComponent = holder.getComponent(InventoryComponent.Armor.getComponentType());
+         if (armorComponent != null) {
+            for (String s : this.armor) {
+               if (!InventoryHelper.useArmor(armorComponent.getInventory(), s)) {
+                  NPCPlugin.get().getLogger().at(Level.WARNING).log("NPC of type '%s': Failed to use armor '%s'", npcComponent.getRoleName(), s);
+               }
+            }
+         }
+      }
+   }
+
+   private void initialiseItemsAndArmor(
+      @Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      if (this.hotbarItems != null && this.hotbarItems.length > 0) {
+         InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null && hotbarComponent.getInventory().isEmpty()) {
+            for (byte i = 0; i < this.hotbarItems.length; i++) {
+               String hotbarItem = this.hotbarItems[i];
+               if (hotbarItem != null) {
+                  if (hotbarItem.startsWith("Droplist:")) {
+                     if (InventoryHelper.checkHotbarSlot(ref, i, componentAccessor)) {
+                        List<ItemStack> items = ItemModule.get().getRandomItemDrops(hotbarItem.substring("Droplist:".length()));
+                        hotbarComponent.getInventory().setItemStackForSlot(i, items.get(RandomExtra.randomRange(items.size())));
+                     }
+                  } else {
+                     InventoryHelper.setHotbarItem(ref, hotbarItem, i, componentAccessor);
+                  }
+               }
+            }
+         }
+      }
+
+      if (this.offHandItems != null && this.offHandItems.length > 0) {
+         for (byte i = 0; i < this.offHandItems.length; i++) {
+            InventoryHelper.setOffHandItem(ref, this.offHandItems[i], i, componentAccessor);
+         }
+      }
+
+      if (this.armor != null) {
+         InventoryComponent.Armor armorComponent = componentAccessor.getComponent(ref, InventoryComponent.Armor.getComponentType());
+         if (armorComponent != null) {
+            for (String s : this.armor) {
+               if (!InventoryHelper.useArmor(armorComponent.getInventory(), s)) {
+                  NPCPlugin.get().getLogger().at(Level.WARNING).log("NPC of type '%s': Failed to use armor '%s'", npcComponent.getRoleName(), s);
+               }
+            }
+         }
+      }
    }
 
    private void initialiseInventories(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.initialiseItemsAndArmor(npcComponent);
+      this.initialiseItemsAndArmor(ref, npcComponent, componentAccessor);
       if (this.defaultOffHandSlot >= 0) {
-         InventoryHelper.setOffHandSlot(ref, npcComponent.getInventory(), this.defaultOffHandSlot, componentAccessor);
+         InventoryHelper.setOffHandSlot(ref, this.defaultOffHandSlot, componentAccessor);
       }
    }
 

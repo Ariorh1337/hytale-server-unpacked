@@ -35,6 +35,6 @@ public class CertificateFormat extends ASN1Object {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      return new ASN1Integer(this.format);
+      return ASN1Integer.valueOf(this.format);
    }
 }

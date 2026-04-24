@@ -23,7 +23,7 @@ class Utils {
             var2[var3 + var10] = Pack.littleEndianToLong(var0, var11 + (var10 << 3));
          }
 
-         var2[var3 + var10] = Pack.littleEndianToLong(var0, var11 + (var10 << 3), var8);
+         var2[var3 + var10] = var8 <= 0 ? 0L : Pack.littleEndianToLong_Low(var0, var11 + (var10 << 3), var8);
          var9--;
          var3 -= var6;
       }
@@ -41,7 +41,10 @@ class Utils {
             Pack.longToLittleEndian(var0[var10 + var8], var1, var2 + (var8 << 3));
          }
 
-         Pack.longToLittleEndian(var0[var10 + var8], var1, var2 + (var8 << 3), var7);
+         if (var7 > 0) {
+            Pack.longToLittleEndian_Low(var0[var10 + var8], var1, var2 + (var8 << 3), var7);
+         }
+
          var9++;
          var2 += var6;
       }

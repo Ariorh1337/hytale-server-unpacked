@@ -84,6 +84,7 @@ import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.handlers.InitialPacketHandler;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.i18n.event.MessagesUpdated;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
@@ -631,10 +632,10 @@ public class AssetEditorPlugin extends JavaPlugin {
    private void initializeClient(@Nonnull EditorClient editorClient) {
       DataSource defaultDataSource = this.assetPackDataSources.get("Hytale:Hytale");
       boolean canDiscard = false;
-      boolean canEditAssets = editorClient.hasPermission("hytale.editor.asset");
-      boolean canEditAssetPacks = editorClient.hasPermission("hytale.editor.packs.edit");
-      boolean canCreateAssetPacks = editorClient.hasPermission("hytale.editor.packs.create");
-      boolean canDeleteAssetPacks = editorClient.hasPermission("hytale.editor.packs.delete");
+      boolean canEditAssets = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR);
+      boolean canEditAssetPacks = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR_PACKS_EDIT);
+      boolean canCreateAssetPacks = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR_PACKS_CREATE);
+      boolean canDeleteAssetPacks = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR_PACKS_DELETE);
       editorClient.getPacketHandler().write(new AssetEditorCapabilities(false, canEditAssets, canCreateAssetPacks, canEditAssetPacks, canDeleteAssetPacks));
       editorClient.getPacketHandler().write(this.setupSchemasPacket);
       this.assetTypeRegistry.sendPacket(editorClient);
@@ -729,8 +730,10 @@ public class AssetEditorPlugin extends JavaPlugin {
             } else {
                try {
                   FileUtil.deleteDirectory(targetPath);
+                  editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Success, Messages.PACK_DELETED);
                } catch (Exception e) {
                   this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to delete asset pack %s from disk", packId);
+                  editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.PACK_DELETION_FAILED);
                }
             }
          }
@@ -825,7 +828,9 @@ public class AssetEditorPlugin extends JavaPlugin {
 
                   AssetModule assetModule = AssetModule.get();
                   assetModule.unregisterPack(packId);
-                  assetModule.registerPack(newPackId, packPath, manifest, false);
+                  if (!assetModule.registerPack(newPackId, packPath, manifest, AssetPack.PackSource.RUNTIME)) {
+                     this.getLogger().at(Level.SEVERE).log("Failed to re-register asset pack '%s' after update", newPackId);
+                  }
                }
             }
          }
@@ -915,7 +920,11 @@ public class AssetEditorPlugin extends JavaPlugin {
                            HytaleServerConfig.save(serverConfig).join();
                         }
 
-                        AssetModule.get().registerPack(packId, packPath, manifest, false);
+                        if (!AssetModule.get().registerPack(packId, packPath, manifest, AssetPack.PackSource.RUNTIME)) {
+                           editorClient.sendFailureReply(requestToken, Messages.PACK_CREATION_FAILED);
+                           return;
+                        }
+
                         editorClient.sendSuccessReply(requestToken, Messages.PACK_CREATED);
                         this.getLogger().at(Level.INFO).log("Created new pack: %s at %s", packId, packPath);
                      } catch (IOException e) {

@@ -57,6 +57,7 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditorCreation
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabMarkerProvider;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabSelectionInteraction;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.commands.PrefabEditCommand;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaveContributor;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfig;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigCommandExecutor;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigEditStore;
@@ -121,7 +122,11 @@ import com.hypixel.hytale.builtin.buildertools.snapshot.BlockSelectionSnapshot;
 import com.hypixel.hytale.builtin.buildertools.snapshot.ClipboardBoundsSnapshot;
 import com.hypixel.hytale.builtin.buildertools.snapshot.ClipboardContentsSnapshot;
 import com.hypixel.hytale.builtin.buildertools.snapshot.EntityAddSnapshot;
+import com.hypixel.hytale.builtin.buildertools.snapshot.EntityFreezeSnapshot;
 import com.hypixel.hytale.builtin.buildertools.snapshot.EntityRemoveSnapshot;
+import com.hypixel.hytale.builtin.buildertools.snapshot.EntityScaleSnapshot;
+import com.hypixel.hytale.builtin.buildertools.snapshot.EntitySettingsSnapshot;
+import com.hypixel.hytale.builtin.buildertools.snapshot.EntitySnapshot;
 import com.hypixel.hytale.builtin.buildertools.snapshot.EntityTransformSnapshot;
 import com.hypixel.hytale.builtin.buildertools.snapshot.SelectionSnapshot;
 import com.hypixel.hytale.builtin.buildertools.tooloperations.PaintOperation;
@@ -202,6 +207,8 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.io.ServerManager;
@@ -279,6 +286,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Level;
@@ -318,8 +326,37 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    private ComponentType<EntityStore, PrefabAnchor> prefabAnchorComponentType;
    private final Int2ObjectConcurrentHashMap<ConcurrentHashMap<UUID, UUID>> pastedPrefabPathUUIDMap = new Int2ObjectConcurrentHashMap<>();
    private final Int2ObjectConcurrentHashMap<ConcurrentHashMap<String, UUID>> pastedPrefabPathNameToUUIDMap = new Int2ObjectConcurrentHashMap<>();
+   private final List<PrefabSaveContributor> prefabSaveContributors = new ArrayList<>();
+   private final List<PrefabSaveContributor> clipboardContributors = new ArrayList<>();
+   @Nullable
+   private volatile BiConsumer<PlayerRef, Store<EntityStore>> selectionBoundsUpdatedCallback;
+   @Nullable
+   private volatile BiConsumer<PlayerRef, Store<EntityStore>> builderToolModeDeactivatedCallback;
+   @Nullable
+   private volatile BiConsumer<PlayerRef, Store<EntityStore>> selectionClearedCallback;
    private static final float SMOOTHING_KERNEL_TOTAL = 27.0F;
    private static final int[] SMOOTHING_KERNEL = new int[]{1, 2, 1, 2, 3, 2, 1, 2, 1, 2, 3, 2, 3, 4, 3, 2, 3, 2, 1, 2, 1, 2, 3, 2, 1, 2, 1};
+   private static final String[] KNOWN_SHAPE_SUFFIXES = new String[]{
+      "Pillar_Base",
+      "Pillar_Middle",
+      "Roof_Flat",
+      "Roof_Steep",
+      "Roof_Shallow",
+      "Roof_Corner",
+      "Roof_Hollow",
+      "Stalactite_Small",
+      "Stalactite_Large",
+      "Smooth",
+      "Beam",
+      "Half",
+      "Stairs",
+      "Wall",
+      "Fence",
+      "Corner",
+      "Roof",
+      "Decorative",
+      "Ornate"
+   };
    private final Config<BuilderToolsPlugin.BuilderToolsConfig> config = this.withConfig("BuilderToolsModule", BuilderToolsPlugin.BuilderToolsConfig.CODEC);
    private static final Message MESSAGE_PACK_NOT_FOUND = Message.translation("server.commands.editprefab.save.pack.notFound");
    private static final Message MESSAGE_PACK_IMMUTABLE = Message.translation("server.commands.editprefab.save.pack.immutable");
@@ -335,9 +372,92 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       return instance;
    }
 
+   public void registerPrefabSaveContributor(@Nonnull PrefabSaveContributor contributor) {
+      this.prefabSaveContributors.add(contributor);
+   }
+
+   @Nonnull
+   public List<PrefabSaveContributor> getPrefabSaveContributors() {
+      return this.prefabSaveContributors;
+   }
+
+   public void registerClipboardContributor(@Nonnull PrefabSaveContributor contributor) {
+      this.clipboardContributors.add(contributor);
+   }
+
+   @Nonnull
+   public List<PrefabSaveContributor> getClipboardContributors() {
+      return this.clipboardContributors;
+   }
+
+   public void setSelectionBoundsUpdatedCallback(@Nullable BiConsumer<PlayerRef, Store<EntityStore>> callback) {
+      this.selectionBoundsUpdatedCallback = callback;
+   }
+
+   public void setBuilderToolModeDeactivatedCallback(@Nullable BiConsumer<PlayerRef, Store<EntityStore>> callback) {
+      this.builderToolModeDeactivatedCallback = callback;
+   }
+
+   public void setSelectionClearedCallback(@Nullable BiConsumer<PlayerRef, Store<EntityStore>> callback) {
+      this.selectionClearedCallback = callback;
+   }
+
+   @Nullable
+   public BiConsumer<PlayerRef, Store<EntityStore>> getSelectionBoundsUpdatedCallback() {
+      return this.selectionBoundsUpdatedCallback;
+   }
+
+   @Nullable
+   public BiConsumer<PlayerRef, Store<EntityStore>> getBuilderToolModeDeactivatedCallback() {
+      return this.builderToolModeDeactivatedCallback;
+   }
+
+   @Nullable
+   public BiConsumer<PlayerRef, Store<EntityStore>> getSelectionClearedCallback() {
+      return this.selectionClearedCallback;
+   }
+
    @Nonnull
    public BlockColorIndex getBlockColorIndex() {
       return this.blockColorIndex;
+   }
+
+   private static String getBlockBaseMaterial(String blockName) {
+      for (String suffix : KNOWN_SHAPE_SUFFIXES) {
+         if (blockName.endsWith("_" + suffix)) {
+            return blockName.substring(0, blockName.length() - suffix.length() - 1);
+         }
+      }
+
+      return blockName;
+   }
+
+   private static String getBlockShape(String blockName) {
+      for (String suffix : KNOWN_SHAPE_SUFFIXES) {
+         if (blockName.endsWith("_" + suffix)) {
+            return suffix;
+         }
+      }
+
+      return "";
+   }
+
+   private static boolean passesFilter(String filterMode, int blockId, int targetBlockId) {
+      if (!"All".equals(filterMode) && blockId != targetBlockId) {
+         BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+         BlockType targetType = BlockType.getAssetMap().getAsset(targetBlockId);
+         if (blockType != null && targetType != null) {
+            return switch (filterMode) {
+               case "SameMaterial" -> getBlockBaseMaterial(blockType.getId()).equals(getBlockBaseMaterial(targetType.getId()));
+               case "SameShape" -> getBlockShape(blockType.getId()).equals(getBlockShape(targetType.getId()));
+               default -> true;
+            };
+         } else {
+            return false;
+         }
+      } else {
+         return true;
+      }
    }
 
    public static void invalidateWorldMapForSelection(@Nonnull BlockSelection selection, @Nonnull World world) {
@@ -661,28 +781,41 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
    }
 
-   public void onToolArgUpdate(@Nonnull PlayerRef playerRef, @Nonnull Player player, @Nonnull BuilderToolArgUpdate packet) {
-      ItemContainer section = player.getInventory().getSectionById(packet.section);
-      ItemStack itemStack = section.getItemStack((short)packet.slot);
-      if (itemStack == null) {
-         MessageUtil.sendFailureReply(playerRef, packet.token, Message.translation("server.builderTools.invalidTool").param("item", "Empty"));
+   public void onToolArgUpdate(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull BuilderToolArgUpdate packet,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      ItemContainer section = InventoryUtils.getSectionById(ref, packet.section, componentAccessor);
+      if (section == null) {
+         MessageUtil.sendFailureReply(
+            playerRef,
+            packet.token,
+            Message.translation("server.builderTools.invalidTool").param("item", Message.translation("builderTools.invalidTool.unknown.section"))
+         );
       } else {
-         Item item = itemStack.getItem();
-         BuilderTool builderToolData = item.getBuilderTool();
-         if (builderToolData == null) {
-            Message itemMessage = Message.translation(item.getTranslationKey());
-            MessageUtil.sendFailureReply(playerRef, packet.token, Message.translation("server.builderTools.invalidTool").param("item", itemMessage));
+         ItemStack itemStack = section.getItemStack((short)packet.slot);
+         if (itemStack == null) {
+            MessageUtil.sendFailureReply(playerRef, packet.token, Message.translation("server.builderTools.invalidTool").param("item", "Empty"));
          } else {
-            try {
-               ItemStack updatedItemStack = builderToolData.updateArgMetadata(itemStack, packet.id, packet.value);
-               section.setItemStackForSlot((short)packet.slot, updatedItemStack);
-               MessageUtil.sendSuccessReply(playerRef, packet.token);
-            } catch (ToolArgException e) {
-               MessageUtil.sendFailureReply(playerRef, packet.token, e.getTranslationMessage());
-            } catch (IllegalArgumentException e) {
-               MessageUtil.sendFailureReply(
-                  playerRef, packet.token, Message.translation("server.builderTools.toolArgParseError").param("arg", packet.id).param("value", packet.value)
-               );
+            Item item = itemStack.getItem();
+            BuilderTool builderToolData = item.getBuilderTool();
+            if (builderToolData == null) {
+               Message itemMessage = Message.translation(item.getTranslationKey());
+               MessageUtil.sendFailureReply(playerRef, packet.token, Message.translation("server.builderTools.invalidTool").param("item", itemMessage));
+            } else {
+               try {
+                  ItemStack updatedItemStack = builderToolData.updateArgMetadata(itemStack, packet.id, packet.value);
+                  section.setItemStackForSlot((short)packet.slot, updatedItemStack);
+                  MessageUtil.sendSuccessReply(playerRef, packet.token);
+               } catch (ToolArgException e) {
+                  MessageUtil.sendFailureReply(playerRef, packet.token, e.getTranslationMessage());
+               } catch (IllegalArgumentException e) {
+                  MessageUtil.sendFailureReply(
+                     playerRef, packet.token, Message.translation("server.builderTools.toolArgParseError").param("arg", packet.id).param("value", packet.value)
+                  );
+               }
             }
          }
       }
@@ -750,6 +883,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
          assert playerRefComponent != null;
          NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), message, notificationStyle);
+      } else if (feedback instanceof PlayerRef playerRefComponent) {
+         NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), message, notificationStyle);
       } else if (feedback != null) {
          feedback.sendMessage(message);
       }
@@ -764,6 +899,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
          assert playerRefComponent != null;
+         NotificationUtil.sendNotification(
+            playerRefComponent.getPacketHandler(),
+            Message.translation("server.builderTools.blocksEdited").param("key", key),
+            Message.raw(String.valueOf(total)),
+            NotificationStyle.Success
+         );
+      } else if (feedback instanceof PlayerRef playerRefComponent) {
          NotificationUtil.sendNotification(
             playerRefComponent.getPacketHandler(),
             Message.translation("server.builderTools.blocksEdited").param("key", key),
@@ -785,6 +927,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
             PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
             assert playerRefComponent != null;
+            NotificationUtil.sendNotification(
+               playerRefComponent.getPacketHandler(),
+               Message.translation("server.builderTools.doneEditing").param("key", key),
+               Message.translation("server.builderTools.blocksChanged").param("total", total),
+               NotificationStyle.Success
+            );
+         } else if (feedback instanceof PlayerRef playerRefComponent) {
             NotificationUtil.sendNotification(
                playerRefComponent.getPacketHandler(),
                Message.translation("server.builderTools.doneEditing").param("key", key),
@@ -949,7 +1098,14 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       UPDATE_SELECTION("server.builderTools.action.updateSelection"),
       WALLS("server.builderTools.action.walls"),
       HOLLOW("server.builderTools.action.hollow"),
-      LAYER("server.builderTools.action.layer");
+      LAYER("server.builderTools.action.layer"),
+      ENTITY_TRANSFORM("server.builderTools.action.entityTransform"),
+      ENTITY_SCALE("server.builderTools.action.entityScale"),
+      ENTITY_CLONE("server.builderTools.action.entityClone"),
+      ENTITY_REMOVE("server.builderTools.action.entityRemove"),
+      ENTITY_FREEZE("server.builderTools.action.entityFreeze"),
+      ENTITY_SETTINGS("server.builderTools.action.entitySettings"),
+      TRIGGER_VOLUME("server.builderTools.action.triggerVolume");
 
       private final String translationKey;
 
@@ -965,6 +1121,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    public static class ActionEntry {
       private final BuilderToolsPlugin.Action action;
       private final List<SelectionSnapshot<?>> snapshots;
+      private boolean entityNotFound;
 
       public ActionEntry(BuilderToolsPlugin.Action action, SelectionSnapshot<?> snapshots) {
          this(action, Collections.singletonList(snapshots));
@@ -977,6 +1134,15 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
       public BuilderToolsPlugin.Action getAction() {
          return this.action;
+      }
+
+      @Nonnull
+      public List<SelectionSnapshot<?>> getSnapshots() {
+         return this.snapshots;
+      }
+
+      public boolean isEntityNotFound() {
+         return this.entityNotFound;
       }
 
       @Nonnull
@@ -1003,6 +1169,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
          }
 
+         boolean entityNotFound = false;
+
          for (SelectionSnapshot<?> snapshot : this.snapshots) {
             if (!handledViaLastTransformRefs || !(snapshot instanceof EntityAddSnapshot)) {
                SelectionSnapshot<?> nextSnapshot = snapshot.restore(ref, playerRef, world, componentAccessor);
@@ -1016,6 +1184,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
                      recreatedEntityRefs.add(entityAddSnapshot.getEntityRef());
                   }
+               } else if (snapshot instanceof EntitySnapshot) {
+                  entityNotFound = true;
                }
             }
          }
@@ -1027,7 +1197,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             prototypeSettings.setLastTransformEntityRefs(recreatedEntityRefs);
          }
 
-         return new BuilderToolsPlugin.ActionEntry(this.action, collector);
+         BuilderToolsPlugin.ActionEntry result = new BuilderToolsPlugin.ActionEntry(this.action, collector);
+         result.entityNotFound = entityNotFound;
+         return result;
       }
    }
 
@@ -1055,6 +1227,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       private volatile CompletableFuture<Void> taskFuture;
       private volatile long timestamp = Long.MAX_VALUE;
       private BlockSelection selection;
+      @Nullable
+      private Vector3i rawPos1;
+      @Nullable
+      private Vector3i rawPos2;
       private boolean skipNextPreviewRebuild;
       @Nullable
       private BlockSelection preRotationSnapshot;
@@ -1073,6 +1249,12 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       private List<EntityAddSnapshot> pendingEntitySnapshots = new ArrayList<>();
       private List<EntityTransformSnapshot> pendingEntityTransformSnapshots = new ArrayList<>();
       private int executionCountInGroup;
+      @Nullable
+      private EntityTransformSnapshot pendingEntityTransformSession;
+      @Nullable
+      private EntityScaleSnapshot pendingEntityScaleSession;
+      @Nullable
+      private Ref<EntityStore> pendingEntityScaleRef;
 
       private BuilderState(@Nonnull Player player, @Nonnull PlayerRef playerRef) {
          this.player = player;
@@ -1096,6 +1278,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
          } finally {
             this.taskLock.unlockWrite(stamp);
+         }
+      }
+
+      public void syncRawPositions() {
+         if (this.selection != null && this.selection.hasSelectionBounds()) {
+            this.rawPos1 = this.selection.getSelectionMin();
+            this.rawPos2 = this.selection.getSelectionMax();
+         } else {
+            this.rawPos1 = null;
+            this.rawPos2 = null;
          }
       }
 
@@ -1132,6 +1324,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                this.selection.setPosition(oldSelection.getX(), oldSelection.getY(), oldSelection.getZ());
                this.selection.setSelectionArea(oldSelection.getSelectionMin(), oldSelection.getSelectionMax());
                task.accept(this.selection);
+               this.syncRawPositions();
                long diff = System.nanoTime() - start;
                BuilderToolsPlugin.get()
                   .getLogger()
@@ -1355,7 +1548,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          PrototypePlayerBuilderToolSettings protoSettings = ToolOperation.PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
          if (protoSettings != null && toolOperation instanceof PaintOperation) {
-            BuilderTool builderTool = BuilderTool.getActiveBuilderTool(this.player);
+            BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
             if (protoSettings.isLoadingBrush()) {
                return 0;
             }
@@ -1392,8 +1585,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             if (protoSettings.usePrototypeBrushConfigurations()) {
-               ItemStack activeItem = this.player.getInventory().getItemInHand();
-               if (activeItem != null && activeItem.getItemId().equals(protoSettings.getPrototypeItemId())) {
+               ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+               if (itemInHand != null && itemInHand.getItemId().equals(protoSettings.getPrototypeItemId())) {
                   toolOperation.executeAsBrushConfig(protoSettings, packet, componentAccessor);
                   return 0;
                }
@@ -1943,163 +2136,364 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          };
       }
 
-      public void extendFace(
+      private static boolean isBlockSolidCover(LocalCachedChunkAccessor accessor, int x, int y, int z) {
+         int blockId = accessor.getBlock(x, y, z);
+         if (blockId <= 0) {
+            return false;
+         }
+
+         BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+         return blockType != null && blockType.getMaterial() == BlockMaterial.Solid;
+      }
+
+      private int[] getFaceHalfExtents(int normalX, int normalY, int normalZ, int halfWidth, int halfHeight) {
+         if (Math.abs(normalX) == 1) {
+            return new int[]{0, halfHeight, halfWidth};
+         } else {
+            return Math.abs(normalY) == 1 ? new int[]{halfWidth, 0, halfHeight} : new int[]{halfWidth, halfHeight, 0};
+         }
+      }
+
+      private LongOpenHashSet findConnectedSurfaceBlocks(
+         @Nonnull LocalCachedChunkAccessor accessor,
          int x,
          int y,
          int z,
          int normalX,
          int normalY,
          int normalZ,
-         int extrudeDepth,
-         int radiusAllowed,
-         int blockId,
-         @Nullable Vector3i min,
-         @Nullable Vector3i max,
+         int halfWidth,
+         int halfHeight,
+         @Nonnull String filterMode,
+         @Nonnull String strategy
+      ) {
+         int[] halfExtents = this.getFaceHalfExtents(normalX, normalY, normalZ, halfWidth, halfHeight);
+         int xHalf = halfExtents[0];
+         int yHalf = halfExtents[1];
+         int zHalf = halfExtents[2];
+         int sxMin = x - xHalf;
+         int sxMax = x + xHalf;
+         int syMin = y - yHalf;
+         int syMax = y + yHalf;
+         int szMin = z - zHalf;
+         int szMax = z + zHalf;
+         if (Math.abs(normalX) == 1) {
+            sxMin = x;
+            sxMax = x;
+         } else if (Math.abs(normalY) == 1) {
+            syMin = y;
+            syMax = y;
+         } else {
+            szMin = z;
+            szMax = z;
+         }
+
+         LongOpenHashSet connected = new LongOpenHashSet();
+         LongArrayList queue = new LongArrayList();
+         LongOpenHashSet visited = new LongOpenHashSet();
+         long startPacked = BlockUtil.pack(x, y, z);
+         if ("Default".equals(strategy) && isBlockSolidCover(accessor, x + normalX, y + normalY, z + normalZ)) {
+            return connected;
+         }
+
+         queue.push(startPacked);
+         visited.add(startPacked);
+         int[][] faceNeighbors;
+         if (Math.abs(normalX) == 1) {
+            faceNeighbors = new int[][]{{0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+         } else if (Math.abs(normalY) == 1) {
+            faceNeighbors = new int[][]{{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+         } else {
+            faceNeighbors = new int[][]{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
+         }
+
+         int targetBlockId = accessor.getBlock(x, y, z);
+
+         while (!queue.isEmpty()) {
+            long packed = queue.popLong();
+            int px = BlockUtil.unpackX(packed);
+            int py = BlockUtil.unpackY(packed);
+            int pz = BlockUtil.unpackZ(packed);
+            int blockId = accessor.getBlock(px, py, pz);
+            if (blockId > 0 && BuilderToolsPlugin.passesFilter(filterMode, blockId, targetBlockId)) {
+               WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(px, pz));
+               int fillerValue = chunk.getFiller(px, py, pz);
+               if (fillerValue == 0) {
+                  boolean include = true;
+                  if ("FullBlocks".equals(filterMode) || "NotFullBlocks".equals(filterMode)) {
+                     BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+                     boolean isFull = blockType != null && blockType.getMaterial() == BlockMaterial.Solid;
+                     include = "FullBlocks".equals(filterMode) ? isFull : !isFull;
+                  }
+
+                  if (include) {
+                     connected.add(packed);
+                  }
+               }
+
+               for (int[] offset : faceNeighbors) {
+                  int nx = px + offset[0];
+                  int ny = py + offset[1];
+                  int nz = pz + offset[2];
+                  if (nx >= sxMin
+                     && nx <= sxMax
+                     && ny >= syMin
+                     && ny <= syMax
+                     && nz >= szMin
+                     && nz <= szMax
+                     && (!"Default".equals(strategy) || !isBlockSolidCover(accessor, nx + normalX, ny + normalY, nz + normalZ))) {
+                     long neighborPacked = BlockUtil.pack(nx, ny, nz);
+                     if (!visited.contains(neighborPacked)) {
+                        visited.add(neighborPacked);
+                        queue.push(neighborPacked);
+                     }
+                  }
+               }
+            }
+         }
+
+         return connected;
+      }
+
+      public void extendOrShrinkFace(
+         int x,
+         int y,
+         int z,
+         int normalX,
+         int normalY,
+         int normalZ,
+         int depth,
+         int extrudeWidth,
+         int extrudeLength,
+         boolean shrink,
+         @Nonnull BlockPattern pattern,
+         @Nonnull String filterMode,
+         @Nonnull String strategy,
+         int undoGroupSize,
+         boolean isHoldDown,
          ComponentAccessor<EntityStore> componentAccessor
       ) {
          World world = componentAccessor.getExternalData().getWorld();
          long start = System.nanoTime();
-         LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, x, z, radiusAllowed);
-         if (min == null) {
-            min = new Vector3i(x - radiusAllowed, y - radiusAllowed, z - radiusAllowed);
-         } else {
-            int minX = min.x();
-            if (x - radiusAllowed > minX) {
-               minX = x - radiusAllowed;
-            }
+         int halfWidth = extrudeWidth / 2;
+         int halfHeight = extrudeLength / 2;
+         int maxHalf = Math.max(halfWidth, halfHeight);
+         LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, x, z, maxHalf + depth);
+         int testBlock = accessor.getBlock(x, y, z);
+         if (testBlock > 0) {
+            LongOpenHashSet connected = this.findConnectedSurfaceBlocks(
+               accessor, x, y, z, normalX, normalY, normalZ, halfWidth, halfHeight, filterMode, strategy
+            );
+            if (!connected.isEmpty()) {
+               int totalBlocks = connected.size() * depth;
+               BlockSelection before = new BlockSelection(totalBlocks, 0);
+               before.setPosition(shrink ? x : x + normalX, shrink ? y : y + normalY, shrink ? z : z + normalZ);
+               BlockSelection after = new BlockSelection(totalBlocks, 0);
+               after.copyPropertiesFrom(before);
+               int dirSign = shrink ? -1 : 1;
+               int startOffset = shrink ? 0 : 1;
 
-            int minY = min.y();
-            if (y - radiusAllowed > minY) {
-               minY = y - radiusAllowed;
-            }
+               for (long packed : connected) {
+                  int sx = BlockUtil.unpackX(packed);
+                  int sy = BlockUtil.unpackY(packed);
+                  int sz = BlockUtil.unpackZ(packed);
+                  WorldChunk sourceChunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(sx, sz));
+                  int sourceBlock = shrink ? 0 : sourceChunk.getBlock(sx, sy, sz);
+                  int sourceRotation = shrink ? 0 : sourceChunk.getRotationIndex(sx, sy, sz);
+                  int sourceFiller = shrink ? 0 : sourceChunk.getFiller(sx, sy, sz);
+                  int sourceSupport = shrink ? 0 : sourceChunk.getSupportValue(sx, sy, sz);
 
-            int minZ = min.z();
-            if (z - radiusAllowed > minZ) {
-               minZ = z - radiusAllowed;
-            }
+                  for (int i = 0; i < depth; i++) {
+                     int ex = sx + normalX * dirSign * (i + startOffset);
+                     int ey = sy + normalY * dirSign * (i + startOffset);
+                     int ez = sz + normalZ * dirSign * (i + startOffset);
+                     WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(ex, ez));
+                     int currentBlock = chunk.getBlock(ex, ey, ez);
+                     int currentFiller = chunk.getFiller(ex, ey, ez);
+                     if (shrink && currentBlock <= 0
+                        || shrink && currentFiller != 0
+                        || shrink && !BuilderToolsPlugin.passesFilter(filterMode, currentBlock, testBlock)) {
+                        break;
+                     }
 
-            min = new Vector3i(minX, minY, minZ);
-         }
+                     Material material = null;
+                     if (pattern != null && !pattern.isEmpty()) {
+                        material = Material.fromPattern(pattern, this.random);
+                     }
 
-         if (max == null) {
-            max = new Vector3i(x + radiusAllowed, y + radiusAllowed, z + radiusAllowed);
-         } else {
-            int maxX = max.x();
-            if (x + radiusAllowed < maxX) {
-               maxX = x + radiusAllowed;
-            }
-
-            int maxY = max.y();
-            if (y + radiusAllowed < maxY) {
-               maxY = y + radiusAllowed;
-            }
-
-            int maxZ = max.z();
-            if (z + radiusAllowed < maxZ) {
-               maxZ = z + radiusAllowed;
-            }
-
-            max = new Vector3i(maxX, maxY, maxZ);
-         }
-
-         int totalBlocks = (max.x() - min.x() + 1) * (max.z() - min.z() + 1) * (max.y() - min.y() + 1);
-         BlockSelection before = new BlockSelection(totalBlocks, 0);
-         before.setPosition(x + normalX, y + normalY, z + normalZ);
-         before.setSelectionArea(min, max);
-         this.pushHistory(BuilderToolsPlugin.Action.EXTRUDE, new BlockSelectionSnapshot(before));
-         BlockSelection after = new BlockSelection(totalBlocks, 0);
-         after.copyPropertiesFrom(before);
-         if (x >= min.x() && x <= max.x()) {
-            if (y >= min.y() && y <= max.y()) {
-               if (z >= min.z() && z <= max.z()) {
-                  int testBlock = accessor.getBlock(x - normalX, y - normalY, z - normalZ);
-                  BlockType testBlockType = BlockType.getAssetMap().getAsset(testBlock);
-                  if (testBlockType != null && (testBlockType.getDrawType() == DrawType.Cube || testBlockType.getDrawType() == DrawType.CubeWithModel)) {
-                     int xMod = Math.abs(normalX) == 1 ? 0 : 1;
-                     int yMod = Math.abs(normalY) == 1 ? 0 : 1;
-                     int zMod = Math.abs(normalZ) == 1 ? 0 : 1;
-                     Vector3i surfaceMin = new Vector3i(x - radiusAllowed * xMod, y - radiusAllowed * yMod, z - radiusAllowed * zMod);
-                     Vector3i surfaceMax = new Vector3i(x + radiusAllowed * xMod, y + radiusAllowed * yMod, z + radiusAllowed * zMod);
-                     this.extendFaceFindBlocks(accessor, before, after, normalX, normalY, normalZ, extrudeDepth, blockId, min, max, surfaceMin, surfaceMax);
-                     after.placeNoReturn("Set", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
-                     BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
-                     long end = System.nanoTime();
-                     long diff = end - start;
-                     BuilderToolsPlugin.get()
-                        .getLogger()
-                        .at(Level.FINE)
-                        .log("Took: %dns (%dms) to execute set of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), after.getBlockCount());
-                     this.sendUpdate();
-                     this.sendArea();
+                     if (material == null || material.equals(Material.EMPTY)) {
+                        before.addBlockAtWorldPos(
+                           ex,
+                           ey,
+                           ez,
+                           currentBlock,
+                           chunk.getRotationIndex(ex, ey, ez),
+                           chunk.getFiller(ex, ey, ez),
+                           chunk.getSupportValue(ex, ey, ez),
+                           chunk.getBlockComponentHolder(ex, ey, ez)
+                        );
+                        after.addBlockAtWorldPos(ex, ey, ez, sourceBlock, sourceRotation, sourceFiller, sourceSupport);
+                     } else if (material.isFluid()) {
+                        int currentFluidId = chunk.getFluidId(ex, ey, ez);
+                        if (currentFluidId == 0) {
+                           byte currentFluidLevel = chunk.getFluidLevel(ex, ey, ez);
+                           before.addFluidAtWorldPos(ex, ey, ez, currentFluidId, currentFluidLevel);
+                           after.addFluidAtWorldPos(ex, ey, ez, material.getFluidId(), material.getFluidLevel());
+                        }
+                     } else {
+                        int newBlockId = material.getBlockId();
+                        int newRotation = material.getRotation();
+                        Holder<ChunkStore> holder = chunk.getBlockComponentHolder(ex, ey, ez);
+                        Holder<ChunkStore> newHolder = BuilderToolsPlugin.createBlockComponent(chunk, ex, ey, ez, newBlockId, currentBlock, holder, false);
+                        int supportValue = chunk.getSupportValue(ex, ey, ez);
+                        int filler = chunk.getFiller(ex, ey, ez);
+                        int rotation = chunk.getRotationIndex(ex, ey, ez);
+                        before.addBlockAtWorldPos(ex, ey, ez, currentBlock, rotation, filler, supportValue, holder);
+                        after.addBlockAtWorldPos(ex, ey, ez, newBlockId, newRotation, 0, 0, newHolder);
+                     }
                   }
                }
+
+               String label = shrink ? "Shrink" : "Extrude";
+               this.handleBrushUndoGrouping(before, Collections.emptyList(), Collections.emptyList(), undoGroupSize, isHoldDown);
+               after.placeNoReturn(label, this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+               BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+               long end = System.nanoTime();
+               long diff = end - start;
+               BuilderToolsPlugin.get()
+                  .getLogger()
+                  .at(Level.FINE)
+                  .log("Took: %dns (%dms) to %s %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), label.toLowerCase(), after.getBlockCount());
+               this.sendUpdate();
+               this.sendArea();
             }
          }
       }
 
-      private void extendFaceFindBlocks(
-         @Nonnull LocalCachedChunkAccessor accessor,
-         @Nonnull BlockSelection before,
-         @Nonnull BlockSelection after,
+      public void fillVolume(
+         int x,
+         int y,
+         int z,
          int normalX,
          int normalY,
          int normalZ,
-         int extrudeDepth,
-         int blockId,
-         @Nonnull Vector3i min,
-         @Nonnull Vector3i max,
-         @Nonnull Vector3i surfaceMin,
-         @Nonnull Vector3i surfaceMax
+         int fillDepth,
+         int fillWidth,
+         int fillHeight,
+         @Nonnull BlockPattern pattern,
+         int undoGroupSize,
+         boolean isHoldDown,
+         ComponentAccessor<EntityStore> componentAccessor
       ) {
-         int xMin = surfaceMin.x();
-         int yMin = surfaceMin.y();
-         int zMin = surfaceMin.z();
-         int xMax = surfaceMax.x();
-         int yMax = surfaceMax.y();
-         int zMax = surfaceMax.z();
+         if (!pattern.isEmpty()) {
+            World world = componentAccessor.getExternalData().getWorld();
+            long start = System.nanoTime();
+            int halfWidth = fillWidth / 2;
+            int halfHeight = fillHeight / 2;
+            int maxHalf = Math.max(halfWidth, halfHeight);
+            int[] halfExtents = this.getFaceHalfExtents(normalX, normalY, normalZ, halfWidth, halfHeight);
+            int xHalf = halfExtents[0];
+            int yHalf = halfExtents[1];
+            int zHalf = halfExtents[2];
+            int startX = x + normalX;
+            int startY = y + normalY;
+            int startZ = z + normalZ;
+            int sxMin = startX - xHalf;
+            int sxMax = startX + xHalf;
+            int syMin = startY - yHalf;
+            int syMax = startY + yHalf;
+            int szMin = startZ - zHalf;
+            int szMax = startZ + zHalf;
+            if (Math.abs(normalX) == 1) {
+               sxMin = normalX > 0 ? startX : startX - fillDepth + 1;
+               sxMax = normalX > 0 ? startX + fillDepth - 1 : startX;
+            } else if (Math.abs(normalY) == 1) {
+               syMin = normalY > 0 ? startY : startY - fillDepth + 1;
+               syMax = normalY > 0 ? startY + fillDepth - 1 : startY;
+            } else {
+               szMin = normalZ > 0 ? startZ : startZ - fillDepth + 1;
+               szMax = normalZ > 0 ? startZ + fillDepth - 1 : startZ;
+            }
 
-         for (int x = xMin; x <= xMax; x++) {
-            for (int z = zMin; z <= zMax; z++) {
-               WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
+            LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, x, z, maxHalf + fillDepth);
+            if (accessor.getBlock(startX, startY, startZ) <= 0) {
+               LongOpenHashSet connected = new LongOpenHashSet();
+               LongArrayList queue = new LongArrayList();
+               LongOpenHashSet visited = new LongOpenHashSet();
+               long startPacked = BlockUtil.pack(startX, startY, startZ);
+               queue.push(startPacked);
+               visited.add(startPacked);
+               int[][] neighbors = new int[][]{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
 
-               for (int y = yMax; y >= yMin; y--) {
-                  int currentBlock = chunk.getBlock(x, y, z);
-                  int currentFluid = chunk.getFluidId(x, y, z);
-                  if (currentBlock > 0) {
-                     int xRes = x + normalX;
-                     int yRes = y + normalY;
-                     int zRes = z + normalZ;
-                     currentBlock = chunk.getBlock(xRes, yRes, zRes);
-                     before.addBlockAtWorldPos(
-                        xRes,
-                        yRes,
-                        zRes,
-                        currentBlock,
-                        chunk.getRotationIndex(xRes, yRes, zRes),
-                        chunk.getFiller(xRes, yRes, zRes),
-                        chunk.getSupportValue(xRes, yRes, zRes),
-                        chunk.getBlockComponentHolder(xRes, yRes, zRes)
-                     );
-                     after.addBlockAtWorldPos(xRes, yRes, zRes, blockId, 0, 0, 0);
+               while (!queue.isEmpty()) {
+                  long packed = queue.popLong();
+                  int px = BlockUtil.unpackX(packed);
+                  int py = BlockUtil.unpackY(packed);
+                  int pz = BlockUtil.unpackZ(packed);
+                  if (accessor.getBlock(px, py, pz) <= 0) {
+                     connected.add(packed);
 
-                     for (int i = 0; i < extrudeDepth; i++) {
-                        int extrudedBlockX = xRes + normalX * i;
-                        int extrudedBlockY = yRes + normalY * i;
-                        int extrudedBlockZ = zRes + normalZ * i;
-                        before.addBlockAtWorldPos(
-                           extrudedBlockX,
-                           extrudedBlockY,
-                           extrudedBlockZ,
-                           currentBlock,
-                           chunk.getRotationIndex(extrudedBlockX, extrudedBlockY, extrudedBlockZ),
-                           chunk.getFiller(extrudedBlockX, extrudedBlockY, extrudedBlockZ),
-                           chunk.getSupportValue(extrudedBlockX, extrudedBlockY, extrudedBlockZ),
-                           chunk.getBlockComponentHolder(extrudedBlockX, extrudedBlockY, extrudedBlockZ)
-                        );
-                        after.addBlockAtWorldPos(extrudedBlockX, extrudedBlockY, extrudedBlockZ, blockId, 0, 0, 0);
+                     for (int[] offset : neighbors) {
+                        int nx = px + offset[0];
+                        int ny = py + offset[1];
+                        int nz = pz + offset[2];
+                        if (nx >= sxMin && nx <= sxMax && ny >= syMin && ny <= syMax && nz >= szMin && nz <= szMax) {
+                           long neighborPacked = BlockUtil.pack(nx, ny, nz);
+                           if (!visited.contains(neighborPacked)) {
+                              visited.add(neighborPacked);
+                              queue.push(neighborPacked);
+                           }
+                        }
                      }
                   }
                }
+
+               int totalBlocks = connected.size() * fillDepth;
+               BlockSelection before = new BlockSelection(totalBlocks, 0);
+               before.setPosition(x, y, z);
+               BlockSelection after = new BlockSelection(totalBlocks, 0);
+               after.copyPropertiesFrom(before);
+
+               for (long packed : connected) {
+                  int bx = BlockUtil.unpackX(packed);
+                  int by = BlockUtil.unpackY(packed);
+                  int bz = BlockUtil.unpackZ(packed);
+                  WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(bx, bz));
+                  int currentBlock = chunk.getBlock(bx, by, bz);
+                  if (currentBlock <= 0) {
+                     Material material = Material.fromPattern(pattern, this.random);
+                     if (material.isFluid()) {
+                        int currentFluidId = chunk.getFluidId(bx, by, bz);
+                        if (currentFluidId == 0) {
+                           byte currentFluidLevel = chunk.getFluidLevel(bx, by, bz);
+                           before.addFluidAtWorldPos(bx, by, bz, currentFluidId, currentFluidLevel);
+                           after.addFluidAtWorldPos(bx, by, bz, material.getFluidId(), material.getFluidLevel());
+                        }
+                     } else {
+                        int newBlockId = material.getBlockId();
+                        int newRotation = material.getRotation();
+                        Holder<ChunkStore> holder = chunk.getBlockComponentHolder(bx, by, bz);
+                        Holder<ChunkStore> newHolder = BuilderToolsPlugin.createBlockComponent(chunk, bx, by, bz, newBlockId, currentBlock, holder, false);
+                        int supportValue = chunk.getSupportValue(bx, by, bz);
+                        int filler = chunk.getFiller(bx, by, bz);
+                        int rotation = chunk.getRotationIndex(bx, by, bz);
+                        before.addBlockAtWorldPos(bx, by, bz, currentBlock, rotation, filler, supportValue, holder);
+                        after.addBlockAtWorldPos(bx, by, bz, newBlockId, newRotation, 0, 0, newHolder);
+                     }
+                  }
+               }
+
+               this.handleBrushUndoGrouping(before, Collections.emptyList(), Collections.emptyList(), undoGroupSize, isHoldDown);
+               after.placeNoReturn("Fill", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+               BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+               long end = System.nanoTime();
+               long diff = end - start;
+               BuilderToolsPlugin.get()
+                  .getLogger()
+                  .at(Level.FINE)
+                  .log("Took: %dns (%dms) to fill %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), after.getBlockCount());
+               this.sendUpdate();
+               this.sendArea();
             }
          }
       }
@@ -2111,6 +2505,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
          this.selection.setSelectionArea(new Vector3i(xMin, yMin, zMin), new Vector3i(xMax, yMax, zMax));
+         this.syncRawPositions();
       }
 
       public void tint(@Nonnull Ref<EntityStore> ref, int color, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -2274,6 +2669,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          this.selection = new BlockSelection();
          this.selection.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
          this.selection.setSelectionArea(min, max);
+         this.syncRawPositions();
          int count = 0;
          int counter = 0;
          int top = Math.max(yMin, yMax);
@@ -2382,6 +2778,17 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                      store.removeEntity(e, RemoveReason.UNLOAD);
                   }
                }
+            }
+
+            int cbMinX = Math.min(xMin, xMax);
+            int cbMinY = Math.min(yMin, yMax);
+            int cbMinZ = Math.min(zMin, zMax);
+            int cbMaxX = Math.max(xMin, xMax);
+            int cbMaxY = Math.max(yMin, yMax);
+            int cbMaxZ = Math.max(zMin, zMax);
+
+            for (PrefabSaveContributor contributor : BuilderToolsPlugin.get().getClipboardContributors()) {
+               contributor.contribute(this.selection, world, new Vector3i(cbMinX, cbMinY, cbMinZ), new Vector3i(cbMaxX, cbMaxY, cbMaxZ));
             }
 
             if (cut) {
@@ -2766,6 +3173,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          Vector3i newMin = this.transformBlockLocation(this.selection.getSelectionMin(), rotation, translationOffset, rotationOrigin);
          Vector3i newMax = this.transformBlockLocation(this.selection.getSelectionMax(), rotation, translationOffset, rotationOrigin);
          this.selection.setSelectionArea(Vector3iUtil.min(newMin, newMax), Vector3iUtil.max(newMin, newMax));
+         this.syncRawPositions();
          this.sendUpdate();
          this.sendArea();
       }
@@ -3046,14 +3454,26 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       public void rotateArbitrary(@Nonnull Ref<EntityStore> ref, float yaw, float pitch, float roll, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
          if (this.selection != null) {
             long start = System.nanoTime();
+            if (this.preRotationSnapshot == null) {
+               this.preRotationSnapshot = this.selection.cloneSelection();
+            }
+
             this.pushHistory(BuilderToolsPlugin.Action.ROTATE, ClipboardContentsSnapshot.copyOf(this.selection));
+            int entitiesBefore = this.selection.getEntityCount();
             this.selection = this.selection.rotateArbitrary(yaw, pitch, roll);
             long end = System.nanoTime();
             long diff = end - start;
             BuilderToolsPlugin.get()
                .getLogger()
                .at(Level.FINE)
-               .log("Took: %dns (%dms) to execute arbitrary rotate of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), this.selection.getBlockCount());
+               .log(
+                  "Took: %dns (%dms) to execute arbitrary rotate of %d blocks, %d -> %d entities",
+                  diff,
+                  TimeUnit.NANOSECONDS.toMillis(diff),
+                  this.selection.getBlockCount(),
+                  entitiesBefore,
+                  this.selection.getEntityCount()
+               );
             this.sendUpdate();
             Message message = Message.translation("server.builderTools.clipboardRotatedArbitrary").param("yaw", yaw).param("pitch", pitch).param("roll", roll);
             this.sendFeedback(message, componentAccessor);
@@ -3937,6 +4357,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             BuilderToolsPlugin.invalidateWorldMapForSelection(cleared, world);
             BuilderToolsPlugin.invalidateWorldMapForSelection(selected, world);
             this.selection.setSelectionArea(min.add(direction), max.add(direction));
+            this.syncRawPositions();
             long end = System.nanoTime();
             long diff = end - start;
             BuilderToolsPlugin.get()
@@ -3960,6 +4381,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          } else {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
             this.selection.setSelectionArea(this.selection.getSelectionMin().add(direction), this.selection.getSelectionMax().add(direction));
+            this.syncRawPositions();
             this.sendArea();
             this.sendFeedback(
                Message.translation("server.builderTools.selectionShiftedBy").param("x", direction.x()).param("y", direction.y()).param("z", direction.z()),
@@ -3969,20 +4391,23 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       public void pos1(@Nonnull Vector3i pos1, ComponentAccessor<EntityStore> componentAccessor) {
-         if (this.selection != null && !this.selection.getSelectionMax().equals(Vector3iUtil.ZERO)) {
-            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
-            this.selection.setSelectionArea(pos1, this.selection.getSelectionMax());
-            this.sendArea();
-         } else {
-            if (this.selection == null) {
-               this.selection = new BlockSelection();
-            }
-
-            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, ClipboardBoundsSnapshot.EMPTY);
-            this.selection.setSelectionArea(pos1, pos1);
-            this.sendArea();
+         this.rawPos1 = new Vector3i(pos1);
+         if (this.selection == null) {
+            this.selection = new BlockSelection();
          }
 
+         if (this.selection.hasSelectionBounds()) {
+            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
+            if (this.rawPos2 == null) {
+               this.rawPos2 = this.selection.getSelectionMax();
+            }
+         } else {
+            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, ClipboardBoundsSnapshot.EMPTY);
+         }
+
+         Vector3i otherCorner = this.rawPos2 != null ? this.rawPos2 : pos1;
+         this.selection.setSelectionArea(pos1, otherCorner);
+         this.sendArea();
          this.sendFeedback(
             Message.translation("server.builderTools.setPosTo").param("num", 1).param("x", pos1.x()).param("y", pos1.y()).param("z", pos1.z()),
             componentAccessor
@@ -3990,20 +4415,23 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       public void pos2(@Nonnull Vector3i pos2, ComponentAccessor<EntityStore> componentAccessor) {
-         if (this.selection != null && !this.selection.getSelectionMin().equals(Vector3iUtil.ZERO)) {
-            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
-            this.selection.setSelectionArea(this.selection.getSelectionMin(), pos2);
-            this.sendArea();
-         } else {
-            if (this.selection == null) {
-               this.selection = new BlockSelection();
-            }
-
-            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, ClipboardBoundsSnapshot.EMPTY);
-            this.selection.setSelectionArea(pos2, pos2);
-            this.sendArea();
+         this.rawPos2 = new Vector3i(pos2);
+         if (this.selection == null) {
+            this.selection = new BlockSelection();
          }
 
+         if (this.selection.hasSelectionBounds()) {
+            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
+            if (this.rawPos1 == null) {
+               this.rawPos1 = this.selection.getSelectionMin();
+            }
+         } else {
+            this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, ClipboardBoundsSnapshot.EMPTY);
+         }
+
+         Vector3i otherCorner = this.rawPos1 != null ? this.rawPos1 : pos2;
+         this.selection.setSelectionArea(otherCorner, pos2);
+         this.sendArea();
          this.sendFeedback(
             Message.translation("server.builderTools.setPosTo").param("num", 2).param("x", pos2.x()).param("y", pos2.y()).param("z", pos2.z()),
             componentAccessor
@@ -4014,6 +4442,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if (this.selection != null && !this.selection.getSelectionMax().equals(Vector3iUtil.ZERO)) {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
             this.selection.setSelectionArea(pos1, pos2);
+            this.syncRawPositions();
             this.sendArea();
          } else {
             if (this.selection == null) {
@@ -4022,6 +4451,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, ClipboardBoundsSnapshot.EMPTY);
             this.selection.setSelectionArea(pos1, pos2);
+            this.syncRawPositions();
             this.sendArea();
          }
 
@@ -4054,10 +4484,19 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          if (this.selection != null && this.selection.hasSelectionBounds()) {
             this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
             this.selection.setSelectionArea(Vector3iUtil.ZERO, Vector3iUtil.ZERO);
+            this.rawPos1 = null;
+            this.rawPos2 = null;
             EditorBlocksChange packet = new EditorBlocksChange();
             packet.selection = null;
             this.playerRef.getPacketHandler().write(packet);
             this.sendFeedback(Message.translation("server.builderTools.deselected"), componentAccessor);
+            BiConsumer<PlayerRef, Store<EntityStore>> clearedCb = BuilderToolsPlugin.get().getSelectionClearedCallback();
+            if (clearedCb != null) {
+               World world = componentAccessor.getExternalData().getWorld();
+               if (world != null) {
+                  clearedCb.accept(this.playerRef, world.getEntityStore().getStore());
+               }
+            }
          } else {
             this.sendFeedback(Message.translation("server.builderTools.noSelectionToDeselect"), componentAccessor);
          }
@@ -4189,6 +4628,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             this.selection.setSelectionArea(min, max);
+            this.syncRawPositions();
             this.sendArea();
             this.sendFeedback(
                Message.translation("server.builderTools.selectionExpanded").param("x", direction.x()).param("y", direction.y()).param("z", direction.z()),
@@ -4225,6 +4665,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             this.selection.setSelectionArea(min, max);
+            this.syncRawPositions();
             this.sendArea();
             this.sendFeedback(
                ref,
@@ -4332,6 +4773,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       @Nonnull
       public List<BuilderToolsPlugin.ActionEntry> undo(@Nonnull Ref<EntityStore> ref, int count, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
          this.commitPendingUndoGroup();
+         this.commitPendingEntitySessions();
          long start = System.nanoTime();
          BlockSelection before = this.selection;
          List<BuilderToolsPlugin.ActionEntry> list = new ObjectArrayList<>();
@@ -4362,12 +4804,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             int i = 0;
 
             for (BuilderToolsPlugin.ActionEntry pair : list) {
-               this.sendFeedback(
-                  ref,
-                  Message.translation("server.builderTools.undoStatus").param("index", ++i).param("action", pair.getAction().toMessage()),
-                  "CREATE_UNDO",
-                  componentAccessor
-               );
+               if (pair.isEntityNotFound()) {
+                  this.sendErrorFeedback(ref, Message.translation("server.builderTools.undoEntityNotFound"), componentAccessor);
+               } else {
+                  this.sendFeedback(
+                     ref,
+                     Message.translation("server.builderTools.undoStatus").param("index", ++i).param("action", pair.getAction().toMessage()),
+                     "CREATE_UNDO",
+                     componentAccessor
+                  );
+               }
             }
          }
 
@@ -4376,6 +4822,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
       @Nonnull
       public List<BuilderToolsPlugin.ActionEntry> redo(@Nonnull Ref<EntityStore> ref, int count, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         this.commitPendingEntitySessions();
          long start = System.nanoTime();
          BlockSelection before = this.selection;
          List<BuilderToolsPlugin.ActionEntry> list = new ObjectArrayList<>();
@@ -4406,12 +4853,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             int i = 0;
 
             for (BuilderToolsPlugin.ActionEntry pair : list) {
-               this.sendFeedback(
-                  ref,
-                  Message.translation("server.builderTools.redoStatus").param("index", ++i).param("action", pair.getAction().toMessage()),
-                  "CREATE_REDO",
-                  componentAccessor
-               );
+               if (pair.isEntityNotFound()) {
+                  this.sendErrorFeedback(ref, Message.translation("server.builderTools.redoEntityNotFound"), componentAccessor);
+               } else {
+                  this.sendFeedback(
+                     ref,
+                     Message.translation("server.builderTools.redoStatus").param("index", ++i).param("action", pair.getAction().toMessage()),
+                     "CREATE_REDO",
+                     componentAccessor
+                  );
+               }
             }
          }
 
@@ -4591,6 +5042,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                   });
                }
 
+               for (PrefabSaveContributor contributor : BuilderToolsPlugin.get().getPrefabSaveContributors()) {
+                  contributor.contribute(tempSelection, world, new Vector3i(xMin, yMin, zMin), new Vector3i(xMax, yMax, zMax));
+               }
+
                try {
                   BlockSelection postClone = relativize ? tempSelection.relativize() : tempSelection.cloneSelection();
                   if (clearSupport) {
@@ -4652,6 +5107,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
             this.selection = serverPrefab.cloneSelection();
             this.selection.setSelectionArea(min, max);
+            this.syncRawPositions();
             this.sendUpdate();
             this.sendFeedback(Message.translation("server.general.loadedPrefab").param("name", name), componentAccessor);
          } catch (PrefabLoadException e) {
@@ -4737,7 +5193,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
             if (action != BuilderToolsPlugin.Action.UPDATE_SELECTION
                && action != BuilderToolsPlugin.Action.COPY
-               && action != BuilderToolsPlugin.Action.CUT_COPY) {
+               && action != BuilderToolsPlugin.Action.CUT_COPY
+               && action != BuilderToolsPlugin.Action.TRIGGER_VOLUME) {
                this.markPrefabsDirtyFromSnapshots(snapshots);
             }
          }
@@ -4827,6 +5284,82 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
       }
 
+      public void handleEntityTransform(
+         @Nonnull Ref<EntityStore> targetRef, boolean hasTransformData, boolean isSessionEnd, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
+         if (hasTransformData && this.pendingEntityTransformSession == null) {
+            this.pendingEntityTransformSession = new EntityTransformSnapshot(targetRef, componentAccessor);
+         }
+
+         if (isSessionEnd) {
+            this.commitPendingEntitySessions();
+         }
+      }
+
+      public void commitPendingEntityTransformSession() {
+         if (this.pendingEntityTransformSession != null) {
+            this.pushHistory(BuilderToolsPlugin.Action.ENTITY_TRANSFORM, this.pendingEntityTransformSession);
+            this.pendingEntityTransformSession = null;
+         }
+      }
+
+      public void pushEntityCloneHistory(@Nonnull Ref<EntityStore> clonedEntityRef) {
+         this.pushHistory(BuilderToolsPlugin.Action.ENTITY_CLONE, new EntityAddSnapshot(clonedEntityRef));
+      }
+
+      public void pushEntityRemoveHistory(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         if (this.pendingEntityTransformSession != null) {
+            this.pendingEntityTransformSession.applyTransform(componentAccessor);
+            this.pendingEntityTransformSession = null;
+         }
+
+         this.pendingEntityScaleSession = null;
+         this.pendingEntityScaleRef = null;
+         EntityRemoveSnapshot snapshot = new EntityRemoveSnapshot(targetRef);
+         this.pushHistory(BuilderToolsPlugin.Action.ENTITY_REMOVE, snapshot);
+      }
+
+      public void pushEntityFreezeHistory(@Nonnull EntityFreezeSnapshot snapshot) {
+         this.commitPendingEntitySessions();
+         this.pushHistory(BuilderToolsPlugin.Action.ENTITY_FREEZE, snapshot);
+      }
+
+      public void pushEntitySettingsHistory(@Nonnull EntitySettingsSnapshot snapshot) {
+         this.commitPendingEntitySessions();
+         this.pushHistory(BuilderToolsPlugin.Action.ENTITY_SETTINGS, snapshot);
+      }
+
+      public void pushTriggerVolumeHistory(@Nonnull SelectionSnapshot<?> snapshot) {
+         this.commitPendingEntitySessions();
+         this.pushHistory(BuilderToolsPlugin.Action.TRIGGER_VOLUME, snapshot);
+      }
+
+      public void pushTriggerVolumeHistory(@Nonnull List<SelectionSnapshot<?>> snapshots) {
+         this.commitPendingEntitySessions();
+         this.pushHistory(BuilderToolsPlugin.Action.TRIGGER_VOLUME, snapshots);
+      }
+
+      public void handleEntityScale(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         if (this.pendingEntityScaleRef == null || !targetRef.equals(this.pendingEntityScaleRef)) {
+            this.commitPendingEntityScaleSession();
+            this.pendingEntityScaleRef = targetRef;
+            this.pendingEntityScaleSession = new EntityScaleSnapshot(targetRef, componentAccessor);
+         }
+      }
+
+      private void commitPendingEntityScaleSession() {
+         if (this.pendingEntityScaleSession != null) {
+            this.pushHistory(BuilderToolsPlugin.Action.ENTITY_SCALE, this.pendingEntityScaleSession);
+            this.pendingEntityScaleSession = null;
+            this.pendingEntityScaleRef = null;
+         }
+      }
+
+      private void commitPendingEntitySessions() {
+         this.commitPendingEntityTransformSession();
+         this.commitPendingEntityScaleSession();
+      }
+
       private void markPrefabsDirtyFromSnapshots(@Nonnull List<SelectionSnapshot<?>> snapshots) {
          PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
          Map<UUID, PrefabEditSession> activeEditSessions = prefabEditSessionManager.getActiveEditSessions();
@@ -4860,15 +5393,66 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             BuilderToolsPlugin.ActionEntry builderAction = from.dequeueLast();
-            to.enqueue(builderAction.restore(ref, this.playerRef, componentAccessor.getExternalData().getWorld(), componentAccessor));
+            BuilderToolsPlugin.ActionEntry restoredAction = builderAction.restore(
+               ref, this.playerRef, componentAccessor.getExternalData().getWorld(), componentAccessor
+            );
+            to.enqueue(restoredAction);
 
             while (to.size() > BuilderToolsPlugin.get().historyCount) {
                to.dequeue();
             }
 
+            propagateEntityRefUpdates(builderAction, restoredAction, from);
             return builderAction;
          } finally {
             this.undoLock.unlockWrite(stamp);
+         }
+      }
+
+      private static void propagateEntityRefUpdates(
+         @Nonnull BuilderToolsPlugin.ActionEntry original,
+         @Nonnull BuilderToolsPlugin.ActionEntry restored,
+         @Nonnull ObjectArrayFIFOQueue<BuilderToolsPlugin.ActionEntry> remaining
+      ) {
+         List<SelectionSnapshot<?>> originalSnapshots = original.getSnapshots();
+         List<SelectionSnapshot<?>> restoredSnapshots = restored.getSnapshots();
+         List<Ref<EntityStore>> oldRefs = null;
+         List<Ref<EntityStore>> newRefs = null;
+
+         for (int i = 0; i < originalSnapshots.size() && i < restoredSnapshots.size(); i++) {
+            if (originalSnapshots.get(i) instanceof EntityRemoveSnapshot removeSnapshot && restoredSnapshots.get(i) instanceof EntityAddSnapshot addSnapshot) {
+               Ref<EntityStore> oldRef = removeSnapshot.getOriginalRef();
+               Ref<EntityStore> newRef = addSnapshot.getEntityRef();
+               if (oldRef != newRef) {
+                  if (oldRefs == null) {
+                     oldRefs = new ObjectArrayList<>();
+                     newRefs = new ObjectArrayList<>();
+                  }
+
+                  oldRefs.add(oldRef);
+                  newRefs.add(newRef);
+               }
+            }
+         }
+
+         if (oldRefs != null) {
+            List<BuilderToolsPlugin.ActionEntry> temp = new ObjectArrayList<>(remaining.size());
+
+            while (!remaining.isEmpty()) {
+               temp.add(remaining.dequeue());
+            }
+
+            for (BuilderToolsPlugin.ActionEntry entry : temp) {
+               for (SelectionSnapshot<?> snapshot : entry.getSnapshots()) {
+                  if (snapshot instanceof EntitySnapshot<?> entitySnapshot) {
+                     for (int i = 0; i < oldRefs.size(); i++) {
+                        entitySnapshot.updateEntityRef(oldRefs.get(i), newRefs.get(i));
+                     }
+                  }
+               }
+
+               remaining.enqueue(entry);
+            }
          }
       }
 

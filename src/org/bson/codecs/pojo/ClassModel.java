@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public final class ClassModel<T> {
    private final String name;
@@ -121,12 +122,12 @@ public final class ClassModel<T> {
 
          if (this.getDiscriminatorKey() != null ? this.getDiscriminatorKey().equals(that.getDiscriminatorKey()) : that.getDiscriminatorKey() == null) {
             if (this.getDiscriminator() != null ? this.getDiscriminator().equals(that.getDiscriminator()) : that.getDiscriminator() == null) {
-               if (this.idPropertyModelHolder != null ? this.idPropertyModelHolder.equals(that.idPropertyModelHolder) : that.idPropertyModelHolder == null) {
+               if (!Objects.equals(this.idPropertyModelHolder, that.idPropertyModelHolder)) {
+                  return false;
+               } else {
                   return !this.getPropertyModels().equals(that.getPropertyModels())
                      ? false
                      : this.getPropertyNameToTypeParameterMap().equals(that.getPropertyNameToTypeParameterMap());
-               } else {
-                  return false;
                }
             } else {
                return false;

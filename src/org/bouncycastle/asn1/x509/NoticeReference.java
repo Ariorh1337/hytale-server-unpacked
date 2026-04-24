@@ -28,7 +28,7 @@ public class NoticeReference extends ASN1Object {
                throw new IllegalArgumentException();
             }
 
-            var4 = new ASN1Integer(((Integer)var3).intValue());
+            var4 = ASN1Integer.valueOf((Integer)var3);
          }
 
          var1.add(var4);

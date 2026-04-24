@@ -34,12 +34,12 @@ import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bouncycastle.util.Arrays;
 
 public class EntityStatsModule extends JavaPlugin {
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(EntityStatsModule.class)
@@ -190,25 +190,25 @@ public class EntityStatsModule extends JavaPlugin {
 
    @Nullable
    public static int[] resolveEntityStats(@Nullable String[] raw) {
-      if (Arrays.isNullOrEmpty(raw)) {
+      if (raw != null && raw.length != 0) {
+         int[] out = new int[raw.length];
+         int size = 0;
+
+         for (int i = 0; i < raw.length; i++) {
+            int index = EntityStatType.getAssetMap().getIndex(raw[i]);
+            if (index != Integer.MIN_VALUE) {
+               out[size++] = index;
+            }
+         }
+
+         if (size != raw.length) {
+            out = Arrays.copyOf(out, size);
+         }
+
+         return out;
+      } else {
          return null;
       }
-
-      int[] out = new int[raw.length];
-      int size = 0;
-
-      for (int i = 0; i < raw.length; i++) {
-         int index = EntityStatType.getAssetMap().getIndex(raw[i]);
-         if (index != Integer.MIN_VALUE) {
-            out[size++] = index;
-         }
-      }
-
-      if (size != raw.length) {
-         out = Arrays.copyOf(out, size);
-      }
-
-      return out;
    }
 
    public ComponentType<EntityStore, EntityStatMap> getEntityStatMapComponentType() {

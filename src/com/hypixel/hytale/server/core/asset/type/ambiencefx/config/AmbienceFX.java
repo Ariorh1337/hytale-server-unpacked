@@ -16,6 +16,7 @@ import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
@@ -50,12 +51,21 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
       )
       .metadata(new UIEditorSectionStart("Audio"))
       .add()
-      .appendInherited(
+      .<AmbienceFXMusic>appendInherited(
          new KeyedCodec<>("Music", AmbienceFXMusic.CODEC),
-         (ambienceFX, l) -> ambienceFX.music = l,
-         ambienceFX -> ambienceFX.music,
-         (ambienceFX, parent) -> ambienceFX.music = parent.music
+         (ambienceFX, l) -> ambienceFX.legacyMusic = l,
+         ambienceFX -> ambienceFX.legacyMusic,
+         (ambienceFX, parent) -> ambienceFX.legacyMusic = parent.legacyMusic
       )
+      .documentation("Deprecated: Use MusicContainer instead.")
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("MusicContainer", MusicContainer.CHILD_ASSET_CODEC),
+         (ambienceFX, id) -> ambienceFX.musicContainerId = id,
+         ambienceFX -> ambienceFX.musicContainerId,
+         (ambienceFX, parent) -> ambienceFX.musicContainerId = parent.musicContainerId
+      )
+      .addValidator(MusicContainer.VALIDATOR_CACHE.getValidator())
       .add()
       .appendInherited(
          new KeyedCodec<>("AmbientBed", AmbienceFXAmbientBed.CODEC),
@@ -114,7 +124,11 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
    protected String id;
    protected AmbienceFXConditions conditions;
    protected AmbienceFXSound[] sounds;
-   protected AmbienceFXMusic music;
+   protected AmbienceFXMusic legacyMusic;
+   @Nullable
+   protected String musicContainerId;
+   protected transient int musicContainerIndex;
+   protected transient boolean musicContainerIndexResolved;
    protected AmbienceFXAmbientBed ambientBed;
    protected AmbienceFXSoundEffect soundEffect;
    protected int priority = 0;
@@ -160,10 +174,8 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
          packet.sounds = ArrayUtil.copyAndMutate(this.sounds, AmbienceFXSound::toPacket, com.hypixel.hytale.protocol.AmbienceFXSound[]::new);
       }
 
-      if (this.music != null) {
-         packet.music = this.music.toPacket();
-      }
-
+      this.resolveMusicContainerIndex();
+      packet.musicContainerIndex = this.musicContainerIndex;
       if (this.ambientBed != null) {
          packet.ambientBed = this.ambientBed.toPacket();
       }
@@ -198,8 +210,39 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
       return this.sounds;
    }
 
-   public AmbienceFXMusic getMusic() {
-      return this.music;
+   public int getMusicContainerIndex() {
+      this.resolveMusicContainerIndex();
+      return this.musicContainerIndex;
+   }
+
+   private void resolveMusicContainerIndex() {
+      if (!this.musicContainerIndexResolved) {
+         this.musicContainerIndexResolved = true;
+         if (this.musicContainerId != null) {
+            this.musicContainerIndex = MusicContainer.getAssetMap().getIndex(this.musicContainerId);
+         }
+      }
+   }
+
+   @Nullable
+   public AmbienceFXMusic consumeLegacyMusic() {
+      if (this.legacyMusic != null && this.musicContainerId == null) {
+         AmbienceFXMusic legacy = this.legacyMusic;
+         this.musicContainerId = "_legacy_" + this.id;
+         this.legacyMusic = null;
+         return legacy;
+      } else {
+         return null;
+      }
+   }
+
+   @Nullable
+   public String getAudioCategoryId() {
+      return this.audioCategoryId;
+   }
+
+   public int getAudioCategoryIndex() {
+      return this.audioCategoryIndex;
    }
 
    public AmbienceFXAmbientBed getAmbientBed() {
@@ -227,8 +270,8 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
          + this.conditions
          + ", sounds="
          + Arrays.toString(this.sounds)
-         + ", music="
-         + this.music
+         + ", musicContainerIndex="
+         + this.musicContainerIndex
          + ", ambientBed="
          + this.ambientBed
          + ", soundEffect='"

@@ -13,7 +13,7 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.codec.LayerEntryCodec;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -100,23 +100,18 @@ public class HeightmapLayerOperation extends SequenceBrushOperation {
    }
 
    @Nullable
-   private Map<String, Object> getToolArgs(Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor) {
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-      if (playerComponent == null) {
-         return null;
-      }
-
-      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
+   private Map<String, Object> getToolArgs(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
       if (builderTool == null) {
          return null;
       }
 
-      ItemStack itemStack = playerComponent.getInventory().getItemInHand();
-      if (itemStack == null) {
+      ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+      if (itemInHand == null) {
          return null;
       }
 
-      BuilderTool.ArgData argData = builderTool.getItemArgData(itemStack);
+      BuilderTool.ArgData argData = builderTool.getItemArgData(itemInHand);
       return argData.tool();
    }
 

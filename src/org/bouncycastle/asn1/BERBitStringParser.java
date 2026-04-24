@@ -4,23 +4,24 @@ import java.io.IOException;
 import java.io.InputStream;
 import org.bouncycastle.util.io.Streams;
 
-@Deprecated
 public class BERBitStringParser implements ASN1BitStringParser {
-   private ASN1StreamParser _parser;
+   private final ASN1StreamParser parser;
    private ConstructedBitStream _bitStream;
 
    BERBitStringParser(ASN1StreamParser var1) {
-      this._parser = var1;
+      this.parser = var1;
    }
 
    @Override
    public InputStream getOctetStream() throws IOException {
-      return this._bitStream = new ConstructedBitStream(this._parser, true);
+      this._bitStream = new ConstructedBitStream(this.parser, true);
+      return this._bitStream;
    }
 
    @Override
    public InputStream getBitStream() throws IOException {
-      return this._bitStream = new ConstructedBitStream(this._parser, false);
+      this._bitStream = new ConstructedBitStream(this.parser, false);
+      return this._bitStream;
    }
 
    @Override
@@ -30,7 +31,7 @@ public class BERBitStringParser implements ASN1BitStringParser {
 
    @Override
    public ASN1Primitive getLoadedObject() throws IOException {
-      return parse(this._parser);
+      return parse(this.parser);
    }
 
    @Override

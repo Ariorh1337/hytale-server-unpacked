@@ -31,16 +31,13 @@ import com.hypixel.hytale.server.core.universe.world.chunk.palette.IntBytePalett
 import com.hypixel.hytale.server.core.universe.world.chunk.palette.ShortBytePalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.lang.ref.SoftReference;
 import java.time.Instant;
 import java.util.List;
@@ -460,17 +457,13 @@ public class BlockChunk implements Component<ChunkStore> {
    }
 
    private byte[] serialize(ExtraInfo extraInfo) {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
-
-      try {
-         buf.writeBoolean(this.needsPhysics);
-         this.height.serialize(buf);
-         this.tint.serialize(buf);
-         return ByteBufUtil.getBytesRelease(buf);
-      } catch (Throwable t) {
-         buf.release();
-         throw SneakyThrow.sneakyThrow(t);
-      }
+      int heightBytes = this.height.byteSize();
+      byte[] result = new byte[1 + heightBytes + this.tint.byteSize()];
+      MemorySegment data = MemorySegment.ofArray(result);
+      data.set(ValueLayout.JAVA_BOOLEAN, 0L, this.needsPhysics);
+      this.height.serialize(data, 1);
+      this.tint.serialize(data, 1 + heightBytes);
+      return result;
    }
 
    private void deserialize(@Nonnull byte[] bytes, @Nonnull ExtraInfo extraInfo) {
@@ -478,10 +471,10 @@ public class BlockChunk implements Component<ChunkStore> {
          throw new IllegalArgumentException("Version not supported");
       }
 
-      ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-      this.needsPhysics = buf.readBoolean();
-      this.height.deserialize(buf);
-      this.tint.deserialize(buf);
+      MemorySegment data = MemorySegment.ofArray(bytes);
+      this.needsPhysics = data.get(ValueLayout.JAVA_BOOLEAN, 0L);
+      int heightSize = this.height.deserialize(data, 1);
+      this.tint.deserialize(data, 1 + heightSize);
    }
 
    @Nonnull

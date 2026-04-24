@@ -32,7 +32,7 @@ public class ValidationParams extends ASN1Object {
       }
 
       this.seed = new DERBitString(var1);
-      this.pgenCounter = new ASN1Integer(var2);
+      this.pgenCounter = ASN1Integer.valueOf(var2);
    }
 
    public ValidationParams(DERBitString var1, ASN1Integer var2) {

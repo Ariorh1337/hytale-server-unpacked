@@ -49,7 +49,7 @@ public class EccP384CurvePoint extends EccCurvePoint implements ASN1Choice {
       if (var0 instanceof EccP384CurvePoint) {
          return (EccP384CurvePoint)var0;
       } else {
-         return var0 != null ? new EccP384CurvePoint(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new EccP384CurvePoint(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

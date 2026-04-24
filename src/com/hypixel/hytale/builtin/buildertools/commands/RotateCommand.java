@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
@@ -23,7 +22,7 @@ import javax.annotation.Nonnull;
 public class RotateCommand extends AbstractCommandCollection {
    public RotateCommand() {
       super("rotate", "server.commands.rotate.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new RotateCommand.RotateArbitraryVariant());
       this.addUsageVariant(new RotateCommand.RotateAxisVariant());
    }

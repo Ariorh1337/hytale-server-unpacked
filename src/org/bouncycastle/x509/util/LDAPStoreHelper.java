@@ -32,8 +32,8 @@ import org.bouncycastle.jce.provider.X509AttrCertParser;
 import org.bouncycastle.jce.provider.X509CRLParser;
 import org.bouncycastle.jce.provider.X509CertPairParser;
 import org.bouncycastle.jce.provider.X509CertParser;
+import org.bouncycastle.ldap.LDAPUtils;
 import org.bouncycastle.util.StoreException;
-import org.bouncycastle.util.Strings;
 import org.bouncycastle.x509.X509AttributeCertStoreSelector;
 import org.bouncycastle.x509.X509AttributeCertificate;
 import org.bouncycastle.x509.X509CRLStoreSelector;
@@ -65,44 +65,6 @@ public class LDAPStoreHelper {
       var1.setProperty("java.naming.referral", REFERRALS_IGNORE);
       var1.setProperty("java.naming.security.authentication", "none");
       return new InitialDirContext(var1);
-   }
-
-   private String parseDN(String var1, String var2) {
-      String var3 = var1;
-      int var4 = Strings.toLowerCase(var3).indexOf(Strings.toLowerCase(var2) + "=");
-      if (var4 == -1) {
-         return "";
-      }
-
-      var3 = var3.substring(var4 + var2.length());
-      int var5 = var3.indexOf(44);
-      if (var5 == -1) {
-         var5 = var3.length();
-      }
-
-      while (var3.charAt(var5 - 1) == '\\') {
-         var5 = var3.indexOf(44, var5 + 1);
-         if (var5 == -1) {
-            var5 = var3.length();
-         }
-      }
-
-      var3 = var3.substring(0, var5);
-      var4 = var3.indexOf(61);
-      var3 = var3.substring(var4 + 1);
-      if (var3.charAt(0) == ' ') {
-         var3 = var3.substring(1);
-      }
-
-      if (var3.startsWith("\"")) {
-         var3 = var3.substring(1);
-      }
-
-      if (var3.endsWith("\"")) {
-         var3 = var3.substring(0, var3.length() - 1);
-      }
-
-      return var3;
    }
 
    private Set createCerts(List var1, X509CertStoreSelector var2) throws StoreException {
@@ -141,7 +103,7 @@ public class LDAPStoreHelper {
       String var8 = null;
       if (var6 != null) {
          for (int var9 = 0; var9 < var4.length; var9++) {
-            var8 = this.parseDN(var6, var4[var9]);
+            var8 = LDAPUtils.parseDN(var6, var4[var9]);
             var5.addAll(this.search(var3, "*" + var8 + "*", var2));
          }
       }
@@ -172,7 +134,7 @@ public class LDAPStoreHelper {
       Object var7 = null;
       if (var6 != null) {
          for (int var8 = 0; var8 < var4.length; var8++) {
-            var7 = this.parseDN(var6, var4[var8]);
+            var7 = LDAPUtils.parseDN(var6, var4[var8]);
             var5.addAll(this.search(var3, "*" + var7 + "*", var2));
          }
       }
@@ -223,7 +185,7 @@ public class LDAPStoreHelper {
       Object var10 = null;
       if (var6 != null) {
          for (int var11 = 0; var11 < var4.length; var11++) {
-            var10 = this.parseDN(var6, var4[var11]);
+            var10 = LDAPUtils.parseDN(var6, var4[var11]);
             var5.addAll(this.search(var3, "*" + var10 + "*", var2));
          }
       }
@@ -270,7 +232,7 @@ public class LDAPStoreHelper {
          Object var12 = null;
 
          for (int var10 = 0; var10 < var4.length; var10++) {
-            var12 = this.parseDN(var6, var4[var10]);
+            var12 = LDAPUtils.parseDN(var6, var4[var10]);
             var5.addAll(this.search(var3, "*" + var12 + "*", var2));
          }
       }

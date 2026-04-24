@@ -5,13 +5,13 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -29,8 +29,8 @@ public class Pos2Command extends AbstractPlayerCommand {
 
    public Pos2Command() {
       super("pos2", "server.commands.pos2.desc");
-      this.setPermissionGroup(GameMode.Creative);
-      this.requirePermission("hytale.editor.selection.use");
+      this.setPermissionGroups("hytale:WorldEditor");
+      this.requirePermission(HytalePermissions.EDITOR_SELECTION_USE);
    }
 
    @Override

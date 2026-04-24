@@ -18,6 +18,8 @@ public class GM {
    public static class Mappings extends AsymmetricAlgorithmProvider {
       @Override
       public void configure(ConfigurableProvider var1) {
+         var1.addAlgorithm("KeyAgreement.SM2", "org.bouncycastle.jcajce.provider.asymmetric.ec.GMKeyExchangeSpi$SM2");
+         var1.addAlgorithm("KeyAgreement", GMObjectIdentifiers.sm2exchange, "org.bouncycastle.jcajce.provider.asymmetric.ec.GMKeyExchangeSpi$SM2");
          var1.addAlgorithm("Signature.SHA256WITHSM2", "org.bouncycastle.jcajce.provider.asymmetric.ec.GMSignatureSpi$sha256WithSM2");
          var1.addAlgorithm("Alg.Alias.Signature." + GMObjectIdentifiers.sm2sign_with_sha256, "SHA256WITHSM2");
          var1.addAlgorithm("Signature.SM3WITHSM2", "org.bouncycastle.jcajce.provider.asymmetric.ec.GMSignatureSpi$sm3WithSM2");

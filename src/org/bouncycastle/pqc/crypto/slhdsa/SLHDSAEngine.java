@@ -1,5 +1,6 @@
 package org.bouncycastle.pqc.crypto.slhdsa;
 
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.Xof;
 import org.bouncycastle.crypto.digests.SHA256Digest;
@@ -14,7 +15,8 @@ import org.bouncycastle.util.Bytes;
 import org.bouncycastle.util.Memoable;
 import org.bouncycastle.util.Pack;
 
-abstract class SLHDSAEngine {
+@Deprecated
+public abstract class SLHDSAEngine {
    final int N;
    final int WOTS_W;
    final int WOTS_LOGW;
@@ -27,7 +29,7 @@ abstract class SLHDSAEngine {
    final int H;
    final int H_PRIME;
 
-   public SLHDSAEngine(int var1, int var2, int var3, int var4, int var5, int var6) {
+   protected SLHDSAEngine(int var1, int var2, int var3, int var4, int var5, int var6) {
       this.N = var1;
       if (var2 == 16) {
          this.WOTS_LOGW = 4;
@@ -84,7 +86,78 @@ abstract class SLHDSAEngine {
 
    abstract byte[] PRF_msg(byte[] var1, byte[] var2, byte[] var3, byte[] var4);
 
-   static class Sha2Engine extends SLHDSAEngine {
+   public static AsymmetricCipherKeyPair implGenerateKeyPair(SLHDSAParameters var0, byte[] var1, byte[] var2, byte[] var3) {
+      SLHDSAEngine var4 = var0.getEngine();
+      SK var5 = new SK(var1, var2);
+      var4.init(var3);
+      PK var6 = new PK(var3, (new HT(var4, var5.seed, var3)).htPubKey);
+      return new AsymmetricCipherKeyPair(new SLHDSAPublicKeyParameters(var0, var6), new SLHDSAPrivateKeyParameters(var0, var5, var6));
+   }
+
+   public static boolean internalVerifySignature(SLHDSAPublicKeyParameters var0, byte[] var1, byte[] var2, byte[] var3) {
+      SLHDSAEngine var4 = var0.getParameters().getEngine();
+      var4.init(var0.getSeed());
+      ADRS var5 = new ADRS();
+      if ((1 + var4.K * (1 + var4.A) + var4.H + var4.D * var4.WOTS_LEN) * var4.N != var3.length) {
+         return false;
+      }
+
+      SIG var6 = new SIG(var4.N, var4.K, var4.A, var4.D, var4.H_PRIME, var4.WOTS_LEN, var3);
+      byte[] var7 = var6.getR();
+      SIG_FORS[] var8 = var6.getSIG_FORS();
+      SIG_XMSS[] var9 = var6.getSIG_HT();
+      IndexedDigest var10 = var4.H_msg(var7, var0.getSeed(), var0.getRoot(), var1, var2);
+      byte[] var11 = var10.digest;
+      long var12 = var10.idx_tree;
+      int var14 = var10.idx_leaf;
+      var5.setTypeAndClear(3);
+      var5.setLayerAddress(0);
+      var5.setTreeAddress(var12);
+      var5.setKeyPairAddress(var14);
+      byte[] var15 = new Fors(var4).pkFromSig(var8, var11, var0.getSeed(), var5);
+      var5.setTypeAndClear(2);
+      var5.setLayerAddress(0);
+      var5.setTreeAddress(var12);
+      var5.setKeyPairAddress(var14);
+      HT var16 = new HT(var4, null, var0.getSeed());
+      return var16.verify(var15, var9, var0.getSeed(), var12, var14, var0.getRoot());
+   }
+
+   public static byte[] internalGenerateSignature(SLHDSAPrivateKeyParameters var0, byte[] var1, byte[] var2, byte[] var3) {
+      SLHDSAEngine var4 = var0.getParameters().getEngine();
+      var4.init(var0.pk.seed);
+      Fors var5 = new Fors(var4);
+      byte[] var6 = var4.PRF_msg(var0.sk.prf, var3, var1, var2);
+      IndexedDigest var7 = var4.H_msg(var6, var0.pk.seed, var0.pk.root, var1, var2);
+      byte[] var8 = var7.digest;
+      long var9 = var7.idx_tree;
+      int var11 = var7.idx_leaf;
+      ADRS var12 = new ADRS();
+      var12.setTypeAndClear(3);
+      var12.setTreeAddress(var9);
+      var12.setKeyPairAddress(var11);
+      SIG_FORS[] var13 = var5.sign(var8, var0.sk.seed, var0.pk.seed, var12);
+      var12 = new ADRS();
+      var12.setTypeAndClear(3);
+      var12.setTreeAddress(var9);
+      var12.setKeyPairAddress(var11);
+      byte[] var14 = var5.pkFromSig(var13, var8, var0.pk.seed, var12);
+      ADRS var15 = new ADRS();
+      var15.setTypeAndClear(2);
+      HT var16 = new HT(var4, var0.getSeed(), var0.getPublicSeed());
+      byte[] var17 = var16.sign(var14, var9, var11);
+      byte[][] var18 = new byte[var13.length + 2][];
+      var18[0] = var6;
+
+      for (int var19 = 0; var19 != var13.length; var19++) {
+         var18[1 + var19] = Arrays.concatenate(var13[var19].sk, Arrays.concatenate(var13[var19].authPath));
+      }
+
+      var18[var18.length - 1] = var17;
+      return Arrays.concatenate(var18);
+   }
+
+   public static class Sha2Engine extends SLHDSAEngine {
       private final HMac treeHMac;
       private final MGF1BytesGenerator mgf1;
       private final byte[] hmacBuf;
@@ -249,7 +322,7 @@ abstract class SLHDSAEngine {
       }
    }
 
-   static class Shake256Engine extends SLHDSAEngine {
+   public static class Shake256Engine extends SLHDSAEngine {
       private final Xof treeDigest = new SHAKEDigest(256);
       private final Xof maskDigest = new SHAKEDigest(256);
 

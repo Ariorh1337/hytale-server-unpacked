@@ -1,8 +1,8 @@
 package org.bson.codecs;
 
-import org.bson.BsonInvalidOperationException;
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
+import org.bson.internal.NumberCodecHelper;
 
 public class ByteCodec implements Codec<Byte> {
    public void encode(BsonWriter writer, Byte value, EncoderContext encoderContext) {
@@ -10,12 +10,7 @@ public class ByteCodec implements Codec<Byte> {
    }
 
    public Byte decode(BsonReader reader, DecoderContext decoderContext) {
-      int value = NumberCodecHelper.decodeInt(reader);
-      if (value >= -128 && value <= 127) {
-         return (byte)value;
-      } else {
-         throw new BsonInvalidOperationException(String.format("%s can not be converted into a Byte.", value));
-      }
+      return NumberCodecHelper.decodeByte(reader);
    }
 
    @Override

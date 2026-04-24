@@ -34,8 +34,8 @@ public class DRBG {
       {"com.android.org.conscrypt.OpenSSLProvider", "com.android.org.conscrypt.OpenSSLRandom"},
       {"org.conscrypt.OpenSSLProvider", "org.conscrypt.OpenSSLRandom"}
    };
-   private static EntropyDaemon entropyDaemon = null;
-   private static Thread entropyThread = null;
+   private static final EntropyDaemon ENTROPY_DAEMON = new EntropyDaemon();
+   private static Thread ENTROPY_THREAD = null;
 
    private static int get256BitsEffectiveEntropySize() {
       int var0 = Properties.asInteger("org.bouncycastle.drbg.effective_256bits_entropy", 282);
@@ -55,41 +55,41 @@ public class DRBG {
       return null;
    }
 
+   private static void initEntropyThread() {
+      synchronized (ENTROPY_DAEMON) {
+         if (ENTROPY_THREAD == null) {
+            ENTROPY_THREAD = new Thread(ENTROPY_DAEMON, "BC Entropy Daemon");
+            ENTROPY_THREAD.setDaemon(true);
+            ENTROPY_THREAD.start();
+         }
+      }
+   }
+
    private static SecureRandom createBaseRandom(boolean var0) {
       if (Properties.getPropertyValue("org.bouncycastle.drbg.entropysource") != null) {
-         EntropySourceProvider var8 = createEntropySource();
-         EntropySource var10 = var8.get(128);
-         byte[] var3 = var0 ? generateDefaultPersonalizationString(var10.getEntropy()) : generateNonceIVPersonalizationString(var10.getEntropy());
-         return new SP800SecureRandomBuilder(var8).setPersonalizationString(var3).buildHash(new SHA512Digest(), var10.getEntropy(), var0);
-      }
-
-      if (Properties.isOverrideSet("org.bouncycastle.drbg.entropy_thread")) {
-         synchronized (entropyDaemon) {
-            if (entropyThread == null) {
-               entropyThread = new Thread(entropyDaemon, "BC Entropy Daemon");
-               entropyThread.setDaemon(true);
-               entropyThread.start();
-            }
-         }
-
-         DRBG.HybridEntropySource var7 = new DRBG.HybridEntropySource(entropyDaemon, 256);
-         byte[] var9 = var0 ? generateDefaultPersonalizationString(var7.getEntropy()) : generateNonceIVPersonalizationString(var7.getEntropy());
-         return new SP800SecureRandomBuilder(new EntropySourceProvider() {
+         return createBaseRandom(var0, 128, createEntropySource());
+      } else if (Properties.isOverrideSet("org.bouncycastle.drbg.entropy_thread")) {
+         initEntropyThread();
+         return createBaseRandom(var0, 256, new EntropySourceProvider() {
             @Override
             public EntropySource get(int var1) {
-               return new DRBG.HybridEntropySource(DRBG.entropyDaemon, var1);
+               return new DRBG.HybridEntropySource(DRBG.ENTROPY_DAEMON, var1);
             }
-         }).setPersonalizationString(var9).buildHash(new SHA512Digest(), var7.getEntropy(), var0);
+         });
       } else {
-         DRBG.OneShotHybridEntropySource var1 = new DRBG.OneShotHybridEntropySource(256);
-         byte[] var2 = var0 ? generateDefaultPersonalizationString(var1.getEntropy()) : generateNonceIVPersonalizationString(var1.getEntropy());
-         return new SP800SecureRandomBuilder(new EntropySourceProvider() {
+         return createBaseRandom(var0, 256, new EntropySourceProvider() {
             @Override
             public EntropySource get(int var1) {
                return new DRBG.OneShotHybridEntropySource(var1);
             }
-         }).setPersonalizationString(var2).buildHash(new SHA512Digest(), var1.getEntropy(), var0);
+         });
       }
+   }
+
+   private static SecureRandom createBaseRandom(boolean var0, int var1, EntropySourceProvider var2) {
+      EntropySource var3 = var2.get(var1);
+      byte[] var4 = generatePersonalizationString(var0, var3);
+      return new SP800SecureRandomBuilder(var2).setPersonalizationString(var4).buildHash(new SHA512Digest(), var3.getEntropy(), var0);
    }
 
    private static EntropySourceProvider createCoreEntropySourceProvider() {
@@ -162,14 +162,15 @@ public class DRBG {
       );
    }
 
+   private static byte[] generatePersonalizationString(boolean var0, EntropySource var1) {
+      byte[] var2 = var1.getEntropy();
+      return var0 ? generateDefaultPersonalizationString(var2) : generateNonceIVPersonalizationString(var2);
+   }
+
    private static void sleep(long var0) throws InterruptedException {
       if (var0 != 0L) {
          Thread.sleep(var0);
       }
-   }
-
-   static {
-      entropyDaemon = new EntropyDaemon();
    }
 
    private static class CoreSecureRandom extends SecureRandom {

@@ -56,23 +56,23 @@ public class KeyPairGeneratorSpi extends KeyPairGenerator {
    @Override
    public void initialize(AlgorithmParameterSpec var1, SecureRandom var2) throws InvalidAlgorithmParameterException {
       if (var1 instanceof ECParameterSpec) {
-         ECParameterSpec var10 = (ECParameterSpec)var1;
+         ECParameterSpec var11 = (ECParameterSpec)var1;
          this.ecParams = var1;
-         this.param = new ECKeyGenerationParameters(new ECDomainParameters(var10.getCurve(), var10.getG(), var10.getN(), var10.getH()), var2);
+         this.param = new ECKeyGenerationParameters(new ECDomainParameters(var11.getCurve(), var11.getG(), var11.getN(), var11.getH()), var2);
          this.engine.init(this.param);
          this.initialised = true;
       } else if (var1 instanceof java.security.spec.ECParameterSpec) {
-         java.security.spec.ECParameterSpec var9 = (java.security.spec.ECParameterSpec)var1;
+         java.security.spec.ECParameterSpec var10 = (java.security.spec.ECParameterSpec)var1;
          this.ecParams = var1;
-         ECCurve var11 = EC5Util.convertCurve(var9.getCurve());
-         ECPoint var12 = EC5Util.convertPoint(var11, var9.getGenerator());
-         if (var9 instanceof DSTU4145ParameterSpec) {
-            DSTU4145ParameterSpec var13 = (DSTU4145ParameterSpec)var9;
+         ECCurve var12 = EC5Util.convertCurve(var10.getCurve());
+         ECPoint var13 = EC5Util.convertPoint(var12, var10.getGenerator());
+         if (var10 instanceof DSTU4145ParameterSpec) {
+            DSTU4145ParameterSpec var14 = (DSTU4145ParameterSpec)var10;
             this.param = new ECKeyGenerationParameters(
-               new DSTU4145Parameters(new ECDomainParameters(var11, var12, var9.getOrder(), BigInteger.valueOf(var9.getCofactor())), var13.getDKE()), var2
+               new DSTU4145Parameters(new ECDomainParameters(var12, var13, var10.getOrder(), BigInteger.valueOf(var10.getCofactor())), var14.getDKE()), var2
             );
          } else {
-            this.param = new ECKeyGenerationParameters(new ECDomainParameters(var11, var12, var9.getOrder(), BigInteger.valueOf(var9.getCofactor())), var2);
+            this.param = new ECKeyGenerationParameters(new ECDomainParameters(var12, var13, var10.getOrder(), BigInteger.valueOf(var10.getCofactor())), var2);
          }
 
          this.engine.init(this.param);
@@ -86,9 +86,9 @@ public class KeyPairGeneratorSpi extends KeyPairGenerator {
             throw new InvalidAlgorithmParameterException("parameter object not a ECParameterSpec: " + var1.getClass().getName());
          }
 
-         ECParameterSpec var8 = BouncyCastleProvider.CONFIGURATION.getEcImplicitlyCa();
+         ECParameterSpec var9 = BouncyCastleProvider.CONFIGURATION.getEcImplicitlyCa();
          this.ecParams = var1;
-         this.param = new ECKeyGenerationParameters(new ECDomainParameters(var8.getCurve(), var8.getG(), var8.getN(), var8.getH()), var2);
+         this.param = new ECKeyGenerationParameters(new ECDomainParameters(var9.getCurve(), var9.getG(), var9.getN(), var9.getH()), var2);
          this.engine.init(this.param);
          this.initialised = true;
       } else {
@@ -99,16 +99,21 @@ public class KeyPairGeneratorSpi extends KeyPairGenerator {
             var3 = ((ECNamedCurveGenParameterSpec)var1).getName();
          }
 
-         ECDomainParameters var4 = DSTU4145NamedCurves.getByOID(new ASN1ObjectIdentifier(var3));
+         ASN1ObjectIdentifier var4 = ASN1ObjectIdentifier.tryFromID(var3);
          if (var4 == null) {
+            throw new InvalidAlgorithmParameterException("non-OID curve name not supported: " + var3);
+         }
+
+         ECDomainParameters var5 = DSTU4145NamedCurves.getByOID(var4);
+         if (var5 == null) {
             throw new InvalidAlgorithmParameterException("unknown curve name: " + var3);
          }
 
-         this.ecParams = new ECNamedCurveSpec(var3, var4.getCurve(), var4.getG(), var4.getN(), var4.getH(), var4.getSeed());
-         java.security.spec.ECParameterSpec var5 = (java.security.spec.ECParameterSpec)this.ecParams;
-         ECCurve var6 = EC5Util.convertCurve(var5.getCurve());
-         ECPoint var7 = EC5Util.convertPoint(var6, var5.getGenerator());
-         this.param = new ECKeyGenerationParameters(new ECDomainParameters(var6, var7, var5.getOrder(), BigInteger.valueOf(var5.getCofactor())), var2);
+         this.ecParams = new ECNamedCurveSpec(var3, var5.getCurve(), var5.getG(), var5.getN(), var5.getH(), var5.getSeed());
+         java.security.spec.ECParameterSpec var6 = (java.security.spec.ECParameterSpec)this.ecParams;
+         ECCurve var7 = EC5Util.convertCurve(var6.getCurve());
+         ECPoint var8 = EC5Util.convertPoint(var7, var6.getGenerator());
+         this.param = new ECKeyGenerationParameters(new ECDomainParameters(var7, var8, var6.getOrder(), BigInteger.valueOf(var6.getCofactor())), var2);
          this.engine.init(this.param);
          this.initialised = true;
       }

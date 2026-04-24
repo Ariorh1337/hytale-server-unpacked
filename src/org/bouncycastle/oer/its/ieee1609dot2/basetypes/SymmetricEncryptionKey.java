@@ -37,7 +37,7 @@ public class SymmetricEncryptionKey extends ASN1Object implements ASN1Choice {
       if (var0 instanceof SymmetricEncryptionKey) {
          return (SymmetricEncryptionKey)var0;
       } else {
-         return var0 != null ? new SymmetricEncryptionKey(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new SymmetricEncryptionKey(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

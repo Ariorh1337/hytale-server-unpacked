@@ -20,7 +20,7 @@ public class DERBitString extends ASN1BitString {
    }
 
    public DERBitString(int var1) {
-      super(getBytes(var1), getPadBits(var1));
+      super(var1);
    }
 
    public DERBitString(ASN1Encodable var1) throws IOException {

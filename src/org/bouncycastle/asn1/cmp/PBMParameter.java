@@ -24,7 +24,7 @@ public class PBMParameter extends ASN1Object {
    }
 
    public PBMParameter(byte[] var1, AlgorithmIdentifier var2, int var3, AlgorithmIdentifier var4) {
-      this(new DEROctetString(var1), var2, new ASN1Integer(var3), var4);
+      this(new DEROctetString(var1), var2, ASN1Integer.valueOf(var3), var4);
    }
 
    public PBMParameter(ASN1OctetString var1, AlgorithmIdentifier var2, ASN1Integer var3, AlgorithmIdentifier var4) {

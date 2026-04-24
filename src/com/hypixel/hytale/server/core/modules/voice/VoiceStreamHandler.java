@@ -6,6 +6,7 @@ import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.protocol.packets.voice.VoiceData;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
+import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -28,7 +29,7 @@ public class VoiceStreamHandler extends SimpleChannelInboundHandler<Packet> {
 
    @Override
    public void handlerAdded(@Nonnull ChannelHandlerContext ctx) throws Exception {
-      this.packetHandler.setChannel(StreamType.Voice, ctx.channel());
+      this.packetHandler.setChannel(StreamType.Voice, new NettyUtil.NettyChannelConnection(ctx.channel()));
       if (this.packetHandler instanceof GamePacketHandler gameHandler) {
          this.cachedPlayerRef = gameHandler.getPlayerRef();
       }
@@ -158,7 +159,7 @@ public class VoiceStreamHandler extends SimpleChannelInboundHandler<Packet> {
 
    @Override
    public void channelInactive(@Nonnull ChannelHandlerContext ctx) throws Exception {
-      this.packetHandler.compareAndSetChannel(StreamType.Voice, ctx.channel(), null);
+      this.packetHandler.compareAndSetChannel(StreamType.Voice, new NettyUtil.NettyChannelConnection(ctx.channel()), null);
       this.logger.at(Level.FINE).log("[VoiceStream] Voice stream closed for %s", this.packetHandler.getIdentifier());
       super.channelInactive(ctx);
    }

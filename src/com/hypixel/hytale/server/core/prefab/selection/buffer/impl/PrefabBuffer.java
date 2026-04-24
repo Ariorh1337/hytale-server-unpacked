@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.prefab.PrefabWeights;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -355,9 +355,9 @@ public class PrefabBuffer {
                   );
                   data.set(ValueLayout.JAVA_SHORT_UNALIGNED, writeOffset, (short)mask);
                   writeOffset += 2;
-                  ByteBufUtil.writeNumber(data, writeOffset, blockBytes, blockId);
+                  MemorySegmentUtil.writeNumber(data, writeOffset, blockBytes, blockId);
                   writeOffset += blockBytes;
-                  ByteBufUtil.writeNumber(data, writeOffset, offsetBytes, yOffset);
+                  MemorySegmentUtil.writeNumber(data, writeOffset, offsetBytes, yOffset);
                   writeOffset += offsetBytes;
                   if (hasChance) {
                      data.set(ValueLayout.JAVA_FLOAT_UNALIGNED, writeOffset, chance);
@@ -375,7 +375,7 @@ public class PrefabBuffer {
                   }
 
                   if (fluidId != 0) {
-                     ByteBufUtil.writeNumber(data, writeOffset, fluidBytes, fluidId);
+                     MemorySegmentUtil.writeNumber(data, writeOffset, fluidBytes, fluidId);
                      writeOffset += fluidBytes;
                      data.set(ValueLayout.JAVA_BYTE, writeOffset, fluidLevel);
                      writeOffset++;
@@ -625,7 +625,7 @@ public class PrefabBuffer {
                if (PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask) > 0) {
                   offset += PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
                   int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                  y += ByteBufUtil.readNumber(data, offset, offsetBytes);
+                  y += MemorySegmentUtil.readNumber(data, offset, offsetBytes);
                   offset += offsetBytes;
                   if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
                      offset += 4;
@@ -679,10 +679,10 @@ public class PrefabBuffer {
                      int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, offset));
                      offset += 2;
                      int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                     int blockId = ByteBufUtil.readNumber(data, offset, blockBytes);
+                     int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
                      offset += blockBytes;
                      int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                     y += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(data, offset, offsetBytes);
+                     y += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
                      offset += offsetBytes;
                      if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
                         float chance = data.get(ValueLayout.JAVA_FLOAT_UNALIGNED, offset);
@@ -713,7 +713,7 @@ public class PrefabBuffer {
                      int fluidId = 0;
                      int fluidLevel = 0;
                      if (fluidBytes != 0) {
-                        fluidId = ByteBufUtil.readNumber(data, offset, fluidBytes - 1);
+                        fluidId = MemorySegmentUtil.readNumber(data, offset, fluidBytes - 1);
                         offset += fluidBytes - 1;
                         fluidLevel = data.get(ValueLayout.JAVA_BYTE, offset);
                         offset++;
@@ -774,10 +774,10 @@ public class PrefabBuffer {
                      int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, offset));
                      offset += 2;
                      int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                     int blockId = ByteBufUtil.readNumber(data, offset, blockBytes);
+                     int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
                      offset += blockBytes;
                      int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                     y += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(data, offset, offsetBytes);
+                     y += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
                      offset += offsetBytes;
                      float chance = 1.0F;
                      if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
@@ -802,7 +802,7 @@ public class PrefabBuffer {
                      blockConsumer.accept(x, y, z, mask, blockId, chance, holder, supportValue, rotation, filler, t);
                      int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                      if (fluidBytes != 0) {
-                        int fluidId = ByteBufUtil.readNumber(data, offset, fluidBytes - 1);
+                        int fluidId = MemorySegmentUtil.readNumber(data, offset, fluidBytes - 1);
                         offset += fluidBytes - 1;
                         byte fluidLevel = data.get(ValueLayout.JAVA_BYTE, offset);
                         offset++;
@@ -847,10 +847,10 @@ public class PrefabBuffer {
                   int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, offset));
                   offset += 2;
                   int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                  int blockId = ByteBufUtil.readNumber(data, offset, blockBytes);
+                  int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
                   offset += blockBytes;
                   int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                  y += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(data, offset, offsetBytes);
+                  y += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
                   offset += offsetBytes;
                   float chance = 1.0F;
                   if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
@@ -878,7 +878,7 @@ public class PrefabBuffer {
 
                   int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                   if (fluidBytes != 0) {
-                     int fluidId = ByteBufUtil.readNumber(data, offset, fluidBytes - 1);
+                     int fluidId = MemorySegmentUtil.readNumber(data, offset, fluidBytes - 1);
                      offset += fluidBytes - 1;
                      byte fluidLevel = data.get(ValueLayout.JAVA_BYTE, offset);
                      offset++;
@@ -964,10 +964,10 @@ public class PrefabBuffer {
                         int mask = Short.toUnsignedInt(firstData.get(ValueLayout.JAVA_SHORT_UNALIGNED, firstOffset));
                         firstOffset += 2;
                         int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                        firstColumnBlockId = ByteBufUtil.readNumber(firstData, firstOffset, blockBytes);
+                        firstColumnBlockId = MemorySegmentUtil.readNumber(firstData, firstOffset, blockBytes);
                         firstOffset += blockBytes;
                         int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                        firstColumnY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(firstData, firstOffset, offsetBytes);
+                        firstColumnY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(firstData, firstOffset, offsetBytes);
                         firstOffset += offsetBytes;
                         if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
                            firstColumnChance = firstData.get(ValueLayout.JAVA_FLOAT_UNALIGNED, firstOffset);
@@ -980,7 +980,7 @@ public class PrefabBuffer {
                            firstColumnRotation = t.rotation.getRotation(Byte.toUnsignedInt(firstData.get(ValueLayout.JAVA_BYTE, firstOffset)));
                            firstOffset++;
                         } else {
-                           firstColumnRotation = 0;
+                           firstColumnRotation = t.rotation.getRotation(0);
                         }
 
                         if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
@@ -998,10 +998,10 @@ public class PrefabBuffer {
                         int mask = Short.toUnsignedInt(secondData.get(ValueLayout.JAVA_SHORT_UNALIGNED, secondOffset));
                         secondOffset += 2;
                         int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                        secondColumnBlockId = ByteBufUtil.readNumber(secondData, secondOffset, blockBytes);
+                        secondColumnBlockId = MemorySegmentUtil.readNumber(secondData, secondOffset, blockBytes);
                         secondOffset += blockBytes;
                         int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                        secondColumnY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(secondData, secondOffset, offsetBytes);
+                        secondColumnY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(secondData, secondOffset, offsetBytes);
                         secondOffset += offsetBytes;
                         if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
                            secondColumnChance = secondData.get(ValueLayout.JAVA_FLOAT_UNALIGNED, secondOffset);
@@ -1014,7 +1014,7 @@ public class PrefabBuffer {
                            secondColumnRotation = t.rotation.getRotation(Byte.toUnsignedInt(secondData.get(ValueLayout.JAVA_BYTE, secondOffset)));
                            secondOffset++;
                         } else {
-                           secondColumnRotation = 0;
+                           secondColumnRotation = t.rotation.getRotation(0);
                         }
 
                         if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
@@ -1129,10 +1129,10 @@ public class PrefabBuffer {
             int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, offset));
             offset += 2;
             int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-            int blockId = ByteBufUtil.readNumber(data, offset, blockBytes);
+            int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
             offset += blockBytes;
             int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-            blockY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(data, offset, offsetBytes);
+            blockY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
             offset += offsetBytes;
             if (blockY > y) {
                return 0;
@@ -1184,10 +1184,10 @@ public class PrefabBuffer {
             int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, offset));
             offset += 2;
             int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-            ByteBufUtil.readNumber(data, offset, blockBytes);
+            MemorySegmentUtil.readNumber(data, offset, blockBytes);
             offset += blockBytes;
             int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-            blockY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(data, offset, offsetBytes);
+            blockY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
             offset += offsetBytes;
             if (blockY > y) {
                return 0;
@@ -1241,10 +1241,10 @@ public class PrefabBuffer {
             int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, offset));
             offset += 2;
             int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-            ByteBufUtil.readNumber(data, offset, blockBytes);
+            MemorySegmentUtil.readNumber(data, offset, blockBytes);
             offset += blockBytes;
             int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-            blockY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(data, offset, offsetBytes);
+            blockY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
             offset += offsetBytes;
             if (blockY > y) {
                return 0;

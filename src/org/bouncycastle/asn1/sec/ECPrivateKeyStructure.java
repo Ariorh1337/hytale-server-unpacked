@@ -26,7 +26,7 @@ public class ECPrivateKeyStructure extends ASN1Object {
 
    public ECPrivateKeyStructure(BigInteger var1) {
       byte[] var2 = BigIntegers.asUnsignedByteArray(var1);
-      this.seq = new DERSequence(new ASN1Integer(1L), new DEROctetString(var2));
+      this.seq = new DERSequence(ASN1Integer.ONE, new DEROctetString(var2));
    }
 
    public ECPrivateKeyStructure(BigInteger var1, ASN1Encodable var2) {
@@ -36,7 +36,7 @@ public class ECPrivateKeyStructure extends ASN1Object {
    public ECPrivateKeyStructure(BigInteger var1, ASN1BitString var2, ASN1Encodable var3) {
       byte[] var4 = BigIntegers.asUnsignedByteArray(var1);
       ASN1EncodableVector var5 = new ASN1EncodableVector(4);
-      var5.add(new ASN1Integer(1L));
+      var5.add(ASN1Integer.ONE);
       var5.add(new DEROctetString(var4));
       if (var3 != null) {
          var5.add(new DERTaggedObject(true, 0, var3));

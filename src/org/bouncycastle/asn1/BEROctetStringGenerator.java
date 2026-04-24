@@ -25,19 +25,19 @@ public class BEROctetStringGenerator extends BERGenerator {
    private class BufferedBEROctetStream extends OutputStream {
       private byte[] _buf;
       private int _off;
-      private DEROutputStream _derOut;
+      private ASN1OutputStream _asn1Out;
 
       BufferedBEROctetStream(byte[] nullx) {
          this._buf = nullx;
          this._off = 0;
-         this._derOut = new DEROutputStream(BEROctetStringGenerator.this._out);
+         this._asn1Out = ASN1OutputStream.create(BEROctetStringGenerator.this._out);
       }
 
       @Override
       public void write(int var1) throws IOException {
          this._buf[this._off++] = (byte)var1;
          if (this._off == this._buf.length) {
-            DEROctetString.encode(this._derOut, true, this._buf, 0, this._buf.length);
+            DEROctetString.encode(this._asn1Out, true, this._buf, 0, this._buf.length);
             this._off = 0;
          }
       }
@@ -54,12 +54,12 @@ public class BEROctetStringGenerator extends BERGenerator {
             if (this._off > 0) {
                System.arraycopy(var1, var2, this._buf, this._off, var5);
                var6 += var5;
-               DEROctetString.encode(this._derOut, true, this._buf, 0, var4);
+               DEROctetString.encode(this._asn1Out, true, this._buf, 0, var4);
             }
 
             int var7;
             while ((var7 = var3 - var6) >= var4) {
-               DEROctetString.encode(this._derOut, true, var1, var2 + var6, var4);
+               DEROctetString.encode(this._asn1Out, true, var1, var2 + var6, var4);
                var6 += var4;
             }
 
@@ -71,10 +71,10 @@ public class BEROctetStringGenerator extends BERGenerator {
       @Override
       public void close() throws IOException {
          if (this._off != 0) {
-            DEROctetString.encode(this._derOut, true, this._buf, 0, this._off);
+            DEROctetString.encode(this._asn1Out, true, this._buf, 0, this._off);
          }
 
-         this._derOut.flushInternal();
+         this._asn1Out.flushInternal();
          BEROctetStringGenerator.this.writeBEREnd();
       }
    }

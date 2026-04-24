@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mldsa;
 
 import java.security.SecureRandom;
 
+@Deprecated
 public class MLDSAParameters {
    public static final int TYPE_PURE = 0;
    public static final int TYPE_SHA2_512 = 1;

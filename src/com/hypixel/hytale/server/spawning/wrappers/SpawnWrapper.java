@@ -71,6 +71,10 @@ public abstract class SpawnWrapper<T extends NPCSpawn> {
       return this.lightRangePredicate;
    }
 
+   public boolean getEnableSafeSpawning(int roleIndex) {
+      return this.roles.get(roleIndex).getEnableSafeSpawning();
+   }
+
    public boolean hasInvalidNPC(String name) {
       return this.invalidNPCs.contains(name);
    }
@@ -119,6 +123,8 @@ public abstract class SpawnWrapper<T extends NPCSpawn> {
          if (roleIndex < 0) {
             this.invalidNPCs.add(name);
             spawningModule.getLogger().at(Level.WARNING).log("NPCSpawn %s references unknown NPC %s", this.spawn.getId(), name);
+         } else if (roles.containsKey(roleIndex)) {
+            spawningModule.getLogger().at(Level.WARNING).log("NPCSpawn %s references multiple times NPC %s. Ignoring all but first.", this.spawn.getId(), name);
          } else {
             roles.put(roleIndex, roleEntry);
          }

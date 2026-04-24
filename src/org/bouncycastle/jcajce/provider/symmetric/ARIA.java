@@ -147,7 +147,7 @@ public final class ARIA {
       @Override
       protected void engineInit(AlgorithmParameterSpec var1) throws InvalidParameterSpecException {
          if (GcmSpecUtil.isGcmSpec(var1)) {
-            this.gcmParams = GcmSpecUtil.extractGcmParameters(var1);
+            this.gcmParams = GCMParameters.getInstance(GcmSpecUtil.extractGcmParameters(var1));
          } else {
             if (!(var1 instanceof AEADParameterSpec)) {
                throw new InvalidParameterSpecException("AlgorithmParameterSpec class not recognized: " + var1.getClass().getName());

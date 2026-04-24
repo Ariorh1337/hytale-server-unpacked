@@ -1,6 +1,7 @@
 package io.sentry;
 
 import io.sentry.logger.ILoggerApi;
+import io.sentry.metrics.IMetricsApi;
 import io.sentry.protocol.Feedback;
 import io.sentry.protocol.SentryId;
 import io.sentry.protocol.SentryTransaction;
@@ -388,6 +389,12 @@ public final class HubScopesWrapper implements IHub {
    @Override
    public ILoggerApi logger() {
       return this.scopes.logger();
+   }
+
+   @NotNull
+   @Override
+   public IMetricsApi metrics() {
+      return this.scopes.metrics();
    }
 
    @Override

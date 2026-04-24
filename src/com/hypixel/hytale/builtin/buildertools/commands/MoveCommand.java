@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -28,7 +27,7 @@ public class MoveCommand extends AbstractPlayerCommand {
 
    public MoveCommand() {
       super("move", "server.commands.move.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new MoveCommand.MoveWithDistanceCommand());
       this.addUsageVariant(new MoveCommand.MoveWithDirectionAndDistanceCommand());
    }
@@ -73,7 +72,7 @@ public class MoveCommand extends AbstractPlayerCommand {
 
       public MoveWithDirectionAndDistanceCommand() {
          super("server.commands.move.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override
@@ -96,7 +95,7 @@ public class MoveCommand extends AbstractPlayerCommand {
 
       public MoveWithDistanceCommand() {
          super("server.commands.move.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

@@ -87,13 +87,13 @@ public class ParSet extends ASN1Object {
       ASN1EncodableVector var3 = new ASN1EncodableVector();
 
       for (int var4 = 0; var4 < this.h.length; var4++) {
-         var1.add(new ASN1Integer(this.h[var4]));
-         var2.add(new ASN1Integer(this.w[var4]));
-         var3.add(new ASN1Integer(this.k[var4]));
+         var1.add(ASN1Integer.valueOf(this.h[var4]));
+         var2.add(ASN1Integer.valueOf(this.w[var4]));
+         var3.add(ASN1Integer.valueOf(this.k[var4]));
       }
 
       ASN1EncodableVector var5 = new ASN1EncodableVector();
-      var5.add(new ASN1Integer(this.t));
+      var5.add(ASN1Integer.valueOf(this.t));
       var5.add(new DERSequence(var1));
       var5.add(new DERSequence(var2));
       var5.add(new DERSequence(var3));

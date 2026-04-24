@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -20,7 +19,7 @@ public class RepairFillersCommand extends AbstractPlayerCommand {
 
    public RepairFillersCommand() {
       super("repairfillers", "server.commands.repairfillers.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

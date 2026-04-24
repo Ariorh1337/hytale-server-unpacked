@@ -5,6 +5,8 @@ import io.sentry.hints.SessionEndHint;
 import io.sentry.hints.SessionStartHint;
 import io.sentry.logger.ILoggerApi;
 import io.sentry.logger.LoggerApi;
+import io.sentry.metrics.IMetricsApi;
+import io.sentry.metrics.MetricsApi;
 import io.sentry.protocol.Feedback;
 import io.sentry.protocol.SentryId;
 import io.sentry.protocol.SentryTransaction;
@@ -38,6 +40,8 @@ public final class Scopes implements IScopes {
    private final CombinedScopeView combinedScope;
    @NotNull
    private final ILoggerApi logger;
+   @NotNull
+   private final IMetricsApi metrics;
 
    public Scopes(@NotNull IScope scope, @NotNull IScope isolationScope, @NotNull IScope globalScope, @NotNull String creator) {
       this(scope, isolationScope, globalScope, null, creator);
@@ -54,6 +58,7 @@ public final class Scopes implements IScopes {
       validateOptions(options);
       this.compositePerformanceCollector = options.getCompositePerformanceCollector();
       this.logger = new LoggerApi(this);
+      this.metrics = new MetricsApi(this);
    }
 
    @NotNull
@@ -988,6 +993,12 @@ public final class Scopes implements IScopes {
    @Override
    public ILoggerApi logger() {
       return this.logger;
+   }
+
+   @NotNull
+   @Override
+   public IMetricsApi metrics() {
+      return this.metrics;
    }
 
    @Override

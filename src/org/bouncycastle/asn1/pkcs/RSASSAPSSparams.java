@@ -20,8 +20,8 @@ public class RSASSAPSSparams extends ASN1Object {
    private ASN1Integer trailerField;
    public static final AlgorithmIdentifier DEFAULT_HASH_ALGORITHM = new AlgorithmIdentifier(OIWObjectIdentifiers.idSHA1, DERNull.INSTANCE);
    public static final AlgorithmIdentifier DEFAULT_MASK_GEN_FUNCTION = new AlgorithmIdentifier(PKCSObjectIdentifiers.id_mgf1, DEFAULT_HASH_ALGORITHM);
-   public static final ASN1Integer DEFAULT_SALT_LENGTH = new ASN1Integer(20L);
-   public static final ASN1Integer DEFAULT_TRAILER_FIELD = new ASN1Integer(1L);
+   public static final ASN1Integer DEFAULT_SALT_LENGTH = ASN1Integer.valueOf(20);
+   public static final ASN1Integer DEFAULT_TRAILER_FIELD = ASN1Integer.ONE;
 
    public static RSASSAPSSparams getInstance(Object var0) {
       if (var0 instanceof RSASSAPSSparams) {

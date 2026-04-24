@@ -597,9 +597,17 @@ public class StandardPhysicsProvider implements IBlockCollisionConsumer, Compone
       return this.impactConsumer;
    }
 
+   public void setImpactConsumer(@Nullable ImpactConsumer impactConsumer) {
+      this.impactConsumer = impactConsumer;
+   }
+
    @Nullable
    public BounceConsumer getBounceConsumer() {
       return this.bounceConsumer;
+   }
+
+   public void setBounceConsumer(@Nullable BounceConsumer bounceConsumer) {
+      this.bounceConsumer = bounceConsumer;
    }
 
    @Nonnull

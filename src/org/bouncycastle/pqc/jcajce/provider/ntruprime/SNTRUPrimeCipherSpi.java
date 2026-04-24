@@ -15,15 +15,14 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.DestroyFailedException;
-import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.SecretWithEncapsulation;
 import org.bouncycastle.crypto.Wrapper;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.jcajce.provider.asymmetric.util.WrapUtil;
 import org.bouncycastle.jcajce.spec.KTSParameterSpec;
 import org.bouncycastle.pqc.crypto.ntruprime.SNTRUPrimeKEMExtractor;
 import org.bouncycastle.pqc.crypto.ntruprime.SNTRUPrimeKEMGenerator;
-import org.bouncycastle.pqc.jcajce.provider.util.WrapUtil;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Exceptions;
 
@@ -110,7 +109,7 @@ class SNTRUPrimeCipherSpi extends CipherSpi {
          }
 
          this.wrapKey = (BCSNTRUPrimePublicKey)var2;
-         this.kemGen = new SNTRUPrimeKEMGenerator(CryptoServicesRegistrar.getSecureRandom(var4));
+         this.kemGen = new SNTRUPrimeKEMGenerator(var4);
       } else {
          if (var1 != 4) {
             throw new InvalidParameterException("Cipher only valid for wrapping/unwrapping");

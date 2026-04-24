@@ -10,4 +10,8 @@ public abstract class ASN1Generator {
    }
 
    public abstract OutputStream getRawOutputStream();
+
+   static int inheritConstructedFlag(int var0, int var1) {
+      return (var1 & 32) != 0 ? var0 | 32 : var0 & -33;
+   }
 }

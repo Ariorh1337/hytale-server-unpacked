@@ -171,23 +171,23 @@ public final class SentryLogEvent implements JsonUnknown, JsonSerializable {
          reader.endObject();
          if (traceId == null) {
             String message = "Missing required field \"trace_id\"";
-            Exception exception = new IllegalStateException(message);
-            logger.log(SentryLevel.ERROR, message, exception);
+            Exception exception = new IllegalStateException("Missing required field \"trace_id\"");
+            logger.log(SentryLevel.ERROR, "Missing required field \"trace_id\"", exception);
             throw exception;
          } else if (timestamp == null) {
             String message = "Missing required field \"timestamp\"";
-            Exception exception = new IllegalStateException(message);
-            logger.log(SentryLevel.ERROR, message, exception);
+            Exception exception = new IllegalStateException("Missing required field \"timestamp\"");
+            logger.log(SentryLevel.ERROR, "Missing required field \"timestamp\"", exception);
             throw exception;
          } else if (body == null) {
             String message = "Missing required field \"body\"";
-            Exception exception = new IllegalStateException(message);
-            logger.log(SentryLevel.ERROR, message, exception);
+            Exception exception = new IllegalStateException("Missing required field \"body\"");
+            logger.log(SentryLevel.ERROR, "Missing required field \"body\"", exception);
             throw exception;
          } else if (level == null) {
             String message = "Missing required field \"level\"";
-            Exception exception = new IllegalStateException(message);
-            logger.log(SentryLevel.ERROR, message, exception);
+            Exception exception = new IllegalStateException("Missing required field \"level\"");
+            logger.log(SentryLevel.ERROR, "Missing required field \"level\"", exception);
             throw exception;
          } else {
             SentryLogEvent logEvent = new SentryLogEvent(traceId, timestamp, body, level);

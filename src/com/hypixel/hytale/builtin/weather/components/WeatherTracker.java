@@ -24,6 +24,7 @@ public class WeatherTracker implements Component<EntityStore> {
    private final Vector3i previousBlockPosition = new Vector3i();
    private int environmentId;
    private boolean firstSendForWorld = true;
+   private int overrideWeatherIndex = 0;
 
    public static ComponentType<EntityStore, WeatherTracker> getComponentType() {
       return WeatherPlugin.get().getWeatherTrackerComponentType();
@@ -36,6 +37,7 @@ public class WeatherTracker implements Component<EntityStore> {
       this.environmentId = other.environmentId;
       this.updateWeather.weatherIndex = other.updateWeather.weatherIndex;
       this.previousBlockPosition.set(other.previousBlockPosition);
+      this.overrideWeatherIndex = other.overrideWeatherIndex;
    }
 
    public void updateWeather(
@@ -48,6 +50,8 @@ public class WeatherTracker implements Component<EntityStore> {
       int forcedWeatherIndex = weatherComponent.getForcedWeatherIndex();
       if (forcedWeatherIndex != 0) {
          this.sendWeatherIndex(playerRef, forcedWeatherIndex, transitionSeconds);
+      } else if (this.overrideWeatherIndex != 0) {
+         this.sendWeatherIndex(playerRef, this.overrideWeatherIndex, transitionSeconds);
       } else {
          this.updateEnvironment(transformComponent, componentAccessor);
          int weatherIndexForEnvironment = weatherComponent.getWeatherIndexForEnvironment(this.environmentId);
@@ -79,6 +83,15 @@ public class WeatherTracker implements Component<EntityStore> {
    public void clear() {
       this.updateWeather.weatherIndex = 0;
       this.firstSendForWorld = true;
+      this.overrideWeatherIndex = 0;
+   }
+
+   public void setOverrideWeatherIndex(int weatherIndex) {
+      this.overrideWeatherIndex = weatherIndex;
+   }
+
+   public void clearOverrideWeatherIndex() {
+      this.overrideWeatherIndex = 0;
    }
 
    public void updateEnvironment(@Nonnull TransformComponent transformComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {

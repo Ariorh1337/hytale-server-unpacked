@@ -50,21 +50,29 @@ public class LightingGetCommand extends AbstractWorldCommand {
          byte blueLight = ChunkLightData.getLightValue(lightValue, 2);
          byte skyLight = ChunkLightData.getLightValue(lightValue, 3);
          boolean displayHex = this.hexFlag.get(context);
-         Message messageToSend = Message.translation("server.commands.light.get").param("x", x).param("y", y).param("z", z).param("worldName", world.getName());
          if (displayHex) {
-            String hexString = Integer.toHexString(lightValue);
-            messageToSend.insert("#" + "0".repeat(8 - hexString.length()) + hexString);
+            String hexFormatted = "%08x".formatted(lightValue);
+            context.sendMessage(
+               Message.translation("server.commands.light.getHex")
+                  .param("x", x)
+                  .param("y", y)
+                  .param("z", z)
+                  .param("worldName", world.getName())
+                  .param("hex", hexFormatted)
+            );
          } else {
-            messageToSend.insert(
-               Message.translation("server.commands.light.value")
+            context.sendMessage(
+               Message.translation("server.commands.light.get")
+                  .param("x", x)
+                  .param("y", y)
+                  .param("z", z)
+                  .param("worldName", world.getName())
                   .param("red", redLight)
                   .param("green", greenLight)
                   .param("blue", blueLight)
                   .param("sky", skyLight)
             );
          }
-
-         context.sendMessage(messageToSend);
       } else {
          Message errorMessage = Message.translation("server.commands.errors.chunkNotLoaded")
             .param("chunkX", ChunkUtil.chunkCoordinate(x))

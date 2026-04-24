@@ -5,23 +5,22 @@ import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class CameraShake {
-   public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 1;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 0;
    public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 9;
-   public static final int MAX_SIZE = 1130496177;
-   @Nullable
-   public CameraShakeConfig firstPerson;
-   @Nullable
-   public CameraShakeConfig thirdPerson;
+   public static final int VARIABLE_BLOCK_START = 8;
+   public static final int MAX_SIZE = 1130496176;
+   @Nonnull
+   public CameraShakeConfig firstPerson = new CameraShakeConfig();
+   @Nonnull
+   public CameraShakeConfig thirdPerson = new CameraShakeConfig();
 
    public CameraShake() {
    }
 
-   public CameraShake(@Nullable CameraShakeConfig firstPerson, @Nullable CameraShakeConfig thirdPerson) {
+   public CameraShake(@Nonnull CameraShakeConfig firstPerson, @Nonnull CameraShakeConfig thirdPerson) {
       this.firstPerson = firstPerson;
       this.thirdPerson = thirdPerson;
    }
@@ -33,155 +32,110 @@ public class CameraShake {
 
    @Nonnull
    public static CameraShake deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 9) {
-         throw ProtocolException.bufferTooSmall("CameraShake", 9, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("CameraShake", 8, buf.readableBytes() - offset);
       }
 
       CameraShake obj = new CameraShake();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 1);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 9) {
-            throw ProtocolException.invalidOffset("FirstPerson", varPosBase0, buf.readableBytes());
-         }
-
-         int varPos0 = offset + 9 + varPosBase0;
+      int varPosBase0 = buf.getIntLE(offset + 0);
+      if (varPosBase0 >= 0 && varPosBase0 <= buf.writerIndex() - offset - 8) {
+         int varPos0 = offset + 8 + varPosBase0;
          obj.firstPerson = CameraShakeConfig.deserialize(buf, varPos0);
-      }
-
-      if ((nullBits & 2) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 5);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 9) {
-            throw ProtocolException.invalidOffset("ThirdPerson", varPosBase1, buf.readableBytes());
+         varPosBase0 = buf.getIntLE(offset + 4);
+         if (varPosBase0 >= 0 && varPosBase0 <= buf.writerIndex() - offset - 8) {
+            varPos0 = offset + 8 + varPosBase0;
+            obj.thirdPerson = CameraShakeConfig.deserialize(buf, varPos0);
+            return obj;
+         } else {
+            throw ProtocolException.invalidOffset("ThirdPerson", varPosBase0, buf.readableBytes());
          }
-
-         int varPos1 = offset + 9 + varPosBase1;
-         obj.thirdPerson = CameraShakeConfig.deserialize(buf, varPos1);
+      } else {
+         throw ProtocolException.invalidOffset("FirstPerson", varPosBase0, buf.readableBytes());
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      byte nullBits = buf.getByte(offset);
-      int maxEnd = 9;
-      if ((nullBits & 1) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 1);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 9) {
-            throw ProtocolException.invalidOffset("FirstPerson", fieldOffset0, maxEnd);
-         }
-
-         int pos0 = offset + 9 + fieldOffset0;
+      int maxEnd = 8;
+      int fieldOffset0 = buf.getIntLE(offset + 0);
+      if (fieldOffset0 >= 0 && fieldOffset0 <= buf.writerIndex() - offset - 8) {
+         int pos0 = offset + 8 + fieldOffset0;
          pos0 += CameraShakeConfig.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
-      }
 
-      if ((nullBits & 2) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 5);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 9) {
-            throw ProtocolException.invalidOffset("ThirdPerson", fieldOffset1, maxEnd);
+         fieldOffset0 = buf.getIntLE(offset + 4);
+         if (fieldOffset0 >= 0 && fieldOffset0 <= buf.writerIndex() - offset - 8) {
+            pos0 = offset + 8 + fieldOffset0;
+            pos0 += CameraShakeConfig.computeBytesConsumed(buf, pos0);
+            if (pos0 - offset > maxEnd) {
+               maxEnd = pos0 - offset;
+            }
+
+            return maxEnd;
+         } else {
+            throw ProtocolException.invalidOffset("ThirdPerson", fieldOffset0, maxEnd);
          }
-
-         int pos1 = offset + 9 + fieldOffset1;
-         pos1 += CameraShakeConfig.computeBytesConsumed(buf, pos1);
-         if (pos1 - offset > maxEnd) {
-            maxEnd = pos1 - offset;
-         }
+      } else {
+         throw ProtocolException.invalidOffset("FirstPerson", fieldOffset0, maxEnd);
       }
-
-      return maxEnd;
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
-      byte nullBits = 0;
-      if (this.firstPerson != null) {
-         nullBits = (byte)(nullBits | 1);
-      }
-
-      if (this.thirdPerson != null) {
-         nullBits = (byte)(nullBits | 2);
-      }
-
-      buf.writeByte(nullBits);
       int firstPersonOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int thirdPersonOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
-      if (this.firstPerson != null) {
-         buf.setIntLE(firstPersonOffsetSlot, buf.writerIndex() - varBlockStart);
-         this.firstPerson.serialize(buf);
-      } else {
-         buf.setIntLE(firstPersonOffsetSlot, -1);
-      }
-
-      if (this.thirdPerson != null) {
-         buf.setIntLE(thirdPersonOffsetSlot, buf.writerIndex() - varBlockStart);
-         this.thirdPerson.serialize(buf);
-      } else {
-         buf.setIntLE(thirdPersonOffsetSlot, -1);
-      }
+      buf.setIntLE(firstPersonOffsetSlot, buf.writerIndex() - varBlockStart);
+      this.firstPerson.serialize(buf);
+      buf.setIntLE(thirdPersonOffsetSlot, buf.writerIndex() - varBlockStart);
+      this.thirdPerson.serialize(buf);
    }
 
    public int computeSize() {
-      int size = 9;
-      if (this.firstPerson != null) {
-         size += this.firstPerson.computeSize();
-      }
-
-      if (this.thirdPerson != null) {
-         size += this.thirdPerson.computeSize();
-      }
-
-      return size;
+      int size = 8;
+      size += this.firstPerson.computeSize();
+      return size + this.thirdPerson.computeSize();
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 9) {
-         return ValidationResult.error("Buffer too small: expected at least 9 bytes");
+      if (buffer.readableBytes() - offset < 8) {
+         return ValidationResult.error("Buffer too small: expected at least 8 bytes");
       }
 
-      byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         int firstPersonOffset = buffer.getIntLE(offset + 1);
-         if (firstPersonOffset < 0 || firstPersonOffset > buffer.writerIndex() - offset - 9) {
-            return ValidationResult.error("Invalid offset for FirstPerson");
-         }
-
-         int pos = offset + 9 + firstPersonOffset;
+      int firstPersonOffset = buffer.getIntLE(offset + 0);
+      if (firstPersonOffset >= 0 && firstPersonOffset <= buffer.writerIndex() - offset - 8) {
+         int pos = offset + 8 + firstPersonOffset;
          ValidationResult firstPersonResult = CameraShakeConfig.validateStructure(buffer, pos);
          if (!firstPersonResult.isValid()) {
             return ValidationResult.error("Invalid FirstPerson: " + firstPersonResult.error());
          }
 
          pos += CameraShakeConfig.computeBytesConsumed(buffer, pos);
-      }
+         firstPersonOffset = buffer.getIntLE(offset + 4);
+         if (firstPersonOffset >= 0 && firstPersonOffset <= buffer.writerIndex() - offset - 8) {
+            pos = offset + 8 + firstPersonOffset;
+            firstPersonResult = CameraShakeConfig.validateStructure(buffer, pos);
+            if (!firstPersonResult.isValid()) {
+               return ValidationResult.error("Invalid ThirdPerson: " + firstPersonResult.error());
+            }
 
-      if ((nullBits & 2) != 0) {
-         int thirdPersonOffset = buffer.getIntLE(offset + 5);
-         if (thirdPersonOffset < 0 || thirdPersonOffset > buffer.writerIndex() - offset - 9) {
+            pos += CameraShakeConfig.computeBytesConsumed(buffer, pos);
+            return ValidationResult.OK;
+         } else {
             return ValidationResult.error("Invalid offset for ThirdPerson");
          }
-
-         int pos = offset + 9 + thirdPersonOffset;
-         ValidationResult thirdPersonResult = CameraShakeConfig.validateStructure(buffer, pos);
-         if (!thirdPersonResult.isValid()) {
-            return ValidationResult.error("Invalid ThirdPerson: " + thirdPersonResult.error());
-         }
-
-         pos += CameraShakeConfig.computeBytesConsumed(buffer, pos);
+      } else {
+         return ValidationResult.error("Invalid offset for FirstPerson");
       }
-
-      return ValidationResult.OK;
    }
 
    public CameraShake clone() {
       CameraShake copy = new CameraShake();
-      copy.firstPerson = this.firstPerson != null ? this.firstPerson.clone() : null;
-      copy.thirdPerson = this.thirdPerson != null ? this.thirdPerson.clone() : null;
+      copy.firstPerson = this.firstPerson.clone();
+      copy.thirdPerson = this.thirdPerson.clone();
       return copy;
    }
 

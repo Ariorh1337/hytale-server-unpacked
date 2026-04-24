@@ -97,7 +97,7 @@ public class ISAPEngine extends AEADBaseEngine {
       AsconPermutationFriend.AsconPermutation p;
       AsconPermutationFriend.AsconPermutation mac;
 
-      public ISAPAEAD_A() {
+      ISAPAEAD_A() {
          ISAPEngine.this.ISAP_rH = 64;
          ISAPEngine.this.BlockSize = ISAPEngine.this.ISAP_rH + 7 >> 3;
          this.p = new AsconPermutationFriend.AsconPermutation();
@@ -112,9 +112,9 @@ public class ISAPEngine extends AEADBaseEngine {
          Pack.bigEndianToLong(ISAPEngine.this.k, 0, this.k64);
       }
 
-      protected abstract void PX1(AsconPermutationFriend.AsconPermutation var1);
+      abstract void PX1(AsconPermutationFriend.AsconPermutation var1);
 
-      protected abstract void PX2(AsconPermutationFriend.AsconPermutation var1);
+      abstract void PX2(AsconPermutationFriend.AsconPermutation var1);
 
       @Override
       public void absorbMacBlock(byte[] var1, int var2) {
@@ -196,43 +196,43 @@ public class ISAPEngine extends AEADBaseEngine {
    }
 
    private class ISAPAEAD_A_128 extends ISAPEngine.ISAPAEAD_A {
-      public ISAPAEAD_A_128() {
+      ISAPAEAD_A_128() {
          this.ISAP_IV1_64 = 108156764298152972L;
          this.ISAP_IV2_64 = 180214358336080908L;
          this.ISAP_IV3_64 = 252271952374008844L;
       }
 
       @Override
-      protected void PX1(AsconPermutationFriend.AsconPermutation var1) {
+      void PX1(AsconPermutationFriend.AsconPermutation var1) {
          var1.p(12);
       }
 
       @Override
-      protected void PX2(AsconPermutationFriend.AsconPermutation var1) {
+      void PX2(AsconPermutationFriend.AsconPermutation var1) {
          var1.p(12);
       }
    }
 
    private class ISAPAEAD_A_128A extends ISAPEngine.ISAPAEAD_A {
-      public ISAPAEAD_A_128A() {
+      ISAPAEAD_A_128A() {
          this.ISAP_IV1_64 = 108156764297430540L;
          this.ISAP_IV2_64 = 180214358335358476L;
          this.ISAP_IV3_64 = 252271952373286412L;
       }
 
       @Override
-      protected void PX1(AsconPermutationFriend.AsconPermutation var1) {
+      void PX1(AsconPermutationFriend.AsconPermutation var1) {
          var1.p(6);
       }
 
       @Override
-      protected void PX2(AsconPermutationFriend.AsconPermutation var1) {
+      void PX2(AsconPermutationFriend.AsconPermutation var1) {
          var1.round(75L);
       }
    }
 
    private abstract class ISAPAEAD_K implements ISAPEngine.ISAP_AEAD {
-      protected final int ISAP_STATE_SZ_CRYPTO_NPUBBYTES = 40 - ISAPEngine.this.IV_SIZE;
+      final int ISAP_STATE_SZ_CRYPTO_NPUBBYTES = 40 - ISAPEngine.this.IV_SIZE;
       protected short[] ISAP_IV1_16;
       protected short[] ISAP_IV2_16;
       protected short[] ISAP_IV3_16;
@@ -248,7 +248,7 @@ public class ISAPEngine extends AEADBaseEngine {
       protected short[] macE = new short[25];
       protected short[] macC = new short[5];
 
-      public ISAPAEAD_K() {
+      ISAPAEAD_K() {
          ISAPEngine.this.ISAP_rH = 144;
          ISAPEngine.this.BlockSize = ISAPEngine.this.ISAP_rH + 7 >> 3;
       }
@@ -273,11 +273,11 @@ public class ISAPEngine extends AEADBaseEngine {
          this.PermuteRoundsHX(this.macSX, this.macE, this.macC);
       }
 
-      protected abstract void PermuteRoundsHX(short[] var1, short[] var2, short[] var3);
+      abstract void PermuteRoundsHX(short[] var1, short[] var2, short[] var3);
 
-      protected abstract void PermuteRoundsKX(short[] var1, short[] var2, short[] var3);
+      abstract void PermuteRoundsKX(short[] var1, short[] var2, short[] var3);
 
-      protected abstract void PermuteRoundsBX(short[] var1, short[] var2, short[] var3);
+      abstract void PermuteRoundsBX(short[] var1, short[] var2, short[] var3);
 
       @Override
       public void absorbMacBlock(byte[] var1, int var2) {
@@ -296,7 +296,7 @@ public class ISAPEngine extends AEADBaseEngine {
          this.macSX[24] = (short)(this.macSX[24] ^ 256);
       }
 
-      public void isap_rk(short[] var1, byte[] var2, int var3, short[] var4, int var5, short[] var6) {
+      void isap_rk(short[] var1, byte[] var2, int var3, short[] var4, int var5, short[] var6) {
          short[] var7 = new short[25];
          short[] var8 = new short[25];
          System.arraycopy(this.k16, 0, var7, 0, 8);
@@ -349,12 +349,12 @@ public class ISAPEngine extends AEADBaseEngine {
          }
       }
 
-      protected void rounds12X(short[] var1, short[] var2, short[] var3) {
+      void rounds12X(short[] var1, short[] var2, short[] var3) {
          this.prepareThetaX(var1, var3);
          this.rounds_8_18(var1, var2, var3);
       }
 
-      protected void rounds_4_18(short[] var1, short[] var2, short[] var3) {
+      void rounds_4_18(short[] var1, short[] var2, short[] var3) {
          this.thetaRhoPiChiIotaPrepareTheta(4, var1, var2, var3);
          this.thetaRhoPiChiIotaPrepareTheta(5, var2, var1, var3);
          this.thetaRhoPiChiIotaPrepareTheta(6, var1, var2, var3);
@@ -362,7 +362,7 @@ public class ISAPEngine extends AEADBaseEngine {
          this.rounds_8_18(var1, var2, var3);
       }
 
-      protected void rounds_8_18(short[] var1, short[] var2, short[] var3) {
+      void rounds_8_18(short[] var1, short[] var2, short[] var3) {
          this.thetaRhoPiChiIotaPrepareTheta(8, var1, var2, var3);
          this.thetaRhoPiChiIotaPrepareTheta(9, var2, var1, var3);
          this.thetaRhoPiChiIotaPrepareTheta(10, var1, var2, var3);
@@ -370,7 +370,7 @@ public class ISAPEngine extends AEADBaseEngine {
          this.rounds_12_18(var1, var2, var3);
       }
 
-      protected void rounds_12_18(short[] var1, short[] var2, short[] var3) {
+      void rounds_12_18(short[] var1, short[] var2, short[] var3) {
          this.thetaRhoPiChiIotaPrepareTheta(12, var1, var2, var3);
          this.thetaRhoPiChiIotaPrepareTheta(13, var2, var1, var3);
          this.thetaRhoPiChiIotaPrepareTheta(14, var1, var2, var3);
@@ -381,7 +381,7 @@ public class ISAPEngine extends AEADBaseEngine {
          this.thetaRhoPiChiIota(var2, var1, var3);
       }
 
-      protected void prepareThetaX(short[] var1, short[] var2) {
+      void prepareThetaX(short[] var1, short[] var2) {
          var2[0] = (short)(var1[0] ^ var1[5] ^ var1[10] ^ var1[15] ^ var1[20]);
          var2[1] = (short)(var1[1] ^ var1[6] ^ var1[11] ^ var1[16] ^ var1[21]);
          var2[2] = (short)(var1[2] ^ var1[7] ^ var1[12] ^ var1[17] ^ var1[22]);
@@ -393,7 +393,7 @@ public class ISAPEngine extends AEADBaseEngine {
          return (short)((var1 & '\uffff') << var2 ^ (var1 & '\uffff') >>> 16 - var2);
       }
 
-      protected void thetaRhoPiChiIotaPrepareTheta(int var1, short[] var2, short[] var3, short[] var4) {
+      void thetaRhoPiChiIotaPrepareTheta(int var1, short[] var2, short[] var3, short[] var4) {
          short var5 = (short)(var4[4] ^ this.ROL16(var4[1], 1));
          short var6 = (short)(var4[0] ^ this.ROL16(var4[2], 1));
          short var7 = (short)(var4[1] ^ this.ROL16(var4[3], 1));
@@ -495,7 +495,7 @@ public class ISAPEngine extends AEADBaseEngine {
          var4[4] ^= var3[24];
       }
 
-      protected void thetaRhoPiChiIota(short[] var1, short[] var2, short[] var3) {
+      void thetaRhoPiChiIota(short[] var1, short[] var2, short[] var3) {
          short var4 = (short)(var3[4] ^ this.ROL16(var3[1], 1));
          short var5 = (short)(var3[0] ^ this.ROL16(var3[2], 1));
          short var6 = (short)(var3[1] ^ this.ROL16(var3[3], 1));
@@ -579,14 +579,14 @@ public class ISAPEngine extends AEADBaseEngine {
    }
 
    private class ISAPAEAD_K_128 extends ISAPEngine.ISAPAEAD_K {
-      public ISAPAEAD_K_128() {
+      ISAPAEAD_K_128() {
          this.ISAP_IV1_16 = new short[]{-32767, 400, 3092, 3084};
          this.ISAP_IV2_16 = new short[]{-32766, 400, 3092, 3084};
          this.ISAP_IV3_16 = new short[]{-32765, 400, 3092, 3084};
       }
 
       @Override
-      protected void PermuteRoundsHX(short[] var1, short[] var2, short[] var3) {
+      void PermuteRoundsHX(short[] var1, short[] var2, short[] var3) {
          this.prepareThetaX(var1, var3);
          this.thetaRhoPiChiIotaPrepareTheta(0, var1, var2, var3);
          this.thetaRhoPiChiIotaPrepareTheta(1, var2, var1, var3);
@@ -596,37 +596,37 @@ public class ISAPEngine extends AEADBaseEngine {
       }
 
       @Override
-      protected void PermuteRoundsKX(short[] var1, short[] var2, short[] var3) {
+      void PermuteRoundsKX(short[] var1, short[] var2, short[] var3) {
          this.rounds12X(var1, var2, var3);
       }
 
       @Override
-      protected void PermuteRoundsBX(short[] var1, short[] var2, short[] var3) {
+      void PermuteRoundsBX(short[] var1, short[] var2, short[] var3) {
          this.rounds12X(var1, var2, var3);
       }
    }
 
    private class ISAPAEAD_K_128A extends ISAPEngine.ISAPAEAD_K {
-      public ISAPAEAD_K_128A() {
+      ISAPAEAD_K_128A() {
          this.ISAP_IV1_16 = new short[]{-32767, 400, 272, 2056};
          this.ISAP_IV2_16 = new short[]{-32766, 400, 272, 2056};
          this.ISAP_IV3_16 = new short[]{-32765, 400, 272, 2056};
       }
 
       @Override
-      protected void PermuteRoundsHX(short[] var1, short[] var2, short[] var3) {
+      void PermuteRoundsHX(short[] var1, short[] var2, short[] var3) {
          this.prepareThetaX(var1, var3);
          this.rounds_4_18(var1, var2, var3);
       }
 
       @Override
-      protected void PermuteRoundsKX(short[] var1, short[] var2, short[] var3) {
+      void PermuteRoundsKX(short[] var1, short[] var2, short[] var3) {
          this.prepareThetaX(var1, var3);
          this.rounds_12_18(var1, var2, var3);
       }
 
       @Override
-      protected void PermuteRoundsBX(short[] var1, short[] var2, short[] var3) {
+      void PermuteRoundsBX(short[] var1, short[] var2, short[] var3) {
          this.prepareThetaX(var1, var3);
          this.thetaRhoPiChiIotaPrepareTheta(19, var1, var2, var3);
          System.arraycopy(var2, 0, var1, 0, var2.length);

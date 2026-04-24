@@ -19,7 +19,7 @@ public class KeyAgreeRecipientInfo extends ASN1Object {
    private ASN1Sequence recipientEncryptedKeys;
 
    public KeyAgreeRecipientInfo(OriginatorIdentifierOrKey var1, ASN1OctetString var2, AlgorithmIdentifier var3, ASN1Sequence var4) {
-      this.version = new ASN1Integer(3L);
+      this.version = ASN1Integer.THREE;
       this.originator = var1;
       this.ukm = var2;
       this.keyEncryptionAlgorithm = var3;

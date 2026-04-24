@@ -31,10 +31,12 @@ public class DERExternalParser implements ASN1ExternalParser {
    }
 
    static DLExternal parse(ASN1StreamParser var0) throws IOException {
+      DLSequence var1 = new DLSequence(var0.readVector());
+
       try {
-         return new DLExternal(new DLSequence(var0.readVector()));
-      } catch (IllegalArgumentException var2) {
-         throw new ASN1Exception(var2.getMessage(), var2);
+         return DLExternal.fromSequence(var1);
+      } catch (IllegalArgumentException var3) {
+         throw new ASN1Exception("corrupted stream detected", var3);
       }
    }
 }

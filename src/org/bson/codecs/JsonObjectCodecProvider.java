@@ -9,4 +9,9 @@ public final class JsonObjectCodecProvider implements CodecProvider {
    public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
       return clazz.equals(JsonObject.class) ? new JsonObjectCodec() : null;
    }
+
+   @Override
+   public String toString() {
+      return "JsonObjectCodecProvider{}";
+   }
 }

@@ -12,6 +12,7 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -21,6 +22,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
+import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -43,14 +45,17 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.npc.INonPlayerCharacter;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawningContext;
+import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.Comparator;
@@ -150,7 +155,7 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
          UIEventBuilder eventBuilder = new UIEventBuilder();
          this.buildList(ref, store, commandBuilder, eventBuilder);
          this.sendUpdate(commandBuilder, eventBuilder, false);
-      } else {
+      } else if (data.type != null) {
          switch (data.type) {
             case "TabSwitch":
                if (data.tab != null && !data.tab.equals(this.activeTab)) {
@@ -224,6 +229,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                            this.createOrUpdateItemPreview(ref, store, this.selectedItemId);
                         }
                      }
+                  } else if ("NPC".equals(this.activeTab) && this.selectedNpcRole != null) {
+                     this.updatePreviewScale(ref, store);
                   }
                }
                break;
@@ -295,7 +302,18 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
             spawnRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
 
             for (int i = 0; i < count; i++) {
-               NPCPlugin.get().spawnNPC(store, this.selectedNpcRole, null, this.position, spawnRotation);
+               Pair<Ref<EntityStore>, INonPlayerCharacter> result = NPCPlugin.get().spawnNPC(store, this.selectedNpcRole, null, this.position, spawnRotation);
+               if (result != null) {
+                  if (this.currentScale != 1.0F) {
+                     store.putComponent(result.first(), EntityScaleComponent.getComponentType(), new EntityScaleComponent(this.currentScale));
+                  }
+
+                  store.ensureComponent(result.first(), Frozen.getComponentType());
+                  NPCEntity npcComponent = store.getComponent(result.first(), NPCEntity.getComponentType());
+                  if (npcComponent != null) {
+                     npcComponent.playAnimation(result.first(), AnimationSlot.Movement, "Idle", store);
+                  }
+               }
             }
 
             store.getComponent(ref, Player.getComponentType()).getPageManager().setPage(ref, store, Page.None);
@@ -364,8 +382,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       commandBuilder.set("#TabItems.Style", this.activeTab.equals("Items") ? TAB_STYLE_ACTIVE : TAB_STYLE_INACTIVE);
       commandBuilder.set("#TabModel.Style", this.activeTab.equals("Model") ? TAB_STYLE_ACTIVE : TAB_STYLE_INACTIVE);
       commandBuilder.set("#RotationGroup.Visible", this.activeTab.equals("Model") || this.activeTab.equals("NPC") || this.activeTab.equals("Items"));
-      commandBuilder.set("#ScaleGroup.Visible", this.activeTab.equals("Model") || this.activeTab.equals("Items"));
-      if (this.activeTab.equals("Model") || this.activeTab.equals("Items")) {
+      commandBuilder.set("#ScaleGroup.Visible", this.activeTab.equals("Model") || this.activeTab.equals("Items") || this.activeTab.equals("NPC"));
+      if (this.activeTab.equals("Model") || this.activeTab.equals("Items") || this.activeTab.equals("NPC")) {
          commandBuilder.set("#ScaleSlider.Value", this.currentScale);
          commandBuilder.set("#ScaleValue.Text", String.format("%.1f", this.currentScale));
       }
@@ -577,7 +595,6 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                      holder.addComponent(ItemComponent.getComponentType(), new ItemComponent(itemStack));
                      holder.addComponent(PreventPickup.getComponentType(), PreventPickup.INSTANCE);
                      holder.addComponent(PreventItemMerging.getComponentType(), PreventItemMerging.INSTANCE);
-                     holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(spawnRotation));
                      holder.addComponent(PropComponent.getComponentType(), PropComponent.get());
                      holder.ensureComponent(UUIDComponent.getComponentType());
                      store.addEntity(holder, AddReason.SPAWN);
@@ -724,6 +741,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                   this.modelPreview, ModelComponent.getComponentType(), new ModelComponent(Model.createStaticScaledModel(modelAsset, this.currentScale))
                );
             }
+         } else if ("NPC".equals(this.activeTab)) {
+            store.putComponent(this.modelPreview, EntityScaleComponent.getComponentType(), new EntityScaleComponent(this.currentScale));
          }
       }
    }
@@ -737,7 +756,6 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       holder.addComponent(BlockEntity.getComponentType(), new BlockEntity(blockTypeKey));
       holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(this.position, this.rotation));
       holder.addComponent(EntityScaleComponent.getComponentType(), new EntityScaleComponent(this.currentScale * 2.0F));
-      holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(this.rotation));
       this.modelPreview = store.addEntity(holder, AddReason.SPAWN);
       this.lastPreviewScale = this.currentScale;
    }

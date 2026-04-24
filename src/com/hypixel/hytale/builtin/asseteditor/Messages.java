@@ -92,4 +92,8 @@ public class Messages {
    public static final Message PACK_ALREADY_EXISTS = Message.translation("server.assetEditor.messages.packAlreadyExists");
    @Nonnull
    public static final Message INVALID_TARGET_DIRECTORY = Message.translation("server.assetEditor.messages.invalidTargetDirectory");
+   @Nonnull
+   public static final Message PACK_DELETED = Message.translation("server.assetEditor.messages.packDeleted");
+   @Nonnull
+   public static final Message PACK_DELETION_FAILED = Message.translation("server.assetEditor.messages.packDeletionFailed");
 }

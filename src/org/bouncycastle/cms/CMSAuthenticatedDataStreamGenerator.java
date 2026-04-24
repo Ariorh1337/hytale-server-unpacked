@@ -21,7 +21,6 @@ import org.bouncycastle.util.io.TeeOutputStream;
 public class CMSAuthenticatedDataStreamGenerator extends CMSAuthenticatedGenerator {
    private int bufferSize;
    private boolean berEncodeRecipientSet;
-   private MacCalculator macCalculator;
 
    public void setBufferSize(int var1) {
       this.bufferSize = var1;
@@ -44,35 +43,32 @@ public class CMSAuthenticatedDataStreamGenerator extends CMSAuthenticatedGenerat
    }
 
    public OutputStream open(ASN1ObjectIdentifier var1, OutputStream var2, MacCalculator var3, DigestCalculator var4) throws CMSException {
-      this.macCalculator = var3;
-
       try {
          ASN1EncodableVector var5 = CMSUtils.getRecipentInfos(var3.getKey(), this.recipientInfoGenerators);
          BERSequenceGenerator var6 = new BERSequenceGenerator(var2);
          var6.addObject(CMSObjectIdentifiers.authenticatedData);
          BERSequenceGenerator var7 = new BERSequenceGenerator(var6.getRawOutputStream(), 0, true);
-         var7.addObject(new ASN1Integer(AuthenticatedData.calculateVersion(this.originatorInfo)));
+         var7.addObject(ASN1Integer.valueOf(AuthenticatedData.calculateVersion(this.originatorInfo)));
          CMSUtils.addOriginatorInfoToGenerator(var7, this.originatorInfo);
          CMSUtils.addRecipientInfosToGenerator(var5, var7, this.berEncodeRecipientSet);
-         AlgorithmIdentifier var8 = var3.getAlgorithmIdentifier();
-         var7.getRawOutputStream().write(var8.getEncoded());
+         var7.addObject(var3.getAlgorithmIdentifier());
          if (var4 != null) {
             var7.addObject(new DERTaggedObject(false, 1, var4.getAlgorithmIdentifier()));
          }
 
-         BERSequenceGenerator var9 = new BERSequenceGenerator(var7.getRawOutputStream());
-         var9.addObject(var1);
-         OutputStream var10 = CMSUtils.createBEROctetOutputStream(var9.getRawOutputStream(), 0, true, this.bufferSize);
-         TeeOutputStream var11;
+         BERSequenceGenerator var8 = new BERSequenceGenerator(var7.getRawOutputStream());
+         var8.addObject(var1);
+         OutputStream var9 = CMSUtils.createBEROctetOutputStream(var8.getRawOutputStream(), 0, true, this.bufferSize);
+         TeeOutputStream var10;
          if (var4 != null) {
-            var11 = new TeeOutputStream(var10, var4.getOutputStream());
+            var10 = new TeeOutputStream(var9, var4.getOutputStream());
          } else {
-            var11 = new TeeOutputStream(var10, var3.getOutputStream());
+            var10 = new TeeOutputStream(var9, var3.getOutputStream());
          }
 
-         return new CMSAuthenticatedDataStreamGenerator.CmsAuthenticatedDataOutputStream(var3, var4, var1, var11, var6, var7, var9);
-      } catch (IOException var12) {
-         throw new CMSException("exception decoding algorithm parameters.", var12);
+         return new CMSAuthenticatedDataStreamGenerator.CmsAuthenticatedDataOutputStream(var3, var4, var1, var10, var6, var7, var8);
+      } catch (IOException var11) {
+         throw new CMSException("exception decoding algorithm parameters.", var11);
       }
    }
 
@@ -124,25 +120,22 @@ public class CMSAuthenticatedDataStreamGenerator extends CMSAuthenticatedGenerat
          this.eiGen.close();
          Map var1;
          if (this.digestCalculator != null) {
+            AlgorithmIdentifier var2 = this.digestCalculator.getAlgorithmIdentifier();
+            AlgorithmIdentifier var3 = this.macCalculator.getAlgorithmIdentifier();
             var1 = Collections.unmodifiableMap(
-               CMSAuthenticatedDataStreamGenerator.this.getBaseParameters(
-                  this.contentType,
-                  this.digestCalculator.getAlgorithmIdentifier(),
-                  this.macCalculator.getAlgorithmIdentifier(),
-                  this.digestCalculator.getDigest()
-               )
+               CMSAuthenticatedDataStreamGenerator.this.getBaseParameters(this.contentType, var2, var3, this.digestCalculator.getDigest())
             );
             if (CMSAuthenticatedDataStreamGenerator.this.authGen == null) {
                CMSAuthenticatedDataStreamGenerator.this.authGen = new DefaultAuthenticatedAttributeTableGenerator();
             }
 
-            DERSet var2 = new DERSet(CMSAuthenticatedDataStreamGenerator.this.authGen.getAttributes(var1).toASN1EncodableVector());
-            OutputStream var3 = this.macCalculator.getOutputStream();
-            var3.write(var2.getEncoded("DER"));
-            var3.close();
-            this.envGen.addObject(new DERTaggedObject(false, 2, var2));
+            DERSet var4 = new DERSet(CMSAuthenticatedDataStreamGenerator.this.authGen.getAttributes(var1).toASN1EncodableVector());
+            OutputStream var5 = this.macCalculator.getOutputStream();
+            var5.write(var4.getEncoded("DER"));
+            var5.close();
+            this.envGen.addObject(new DERTaggedObject(false, 2, var4));
          } else {
-            var1 = Collections.EMPTY_MAP;
+            var1 = CMSUtils.getEmptyParameters();
          }
 
          this.envGen.addObject(new DEROctetString(this.macCalculator.getMac()));

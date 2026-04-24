@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
@@ -38,7 +38,7 @@ public class RespawnSystems {
       ) {
          PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
          assert playerRefComponent != null;
-         if (Inventory.containsBrokenItem(ref, commandBuffer)) {
+         if (InventoryUtils.containsBrokenItem(ref, commandBuffer)) {
             playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
          }
       }

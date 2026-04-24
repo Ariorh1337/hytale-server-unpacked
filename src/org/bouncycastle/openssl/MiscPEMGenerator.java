@@ -70,8 +70,8 @@ public class MiscPEMGenerator implements PemObjectGenerator {
          } else if (var5.equals(dsaOids[0]) || var5.equals(dsaOids[1])) {
             var2 = "DSA PRIVATE KEY";
             DSAParameter var6 = DSAParameter.getInstance(var4.getPrivateKeyAlgorithm().getParameters());
-            ASN1EncodableVector var7 = new ASN1EncodableVector();
-            var7.add(new ASN1Integer(0L));
+            ASN1EncodableVector var7 = new ASN1EncodableVector(6);
+            var7.add(ASN1Integer.ZERO);
             var7.add(new ASN1Integer(var6.getP()));
             var7.add(new ASN1Integer(var6.getQ()));
             var7.add(new ASN1Integer(var6.getG()));

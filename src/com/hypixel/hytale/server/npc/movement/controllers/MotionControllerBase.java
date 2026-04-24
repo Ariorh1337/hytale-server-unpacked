@@ -445,6 +445,7 @@ public abstract class MotionControllerBase implements MotionController {
             .log(
                "==  Move  %s  = t =%.4f pos=%s motion=%s obstr=%s",
                this.type,
+               interval,
                Vector3dUtil.formatShortString(this.position),
                role.getSteeringMotionName(),
                this.isObstructed ? "yes" : "no"

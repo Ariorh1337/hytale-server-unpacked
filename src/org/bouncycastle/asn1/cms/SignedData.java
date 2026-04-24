@@ -16,10 +16,6 @@ import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.DLSequence;
 
 public class SignedData extends ASN1Object {
-   private static final ASN1Integer VERSION_1 = new ASN1Integer(1L);
-   private static final ASN1Integer VERSION_3 = new ASN1Integer(3L);
-   private static final ASN1Integer VERSION_4 = new ASN1Integer(4L);
-   private static final ASN1Integer VERSION_5 = new ASN1Integer(5L);
    private final ASN1Integer version;
    private final ASN1Set digestAlgorithms;
    private final ContentInfo contentInfo;
@@ -76,7 +72,7 @@ public class SignedData extends ASN1Object {
       }
 
       if (var5) {
-         return new ASN1Integer(5L);
+         return ASN1Integer.FIVE;
       }
 
       if (var3 != null) {
@@ -91,15 +87,15 @@ public class SignedData extends ASN1Object {
       }
 
       if (var6) {
-         return VERSION_5;
+         return ASN1Integer.FIVE;
       } else if (var8) {
-         return VERSION_4;
+         return ASN1Integer.FOUR;
       } else if (var7) {
-         return VERSION_3;
+         return ASN1Integer.THREE;
       } else if (this.checkForVersion3(var4)) {
-         return VERSION_3;
+         return ASN1Integer.THREE;
       } else {
-         return !CMSObjectIdentifiers.data.equals(var1) ? VERSION_3 : VERSION_1;
+         return !CMSObjectIdentifiers.data.equals(var1) ? ASN1Integer.THREE : ASN1Integer.ONE;
       }
    }
 

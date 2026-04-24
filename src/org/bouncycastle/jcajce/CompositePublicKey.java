@@ -16,8 +16,6 @@ import org.bouncycastle.internal.asn1.iana.IANAObjectIdentifiers;
 import org.bouncycastle.internal.asn1.misc.MiscObjectIdentifiers;
 import org.bouncycastle.jcajce.provider.asymmetric.compositesignatures.CompositeIndex;
 import org.bouncycastle.jcajce.provider.asymmetric.compositesignatures.KeyFactorySpi;
-import org.bouncycastle.pqc.crypto.util.PublicKeyFactory;
-import org.bouncycastle.pqc.crypto.util.SubjectPublicKeyInfoFactory;
 import org.bouncycastle.util.Arrays;
 
 public class CompositePublicKey implements PublicKey {
@@ -131,43 +129,38 @@ public class CompositePublicKey implements PublicKey {
 
    @Override
    public byte[] getEncoded() {
-      if (this.algorithmIdentifier.getAlgorithm().on(IANAObjectIdentifiers.id_alg)) {
+      ASN1ObjectIdentifier var1 = this.algorithmIdentifier.getAlgorithm();
+      if (var1.on(IANAObjectIdentifiers.id_alg)) {
          try {
-            byte[] var6 = SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(PublicKeyFactory.createKey(this.keys.get(0).getEncoded()))
-               .getPublicKeyData()
-               .getBytes();
-            byte[] var7 = org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(
-                  org.bouncycastle.crypto.util.PublicKeyFactory.createKey(this.keys.get(1).getEncoded())
-               )
-               .getPublicKeyData()
-               .getBytes();
-            return new SubjectPublicKeyInfo(this.getAlgorithmIdentifier(), Arrays.concatenate(var6, var7)).getEncoded();
-         } catch (IOException var4) {
-            throw new IllegalStateException("unable to encode composite public key: " + var4.getMessage());
+            byte[] var7 = SubjectPublicKeyInfo.getInstance(this.keys.get(0).getEncoded()).getPublicKeyData().getOctets();
+            byte[] var8 = SubjectPublicKeyInfo.getInstance(this.keys.get(1).getEncoded()).getPublicKeyData().getOctets();
+            return new SubjectPublicKeyInfo(this.algorithmIdentifier, Arrays.concatenate(var7, var8)).getEncoded("DER");
+         } catch (IOException var5) {
+            throw new IllegalStateException("unable to encode composite public key: " + var5.getMessage());
          }
       } else {
-         ASN1EncodableVector var1 = new ASN1EncodableVector();
+         ASN1EncodableVector var2 = new ASN1EncodableVector();
 
-         for (int var2 = 0; var2 < this.keys.size(); var2++) {
-            if (this.algorithmIdentifier.getAlgorithm().equals(MiscObjectIdentifiers.id_composite_key)) {
-               var1.add(SubjectPublicKeyInfo.getInstance(this.keys.get(var2).getEncoded()));
+         for (int var3 = 0; var3 < this.keys.size(); var3++) {
+            SubjectPublicKeyInfo var4 = SubjectPublicKeyInfo.getInstance(this.keys.get(var3).getEncoded());
+            if (MiscObjectIdentifiers.id_composite_key.equals(var1)) {
+               var2.add(var4);
             } else {
-               SubjectPublicKeyInfo var3 = SubjectPublicKeyInfo.getInstance(this.keys.get(var2).getEncoded());
-               var1.add(var3.getPublicKeyData());
+               var2.add(var4.getPublicKeyData());
             }
          }
 
          try {
-            return new SubjectPublicKeyInfo(this.algorithmIdentifier, new DERSequence(var1)).getEncoded("DER");
-         } catch (IOException var5) {
-            throw new IllegalStateException("unable to encode composite public key: " + var5.getMessage());
+            return new SubjectPublicKeyInfo(this.algorithmIdentifier, new DERSequence(var2)).getEncoded("DER");
+         } catch (IOException var6) {
+            throw new IllegalStateException("unable to encode composite public key: " + var6.getMessage());
          }
       }
    }
 
    @Override
    public int hashCode() {
-      return this.keys.hashCode();
+      return this.algorithmIdentifier.hashCode() ^ this.keys.hashCode();
    }
 
    @Override
@@ -180,13 +173,8 @@ public class CompositePublicKey implements PublicKey {
          return false;
       }
 
-      boolean var2 = true;
-      CompositePublicKey var3 = (CompositePublicKey)var1;
-      if (!var3.getAlgorithmIdentifier().equals(this.algorithmIdentifier) || !this.keys.equals(var3.keys)) {
-         var2 = false;
-      }
-
-      return var2;
+      CompositePublicKey var2 = (CompositePublicKey)var1;
+      return this.algorithmIdentifier.equals(var2.algorithmIdentifier) && this.keys.equals(var2.keys);
    }
 
    public static class Builder {

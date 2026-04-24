@@ -33,6 +33,7 @@ public class FluidCommand extends AbstractCommandCollection {
 
    public FluidCommand() {
       super("fluid", "server.commands.fluid.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new FluidCommand.SetCommand());
       this.addSubCommand(new FluidCommand.GetCommand());
       this.addSubCommand(new FluidCommand.SetRadiusCommand());

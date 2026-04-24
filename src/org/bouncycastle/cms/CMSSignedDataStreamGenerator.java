@@ -1,5 +1,6 @@
 package org.bouncycastle.cms;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -13,14 +14,20 @@ import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.asn1.BERSequenceGenerator;
 import org.bouncycastle.asn1.BERTaggedObject;
+import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.DLSequence;
+import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.CMSObjectIdentifiers;
+import org.bouncycastle.asn1.cms.ContentInfo;
 import org.bouncycastle.asn1.cms.SignerInfo;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.operator.DigestAlgorithmIdentifierFinder;
 
 public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
    private int _bufferSize;
+   private String encoding = "BER";
 
    public CMSSignedDataStreamGenerator() {
    }
@@ -31,6 +38,14 @@ public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
 
    public void setBufferSize(int var1) {
       this._bufferSize = var1;
+   }
+
+   public void setEncoding(String var1) {
+      if (!"BER".equals(var1) && !"DL".equals(var1) && !"DER".equals(var1)) {
+         throw new IllegalArgumentException("encoding must be one of BER, DER, or DL");
+      }
+
+      this.encoding = var1;
    }
 
    public OutputStream open(OutputStream var1) throws IOException {
@@ -50,27 +65,42 @@ public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
    }
 
    public OutputStream open(ASN1ObjectIdentifier var1, OutputStream var2, boolean var3, OutputStream var4) throws IOException {
-      BERSequenceGenerator var5 = new BERSequenceGenerator(var2);
-      var5.addObject(CMSObjectIdentifiers.signedData);
-      BERSequenceGenerator var6 = new BERSequenceGenerator(var5.getRawOutputStream(), 0, true);
-      var6.addObject(this.calculateVersion(var1));
-      HashSet var7 = new HashSet();
+      HashSet var5 = new HashSet();
+      var5.addAll(this.extraDigestAlgorithms);
 
-      for (SignerInformation var9 : this._signers) {
-         CMSUtils.addDigestAlgs(var7, var9, this.digestAlgIdFinder);
+      for (SignerInformation var7 : this._signers) {
+         CMSUtils.addDigestAlgs(var5, var7, this.digestAlgIdFinder);
       }
 
-      for (SignerInfoGenerator var14 : this.signerGens) {
-         var7.add(var14.getDigestAlgorithm());
+      for (SignerInfoGenerator var15 : this.signerGens) {
+         var5.add(CMSSignedHelper.INSTANCE.fixDigestAlgID(var15.getDigestAlgorithm(), this.digestAlgIdFinder));
       }
 
-      var6.getRawOutputStream().write(CMSUtils.convertToDlSet(var7).getEncoded());
-      BERSequenceGenerator var13 = new BERSequenceGenerator(var6.getRawOutputStream());
-      var13.addObject(var1);
-      OutputStream var15 = var3 ? CMSUtils.createBEROctetOutputStream(var13.getRawOutputStream(), 0, true, this._bufferSize) : null;
-      OutputStream var10 = CMSUtils.getSafeTeeOutputStream(var4, var15);
-      OutputStream var11 = CMSUtils.attachSignersToOutputStream(this.signerGens, var10);
-      return new CMSSignedDataStreamGenerator.CmsSignedDataOutputStream(var11, var1, var5, var6, var13);
+      if ("BER".equals(this.encoding)) {
+         BERSequenceGenerator var14 = new BERSequenceGenerator(var2);
+         var14.addObject(CMSObjectIdentifiers.signedData);
+         BERSequenceGenerator var17 = new BERSequenceGenerator(var14.getRawOutputStream(), 0, true);
+         var17.addObject(this.calculateVersion(var1));
+         var17.addObject(CMSUtils.convertToDlSet(var5));
+         BERSequenceGenerator var18 = new BERSequenceGenerator(var17.getRawOutputStream());
+         var18.addObject(var1);
+         OutputStream var19 = var3 ? CMSUtils.createBEROctetOutputStream(var18.getRawOutputStream(), 0, true, this._bufferSize) : null;
+         OutputStream var20 = CMSUtils.getSafeTeeOutputStream(var4, var19);
+         OutputStream var21 = CMSUtils.attachSignersToOutputStream(this.signerGens, var20);
+         return new CMSSignedDataStreamGenerator.CmsSignedDataOutputStream(var21, var1, var14, var17, var18);
+      } else {
+         ASN1EncodableVector var13 = new ASN1EncodableVector();
+         var13.add(CMSObjectIdentifiers.signedData);
+         ASN1EncodableVector var16 = new ASN1EncodableVector();
+         var16.add(this.calculateVersion(var1));
+         var16.add(CMSUtils.convertToDlSet(var5));
+         ASN1EncodableVector var8 = new ASN1EncodableVector();
+         var8.add(var1);
+         ByteArrayOutputStream var9 = var3 ? new ByteArrayOutputStream() : null;
+         OutputStream var10 = CMSUtils.getSafeTeeOutputStream(var4, var9);
+         OutputStream var11 = CMSUtils.attachSignersToOutputStream(this.signerGens, var10);
+         return new CMSSignedDataStreamGenerator.CmsDLSignedDataOutputStream(var11, var1, var16, var8, var9, var2);
+      }
    }
 
    public List<AlgorithmIdentifier> getDigestAlgorithms() {
@@ -109,7 +139,7 @@ public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
       }
 
       if (var2) {
-         return new ASN1Integer(5L);
+         return ASN1Integer.FIVE;
       }
 
       if (this.crls != null) {
@@ -121,15 +151,15 @@ public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
       }
 
       if (var3) {
-         return new ASN1Integer(5L);
+         return ASN1Integer.FIVE;
       } else if (var5) {
-         return new ASN1Integer(4L);
+         return ASN1Integer.FOUR;
       } else if (var4) {
-         return new ASN1Integer(3L);
+         return ASN1Integer.THREE;
       } else if (checkForVersion3(this._signers, this.signerGens)) {
-         return new ASN1Integer(3L);
+         return ASN1Integer.THREE;
       } else {
-         return !CMSObjectIdentifiers.data.equals(var1) ? new ASN1Integer(3L) : new ASN1Integer(1L);
+         return !CMSObjectIdentifiers.data.equals(var1) ? ASN1Integer.THREE : ASN1Integer.ONE;
       }
    }
 
@@ -150,6 +180,91 @@ public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
       }
 
       return false;
+   }
+
+   private class CmsDLSignedDataOutputStream extends OutputStream {
+      private OutputStream _out;
+      private ASN1ObjectIdentifier _contentOID;
+      private ASN1EncodableVector _sigGen;
+      private ASN1EncodableVector _eiGen;
+      private ByteArrayOutputStream _ecStream;
+      private OutputStream _output;
+
+      public CmsDLSignedDataOutputStream(
+         OutputStream nullx,
+         ASN1ObjectIdentifier nullxx,
+         ASN1EncodableVector nullxxx,
+         ASN1EncodableVector nullxxxx,
+         ByteArrayOutputStream nullxxxxx,
+         OutputStream nullxxxxxx
+      ) {
+         this._out = nullx;
+         this._contentOID = nullxx;
+         this._sigGen = nullxxx;
+         this._eiGen = nullxxxx;
+         this._ecStream = nullxxxxx;
+         this._output = nullxxxxxx;
+      }
+
+      @Override
+      public void write(int var1) throws IOException {
+         this._out.write(var1);
+      }
+
+      @Override
+      public void write(byte[] var1, int var2, int var3) throws IOException {
+         this._out.write(var1, var2, var3);
+      }
+
+      @Override
+      public void write(byte[] var1) throws IOException {
+         this._out.write(var1);
+      }
+
+      @Override
+      public void close() throws IOException {
+         this._out.close();
+         if (this._ecStream != null) {
+            this._eiGen.add(new DERTaggedObject(true, 0, new DEROctetString(this._ecStream.toByteArray())));
+         }
+
+         CMSSignedDataStreamGenerator.this.digests.clear();
+         this._sigGen.add(new DLSequence(this._eiGen));
+         boolean var1 = "DER".equals(CMSSignedDataStreamGenerator.this.encoding);
+         if (CMSSignedDataStreamGenerator.this.certs.size() != 0) {
+            ASN1Set var2 = var1
+               ? CMSUtils.createDerSetFromList(CMSSignedDataStreamGenerator.this.certs)
+               : CMSUtils.createDlSetFromList(CMSSignedDataStreamGenerator.this.certs);
+            this._sigGen.add(new DERTaggedObject(false, 0, var2));
+         }
+
+         if (CMSSignedDataStreamGenerator.this.crls.size() != 0) {
+            ASN1Set var7 = var1
+               ? CMSUtils.createDerSetFromList(CMSSignedDataStreamGenerator.this.crls)
+               : CMSUtils.createDlSetFromList(CMSSignedDataStreamGenerator.this.crls);
+            this._sigGen.add(new DERTaggedObject(false, 1, var7));
+         }
+
+         ASN1EncodableVector var8 = new ASN1EncodableVector();
+
+         for (SignerInfoGenerator var4 : CMSSignedDataStreamGenerator.this.signerGens) {
+            try {
+               var8.add(var4.generate(this._contentOID));
+               byte[] var5 = var4.getCalculatedDigest();
+               CMSSignedDataStreamGenerator.this.digests.put(var4.getDigestAlgorithm().getAlgorithm().getId(), var5);
+            } catch (CMSException var6) {
+               throw new CMSStreamException("exception generating signers: " + var6.getMessage(), var6);
+            }
+         }
+
+         for (SignerInformation var11 : CMSSignedDataStreamGenerator.this._signers) {
+            var8.add(var11.toASN1Structure());
+         }
+
+         this._sigGen.add(var1 ? new DERSet(var8) : new DLSet(var8));
+         ContentInfo var10 = new ContentInfo(CMSObjectIdentifiers.signedData, new DLSequence(this._sigGen));
+         this._output.write(var10.getEncoded(CMSSignedDataStreamGenerator.this.encoding));
+      }
    }
 
    private class CmsSignedDataOutputStream extends OutputStream {
@@ -191,12 +306,12 @@ public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
          CMSSignedDataStreamGenerator.this.digests.clear();
          if (CMSSignedDataStreamGenerator.this.certs.size() != 0) {
             ASN1Set var1 = CMSUtils.createBerSetFromList(CMSSignedDataStreamGenerator.this.certs);
-            this._sigGen.getRawOutputStream().write(new BERTaggedObject(false, 0, var1).getEncoded());
+            this._sigGen.addObject(new BERTaggedObject(false, 0, var1));
          }
 
          if (CMSSignedDataStreamGenerator.this.crls.size() != 0) {
             ASN1Set var6 = CMSUtils.createBerSetFromList(CMSSignedDataStreamGenerator.this.crls);
-            this._sigGen.getRawOutputStream().write(new BERTaggedObject(false, 1, var6).getEncoded());
+            this._sigGen.addObject(new BERTaggedObject(false, 1, var6));
          }
 
          ASN1EncodableVector var7 = new ASN1EncodableVector();
@@ -215,7 +330,7 @@ public class CMSSignedDataStreamGenerator extends CMSSignedGenerator {
             var7.add(var9.toASN1Structure());
          }
 
-         this._sigGen.getRawOutputStream().write(new DERSet(var7).getEncoded());
+         this._sigGen.addObject(new DLSet(var7));
          this._sigGen.close();
          this._sGen.close();
       }

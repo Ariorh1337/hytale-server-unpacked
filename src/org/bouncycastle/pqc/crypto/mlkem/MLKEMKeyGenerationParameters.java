@@ -3,6 +3,7 @@ package org.bouncycastle.pqc.crypto.mlkem;
 import java.security.SecureRandom;
 import org.bouncycastle.crypto.KeyGenerationParameters;
 
+@Deprecated
 public class MLKEMKeyGenerationParameters extends KeyGenerationParameters {
    private final MLKEMParameters params;
 

@@ -28,7 +28,7 @@ public class EncryptedData extends ASN1Object {
    }
 
    public EncryptedData(EncryptedContentInfo var1, ASN1Set var2) {
-      this.version = new ASN1Integer(var2 == null ? 0L : 2L);
+      this.version = var2 == null ? ASN1Integer.ZERO : ASN1Integer.TWO;
       this.encryptedContentInfo = var1;
       this.unprotectedAttrs = var2;
    }

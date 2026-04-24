@@ -40,7 +40,7 @@ public class AttributeCertificateInfo extends ASN1Object {
             this.version = ASN1Integer.getInstance(var1.getObjectAt(0));
             var2 = 1;
          } else {
-            this.version = new ASN1Integer(0L);
+            this.version = ASN1Integer.ZERO;
             var2 = 0;
          }
 

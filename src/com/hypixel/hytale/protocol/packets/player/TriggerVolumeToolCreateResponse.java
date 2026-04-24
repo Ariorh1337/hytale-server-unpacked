@@ -1,0 +1,126 @@
+package com.hypixel.hytale.protocol.packets.player;
+
+import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
+import com.hypixel.hytale.protocol.io.ValidationResult;
+import com.hypixel.hytale.protocol.io.VarInt;
+import io.netty.buffer.ByteBuf;
+import java.util.Objects;
+import javax.annotation.Nonnull;
+
+public class TriggerVolumeToolCreateResponse implements Packet, ToClientPacket {
+   public static final int PACKET_ID = 485;
+   public static final boolean IS_COMPRESSED = false;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 0;
+   public static final int VARIABLE_FIELD_COUNT = 1;
+   public static final int VARIABLE_BLOCK_START = 0;
+   public static final int MAX_SIZE = 16384005;
+   @Nonnull
+   public String volumeId = "";
+
+   @Override
+   public int getId() {
+      return 485;
+   }
+
+   @Override
+   public NetworkChannel getChannel() {
+      return NetworkChannel.Default;
+   }
+
+   public TriggerVolumeToolCreateResponse() {
+   }
+
+   public TriggerVolumeToolCreateResponse(@Nonnull String volumeId) {
+      this.volumeId = volumeId;
+   }
+
+   public TriggerVolumeToolCreateResponse(@Nonnull TriggerVolumeToolCreateResponse other) {
+      this.volumeId = other.volumeId;
+   }
+
+   @Nonnull
+   public static TriggerVolumeToolCreateResponse deserialize(@Nonnull ByteBuf buf, int offset) {
+      TriggerVolumeToolCreateResponse obj = new TriggerVolumeToolCreateResponse();
+      int pos = offset + 0;
+      int volumeIdLen = VarInt.peek(buf, pos);
+      if (volumeIdLen < 0) {
+         throw ProtocolException.invalidVarInt("VolumeId");
+      }
+
+      int volumeIdVarLen = VarInt.size(volumeIdLen);
+      if (volumeIdLen > 4096000) {
+         throw ProtocolException.stringTooLong("VolumeId", volumeIdLen, 4096000);
+      }
+
+      if (pos + volumeIdVarLen + volumeIdLen > buf.readableBytes()) {
+         throw ProtocolException.bufferTooSmall("VolumeId", pos + volumeIdVarLen + volumeIdLen, buf.readableBytes());
+      }
+
+      obj.volumeId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+      pos += volumeIdVarLen + volumeIdLen;
+      return obj;
+   }
+
+   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
+      int pos = offset + 0;
+      int sl = VarInt.peek(buf, pos);
+      pos += VarInt.size(sl) + sl;
+      return pos - offset;
+   }
+
+   @Override
+   public void serialize(@Nonnull ByteBuf buf) {
+      PacketIO.writeVarString(buf, this.volumeId, 4096000);
+   }
+
+   @Override
+   public int computeSize() {
+      int size = 0;
+      return size + PacketIO.stringSize(this.volumeId);
+   }
+
+   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
+      if (buffer.readableBytes() - offset < 0) {
+         return ValidationResult.error("Buffer too small: expected at least 0 bytes");
+      }
+
+      int pos = offset + 0;
+      int volumeIdLen = VarInt.peek(buffer, pos);
+      if (volumeIdLen < 0) {
+         return ValidationResult.error("Invalid string length for VolumeId");
+      }
+
+      if (volumeIdLen > 4096000) {
+         return ValidationResult.error("VolumeId exceeds max length 4096000");
+      }
+
+      pos += VarInt.size(volumeIdLen);
+      pos += volumeIdLen;
+      return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading VolumeId") : ValidationResult.OK;
+   }
+
+   public TriggerVolumeToolCreateResponse clone() {
+      TriggerVolumeToolCreateResponse copy = new TriggerVolumeToolCreateResponse();
+      copy.volumeId = this.volumeId;
+      return copy;
+   }
+
+   @Override
+   public boolean equals(Object obj) {
+      if (this == obj) {
+         return true;
+      } else {
+         return obj instanceof TriggerVolumeToolCreateResponse other ? Objects.equals(this.volumeId, other.volumeId) : false;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      return Objects.hash(this.volumeId);
+   }
+}

@@ -4,6 +4,7 @@ import org.bouncycastle.asn1.nist.NISTObjectIdentifiers;
 import org.bouncycastle.jcajce.provider.asymmetric.mlkem.MLKEMKeyFactorySpi;
 import org.bouncycastle.jcajce.provider.config.ConfigurableProvider;
 import org.bouncycastle.jcajce.provider.util.AsymmetricAlgorithmProvider;
+import org.bouncycastle.jcajce.util.SpiUtil;
 
 public class MLKEM {
    private static final String PREFIX = "org.bouncycastle.jcajce.provider.asymmetric.mlkem.";
@@ -73,6 +74,18 @@ public class MLKEM {
          var1.addKeyInfoConverter(NISTObjectIdentifiers.id_alg_ml_kem_512, var2);
          var1.addKeyInfoConverter(NISTObjectIdentifiers.id_alg_ml_kem_768, var2);
          var1.addKeyInfoConverter(NISTObjectIdentifiers.id_alg_ml_kem_1024, var2);
+         if (SpiUtil.hasKEM()) {
+            var1.addAlgorithm("KEM.ML-KEM", "org.bouncycastle.jcajce.provider.asymmetric.mlkem.MLKEMSpi$MLKEM");
+            this.addKEMAlgorithm(
+               var1, "ML-KEM-512", "org.bouncycastle.jcajce.provider.asymmetric.mlkem.MLKEMSpi$MLKEM512", NISTObjectIdentifiers.id_alg_ml_kem_512
+            );
+            this.addKEMAlgorithm(
+               var1, "ML-KEM-768", "org.bouncycastle.jcajce.provider.asymmetric.mlkem.MLKEMSpi$MLKEM768", NISTObjectIdentifiers.id_alg_ml_kem_768
+            );
+            this.addKEMAlgorithm(
+               var1, "ML-KEM-1024", "org.bouncycastle.jcajce.provider.asymmetric.mlkem.MLKEMSpi$MLKEM1024", NISTObjectIdentifiers.id_alg_ml_kem_1024
+            );
+         }
       }
    }
 }

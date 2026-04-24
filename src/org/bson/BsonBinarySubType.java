@@ -7,6 +7,10 @@ public enum BsonBinarySubType {
    UUID_LEGACY((byte)3),
    UUID_STANDARD((byte)4),
    MD5((byte)5),
+   ENCRYPTED((byte)6),
+   COLUMN((byte)7),
+   SENSITIVE((byte)8),
+   VECTOR((byte)9),
    USER_DEFINED((byte)-128);
 
    private final byte value;

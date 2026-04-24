@@ -91,19 +91,19 @@ public class AsconEngine extends AsconBaseEngine {
          var4 += 8;
          var2 -= 8;
          this.p.x1 = this.p.x1 ^ this.pad(var2);
-         if (var2 != 0) {
-            long var7 = Pack.littleEndianToLong_High(var1, 8, var2);
+         if (var2 > 0) {
+            long var7 = Pack.bigEndianToLong_High(var1, 8, var2);
             this.p.x1 ^= var7;
-            Pack.longToLittleEndian_High(this.p.x1, var3, var4, var2);
+            Pack.longToBigEndian_High(this.p.x1, var3, var4, var2);
             this.p.x1 &= -1L >>> (var2 << 3);
             this.p.x1 ^= var7;
          }
       } else {
          this.p.x0 = this.p.x0 ^ this.pad(var2);
-         if (var2 != 0) {
-            long var11 = Pack.littleEndianToLong_High(var1, 0, var2);
+         if (var2 > 0) {
+            long var11 = Pack.bigEndianToLong_High(var1, 0, var2);
             this.p.x0 ^= var11;
-            Pack.longToLittleEndian_High(this.p.x0, var3, var4, var2);
+            Pack.longToBigEndian_High(this.p.x0, var3, var4, var2);
             this.p.x0 &= -1L >>> (var2 << 3);
             this.p.x0 ^= var11;
          }
@@ -120,15 +120,15 @@ public class AsconEngine extends AsconBaseEngine {
          var4 += 8;
          var2 -= 8;
          this.p.x1 = this.p.x1 ^ this.pad(var2);
-         if (var2 != 0) {
-            this.p.x1 = this.p.x1 ^ Pack.littleEndianToLong_High(var1, 8, var2);
-            Pack.longToLittleEndian_High(this.p.x1, var3, var4, var2);
+         if (var2 > 0) {
+            this.p.x1 = this.p.x1 ^ Pack.bigEndianToLong_High(var1, 8, var2);
+            Pack.longToBigEndian_High(this.p.x1, var3, var4, var2);
          }
       } else {
          this.p.x0 = this.p.x0 ^ this.pad(var2);
-         if (var2 != 0) {
-            this.p.x0 = this.p.x0 ^ Pack.littleEndianToLong_High(var1, 0, var2);
-            Pack.longToLittleEndian_High(this.p.x0, var3, var4, var2);
+         if (var2 > 0) {
+            this.p.x0 = this.p.x0 ^ Pack.bigEndianToLong_High(var1, 0, var2);
+            Pack.longToBigEndian_High(this.p.x0, var3, var4, var2);
          }
       }
 

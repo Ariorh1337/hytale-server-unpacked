@@ -1,0 +1,83 @@
+package com.hypixel.hytale.builtin.triggervolumes.shape;
+
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+
+public class CylinderShape extends TriggerVolumeShape {
+   @Nonnull
+   public static final BuilderCodec<CylinderShape> CODEC = BuilderCodec.builder(CylinderShape.class, CylinderShape::new, BASE_CODEC)
+      .append(new KeyedCodec<>("Center", Vector3dUtil.AS_ARRAY_CODEC), (s, v) -> s.center = v, s -> s.center)
+      .add()
+      .append(new KeyedCodec<>("Radius", Codec.DOUBLE), (s, v) -> s.radius = v, s -> s.radius)
+      .add()
+      .append(new KeyedCodec<>("Height", Codec.DOUBLE), (s, v) -> s.height = v, s -> s.height)
+      .add()
+      .build();
+   private Vector3d center = new Vector3d();
+   private double radius;
+   private double height;
+
+   public CylinderShape() {
+   }
+
+   public CylinderShape(@Nonnull Vector3d center, double radius, double height) {
+      this.center = center;
+      this.radius = radius;
+      this.height = height;
+   }
+
+   @Override
+   public boolean contains(@Nonnull Vector3d origin, @Nonnull Vector3d testPoint) {
+      double cx = origin.x() + this.center.x();
+      double cz = origin.z() + this.center.z();
+      double baseY = origin.y() + this.center.y();
+      double dx = testPoint.x() - cx;
+      double dz = testPoint.z() - cz;
+      if (dx * dx + dz * dz > this.radius * this.radius) {
+         return false;
+      }
+
+      double py = testPoint.y();
+      return py >= baseY && py <= baseY + this.height;
+   }
+
+   @Override
+   public double getBoundingRadius() {
+      double halfHeight = this.height * 0.5;
+      return Math.sqrt(this.radius * this.radius + halfHeight * halfHeight);
+   }
+
+   @Override
+   public double getMaxDistanceFromOrigin() {
+      double halfHeight = this.height * 0.5;
+      double gcY = this.center.y() + halfHeight;
+      double distToCenter = Math.sqrt(this.center.x() * this.center.x() + gcY * gcY + this.center.z() * this.center.z());
+      return distToCenter + Math.sqrt(this.radius * this.radius + halfHeight * halfHeight);
+   }
+
+   @Override
+   public void getWorldAABB(@Nonnull Vector3d origin, @Nonnull Vector3d outMin, @Nonnull Vector3d outMax) {
+      double cx = origin.x() + this.center.x();
+      double cy = origin.y() + this.center.y();
+      double cz = origin.z() + this.center.z();
+      outMin.set(cx - this.radius, cy, cz - this.radius);
+      outMax.set(cx + this.radius, cy + this.height, cz + this.radius);
+   }
+
+   @Nonnull
+   public Vector3d getCenter() {
+      return this.center;
+   }
+
+   public double getRadius() {
+      return this.radius;
+   }
+
+   public double getHeight() {
+      return this.height;
+   }
+}

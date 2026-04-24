@@ -17,6 +17,7 @@ import com.hypixel.hytale.codec.schema.metadata.ui.UIEditor;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
@@ -37,10 +38,10 @@ import com.hypixel.hytale.server.core.asset.type.itemanimation.config.ItemPlayer
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.meta.MetaKey;
 import com.hypixel.hytale.server.core.meta.MetaRegistry;
@@ -251,7 +252,6 @@ public abstract class Interaction
    @Override
    public final void tick(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull LivingEntity entity,
       boolean firstRun,
       float time,
       @Nonnull InteractionType type,
@@ -260,7 +260,9 @@ public abstract class Interaction
    ) {
       int previousCounter = context.getOperationCounter();
       int previousDepth = context.getChain().getCallDepth();
-      if (!this.tickInternal(entity, time, type, context)) {
+      CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      assert commandBuffer != null;
+      if (!this.tickInternal(ref, time, type, context, commandBuffer)) {
          this.tick0(firstRun, time, type, context, cooldownHandler);
       }
 
@@ -288,7 +290,6 @@ public abstract class Interaction
    @Override
    public final void simulateTick(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull LivingEntity entity,
       boolean firstRun,
       float time,
       @Nonnull InteractionType type,
@@ -297,7 +298,9 @@ public abstract class Interaction
    ) {
       int previousCounter = context.getOperationCounter();
       int previousDepth = context.getChain().getSimulatedCallDepth();
-      if (!this.tickInternal(entity, time, type, context)) {
+      CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      assert commandBuffer != null;
+      if (!this.tickInternal(ref, time, type, context, commandBuffer)) {
          this.simulateTick0(firstRun, time, type, context, cooldownHandler);
       }
 
@@ -318,21 +321,26 @@ public abstract class Interaction
       }
    }
 
-   private boolean tickInternal(@Nonnull LivingEntity entity, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context) {
-      Inventory inventory = entity.getInventory();
+   private boolean tickInternal(
+      @Nonnull Ref<EntityStore> ref,
+      float time,
+      @Nonnull InteractionType type,
+      @Nonnull InteractionContext context,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      byte activeSlot = InventoryUtils.getActiveSlot(ref, context.getHeldItemSectionId(), componentAccessor);
+      byte contextHeldItemSlot = context.getHeldItemSlot();
+      ItemStack contextHeldItemStack = context.getHeldItem();
+      ItemContainer contextHeldItemContainer = context.getHeldItemContainer();
       if (!UUIDUtil.isEmptyOrNull(context.getChain().getChainData().proxyId)
          || !this.cancelOnItemChange
-         || (type == InteractionType.Equipped || inventory.getActiveSlot(context.getHeldItemSectionId()) == context.getHeldItemSlot())
-            && (
-               context.getHeldItemSlot() == -1
-                  || ItemStack.isEquivalentType(context.getHeldItemContainer().getItemStack(context.getHeldItemSlot()), context.getHeldItem())
-            )) {
+         || (type == InteractionType.Equipped || activeSlot == contextHeldItemSlot)
+            && (contextHeldItemSlot == -1 || ItemStack.isEquivalentType(contextHeldItemContainer.getItemStack(contextHeldItemSlot), contextHeldItemStack))) {
          if (!failed(context.getState().state)) {
             double animationDuration = 0.0;
             if (this.effects.isWaitForAnimationToFinish()) {
-               ItemStack heldItem = context.getHeldItem();
-               Item item = heldItem != null ? heldItem.getItem() : null;
-               animationDuration = this.getAnimationDuration(item);
+               Item heldItem = contextHeldItemStack != null ? contextHeldItemStack.getItem() : null;
+               animationDuration = this.getAnimationDuration(heldItem);
             }
 
             InteractionSyncData data = context.getState();

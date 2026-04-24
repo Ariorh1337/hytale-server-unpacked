@@ -21,7 +21,7 @@ public class AuthEnvelopedData extends ASN1Object {
    private ASN1Set unauthAttrs;
 
    public AuthEnvelopedData(OriginatorInfo var1, ASN1Set var2, EncryptedContentInfo var3, ASN1Set var4, ASN1OctetString var5, ASN1Set var6) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.originatorInfo = var1;
       this.recipientInfos = var2;
       if (this.recipientInfos.size() == 0) {

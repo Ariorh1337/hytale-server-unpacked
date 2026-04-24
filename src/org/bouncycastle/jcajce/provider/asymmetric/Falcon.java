@@ -36,10 +36,8 @@ public class Falcon {
          this.addSignatureAlgorithm(var1, "FALCON", "org.bouncycastle.pqc.jcajce.provider.falcon.SignatureSpi$Base", BCObjectIdentifiers.falcon);
          this.addSignatureAlgorithm(var1, "FALCON-512", "org.bouncycastle.pqc.jcajce.provider.falcon.SignatureSpi$Falcon512", BCObjectIdentifiers.falcon_512);
          this.addSignatureAlgorithm(var1, "FALCON-1024", "org.bouncycastle.pqc.jcajce.provider.falcon.SignatureSpi$Falcon1024", BCObjectIdentifiers.falcon_1024);
-         var1.addAlgorithm("Alg.Alias.Signature." + BCObjectIdentifiers.old_falcon_512, "FALCON-512");
-         var1.addAlgorithm("Alg.Alias.Signature.OID." + BCObjectIdentifiers.old_falcon_512, "FALCON-512");
-         var1.addAlgorithm("Alg.Alias.Signature." + BCObjectIdentifiers.old_falcon_1024, "FALCON-1024");
-         var1.addAlgorithm("Alg.Alias.Signature.OID." + BCObjectIdentifiers.old_falcon_1024, "FALCON-1024");
+         this.registerSignatureOid(var1, BCObjectIdentifiers.old_falcon_512, "FALCON-512");
+         this.registerSignatureOid(var1, BCObjectIdentifiers.old_falcon_1024, "FALCON-1024");
       }
    }
 }

@@ -36,10 +36,10 @@ public class Blake2sDigest implements ExtendedDigest {
    private int nodeDepth = 0;
    private int innerHashLength = 0;
    private boolean isLastNode = false;
-   private byte[] buffer = null;
+   private final byte[] buffer = new byte[64];
    private int bufferPos = 0;
-   private int[] internalState = new int[16];
-   private int[] chainValue = null;
+   private final int[] internalState = new int[16];
+   private final int[] chainValue = new int[8];
    private int t0 = 0;
    private int t1 = 0;
    private int f0 = 0;
@@ -55,13 +55,12 @@ public class Blake2sDigest implements ExtendedDigest {
    }
 
    public Blake2sDigest(Blake2sDigest var1) {
+      System.arraycopy(var1.chainValue, 0, this.chainValue, 0, 8);
+      System.arraycopy(var1.buffer, 0, this.buffer, 0, 64);
       this.bufferPos = var1.bufferPos;
-      this.buffer = Arrays.clone(var1.buffer);
       this.keyLength = var1.keyLength;
       this.key = Arrays.clone(var1.key);
       this.digestLength = var1.digestLength;
-      this.internalState = Arrays.clone(var1.internalState);
-      this.chainValue = Arrays.clone(var1.chainValue);
       this.t0 = var1.t0;
       this.t1 = var1.t1;
       this.f0 = var1.f0;
@@ -155,7 +154,6 @@ public class Blake2sDigest implements ExtendedDigest {
    }
 
    private void init(byte[] var1, byte[] var2, byte[] var3) {
-      this.buffer = new byte[64];
       if (var3 != null && var3.length > 0) {
          this.keyLength = var3.length;
          if (this.keyLength > 32) {
@@ -168,39 +166,36 @@ public class Blake2sDigest implements ExtendedDigest {
          this.bufferPos = 64;
       }
 
-      if (this.chainValue == null) {
-         this.chainValue = new int[8];
-         this.chainValue[0] = blake2s_IV[0] ^ (this.digestLength | this.keyLength << 8 | this.fanout << 16 | this.depth << 24);
-         this.chainValue[1] = blake2s_IV[1] ^ this.leafLength;
-         int var4 = (int)(this.nodeOffset >> 32);
-         int var5 = (int)this.nodeOffset;
-         this.chainValue[2] = blake2s_IV[2] ^ var5;
-         this.chainValue[3] = blake2s_IV[3] ^ (var4 | this.nodeDepth << 16 | this.innerHashLength << 24);
-         this.chainValue[4] = blake2s_IV[4];
-         this.chainValue[5] = blake2s_IV[5];
-         if (var1 != null) {
-            if (var1.length != 8) {
-               throw new IllegalArgumentException("Salt length must be exactly 8 bytes");
-            }
-
-            this.salt = new byte[8];
-            System.arraycopy(var1, 0, this.salt, 0, var1.length);
-            this.chainValue[4] = this.chainValue[4] ^ Pack.littleEndianToInt(var1, 0);
-            this.chainValue[5] = this.chainValue[5] ^ Pack.littleEndianToInt(var1, 4);
+      this.chainValue[0] = blake2s_IV[0] ^ (this.digestLength | this.keyLength << 8 | this.fanout << 16 | this.depth << 24);
+      this.chainValue[1] = blake2s_IV[1] ^ this.leafLength;
+      int var4 = (int)(this.nodeOffset >> 32);
+      int var5 = (int)this.nodeOffset;
+      this.chainValue[2] = blake2s_IV[2] ^ var5;
+      this.chainValue[3] = blake2s_IV[3] ^ (var4 | this.nodeDepth << 16 | this.innerHashLength << 24);
+      this.chainValue[4] = blake2s_IV[4];
+      this.chainValue[5] = blake2s_IV[5];
+      if (var1 != null) {
+         if (var1.length != 8) {
+            throw new IllegalArgumentException("Salt length must be exactly 8 bytes");
          }
 
-         this.chainValue[6] = blake2s_IV[6];
-         this.chainValue[7] = blake2s_IV[7];
-         if (var2 != null) {
-            if (var2.length != 8) {
-               throw new IllegalArgumentException("Personalization length must be exactly 8 bytes");
-            }
+         this.salt = new byte[8];
+         System.arraycopy(var1, 0, this.salt, 0, var1.length);
+         this.chainValue[4] = this.chainValue[4] ^ Pack.littleEndianToInt(var1, 0);
+         this.chainValue[5] = this.chainValue[5] ^ Pack.littleEndianToInt(var1, 4);
+      }
 
-            this.personalization = new byte[8];
-            System.arraycopy(var2, 0, this.personalization, 0, var2.length);
-            this.chainValue[6] = this.chainValue[6] ^ Pack.littleEndianToInt(var2, 0);
-            this.chainValue[7] = this.chainValue[7] ^ Pack.littleEndianToInt(var2, 4);
+      this.chainValue[6] = blake2s_IV[6];
+      this.chainValue[7] = blake2s_IV[7];
+      if (var2 != null) {
+         if (var2.length != 8) {
+            throw new IllegalArgumentException("Personalization length must be exactly 8 bytes");
          }
+
+         this.personalization = new byte[8];
+         System.arraycopy(var2, 0, this.personalization, 0, var2.length);
+         this.chainValue[6] = this.chainValue[6] ^ Pack.littleEndianToInt(var2, 0);
+         this.chainValue[7] = this.chainValue[7] ^ Pack.littleEndianToInt(var2, 4);
       }
    }
 
@@ -217,18 +212,13 @@ public class Blake2sDigest implements ExtendedDigest {
    public void update(byte var1) {
       int var2 = 64 - this.bufferPos;
       if (var2 == 0) {
-         this.t0 += 64;
-         if (this.t0 == 0) {
-            this.t1++;
-         }
-
+         this.incrementCounter(64);
          this.compress(this.buffer, 0);
          Arrays.fill(this.buffer, (byte)0);
          this.buffer[0] = var1;
          this.bufferPos = 1;
       } else {
-         this.buffer[this.bufferPos] = var1;
-         this.bufferPos++;
+         this.buffer[this.bufferPos++] = var1;
       }
    }
 
@@ -245,30 +235,22 @@ public class Blake2sDigest implements ExtendedDigest {
             }
 
             System.arraycopy(var1, var2, this.buffer, this.bufferPos, var4);
-            this.t0 += 64;
-            if (this.t0 == 0) {
-               this.t1++;
-            }
-
+            this.incrementCounter(64);
             this.compress(this.buffer, 0);
             this.bufferPos = 0;
             Arrays.fill(this.buffer, (byte)0);
          }
 
-         int var6 = var2 + var3 - 64;
+         int var5 = var2 + var3 - 64;
 
-         int var5;
-         for (var5 = var2 + var4; var5 < var6; var5 += 64) {
-            this.t0 += 64;
-            if (this.t0 == 0) {
-               this.t1++;
-            }
-
-            this.compress(var1, var5);
+         int var6;
+         for (var6 = var2 + var4; var6 < var5; var6 += 64) {
+            this.incrementCounter(64);
+            this.compress(var1, var6);
          }
 
-         System.arraycopy(var1, var5, this.buffer, 0, var2 + var3 - var5);
-         this.bufferPos += var2 + var3 - var5;
+         System.arraycopy(var1, var6, this.buffer, 0, var2 + var3 - var6);
+         this.bufferPos += var2 + var3 - var6;
       }
    }
 
@@ -283,24 +265,18 @@ public class Blake2sDigest implements ExtendedDigest {
          this.f1 = -1;
       }
 
-      this.t0 = this.t0 + this.bufferPos;
-      if (this.t0 < 0 && this.bufferPos > -this.t0) {
-         this.t1++;
+      if (this.bufferPos > 0) {
+         this.incrementCounter(this.bufferPos);
       }
 
       this.compress(this.buffer, 0);
-      Arrays.fill(this.buffer, (byte)0);
-      Arrays.fill(this.internalState, 0);
       int var3 = this.digestLength >>> 2;
       int var4 = this.digestLength & 3;
       Pack.intToLittleEndian(this.chainValue, 0, var3, var1, var2);
       if (var4 > 0) {
-         byte[] var5 = new byte[4];
-         Pack.intToLittleEndian(this.chainValue[var3], var5, 0);
-         System.arraycopy(var5, 0, var1, var2 + this.digestLength - var4, var4);
+         Pack.intToLittleEndian_Low(this.chainValue[var3], var1, var2 + this.digestLength - var4, var4);
       }
 
-      Arrays.fill(this.chainValue, 0);
       this.reset();
       return this.digestLength;
    }
@@ -313,7 +289,7 @@ public class Blake2sDigest implements ExtendedDigest {
       this.t0 = 0;
       this.t1 = 0;
       this.isLastNode = false;
-      this.chainValue = null;
+      Arrays.fill(this.internalState, 0);
       Arrays.fill(this.buffer, (byte)0);
       if (this.key != null) {
          System.arraycopy(this.key, 0, this.buffer, 0, this.key.length);
@@ -384,6 +360,13 @@ public class Blake2sDigest implements ExtendedDigest {
    public void clearSalt() {
       if (this.salt != null) {
          Arrays.fill(this.salt, (byte)0);
+      }
+   }
+
+   private void incrementCounter(int var1) {
+      this.t0 += var1;
+      if (Integers.compareUnsigned(this.t0, var1) < 0) {
+         this.t1++;
       }
    }
 }

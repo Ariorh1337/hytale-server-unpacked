@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.UUID;
 import org.bson.assertions.Assertions;
 import org.bson.internal.UuidHelper;
+import org.bson.internal.vector.BinaryVectorHelper;
 
 public class BsonBinary extends BsonValue {
    private final byte type;
@@ -39,6 +40,15 @@ public class BsonBinary extends BsonValue {
       this(uuid, UuidRepresentation.STANDARD);
    }
 
+   public BsonBinary(BinaryVector vector) {
+      if (vector == null) {
+         throw new IllegalArgumentException("Vector must not be null");
+      }
+
+      this.data = BinaryVectorHelper.encodeVectorToBinary(vector);
+      this.type = BsonBinarySubType.VECTOR.getValue();
+   }
+
    public BsonBinary(UUID uuid, UuidRepresentation uuidRepresentation) {
       if (uuid == null) {
          throw new IllegalArgumentException("uuid may not be null");
@@ -59,6 +69,14 @@ public class BsonBinary extends BsonValue {
          throw new BsonInvalidOperationException("uuidRepresentation must be set to return the correct UUID.");
       } else {
          return UuidHelper.decodeBinaryToUuid((byte[])this.data.clone(), this.type, UuidRepresentation.STANDARD);
+      }
+   }
+
+   public BinaryVector asVector() {
+      if (this.type != BsonBinarySubType.VECTOR.getValue()) {
+         throw new BsonInvalidOperationException("type must be a Vector subtype.");
+      } else {
+         return BinaryVectorHelper.decodeBinaryToVector(this.data);
       }
    }
 

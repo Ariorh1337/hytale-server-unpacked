@@ -128,7 +128,7 @@ public final class Zuc256Mac implements Mac {
    }
 
    private static class InternalZuc256Engine extends Zuc256CoreEngine {
-      public InternalZuc256Engine(int var1) {
+      InternalZuc256Engine(int var1) {
          super(var1);
       }
 

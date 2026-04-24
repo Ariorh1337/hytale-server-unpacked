@@ -266,7 +266,10 @@ public class JcaContentSignerBuilder {
       }
 
       return new RSASSAPSSparams(
-         var2, new AlgorithmIdentifier(PKCSObjectIdentifiers.id_mgf1, var3), new ASN1Integer(var0.getSaltLength()), new ASN1Integer(var0.getTrailerField())
+         var2,
+         new AlgorithmIdentifier(PKCSObjectIdentifiers.id_mgf1, var3),
+         ASN1Integer.valueOf(var0.getSaltLength()),
+         ASN1Integer.valueOf(var0.getTrailerField())
       );
    }
 

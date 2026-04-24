@@ -19,7 +19,7 @@ public class DeclarationOfMajority extends ASN1Object implements ASN1Choice {
    private ASN1TaggedObject declaration;
 
    public DeclarationOfMajority(int var1) {
-      this.declaration = new DERTaggedObject(false, 0, new ASN1Integer(var1));
+      this.declaration = new DERTaggedObject(false, 0, ASN1Integer.valueOf(var1));
    }
 
    public DeclarationOfMajority(boolean var1, String var2) {
@@ -42,7 +42,7 @@ public class DeclarationOfMajority extends ASN1Object implements ASN1Choice {
       if (var0 == null || var0 instanceof DeclarationOfMajority) {
          return (DeclarationOfMajority)var0;
       } else if (var0 instanceof ASN1TaggedObject) {
-         return new DeclarationOfMajority(ASN1TaggedObject.getInstance(var0, 128));
+         return new DeclarationOfMajority(ASN1TaggedObject.getContextInstance(var0));
       } else {
          throw new IllegalArgumentException("illegal object in getInstance: " + var0.getClass().getName());
       }

@@ -4,7 +4,7 @@ import com.hypixel.hytale.common.util.BitUtil;
 import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.math.util.NumberUtil;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
-import io.netty.buffer.ByteBuf;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.bytes.Byte2ByteMap;
 import it.unimi.dsi.fastutil.bytes.Byte2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.bytes.Byte2IntMap;
@@ -20,9 +20,10 @@ import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.BitSet;
 import java.util.function.IntConsumer;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 
 public final class HalfByteSectionPalette extends AbstractSectionPalette {
@@ -307,48 +308,78 @@ public final class HalfByteSectionPalette extends AbstractSectionPalette {
    }
 
    @Override
-   public void serializeForPacket(@Nonnull ByteBuf buf) {
-      buf.writeShortLE(this.internalToExternal.size());
+   public int serializedPacketByteSize() {
+      return 2 + 7 * this.internalToExternal.size() + this.blocks.length;
+   }
+
+   @Override
+   public int serializeForPacket(MemorySegment memorySegment, int baseOffset) {
+      int offset = baseOffset;
+      memorySegment.set(MemorySegmentUtil.SHORT_LE, offset, (short)this.internalToExternal.size());
+      offset += 2;
 
       for (Byte2IntMap.Entry entry : this.internalToExternal.byte2IntEntrySet()) {
          byte internalId = entry.getByteKey();
          int externalId = entry.getIntValue();
-         buf.writeByte(internalId);
-         buf.writeIntLE(externalId);
-         buf.writeShortLE(this.internalIdCount.get(internalId));
+         memorySegment.set(ValueLayout.JAVA_BYTE, offset, internalId);
+         memorySegment.set(MemorySegmentUtil.INT_LE, offset + 1, externalId);
+         memorySegment.set(MemorySegmentUtil.SHORT_LE, offset + 1 + 4, this.internalIdCount.get(internalId));
+         offset += 7;
       }
 
-      buf.writeBytes(this.blocks);
+      MemorySegment.copy(this.blocks, 0, memorySegment, ValueLayout.JAVA_BYTE, offset, this.blocks.length);
+      offset += this.blocks.length;
+      return offset - baseOffset;
    }
 
    @Override
-   public void serialize(@Nonnull AbstractSectionPalette.KeySerializer keySerializer, @Nonnull ByteBuf buf) {
-      buf.writeShort(this.internalToExternal.size());
+   public int serializedByteSize(AbstractSectionPalette.KeyMemorySerializer keySerializer) {
+      int size = 2 + 3 * this.internalToExternal.size() + this.blocks.length;
+
+      for (int externalId : this.internalToExternal.values()) {
+         size += keySerializer.keySize(externalId);
+      }
+
+      return size;
+   }
+
+   @Override
+   public int serialize(AbstractSectionPalette.KeyMemorySerializer keySerializer, MemorySegment memorySegment, int baseOffset) {
+      int offset = baseOffset;
+      memorySegment.set(MemorySegmentUtil.SHORT_BE, offset, (short)this.internalToExternal.size());
+      offset += 2;
 
       for (Byte2IntMap.Entry entry : this.internalToExternal.byte2IntEntrySet()) {
          byte internalId = entry.getByteKey();
          int externalId = entry.getIntValue();
-         buf.writeByte(internalId);
-         keySerializer.serialize(buf, externalId);
-         buf.writeShort(this.internalIdCount.get(internalId));
+         memorySegment.set(ValueLayout.JAVA_BYTE, offset, internalId);
+         offset += 1 + keySerializer.serialize(memorySegment, offset + 1, externalId);
+         memorySegment.set(MemorySegmentUtil.SHORT_BE, offset, this.internalIdCount.get(internalId));
+         offset += 2;
       }
 
-      buf.writeBytes(this.blocks);
+      MemorySegment.copy(this.blocks, 0, memorySegment, ValueLayout.JAVA_BYTE, offset, this.blocks.length);
+      offset += this.blocks.length;
+      return offset - baseOffset;
    }
 
    @Override
-   public void deserialize(@Nonnull ToIntFunction<ByteBuf> deserializer, @Nonnull ByteBuf buf, int version) {
+   public int deserialize(AbstractSectionPalette.KeyMemoryDeserializer deserializer, MemorySegment memorySegment, int baseOffset) {
+      int offset = baseOffset;
       this.externalToInternal.clear();
       this.internalToExternal.clear();
       this.internalIdSet.clear();
       this.internalIdCount.clear();
       Byte2ByteMap internalIdRemapping = null;
-      int blockCount = buf.readShort();
+      int blockCount = memorySegment.get(MemorySegmentUtil.SHORT_BE, offset);
+      offset += 2;
 
       for (int i = 0; i < blockCount; i++) {
-         byte internalId = buf.readByte();
-         int externalId = deserializer.applyAsInt(buf);
-         short count = buf.readShort();
+         byte internalId = memorySegment.get(ValueLayout.JAVA_BYTE, offset);
+         int externalId = deserializer.deserialize(memorySegment, ++offset);
+         offset += deserializer.keySize(memorySegment, offset);
+         short count = memorySegment.get(MemorySegmentUtil.SHORT_BE, offset);
+         offset += 2;
          if (this.externalToInternal.containsKey(externalId)) {
             byte existingInternalId = this.externalToInternal.get(externalId);
             if (internalIdRemapping == null) {
@@ -365,7 +396,8 @@ public final class HalfByteSectionPalette extends AbstractSectionPalette {
          }
       }
 
-      buf.readBytes(this.blocks);
+      MemorySegment.copy(memorySegment, ValueLayout.JAVA_BYTE, offset, this.blocks, 0, this.blocks.length);
+      offset += this.blocks.length;
       if (internalIdRemapping != null) {
          for (int i = 0; i < 32768; i++) {
             byte old = BitUtil.getNibble(this.blocks, i);
@@ -374,6 +406,8 @@ public final class HalfByteSectionPalette extends AbstractSectionPalette {
             }
          }
       }
+
+      return offset - baseOffset;
    }
 
    @Nonnull

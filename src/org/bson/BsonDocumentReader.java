@@ -214,8 +214,8 @@ public class BsonDocumentReader extends AbstractBsonReader {
    }
 
    private static class BsonDocumentMarkableIterator<T> implements Iterator<T> {
-      private Iterator<T> baseIterator;
-      private List<T> markIterator = new ArrayList<>();
+      private final Iterator<T> baseIterator;
+      private final List<T> markIterator = new ArrayList<>();
       private int curIndex;
       private boolean marking;
 

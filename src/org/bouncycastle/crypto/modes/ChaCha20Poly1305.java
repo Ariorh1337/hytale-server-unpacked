@@ -11,6 +11,7 @@ import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.util.Arrays;
+import org.bouncycastle.util.Longs;
 import org.bouncycastle.util.Pack;
 
 public class ChaCha20Poly1305 implements AEADCipher {
@@ -406,7 +407,7 @@ public class ChaCha20Poly1305 implements AEADCipher {
    }
 
    private long incrementCount(long var1, int var3, long var4) {
-      if (var1 + Long.MIN_VALUE > var4 - var3 + Long.MIN_VALUE) {
+      if (Longs.compareUnsigned(var1, var4 - var3) > 0) {
          throw new IllegalStateException("Limit exceeded");
       } else {
          return var1 + var3;

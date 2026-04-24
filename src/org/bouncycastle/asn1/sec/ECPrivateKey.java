@@ -1,7 +1,6 @@
 package org.bouncycastle.asn1.sec;
 
 import java.math.BigInteger;
-import java.util.Enumeration;
 import org.bouncycastle.asn1.ASN1BitString;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -17,11 +16,7 @@ import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.util.BigIntegers;
 
 public class ECPrivateKey extends ASN1Object {
-   private ASN1Sequence seq;
-
-   private ECPrivateKey(ASN1Sequence var1) {
-      this.seq = var1;
-   }
+   private final ASN1Sequence seq;
 
    public static ECPrivateKey getInstance(Object var0) {
       if (var0 instanceof ECPrivateKey) {
@@ -31,24 +26,21 @@ public class ECPrivateKey extends ASN1Object {
       }
    }
 
-   /** @deprecated */
-   public ECPrivateKey(BigInteger var1) {
-      this(var1.bitLength(), var1);
+   public static ECPrivateKey getInstance(ASN1TaggedObject var0, boolean var1) {
+      return new ECPrivateKey(ASN1Sequence.getInstance(var0, var1));
+   }
+
+   public static ECPrivateKey getTagged(ASN1TaggedObject var0, boolean var1) {
+      return new ECPrivateKey(ASN1Sequence.getTagged(var0, var1));
+   }
+
+   private ECPrivateKey(ASN1Sequence var1) {
+      this.seq = var1;
    }
 
    public ECPrivateKey(int var1, BigInteger var2) {
       byte[] var3 = BigIntegers.asUnsignedByteArray((var1 + 7) / 8, var2);
-      this.seq = new DERSequence(new ASN1Integer(1L), new DEROctetString(var3));
-   }
-
-   /** @deprecated */
-   public ECPrivateKey(BigInteger var1, ASN1Encodable var2) {
-      this(var1, null, var2);
-   }
-
-   /** @deprecated */
-   public ECPrivateKey(BigInteger var1, ASN1BitString var2, ASN1Encodable var3) {
-      this(var1.bitLength(), var1, var2, var3);
+      this.seq = new DERSequence(ASN1Integer.ONE, new DEROctetString(var3));
    }
 
    public ECPrivateKey(int var1, BigInteger var2, ASN1Encodable var3) {
@@ -58,7 +50,7 @@ public class ECPrivateKey extends ASN1Object {
    public ECPrivateKey(int var1, BigInteger var2, ASN1BitString var3, ASN1Encodable var4) {
       byte[] var5 = BigIntegers.asUnsignedByteArray((var1 + 7) / 8, var2);
       ASN1EncodableVector var6 = new ASN1EncodableVector(4);
-      var6.add(new ASN1Integer(1L));
+      var6.add(ASN1Integer.ONE);
       var6.add(new DEROctetString(var5));
       if (var4 != null) {
          var6.add(new DERTaggedObject(true, 0, var4));
@@ -71,18 +63,31 @@ public class ECPrivateKey extends ASN1Object {
       this.seq = new DERSequence(var6);
    }
 
+   public ECPrivateKey(ASN1OctetString var1, ASN1Encodable var2, ASN1BitString var3) {
+      ASN1EncodableVector var4 = new ASN1EncodableVector(4);
+      var4.add(ASN1Integer.ONE);
+      var4.add(var1);
+      if (var2 != null) {
+         var4.add(new DERTaggedObject(true, 0, var2));
+      }
+
+      if (var3 != null) {
+         var4.add(new DERTaggedObject(true, 1, var3));
+      }
+
+      this.seq = new DERSequence(var4);
+   }
+
    public BigInteger getKey() {
-      ASN1OctetString var1 = (ASN1OctetString)this.seq.getObjectAt(1);
-      return new BigInteger(1, var1.getOctets());
+      return new BigInteger(1, this.getPrivateKey().getOctets());
+   }
+
+   public ASN1OctetString getPrivateKey() {
+      return (ASN1OctetString)this.seq.getObjectAt(1);
    }
 
    public ASN1BitString getPublicKey() {
       return (ASN1BitString)this.getObjectInTag(1, 3);
-   }
-
-   /** @deprecated */
-   public ASN1Primitive getParameters() {
-      return this.getParametersObject().toASN1Primitive();
    }
 
    public ASN1Object getParametersObject() {
@@ -90,15 +95,13 @@ public class ECPrivateKey extends ASN1Object {
    }
 
    private ASN1Object getObjectInTag(int var1, int var2) {
-      Enumeration var3 = this.seq.getObjects();
+      int var3 = 0;
 
-      while (var3.hasMoreElements()) {
-         ASN1Encodable var4 = (ASN1Encodable)var3.nextElement();
-         if (var4 instanceof ASN1TaggedObject) {
-            ASN1TaggedObject var5 = (ASN1TaggedObject)var4;
-            if (var5.hasContextTag(var1)) {
-               return var2 < 0 ? var5.getExplicitBaseObject().toASN1Primitive() : var5.getBaseUniversal(true, var2);
-            }
+      for (int var4 = this.seq.size(); var3 < var4; var3++) {
+         ASN1Encodable var5 = this.seq.getObjectAt(var3);
+         ASN1TaggedObject var6 = ASN1TaggedObject.getContextOptional(var5, var1);
+         if (var6 != null) {
+            return var2 < 0 ? var6.getExplicitBaseObject().toASN1Primitive() : var6.getBaseUniversal(true, var2);
          }
       }
 

@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,10 +24,10 @@ public final class VoidEventRefSystem extends RefSystem<EntityStore> {
       PortalWorld portalWorld = store.getResource(PortalWorld.getResourceType());
       if (portalWorld.exists()) {
          VoidEventConfig voidEventConfig = portalWorld.getVoidEventConfig();
-         String forcedMusic = voidEventConfig.getMusicAmbienceFX();
-         if (forcedMusic != null) {
+         int musicIndex = voidEventConfig.getMusicContainerIndex();
+         if (musicIndex > 0) {
             AmbienceResource ambienceResource = store.getResource(AmbienceResource.getResourceType());
-            ambienceResource.setForcedMusicAmbience(forcedMusic);
+            ambienceResource.setForcedMusicContainerIndex(musicIndex);
          }
       }
    }
@@ -39,12 +38,11 @@ public final class VoidEventRefSystem extends RefSystem<EntityStore> {
    ) {
       PortalWorld portalWorld = store.getResource(PortalWorld.getResourceType());
       if (portalWorld.exists()) {
-         World world = store.getExternalData().getWorld();
          VoidEventConfig voidEventConfig = portalWorld.getVoidEventConfig();
-         String forcedMusic = voidEventConfig.getMusicAmbienceFX();
-         if (forcedMusic != null) {
+         int musicIndex = voidEventConfig.getMusicContainerIndex();
+         if (musicIndex > 0) {
             AmbienceResource ambienceResource = store.getResource(AmbienceResource.getResourceType());
-            ambienceResource.setForcedMusicAmbience(null);
+            ambienceResource.setForcedMusicContainerIndex(0);
          }
 
          VoidEvent voidEvent = commandBuffer.getComponent(ref, VoidEvent.getComponentType());

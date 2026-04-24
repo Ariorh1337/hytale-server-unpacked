@@ -2,14 +2,13 @@ package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
 import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
-import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.lang.foreign.MemorySegment;
 import java.util.function.IntConsumer;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 
 public final class EmptySectionPalette extends AbstractSectionPalette {
@@ -117,14 +116,27 @@ public final class EmptySectionPalette extends AbstractSectionPalette {
    }
 
    @Override
-   public void serializeForPacket(ByteBuf buf) {
+   public int serializedPacketByteSize() {
+      return 0;
    }
 
    @Override
-   public void serialize(AbstractSectionPalette.KeySerializer keySerializer, ByteBuf buf) {
+   public int serializeForPacket(MemorySegment memorySegment, int offset) {
+      return 0;
    }
 
    @Override
-   public void deserialize(ToIntFunction<ByteBuf> deserializer, ByteBuf buf, int version) {
+   public int serializedByteSize(AbstractSectionPalette.KeyMemorySerializer keySerializer) {
+      return 0;
+   }
+
+   @Override
+   public int serialize(AbstractSectionPalette.KeyMemorySerializer keySerializer, MemorySegment memorySegment, int offset) {
+      return 0;
+   }
+
+   @Override
+   public int deserialize(AbstractSectionPalette.KeyMemoryDeserializer deserializer, MemorySegment memorySegment, int offset) {
+      return 0;
    }
 }

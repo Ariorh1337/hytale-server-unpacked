@@ -223,7 +223,7 @@ public class WorldTimeResource implements Resource<EntityStore> {
    }
 
    public boolean isDayTimeWithinRange(double minTime, double maxTime) {
-      double dayProgress = (double)this._gameTimeLocalDateTime.getHour() / HOURS_PER_DAY;
+      double dayProgress = this.getDayProgress();
       return !(minTime > maxTime)
          ? MathUtil.within(dayProgress, minTime, maxTime)
          : MathUtil.within(dayProgress, minTime, 1.0) || MathUtil.within(dayProgress, 0.0, maxTime);

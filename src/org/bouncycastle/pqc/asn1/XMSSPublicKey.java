@@ -45,8 +45,8 @@ public class XMSSPublicKey extends ASN1Object {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      ASN1EncodableVector var1 = new ASN1EncodableVector();
-      var1.add(new ASN1Integer(0L));
+      ASN1EncodableVector var1 = new ASN1EncodableVector(3);
+      var1.add(ASN1Integer.ZERO);
       var1.add(new DEROctetString(this.publicSeed));
       var1.add(new DEROctetString(this.root));
       return new DERSequence(var1);

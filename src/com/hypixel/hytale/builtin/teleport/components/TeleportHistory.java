@@ -22,6 +22,7 @@ import org.joml.Vector3d;
 public class TeleportHistory implements Component<EntityStore> {
    private static final int MAX_TELEPORT_HISTORY = 100;
    private static final Message MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER = Message.translation("server.commands.teleport.notFurther");
+   private static final Message MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER_BACK = Message.translation("server.commands.teleport.notFurtherBack");
    @Nonnull
    private final Deque<TeleportHistory.Waypoint> back = new ArrayDeque<>();
    @Nonnull
@@ -71,7 +72,7 @@ public class TeleportHistory implements Component<EntityStore> {
       for (int steps = 0; steps < count; steps++) {
          if (from.isEmpty()) {
             if (point == null) {
-               playerRef.sendMessage(MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER);
+               playerRef.sendMessage(isForward ? MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER : MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER_BACK);
                return;
             }
             break;
@@ -89,7 +90,7 @@ public class TeleportHistory implements Component<EntityStore> {
       }
 
       if (point == null) {
-         playerRef.sendMessage(MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER);
+         playerRef.sendMessage(isForward ? MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER : MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER_BACK);
       } else {
          World currentWorld = store.getExternalData().getWorld();
          TransformComponent currentTransform = store.getComponent(ref, TransformComponent.getComponentType());

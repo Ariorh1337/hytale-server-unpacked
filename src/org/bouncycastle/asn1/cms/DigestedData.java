@@ -19,7 +19,7 @@ public class DigestedData extends ASN1Object {
    private ASN1OctetString digest;
 
    public DigestedData(AlgorithmIdentifier var1, ContentInfo var2, byte[] var3) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.digestAlgorithm = var1;
       this.encapContentInfo = var2;
       this.digest = new DEROctetString(Arrays.clone(var3));

@@ -3,7 +3,6 @@ package com.hypixel.hytale.builtin.buildertools.commands;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -19,7 +18,7 @@ import javax.annotation.Nonnull;
 public class GlobalMaskCommand extends AbstractPlayerCommand {
    public GlobalMaskCommand() {
       super("gmask", "server.commands.globalmask.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new GlobalMaskCommand.GlobalMaskSetCommand());
       this.addSubCommand(new GlobalMaskCommand.GlobalMaskClearCommand());
    }
@@ -43,7 +42,7 @@ public class GlobalMaskCommand extends AbstractPlayerCommand {
    private static class GlobalMaskClearCommand extends AbstractPlayerCommand {
       public GlobalMaskClearCommand() {
          super("clear", "server.commands.globalmask.clear.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
          this.addAliases("disable", "c");
       }
 
@@ -63,7 +62,7 @@ public class GlobalMaskCommand extends AbstractPlayerCommand {
 
       public GlobalMaskSetCommand() {
          super("server.commands.globalmask.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

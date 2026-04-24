@@ -14,7 +14,7 @@ public class XMSSKeyParams extends ASN1Object {
    private final AlgorithmIdentifier treeDigest;
 
    public XMSSKeyParams(int var1, AlgorithmIdentifier var2) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.height = var1;
       this.treeDigest = var2;
    }
@@ -45,7 +45,7 @@ public class XMSSKeyParams extends ASN1Object {
    public ASN1Primitive toASN1Primitive() {
       ASN1EncodableVector var1 = new ASN1EncodableVector();
       var1.add(this.version);
-      var1.add(new ASN1Integer(this.height));
+      var1.add(ASN1Integer.valueOf(this.height));
       var1.add(this.treeDigest);
       return new DERSequence(var1);
    }

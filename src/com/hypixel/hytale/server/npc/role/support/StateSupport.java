@@ -48,6 +48,8 @@ public class StateSupport {
    protected final Int2ObjectMap<IntSet> busyStates;
    protected final HashSet<String> missingStates = new HashSet<>();
    protected boolean needClearOnce;
+   protected boolean clearHeadMotion;
+   protected boolean clearBodyMotion;
    protected Set<Ref<EntityStore>> interactablePlayers;
    protected Set<Ref<EntityStore>> interactedPlayers;
    protected Map<Ref<EntityStore>, String> contextualInteractions;
@@ -220,6 +222,22 @@ public class StateSupport {
       if (subStateIndex >= 0) {
          this.setState(this.state, subStateIndex, true, true);
       }
+   }
+
+   public boolean isClearBodyMotion() {
+      return this.clearBodyMotion;
+   }
+
+   public void setClearBodyMotion(boolean clearBodyMotion) {
+      this.clearBodyMotion = clearBodyMotion;
+   }
+
+   public boolean isClearHeadMotion() {
+      return this.clearHeadMotion;
+   }
+
+   public void setClearHeadMotion(boolean clearHeadMotion) {
+      this.clearHeadMotion = clearHeadMotion;
    }
 
    public boolean isComponentInState(int componentIndex, int targetState) {

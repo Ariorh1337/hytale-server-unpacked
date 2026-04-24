@@ -341,33 +341,33 @@ public class SecT571Field {
    }
 
    protected static void implMulwAcc(long[] var0, long var1, long var3, long[] var5, int var6) {
+      long var7 = 0L;
+      long var9 = var1;
+      long var11 = var3;
       var0[1] = var3;
 
-      for (byte var7 = 2; var7 < 16; var7 += 2) {
-         var0[var7] = var0[var7 >>> 1] << 1;
-         var0[var7 + 1] = var0[var7] ^ var3;
+      for (byte var13 = 2; var13 < 16; var13 += 2) {
+         var0[var13] = var0[var13 >>> 1] << 1;
+         var0[var13 + 1] = var0[var13] ^ var3;
+         var9 = (var9 & -72340172838076674L) >>> 1;
+         var7 ^= var9 & var11 >> 63;
+         var11 <<= 1;
       }
 
-      int var16 = (int)var1;
-      long var10 = 0L;
-      long var12 = var0[var16 & 15] ^ var0[var16 >>> 4 & 15] << 4;
-      byte var14 = 56;
+      int var19 = (int)var1;
+      long var16 = var0[var19 & 15] ^ var0[var19 >>> 4 & 15] << 4;
+      byte var18 = 56;
 
       do {
-         var16 = (int)(var1 >>> var14);
-         long var8 = var0[var16 & 15] ^ var0[var16 >>> 4 & 15] << 4;
-         var12 ^= var8 << var14;
-         var10 ^= var8 >>> -var14;
-         var14 -= 8;
-      } while (var14 > 0);
+         var19 = (int)(var1 >>> var18);
+         long var14 = var0[var19 & 15] ^ var0[var19 >>> 4 & 15] << 4;
+         var16 ^= var14 << var18;
+         var7 ^= var14 >>> -var18;
+         var18 -= 8;
+      } while (var18 > 0);
 
-      for (int var15 = 0; var15 < 7; var15++) {
-         var1 = (var1 & -72340172838076674L) >>> 1;
-         var10 ^= var1 & var3 << var15 >> 63;
-      }
-
-      var5[var6] ^= var12;
-      var5[var6 + 1] = var5[var6 + 1] ^ var10;
+      var5[var6] ^= var16;
+      var5[var6 + 1] = var5[var6 + 1] ^ var7;
    }
 
    protected static void implSquare(long[] var0, long[] var1) {

@@ -44,6 +44,11 @@ public class EnumCodec<T extends Enum<T>> implements Codec<T> {
    }
 
    @Nonnull
+   public String[] getEnumKeys() {
+      return this.enumKeys;
+   }
+
+   @Nonnull
    public EnumCodec<T> documentKey(T key, String doc) {
       this.documentation.put(key, doc);
       return this;

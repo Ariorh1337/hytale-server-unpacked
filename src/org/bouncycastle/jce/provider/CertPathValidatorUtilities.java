@@ -92,9 +92,10 @@ class CertPathValidatorUtilities {
    protected static final String AUTHORITY_KEY_IDENTIFIER = Extension.authorityKeyIdentifier.getId();
    protected static final String ANY_POLICY = "2.5.29.32.0";
    protected static final String CRL_NUMBER = Extension.cRLNumber.getId();
+   protected static final String REASON_CODE = Extension.reasonCode.getId();
    protected static final int KEY_CERT_SIGN = 5;
    protected static final int CRL_SIGN = 6;
-   protected static final String[] crlReasons = new String[]{
+   static final String[] crlReasons = new String[]{
       "unspecified",
       "keyCompromise",
       "cACompromise",
@@ -250,7 +251,7 @@ class CertPathValidatorUtilities {
       }
    }
 
-   protected static final Set getQualifierSet(ASN1Sequence var0) throws CertPathValidatorException {
+   static final Set getQualifierSet(ASN1Sequence var0) throws CertPathValidatorException {
       HashSet var1 = new HashSet();
       if (var0 == null) {
          return var1;
@@ -387,7 +388,7 @@ class CertPathValidatorUtilities {
       }
    }
 
-   static List<PKIXCRLStore> getAdditionalStoresFromCRLDistributionPoint(CRLDistPoint var0, Map<GeneralName, PKIXCRLStore> var1, Date var2, JcaJceHelper var3) throws AnnotatedException {
+   static List<PKIXCRLStore> getAdditionalStoresFromCRLDistributionPoint(CRLDistPoint var0, PKIXExtendedParameters var1, Date var2, JcaJceHelper var3) throws AnnotatedException {
       if (null == var0) {
          return Collections.EMPTY_LIST;
       }
@@ -395,50 +396,52 @@ class CertPathValidatorUtilities {
       DistributionPoint[] var4;
       try {
          var4 = var0.getDistributionPoints();
-      } catch (Exception var15) {
-         throw new AnnotatedException("Distribution points could not be read.", var15);
+      } catch (Exception var16) {
+         throw new AnnotatedException("Distribution points could not be read.", var16);
       }
 
       ArrayList var5 = new ArrayList();
+      Map var6 = var1.getNamedCRLStoreMap();
+      if (!var6.isEmpty()) {
+         for (int var7 = 0; var7 < var4.length; var7++) {
+            DistributionPointName var8 = var4[var7].getDistributionPoint();
+            if (var8 != null && var8.getType() == 0) {
+               GeneralName[] var9 = GeneralNames.getInstance(var8.getName()).getNames();
 
-      for (int var6 = 0; var6 < var4.length; var6++) {
-         DistributionPointName var7 = var4[var6].getDistributionPoint();
-         if (var7 != null && var7.getType() == 0) {
-            GeneralName[] var8 = GeneralNames.getInstance(var7.getName()).getNames();
-
-            for (int var9 = 0; var9 < var8.length; var9++) {
-               PKIXCRLStore var10 = (PKIXCRLStore)var1.get(var8[var9]);
-               if (var10 != null) {
-                  var5.add(var10);
+               for (int var10 = 0; var10 < var9.length; var10++) {
+                  PKIXCRLStore var11 = (PKIXCRLStore)var6.get(var9[var10]);
+                  if (var11 != null) {
+                     var5.add(var11);
+                  }
                }
             }
          }
       }
 
       if (var5.isEmpty() && Properties.isOverrideSet("org.bouncycastle.x509.enableCRLDP")) {
-         CertificateFactory var17;
+         CertificateFactory var18;
          try {
-            var17 = var3.createCertificateFactory("X.509");
-         } catch (Exception var14) {
-            throw new AnnotatedException("cannot create certificate factory: " + var14.getMessage(), var14);
+            var18 = var3.createCertificateFactory("X.509");
+         } catch (Exception var15) {
+            throw new AnnotatedException("cannot create certificate factory: " + var15.getMessage(), var15);
          }
 
-         for (int var18 = 0; var18 < var4.length; var18++) {
-            DistributionPointName var19 = var4[var18].getDistributionPoint();
-            if (var19 != null && var19.getType() == 0) {
-               GeneralName[] var20 = GeneralNames.getInstance(var19.getName()).getNames();
+         for (int var19 = 0; var19 < var4.length; var19++) {
+            DistributionPointName var20 = var4[var19].getDistributionPoint();
+            if (var20 != null && var20.getType() == 0) {
+               GeneralName[] var21 = GeneralNames.getInstance(var20.getName()).getNames();
 
-               for (int var21 = 0; var21 < var20.length; var21++) {
-                  GeneralName var11 = var20[var21];
-                  if (var11.getTagNo() == 6) {
+               for (int var22 = 0; var22 < var21.length; var22++) {
+                  GeneralName var12 = var21[var22];
+                  if (var12.getTagNo() == 6) {
                      try {
-                        URI var12 = new URI(((ASN1String)var11.getName()).getString());
-                        PKIXCRLStore var13 = CrlCache.getCrl(var17, var2, var12);
-                        if (var13 != null) {
-                           var5.add(var13);
+                        URI var13 = new URI(((ASN1String)var12.getName()).getString());
+                        PKIXCRLStore var14 = CrlCache.getCrl(var18, var2, var13);
+                        if (var14 != null) {
+                           var5.add(var14);
                         }
                         break;
-                     } catch (Exception var16) {
+                     } catch (Exception var17) {
                      }
                   }
                }
@@ -532,7 +535,7 @@ class CertPathValidatorUtilities {
          checkCRLEntryCriticalExtensions(var5, "CRL entry has unsupported critical extensions.");
 
          try {
-            var10 = ASN1Enumerated.getInstance(getExtensionValue(var5, Extension.reasonCode.getId()));
+            var10 = ASN1Enumerated.getInstance(getExtensionValue(var5, REASON_CODE));
          } catch (Exception var8) {
             throw new AnnotatedException("Reason code CRL entry extension could not be decoded.", var8);
          }
@@ -629,7 +632,7 @@ class CertPathValidatorUtilities {
    }
 
    private static boolean isDeltaCRL(X509CRL var0) {
-      return hasCriticalExtension(var0, Extension.deltaCRLIndicator.getId());
+      return hasCriticalExtension(var0, DELTA_CRL_INDICATOR);
    }
 
    protected static Set getCompleteCRLs(PKIXCertRevocationCheckerParameters var0, DistributionPoint var1, Object var2, PKIXExtendedParameters var3, Date var4) throws AnnotatedException, RecoverableCertPathValidatorException {
@@ -660,8 +663,7 @@ class CertPathValidatorUtilities {
             ASN1GeneralizedTime var5 = null;
 
             try {
-               byte[] var6 = ((X509Certificate)var2.getCertificates().get(var3 - 1))
-                  .getExtensionValue(ISISMTTObjectIdentifiers.id_isismtt_at_dateOfCertGen.getId());
+               byte[] var6 = var4.getExtensionValue(ISISMTTObjectIdentifiers.id_isismtt_at_dateOfCertGen.getId());
                if (var6 != null) {
                   var5 = ASN1GeneralizedTime.getInstance(ASN1Primitive.fromByteArray(var6));
                }
@@ -771,15 +773,19 @@ class CertPathValidatorUtilities {
    }
 
    static void checkCRLCriticalExtensions(X509CRL var0, String var1) throws AnnotatedException {
+      if (var0.hasUnsupportedCriticalExtension()) {
+         throw new AnnotatedException(var1);
+      }
+
       Set var2 = var0.getCriticalExtensionOIDs();
       if (var2 != null) {
          int var3 = var2.size();
          if (var3 > 0) {
-            if (var2.contains(Extension.issuingDistributionPoint.getId())) {
+            if (var2.contains(ISSUING_DISTRIBUTION_POINT)) {
                var3--;
             }
 
-            if (var2.contains(Extension.deltaCRLIndicator.getId())) {
+            if (var2.contains(DELTA_CRL_INDICATOR)) {
                var3--;
             }
 

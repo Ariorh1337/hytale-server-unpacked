@@ -26,16 +26,14 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.Abstr
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.EmptySectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.PaletteTypeEnum;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.lang.ref.SoftReference;
 import java.time.Instant;
 import java.util.BitSet;
@@ -46,7 +44,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -82,6 +79,52 @@ public class BlockSection implements Component<ChunkStore> {
    private double maximumHitboxExtent;
    @Nullable
    private transient SoftReference<CompletableFuture<CachedPacket<SetChunk>>> cachedChunkPacket;
+   private static final AbstractSectionPalette.KeyMemorySerializer FILLER_SERIALIZER = new AbstractSectionPalette.KeyMemorySerializer() {
+      @Override
+      public int serialize(MemorySegment memorySegment, int offset, int index) {
+         memorySegment.set(MemorySegmentUtil.SHORT_BE, offset, (short)index);
+         return 2;
+      }
+
+      @Override
+      public int keySize(int index) {
+         return 2;
+      }
+   };
+   private static final AbstractSectionPalette.KeyMemorySerializer ROTATION_SERIALIZER = new AbstractSectionPalette.KeyMemorySerializer() {
+      @Override
+      public int serialize(MemorySegment memorySegment, int offset, int index) {
+         memorySegment.set(ValueLayout.JAVA_BYTE, offset, (byte)index);
+         return 1;
+      }
+
+      @Override
+      public int keySize(int index) {
+         return 1;
+      }
+   };
+   private static final AbstractSectionPalette.KeyMemoryDeserializer FILLER_DESERIALIZER = new AbstractSectionPalette.KeyMemoryDeserializer() {
+      @Override
+      public int deserialize(MemorySegment mem, int offset) {
+         return Short.toUnsignedInt(mem.get(MemorySegmentUtil.SHORT_BE, offset));
+      }
+
+      @Override
+      public int keySize(MemorySegment mem, int offset) {
+         return 2;
+      }
+   };
+   private static final AbstractSectionPalette.KeyMemoryDeserializer ROTATION_DESERIALIZER = new AbstractSectionPalette.KeyMemoryDeserializer() {
+      @Override
+      public int deserialize(MemorySegment mem, int offset) {
+         return Byte.toUnsignedInt(mem.get(ValueLayout.JAVA_BYTE, offset));
+      }
+
+      @Override
+      public int keySize(MemorySegment mem, int offset) {
+         return 1;
+      }
+   };
    private static final Comparator<BlockSection.TickRequest> TICK_REQUEST_COMPARATOR = Comparator.comparing(t -> t.requestedGameTime);
 
    public static ComponentType<ChunkStore, BlockSection> getComponentType() {
@@ -667,78 +710,95 @@ public class BlockSection implements Component<ChunkStore> {
       }
    }
 
-   public void serializeForPacket(@Nonnull ByteBuf buf) {
+   public byte[] serializeForPacket() {
       long lock = this.chunkSectionLock.readLock();
 
       try {
+         byte[] result = new byte[1
+            + this.chunkSection.serializedPacketByteSize()
+            + 1
+            + this.fillerSection.serializedPacketByteSize()
+            + 1
+            + this.rotationSection.serializedPacketByteSize()];
+         MemorySegment data = MemorySegment.ofArray(result);
          PaletteType paletteType = this.chunkSection.getPaletteType();
          byte paletteTypeId = (byte)paletteType.ordinal();
-         buf.writeByte(paletteTypeId);
-         this.chunkSection.serializeForPacket(buf);
+         data.set(ValueLayout.JAVA_BYTE, 0L, paletteTypeId);
+         int offset = 1 + this.chunkSection.serializeForPacket(data, 1);
          PaletteType fillerType = this.fillerSection.getPaletteType();
          byte fillerTypeId = (byte)fillerType.ordinal();
-         buf.writeByte(fillerTypeId);
-         this.fillerSection.serializeForPacket(buf);
+         data.set(ValueLayout.JAVA_BYTE, offset, fillerTypeId);
+         offset += 1 + this.fillerSection.serializeForPacket(data, offset + 1);
          PaletteType rotationType = this.rotationSection.getPaletteType();
          byte rotationTypeId = (byte)rotationType.ordinal();
-         buf.writeByte(rotationTypeId);
-         this.rotationSection.serializeForPacket(buf);
-      } finally {
-         this.chunkSectionLock.unlockRead(lock);
-      }
-   }
-
-   public void serialize(AbstractSectionPalette.KeySerializer keySerializer, @Nonnull ByteBuf buf) {
-      long lock = this.chunkSectionLock.readLock();
-
-      try {
-         buf.writeInt(BlockMigration.getAssetMap().getAssetCount());
-         PaletteType paletteType = this.chunkSection.getPaletteType();
-         buf.writeByte(paletteType.ordinal());
-         this.chunkSection.serialize(keySerializer, buf);
-         if (paletteType != PaletteType.Empty) {
-            BitSet combinedTickingBlock = (BitSet)this.tickingBlocks.clone();
-            combinedTickingBlock.or(this.tickingWaitAdjacentBlocks);
-            buf.writeShort(combinedTickingBlock.cardinality());
-            long[] data = combinedTickingBlock.toLongArray();
-            buf.writeShort(data.length);
-
-            for (long l : data) {
-               buf.writeLong(l);
-            }
-         }
-
-         buf.writeByte(this.fillerSection.getPaletteType().ordinal());
-         this.fillerSection.serialize(ByteBuf::writeShort, buf);
-         buf.writeByte(this.rotationSection.getPaletteType().ordinal());
-         this.rotationSection.serialize(ByteBuf::writeByte, buf);
-         this.localLight.serialize(buf);
-         this.globalLight.serialize(buf);
-         buf.writeShort(this.localChangeCounter);
-         buf.writeShort(this.globalChangeCounter);
+         data.set(ValueLayout.JAVA_BYTE, offset, rotationTypeId);
+         this.rotationSection.serializeForPacket(data, offset + 1);
+         return result;
       } finally {
          this.chunkSectionLock.unlockRead(lock);
       }
    }
 
    public byte[] serialize(ExtraInfo extraInfo) {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+      long lock = this.chunkSectionLock.readLock();
 
       try {
-         this.serialize(BlockType.KEY_SERIALIZER, buf);
-         return ByteBufUtil.getBytesRelease(buf);
-      } catch (Throwable t) {
-         buf.release();
-         throw SneakyThrow.sneakyThrow(t);
+         PaletteType paletteType = this.chunkSection.getPaletteType();
+         BitSet combinedTickingBlock;
+         long[] tickingData;
+         if (paletteType != PaletteType.Empty) {
+            combinedTickingBlock = (BitSet)this.tickingBlocks.clone();
+            combinedTickingBlock.or(this.tickingWaitAdjacentBlocks);
+            tickingData = combinedTickingBlock.toLongArray();
+         } else {
+            combinedTickingBlock = null;
+            tickingData = null;
+         }
+
+         byte[] result = new byte[5
+            + this.chunkSection.serializedByteSize(BlockType.KEY_MEMORY_SERIALIZER)
+            + (paletteType != PaletteType.Empty ? 4 + tickingData.length * 8 : 0)
+            + 1
+            + this.fillerSection.serializedByteSize(FILLER_SERIALIZER)
+            + 1
+            + this.rotationSection.serializedByteSize(ROTATION_SERIALIZER)
+            + this.localLight.serializedByteSize()
+            + this.globalLight.serializedByteSize()
+            + 2
+            + 2];
+         MemorySegment data = MemorySegment.ofArray(result);
+         data.set(MemorySegmentUtil.INT_BE, 0L, BlockMigration.getAssetMap().getAssetCount());
+         data.set(ValueLayout.JAVA_BYTE, 4L, (byte)paletteType.ordinal());
+         int offset = 5 + this.chunkSection.serialize(BlockType.KEY_MEMORY_SERIALIZER, data, 5);
+         if (paletteType != PaletteType.Empty) {
+            data.set(MemorySegmentUtil.SHORT_BE, offset, (short)combinedTickingBlock.cardinality());
+            data.set(MemorySegmentUtil.SHORT_BE, offset + 2, (short)tickingData.length);
+            MemorySegment.copy(tickingData, 0, data, MemorySegmentUtil.LONG_BE, offset + 4, tickingData.length);
+            offset += 4 + tickingData.length * 8;
+         }
+
+         data.set(ValueLayout.JAVA_BYTE, offset, (byte)this.fillerSection.getPaletteType().ordinal());
+         offset += 1 + this.fillerSection.serialize(FILLER_SERIALIZER, data, offset + 1);
+         data.set(ValueLayout.JAVA_BYTE, offset, (byte)this.rotationSection.getPaletteType().ordinal());
+         offset += 1 + this.rotationSection.serialize(ROTATION_SERIALIZER, data, offset + 1);
+         offset += this.localLight.serialize(data, offset);
+         offset += this.globalLight.serialize(data, offset);
+         data.set(MemorySegmentUtil.SHORT_BE, offset, this.localChangeCounter);
+         data.set(MemorySegmentUtil.SHORT_BE, offset + 2, this.globalChangeCounter);
+         return result;
+      } finally {
+         this.chunkSectionLock.unlockRead(lock);
       }
    }
 
-   public void deserialize(ToIntFunction<ByteBuf> keyDeserializer, @Nonnull ByteBuf buf, int version) {
+   public void deserialize(@Nonnull byte[] bytes, @Nonnull ExtraInfo extraInfo) {
+      MemorySegment data = MemorySegment.ofArray(bytes);
+      int version = extraInfo.getVersion();
       if (version < 6) {
          throw new IllegalArgumentException("Version not supported: " + version);
       }
 
-      int blockMigrationVersion = buf.readInt();
+      int blockMigrationVersion = data.get(MemorySegmentUtil.INT_BE, 0L);
       Function<String, String> blockMigration = null;
       Map<Integer, BlockMigration> blockMigrationMap = BlockMigration.getAssetMap().getAssetMap();
 
@@ -753,48 +813,50 @@ public class BlockSection implements Component<ChunkStore> {
          }
       }
 
-      PaletteTypeEnum typeEnum = PaletteTypeEnum.get(buf.readByte());
+      PaletteTypeEnum typeEnum = PaletteTypeEnum.get(data.get(ValueLayout.JAVA_BYTE, 4L));
       PaletteType paletteType = typeEnum.getPaletteType();
       this.chunkSection = typeEnum.getConstructor().get();
+      int offset = 5;
       if (blockMigration != null) {
-         Function<String, String> finalBlockMigration1 = blockMigration;
-         this.chunkSection.deserialize(bytebuf -> {
-            String key = ByteBufUtil.readUTF(bytebuf);
-            key = finalBlockMigration1.apply(key);
-            return BlockType.getBlockIdOrUnknown(key, "Unknown BlockType %s", key);
-         }, buf, version);
+         final Function<String, String> finalBlockMigration1 = blockMigration;
+         offset += this.chunkSection.deserialize(new AbstractSectionPalette.KeyMemoryDeserializer() {
+            @Override
+            public int deserialize(MemorySegment mem, int offsetx) {
+               String key = finalBlockMigration1.apply(MemorySegmentUtil.readUTF(mem, offsetx));
+               return BlockType.getBlockIdOrUnknown(key, "Unknown BlockType %s", key);
+            }
+
+            @Override
+            public int keySize(MemorySegment mem, int offsetx) {
+               return MemorySegmentUtil.utf8Size(mem, offsetx);
+            }
+         }, data, offset);
       } else {
-         this.chunkSection.deserialize(keyDeserializer, buf, version);
+         offset += this.chunkSection.deserialize(BlockType.KEY_MEMORY_DESERIALIZER, data, offset);
       }
 
       if (paletteType != PaletteType.Empty) {
-         this.tickingBlocksCount = buf.readUnsignedShort();
-         int len = buf.readUnsignedShort();
-         long[] tickingBlocksData = new long[len];
-
-         for (int i = 0; i < tickingBlocksData.length; i++) {
-            tickingBlocksData[i] = buf.readLong();
-         }
-
+         this.tickingBlocksCount = Short.toUnsignedInt(data.get(MemorySegmentUtil.SHORT_BE, offset));
+         int len = Short.toUnsignedInt(data.get(MemorySegmentUtil.SHORT_BE, offset + 2));
+         offset += 4;
+         long[] tickingBlocksData = data.asSlice(offset, len * 8).toArray(MemorySegmentUtil.LONG_BE);
+         offset += len * 8;
          this.tickingBlocks = BitSet.valueOf(tickingBlocksData);
          this.tickingBlocksCount = this.tickingBlocks.cardinality();
       }
 
-      PaletteTypeEnum fillerTypeEnum = PaletteTypeEnum.get(buf.readByte());
+      PaletteTypeEnum fillerTypeEnum = PaletteTypeEnum.get(data.get(ValueLayout.JAVA_BYTE, offset));
       this.fillerSection = fillerTypeEnum.getConstructor().get();
-      this.fillerSection.deserialize(ByteBuf::readUnsignedShort, buf, version);
-      PaletteTypeEnum rotationTypeEnum = PaletteTypeEnum.get(buf.readByte());
+      offset += 1 + this.fillerSection.deserialize(FILLER_DESERIALIZER, data, offset + 1);
+      PaletteTypeEnum rotationTypeEnum = PaletteTypeEnum.get(data.get(ValueLayout.JAVA_BYTE, offset));
       this.rotationSection = rotationTypeEnum.getConstructor().get();
-      this.rotationSection.deserialize(ByteBuf::readUnsignedByte, buf, version);
-      this.localLight = ChunkLightData.deserialize(buf, version);
-      this.globalLight = ChunkLightData.deserialize(buf, version);
-      this.localChangeCounter = buf.readShort();
-      this.globalChangeCounter = buf.readShort();
-   }
-
-   public void deserialize(@Nonnull byte[] bytes, @Nonnull ExtraInfo extraInfo) {
-      ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-      this.deserialize(BlockType.KEY_DESERIALIZER, buf, extraInfo.getVersion());
+      offset += 1 + this.rotationSection.deserialize(ROTATION_DESERIALIZER, data, offset + 1);
+      this.localLight = ChunkLightData.deserialize(data, offset);
+      offset += this.localLight.serializedByteSize();
+      this.globalLight = ChunkLightData.deserialize(data, offset);
+      offset += this.globalLight.serializedByteSize();
+      this.localChangeCounter = data.get(MemorySegmentUtil.SHORT_BE, offset);
+      this.globalChangeCounter = data.get(MemorySegmentUtil.SHORT_BE, offset + 2);
    }
 
    @Override
@@ -822,26 +884,26 @@ public class BlockSection implements Component<ChunkStore> {
          byte[] data = null;
          if (BlockChunk.SEND_LOCAL_LIGHTING_DATA && this.hasLocalLight()) {
             ChunkLightData localLight = this.getLocalLight();
-            ByteBuf buffer = Unpooled.buffer();
-            localLight.serializeForPacket(buffer);
-            if (this.getLocalChangeCounter() == localLight.getChangeId()) {
-               localLightArr = ByteBufUtil.getBytesRelease(buffer);
+            localLightArr = new byte[localLight.serializedForPacketByteSize()];
+            MemorySegment mem = MemorySegment.ofArray(localLightArr);
+            localLight.serializeForPacket(mem, 0);
+            if (this.getLocalChangeCounter() != localLight.getChangeId()) {
+               localLightArr = null;
             }
          }
 
          if (BlockChunk.SEND_GLOBAL_LIGHTING_DATA && this.hasGlobalLight()) {
-            ByteBuf buffer = Unpooled.buffer();
             ChunkLightData globalLight = this.getGlobalLight();
-            globalLight.serializeForPacket(buffer);
-            if (this.getGlobalChangeCounter() == globalLight.getChangeId()) {
-               globalLightArr = ByteBufUtil.getBytesRelease(buffer);
+            globalLightArr = new byte[globalLight.serializedForPacketByteSize()];
+            MemorySegment mem = MemorySegment.ofArray(globalLightArr);
+            globalLight.serializeForPacket(mem, 0);
+            if (this.getGlobalChangeCounter() != globalLight.getChangeId()) {
+               globalLightArr = null;
             }
          }
 
          if (!this.isSolidAir()) {
-            ByteBuf buf = Unpooled.buffer(65536);
-            this.serializeForPacket(buf);
-            data = ByteBufUtil.getBytesRelease(buf);
+            data = this.serializeForPacket();
          }
 
          SetChunk setChunk = new SetChunk(x, y, z, localLightArr, globalLightArr, data);

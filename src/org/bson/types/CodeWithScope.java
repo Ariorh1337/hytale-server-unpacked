@@ -1,5 +1,6 @@
 package org.bson.types;
 
+import java.util.Objects;
 import org.bson.Document;
 
 public class CodeWithScope extends Code {
@@ -30,7 +31,7 @@ public class CodeWithScope extends Code {
       }
 
       CodeWithScope that = (CodeWithScope)o;
-      return this.scope != null ? this.scope.equals(that.scope) : that.scope == null;
+      return Objects.equals(this.scope, that.scope);
    }
 
    @Override

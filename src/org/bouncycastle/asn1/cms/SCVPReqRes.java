@@ -1,6 +1,5 @@
 package org.bouncycastle.asn1.cms;
 
-import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -20,22 +19,46 @@ public class SCVPReqRes extends ASN1Object {
       }
    }
 
+   public static SCVPReqRes getInstance(ASN1TaggedObject var0, boolean var1) {
+      return new SCVPReqRes(ASN1Sequence.getInstance(var0, var1));
+   }
+
+   public static SCVPReqRes getTagged(ASN1TaggedObject var0, boolean var1) {
+      return new SCVPReqRes(ASN1Sequence.getTagged(var0, var1));
+   }
+
    private SCVPReqRes(ASN1Sequence var1) {
-      if (var1.getObjectAt(0) instanceof ASN1TaggedObject) {
-         this.request = ContentInfo.getInstance(ASN1TaggedObject.getInstance(var1.getObjectAt(0)), true);
-         this.response = ContentInfo.getInstance(var1.getObjectAt(1));
+      int var2 = var1.size();
+      int var3 = 0;
+      if (var2 >= 1 && var2 <= 2) {
+         ContentInfo var4 = null;
+         if (var3 < var2) {
+            ASN1TaggedObject var5 = ASN1TaggedObject.getContextOptional(var1.getObjectAt(var3), 0);
+            if (var5 != null) {
+               var3++;
+               var4 = ContentInfo.getTagged(var5, true);
+            }
+         }
+
+         this.request = var4;
+         this.response = ContentInfo.getInstance(var1.getObjectAt(var3++));
+         if (var3 != var2) {
+            throw new IllegalArgumentException("Unexpected elements in sequence");
+         }
       } else {
-         this.request = null;
-         this.response = ContentInfo.getInstance(var1.getObjectAt(0));
+         throw new IllegalArgumentException("Bad sequence size: " + var2);
       }
    }
 
    public SCVPReqRes(ContentInfo var1) {
-      this.request = null;
-      this.response = var1;
+      this(null, var1);
    }
 
    public SCVPReqRes(ContentInfo var1, ContentInfo var2) {
+      if (var2 == null) {
+         throw new NullPointerException("'response' cannot be null");
+      }
+
       this.request = var1;
       this.response = var2;
    }
@@ -50,12 +73,6 @@ public class SCVPReqRes extends ASN1Object {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      ASN1EncodableVector var1 = new ASN1EncodableVector(2);
-      if (this.request != null) {
-         var1.add(new DERTaggedObject(true, 0, this.request));
-      }
-
-      var1.add(this.response);
-      return new DERSequence(var1);
+      return this.request == null ? new DERSequence(this.response) : new DERSequence(new DERTaggedObject(true, 0, this.request), this.response);
    }
 }

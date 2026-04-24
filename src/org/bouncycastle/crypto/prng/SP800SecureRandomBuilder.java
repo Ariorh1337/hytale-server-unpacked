@@ -89,7 +89,7 @@ public class SP800SecureRandomBuilder {
       private final byte[] personalizationString;
       private final int securityStrength;
 
-      public CTRDRBGProvider(BlockCipher var1, int var2, byte[] var3, byte[] var4, int var5) {
+      CTRDRBGProvider(BlockCipher var1, int var2, byte[] var3, byte[] var4, int var5) {
          this.blockCipher = var1;
          this.keySizeInBits = var2;
          this.nonce = var3;
@@ -114,7 +114,7 @@ public class SP800SecureRandomBuilder {
       private final byte[] personalizationString;
       private final int securityStrength;
 
-      public HMacDRBGProvider(Mac var1, byte[] var2, byte[] var3, int var4) {
+      HMacDRBGProvider(Mac var1, byte[] var2, byte[] var3, int var4) {
          this.hMac = var1;
          this.nonce = var2;
          this.personalizationString = var3;
@@ -140,7 +140,7 @@ public class SP800SecureRandomBuilder {
       private final byte[] personalizationString;
       private final int securityStrength;
 
-      public HashDRBGProvider(Digest var1, byte[] var2, byte[] var3, int var4) {
+      HashDRBGProvider(Digest var1, byte[] var2, byte[] var3, int var4) {
          this.digest = var1;
          this.nonce = var2;
          this.personalizationString = var3;

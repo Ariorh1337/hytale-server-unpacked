@@ -55,6 +55,6 @@ public class NTRUKEMExtractor implements EncapsulatedSecretExtractor {
 
    @Override
    public int getEncapsulationLength() {
-      return this.ntruPrivateKey.getParameters().getParameterSet().ntruCiphertextBytes();
+      return this.ntruPrivateKey.getParameters().getEncapsulationLength();
    }
 }

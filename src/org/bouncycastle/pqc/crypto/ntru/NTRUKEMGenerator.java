@@ -1,6 +1,7 @@
 package org.bouncycastle.pqc.crypto.ntru;
 
 import java.security.SecureRandom;
+import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.crypto.EncapsulatedSecretGenerator;
 import org.bouncycastle.crypto.SecretWithEncapsulation;
 import org.bouncycastle.crypto.digests.SHA3Digest;
@@ -14,11 +15,7 @@ public class NTRUKEMGenerator implements EncapsulatedSecretGenerator {
    private final SecureRandom random;
 
    public NTRUKEMGenerator(SecureRandom var1) {
-      if (var1 == null) {
-         throw new NullPointerException("'random' cannot be null");
-      }
-
-      this.random = var1;
+      this.random = CryptoServicesRegistrar.getSecureRandom(var1);
    }
 
    @Override

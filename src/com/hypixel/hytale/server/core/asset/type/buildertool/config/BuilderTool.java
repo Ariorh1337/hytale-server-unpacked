@@ -9,6 +9,8 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.lookup.MapProvidedMapCodec;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArg;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolState;
 import com.hypixel.hytale.server.core.Message;
@@ -17,11 +19,11 @@ import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.MaskArg
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.StringArg;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.ToolArg;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.ToolArgException;
-import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
@@ -135,15 +137,9 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    }
 
    @Nullable
-   public static BuilderTool getActiveBuilderTool(@Nonnull Player player) {
-      ItemStack activeItemStack = player.getInventory().getItemInHand();
-      if (activeItemStack == null) {
-         return null;
-      }
-
-      Item item = activeItemStack.getItem();
-      BuilderTool builderToolData = item.getBuilderTool();
-      return builderToolData == null ? null : builderToolData;
+   public static BuilderTool getActiveBuilderTool(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+      return itemInHand == null ? null : itemInHand.getItem().getBuilderTool();
    }
 
    public String getId() {
@@ -184,7 +180,12 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
       if (!this.args.isEmpty()) {
          try {
             Map<String, Object> toolData = itemStack.getFromMetadataOrNull("ToolData", this.argsCodec);
-            toolArgs = toolData == null ? this.getDefaultToolArgs(itemStack) : toolData;
+            if (toolData == null) {
+               toolArgs = this.getDefaultToolArgs(itemStack);
+            } else {
+               toolArgs = this.getDefaultToolArgs(itemStack);
+               toolArgs.putAll(toolData);
+            }
          } catch (Exception e) {
             toolArgs = this.getDefaultToolArgs(itemStack);
          }

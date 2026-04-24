@@ -10,6 +10,7 @@ import io.sentry.util.CollectionUtils;
 import io.sentry.vendor.gson.stream.JsonToken;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
@@ -22,6 +23,8 @@ public final class SentryStackTrace implements JsonUnknown, JsonSerializable {
    private Map<String, String> registers;
    @Nullable
    private Boolean snapshot;
+   @Nullable
+   private SentryStackTrace.InstructionAddressAdjustment instructionAddressAdjustment;
    @Nullable
    private Map<String, Object> unknown;
 
@@ -70,6 +73,15 @@ public final class SentryStackTrace implements JsonUnknown, JsonSerializable {
       this.unknown = unknown;
    }
 
+   @Nullable
+   public SentryStackTrace.InstructionAddressAdjustment getInstructionAddressAdjustment() {
+      return this.instructionAddressAdjustment;
+   }
+
+   public void setInstructionAddressAdjustment(@Nullable SentryStackTrace.InstructionAddressAdjustment instructionAddressAdjustment) {
+      this.instructionAddressAdjustment = instructionAddressAdjustment;
+   }
+
    @Override
    public void serialize(@NotNull ObjectWriter writer, @NotNull ILogger logger) throws IOException {
       writer.beginObject();
@@ -83,6 +95,10 @@ public final class SentryStackTrace implements JsonUnknown, JsonSerializable {
 
       if (this.snapshot != null) {
          writer.name("snapshot").value(this.snapshot);
+      }
+
+      if (this.instructionAddressAdjustment != null) {
+         writer.name("instruction_addr_adjustment").value(logger, this.instructionAddressAdjustment);
       }
 
       if (this.unknown != null) {
@@ -115,6 +131,9 @@ public final class SentryStackTrace implements JsonUnknown, JsonSerializable {
                case "snapshot":
                   sentryStackTrace.snapshot = reader.nextBooleanOrNull();
                   break;
+               case "instruction_addr_adjustment":
+                  sentryStackTrace.instructionAddressAdjustment = reader.nextOrNull(logger, new SentryStackTrace.InstructionAddressAdjustment.Deserializer());
+                  break;
                default:
                   if (unknown == null) {
                      unknown = new ConcurrentHashMap<>();
@@ -130,9 +149,29 @@ public final class SentryStackTrace implements JsonUnknown, JsonSerializable {
       }
    }
 
+   public enum InstructionAddressAdjustment implements JsonSerializable {
+      AUTO,
+      ALL,
+      ALL_BUT_FIRST,
+      NONE;
+
+      @Override
+      public void serialize(@NotNull ObjectWriter writer, @NotNull ILogger logger) throws IOException {
+         writer.value(this.toString().toLowerCase(Locale.ROOT));
+      }
+
+      public static final class Deserializer implements JsonDeserializer<SentryStackTrace.InstructionAddressAdjustment> {
+         @NotNull
+         public SentryStackTrace.InstructionAddressAdjustment deserialize(@NotNull ObjectReader reader, @NotNull ILogger logger) throws Exception {
+            return SentryStackTrace.InstructionAddressAdjustment.valueOf(reader.nextString().toUpperCase(Locale.ROOT));
+         }
+      }
+   }
+
    public static final class JsonKeys {
       public static final String FRAMES = "frames";
       public static final String REGISTERS = "registers";
       public static final String SNAPSHOT = "snapshot";
+      public static final String INSTRUCTION_ADDRESS_ADJUSTMENT = "instruction_addr_adjustment";
    }
 }

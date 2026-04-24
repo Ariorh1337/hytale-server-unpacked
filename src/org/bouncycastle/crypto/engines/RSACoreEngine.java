@@ -120,6 +120,10 @@ class RSACoreEngine {
 
             return var12;
          }
+
+         if (this.key.getExponent() == null) {
+            throw new IllegalStateException("null exponent, should \"org.bouncycastle.rsa.no_lenstra_check\" be enabled?");
+         }
       }
 
       return var1.modPow(this.key.getExponent(), this.key.getModulus());

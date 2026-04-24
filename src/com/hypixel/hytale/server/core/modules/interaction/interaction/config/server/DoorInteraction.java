@@ -122,6 +122,10 @@ public class DoorInteraction extends SimpleBlockInteraction {
       }
    }
 
+   public boolean getIsHorizontal() {
+      return this.horizontal;
+   }
+
    @Override
    protected void simulateInteractWithBlock(
       @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock

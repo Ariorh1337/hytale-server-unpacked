@@ -2,6 +2,7 @@ package org.bson.codecs;
 
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
+import org.bson.internal.NumberCodecHelper;
 
 public class LongCodec implements Codec<Long> {
    public void encode(BsonWriter writer, Long value, EncoderContext encoderContext) {

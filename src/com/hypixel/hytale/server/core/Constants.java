@@ -34,6 +34,7 @@ import com.hypixel.hytale.server.core.modules.splitvelocity.SplitVelocity;
 import com.hypixel.hytale.server.core.modules.time.TimeModule;
 import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
+import com.hypixel.hytale.server.core.telemetry.TelemetryModule;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksModule;
 import com.hypixel.hytale.server.core.update.UpdateModule;
@@ -87,6 +88,7 @@ public final class Constants {
       AccessControlModule.MANIFEST,
       SingleplayerModule.MANIFEST,
       Universe.MANIFEST,
+      TelemetryModule.MANIFEST,
       ConnectedBlocksModule.MANIFEST
    };
 

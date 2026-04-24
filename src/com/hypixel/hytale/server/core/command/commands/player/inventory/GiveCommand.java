@@ -34,6 +34,7 @@ public class GiveCommand extends AbstractPlayerCommand {
    public GiveCommand() {
       super("give", "server.commands.give.desc");
       this.requirePermission(HytalePermissions.fromCommand("give.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new GiveCommand.GiveOtherCommand());
       this.addSubCommand(new GiveArmorCommand());
    }
@@ -91,6 +92,7 @@ public class GiveCommand extends AbstractPlayerCommand {
       GiveOtherCommand() {
          super("server.commands.give.other.desc");
          this.requirePermission(HytalePermissions.fromCommand("give.other"));
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

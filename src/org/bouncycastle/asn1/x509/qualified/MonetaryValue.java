@@ -31,8 +31,8 @@ public class MonetaryValue extends ASN1Object {
 
    public MonetaryValue(Iso4217CurrencyCode var1, int var2, int var3) {
       this.currency = var1;
-      this.amount = new ASN1Integer(var2);
-      this.exponent = new ASN1Integer(var3);
+      this.amount = ASN1Integer.valueOf(var2);
+      this.exponent = ASN1Integer.valueOf(var3);
    }
 
    public Iso4217CurrencyCode getCurrency() {

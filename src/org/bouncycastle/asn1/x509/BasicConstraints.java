@@ -66,7 +66,7 @@ public class BasicConstraints extends ASN1Object {
 
    public BasicConstraints(int var1) {
       this.cA = ASN1Boolean.getInstance(true);
-      this.pathLenConstraint = new ASN1Integer(var1);
+      this.pathLenConstraint = ASN1Integer.valueOf(var1);
    }
 
    public boolean isCA() {

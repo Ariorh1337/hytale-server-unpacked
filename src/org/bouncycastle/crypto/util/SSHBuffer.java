@@ -8,7 +8,7 @@ class SSHBuffer {
    private final byte[] buffer;
    private int pos = 0;
 
-   public SSHBuffer(byte[] var1, byte[] var2) {
+   SSHBuffer(byte[] var1, byte[] var2) {
       this.buffer = var2;
 
       for (int var3 = 0; var3 != var1.length; var3++) {
@@ -20,32 +20,31 @@ class SSHBuffer {
       this.pos += var1.length;
    }
 
-   public SSHBuffer(byte[] var1) {
+   SSHBuffer(byte[] var1) {
       this.buffer = var1;
    }
 
-   public int readU32() {
+   int readU32() {
       if (this.pos > this.buffer.length - 4) {
          throw new IllegalArgumentException("4 bytes for U32 exceeds buffer.");
       }
 
-      int var1 = (this.buffer[this.pos++] & 255) << 24;
-      var1 |= (this.buffer[this.pos++] & 255) << 16;
-      var1 |= (this.buffer[this.pos++] & 255) << 8;
-      return var1 | this.buffer[this.pos++] & 0xFF;
+      int var1 = org.bouncycastle.util.Pack.bigEndianToInt(this.buffer, this.pos);
+      this.pos += 4;
+      return var1;
    }
 
-   public String readString() {
+   String readString() {
       return Strings.fromByteArray(this.readBlock());
    }
 
-   public byte[] readBlock() {
+   byte[] readBlock() {
       int var1 = this.readU32();
       if (var1 == 0) {
          return new byte[0];
       }
 
-      if (this.pos > this.buffer.length - var1) {
+      if (var1 > this.buffer.length - this.pos) {
          throw new IllegalArgumentException("not enough data for block");
       }
 
@@ -54,26 +53,26 @@ class SSHBuffer {
       return Arrays.copyOfRange(this.buffer, var2, this.pos);
    }
 
-   public void skipBlock() {
+   void skipBlock() {
       int var1 = this.readU32();
-      if (this.pos > this.buffer.length - var1) {
+      if (var1 > this.buffer.length - this.pos) {
          throw new IllegalArgumentException("not enough data for block");
       }
 
       this.pos += var1;
    }
 
-   public byte[] readPaddedBlock() {
+   byte[] readPaddedBlock() {
       return this.readPaddedBlock(8);
    }
 
-   public byte[] readPaddedBlock(int var1) {
+   byte[] readPaddedBlock(int var1) {
       int var2 = this.readU32();
       if (var2 == 0) {
          return new byte[0];
       }
 
-      if (this.pos > this.buffer.length - var2) {
+      if (var2 > this.buffer.length - this.pos) {
          throw new IllegalArgumentException("not enough data for block");
       }
 
@@ -105,9 +104,9 @@ class SSHBuffer {
       return Arrays.copyOfRange(this.buffer, var4, var5);
    }
 
-   public BigInteger readBigNumPositive() {
+   BigInteger readBigNumPositive() {
       int var1 = this.readU32();
-      if (this.pos + var1 > this.buffer.length) {
+      if (var1 > this.buffer.length - this.pos) {
          throw new IllegalArgumentException("not enough data for big num");
       }
 
@@ -117,11 +116,11 @@ class SSHBuffer {
       return new BigInteger(1, var3);
    }
 
-   public byte[] getBuffer() {
+   byte[] getBuffer() {
       return Arrays.clone(this.buffer);
    }
 
-   public boolean hasRemaining() {
+   boolean hasRemaining() {
       return this.pos < this.buffer.length;
    }
 }

@@ -236,16 +236,20 @@ public class JcaContentVerifierProviderBuilder {
          try {
             ASN1Sequence var2 = ASN1Sequence.getInstance(var1);
             boolean var3 = false;
+            boolean var4 = false;
 
-            for (int var4 = 0; var4 != var2.size(); var4++) {
-               if (this.sigs[var4] != null && !this.sigs[var4].verify(ASN1BitString.getInstance(var2.getObjectAt(var4)).getOctets())) {
-                  var3 = true;
+            for (int var5 = 0; var5 != var2.size(); var5++) {
+               if (this.sigs[var5] != null) {
+                  var4 = true;
+                  if (!this.sigs[var5].verify(ASN1BitString.getInstance(var2.getObjectAt(var5)).getOctets())) {
+                     var3 = true;
+                  }
                }
             }
 
-            return !var3;
-         } catch (SignatureException var5) {
-            throw new RuntimeOperatorException("exception obtaining signature: " + var5.getMessage(), var5);
+            return !var3 & var4;
+         } catch (SignatureException var6) {
+            throw new RuntimeOperatorException("exception obtaining signature: " + var6.getMessage(), var6);
          }
       }
    }

@@ -3,7 +3,6 @@ package org.bouncycastle.asn1.cmc;
 import java.io.IOException;
 import java.math.BigInteger;
 import org.bouncycastle.asn1.ASN1BitString;
-import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Object;
@@ -17,7 +16,6 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 public class CertificationRequest extends ASN1Object {
-   private static final ASN1Integer ZERO = new ASN1Integer(0L);
    private final CertificationRequest.CertificationRequestInfo certificationRequestInfo;
    private final AlgorithmIdentifier signatureAlgorithm;
    private final ASN1BitString signature;
@@ -114,9 +112,9 @@ public class CertificationRequest extends ASN1Object {
       }
 
       private CertificationRequestInfo(X500Name var1, AlgorithmIdentifier var2, ASN1BitString var3, ASN1Set var4) {
-         this.version = CertificationRequest.ZERO;
+         this.version = ASN1Integer.ZERO;
          this.subject = var1;
-         this.subjectPublicKeyInfo = new DERSequence(new ASN1Encodable[]{var2, var3});
+         this.subjectPublicKeyInfo = new DERSequence(var2, var3);
          this.attributes = var4;
       }
 

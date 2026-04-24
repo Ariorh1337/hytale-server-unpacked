@@ -33,6 +33,8 @@ public class PositionsPinchDensity extends Density {
    private final ReusableList<Double> rWeights;
    @Nonnull
    private final Density.Context rChildContext;
+   @Nonnull
+   private final PositionProvider.Context rPositionsContext;
 
    public PositionsPinchDensity(
       @Nullable Density input, @Nullable PositionProvider positions, @Nonnull Double2DoubleFunction pinchCurve, double maxDistance, boolean distanceNormalized
@@ -54,6 +56,7 @@ public class PositionsPinchDensity extends Density {
       this.rWarpDistances = new ReusableList<>();
       this.rWeights = new ReusableList<>();
       this.rChildContext = new Density.Context();
+      this.rPositionsContext = new PositionProvider.Context();
    }
 
    private void pipe(@Nonnull Vector3d p, @Nonnull Control control) {
@@ -98,11 +101,10 @@ public class PositionsPinchDensity extends Density {
       this.rSamplePoint.set(context.position);
       this.rWarpVectors.clear();
       this.rWarpDistances.clear();
-      PositionProvider.Context positionsContext = new PositionProvider.Context();
-      positionsContext.bounds.min.set(this.rMin);
-      positionsContext.bounds.max.set(this.rMax);
-      positionsContext.pipe = this::pipe;
-      this.positions.generate(positionsContext);
+      this.rPositionsContext.bounds.min.set(this.rMin);
+      this.rPositionsContext.bounds.max.set(this.rMax);
+      this.rPositionsContext.pipe = this::pipe;
+      this.positions.generate(this.rPositionsContext);
       if (this.rWarpVectors.getSoftSize() == 0) {
          return this.input.process(context);
       }

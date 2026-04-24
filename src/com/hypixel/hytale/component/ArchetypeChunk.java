@@ -13,7 +13,7 @@ public class ArchetypeChunk<ECS_TYPE> {
    @Nonnull
    private static final ArchetypeChunk[] EMPTY_ARRAY = new ArchetypeChunk[0];
    @Nonnull
-   protected final Store<ECS_TYPE> store;
+   protected final ComponentRegistry<ECS_TYPE> componentRegistry;
    @Nonnull
    protected final Archetype<ECS_TYPE> archetype;
    protected int entitiesSize;
@@ -28,7 +28,7 @@ public class ArchetypeChunk<ECS_TYPE> {
    }
 
    public ArchetypeChunk(@Nonnull Store<ECS_TYPE> store, @Nonnull Archetype<ECS_TYPE> archetype) {
-      this.store = store;
+      this.componentRegistry = store.getRegistry();
       this.archetype = archetype;
       this.components = new Component[archetype.length()][];
 
@@ -59,7 +59,7 @@ public class ArchetypeChunk<ECS_TYPE> {
    }
 
    public <T extends Component<ECS_TYPE>> void setComponent(int index, @Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {
-      componentType.validateRegistry(this.store.getRegistry());
+      componentType.validateRegistry(this.componentRegistry);
       if (index < 0 || index >= this.entitiesSize) {
          throw new IndexOutOfBoundsException(index);
       }
@@ -73,7 +73,12 @@ public class ArchetypeChunk<ECS_TYPE> {
 
    @Nullable
    public <T extends Component<ECS_TYPE>> T getComponent(int index, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
-      componentType.validateRegistry(this.store.getRegistry());
+      componentType.validateRegistry(this.componentRegistry);
+      return this.__internal_getComponent(index, componentType);
+   }
+
+   @Nullable
+   protected <T extends Component<ECS_TYPE>> T __internal_getComponent(int index, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
       if (index < 0 || index >= this.entitiesSize) {
          throw new IndexOutOfBoundsException(index);
       } else {
@@ -117,6 +122,99 @@ public class ArchetypeChunk<ECS_TYPE> {
 
          return entityIndex;
       }
+   }
+
+   public void addEntityFrom(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ArchetypeChunk<ECS_TYPE> source, int sourceIndex) {
+      this.__internal_addEntity(ref, source, sourceIndex, -1, null);
+   }
+
+   public void addEntityFrom(
+      @Nonnull Ref<ECS_TYPE> ref,
+      @Nonnull ArchetypeChunk<ECS_TYPE> source,
+      int sourceIndex,
+      @Nonnull ComponentType<ECS_TYPE, ?> addedType,
+      @Nonnull Component<ECS_TYPE> addedComponent
+   ) {
+      this.__internal_addEntity(ref, source, sourceIndex, addedType.getIndex(), addedComponent);
+   }
+
+   private void __internal_addEntity(
+      @Nonnull Ref<ECS_TYPE> ref, @Nonnull ArchetypeChunk<ECS_TYPE> source, int sourceIndex, int overrideIndex, @Nullable Component<ECS_TYPE> overrideComponent
+   ) {
+      int entityIndex = this.entitiesSize++;
+      int sourceLastIndex = source.entitiesSize - 1;
+      if (this.refs.length <= entityIndex) {
+         int newLength = ArrayUtil.grow(entityIndex);
+         this.refs = Arrays.copyOf(this.refs, newLength);
+
+         for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
+            if (this.archetype.get(i) != null) {
+               Component<ECS_TYPE>[] grown = Arrays.copyOf(this.components[i], newLength);
+               grown[entityIndex] = i == overrideIndex ? overrideComponent : source.components[i][sourceIndex];
+               this.components[i] = grown;
+            }
+         }
+
+         if (sourceIndex != sourceLastIndex) {
+            for (int i = source.archetype.getMinIndex(); i < source.archetype.length(); i++) {
+               if (source.archetype.get(i) != null) {
+                  Component<ECS_TYPE>[] col = source.components[i];
+                  col[sourceIndex] = col[sourceLastIndex];
+                  col[sourceLastIndex] = null;
+               }
+            }
+         } else {
+            for (int i = source.archetype.getMinIndex(); i < source.archetype.length(); i++) {
+               if (source.archetype.get(i) != null) {
+                  source.components[i][sourceLastIndex] = null;
+               }
+            }
+         }
+      } else {
+         if (sourceIndex != sourceLastIndex) {
+            for (int i = source.archetype.getMinIndex(); i < source.archetype.length(); i++) {
+               if (source.archetype.get(i) != null) {
+                  Component<ECS_TYPE>[] col = source.components[i];
+                  if (i < this.components.length && this.components[i] != null) {
+                     this.components[i][entityIndex] = col[sourceIndex];
+                  }
+
+                  col[sourceIndex] = col[sourceLastIndex];
+                  col[sourceLastIndex] = null;
+               }
+            }
+         } else {
+            for (int i = source.archetype.getMinIndex(); i < source.archetype.length(); i++) {
+               if (source.archetype.get(i) != null) {
+                  Component<ECS_TYPE>[] col = source.components[i];
+                  if (i < this.components.length && this.components[i] != null) {
+                     this.components[i][entityIndex] = col[sourceIndex];
+                  }
+
+                  col[sourceIndex] = null;
+               }
+            }
+         }
+
+         if (overrideIndex >= 0) {
+            this.components[overrideIndex][entityIndex] = overrideComponent;
+         }
+      }
+
+      this.refs[entityIndex] = ref;
+      ref.setArchetypeChunk(this);
+      ref.setChunkEntityIndex(entityIndex);
+      if (sourceIndex != sourceLastIndex) {
+         Ref<ECS_TYPE> movedRef = source.refs[sourceLastIndex];
+         if (movedRef.isValid()) {
+            movedRef.setChunkEntityIndex(sourceIndex);
+         }
+
+         source.refs[sourceIndex] = movedRef;
+      }
+
+      source.refs[sourceLastIndex] = null;
+      source.entitiesSize = sourceLastIndex;
    }
 
    @Nonnull
@@ -172,7 +270,10 @@ public class ArchetypeChunk<ECS_TYPE> {
       Component<ECS_TYPE>[] entityComponents = target.ensureComponentsSize(this.archetype.length());
       if (entityIndex != lastIndex) {
          Ref<ECS_TYPE> ref = this.refs[lastIndex];
-         this.store.setEntityChunkIndex(ref, entityIndex);
+         if (ref.isValid()) {
+            ref.setChunkEntityIndex(entityIndex);
+         }
+
          this.refs[entityIndex] = ref;
 
          for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
@@ -227,7 +328,7 @@ public class ArchetypeChunk<ECS_TYPE> {
             }
          }
 
-         tempInternalEntityHolder._internal_init(this.archetype, entityComponents, this.store.getRegistry().getUnknownComponentType());
+         tempInternalEntityHolder._internal_init(this.archetype, entityComponents, this.componentRegistry.getUnknownComponentType());
          modification.accept(tempInternalEntityHolder);
          int newEntityIndex = chunk.addEntity(ref, tempInternalEntityHolder);
          referenceConsumer.accept(newEntityIndex, ref);
@@ -305,7 +406,9 @@ public class ArchetypeChunk<ECS_TYPE> {
 
    protected void fillEmptyIndex(int entityIndex, int lastIndex) {
       Ref<ECS_TYPE> ref = this.refs[lastIndex];
-      this.store.setEntityChunkIndex(ref, entityIndex);
+      if (ref.isValid()) {
+         ref.setChunkEntityIndex(entityIndex);
+      }
 
       for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
          ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>> componentType = (ComponentType<ECS_TYPE, ? extends Component<ECS_TYPE>>)this.archetype.get(i);

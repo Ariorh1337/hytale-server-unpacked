@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mlkem;
 
 import org.bouncycastle.crypto.EncapsulatedSecretExtractor;
 
+@Deprecated
 public class MLKEMExtractor implements EncapsulatedSecretExtractor {
    private final MLKEMPrivateKeyParameters privateKey;
    private final MLKEMEngine engine;
@@ -17,11 +18,15 @@ public class MLKEMExtractor implements EncapsulatedSecretExtractor {
 
    @Override
    public byte[] extractSecret(byte[] var1) {
-      return this.engine.kemDecrypt(this.privateKey, var1);
+      if (var1.length != this.getEncapsulationLength()) {
+         throw new IllegalArgumentException("encapsulation wrong length");
+      } else {
+         return this.engine.kemDecrypt(this.privateKey, var1);
+      }
    }
 
    @Override
    public int getEncapsulationLength() {
-      return this.engine.getCryptoCipherTextBytes();
+      return this.engine.getCipherTextBytes();
    }
 }

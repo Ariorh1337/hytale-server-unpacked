@@ -55,18 +55,22 @@ public abstract class TickingThread implements Runnable {
 
          while (this.thread != null && !this.thread.isInterrupted()) {
             long delta;
-            if (!this.isIdle()) {
+            if (this.isIdle()) {
+               long now = System.nanoTime();
+               delta = now - beforeTick;
+               beforeTick = now;
+            } else {
                while ((delta = System.nanoTime() - beforeTick) < this.tickStepNanos) {
                   Thread.onSpinWait();
                }
-            } else {
-               delta = System.nanoTime() - beforeTick;
+
+               beforeTick = System.nanoTime();
             }
 
-            beforeTick = System.nanoTime();
             this.tick((float)delta / 1.0E9F);
-            long tickLength = System.nanoTime() - beforeTick;
-            this.bufferedTickLengthMetricSet.add(System.nanoTime(), tickLength);
+            long afterTick = System.nanoTime();
+            long tickLength = afterTick - beforeTick;
+            this.bufferedTickLengthMetricSet.add(afterTick, tickLength);
             long sleepLength = this.tickStepNanos - tickLength;
             if (!this.isIdle()) {
                sleepLength -= SLEEP_OFFSET;

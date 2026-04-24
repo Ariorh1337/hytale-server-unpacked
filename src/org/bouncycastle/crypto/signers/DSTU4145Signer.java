@@ -27,17 +27,18 @@ public class DSTU4145Signer implements DSAExt {
    @Override
    public void init(boolean var1, CipherParameters var2) {
       if (var1) {
+         SecureRandom var3 = null;
          if (var2 instanceof ParametersWithRandom) {
-            ParametersWithRandom var3 = (ParametersWithRandom)var2;
-            this.random = var3.getRandom();
-            var2 = var3.getParameters();
-         } else {
-            this.random = CryptoServicesRegistrar.getSecureRandom();
+            ParametersWithRandom var4 = (ParametersWithRandom)var2;
+            var3 = var4.getRandom();
+            var2 = var4.getParameters();
          }
 
          this.key = (ECPrivateKeyParameters)var2;
+         this.random = CryptoServicesRegistrar.getSecureRandom(var3);
       } else {
          this.key = (ECPublicKeyParameters)var2;
+         this.random = null;
       }
 
       CryptoServicesRegistrar.checkConstraints(Utils.getDefaultProperties("DSTU4145", this.key, var1));
@@ -62,7 +63,7 @@ public class DSTU4145Signer implements DSAExt {
       ECMultiplier var12 = this.createBasePointMultiplier();
 
       while (true) {
-         BigInteger var6 = generateRandomInteger(var5, this.random);
+         BigInteger var6 = BigIntegers.createRandomInRange(BigInteger.ONE, var5.subtract(BigInteger.ONE), this.random);
          ECFieldElement var9 = var12.multiply(var2.getG(), var6).normalize().getAffineXCoord();
          if (!var9.isZero()) {
             ECFieldElement var10 = var4.multiply(var9);
@@ -106,10 +107,6 @@ public class DSTU4145Signer implements DSAExt {
 
    protected ECMultiplier createBasePointMultiplier() {
       return new FixedPointCombMultiplier();
-   }
-
-   private static BigInteger generateRandomInteger(BigInteger var0, SecureRandom var1) {
-      return BigIntegers.createRandomBigInteger(var0.bitLength() - 1, var1);
    }
 
    private static ECFieldElement hash2FieldElement(ECCurve var0, byte[] var1) {

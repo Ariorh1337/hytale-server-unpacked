@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -30,7 +29,7 @@ public class ShiftCommand extends AbstractPlayerCommand {
 
    public ShiftCommand() {
       super("shift", "server.commands.shift.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

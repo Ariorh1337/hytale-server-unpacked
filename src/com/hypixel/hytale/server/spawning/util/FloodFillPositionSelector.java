@@ -3,11 +3,11 @@ package com.hypixel.hytale.server.spawning.util;
 import com.hypixel.fastutil.longs.Long2ObjectConcurrentHashMap;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.accessor.LocalCachedChunkAccessor;
@@ -15,7 +15,9 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.spawning.ISpawnable;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
@@ -139,11 +141,35 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
       return !this.positionsByRole.get(roleIndex).isEmpty();
    }
 
+   public boolean hasValidMovementModeWeights(int roleIndex, @Nonnull SpawningContext spawningContext) {
+      ISpawnable spawnableForMode = (ISpawnable)NPCPlugin.get().tryGetCachedValidRole(roleIndex);
+      return spawnableForMode == null
+         ? true
+         : this.spawnWrapper.getRoles().get(roleIndex).getOrComputeMovementModeWeights(spawnableForMode, spawningContext) != null;
+   }
+
    public boolean prepareSpawnContext(
       @Nonnull Vector3d playerPosition, int spawnsThisRound, int roleIndex, @Nonnull SpawningContext spawningContext, @Nonnull BeaconSpawnWrapper spawnWrapper
    ) {
       ObjectArrayList<FloodFillPositionSelector.WeightedPosition> positions = this.positionsByRole.get(roleIndex);
-      if (this.positionsByRole.isEmpty()) {
+      if (positions.isEmpty()) {
+         return false;
+      }
+
+      RoleSpawnParameters roleParams = spawnWrapper.getRoles().get(roleIndex);
+      ISpawnable spawnableForMode = (ISpawnable)NPCPlugin.get().tryGetCachedValidRole(roleIndex);
+      if (spawnableForMode == null) {
+         return false;
+      }
+
+      double[] modeWeights = roleParams.getOrComputeMovementModeWeights(spawnableForMode, spawningContext);
+      if (modeWeights == null) {
+         return false;
+      }
+
+      int selectedModeIndex = RandomExtra.pickWeightedIndex(modeWeights);
+      int modeBit = 1 << selectedModeIndex;
+      if (!spawningContext.setMovementMode(MovementMode.values()[selectedModeIndex], spawnWrapper.getEnableSafeSpawning(roleIndex))) {
          return false;
       }
 
@@ -152,10 +178,14 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
 
       for (int i = 0; i < positions.size(); i++) {
          FloodFillPositionSelector.WeightedPosition entry = positions.get(i);
-         double distance = playerPosition.distanceSquared(entry.position.x, entry.position.y, entry.position.z);
-         entry.weight = distance < minDistanceFromPlayerSquared
-            ? 0.0
-            : Math.max(0.0, targetDistanceFromPlayerSquared - Math.abs(distance - targetDistanceFromPlayerSquared));
+         if ((entry.validMovementModesMask & modeBit) == 0) {
+            entry.weight = 0.0;
+         } else {
+            double distance = playerPosition.distanceSquared(entry.position.x, entry.position.y, entry.position.z);
+            entry.weight = distance < minDistanceFromPlayerSquared
+               ? 0.0
+               : Math.max(0.0, targetDistanceFromPlayerSquared - Math.abs(distance - targetDistanceFromPlayerSquared));
+         }
       }
 
       int targetNumberOfOptions = spawnsThisRound * 3;
@@ -405,77 +435,84 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
             && spawnable.isSpawnable()
             && spawnable instanceof ISpawnableWithModel
             && this.spawningContext.setSpawnable((ISpawnableWithModel)spawnable, true)) {
-            ObjectArrayList<FloodFillPositionSelector.WeightedPosition> positionList = this.positionsByRole.get(roleIndex);
+            RoleSpawnParameters roleParams = this.spawnWrapper.getRoles().get(roleIndex);
+            double[] modeWeights = roleParams.getOrComputeMovementModeWeights((ISpawnable)spawnable, this.spawningContext);
+            if (modeWeights != null) {
+               boolean enableSafeSpawning = this.spawnWrapper.getEnableSafeSpawning(roleIndex);
+               ObjectArrayList<FloodFillPositionSelector.WeightedPosition> positionList = this.positionsByRole.get(roleIndex);
 
-            for (int i = lowestResolutionMap.nextSetBit(0); i >= 0; i = lowestResolutionMap.nextSetBit(i + 1)) {
-               int chosenIndex = i;
+               for (int i = lowestResolutionMap.nextSetBit(0); i >= 0; i = lowestResolutionMap.nextSetBit(i + 1)) {
+                  int chosenIndex = i;
 
-               for (int currentResolution = resolution; currentResolution > 1; currentResolution /= 2) {
-                  int nextResolution = currentResolution / 2;
-                  chosenIndex = this.pickOpenSegment(
-                     chosenIndex, this.size / currentResolution, this.resolutionMaps.get(nextResolution), this.size / nextResolution
-                  );
-               }
-
-               int x = offsetOriginX + xFromIndex(chosenIndex, this.size);
-               int y = this.heightGrid[chosenIndex];
-               int z = offsetOriginZ + zFromIndex(chosenIndex, this.size);
-               long newChunkIndex = ChunkUtil.indexChunk(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(z));
-               if (chunkIndex != newChunkIndex) {
-                  suppressionEntry = chunkSuppressionMap.get(newChunkIndex);
-                  chunkIndex = newChunkIndex;
-               }
-
-               if (!this.canSpawn(x, y, z, roleIndex, suppressionEntry)) {
-                  if (this.debug != FloodFillPositionSelector.Debug.DISABLED) {
-                     this.failedPositionTestIndexes.add(chosenIndex);
+                  for (int currentResolution = resolution; currentResolution > 1; currentResolution /= 2) {
+                     int nextResolution = currentResolution / 2;
+                     chosenIndex = this.pickOpenSegment(
+                        chosenIndex, this.size / currentResolution, this.resolutionMaps.get(nextResolution), this.size / nextResolution
+                     );
                   }
 
-                  int originalIndex = chosenIndex;
-                  chosenIndex = this.shiftIndexAwayFromWall(chosenIndex);
-                  if (chosenIndex == originalIndex) {
-                     continue;
-                  }
-
-                  x = offsetOriginX + xFromIndex(chosenIndex, this.size);
-                  y = this.heightGrid[chosenIndex];
-                  z = offsetOriginZ + zFromIndex(chosenIndex, this.size);
-                  newChunkIndex = ChunkUtil.indexChunk(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(z));
+                  int x = offsetOriginX + xFromIndex(chosenIndex, this.size);
+                  int y = this.heightGrid[chosenIndex];
+                  int z = offsetOriginZ + zFromIndex(chosenIndex, this.size);
+                  long newChunkIndex = ChunkUtil.indexChunk(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(z));
                   if (chunkIndex != newChunkIndex) {
                      suppressionEntry = chunkSuppressionMap.get(newChunkIndex);
                      chunkIndex = newChunkIndex;
                   }
 
-                  if (!this.canSpawn(x, y, z, roleIndex, suppressionEntry)) {
+                  int validModes = this.getValidMovementModesMask(x, y, z, roleIndex, suppressionEntry, modeWeights, enableSafeSpawning);
+                  if (validModes == 0) {
                      if (this.debug != FloodFillPositionSelector.Debug.DISABLED) {
                         this.failedPositionTestIndexes.add(chosenIndex);
                      }
-                     continue;
+
+                     int originalIndex = chosenIndex;
+                     chosenIndex = this.shiftIndexAwayFromWall(chosenIndex);
+                     if (chosenIndex == originalIndex) {
+                        continue;
+                     }
+
+                     x = offsetOriginX + xFromIndex(chosenIndex, this.size);
+                     y = this.heightGrid[chosenIndex];
+                     z = offsetOriginZ + zFromIndex(chosenIndex, this.size);
+                     newChunkIndex = ChunkUtil.indexChunk(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(z));
+                     if (chunkIndex != newChunkIndex) {
+                        suppressionEntry = chunkSuppressionMap.get(newChunkIndex);
+                        chunkIndex = newChunkIndex;
+                     }
+
+                     validModes = this.getValidMovementModesMask(x, y, z, roleIndex, suppressionEntry, modeWeights, enableSafeSpawning);
+                     if (validModes == 0) {
+                        if (this.debug != FloodFillPositionSelector.Debug.DISABLED) {
+                           this.failedPositionTestIndexes.add(chosenIndex);
+                        }
+                        continue;
+                     }
+                  }
+
+                  if (this.positionIndexes.add(chosenIndex)) {
+                     positionList.add(new FloodFillPositionSelector.WeightedPosition(x, y, z, validModes));
+                  }
+
+                  if (i == Integer.MAX_VALUE) {
+                     break;
                   }
                }
 
-               if (this.positionIndexes.add(chosenIndex)) {
-                  positionList.add(new FloodFillPositionSelector.WeightedPosition(x, y, z));
+               int positionCount = this.positionIndexes.size();
+               if (this.debug != FloodFillPositionSelector.Debug.DISABLED
+                  && (positionCount < this.desiredPositionCount * 0.3 || positionCount > this.desiredPositionCount * 5.0)) {
+                  this.irregularCase = true;
                }
 
-               if (i == Integer.MAX_VALUE) {
-                  break;
+               if (this.irregularCase || this.debug == FloodFillPositionSelector.Debug.ALL) {
+                  SpawningPlugin.get().getLogger().at(Level.WARNING).log("Role: " + NPCPlugin.get().getName(roleIndex));
+                  SpawningPlugin.get().getLogger().at(Level.WARNING).log(this.debugDumpBaseFloodFill());
+                  this.failedPositionTestIndexes.clear();
                }
-            }
 
-            int positionCount = this.positionIndexes.size();
-            if (this.debug != FloodFillPositionSelector.Debug.DISABLED
-               && (positionCount < this.desiredPositionCount * 0.3 || positionCount > this.desiredPositionCount * 5.0)) {
-               this.irregularCase = true;
+               this.positionIndexes.clear();
             }
-
-            if (this.irregularCase || this.debug == FloodFillPositionSelector.Debug.ALL) {
-               SpawningPlugin.get().getLogger().at(Level.WARNING).log("Role: " + NPCPlugin.get().getName(roleIndex));
-               SpawningPlugin.get().getLogger().at(Level.WARNING).log(this.debugDumpBaseFloodFill());
-               this.failedPositionTestIndexes.clear();
-            }
-
-            this.positionIndexes.clear();
          }
       }
    }
@@ -554,26 +591,43 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
       return this.fullResolutionMap.get(newIndex) ? newIndex : index;
    }
 
-   private boolean canSpawn(int x, int y, int z, int roleIndex, @Nullable ChunkSuppressionEntry suppressionEntry) {
+   private int getValidMovementModesMask(
+      int x, int y, int z, int roleIndex, @Nullable ChunkSuppressionEntry suppressionEntry, double[] modeWeights, boolean enableSafeSpawning
+   ) {
       if (!this.spawnWrapper.getSpawn().isOverrideSpawnSuppressors() && suppressionEntry != null && suppressionEntry.isSuppressingRoleAt(roleIndex, y)) {
-         return false;
-      } else if (!this.spawningContext.set(this.world, x, y, z)
-         || this.spawningContext.canSpawn() != SpawnTestResult.TEST_OK
-         || !this.spawnWrapper.withinLightRange(this.spawningContext)) {
-         return false;
-      } else if (this.spawningContext.ySpawn > this.maxY) {
-         return false;
-      } else {
-         IntSet spawnBlockSet = this.spawnWrapper.getSpawnBlockSet(roleIndex);
-         int spawnFluidTag = this.spawnWrapper.getSpawnFluidTag(roleIndex);
-         if (spawnBlockSet == null && spawnFluidTag == Integer.MIN_VALUE) {
-            return true;
-         } else {
-            return spawnBlockSet != null && spawnBlockSet.contains(this.spawningContext.groundBlockId)
-               ? true
-               : spawnFluidTag != Integer.MIN_VALUE && Fluid.getAssetMap().getIndexesForTag(spawnFluidTag).contains(this.spawningContext.groundFluidId);
+         return 0;
+      }
+
+      if (!this.spawningContext.set(this.world, x, y, z)) {
+         return 0;
+      }
+
+      if (!this.spawnWrapper.withinLightRange(this.spawningContext)) {
+         return 0;
+      }
+
+      IntSet spawnBlockSet = this.spawnWrapper.getSpawnBlockSet(roleIndex);
+      int spawnFluidTag = this.spawnWrapper.getSpawnFluidTag(roleIndex);
+      if (!this.spawningContext.canSpawnOnBlock(spawnBlockSet, spawnFluidTag)) {
+         return 0;
+      }
+
+      int validModes = 0;
+      MovementMode[] allModes = MovementMode.values();
+
+      for (int i = 0; i < modeWeights.length; i++) {
+         if (modeWeights[i] != 0.0) {
+            this.spawningContext.invalidMaterials = -1;
+            if (this.spawningContext.setMovementMode(allModes[i], enableSafeSpawning)) {
+               SpawnTestResult result = this.spawningContext.canSpawn();
+               if (result == SpawnTestResult.TEST_OK && this.spawningContext.ySpawn <= this.maxY) {
+                  validModes |= 1 << i;
+               }
+            }
          }
       }
+
+      return validModes;
    }
 
    @Nonnull
@@ -675,9 +729,11 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
       @Nonnull
       private final Vector3i position;
       private double weight;
+      private final int validMovementModesMask;
 
-      private WeightedPosition(int x, int y, int z) {
+      private WeightedPosition(int x, int y, int z, int validMovementModesMask) {
          this.position = new Vector3i(x, y, z);
+         this.validMovementModesMask = validMovementModesMask;
       }
 
       public double getWeight() {

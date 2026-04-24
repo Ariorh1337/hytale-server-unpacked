@@ -1,9 +1,8 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.palette;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
+import java.lang.foreign.MemorySegment;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nonnull;
@@ -120,42 +119,55 @@ public class ShortBytePalette {
       }
    }
 
-   public void serialize(@Nonnull ByteBuf dos) {
+   public int byteSize() {
       this.keysLock.lock();
 
       try {
-         dos.writeShortLE(this.count);
-
-         for (int i = 0; i < this.count; i++) {
-            dos.writeShortLE(this.keys[i]);
-         }
-
-         byte[] bytes = this.array.get();
-         dos.writeIntLE(bytes.length);
-         dos.writeBytes(bytes);
+         return this.internalByteSize();
       } finally {
          this.keysLock.unlock();
       }
    }
 
-   public void deserialize(@Nonnull ByteBuf buf) {
+   private int internalByteSize() {
+      return (int)(
+         MemorySegmentUtil.SHORT_LE.byteSize()
+            + MemorySegmentUtil.SHORT_LE.byteSize() * this.count
+            + MemorySegmentUtil.INT_LE.byteSize()
+            + this.array.getByteLength()
+      );
+   }
+
+   public void serialize(@Nonnull MemorySegment memorySegment, int offset) {
       this.keysLock.lock();
 
       try {
-         this.count = buf.readShortLE();
+         memorySegment.set(MemorySegmentUtil.SHORT_LE, offset, this.count);
+         MemorySegment.copy(this.keys, 0, memorySegment, MemorySegmentUtil.SHORT_LE, offset + MemorySegmentUtil.SHORT_LE.byteSize(), this.count);
+         offset += (int)(MemorySegmentUtil.SHORT_LE.byteSize() + this.count * MemorySegmentUtil.SHORT_LE.byteSize());
+         memorySegment.set(MemorySegmentUtil.INT_LE, offset, this.array.getByteLength());
+         this.array.copyTo(memorySegment, offset + MemorySegmentUtil.INT_LE.byteSize());
+      } finally {
+         this.keysLock.unlock();
+      }
+   }
+
+   public int deserialize(@Nonnull MemorySegment memorySegment, int offset) {
+      this.keysLock.lock();
+
+      try {
+         this.count = memorySegment.get(MemorySegmentUtil.SHORT_LE, offset);
          this.keys = new short[this.count];
-
-         for (int i = 0; i < this.count; i++) {
-            this.keys[i] = buf.readShortLE();
-         }
-
-         int length = buf.readIntLE();
-         byte[] bytes = new byte[length];
-         buf.readBytes(bytes);
-         this.array.set(bytes);
+         MemorySegment.copy(memorySegment, MemorySegmentUtil.SHORT_LE, offset + MemorySegmentUtil.SHORT_LE.byteSize(), this.keys, 0, this.count);
+         offset += (int)(MemorySegmentUtil.SHORT_LE.byteSize() + this.count * MemorySegmentUtil.SHORT_LE.byteSize());
+         int length = memorySegment.get(MemorySegmentUtil.INT_LE, offset);
+         this.array.copyFrom(memorySegment, offset + MemorySegmentUtil.INT_LE.byteSize(), length);
          if (this.count == 0) {
             this.count = 1;
             this.keys = new short[]{0};
+            return (int)(MemorySegmentUtil.SHORT_LE.byteSize() + MemorySegmentUtil.INT_LE.byteSize());
+         } else {
+            return this.internalByteSize();
          }
       } finally {
          this.keysLock.unlock();
@@ -163,9 +175,10 @@ public class ShortBytePalette {
    }
 
    public byte[] serialize() {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
-      this.serialize(buf);
-      return ByteBufUtil.getBytesRelease(buf);
+      byte[] result = new byte[this.byteSize()];
+      MemorySegment mem = MemorySegment.ofArray(result);
+      this.serialize(mem, 0);
+      return result;
    }
 
    public void copyFrom(@Nonnull ShortBytePalette other) {

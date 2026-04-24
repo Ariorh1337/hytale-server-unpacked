@@ -51,7 +51,7 @@ public class PKCS10CertificationRequest extends CertificationRequest {
 
    private static RSASSAPSSparams creatPSSParams(AlgorithmIdentifier var0, int var1) {
       return new RSASSAPSSparams(
-         var0, new AlgorithmIdentifier(PKCSObjectIdentifiers.id_mgf1, var0), new ASN1Integer(var1), RSASSAPSSparams.DEFAULT_TRAILER_FIELD
+         var0, new AlgorithmIdentifier(PKCSObjectIdentifiers.id_mgf1, var0), ASN1Integer.valueOf(var1), RSASSAPSSparams.DEFAULT_TRAILER_FIELD
       );
    }
 
@@ -96,9 +96,8 @@ public class PKCS10CertificationRequest extends CertificationRequest {
       String var7 = Strings.toUpperCase(var1);
       ASN1ObjectIdentifier var8 = (ASN1ObjectIdentifier)algorithms.get(var7);
       if (var8 == null) {
-         try {
-            var8 = new ASN1ObjectIdentifier(var7);
-         } catch (Exception var13) {
+         var8 = ASN1ObjectIdentifier.tryFromID(var7);
+         if (var8 == null) {
             throw new IllegalArgumentException("Unknown signature type requested");
          }
       }
@@ -126,22 +125,22 @@ public class PKCS10CertificationRequest extends CertificationRequest {
          throw new IllegalArgumentException("can't encode public key");
       }
 
-      Signature var14;
+      Signature var13;
       if (var6 == null) {
-         var14 = Signature.getInstance(var1);
+         var13 = Signature.getInstance(var1);
       } else {
-         var14 = Signature.getInstance(var1, var6);
+         var13 = Signature.getInstance(var1, var6);
       }
 
-      var14.initSign(var5);
+      var13.initSign(var5);
 
       try {
-         var14.update(this.reqInfo.getEncoded("DER"));
+         var13.update(this.reqInfo.getEncoded("DER"));
       } catch (Exception var11) {
          throw new IllegalArgumentException("exception encoding TBS cert request - " + var11);
       }
 
-      this.sigBits = new DERBitString(var14.sign());
+      this.sigBits = new DERBitString(var13.sign());
    }
 
    public PublicKey getPublicKey() throws NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException {

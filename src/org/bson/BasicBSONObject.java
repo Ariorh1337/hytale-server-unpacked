@@ -41,7 +41,7 @@ public class BasicBSONObject extends LinkedHashMap<String, Object> implements BS
 
    @Override
    public boolean containsField(String field) {
-      return super.containsKey(field);
+      return this.containsKey(field);
    }
 
    @Override

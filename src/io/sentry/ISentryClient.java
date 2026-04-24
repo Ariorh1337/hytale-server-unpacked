@@ -130,8 +130,13 @@ public interface ISentryClient {
 
    void captureLog(@NotNull SentryLogEvent var1, @Nullable IScope var2);
 
+   void captureMetric(@NotNull SentryMetricsEvent var1, @Nullable IScope var2, @Nullable Hint var3);
+
    @Internal
    void captureBatchedLogEvents(@NotNull SentryLogEvents var1);
+
+   @Internal
+   void captureBatchedMetricsEvents(@NotNull SentryMetricsEvents var1);
 
    @Internal
    @Nullable

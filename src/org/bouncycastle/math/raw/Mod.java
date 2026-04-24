@@ -29,7 +29,7 @@ public abstract class Mod {
 
    public static int modOddInverse(int[] var0, int[] var1, int[] var2) {
       int var3 = var0.length;
-      int var4 = (var3 << 5) - Integers.numberOfLeadingZeros(var0[var3 - 1]);
+      int var4 = var3 * 32 - Integers.numberOfLeadingZeros(var0[var3 - 1]);
       int var5 = (var4 + 29) / 30;
       int[] var6 = new int[4];
       int[] var7 = new int[var5];
@@ -60,7 +60,7 @@ public abstract class Mod {
 
    public static boolean modOddInverseVar(int[] var0, int[] var1, int[] var2) {
       int var3 = var0.length;
-      int var4 = (var3 << 5) - Integers.numberOfLeadingZeros(var0[var3 - 1]);
+      int var4 = var3 * 32 - Integers.numberOfLeadingZeros(var0[var3 - 1]);
       int var5 = (var4 + 29) / 30;
       int var6 = var4 - Nat.getBitLength(var3, var1);
       int[] var7 = new int[4];
@@ -117,7 +117,7 @@ public abstract class Mod {
 
    public static int modOddIsCoprime(int[] var0, int[] var1) {
       int var2 = var0.length;
-      int var3 = (var2 << 5) - Integers.numberOfLeadingZeros(var0[var2 - 1]);
+      int var3 = var2 * 32 - Integers.numberOfLeadingZeros(var0[var2 - 1]);
       int var4 = (var3 + 29) / 30;
       int[] var5 = new int[4];
       int[] var6 = new int[var4];
@@ -141,7 +141,7 @@ public abstract class Mod {
 
    public static boolean modOddIsCoprimeVar(int[] var0, int[] var1) {
       int var2 = var0.length;
-      int var3 = (var2 << 5) - Integers.numberOfLeadingZeros(var0[var2 - 1]);
+      int var3 = var2 * 32 - Integers.numberOfLeadingZeros(var0[var2 - 1]);
       int var4 = (var3 + 29) / 30;
       int var5 = var3 - Nat.getBitLength(var2, var1);
       int[] var6 = new int[4];
@@ -355,8 +355,7 @@ public abstract class Mod {
          var3 |= var1[var4];
       }
 
-      var3 = var3 >>> 1 | var3 & 1;
-      return var3 - 1 >> 31;
+      return Nat.czero(var3);
    }
 
    private static boolean equalToVar(int var0, int[] var1, int var2) {

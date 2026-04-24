@@ -47,14 +47,11 @@ public class PendingStreamHandler extends ChannelInboundHandlerAdapter {
                LOGGER.at(Level.INFO).log("Unsupported stream type %s from %s", type.name(), this.packetHandler.getIdentifier());
                ctx.writeAndFlush(new StreamOpenResponse(type, false, "Stream type not supported")).addListener(future -> ctx.close());
             } else {
-               Channel existingChannel = this.packetHandler.getChannel(type);
-               if (existingChannel != null) {
+               if (this.packetHandler.getChannel(type) instanceof NettyUtil.NettyChannelConnection(Channel ch)) {
                   LOGGER.at(Level.INFO)
-                     .log(
-                        "Replacing stale %s stream for %s (old channel active=%s)", type.name(), this.packetHandler.getIdentifier(), existingChannel.isActive()
-                     );
+                     .log("Replacing stale %s stream for %s (old channel active=%s)", type.name(), this.packetHandler.getIdentifier(), ch.isActive());
                   this.packetHandler.setChannel(type, null);
-                  existingChannel.close();
+                  ch.close();
                }
 
                if (this.packetHandler.getAuxiliaryChannelCount() >= 4) {
@@ -69,7 +66,7 @@ public class PendingStreamHandler extends ChannelInboundHandlerAdapter {
                      LOGGER.at(Level.INFO).log("Opening %s stream for %s", type.name(), this.packetHandler.getIdentifier());
                      ctx.pipeline().replace(this, type.name() + "Handler", handler);
                      ctx.pipeline().remove("aux_read_timeout");
-                     this.packetHandler.setChannel(type, ctx.channel());
+                     this.packetHandler.setChannel(type, new NettyUtil.NettyChannelConnection(ctx.channel()));
                      if (ctx.channel() instanceof QuicStreamChannel quicStreamChannel) {
                         quicStreamChannel.updatePriority(this.streamManager.getStreamPriority(type));
                      }

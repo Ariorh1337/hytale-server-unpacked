@@ -73,7 +73,7 @@ public class NTRULPRimeKEMExtractor implements EncapsulatedSecretExtractor {
       System.arraycopy(var12, 0, var37, 0, var12.length);
       System.arraycopy(var14, 0, var37, var12.length, var14.length);
       System.arraycopy(var36, 0, var37, var12.length + var14.length, var36.length / 2);
-      int var38 = Arrays.areEqual(var1, var37) ? 0 : -1;
+      int var38 = Arrays.constantTimeAreEqual(var1, var37) ? 0 : -1;
       Utils.updateDiffMask(var18, this.privateKey.getRho(), var38);
       byte[] var39 = new byte[var18.length + var37.length];
       System.arraycopy(var18, 0, var39, 0, var18.length);

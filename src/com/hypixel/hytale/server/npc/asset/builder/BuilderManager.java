@@ -213,12 +213,12 @@ public class BuilderManager {
 
    public void unloadBuilders(AssetPack pack) {
       Path path = pack.getRoot().resolve(NPCPlugin.ROLE_ASSETS_PATH);
-      AssetMonitor assetMonitor = AssetModule.get().getAssetMonitor();
-      if (assetMonitor != null) {
-         assetMonitor.removeMonitorDirectoryFiles(path, pack);
-      }
-
       if (Files.isDirectory(path)) {
+         AssetMonitor assetMonitor = AssetModule.get().getAssetMonitor();
+         if (assetMonitor != null) {
+            assetMonitor.removeMonitorDirectoryFiles(path, pack);
+         }
+
          try {
             Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
                @Nonnull

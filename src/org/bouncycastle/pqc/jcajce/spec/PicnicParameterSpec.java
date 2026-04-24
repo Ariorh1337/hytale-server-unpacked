@@ -3,7 +3,7 @@ package org.bouncycastle.pqc.jcajce.spec;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.HashMap;
 import java.util.Map;
-import org.bouncycastle.pqc.crypto.picnic.PicnicParameters;
+import org.bouncycastle.pqc.legacy.picnic.PicnicParameters;
 import org.bouncycastle.util.Strings;
 
 public class PicnicParameterSpec implements AlgorithmParameterSpec {

@@ -3,12 +3,18 @@ package org.bson.codecs.pojo;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
+import org.bson.BsonDocument;
+import org.bson.BsonDocumentReader;
+import org.bson.BsonDocumentWrapper;
 import org.bson.BsonInvalidOperationException;
 import org.bson.BsonReader;
 import org.bson.BsonReaderMark;
 import org.bson.BsonType;
+import org.bson.BsonValue;
 import org.bson.BsonWriter;
+import org.bson.codecs.BsonValueCodec;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
@@ -19,11 +25,11 @@ import org.bson.diagnostics.Loggers;
 
 final class PojoCodecImpl<T> extends PojoCodec<T> {
    private static final Logger LOGGER = Loggers.getLogger("PojoCodec");
+   private static final Codec<BsonValue> BSON_VALUE_CODEC = new BsonValueCodec();
    private final ClassModel<T> classModel;
    private final CodecRegistry registry;
    private final PropertyCodecRegistry propertyCodecRegistry;
    private final DiscriminatorLookup discriminatorLookup;
-   private final boolean specialized;
 
    PojoCodecImpl(
       ClassModel<T> classModel, CodecRegistry codecRegistry, List<PropertyCodecProvider> propertyCodecProviders, DiscriminatorLookup discriminatorLookup
@@ -32,45 +38,26 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
       this.registry = codecRegistry;
       this.discriminatorLookup = discriminatorLookup;
       this.propertyCodecRegistry = new PropertyCodecRegistryImpl(this, this.registry, propertyCodecProviders);
-      this.specialized = shouldSpecialize(classModel);
       this.specialize();
    }
 
-   PojoCodecImpl(
-      ClassModel<T> classModel,
-      CodecRegistry codecRegistry,
-      PropertyCodecRegistry propertyCodecRegistry,
-      DiscriminatorLookup discriminatorLookup,
-      boolean specialized
-   ) {
+   PojoCodecImpl(ClassModel<T> classModel, CodecRegistry codecRegistry, PropertyCodecRegistry propertyCodecRegistry, DiscriminatorLookup discriminatorLookup) {
       this.classModel = classModel;
       this.registry = codecRegistry;
       this.discriminatorLookup = discriminatorLookup;
       this.propertyCodecRegistry = propertyCodecRegistry;
-      this.specialized = specialized;
       this.specialize();
    }
 
    @Override
    public void encode(BsonWriter writer, T value, EncoderContext encoderContext) {
-      if (!this.specialized) {
-         throw new CodecConfigurationException(
-            String.format(
-               "%s contains generic types that have not been specialised.%nTop level classes with generic types are not supported by the PojoCodec.",
-               this.classModel.getName()
-            )
-         );
-      }
-
       if (this.areEquivalentTypes(value.getClass(), this.classModel.getType())) {
          writer.writeStartDocument();
          this.encodeIdProperty(writer, value, encoderContext, this.classModel.getIdPropertyModelHolder());
-         if (this.classModel.useDiscriminator()) {
-            writer.writeString(this.classModel.getDiscriminatorKey(), this.classModel.getDiscriminator());
-         }
+         this.encodeDiscriminatorProperty(writer);
 
          for (PropertyModel<?> propertyModel : this.classModel.getPropertyModels()) {
-            if (!propertyModel.equals(this.classModel.getIdPropertyModel())) {
+            if (!this.idProperty(propertyModel)) {
                this.encodeProperty(writer, value, encoderContext, propertyModel);
             }
          }
@@ -84,21 +71,18 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
    @Override
    public T decode(BsonReader reader, DecoderContext decoderContext) {
       if (decoderContext.hasCheckedDiscriminator()) {
-         if (!this.specialized) {
-            throw new CodecConfigurationException(
-               String.format(
-                  "%s contains generic types that have not been specialised.%nTop level classes with generic types are not supported by the PojoCodec.",
-                  this.classModel.getName()
-               )
-            );
-         }
-
          InstanceCreator<T> instanceCreator = this.classModel.getInstanceCreator();
          this.decodeProperties(reader, decoderContext, instanceCreator);
          return instanceCreator.getInstance();
       } else {
-         return this.getCodecFromDocument(
-               reader, this.classModel.useDiscriminator(), this.classModel.getDiscriminatorKey(), this.registry, this.discriminatorLookup, this
+         return getCodecFromDocument(
+               reader,
+               this.classModel.useDiscriminator(),
+               this.classModel.getDiscriminatorKey(),
+               this.registry,
+               this.discriminatorLookup,
+               this,
+               this.classModel.getName()
             )
             .decode(reader, DecoderContext.builder().checkedDiscriminator(true).build());
       }
@@ -139,6 +123,16 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
       }
    }
 
+   private boolean idProperty(PropertyModel<?> propertyModel) {
+      return propertyModel.equals(this.classModel.getIdPropertyModel());
+   }
+
+   private void encodeDiscriminatorProperty(BsonWriter writer) {
+      if (this.classModel.useDiscriminator()) {
+         writer.writeString(this.classModel.getDiscriminatorKey(), this.classModel.getDiscriminator());
+      }
+   }
+
    private <S> void encodeProperty(BsonWriter writer, T instance, EncoderContext encoderContext, PropertyModel<S> propertyModel) {
       if (propertyModel != null && propertyModel.isReadable()) {
          S propertyValue = propertyModel.getPropertyAccessor().get(instance);
@@ -148,23 +142,39 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
 
    private <S> void encodeValue(BsonWriter writer, EncoderContext encoderContext, PropertyModel<S> propertyModel, S propertyValue) {
       if (propertyModel.shouldSerialize(propertyValue)) {
-         writer.writeName(propertyModel.getReadName());
-         if (propertyValue == null) {
-            writer.writeNull();
-         } else {
-            try {
-               encoderContext.encodeWithChildContext(propertyModel.getCachedCodec(), writer, propertyValue);
-            } catch (CodecConfigurationException e) {
-               throw new CodecConfigurationException(
-                  String.format("Failed to encode '%s'. Encoding '%s' errored with: %s", this.classModel.getName(), propertyModel.getReadName(), e.getMessage()),
-                  e
-               );
+         try {
+            if (propertyModel.getPropertySerialization().inline()) {
+               if (propertyValue != null) {
+                  new BsonDocumentWrapper<>(propertyValue, propertyModel.getCachedCodec()).forEach((k, v) -> {
+                     writer.writeName(k);
+                     encoderContext.encodeWithChildContext(this.registry.get((Class<T>)v.getClass()), writer, (T)v);
+                  });
+               }
+            } else {
+               writer.writeName(propertyModel.getReadName());
+               if (propertyValue == null) {
+                  writer.writeNull();
+               } else {
+                  encoderContext.encodeWithChildContext(propertyModel.getCachedCodec(), writer, propertyValue);
+               }
             }
+         } catch (CodecConfigurationException e) {
+            throw new CodecConfigurationException(
+               String.format("Failed to encode '%s'. Encoding '%s' errored with: %s", this.classModel.getName(), propertyModel.getReadName(), e.getMessage()),
+               e
+            );
          }
       }
    }
 
    private void decodeProperties(BsonReader reader, DecoderContext decoderContext, InstanceCreator<T> instanceCreator) {
+      PropertyModel<?> inlineElementsPropertyModel = this.classModel
+         .getPropertyModels()
+         .stream()
+         .filter(p -> p.getPropertySerialization().inline())
+         .findFirst()
+         .orElse(null);
+      BsonDocument extraElements = inlineElementsPropertyModel == null ? null : new BsonDocument();
       reader.readStartDocument();
 
       while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
@@ -172,18 +182,24 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
          if (this.classModel.useDiscriminator() && this.classModel.getDiscriminatorKey().equals(name)) {
             reader.readString();
          } else {
-            this.decodePropertyModel(reader, decoderContext, instanceCreator, name, this.getPropertyModelByWriteName(this.classModel, name));
+            this.decodePropertyModel(reader, decoderContext, instanceCreator, name, this.getPropertyModelByWriteName(this.classModel, name), extraElements);
          }
       }
 
       reader.readEndDocument();
+      this.setPropertyValueBsonExtraElements(instanceCreator, extraElements, inlineElementsPropertyModel);
    }
 
    private <S> void decodePropertyModel(
-      BsonReader reader, DecoderContext decoderContext, InstanceCreator<T> instanceCreator, String name, PropertyModel<S> propertyModel
+      BsonReader reader,
+      DecoderContext decoderContext,
+      InstanceCreator<T> instanceCreator,
+      String name,
+      PropertyModel<S> propertyModel,
+      @Nullable BsonDocument extraElements
    ) {
       if (propertyModel != null) {
-         try {
+         this.setPropertyValue(instanceCreator, () -> {
             S value = null;
             if (reader.getCurrentBsonType() == BsonType.NULL) {
                reader.readNull();
@@ -196,34 +212,56 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
                value = decoderContext.decodeWithChildContext(codec, reader);
             }
 
-            if (propertyModel.isWritable()) {
-               instanceCreator.set(value, propertyModel);
-            }
-         } catch (BsonInvalidOperationException | CodecConfigurationException e) {
-            throw new CodecConfigurationException(
-               String.format("Failed to decode '%s'. Decoding '%s' errored with: %s", this.classModel.getName(), name, e.getMessage()), e
-            );
-         }
-      } else {
+            return value;
+         }, propertyModel);
+      } else if (extraElements == null) {
          if (LOGGER.isTraceEnabled()) {
             LOGGER.trace(String.format("Found property not present in the ClassModel: %s", name));
          }
 
          reader.skipValue();
+      } else {
+         try {
+            extraElements.append(name, decoderContext.decodeWithChildContext(BSON_VALUE_CODEC, reader));
+         } catch (CodecConfigurationException e) {
+            throw new CodecConfigurationException(
+               String.format("Failed to decode '%s'. Decoding '%s' errored with: %s", this.classModel.getName(), name, e.getMessage()), e
+            );
+         }
+      }
+   }
+
+   private <S> void setPropertyValue(InstanceCreator<T> instanceCreator, Supplier<S> valueSupplier, PropertyModel<S> propertyModel) {
+      try {
+         instanceCreator.set(valueSupplier.get(), propertyModel);
+      } catch (BsonInvalidOperationException | CodecConfigurationException e) {
+         throw new CodecConfigurationException(
+            String.format("Failed to decode '%s'. Decoding '%s' errored with: %s", this.classModel.getName(), propertyModel.getName(), e.getMessage()), e
+         );
+      }
+   }
+
+   private <S> void setPropertyValueBsonExtraElements(
+      InstanceCreator<T> instanceCreator, @Nullable BsonDocument extraElements, PropertyModel<S> inlineElementsPropertyModel
+   ) {
+      if (extraElements != null && !extraElements.isEmpty() && inlineElementsPropertyModel != null && inlineElementsPropertyModel.isWritable()) {
+         this.setPropertyValue(
+            instanceCreator,
+            () -> inlineElementsPropertyModel.getCachedCodec().decode(new BsonDocumentReader(extraElements), DecoderContext.builder().build()),
+            inlineElementsPropertyModel
+         );
       }
    }
 
    private void specialize() {
-      if (this.specialized) {
-         this.classModel.getPropertyModels().forEach(this::cachePropertyModelCodec);
-      }
+      this.classModel.getPropertyModels().forEach(this::cachePropertyModelCodec);
    }
 
    private <S> void cachePropertyModelCodec(PropertyModel<S> propertyModel) {
       if (propertyModel.getCachedCodec() == null) {
          Codec<S> codec = propertyModel.getCodec() != null
             ? propertyModel.getCodec()
-            : new LazyPropertyModelCodec<>(propertyModel, this.registry, this.propertyCodecRegistry, this.discriminatorLookup);
+            : new LazyPropertyModelCodec<>(propertyModel, this.registry, this.propertyCodecRegistry);
          propertyModel.cachedCodec(codec);
       }
    }
@@ -238,15 +276,17 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
       }
    }
 
-   private Codec<T> getCodecFromDocument(
+   @Nullable
+   static <C> Codec<C> getCodecFromDocument(
       BsonReader reader,
       boolean useDiscriminator,
       String discriminatorKey,
       CodecRegistry registry,
       DiscriminatorLookup discriminatorLookup,
-      Codec<T> defaultCodec
+      @Nullable Codec<C> defaultCodec,
+      String simpleClassName
    ) {
-      Codec<T> codec = defaultCodec;
+      Codec<C> codec = defaultCodec;
       if (useDiscriminator) {
          BsonReaderMark mark = reader.getMark();
          reader.readStartDocument();
@@ -259,13 +299,11 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
 
                try {
                   Class<?> discriminatorClass = discriminatorLookup.lookup(reader.readString());
-                  if (!codec.getEncoderClass().equals(discriminatorClass)) {
-                     codec = registry.get((Class<T>)discriminatorClass);
+                  if (codec == null || !codec.getEncoderClass().equals(discriminatorClass)) {
+                     codec = (Codec<C>)registry.get(discriminatorClass);
                   }
                } catch (Exception e) {
-                  throw new CodecConfigurationException(
-                     String.format("Failed to decode '%s'. Decoding errored with: %s", this.classModel.getName(), e.getMessage()), e
-                  );
+                  throw new CodecConfigurationException(String.format("Failed to decode '%s'. Decoding errored with: %s", simpleClassName, e.getMessage()), e);
                }
             } else {
                reader.skipValue();
@@ -286,22 +324,6 @@ final class PojoCodecImpl<T> extends PojoCodec<T> {
       }
 
       return null;
-   }
-
-   private static <T> boolean shouldSpecialize(ClassModel<T> classModel) {
-      if (!classModel.hasTypeParameters()) {
-         return true;
-      }
-
-      for (Entry<String, TypeParameterMap> entry : classModel.getPropertyNameToTypeParameterMap().entrySet()) {
-         TypeParameterMap typeParameterMap = entry.getValue();
-         PropertyModel<?> propertyModel = classModel.getPropertyModel(entry.getKey());
-         if (typeParameterMap.hasTypeParameters() && (propertyModel == null || propertyModel.getCodec() == null)) {
-            return false;
-         }
-      }
-
-      return true;
    }
 
    @Override

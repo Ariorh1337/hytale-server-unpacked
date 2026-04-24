@@ -10,6 +10,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
@@ -27,6 +28,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -35,7 +37,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.metadata.CapturedNPCMetadata;
+import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.storage.AlarmStore;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -43,6 +47,7 @@ import org.joml.Vector3i;
 import org.joml.Vector3ic;
 
 public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<UseCaptureCrateInteraction> CODEC = BuilderCodec.builder(
          UseCaptureCrateInteraction.class, UseCaptureCrateInteraction::new, SimpleInteraction.CODEC
@@ -127,6 +132,15 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                            if (!tagFound) {
                               context.getState().state = InteractionState.Failed;
                               super.tick0(firstRun, time, type, context, cooldownHandler);
+                           } else if (!InteractionValidation.canPlayerInteractWithEntity(ref, commandBuffer, context.getHeldItem(), targetEntity)) {
+                              LOGGER.at(Level.WARNING)
+                                 .log(
+                                    "Entity %d failed capture crate interaction distance check for target entity %d",
+                                    (int)ref.getIndex(),
+                                    (int)targetEntity.getIndex()
+                                 );
+                              context.getState().state = InteractionState.Failed;
+                              super.tick0(firstRun, time, type, context, cooldownHandler);
                            } else {
                               PersistentModel persistentModelComponent = commandBuffer.getComponent(targetEntity, PersistentModel.getComponentType());
                               if (persistentModelComponent == null) {
@@ -144,14 +158,26 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                                     itemMetaData.setNpcNameKey(npcName);
                                  }
 
-                                 if (this.fullIcon != null) {
-                                    itemMetaData.setFullItemIcon(this.fullIcon);
-                                 }
+                                 Role role = npcComponent.getRole();
+                                 if (role != null) {
+                                    String appearanceName = role.getAppearanceName();
+                                    ModelAsset appearance = ModelAsset.getAssetMap().getAsset(appearanceName);
+                                    if (appearance == null) {
+                                       itemMetaData.setFullItemIcon(this.fullIcon);
+                                    } else {
+                                       String npcIcon = appearance.getIcon();
+                                       if (npcIcon != null) {
+                                          itemMetaData.setFullItemIcon(npcIcon);
+                                       } else {
+                                          itemMetaData.setFullItemIcon(this.fullIcon);
+                                       }
+                                    }
 
-                                 itemMetaData.setAlarmStore(npcComponent.getAlarmStore());
-                                 ItemStack itemWithNPC = inHandItemStack.withMetadata(CapturedNPCMetadata.KEYED_CODEC, itemMetaData);
-                                 hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
-                                 commandBuffer.removeEntity(targetEntity, RemoveReason.REMOVE);
+                                    itemMetaData.setAlarmStore(npcComponent.getAlarmStore());
+                                    ItemStack itemWithNPC = inHandItemStack.withMetadata(CapturedNPCMetadata.KEYED_CODEC, itemMetaData);
+                                    hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
+                                    commandBuffer.removeEntity(targetEntity, RemoveReason.REMOVE);
+                                 }
                               }
                            }
                         }

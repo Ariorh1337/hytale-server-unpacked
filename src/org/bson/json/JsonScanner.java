@@ -137,14 +137,12 @@ class JsonScanner {
                throw new JsonParseException("Invalid JSON regular expression. Position: %d.", this.buffer.getPosition());
          }
 
-         switch (state) {
-            case IN_OPTIONS:
-               if (c != 47) {
-                  optionsBuilder.append((char)c);
-               }
-               break;
-            default:
-               patternBuilder.append((char)c);
+         if (state == JsonScanner.RegularExpressionState.IN_OPTIONS) {
+            if (c != 47) {
+               optionsBuilder.append((char)c);
+            }
+         } else {
+            patternBuilder.append((char)c);
          }
       }
    }
@@ -388,58 +386,57 @@ class JsonScanner {
       int c;
       do {
          c = this.buffer.read();
-         switch (c) {
-            case 92:
-               c = this.buffer.read();
-               switch (c) {
-                  case 34:
-                     sb.append('"');
-                     continue;
-                  case 39:
-                     sb.append('\'');
-                     continue;
-                  case 47:
-                     sb.append('/');
-                     continue;
-                  case 92:
-                     sb.append('\\');
-                     continue;
-                  case 98:
-                     sb.append('\b');
-                     continue;
-                  case 102:
-                     sb.append('\f');
-                     continue;
-                  case 110:
-                     sb.append('\n');
-                     continue;
-                  case 114:
-                     sb.append('\r');
-                     continue;
-                  case 116:
-                     sb.append('\t');
-                     continue;
-                  case 117:
-                     int u1 = this.buffer.read();
-                     int u2 = this.buffer.read();
-                     int u3 = this.buffer.read();
-                     int u4 = this.buffer.read();
-                     if (u4 != -1) {
-                        String hex = new String(new char[]{(char)u1, (char)u2, (char)u3, (char)u4});
-                        sb.append((char)Integer.parseInt(hex, 16));
-                     }
-                     continue;
-                  default:
-                     throw new JsonParseException("Invalid escape sequence in JSON string '\\%c'.", c);
-               }
-            default:
-               if (c == quoteCharacter) {
-                  return new JsonToken(JsonTokenType.STRING, sb.toString());
-               }
+         if (c == 92) {
+            c = this.buffer.read();
+            switch (c) {
+               case 34:
+                  sb.append('"');
+                  break;
+               case 39:
+                  sb.append('\'');
+                  break;
+               case 47:
+                  sb.append('/');
+                  break;
+               case 92:
+                  sb.append('\\');
+                  break;
+               case 98:
+                  sb.append('\b');
+                  break;
+               case 102:
+                  sb.append('\f');
+                  break;
+               case 110:
+                  sb.append('\n');
+                  break;
+               case 114:
+                  sb.append('\r');
+                  break;
+               case 116:
+                  sb.append('\t');
+                  break;
+               case 117:
+                  int u1 = this.buffer.read();
+                  int u2 = this.buffer.read();
+                  int u3 = this.buffer.read();
+                  int u4 = this.buffer.read();
+                  if (u4 != -1) {
+                     String hex = new String(new char[]{(char)u1, (char)u2, (char)u3, (char)u4});
+                     sb.append((char)Integer.parseInt(hex, 16));
+                  }
+                  break;
+               default:
+                  throw new JsonParseException("Invalid escape sequence in JSON string '\\%c'.", c);
+            }
+         } else {
+            if (c == quoteCharacter) {
+               return new JsonToken(JsonTokenType.STRING, sb.toString());
+            }
 
-               if (c != -1) {
-                  sb.append((char)c);
-               }
+            if (c != -1) {
+               sb.append((char)c);
+            }
          }
       } while (c != -1);
 

@@ -106,10 +106,8 @@ public final class XMSSPrivateKeyParameters extends XMSSKeyParameters implements
          BDS var20 = var1.bdsState;
          if (var20 != null) {
             this.bdsState = var20;
-         } else if (var1.index < (1 << this.params.getHeight()) - 2 && var18 != null && var16 != null) {
-            this.bdsState = new BDS(this.params, var18, var16, (OTSHashAddress)new OTSHashAddress.Builder().build(), var1.index);
          } else {
-            this.bdsState = new BDS(this.params, (1 << this.params.getHeight()) - 1, var1.index);
+            this.bdsState = new BDS(this.params, var18, var16, (OTSHashAddress)new OTSHashAddress.Builder().build(), var1.index);
          }
 
          if (var1.maxIndex >= 0 && var1.maxIndex != this.bdsState.getMaxIndex()) {
@@ -299,7 +297,11 @@ public final class XMSSPrivateKeyParameters extends XMSSKeyParameters implements
       }
 
       public XMSSPrivateKeyParameters build() {
-         return new XMSSPrivateKeyParameters(this);
+         if (this.privateKey != null || this.publicSeed != null && this.secretKeySeed != null) {
+            return new XMSSPrivateKeyParameters(this);
+         } else {
+            throw new IllegalStateException("publicSeed or secretKeySeed is null");
+         }
       }
    }
 }

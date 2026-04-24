@@ -17,6 +17,8 @@ public class ActionState extends ActionBase {
    protected final int state;
    protected final int subState;
    protected final boolean clearOnce;
+   protected final boolean clearHeadMotion;
+   protected final boolean clearBodyMotion;
    protected final boolean componentLocal;
    protected final int componentIndex;
 
@@ -25,6 +27,8 @@ public class ActionState extends ActionBase {
       this.state = builderActionState.getStateIndex();
       this.subState = builderActionState.getSubStateIndex();
       this.clearOnce = builderActionState.isClearState();
+      this.clearHeadMotion = builderActionState.isClearHeadMotion();
+      this.clearBodyMotion = builderActionState.isClearBodyMotion();
       this.componentLocal = builderActionState.isComponentLocal();
       this.componentIndex = support.getComponentIndex();
    }
@@ -39,6 +43,8 @@ public class ActionState extends ActionBase {
 
       StateEvaluator stateEvaluatorComponent = store.getComponent(ref, StateEvaluator.getComponentType());
       if (stateEvaluatorComponent == null || !stateEvaluatorComponent.isActive()) {
+         role.getStateSupport().setClearHeadMotion(this.clearHeadMotion);
+         role.getStateSupport().setClearBodyMotion(this.clearBodyMotion);
          role.getStateSupport().setState(this.state, this.subState, this.clearOnce, false);
       }
 

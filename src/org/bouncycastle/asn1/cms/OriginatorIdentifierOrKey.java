@@ -79,25 +79,13 @@ public class OriginatorIdentifierOrKey extends ASN1Object implements ASN1Choice 
    }
 
    public SubjectKeyIdentifier getSubjectKeyIdentifier() {
-      if (this.id instanceof ASN1TaggedObject) {
-         ASN1TaggedObject var1 = (ASN1TaggedObject)this.id;
-         if (var1.hasContextTag(0)) {
-            return SubjectKeyIdentifier.getInstance(var1, false);
-         }
-      }
-
-      return null;
+      ASN1TaggedObject var1 = ASN1TaggedObject.getContextOptional(this.id, 0);
+      return var1 == null ? null : SubjectKeyIdentifier.getInstance(var1, false);
    }
 
    public OriginatorPublicKey getOriginatorKey() {
-      if (this.id instanceof ASN1TaggedObject) {
-         ASN1TaggedObject var1 = (ASN1TaggedObject)this.id;
-         if (var1.hasContextTag(1)) {
-            return OriginatorPublicKey.getInstance(var1, false);
-         }
-      }
-
-      return null;
+      ASN1TaggedObject var1 = ASN1TaggedObject.getContextOptional(this.id, 1);
+      return var1 == null ? null : OriginatorPublicKey.getInstance(var1, false);
    }
 
    @Override

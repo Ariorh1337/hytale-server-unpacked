@@ -1,6 +1,5 @@
 package org.bouncycastle.asn1.x9;
 
-import java.util.Enumeration;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1OctetString;
@@ -11,15 +10,9 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 
 public class OtherInfo extends ASN1Object {
-   private KeySpecificInfo keyInfo;
-   private ASN1OctetString partyAInfo;
-   private ASN1OctetString suppPubInfo;
-
-   public OtherInfo(KeySpecificInfo var1, ASN1OctetString var2, ASN1OctetString var3) {
-      this.keyInfo = var1;
-      this.partyAInfo = var2;
-      this.suppPubInfo = var3;
-   }
+   private final KeySpecificInfo keyInfo;
+   private final ASN1OctetString partyAInfo;
+   private final ASN1OctetString suppPubInfo;
 
    public static OtherInfo getInstance(Object var0) {
       if (var0 instanceof OtherInfo) {
@@ -29,18 +22,51 @@ public class OtherInfo extends ASN1Object {
       }
    }
 
-   private OtherInfo(ASN1Sequence var1) {
-      Enumeration var2 = var1.getObjects();
-      this.keyInfo = KeySpecificInfo.getInstance(var2.nextElement());
+   public static OtherInfo getInstance(ASN1TaggedObject var0, boolean var1) {
+      return new OtherInfo(ASN1Sequence.getInstance(var0, var1));
+   }
 
-      while (var2.hasMoreElements()) {
-         ASN1TaggedObject var3 = (ASN1TaggedObject)var2.nextElement();
-         if (var3.hasContextTag(0)) {
-            this.partyAInfo = (ASN1OctetString)var3.getExplicitBaseObject();
-         } else if (var3.hasContextTag(2)) {
-            this.suppPubInfo = (ASN1OctetString)var3.getExplicitBaseObject();
+   public static OtherInfo getTagged(ASN1TaggedObject var0, boolean var1) {
+      return new OtherInfo(ASN1Sequence.getTagged(var0, var1));
+   }
+
+   private OtherInfo(ASN1Sequence var1) {
+      int var2 = var1.size();
+      int var3 = 0;
+      if (var2 >= 2 && var2 <= 3) {
+         this.keyInfo = KeySpecificInfo.getInstance(var1.getObjectAt(var3++));
+         ASN1OctetString var4 = null;
+         if (var3 < var2) {
+            ASN1TaggedObject var5 = ASN1TaggedObject.getContextOptional(var1.getObjectAt(var3), 0);
+            if (var5 != null) {
+               var3++;
+               var4 = ASN1OctetString.getTagged(var5, true);
+            }
          }
+
+         this.partyAInfo = var4;
+         ASN1TaggedObject var8 = ASN1TaggedObject.getContextInstance(var1.getObjectAt(var3++), 2);
+         this.suppPubInfo = ASN1OctetString.getTagged(var8, true);
+         if (var3 != var2) {
+            throw new IllegalArgumentException("Unexpected elements in sequence");
+         }
+      } else {
+         throw new IllegalArgumentException("Bad sequence size: " + var2);
       }
+   }
+
+   public OtherInfo(KeySpecificInfo var1, ASN1OctetString var2, ASN1OctetString var3) {
+      if (var1 == null) {
+         throw new NullPointerException("'keyInfo' cannot be null");
+      }
+
+      if (var3 == null) {
+         throw new NullPointerException("'suppPubInfo' cannot be null");
+      }
+
+      this.keyInfo = var1;
+      this.partyAInfo = var2;
+      this.suppPubInfo = var3;
    }
 
    public KeySpecificInfo getKeyInfo() {

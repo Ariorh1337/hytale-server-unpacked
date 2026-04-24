@@ -634,7 +634,7 @@ abstract class Scalar448 {
             ScalarUtil.subShifted_UV(7, var15, var7, var8, var9, var10);
          }
 
-         if (ScalarUtil.lessThan(var12, var3, var4)) {
+         if (ScalarUtil.lessThanUnsigned(var12, var3, var4)) {
             int[] var16 = var7;
             var7 = var9;
             var9 = var16;

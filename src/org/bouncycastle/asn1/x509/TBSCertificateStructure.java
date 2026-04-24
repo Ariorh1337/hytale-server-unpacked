@@ -42,7 +42,7 @@ public class TBSCertificateStructure extends ASN1Object implements X509ObjectIde
          this.version = ASN1Integer.getInstance((ASN1TaggedObject)var1.getObjectAt(0), true);
       } else {
          var2 = -1;
-         this.version = new ASN1Integer(0L);
+         this.version = ASN1Integer.ZERO;
       }
 
       this.serialNumber = ASN1Integer.getInstance(var1.getObjectAt(var2 + 1));

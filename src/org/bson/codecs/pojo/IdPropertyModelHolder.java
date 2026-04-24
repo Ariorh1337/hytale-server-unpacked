@@ -1,5 +1,6 @@
 package org.bson.codecs.pojo;
 
+import java.util.Objects;
 import org.bson.codecs.configuration.CodecConfigurationException;
 
 final class IdPropertyModelHolder<I> {
@@ -43,15 +44,9 @@ final class IdPropertyModelHolder<I> {
    public boolean equals(Object o) {
       if (this == o) {
          return true;
-      }
-
-      if (o != null && this.getClass() == o.getClass()) {
+      } else if (o != null && this.getClass() == o.getClass()) {
          IdPropertyModelHolder<?> that = (IdPropertyModelHolder<?>)o;
-         if (this.propertyModel != null ? this.propertyModel.equals(that.propertyModel) : that.propertyModel == null) {
-            return this.idGenerator != null ? this.idGenerator.equals(that.idGenerator) : that.idGenerator == null;
-         } else {
-            return false;
-         }
+         return !Objects.equals(this.propertyModel, that.propertyModel) ? false : Objects.equals(this.idGenerator, that.idGenerator);
       } else {
          return false;
       }

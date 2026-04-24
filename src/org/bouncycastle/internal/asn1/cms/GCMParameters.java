@@ -49,7 +49,7 @@ public class GCMParameters extends ASN1Object {
       ASN1EncodableVector var1 = new ASN1EncodableVector(2);
       var1.add(new DEROctetString(this.nonce));
       if (this.icvLen != 12) {
-         var1.add(new ASN1Integer(this.icvLen));
+         var1.add(ASN1Integer.valueOf(this.icvLen));
       }
 
       return new DERSequence(var1);

@@ -26,7 +26,7 @@ public class TeleportWorldCommand extends AbstractPlayerCommand {
 
    public TeleportWorldCommand() {
       super("world", "server.commands.worldport.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.requirePermission(HytalePermissions.fromCommand("teleport.world"));
    }
 

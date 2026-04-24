@@ -73,8 +73,8 @@ public final class SentryLogEvents implements JsonUnknown, JsonSerializable {
          reader.endObject();
          if (items == null) {
             String message = "Missing required field \"items\"";
-            Exception exception = new IllegalStateException(message);
-            logger.log(SentryLevel.ERROR, message, exception);
+            Exception exception = new IllegalStateException("Missing required field \"items\"");
+            logger.log(SentryLevel.ERROR, "Missing required field \"items\"", exception);
             throw exception;
          } else {
             SentryLogEvents logEvent = new SentryLogEvents(items);

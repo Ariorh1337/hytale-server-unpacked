@@ -19,7 +19,7 @@ public class PKIArchiveOptions extends ASN1Object implements ASN1Choice {
       if (var0 == null || var0 instanceof PKIArchiveOptions) {
          return (PKIArchiveOptions)var0;
       } else if (var0 instanceof ASN1TaggedObject) {
-         return new PKIArchiveOptions(ASN1TaggedObject.getInstance(var0, 128));
+         return new PKIArchiveOptions(ASN1TaggedObject.getContextInstance(var0));
       } else {
          throw new IllegalArgumentException("unknown object: " + var0);
       }

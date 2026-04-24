@@ -1,5 +1,6 @@
 package com.hypixel.hytale.common.plugin;
 
+import com.hypixel.hytale.common.semver.SemverRange;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
 
 public interface Mod {
@@ -21,17 +22,21 @@ public interface Mod {
 
    @Nonnull
    static <T extends Mod> List<T> calculateLoadOrder(@Nonnull Map<PluginIdentifier, T> pending) throws ModLoadOrderException {
-      return calculateLoadOrder(pending, pluginIdentifier -> false);
+      return calculateLoadOrder(pending, (pluginIdentifier, range) -> false);
    }
 
    @Nonnull
-   static <T extends Mod> List<T> calculateLoadOrder(@Nonnull Map<PluginIdentifier, T> pending, @Nonnull Predicate<PluginIdentifier> externalDepsValidator) throws ModLoadOrderException {
+   static <T extends Mod> List<T> calculateLoadOrder(
+      @Nonnull Map<PluginIdentifier, T> pending, @Nonnull BiPredicate<PluginIdentifier, SemverRange> externalDepsValidator
+   ) throws ModLoadOrderException {
       return calculateLoadOrder(pending, externalDepsValidator, List.of());
    }
 
    @Nonnull
    static <T extends Mod> List<T> calculateLoadOrder(
-      @Nonnull Map<PluginIdentifier, T> pending, @Nonnull Predicate<PluginIdentifier> externalDepsValidator, @Nonnull List<PluginIdentifier> manualOrder
+      @Nonnull Map<PluginIdentifier, T> pending,
+      @Nonnull BiPredicate<PluginIdentifier, SemverRange> externalDepsValidator,
+      @Nonnull List<PluginIdentifier> manualOrder
    ) throws ModLoadOrderException {
       HashMap<PluginIdentifier, Mod.EntryNode<T>> nodes = new HashMap<>(pending.size());
 
@@ -52,10 +57,11 @@ public interface Mod {
       for (Entry<PluginIdentifier, Mod.EntryNode<T>> node : nodes.entrySet()) {
          PluginManifest manifest = node.getValue().mod.getManifest();
 
-         for (PluginIdentifier depId : manifest.getDependencies().keySet()) {
+         for (Entry<PluginIdentifier, SemverRange> dep : manifest.getDependencies().entrySet()) {
+            PluginIdentifier depId = dep.getKey();
             if (nodes.containsKey(depId)) {
                node.getValue().edges.add(depId);
-            } else if (!externalDepsValidator.test(depId)) {
+            } else if (!externalDepsValidator.test(depId, dep.getValue())) {
                missingDependencies.computeIfAbsent(node.getKey(), k -> new HashSet<>()).add(depId);
             }
          }

@@ -56,7 +56,7 @@ public class OOBCert extends CMPCertificate {
          if (var0 instanceof ASN1Sequence) {
             return new OOBCert(Certificate.getInstance(var0));
          } else if (var0 instanceof ASN1TaggedObject) {
-            ASN1TaggedObject var1 = ASN1TaggedObject.getInstance(var0, 128);
+            ASN1TaggedObject var1 = ASN1TaggedObject.getContextInstance(var0);
             return new OOBCert(var1.getTagNo(), var1.getExplicitBaseObject());
          } else {
             throw new IllegalArgumentException("Invalid object: " + var0.getClass().getName());

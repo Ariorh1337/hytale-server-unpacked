@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorInitialize;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateJsonAsset;
 import com.hypixel.hytale.server.core.io.handlers.IPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -37,19 +38,17 @@ public class AssetEditorGamePacketHandler implements SubPacketHandler {
    public void handle(AssetEditorInitialize packet) {
       PlayerRef playerRef = this.packetHandler.getPlayerRef();
       Ref<EntityStore> ref = playerRef.getReference();
-      if (ref == null || !ref.isValid()) {
-         throw new RuntimeException("Unable to process AssetEditorInitialize packet. Player ref is invalid!");
-      }
-
-      if (this.lacksPermission(playerRef, false)) {
-         this.packetHandler.getPlayerRef().getPacketHandler().write(new AssetEditorAuthorization(false));
-      } else {
-         Store<EntityStore> store = ref.getStore();
-         World world = store.getExternalData().getWorld();
-         world.execute(() -> {
-            this.packetHandler.getPlayerRef().getPacketHandler().write(new AssetEditorAuthorization(true));
-            AssetEditorPlugin.get().handleInitializeEditor(ref, store);
-         });
+      if (ref != null && ref.isValid()) {
+         if (this.lacksPermission(playerRef, false)) {
+            this.packetHandler.getPlayerRef().getPacketHandler().write(new AssetEditorAuthorization(false));
+         } else {
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData().getWorld();
+            world.execute(() -> {
+               this.packetHandler.getPlayerRef().getPacketHandler().write(new AssetEditorAuthorization(true));
+               AssetEditorPlugin.get().handleInitializeEditor(ref, store);
+            });
+         }
       }
    }
 
@@ -57,26 +56,24 @@ public class AssetEditorGamePacketHandler implements SubPacketHandler {
    public void handle(@Nonnull AssetEditorUpdateJsonAsset packet) {
       PlayerRef playerRef = this.packetHandler.getPlayerRef();
       Ref<EntityStore> ref = playerRef.getReference();
-      if (ref == null || !ref.isValid()) {
-         throw new RuntimeException("Unable to process AssetEditorUpdateJsonAsset packet. Player ref is invalid!");
-      }
-
-      if (!this.lacksPermission(playerRef, true)) {
-         CompletableFuture.runAsync(
-            () -> {
-               LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
-               EditorClient mockClient = new EditorClient(playerRef);
-               AssetEditorPlugin.get()
-                  .handleJsonAssetUpdate(
-                     mockClient, packet.path != null ? new AssetPath(packet.path) : null, packet.assetType, packet.assetIndex, packet.commands, packet.token
-                  );
-            }
-         );
+      if (ref != null && ref.isValid()) {
+         if (!this.lacksPermission(playerRef, true)) {
+            CompletableFuture.runAsync(
+               () -> {
+                  LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
+                  EditorClient mockClient = new EditorClient(playerRef);
+                  AssetEditorPlugin.get()
+                     .handleJsonAssetUpdate(
+                        mockClient, packet.path != null ? new AssetPath(packet.path) : null, packet.assetType, packet.assetIndex, packet.commands, packet.token
+                     );
+               }
+            );
+         }
       }
    }
 
    private boolean lacksPermission(@Nonnull PlayerRef playerRef, boolean shouldShowDenialMessage) {
-      if (!playerRef.hasPermission("hytale.editor.asset")) {
+      if (!playerRef.hasPermission(HytalePermissions.ASSET_EDITOR)) {
          if (shouldShowDenialMessage) {
             playerRef.sendMessage(Messages.USAGE_DENIED);
          }

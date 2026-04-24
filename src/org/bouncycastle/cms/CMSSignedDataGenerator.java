@@ -20,7 +20,7 @@ import org.bouncycastle.asn1.cms.SignerInfo;
 import org.bouncycastle.operator.DigestAlgorithmIdentifierFinder;
 
 public class CMSSignedDataGenerator extends CMSSignedGenerator {
-   private boolean isDefiniteLength = false;
+   private String encoding = "BER";
 
    public CMSSignedDataGenerator() {
    }
@@ -29,8 +29,17 @@ public class CMSSignedDataGenerator extends CMSSignedGenerator {
       super(var1);
    }
 
+   /** @deprecated */
    public void setDefiniteLengthEncoding(boolean var1) {
-      this.isDefiniteLength = var1;
+      this.setEncoding(var1 ? "DL" : "BER");
+   }
+
+   public void setEncoding(String var1) {
+      if (!"BER".equals(var1) && !"DL".equals(var1) && !"DER".equals(var1)) {
+         throw new IllegalArgumentException("encoding must be one of BER, DER, or DL");
+      }
+
+      this.encoding = var1;
    }
 
    public CMSSignedData generate(CMSTypedData var1) throws CMSException {
@@ -41,6 +50,7 @@ public class CMSSignedDataGenerator extends CMSSignedGenerator {
       LinkedHashSet var3 = new LinkedHashSet();
       ASN1EncodableVector var4 = new ASN1EncodableVector();
       this.digests.clear();
+      var3.addAll(this.extraDigestAlgorithms);
 
       for (SignerInformation var6 : this._signers) {
          CMSUtils.addDigestAlgs(var3, var6, this.digestAlgIdFinder);
@@ -53,10 +63,10 @@ public class CMSSignedDataGenerator extends CMSSignedGenerator {
          if (var2) {
             ByteArrayOutputStream var7 = new ByteArrayOutputStream();
             this.writeContentViaSignerGens(var1, var7);
-            if (this.isDefiniteLength) {
-               var13 = new DEROctetString(var7.toByteArray());
-            } else {
+            if ("BER".equals(this.encoding)) {
                var13 = new BEROctetString(var7.toByteArray());
+            } else {
+               var13 = new DEROctetString(var7.toByteArray());
             }
          } else {
             this.writeContentViaSignerGens(var1, null);
@@ -69,8 +79,8 @@ public class CMSSignedDataGenerator extends CMSSignedGenerator {
          var4.add(var9);
       }
 
-      ASN1Set var15 = createSetFromList(this.certs, this.isDefiniteLength);
-      ASN1Set var16 = createSetFromList(this.crls, this.isDefiniteLength);
+      ASN1Set var15 = createSetFromList(this.certs, this.encoding);
+      ASN1Set var16 = createSetFromList(this.crls, this.encoding);
       ContentInfo var17 = new ContentInfo(var12, var13);
       SignedData var10 = new SignedData(CMSUtils.convertToDlSet(var3), var17, var15, var16, new DERSet(var4));
       ContentInfo var11 = new ContentInfo(CMSObjectIdentifiers.signedData, var10);
@@ -119,7 +129,13 @@ public class CMSSignedDataGenerator extends CMSSignedGenerator {
       }
    }
 
-   private static ASN1Set createSetFromList(List var0, boolean var1) {
-      return var0.size() < 1 ? null : (var1 ? CMSUtils.createDlSetFromList(var0) : CMSUtils.createBerSetFromList(var0));
+   private static ASN1Set createSetFromList(List var0, String var1) {
+      return var0.size() < 1
+         ? null
+         : (
+            "DL".equals(var1)
+               ? CMSUtils.createDlSetFromList(var0)
+               : ("DER".equals(var1) ? CMSUtils.createDerSetFromList(var0) : CMSUtils.createBerSetFromList(var0))
+         );
    }
 }

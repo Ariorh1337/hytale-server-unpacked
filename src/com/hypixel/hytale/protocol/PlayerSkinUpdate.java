@@ -12,7 +12,7 @@ public class PlayerSkinUpdate extends ComponentUpdate {
    public static final int FIXED_BLOCK_SIZE = 1;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 1;
-   public static final int MAX_SIZE = 327680184;
+   public static final int MAX_SIZE = 2104;
    @Nullable
    public PlayerSkin skin;
 

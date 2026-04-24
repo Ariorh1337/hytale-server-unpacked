@@ -1,9 +1,10 @@
 package org.bson;
 
 import java.io.Closeable;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
-import java.util.Stack;
 import java.util.Map.Entry;
 import org.bson.assertions.Assertions;
 import org.bson.types.Decimal128;
@@ -11,14 +12,14 @@ import org.bson.types.ObjectId;
 
 public abstract class AbstractBsonWriter implements BsonWriter, Closeable {
    private final BsonWriterSettings settings;
-   private final Stack<FieldNameValidator> fieldNameValidatorStack = new Stack<>();
+   private final Deque<FieldNameValidator> fieldNameValidatorStack = new ArrayDeque<>();
    private AbstractBsonWriter.State state;
    private AbstractBsonWriter.Context context;
    private int serializationDepth;
    private boolean closed;
 
    protected AbstractBsonWriter(BsonWriterSettings settings) {
-      this(settings, new NoOpFieldNameValidator());
+      this(settings, NoOpFieldNameValidator.INSTANCE);
    }
 
    protected AbstractBsonWriter(BsonWriterSettings settings, FieldNameValidator validator) {
@@ -368,8 +369,9 @@ public abstract class AbstractBsonWriter implements BsonWriter, Closeable {
          this.throwInvalidState("WriteName", AbstractBsonWriter.State.NAME);
       }
 
-      if (!this.fieldNameValidatorStack.peek().validate(name)) {
-         throw new IllegalArgumentException(String.format("Invalid BSON field name %s", name));
+      FieldNameValidator fieldNameValidator = this.fieldNameValidatorStack.peek();
+      if (!fieldNameValidator.validate(name)) {
+         throw new IllegalArgumentException(fieldNameValidator.getValidationErrorMessage(name));
       }
 
       this.doWriteName(name);
@@ -511,7 +513,7 @@ public abstract class AbstractBsonWriter implements BsonWriter, Closeable {
    }
 
    protected void throwInvalidContextType(String methodName, BsonContextType actualContextType, BsonContextType... validContextTypes) {
-      String validContextTypesString = StringUtils.join(" or ", Arrays.asList(validContextTypes));
+      String validContextTypesString = StringUtils.join(" or ", validContextTypes);
       throw new BsonInvalidOperationException(
          String.format("%s can only be called when ContextType is %s, not when ContextType is %s.", methodName, validContextTypesString, actualContextType)
       );
@@ -537,11 +539,15 @@ public abstract class AbstractBsonWriter implements BsonWriter, Closeable {
 
          throw new BsonInvalidOperationException(String.format("%s %s value cannot be written to the root level of a BSON document.", article, typeName));
       } else {
-         String validStatesString = StringUtils.join(" or ", Arrays.asList(validStates));
+         String validStatesString = StringUtils.join(" or ", validStates);
          throw new BsonInvalidOperationException(
             String.format("%s can only be called when State is %s, not when State is %s", methodName, validStatesString, this.state)
          );
       }
+   }
+
+   @Override
+   public void flush() {
    }
 
    @Override

@@ -44,6 +44,7 @@
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:BlockTick": "*",
+    "Hytale:FallingBlocks": "*",
     "Hytale:BlockTypeModule": "*"
   }
 }
@@ -432,6 +433,18 @@
 }
 ,{
   "Group": "Hytale",
+  "Name": "FallingBlocks",
+  "Description": "Falling Blocks",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.fallingblocks.FallingBlocksPlugin",
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:EntityModule": "*"
+  }
+}
+,{
+  "Group": "Hytale",
   "Name": "Parkour",
   "Description": "Module to add a timer with a checkpoint system",
   "Version": "1.0.0",
@@ -563,5 +576,30 @@
   "Dependencies": {
     "Hytale:LegacyModule": "*"
   }
+}
+,{
+  "Group": "Hytale",
+  "Name": "TriggerVolumes",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.triggervolumes.TriggerVolumesPlugin",
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:I18nModule": "*",
+    "Hytale:EntityModule": "*",
+    "Hytale:BuilderTools": "*",
+    "Hytale:NPC": "*"
+  }
+}
+,{
+  "Group": "Hytale",
+  "Name": "Locate",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.locate.LocatePlugin",
+  "Dependencies": {
+    "Hytale:WorldGen": "*"
+  },
+  "ServerVersion": "*"
 }
 ]

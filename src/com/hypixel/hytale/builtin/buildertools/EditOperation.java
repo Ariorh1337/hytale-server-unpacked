@@ -153,9 +153,9 @@ public class EditOperation {
          long chunkIdx = ChunkUtil.indexChunkFromBlock(x, z);
          WorldChunk chunk = this.world.getNonTickingChunk(chunkIdx);
          int beforeColor = chunk.getBlockChunk().getTint(x, z);
-         int r = (int)MathUtil.lerp(beforeColor >> 16 & 0xFF, color >> 16 & 0xFF, 1.0 - opacity);
-         int g = (int)MathUtil.lerp(beforeColor >> 8 & 0xFF, color >> 8 & 0xFF, 1.0 - opacity);
-         int b = (int)MathUtil.lerp(beforeColor & 0xFF, color & 0xFF, 1.0 - opacity);
+         int r = (int)MathUtil.lerp(beforeColor >> 16 & 0xFF, color >> 16 & 0xFF, opacity);
+         int g = (int)MathUtil.lerp(beforeColor >> 8 & 0xFF, color >> 8 & 0xFF, opacity);
+         int b = (int)MathUtil.lerp(beforeColor & 0xFF, color & 0xFF, opacity);
          int merged = r << 16 | g << 8 | b;
          this.before.addTintAtWorldPos(x, z, beforeColor);
          this.after.addTintAtWorldPos(x, z, merged);

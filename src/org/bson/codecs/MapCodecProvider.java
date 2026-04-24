@@ -1,8 +1,13 @@
 package org.bson.codecs;
 
+import java.lang.reflect.Type;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.bson.Transformer;
 import org.bson.assertions.Assertions;
+import org.bson.codecs.configuration.CodecConfigurationException;
 import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 
@@ -29,22 +34,38 @@ public class MapCodecProvider implements CodecProvider {
 
    @Override
    public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
-      return Map.class.isAssignableFrom(clazz) ? new MapCodec(registry, this.bsonTypeClassMap, this.valueTransformer) : null;
+      return this.get(clazz, Collections.emptyList(), registry);
+   }
+
+   @Override
+   public <T> Codec<T> get(Class<T> clazz, List<Type> typeArguments, CodecRegistry registry) {
+      if (Map.class.isAssignableFrom(clazz)) {
+         int typeArgumentsSize = typeArguments.size();
+         switch (typeArgumentsSize) {
+            case 0:
+               return new MapCodec(registry, this.bsonTypeClassMap, this.valueTransformer, clazz);
+            case 2:
+               Type genericTypeOfMapKey = typeArguments.get(0);
+               if (!genericTypeOfMapKey.getTypeName().equals("java.lang.String")) {
+                  throw new CodecConfigurationException("Unsupported key type for Map: " + genericTypeOfMapKey.getTypeName());
+               }
+
+               return new ParameterizedMapCodec<>(ContainerCodecHelper.getCodec(registry, typeArguments.get(1)), clazz);
+            default:
+               throw new CodecConfigurationException("Expected two parameterized type for an Iterable, but found " + typeArgumentsSize);
+         }
+      } else {
+         return null;
+      }
    }
 
    @Override
    public boolean equals(Object o) {
       if (this == o) {
          return true;
-      }
-
-      if (o != null && this.getClass() == o.getClass()) {
+      } else if (o != null && this.getClass() == o.getClass()) {
          MapCodecProvider that = (MapCodecProvider)o;
-         if (!this.bsonTypeClassMap.equals(that.bsonTypeClassMap)) {
-            return false;
-         } else {
-            return this.valueTransformer != null ? this.valueTransformer.equals(that.valueTransformer) : that.valueTransformer == null;
-         }
+         return !this.bsonTypeClassMap.equals(that.bsonTypeClassMap) ? false : Objects.equals(this.valueTransformer, that.valueTransformer);
       } else {
          return false;
       }
@@ -54,5 +75,10 @@ public class MapCodecProvider implements CodecProvider {
    public int hashCode() {
       int result = this.bsonTypeClassMap.hashCode();
       return 31 * result + (this.valueTransformer != null ? this.valueTransformer.hashCode() : 0);
+   }
+
+   @Override
+   public String toString() {
+      return "MapCodecProvider{}";
    }
 }

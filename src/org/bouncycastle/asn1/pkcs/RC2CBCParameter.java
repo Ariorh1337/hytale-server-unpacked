@@ -28,7 +28,7 @@ public class RC2CBCParameter extends ASN1Object {
    }
 
    public RC2CBCParameter(int var1, byte[] var2) {
-      this.version = new ASN1Integer(var1);
+      this.version = ASN1Integer.valueOf(var1);
       this.iv = new DEROctetString(var2);
    }
 

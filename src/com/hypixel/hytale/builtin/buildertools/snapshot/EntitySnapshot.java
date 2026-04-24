@@ -14,6 +14,9 @@ public interface EntitySnapshot<T extends SelectionSnapshot<?>> extends Selectio
    @Nullable
    T restoreEntity(@Nonnull PlayerRef var1, @Nonnull World var2, @Nonnull ComponentAccessor<EntityStore> var3);
 
+   default void updateEntityRef(@Nonnull Ref<EntityStore> oldRef, @Nonnull Ref<EntityStore> newRef) {
+   }
+
    @Override
    default T restore(Ref<EntityStore> ref, PlayerRef playerRef, @Nonnull World world, ComponentAccessor<EntityStore> componentAccessor) {
       Store<EntityStore> store = world.getEntityStore().getStore();

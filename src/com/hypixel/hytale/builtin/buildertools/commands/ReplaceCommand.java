@@ -6,7 +6,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.builtin.buildertools.utils.Material;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -33,7 +32,7 @@ public class ReplaceCommand extends AbstractPlayerCommand {
 
    public ReplaceCommand() {
       super("replace", "server.commands.replace.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new ReplaceCommand.ReplaceFromToCommand());
       this.addSubCommand(new ReplaceCommand.ReplaceSwapCommand());
       this.addSubCommand(new ReplaceCommand.ReplaceRegexCommand());
@@ -95,7 +94,7 @@ public class ReplaceCommand extends AbstractPlayerCommand {
 
       public ReplaceFromToCommand() {
          super("server.commands.replace.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override
@@ -114,7 +113,7 @@ public class ReplaceCommand extends AbstractPlayerCommand {
 
       public ReplaceRegexCommand() {
          super("regex", "server.commands.replace.regex.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override
@@ -172,7 +171,7 @@ public class ReplaceCommand extends AbstractPlayerCommand {
 
       public ReplaceSwapCommand() {
          super("swap", "server.commands.replace.swap.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

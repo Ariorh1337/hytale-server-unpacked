@@ -15,7 +15,7 @@ import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.asn1.x509.X509Name;
 
 public class CertificationRequestInfo extends ASN1Object {
-   ASN1Integer version = new ASN1Integer(0L);
+   ASN1Integer version = ASN1Integer.ZERO;
    X500Name subject;
    SubjectPublicKeyInfo subjectPKInfo;
    ASN1Set attributes = null;

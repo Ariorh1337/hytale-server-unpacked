@@ -19,7 +19,7 @@ public class PBEParameter extends ASN1Object {
       }
 
       this.salt = new DEROctetString(var1);
-      this.iterations = new ASN1Integer(var2);
+      this.iterations = ASN1Integer.valueOf(var2);
    }
 
    private PBEParameter(ASN1Sequence var1) {

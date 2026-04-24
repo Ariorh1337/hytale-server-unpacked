@@ -50,7 +50,7 @@ public abstract class KEMRecipientInfoGenerator implements RecipientInfoGenerato
                this.wrapper.getAlgorithmIdentifier(),
                new DEROctetString(this.wrapper.getEncapsulation()),
                this.wrapper.getKdfAlgorithmIdentifier(),
-               new ASN1Integer(this.wrapper.getKekLength()),
+               ASN1Integer.valueOf(this.wrapper.getKekLength()),
                null,
                this.wrapper.getWrapAlgorithmIdentifier(),
                new DEROctetString(var2)

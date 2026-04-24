@@ -90,7 +90,7 @@ public class PsidGroupPermissions extends ASN1Object {
       }
 
       public PsidGroupPermissions.Builder setMinChainLength(long var1) {
-         this.minChainLength = new ASN1Integer(var1);
+         this.minChainLength = ASN1Integer.valueOf(var1);
          return this;
       }
 
@@ -110,7 +110,7 @@ public class PsidGroupPermissions extends ASN1Object {
       }
 
       public PsidGroupPermissions.Builder setChainLengthRange(long var1) {
-         this.chainLengthRange = new ASN1Integer(var1);
+         this.chainLengthRange = ASN1Integer.valueOf(var1);
          return this;
       }
 

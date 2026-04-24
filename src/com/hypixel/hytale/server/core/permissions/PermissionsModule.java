@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.core.permissions;
 
 import com.hypixel.hytale.common.plugin.PluginManifest;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
@@ -10,6 +9,7 @@ import com.hypixel.hytale.server.core.event.events.permissions.PlayerGroupEvent;
 import com.hypixel.hytale.server.core.event.events.permissions.PlayerPermissionChangeEvent;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
 import com.hypixel.hytale.server.core.permissions.commands.PermCommand;
+import com.hypixel.hytale.server.core.permissions.commands.SetGroupCommand;
 import com.hypixel.hytale.server.core.permissions.commands.op.OpCommand;
 import com.hypixel.hytale.server.core.permissions.provider.HytalePermissionsProvider;
 import com.hypixel.hytale.server.core.permissions.provider.PermissionProvider;
@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -43,6 +45,8 @@ public class PermissionsModule extends JavaPlugin {
          this.add(PermissionsModule.this.standardProvider);
       }
    };
+   @Nonnull
+   private static final Map<String, Set<String>> registeredPermissions = new ConcurrentHashMap<>();
 
    public static PermissionsModule get() {
       return instance;
@@ -58,14 +62,57 @@ public class PermissionsModule extends JavaPlugin {
       CommandRegistry commandRegistry = this.getCommandRegistry();
       commandRegistry.registerCommand(new OpCommand());
       commandRegistry.registerCommand(new PermCommand());
+      commandRegistry.registerCommand(new SetGroupCommand());
    }
 
    @Override
    protected void start() {
-      Map<String, Set<String>> virtualGroups = CommandManager.get().createVirtualPermissionGroups();
-      virtualGroups.computeIfAbsent(GameMode.Creative.toString(), k -> new HashSet<>()).add("hytale.editor.builderTools");
-      this.setVirtualGroups(virtualGroups);
       this.standardProvider.syncLoad();
+      this.refreshVirtualGroups();
+   }
+
+   public static void registerPermission(@Nonnull String permission) {
+      if (!PermissionValidation.isValidPermissionNode(permission)) {
+         throw new IllegalArgumentException("Invalid permission node: " + permission);
+      }
+
+      registeredPermissions.computeIfAbsent(permission, k -> ConcurrentHashMap.newKeySet());
+   }
+
+   public static void registerPermission(@Nonnull String permission, @Nonnull String... groups) {
+      if (!PermissionValidation.isValidPermissionNode(permission)) {
+         throw new IllegalArgumentException("Invalid permission node: " + permission);
+      }
+
+      for (String group : groups) {
+         if (!PermissionValidation.isValidGroupName(group)) {
+            throw new IllegalArgumentException("Invalid group name: " + group);
+         }
+
+         registeredPermissions.computeIfAbsent(permission, k -> ConcurrentHashMap.newKeySet()).add(group);
+      }
+   }
+
+   @Nonnull
+   public static Map<String, Set<String>> getRegisteredPermissions() {
+      return Collections.unmodifiableMap(registeredPermissions);
+   }
+
+   public void refreshVirtualGroups() {
+      Map<String, Set<String>> groups = CommandManager.get().createVirtualPermissionGroups();
+
+      for (Entry<String, Set<String>> entry : registeredPermissions.entrySet()) {
+         for (String group : entry.getValue()) {
+            groups.computeIfAbsent(group, k -> new HashSet<>()).add(entry.getKey());
+         }
+      }
+
+      this.setVirtualGroups(groups);
+   }
+
+   public void reload() {
+      this.standardProvider.syncLoad();
+      this.refreshVirtualGroups();
    }
 
    public void addProvider(@Nonnull PermissionProvider permissionProvider) {
@@ -139,6 +186,29 @@ public class PermissionsModule extends JavaPlugin {
       resendCommandTreeForPlayer(uuid);
    }
 
+   public void setUserGroup(@Nonnull UUID uuid, @Nonnull String group) {
+      Set<String> oldGroups = this.getGroupsForUser(uuid);
+      this.getFirstPermissionProvider().setUserGroup(uuid, group);
+
+      for (String old : oldGroups) {
+         if (!old.equals(group)) {
+            HytaleServer.get()
+               .getEventBus()
+               .<Void, PlayerGroupEvent.Removed>dispatchFor(PlayerGroupEvent.Removed.class)
+               .dispatch(new PlayerGroupEvent.Removed(uuid, old));
+         }
+      }
+
+      if (!oldGroups.contains(group)) {
+         HytaleServer.get()
+            .getEventBus()
+            .<Void, PlayerGroupEvent.Added>dispatchFor(PlayerGroupEvent.Added.class)
+            .dispatch(new PlayerGroupEvent.Added(uuid, group));
+      }
+
+      resendCommandTreeForPlayer(uuid);
+   }
+
    private static void resendCommandTreeForPlayer(@Nonnull UUID uuid) {
       PlayerRef playerRef = Universe.get().getPlayer(uuid);
       if (playerRef != null && playerRef.getPacketHandler() instanceof GamePacketHandler gameHandler) {
@@ -148,6 +218,11 @@ public class PermissionsModule extends JavaPlugin {
 
    public void setVirtualGroups(@Nonnull Map<String, Set<String>> virtualGroups) {
       this.virtualGroups = new Object2ObjectOpenHashMap<>(virtualGroups);
+   }
+
+   @Nonnull
+   public Map<String, Set<String>> getVirtualGroups() {
+      return Collections.unmodifiableMap(this.virtualGroups);
    }
 
    @Nonnull
@@ -168,29 +243,43 @@ public class PermissionsModule extends JavaPlugin {
       return groups != null ? Collections.unmodifiableSet(groups) : Collections.emptySet();
    }
 
+   @Nonnull
+   public Set<String> getAllRegisteredGroups() {
+      Set<String> groups = new HashSet<>(this.virtualGroups.keySet());
+
+      for (PermissionProvider provider : this.providers) {
+         groups.addAll(provider.getAllRegisteredGroups());
+      }
+
+      return Collections.unmodifiableSet(groups);
+   }
+
    public boolean hasPermission(@Nonnull UUID uuid, @Nonnull String id) {
       return this.hasPermission(uuid, id, false);
    }
 
    public boolean hasPermission(@Nonnull UUID uuid, @Nonnull String id, boolean def) {
       for (PermissionProvider permissionProvider : this.providers) {
-         Set<String> userNodes = permissionProvider.getUserPermissions(uuid);
-         Boolean userHasPerm = hasPermission(userNodes, id);
-         if (userHasPerm != null) {
-            return userHasPerm;
+         Boolean userResult = hasPermission(permissionProvider.getUserPermissions(uuid), id);
+         if (userResult != null) {
+            return userResult;
          }
 
          for (String group : permissionProvider.getGroupsForUser(uuid)) {
-            Set<String> groupNodes = permissionProvider.getGroupPermissions(group);
-            Boolean groupHasPerm = hasPermission(groupNodes, id);
-            if (groupHasPerm != null) {
-               return groupHasPerm;
+            Boolean groupResult = hasPermission(permissionProvider.getGroupPermissions(group), id);
+            if (groupResult != null) {
+               return groupResult;
             }
 
             Set<String> virtualNodes = this.virtualGroups.get(group);
-            Boolean virtualHasPerm = hasPermission(virtualNodes, id);
-            if (virtualHasPerm != null) {
-               return virtualHasPerm;
+            Boolean virtualResult = hasPermission(virtualNodes, id);
+            if (virtualResult != null) {
+               return virtualResult;
+            }
+
+            Boolean parentResult = this.checkParentChain(permissionProvider, group, id);
+            if (parentResult != null) {
+               return parentResult;
             }
          }
       }
@@ -199,45 +288,77 @@ public class PermissionsModule extends JavaPlugin {
    }
 
    @Nullable
-   public static Boolean hasPermission(@Nullable Set<String> nodes, @Nonnull String id) {
-      if (nodes == null) {
-         return null;
-      }
+   private Boolean checkParentChain(@Nonnull PermissionProvider provider, @Nonnull String group, @Nonnull String id) {
+      Set<String> visited = new HashSet<>();
+      visited.add(group);
 
-      if (nodes.contains("*")) {
-         return Boolean.TRUE;
-      }
-
-      if (nodes.contains("-*")) {
-         return Boolean.FALSE;
-      }
-
-      if (nodes.contains(id)) {
-         return Boolean.TRUE;
-      }
-
-      if (nodes.contains("-" + id)) {
-         return Boolean.FALSE;
-      }
-
-      String[] split = id.split("\\.");
-      StringBuilder completeTrace = new StringBuilder();
-
-      for (int i = 0; i < split.length; i++) {
-         if (i > 0) {
-            completeTrace.append('.');
+      for (String current = provider.getGroupParent(group); current != null && visited.add(current); current = provider.getGroupParent(current)) {
+         Boolean result = hasPermission(provider.getGroupPermissions(current), id);
+         if (result != null) {
+            return result;
          }
 
-         completeTrace.append(split[i]);
-         if (nodes.contains(completeTrace + ".*")) {
-            return Boolean.TRUE;
-         }
-
-         if (nodes.contains("-" + completeTrace.toString() + ".*")) {
-            return Boolean.FALSE;
+         Set<String> virtualNodes = this.virtualGroups.get(current);
+         Boolean virtualResult = hasPermission(virtualNodes, id);
+         if (virtualResult != null) {
+            return virtualResult;
          }
       }
 
       return null;
+   }
+
+   @Nullable
+   public static Boolean hasPermission(@Nullable Set<String> nodes, @Nonnull String id) {
+      if (nodes != null && !nodes.isEmpty()) {
+         if (nodes.contains("-*")) {
+            return Boolean.FALSE;
+         }
+
+         if (nodes.contains("-" + id)) {
+            return Boolean.FALSE;
+         }
+
+         if (nodes.contains(id)) {
+            return Boolean.TRUE;
+         }
+
+         String[] split = id.split("\\.");
+         String[] wildcardPaths = new String[split.length];
+         StringBuilder sb = new StringBuilder();
+
+         for (int i = 0; i < split.length; i++) {
+            if (i > 0) {
+               sb.append('.');
+            }
+
+            sb.append(split[i]);
+            wildcardPaths[i] = sb + ".*";
+         }
+
+         for (int i = wildcardPaths.length - 1; i >= 0; i--) {
+            if (nodes.contains("-" + wildcardPaths[i])) {
+               return Boolean.FALSE;
+            }
+         }
+
+         if (nodes.contains("*")) {
+            return Boolean.TRUE;
+         }
+
+         for (String wildcardPath : wildcardPaths) {
+            if (nodes.contains(wildcardPath)) {
+               return Boolean.TRUE;
+            }
+         }
+
+         return null;
+      } else {
+         return null;
+      }
+   }
+
+   static void resetForTesting() {
+      registeredPermissions.clear();
    }
 }

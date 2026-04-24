@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.slhdsa;
 
 import org.bouncycastle.util.Arrays;
 
+@Deprecated
 public class SLHDSAPublicKeyParameters extends SLHDSAKeyParameters {
    private final PK pk;
 

@@ -1,8 +1,32 @@
 package org.bouncycastle.util;
 
+import org.bouncycastle.math.raw.Nat;
+
 public class Bytes {
    public static final int BYTES = 1;
    public static final int SIZE = 8;
+
+   public static void cmov(int var0, int var1, byte[] var2, byte[] var3) {
+      int var4 = Nat.czero(var1);
+      int var5 = ~var4;
+
+      for (int var6 = 0; var6 < var0; var6++) {
+         byte var7 = var2[var6];
+         byte var8 = var3[var6];
+         var3[var6] = (byte)(var8 & var4 | var7 & var5);
+      }
+   }
+
+   public static void cmov(int var0, int var1, byte[] var2, int var3, byte[] var4, int var5) {
+      int var6 = Nat.czero(var1);
+      int var7 = ~var6;
+
+      for (int var8 = 0; var8 < var0; var8++) {
+         byte var9 = var2[var3 + var8];
+         byte var10 = var4[var5 + var8];
+         var4[var5 + var8] = (byte)(var10 & var6 | var9 & var7);
+      }
+   }
 
    public static void xor(int var0, byte[] var1, byte[] var2, byte[] var3) {
       for (int var4 = 0; var4 < var0; var4++) {

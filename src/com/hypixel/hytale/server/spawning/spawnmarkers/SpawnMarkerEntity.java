@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
 import com.hypixel.hytale.server.npc.components.SpawnMarkerReference;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
@@ -317,6 +318,16 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
          if (!this.context.set(world, position.x, position.y, position.z)) {
             SpawningPlugin.get().getLogger().at(Level.FINE).log("Marker %s attempted to spawn NPC '%s' at %s but could not fit", uuid, roleName, position);
             this.fail(ref, uuid, roleName, position, store, SpawnMarkerEntity.FailReason.NO_ROOM);
+            return false;
+         }
+
+         MovementMode autoMode = this.context.breathesInAir ? MovementMode.WALK : MovementMode.UNDERWATER_WALK;
+         if (!this.context.setMovementMode(autoMode, true)) {
+            SpawningPlugin.get()
+               .getLogger()
+               .at(Level.FINE)
+               .log("Marker %s attempted to spawn NPC '%s' but its breathing config is incompatible with mode %s", uuid, roleName, autoMode);
+            this.fail(ref, uuid, roleName, position, store, SpawnMarkerEntity.FailReason.FAILED_ROLE_VALIDATION);
             return false;
          }
 

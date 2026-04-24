@@ -24,16 +24,9 @@ public abstract class X448 {
       var0[55] = (byte)(var0[55] | 128);
    }
 
-   private static int decode32(byte[] var0, int var1) {
-      int var2 = var0[var1] & 255;
-      var2 |= (var0[++var1] & 255) << 8;
-      var2 |= (var0[++var1] & 255) << 16;
-      return var2 | var0[++var1] << 24;
-   }
-
    private static void decodeScalar(byte[] var0, int var1, int[] var2) {
       for (int var3 = 0; var3 < 14; var3++) {
-         var2[var3] = decode32(var0, var1 + var3 * 4);
+         var2[var3] = X448.F.decode32(var0, var1 + var3 * 4);
       }
 
       var2[0] &= -4;
@@ -75,7 +68,7 @@ public abstract class X448 {
       int[] var6 = new int[14];
       decodeScalar(var0, var1, var6);
       int[] var7 = X448.F.create();
-      X448.F.decode(var2, var3, var7);
+      X448.F.decode448(var2, var3, var7, 0);
       int[] var8 = X448.F.create();
       X448.F.copy(var7, 0, var8, 0);
       int[] var9 = X448.F.create();

@@ -40,6 +40,7 @@ public class SpawnSetCommand extends AbstractWorldCommand {
 
    public SpawnSetCommand() {
       super("set", "server.commands.spawn.set.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

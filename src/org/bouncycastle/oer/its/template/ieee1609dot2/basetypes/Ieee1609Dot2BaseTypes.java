@@ -148,12 +148,12 @@ public class Ieee1609Dot2BaseTypes {
    public static final OERDefinition.Builder OneEightyDegreeInt = OERDefinition.integer(-1799999999L, 1800000001L).typeName("OneEightyDegreeInt");
    public static final OERDefinition.Builder KnownLongitude = OneEightyDegreeInt.copy().typeName("KnownLongitude");
    public static final OERDefinition.Builder UnknownLongitude = OERDefinition.integer()
-      .validSwitchValue(new ASN1Integer(1800000001L))
+      .validSwitchValue(ASN1Integer.valueOf(1800000001))
       .typeName("UnknownLongitude");
    public static final OERDefinition.Builder NinetyDegreeInt = OERDefinition.integer(-900000000L, 900000001L).typeName("NinetyDegreeInt");
    public static final OERDefinition.Builder KnownLatitude = NinetyDegreeInt.copy().typeName("KnownLatitude");
    public static final OERDefinition.Builder UnknownLatitude = OERDefinition.integer()
-      .validSwitchValue(new ASN1Integer(900000001L))
+      .validSwitchValue(ASN1Integer.valueOf(900000001))
       .typeName("UnknownLatitude");
    public static final OERDefinition.Builder Elevation = UINT16.typeName("Elevation");
    public static final OERDefinition.Builder Longitude = OneEightyDegreeInt.copy().typeName("Longitude");

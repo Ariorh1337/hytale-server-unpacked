@@ -15,7 +15,7 @@ final class PropertyReflectionUtils {
    }
 
    static boolean isGetter(Method method) {
-      if (method.getParameterTypes().length > 0) {
+      if (method.getParameterCount() > 0) {
          return false;
       } else if (method.getName().startsWith("get") && method.getName().length() > "get".length()) {
          return Character.isUpperCase(method.getName().charAt("get".length()));
@@ -27,14 +27,14 @@ final class PropertyReflectionUtils {
    }
 
    static boolean isSetter(Method method) {
-      return method.getName().startsWith("set") && method.getName().length() > "set".length() && method.getParameterTypes().length == 1
+      return method.getName().startsWith("set") && method.getName().length() > "set".length() && method.getParameterCount() == 1
          ? Character.isUpperCase(method.getName().charAt("set".length()))
          : false;
    }
 
    static String toPropertyName(Method method) {
       String name = method.getName();
-      String propertyName = name.substring(name.startsWith("is") ? 2 : 3, name.length());
+      String propertyName = name.substring(name.startsWith("is") ? 2 : 3);
       char[] chars = propertyName.toCharArray();
       chars[0] = Character.toLowerCase(chars[0]);
       return new String(chars);
@@ -60,7 +60,7 @@ final class PropertyReflectionUtils {
    }
 
    private static void verifyAddMethodToList(Method method, List<Method> getters, List<Method> setters) {
-      if (Modifier.isPublic(method.getModifiers()) && !method.isBridge()) {
+      if (Modifier.isPublic(method.getModifiers()) && !Modifier.isStatic(method.getModifiers()) && !method.isBridge()) {
          if (isGetter(method)) {
             getters.add(method);
          } else if (isSetter(method)) {

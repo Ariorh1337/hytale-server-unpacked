@@ -1,8 +1,8 @@
 package org.bson.codecs;
 
-import org.bson.BsonInvalidOperationException;
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
+import org.bson.internal.NumberCodecHelper;
 
 public class ShortCodec implements Codec<Short> {
    public void encode(BsonWriter writer, Short value, EncoderContext encoderContext) {
@@ -10,12 +10,7 @@ public class ShortCodec implements Codec<Short> {
    }
 
    public Short decode(BsonReader reader, DecoderContext decoderContext) {
-      int value = NumberCodecHelper.decodeInt(reader);
-      if (value >= -32768 && value <= 32767) {
-         return (short)value;
-      } else {
-         throw new BsonInvalidOperationException(String.format("%s can not be converted into a Short.", value));
-      }
+      return NumberCodecHelper.decodeShort(reader);
    }
 
    @Override

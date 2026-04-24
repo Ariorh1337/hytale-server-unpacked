@@ -39,7 +39,7 @@ class X509Util {
 
    private static RSASSAPSSparams creatPSSParams(AlgorithmIdentifier var0, int var1) {
       return new RSASSAPSSparams(
-         var0, new AlgorithmIdentifier(PKCSObjectIdentifiers.id_mgf1, var0), new ASN1Integer(var1), RSASSAPSSparams.DEFAULT_TRAILER_FIELD
+         var0, new AlgorithmIdentifier(PKCSObjectIdentifiers.id_mgf1, var0), ASN1Integer.valueOf(var1), RSASSAPSSparams.DEFAULT_TRAILER_FIELD
       );
    }
 

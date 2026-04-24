@@ -46,20 +46,14 @@ public abstract class DERGenerator extends ASN1Generator {
    }
 
    void writeDEREncoded(int var1, byte[] var2) throws IOException {
-      if (this._tagged) {
-         int var3 = this._tagNo | 128;
-         if (this._isExplicit) {
-            int var4 = this._tagNo | 32 | 128;
-            ByteArrayOutputStream var5 = new ByteArrayOutputStream();
-            this.writeDEREncoded(var5, var1, var2);
-            this.writeDEREncoded(this._out, var4, var5.toByteArray());
-         } else if ((var1 & 32) != 0) {
-            this.writeDEREncoded(this._out, var3 | 32, var2);
-         } else {
-            this.writeDEREncoded(this._out, var3, var2);
-         }
-      } else {
+      if (!this._tagged) {
          this.writeDEREncoded(this._out, var1, var2);
+      } else if (this._isExplicit) {
+         ByteArrayOutputStream var3 = new ByteArrayOutputStream();
+         this.writeDEREncoded(var3, var1, var2);
+         this.writeDEREncoded(this._out, this._tagNo | 128 | 32, var3.toByteArray());
+      } else {
+         this.writeDEREncoded(this._out, inheritConstructedFlag(this._tagNo | 128, var1), var2);
       }
    }
 }

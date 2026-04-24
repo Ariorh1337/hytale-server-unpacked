@@ -61,7 +61,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    protected final boolean dbgMotionState;
    @Nonnull
    protected final T aStar;
-   @Nonnull
+   @Nullable
    protected final AStarDebugBase aStarDebug;
    protected final PathFollower pathFollower = new PathFollower();
    protected final ProbeMoveData probeMoveData = new ProbeMoveData();
@@ -86,7 +86,6 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    public BodyMotionFindBase(@Nonnull BuilderBodyMotionFindBase builderBodyMotionFindBase, @Nonnull BuilderSupport support, @Nonnull T aStar) {
       super(builderBodyMotionFindBase);
       this.aStar = aStar;
-      this.aStarDebug = aStar.createDebugHelper(HytaleLogger.forEnclosingClass());
       this.useBestPath = builderBodyMotionFindBase.getUseBestPath(support);
       this.nodesPerTick = builderBodyMotionFindBase.getNodesPerTick(support);
       this.usePathfinder = builderBodyMotionFindBase.isUsePathfinder(support);
@@ -130,6 +129,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
       this.dbgStay = debugFlags.contains(BodyMotionFindBase.DebugFlags.Stay);
       this.dbgMotionState = debugFlags.contains(BodyMotionFindBase.DebugFlags.Motion);
       this.dbgDisplayString = false;
+      this.aStarDebug = !this.dbgPath && !this.dbgOpens && !this.dbgMaps ? null : aStar.createDebugHelper(HytaleLogger.forEnclosingClass());
       this.pathFollower.setDebugNodes(this.dbgNodes);
    }
 

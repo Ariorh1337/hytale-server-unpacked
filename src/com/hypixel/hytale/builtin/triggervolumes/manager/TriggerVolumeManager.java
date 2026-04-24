@@ -1,0 +1,421 @@
+package com.hypixel.hytale.builtin.triggervolumes.manager;
+
+import com.hypixel.hytale.builtin.triggervolumes.EntityTargetType;
+import com.hypixel.hytale.builtin.triggervolumes.shape.BoxShape;
+import com.hypixel.hytale.builtin.triggervolumes.shape.CylinderShape;
+import com.hypixel.hytale.builtin.triggervolumes.shape.SphereShape;
+import com.hypixel.hytale.builtin.triggervolumes.shape.TriggerVolumeShape;
+import com.hypixel.hytale.builtin.triggervolumes.system.VolumeSpatialIndex;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.map.MapCodec;
+import com.hypixel.hytale.component.Resource;
+import com.hypixel.hytale.protocol.packets.player.AddOrUpdateTriggerVolumeDisplay;
+import com.hypixel.hytale.protocol.packets.player.RemoveTriggerVolumeDisplay;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeDisplayEntry;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeShapeType;
+import com.hypixel.hytale.protocol.packets.player.UpdateTriggerVolumeDisplay;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+
+public class TriggerVolumeManager implements Resource<EntityStore> {
+   @Nonnull
+   public static final BuilderCodec<TriggerVolumeManager> CODEC = BuilderCodec.builder(TriggerVolumeManager.class, TriggerVolumeManager::new)
+      .append(
+         new KeyedCodec<>("Volumes", new MapCodec<>(VolumeEntry.CODEC, ConcurrentHashMap::new, false), false),
+         (m, vols) -> m.volumes.putAll(vols),
+         m -> m.volumes.isEmpty() ? null : m.volumes
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("Groups", new MapCodec<>(GroupEntry.CODEC, ConcurrentHashMap::new, false), false),
+         (m, grps) -> m.groups.putAll(grps),
+         m -> m.groups.isEmpty() ? null : m.groups
+      )
+      .add()
+      .afterDecode(TriggerVolumeManager::postDecode)
+      .build();
+   private static final Vector3f COLOR_ENABLED = new Vector3f(0.0F, 0.8F, 0.8F);
+   private static final Vector3f COLOR_DISABLED = new Vector3f(0.8F, 0.2F, 0.2F);
+   private static final float OPACITY_ENABLED = 0.3F;
+   private static final float OPACITY_DISABLED = 0.15F;
+   private static final String PASTED_GROUP_ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+   private static final int PASTED_GROUP_ID_LENGTH = 8;
+   private final Map<String, VolumeEntry> volumes = new ConcurrentHashMap<>();
+   private final Map<String, GroupEntry> groups = new ConcurrentHashMap<>();
+   private final ConcurrentHashMap<String, String> prefabGroupLinkRemap = new ConcurrentHashMap<>();
+   private final Map<UUID, EnumSet<TriggerVolumeManager.ViewSource>> activeViewers = new ConcurrentHashMap<>();
+   private final Map<UUID, String> playerSelections = new ConcurrentHashMap<>();
+   @Nonnull
+   private final VolumeSpatialIndex spatialIndex = new VolumeSpatialIndex();
+   @Nullable
+   private World world;
+
+   private void postDecode() {
+      for (Entry<String, VolumeEntry> entry : this.volumes.entrySet()) {
+         entry.getValue().setId(entry.getKey());
+         entry.getValue().expandTags();
+      }
+
+      for (Entry<String, GroupEntry> entry : this.groups.entrySet()) {
+         entry.getValue().setId(entry.getKey());
+      }
+
+      for (VolumeEntry vol : this.volumes.values()) {
+         if (vol.getGroupId() != null) {
+            GroupEntry group = this.groups.get(vol.getGroupId());
+            if (group != null) {
+               group.addMember(vol.getId());
+            }
+         }
+      }
+
+      this.spatialIndex.markDirty();
+   }
+
+   public void register(@Nonnull String id, @Nonnull VolumeEntry entry) {
+      this.volumes.put(id, entry);
+      this.spatialIndex.markDirty();
+   }
+
+   public void unregister(@Nonnull String id) {
+      this.volumes.remove(id);
+      this.spatialIndex.markDirty();
+   }
+
+   @Nullable
+   public VolumeEntry getVolume(@Nonnull String id) {
+      return this.volumes.get(id);
+   }
+
+   @Nonnull
+   public Collection<VolumeEntry> getVolumes() {
+      return Collections.unmodifiableCollection(this.volumes.values());
+   }
+
+   @Nonnull
+   public Map<String, VolumeEntry> getVolumesMap() {
+      return Collections.unmodifiableMap(this.volumes);
+   }
+
+   public boolean hasVolume(@Nonnull String id) {
+      return this.volumes.containsKey(id);
+   }
+
+   public void markSpatialDirty() {
+      this.spatialIndex.markDirty();
+   }
+
+   @Nonnull
+   public VolumeSpatialIndex getSpatialIndex() {
+      return this.spatialIndex;
+   }
+
+   public void setWorld(@Nullable World world) {
+      this.world = world;
+   }
+
+   @Nullable
+   public World getWorld() {
+      return this.world;
+   }
+
+   public void registerGroup(@Nonnull String id, @Nonnull GroupEntry entry) {
+      this.groups.put(id, entry);
+   }
+
+   public void unregisterGroup(@Nonnull String id) {
+      this.groups.remove(id);
+   }
+
+   @Nullable
+   public GroupEntry getGroup(@Nonnull String id) {
+      return this.groups.get(id);
+   }
+
+   public boolean hasGroup(@Nonnull String id) {
+      return this.groups.containsKey(id);
+   }
+
+   public void clearPrefabGroupLinkRemap() {
+      this.prefabGroupLinkRemap.clear();
+   }
+
+   @Nonnull
+   public String ensureGroupForPrefabLink(@Nonnull String groupLinkId, @Nonnull VolumeEntry memberVolume, @Nonnull String worldName) {
+      return this.prefabGroupLinkRemap
+         .computeIfAbsent(
+            groupLinkId,
+            link -> {
+               String gid = this.generateUniquePastedGroupId();
+               int packed = memberVolume.getColor() != null
+                  ? packRgb(memberVolume.getColor())
+                  : (int)(COLOR_ENABLED.x() * 255.0F) << 16 | (int)(COLOR_ENABLED.y() * 255.0F) << 8 | (int)(COLOR_ENABLED.z() * 255.0F);
+               GroupEntry ge = new GroupEntry(
+                  gid,
+                  worldName,
+                  new Vector3d(memberVolume.getPosition()),
+                  new ArrayList<>(),
+                  EnumSet.copyOf(memberVolume.getTargetTypes()),
+                  memberVolume.isEnabled(),
+                  packed
+               );
+               this.registerGroup(gid, ge);
+               return gid;
+            }
+         );
+   }
+
+   @Nonnull
+   private String generateUniquePastedGroupId() {
+      ThreadLocalRandom rng = ThreadLocalRandom.current();
+
+      String id;
+      do {
+         StringBuilder builder = new StringBuilder("tvg_");
+
+         for (int i = 0; i < 8; i++) {
+            builder.append("abcdefghijklmnopqrstuvwxyz0123456789".charAt(rng.nextInt("abcdefghijklmnopqrstuvwxyz0123456789".length())));
+         }
+
+         id = builder.toString();
+      } while (this.hasGroup(id));
+
+      return id;
+   }
+
+   private static int packRgb(@Nonnull Vector3f c) {
+      int r = Math.min(255, Math.max(0, Math.round(c.x() * 255.0F))) & 0xFF;
+      int g = Math.min(255, Math.max(0, Math.round(c.y() * 255.0F))) & 0xFF;
+      int b = Math.min(255, Math.max(0, Math.round(c.z() * 255.0F))) & 0xFF;
+      return r << 16 | g << 8 | b;
+   }
+
+   @Nonnull
+   public Map<String, GroupEntry> getGroupsMap() {
+      return Collections.unmodifiableMap(this.groups);
+   }
+
+   @Nonnull
+   public List<VolumeEntry> getGroupMembers(@Nonnull String groupId) {
+      ArrayList<VolumeEntry> result = new ArrayList<>();
+
+      for (VolumeEntry entry : this.volumes.values()) {
+         if (groupId.equals(entry.getGroupId())) {
+            result.add(entry);
+         }
+      }
+
+      return result;
+   }
+
+   @Nonnull
+   public List<VolumeEntry> getVolumesByTag(int tagIndex) {
+      ArrayList<VolumeEntry> result = new ArrayList<>();
+
+      for (VolumeEntry entry : this.volumes.values()) {
+         if (entry.hasTag(tagIndex)) {
+            result.add(entry);
+         }
+      }
+
+      return result;
+   }
+
+   public boolean isViewing(@Nonnull UUID playerUuid) {
+      EnumSet<TriggerVolumeManager.ViewSource> sources = this.activeViewers.get(playerUuid);
+      return sources != null && !sources.isEmpty();
+   }
+
+   public boolean isViewing(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.ViewSource source) {
+      EnumSet<TriggerVolumeManager.ViewSource> sources = this.activeViewers.get(playerUuid);
+      return sources != null && sources.contains(source);
+   }
+
+   public void addViewer(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.ViewSource source) {
+      this.activeViewers.computeIfAbsent(playerUuid, k -> EnumSet.noneOf(TriggerVolumeManager.ViewSource.class)).add(source);
+   }
+
+   public void removeViewer(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.ViewSource source) {
+      this.activeViewers.computeIfPresent(playerUuid, (k, sources) -> {
+         sources.remove(source);
+         return sources.isEmpty() ? null : sources;
+      });
+   }
+
+   public void setPlayerSelection(@Nonnull UUID playerUuid, @Nullable String volumeId) {
+      if (volumeId == null) {
+         this.playerSelections.remove(playerUuid);
+      } else {
+         this.playerSelections.put(playerUuid, volumeId);
+      }
+   }
+
+   @Nullable
+   public String getPlayerSelection(@Nonnull UUID playerUuid) {
+      return this.playerSelections.get(playerUuid);
+   }
+
+   public void notifyViewers() {
+      if (!this.activeViewers.isEmpty()) {
+         TriggerVolumeDisplayEntry[] entries = this.buildDisplayEntries();
+         UpdateTriggerVolumeDisplay packet = new UpdateTriggerVolumeDisplay(entries);
+
+         for (UUID uuid : this.activeViewers.keySet()) {
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef != null) {
+               playerRef.getPacketHandler().write(packet);
+            }
+         }
+      }
+   }
+
+   public int getViewerCount() {
+      return this.activeViewers.size();
+   }
+
+   public void clearViewers() {
+      this.activeViewers.clear();
+      this.playerSelections.clear();
+   }
+
+   public void notifyViewersAdd(@Nonnull VolumeEntry vol) {
+      if (!this.activeViewers.isEmpty()) {
+         AddOrUpdateTriggerVolumeDisplay packet = new AddOrUpdateTriggerVolumeDisplay(vol.getId(), this.buildDisplayEntry(vol));
+
+         for (UUID uuid : this.activeViewers.keySet()) {
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef != null) {
+               playerRef.getPacketHandler().write(packet);
+            }
+         }
+      }
+   }
+
+   public void notifyViewersRemove(@Nonnull String volumeId) {
+      if (!this.activeViewers.isEmpty()) {
+         RemoveTriggerVolumeDisplay packet = new RemoveTriggerVolumeDisplay(volumeId);
+
+         for (UUID uuid : this.activeViewers.keySet()) {
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef != null) {
+               playerRef.getPacketHandler().write(packet);
+            }
+         }
+      }
+   }
+
+   public void sendVolumeDisplay(@Nonnull PlayerRef playerRef) {
+      playerRef.getPacketHandler().write(new UpdateTriggerVolumeDisplay(this.buildDisplayEntries()));
+   }
+
+   @Nonnull
+   private TriggerVolumeDisplayEntry[] buildDisplayEntries() {
+      Collection<VolumeEntry> volumeList = this.volumes.values();
+      TriggerVolumeDisplayEntry[] entries = new TriggerVolumeDisplayEntry[volumeList.size()];
+      int i = 0;
+
+      for (VolumeEntry vol : volumeList) {
+         entries[i++] = this.buildDisplayEntry(vol);
+      }
+
+      return entries;
+   }
+
+   @Nonnull
+   public TriggerVolumeDisplayEntry buildDisplayEntry(@Nonnull VolumeEntry vol) {
+      TriggerVolumeDisplayEntry entry = new TriggerVolumeDisplayEntry();
+      Vector3d pos = vol.getPosition();
+      TriggerVolumeShape shape = vol.getShape();
+      if (shape instanceof BoxShape box) {
+         Vector3d min = box.getMin();
+         Vector3d max = box.getMax();
+         double cx = pos.x() + (min.x() + max.x()) * 0.5;
+         double cy = pos.y() + (min.y() + max.y()) * 0.5;
+         double cz = pos.z() + (min.z() + max.z()) * 0.5;
+         double hx = (max.x() - min.x()) * 0.5;
+         double hy = (max.y() - min.y()) * 0.5;
+         double hz = (max.z() - min.z()) * 0.5;
+         entry.shapeType = TriggerVolumeShapeType.Box;
+         entry.position = new Vector3f((float)cx, (float)cy, (float)cz);
+         entry.dimensions = new Vector3f((float)hx, (float)hy, (float)hz);
+      } else if (shape instanceof SphereShape sphere) {
+         Vector3d c = sphere.getCenter();
+         entry.shapeType = TriggerVolumeShapeType.Sphere;
+         entry.position = new Vector3f((float)(pos.x() + c.x()), (float)(pos.y() + c.y()), (float)(pos.z() + c.z()));
+         entry.dimensions = new Vector3f((float)sphere.getRadius(), 0.0F, 0.0F);
+      } else if (shape instanceof CylinderShape cyl) {
+         Vector3d c = cyl.getCenter();
+         double halfH = cyl.getHeight() * 0.5;
+         entry.shapeType = TriggerVolumeShapeType.Cylinder;
+         entry.position = new Vector3f((float)(pos.x() + c.x()), (float)(pos.y() + c.y() + halfH), (float)(pos.z() + c.z()));
+         entry.dimensions = new Vector3f((float)cyl.getRadius(), (float)cyl.getHeight(), 0.0F);
+      } else {
+         double r = shape.getBoundingRadius();
+         entry.shapeType = TriggerVolumeShapeType.Sphere;
+         entry.position = new Vector3f((float)pos.x(), (float)pos.y(), (float)pos.z());
+         entry.dimensions = new Vector3f((float)r, 0.0F, 0.0F);
+      }
+
+      entry.color = vol.getColor() != null ? vol.getColor() : (vol.isEnabled() ? COLOR_ENABLED : COLOR_DISABLED);
+      entry.opacity = vol.isEnabled() ? 0.3F : 0.15F;
+      entry.name = vol.getId();
+      entry.effectAssetRef = vol.getEffectAssetRef();
+      byte targetBits = 0;
+
+      for (EntityTargetType tt : vol.getTargetTypes()) {
+         if (tt == EntityTargetType.PLAYER) {
+            targetBits = (byte)(targetBits | 1);
+         } else if (tt == EntityTargetType.NPC) {
+            targetBits = (byte)(targetBits | 2);
+         }
+      }
+
+      entry.targetTypes = targetBits;
+      entry.keepLoaded = vol.isKeepLoaded();
+      entry.cooldown = vol.getCooldown();
+      entry.cooldownMode = (byte)vol.getCooldownMode().ordinal();
+      entry.activationDelay = vol.getActivationDelay();
+      if (vol.getGroupId() != null) {
+         entry.groupId = vol.getGroupId();
+         GroupEntry group = this.groups.get(vol.getGroupId());
+         if (group != null) {
+            entry.groupColor = group.getColor();
+            float r = (group.getColor() >> 16 & 0xFF) / 255.0F;
+            float g = (group.getColor() >> 8 & 0xFF) / 255.0F;
+            float b = (group.getColor() & 0xFF) / 255.0F;
+            entry.color = new Vector3f(r, g, b);
+         }
+      }
+
+      return entry;
+   }
+
+   @Nonnull
+   @Override
+   public Resource<EntityStore> clone() {
+      throw new UnsupportedOperationException("TriggerVolumeManager cannot be cloned");
+   }
+
+   public enum ViewSource {
+      COMMAND,
+      TOOL,
+      SELECTION_TOOL;
+   }
+}

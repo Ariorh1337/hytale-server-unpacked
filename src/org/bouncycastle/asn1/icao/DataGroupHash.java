@@ -27,7 +27,7 @@ public class DataGroupHash extends ASN1Object {
    }
 
    public DataGroupHash(int var1, ASN1OctetString var2) {
-      this.dataGroupNumber = new ASN1Integer(var1);
+      this.dataGroupNumber = ASN1Integer.valueOf(var1);
       this.dataGroupHashValue = var2;
    }
 

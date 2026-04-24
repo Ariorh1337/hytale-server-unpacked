@@ -14,7 +14,7 @@ public class NetscapeCertType extends DERBitString {
    public static final int objectSigningCA = 1;
 
    public NetscapeCertType(int var1) {
-      super(getBytes(var1), getPadBits(var1));
+      super(var1);
    }
 
    public NetscapeCertType(ASN1BitString var1) {

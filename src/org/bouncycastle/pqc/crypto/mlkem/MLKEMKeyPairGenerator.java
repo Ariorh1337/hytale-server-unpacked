@@ -5,6 +5,7 @@ import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPairGenerator;
 import org.bouncycastle.crypto.KeyGenerationParameters;
 
+@Deprecated
 public class MLKEMKeyPairGenerator implements AsymmetricCipherKeyPairGenerator {
    private MLKEMParameters mlkemParams;
    private SecureRandom random;
@@ -16,8 +17,7 @@ public class MLKEMKeyPairGenerator implements AsymmetricCipherKeyPairGenerator {
 
    private AsymmetricCipherKeyPair genKeyPair() {
       MLKEMEngine var1 = this.mlkemParams.getEngine();
-      var1.init(this.random);
-      byte[][] var2 = var1.generateKemKeyPair();
+      byte[][] var2 = var1.generateKemKeyPair(this.random);
       MLKEMPublicKeyParameters var3 = new MLKEMPublicKeyParameters(this.mlkemParams, var2[0], var2[1]);
       MLKEMPrivateKeyParameters var4 = new MLKEMPrivateKeyParameters(this.mlkemParams, var2[2], var2[3], var2[4], var2[0], var2[1], var2[5]);
       return new AsymmetricCipherKeyPair(var3, var4);

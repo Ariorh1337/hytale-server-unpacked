@@ -44,7 +44,7 @@ public class KEMRecipientInfo extends ASN1Object {
          throw new IllegalArgumentException("kekLength must be <= 65535");
       }
 
-      this.cmsVersion = new ASN1Integer(0L);
+      this.cmsVersion = ASN1Integer.ZERO;
       this.rid = var1;
       this.kem = var2;
       this.kemct = var3;

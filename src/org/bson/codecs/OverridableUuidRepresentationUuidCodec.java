@@ -13,6 +13,6 @@ public class OverridableUuidRepresentationUuidCodec extends UuidCodec implements
 
    @Override
    public Codec<UUID> withUuidRepresentation(UuidRepresentation uuidRepresentation) {
-      return new OverridableUuidRepresentationUuidCodec(uuidRepresentation);
+      return this.getUuidRepresentation().equals(uuidRepresentation) ? this : new OverridableUuidRepresentationUuidCodec(uuidRepresentation);
    }
 }

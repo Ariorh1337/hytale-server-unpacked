@@ -39,6 +39,7 @@ public class ViewportCommand extends AbstractPlayerCommand {
 
    public ViewportCommand(@Nonnull AssetManager assetManager) {
       super("Viewport", "server.commands.viewport.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.assetManager = assetManager;
    }
 
@@ -79,7 +80,7 @@ public class ViewportCommand extends AbstractPlayerCommand {
             viewportBounds_voxelGrid = new Bounds3i(selection.getSelectionMin(), selection.getSelectionMax());
          }
 
-         Viewport viewport = new Viewport(viewportBounds_voxelGrid, world, context.sender());
+         Viewport viewport = new Viewport(viewportBounds_voxelGrid, world);
          this.activeTask = () -> world.execute(() -> {
             try {
                viewport.refresh();

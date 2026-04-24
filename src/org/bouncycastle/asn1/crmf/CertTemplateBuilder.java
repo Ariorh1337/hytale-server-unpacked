@@ -25,7 +25,7 @@ public class CertTemplateBuilder {
    private Extensions extensions;
 
    public CertTemplateBuilder setVersion(int var1) {
-      this.version = new ASN1Integer(var1);
+      this.version = ASN1Integer.valueOf(var1);
       return this;
    }
 

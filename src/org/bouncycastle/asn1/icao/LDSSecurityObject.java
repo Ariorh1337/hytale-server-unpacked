@@ -11,7 +11,7 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 public class LDSSecurityObject extends ASN1Object implements ICAOObjectIdentifiers {
    public static final int ub_DataGroups = 16;
-   private ASN1Integer version = new ASN1Integer(0L);
+   private ASN1Integer version = ASN1Integer.ZERO;
    private AlgorithmIdentifier digestAlgorithmIdentifier;
    private DataGroupHash[] datagroupHash;
    private LDSVersionInfo versionInfo;
@@ -46,14 +46,14 @@ public class LDSSecurityObject extends ASN1Object implements ICAOObjectIdentifie
    }
 
    public LDSSecurityObject(AlgorithmIdentifier var1, DataGroupHash[] var2) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.digestAlgorithmIdentifier = var1;
       this.datagroupHash = this.copy(var2);
       this.checkDatagroupHashSeqSize(var2.length);
    }
 
    public LDSSecurityObject(AlgorithmIdentifier var1, DataGroupHash[] var2, LDSVersionInfo var3) {
-      this.version = new ASN1Integer(1L);
+      this.version = ASN1Integer.ONE;
       this.digestAlgorithmIdentifier = var1;
       this.datagroupHash = this.copy(var2);
       this.versionInfo = var3;

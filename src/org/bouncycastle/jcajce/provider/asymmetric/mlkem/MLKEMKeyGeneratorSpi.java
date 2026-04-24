@@ -8,28 +8,28 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.DestroyFailedException;
 import org.bouncycastle.crypto.SecretWithEncapsulation;
+import org.bouncycastle.crypto.kems.MLKEMExtractor;
+import org.bouncycastle.crypto.kems.MLKEMGenerator;
+import org.bouncycastle.crypto.params.MLKEMParameters;
 import org.bouncycastle.jcajce.SecretKeyWithEncapsulation;
+import org.bouncycastle.jcajce.provider.asymmetric.util.KdfUtil;
 import org.bouncycastle.jcajce.spec.KEMExtractSpec;
 import org.bouncycastle.jcajce.spec.KEMGenerateSpec;
 import org.bouncycastle.jcajce.spec.MLKEMParameterSpec;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMExtractor;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMGenerator;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters;
-import org.bouncycastle.pqc.jcajce.provider.util.KdfUtil;
 import org.bouncycastle.util.Arrays;
 
 public class MLKEMKeyGeneratorSpi extends KeyGeneratorSpi {
+   private final MLKEMParameters mlkemParameters;
    private KEMGenerateSpec genSpec;
    private SecureRandom random;
    private KEMExtractSpec extSpec;
-   private MLKEMParameters kyberParameters;
 
    public MLKEMKeyGeneratorSpi() {
       this(null);
    }
 
    protected MLKEMKeyGeneratorSpi(MLKEMParameters var1) {
-      this.kyberParameters = var1;
+      this.mlkemParameters = var1;
    }
 
    @Override
@@ -43,8 +43,8 @@ public class MLKEMKeyGeneratorSpi extends KeyGeneratorSpi {
       if (var1 instanceof KEMGenerateSpec) {
          this.genSpec = (KEMGenerateSpec)var1;
          this.extSpec = null;
-         if (this.kyberParameters != null) {
-            String var3 = MLKEMParameterSpec.fromName(this.kyberParameters.getName()).getName();
+         if (this.mlkemParameters != null) {
+            String var3 = MLKEMParameterSpec.fromName(this.mlkemParameters.getName()).getName();
             if (!var3.equals(this.genSpec.getPublicKey().getAlgorithm())) {
                throw new InvalidAlgorithmParameterException("key generator locked to " + var3);
             }
@@ -56,8 +56,8 @@ public class MLKEMKeyGeneratorSpi extends KeyGeneratorSpi {
 
          this.genSpec = null;
          this.extSpec = (KEMExtractSpec)var1;
-         if (this.kyberParameters != null) {
-            String var4 = MLKEMParameterSpec.fromName(this.kyberParameters.getName()).getName();
+         if (this.mlkemParameters != null) {
+            String var4 = MLKEMParameterSpec.fromName(this.mlkemParameters.getName()).getName();
             if (!var4.equals(this.extSpec.getPrivateKey().getAlgorithm())) {
                throw new InvalidAlgorithmParameterException("key generator locked to " + var4);
             }
@@ -73,21 +73,20 @@ public class MLKEMKeyGeneratorSpi extends KeyGeneratorSpi {
    @Override
    protected SecretKey engineGenerateKey() {
       if (this.genSpec != null) {
-         BCMLKEMPublicKey var9 = (BCMLKEMPublicKey)this.genSpec.getPublicKey();
-         MLKEMGenerator var10 = new MLKEMGenerator(this.random);
-         SecretWithEncapsulation var11 = var10.generateEncapsulated(var9.getKeyParams());
-         byte[] var12 = var11.getSecret();
-         byte[] var13 = KdfUtil.makeKeyBytes(this.genSpec, var12);
-         Arrays.clear(var12);
-         SecretKeyWithEncapsulation var14 = new SecretKeyWithEncapsulation(
-            new SecretKeySpec(var13, this.genSpec.getKeyAlgorithmName()), var11.getEncapsulation()
-         );
+         BCMLKEMPublicKey var23 = (BCMLKEMPublicKey)this.genSpec.getPublicKey();
+         MLKEMGenerator var24 = new MLKEMGenerator(this.random);
+         SecretWithEncapsulation var25 = var24.generateEncapsulated(var23.getKeyParams());
+         byte[] var26 = var25.getSecret();
+         byte[] var27 = KdfUtil.makeKeyBytes(this.genSpec, var26);
 
          try {
-            var11.destroy();
-            return var14;
-         } catch (DestroyFailedException var8) {
-            throw new IllegalStateException("key cleanup failed");
+            SecretKeySpec var28 = new SecretKeySpec(var27, this.genSpec.getKeyAlgorithmName());
+            return new SecretKeyWithEncapsulation(var28, var25.getEncapsulation());
+         } finally {
+            try {
+               var25.destroy();
+            } catch (DestroyFailedException var20) {
+            }
          }
       } else {
          BCMLKEMPrivateKey var1 = (BCMLKEMPrivateKey)this.extSpec.getPrivateKey();
@@ -95,10 +94,13 @@ public class MLKEMKeyGeneratorSpi extends KeyGeneratorSpi {
          byte[] var3 = this.extSpec.getEncapsulation();
          byte[] var4 = var2.extractSecret(var3);
          byte[] var5 = KdfUtil.makeKeyBytes(this.extSpec, var4);
-         Arrays.clear(var4);
-         SecretKeyWithEncapsulation var6 = new SecretKeyWithEncapsulation(new SecretKeySpec(var5, this.extSpec.getKeyAlgorithmName()), var3);
-         Arrays.clear(var5);
-         return var6;
+
+         try {
+            SecretKeySpec var6 = new SecretKeySpec(var5, this.extSpec.getKeyAlgorithmName());
+            return new SecretKeyWithEncapsulation(var6, var3);
+         } finally {
+            Arrays.clear(var5);
+         }
       }
    }
 

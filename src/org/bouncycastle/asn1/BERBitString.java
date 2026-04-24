@@ -11,7 +11,7 @@ public class BERBitString extends ASN1BitString {
       int var1 = var0.length;
       switch (var1) {
          case 0:
-            return new byte[]{0};
+            return EMPTY_OCTETS_CONTENTS;
          case 1:
             return var0[0].contents;
          default:
@@ -63,6 +63,12 @@ public class BERBitString extends ASN1BitString {
       super(var1, var2);
       this.elements = null;
       this.segmentLimit = var3;
+   }
+
+   public BERBitString(int var1) {
+      super(var1);
+      this.elements = null;
+      this.segmentLimit = 1000;
    }
 
    public BERBitString(ASN1Encodable var1) throws IOException {

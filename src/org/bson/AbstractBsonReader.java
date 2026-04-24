@@ -1,6 +1,5 @@
 package org.bson;
 
-import java.util.Arrays;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
 
@@ -153,7 +152,7 @@ public abstract class AbstractBsonReader implements BsonReader {
    @Override
    public void readEndArray() {
       if (this.isClosed()) {
-         throw new IllegalStateException("BSONBinaryWriter");
+         throw new IllegalStateException("BsonReader is closed");
       }
 
       if (this.getContext().getContextType() != BsonContextType.ARRAY) {
@@ -175,7 +174,7 @@ public abstract class AbstractBsonReader implements BsonReader {
    @Override
    public void readEndDocument() {
       if (this.isClosed()) {
-         throw new IllegalStateException("BSONBinaryWriter");
+         throw new IllegalStateException("BsonReader is closed");
       }
 
       if (this.getContext().getContextType() != BsonContextType.DOCUMENT && this.getContext().getContextType() != BsonContextType.SCOPE_DOCUMENT) {
@@ -475,7 +474,7 @@ public abstract class AbstractBsonReader implements BsonReader {
    }
 
    protected void throwInvalidContextType(String methodName, BsonContextType actualContextType, BsonContextType... validContextTypes) {
-      String validContextTypesString = StringUtils.join(" or ", Arrays.asList(validContextTypes));
+      String validContextTypesString = StringUtils.join(" or ", validContextTypes);
       String message = String.format(
          "%s can only be called when ContextType is %s, not when ContextType is %s.", methodName, validContextTypesString, actualContextType
       );
@@ -483,7 +482,7 @@ public abstract class AbstractBsonReader implements BsonReader {
    }
 
    protected void throwInvalidState(String methodName, AbstractBsonReader.State... validStates) {
-      String validStatesString = StringUtils.join(" or ", Arrays.asList(validStates));
+      String validStatesString = StringUtils.join(" or ", validStates);
       String message = String.format("%s can only be called when State is %s, not when State is %s.", methodName, validStatesString, this.state);
       throw new BsonInvalidOperationException(message);
    }
@@ -522,7 +521,7 @@ public abstract class AbstractBsonReader implements BsonReader {
 
    protected void checkPreconditions(String methodName, BsonType type) {
       if (this.isClosed()) {
-         throw new IllegalStateException("BsonWriter is closed");
+         throw new IllegalStateException("BsonReader is closed");
       }
 
       this.verifyBSONType(methodName, type);

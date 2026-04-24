@@ -15,9 +15,11 @@ class PrincipalUtils {
    }
 
    static X500Name getEncodedIssuerPrincipal(Object var0) {
-      return var0 instanceof X509Certificate
-         ? getIssuerPrincipal((X509Certificate)var0)
-         : getX500Name((X500Principal)((X509AttributeCertificate)var0).getIssuer().getPrincipals()[0]);
+      return var0 instanceof X509Certificate ? getIssuerPrincipal((X509Certificate)var0) : getIssuerPrincipal((X509AttributeCertificate)var0);
+   }
+
+   static X500Name getIssuerPrincipal(X509AttributeCertificate var0) {
+      return getX500Name((X500Principal)notNull(var0).getIssuer().getPrincipals()[0]);
    }
 
    static X500Name getIssuerPrincipal(X509Certificate var0) {
@@ -56,6 +58,14 @@ class PrincipalUtils {
    }
 
    private static TrustAnchor notNull(TrustAnchor var0) {
+      if (null == var0) {
+         throw new IllegalStateException();
+      } else {
+         return var0;
+      }
+   }
+
+   private static X509AttributeCertificate notNull(X509AttributeCertificate var0) {
       if (null == var0) {
          throw new IllegalStateException();
       } else {

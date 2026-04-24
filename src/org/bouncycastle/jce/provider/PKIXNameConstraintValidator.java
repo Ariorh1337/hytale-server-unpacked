@@ -40,6 +40,22 @@ public class PKIXNameConstraintValidator {
       }
    }
 
+   public void checkPermittedEmail(String var1) throws PKIXNameConstraintValidatorException {
+      try {
+         this.validator.checkPermittedEmail(var1);
+      } catch (NameConstraintValidatorException var3) {
+         throw new PKIXNameConstraintValidatorException(var3.getMessage(), var3);
+      }
+   }
+
+   public void checkExcludedEmail(String var1) throws PKIXNameConstraintValidatorException {
+      try {
+         this.validator.checkExcludedEmail(var1);
+      } catch (NameConstraintValidatorException var3) {
+         throw new PKIXNameConstraintValidatorException(var3.getMessage(), var3);
+      }
+   }
+
    public void checkPermitted(GeneralName var1) throws PKIXNameConstraintValidatorException {
       try {
          this.validator.checkPermitted(var1);

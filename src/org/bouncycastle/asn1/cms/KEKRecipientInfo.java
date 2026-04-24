@@ -17,7 +17,7 @@ public class KEKRecipientInfo extends ASN1Object {
    private ASN1OctetString encryptedKey;
 
    public KEKRecipientInfo(KEKIdentifier var1, AlgorithmIdentifier var2, ASN1OctetString var3) {
-      this.version = new ASN1Integer(4L);
+      this.version = ASN1Integer.FOUR;
       this.kekid = var1;
       this.keyEncryptionAlgorithm = var2;
       this.encryptedKey = var3;

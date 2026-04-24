@@ -114,18 +114,19 @@ public class DeployableTrapConfig extends DeployableAoeConfig {
       float radius,
       @Nonnull final DamageCause damageCause
    ) {
-      World world = store.getExternalData().getWorld();
       var consumer = new Consumer<Ref<EntityStore>>() {
          public void accept(@Nonnull Ref<EntityStore> ref) {
             if (ref != deployableRef) {
                if (store.getComponent(ref, DeployableComponent.getComponentType()) == null) {
-                  DeployableTrapConfig.this.attackTarget(ref, deployableRef, damageCause, commandBuffer);
-                  if (DeployableTrapConfig.this.destroyOnTriggered && deployableComponent.getFlag(DeployableComponent.DeployableFlag.TRIGGERED) == 0) {
-                     DeployableTrapConfig.this.onTriggered(store, deployableRef);
-                     deployableComponent.setFlag(DeployableComponent.DeployableFlag.TRIGGERED, 1);
-                  }
+                  if (DeployableTrapConfig.this.canAttackEntity(ref, deployableComponent, store)) {
+                     DeployableTrapConfig.this.attackTarget(ref, deployableComponent.getOwner(), damageCause, commandBuffer);
+                     if (DeployableTrapConfig.this.destroyOnTriggered && deployableComponent.getFlag(DeployableComponent.DeployableFlag.TRIGGERED) == 0) {
+                        DeployableTrapConfig.this.onTriggered(store, deployableRef);
+                        deployableComponent.setFlag(DeployableComponent.DeployableFlag.TRIGGERED, 1);
+                     }
 
-                  DeployableTrapConfig.this.applyEffectToTarget(store, ref);
+                     DeployableTrapConfig.this.applyEffectToTarget(store, ref);
+                  }
                }
             }
          }

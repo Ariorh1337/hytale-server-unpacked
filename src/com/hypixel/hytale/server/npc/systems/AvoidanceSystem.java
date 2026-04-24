@@ -100,7 +100,7 @@ public class AvoidanceSystem extends SteppableTickingSystem {
             if (role.isApplySeparation()) {
                role.blendSeparation(npcRef, position, rotation, role.getBodySteering(), this.transformComponentType, commandBuffer);
                if (debugVisSeparation) {
-                  VisHelper.renderDebugVector(position, role.getLastAvoidanceSteering(), VisHelper.DEBUG_COLOR_SEPARATION, world);
+                  VisHelper.renderDebugVector(position, role.getLastSeparationSteering(), VisHelper.DEBUG_COLOR_SEPARATION, world);
                }
             }
 

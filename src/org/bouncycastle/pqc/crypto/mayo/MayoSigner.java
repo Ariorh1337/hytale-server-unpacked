@@ -5,11 +5,11 @@ import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.crypto.digests.SHAKEDigest;
 import org.bouncycastle.crypto.params.ParametersWithRandom;
+import org.bouncycastle.math.raw.Nat;
 import org.bouncycastle.pqc.crypto.MessageSigner;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Bytes;
 import org.bouncycastle.util.GF16;
-import org.bouncycastle.util.Longs;
 import org.bouncycastle.util.Pack;
 
 public class MayoSigner implements MessageSigner {
@@ -697,7 +697,7 @@ public class MayoSigner implements MessageSigner {
             int var18 = 0;
 
             for (int var19 = 0; var18 < var7; var19 += var9) {
-               Longs.xorTo(var10, var1, var13, var11, ((var15 + var18 << 4) + (var4[var19 + var17] & 255)) * var10);
+               Nat.xorTo64(var10, var1, var13, var11, ((var15 + var18 << 4) + (var4[var19 + var17] & 255)) * var10);
                var18++;
             }
 
@@ -710,7 +710,7 @@ public class MayoSigner implements MessageSigner {
             int var29 = 0;
 
             for (int var20 = 0; var29 < var7; var20 += var9) {
-               Longs.xorTo(var10, var1, var2 + var27, var11, ((var15 + var29 << 4) + (var4[var20 + var25 + var5] & 255)) * var10);
+               Nat.xorTo64(var10, var1, var2 + var27, var11, ((var15 + var29 << 4) + (var4[var20 + var25 + var5] & 255)) * var10);
                var29++;
             }
 
@@ -729,7 +729,7 @@ public class MayoSigner implements MessageSigner {
             int var26 = 0;
 
             for (int var28 = 0; var26 < var7; var28 += var9) {
-               Longs.xorTo(var10, var1, var3 + var13, var11, ((var23 + var26 << 4) + (var4[var28 + var24] & 255)) * var10);
+               Nat.xorTo64(var10, var1, var3 + var13, var11, ((var23 + var26 << 4) + (var4[var28 + var24] & 255)) * var10);
                var26++;
             }
 
@@ -758,7 +758,7 @@ public class MayoSigner implements MessageSigner {
             int var16 = 0;
 
             for (int var17 = 0; var16 < var3; var17 += var2) {
-               Longs.xorTo(var2, var0, var14 + var17, var8, var15 + (var17 << 4));
+               Nat.xorTo64(var2, var0, var14 + var17, var8, var15 + (var17 << 4));
                var16++;
             }
 

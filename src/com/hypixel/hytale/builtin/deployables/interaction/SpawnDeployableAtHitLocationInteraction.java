@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.InteractionChainData;
@@ -47,11 +48,12 @@ public class SpawnDeployableAtHitLocationInteraction extends SimpleInstantIntera
          Store<EntityStore> store = commandBuffer.getStore();
          Vector3fc hitNormal = chainData.hitNormal;
          Vector3d hitNormalVec = new Vector3d(hitNormal.x(), hitNormal.y(), hitNormal.z());
+         Ref<EntityStore> deployerRef = context.getOwningEntity() != null ? context.getOwningEntity() : context.getEntity();
          DeployablesUtils.spawnDeployable(
             commandBuffer,
             store,
             this.config,
-            context.getEntity(),
+            deployerRef,
             new Vector3d(hitLocation.x(), hitLocation.y(), hitLocation.z()),
             MathUtil.getRotationForHitNormal(hitNormalVec),
             MathUtil.getNameForHitNormal(hitNormalVec)

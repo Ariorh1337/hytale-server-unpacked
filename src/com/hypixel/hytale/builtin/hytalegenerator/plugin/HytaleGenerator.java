@@ -10,6 +10,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldSt
 import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.commands.ViewportCommand;
+import com.hypixel.hytale.builtin.hytalegenerator.commands.WorldGenCommand;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.CountedPixelBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.EntityBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.SimplePixelBuffer;
@@ -29,6 +30,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.Stage;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.TerrainStage;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.TintStage;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
+import com.hypixel.hytale.builtin.hytalegenerator.plugin.editor.BiomeEditor;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
@@ -42,6 +44,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
+import com.hypixel.hytale.server.core.util.Config;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -60,8 +63,10 @@ import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 
 public class HytaleGenerator extends JavaPlugin {
+   private static HytaleGenerator instance;
    private AssetManager assetManager;
    private Runnable assetReloadListener;
+   public final Config<BiomeEditor.Defaults> biomeEditorConfig;
    @Nonnull
    private final Map<ChunkRequest.GeneratorProfile, ChunkGenerator> generators = new HashMap<>();
    @Nonnull
@@ -76,6 +81,7 @@ public class HytaleGenerator extends JavaPlugin {
    @Override
    protected void start() {
       super.start();
+      this.biomeEditorConfig.save();
       if (this.mainExecutor == null) {
          this.loadExecutors(this.assetManager.getSettingsAsset());
       }
@@ -155,6 +161,7 @@ public class HytaleGenerator extends JavaPlugin {
          .build();
       IWorldGenProvider.CODEC.register("HytaleGenerator", HandleProvider.class, generatorProvider);
       this.getCommandRegistry().registerCommand(new ViewportCommand(this.assetManager));
+      this.getCommandRegistry().registerCommand(new WorldGenCommand());
       this.getEventRegistry().registerGlobal(RemoveWorldEvent.class, event -> {
          if (event.getWorld().getChunkStore().getGenerator() instanceof Handle handle) {
             this.generators.remove(handle.getProfile());
@@ -415,5 +422,15 @@ public class HytaleGenerator extends JavaPlugin {
 
    public HytaleGenerator(@Nonnull JavaPluginInit init) {
       super(init);
+      instance = this;
+      this.biomeEditorConfig = this.withConfig("biome_editor", BiomeEditor.Defaults.CODEC);
+   }
+
+   public AssetManager getAssetManager() {
+      return this.assetManager;
+   }
+
+   public static HytaleGenerator get() {
+      return instance;
    }
 }

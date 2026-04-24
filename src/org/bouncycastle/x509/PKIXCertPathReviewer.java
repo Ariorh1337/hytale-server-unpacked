@@ -43,7 +43,6 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.asn1.x509.AccessDescription;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier;
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -405,279 +404,273 @@ public class PKIXCertPathReviewer extends CertPathValidatorUtilities {
       this.addNotification(var3);
 
       try {
-         X509Certificate var34 = (X509Certificate)this.certs.get(this.certs.size() - 1);
-         Collection var37 = this.getTrustAnchors(var34, this.pkixParams.getTrustAnchors());
-         if (var37.size() > 1) {
+         X509Certificate var32 = (X509Certificate)this.certs.get(this.certs.size() - 1);
+         Collection var35 = this.getTrustAnchors(var32, this.pkixParams.getTrustAnchors());
+         if (var35.size() > 1) {
             ErrorBundle var5 = new ErrorBundle(
                "org.bouncycastle.x509.CertPathReviewerMessages",
                "CertPathReviewer.conflictingTrustAnchors",
-               new Object[]{Integers.valueOf(var37.size()), new UntrustedInput(var34.getIssuerX500Principal())}
+               new Object[]{Integers.valueOf(var35.size()), new UntrustedInput(var32.getIssuerX500Principal())}
             );
             this.addError(var5);
-         } else if (var37.isEmpty()) {
-            ErrorBundle var40 = new ErrorBundle(
+         } else if (var35.isEmpty()) {
+            ErrorBundle var38 = new ErrorBundle(
                "org.bouncycastle.x509.CertPathReviewerMessages",
                "CertPathReviewer.noTrustAnchorFound",
-               new Object[]{new UntrustedInput(var34.getIssuerX500Principal()), Integers.valueOf(this.pkixParams.getTrustAnchors().size())}
+               new Object[]{new UntrustedInput(var32.getIssuerX500Principal()), Integers.valueOf(this.pkixParams.getTrustAnchors().size())}
             );
-            this.addError(var40);
+            this.addError(var38);
          } else {
-            var1 = (TrustAnchor)var37.iterator().next();
-            PublicKey var41;
+            var1 = (TrustAnchor)var35.iterator().next();
+            PublicKey var39;
             if (var1.getTrustedCert() != null) {
-               var41 = var1.getTrustedCert().getPublicKey();
+               var39 = var1.getTrustedCert().getPublicKey();
             } else {
-               var41 = var1.getCAPublicKey();
+               var39 = var1.getCAPublicKey();
             }
 
             try {
-               CertPathValidatorUtilities.verifyX509Certificate(var34, var41, this.pkixParams.getSigProvider());
-            } catch (SignatureException var30) {
+               CertPathValidatorUtilities.verifyX509Certificate(var32, var39, this.pkixParams.getSigProvider());
+            } catch (SignatureException var28) {
                ErrorBundle var7 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.trustButInvalidCert");
                this.addError(var7);
-            } catch (Exception var31) {
+            } catch (Exception var29) {
             }
          }
-      } catch (CertPathReviewerException var32) {
-         this.addError(var32.getErrorMessage());
-      } catch (Throwable var33) {
+      } catch (CertPathReviewerException var30) {
+         this.addError(var30.getErrorMessage());
+      } catch (Throwable var31) {
          ErrorBundle var4 = new ErrorBundle(
             "org.bouncycastle.x509.CertPathReviewerMessages",
             "CertPathReviewer.unknown",
-            new Object[]{new UntrustedInput(var33.getMessage()), new UntrustedInput(var33)}
+            new Object[]{new UntrustedInput(var31.getMessage()), new UntrustedInput(var31)}
          );
          this.addError(var4);
       }
 
       if (var1 != null) {
-         X509Certificate var35 = var1.getTrustedCert();
+         X509Certificate var33 = var1.getTrustedCert();
 
          try {
-            if (var35 != null) {
-               var2 = getSubjectPrincipal(var35);
+            if (var33 != null) {
+               var2 = getSubjectPrincipal(var33);
             } else {
                var2 = new X500Principal(var1.getCAName());
             }
-         } catch (IllegalArgumentException var29) {
-            ErrorBundle var42 = new ErrorBundle(
+         } catch (IllegalArgumentException var27) {
+            ErrorBundle var40 = new ErrorBundle(
                "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.trustDNInvalid", new Object[]{new UntrustedInput(var1.getCAName())}
             );
-            this.addError(var42);
+            this.addError(var40);
          }
 
-         if (var35 != null) {
-            boolean[] var38 = var35.getKeyUsage();
-            if (var38 != null && (var38.length <= 5 || !var38[5])) {
-               ErrorBundle var43 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.trustKeyUsage");
-               this.addNotification(var43);
+         if (var33 != null) {
+            boolean[] var36 = var33.getKeyUsage();
+            if (var36 != null && (var36.length <= 5 || !var36[5])) {
+               ErrorBundle var41 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.trustKeyUsage");
+               this.addNotification(var41);
             }
          }
       }
 
-      PublicKey var36 = null;
-      X500Principal var39 = var2;
-      X509Certificate var44 = null;
-      AlgorithmIdentifier var6 = null;
-      Object var49 = null;
-      Object var8 = null;
+      PublicKey var34 = null;
+      X500Principal var37 = var2;
+      X509Certificate var42 = null;
+      Object var6 = null;
       if (var1 != null) {
-         var44 = var1.getTrustedCert();
-         if (var44 != null) {
-            var36 = var44.getPublicKey();
+         var42 = var1.getTrustedCert();
+         if (var42 != null) {
+            var34 = var42.getPublicKey();
          } else {
-            var36 = var1.getCAPublicKey();
+            var34 = var1.getCAPublicKey();
          }
 
          try {
-            var6 = getAlgorithmIdentifier(var36);
-            var49 = var6.getAlgorithm();
-            var8 = var6.getParameters();
-         } catch (CertPathValidatorException var28) {
-            ErrorBundle var10 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.trustPubKeyError");
-            this.addError(var10);
+            var6 = getAlgorithmIdentifier(var34);
+         } catch (CertPathValidatorException var26) {
+            ErrorBundle var8 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.trustPubKeyError");
+            this.addError(var8);
             var6 = null;
          }
       }
 
-      X509Certificate var9 = null;
+      X509Certificate var47 = null;
 
-      for (int var11 = this.certs.size() - 1; var11 >= 0; var11--) {
-         int var57 = this.n - var11;
-         var9 = (X509Certificate)this.certs.get(var11);
-         if (var36 != null) {
+      for (int var9 = this.certs.size() - 1; var9 >= 0; var9--) {
+         int var49 = this.n - var9;
+         var47 = (X509Certificate)this.certs.get(var9);
+         if (var34 != null) {
             try {
-               CertPathValidatorUtilities.verifyX509Certificate(var9, var36, this.pkixParams.getSigProvider());
-            } catch (GeneralSecurityException var19) {
-               ErrorBundle var13 = new ErrorBundle(
+               CertPathValidatorUtilities.verifyX509Certificate(var47, var34, this.pkixParams.getSigProvider());
+            } catch (GeneralSecurityException var17) {
+               ErrorBundle var11 = new ErrorBundle(
                   "org.bouncycastle.x509.CertPathReviewerMessages",
                   "CertPathReviewer.signatureNotVerified",
-                  new Object[]{var19.getMessage(), var19, var19.getClass().getName()}
+                  new Object[]{var17.getMessage(), var17, var17.getClass().getName()}
                );
-               this.addError(var13, var11);
+               this.addError(var11, var9);
             }
-         } else if (isSelfIssued(var9)) {
+         } else if (isSelfIssued(var47)) {
             try {
-               CertPathValidatorUtilities.verifyX509Certificate(var9, var9.getPublicKey(), this.pkixParams.getSigProvider());
-               ErrorBundle var12 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.rootKeyIsValidButNotATrustAnchor");
-               this.addError(var12, var11);
-            } catch (GeneralSecurityException var27) {
-               ErrorBundle var63 = new ErrorBundle(
+               CertPathValidatorUtilities.verifyX509Certificate(var47, var47.getPublicKey(), this.pkixParams.getSigProvider());
+               ErrorBundle var10 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.rootKeyIsValidButNotATrustAnchor");
+               this.addError(var10, var9);
+            } catch (GeneralSecurityException var25) {
+               ErrorBundle var55 = new ErrorBundle(
                   "org.bouncycastle.x509.CertPathReviewerMessages",
                   "CertPathReviewer.signatureNotVerified",
-                  new Object[]{var27.getMessage(), var27, var27.getClass().getName()}
+                  new Object[]{var25.getMessage(), var25, var25.getClass().getName()}
                );
-               this.addError(var63, var11);
+               this.addError(var55, var9);
             }
          } else {
-            ErrorBundle var58 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.NoIssuerPublicKey");
-            byte[] var64 = var9.getExtensionValue(Extension.authorityKeyIdentifier.getId());
-            if (var64 != null) {
-               AuthorityKeyIdentifier var14 = AuthorityKeyIdentifier.getInstance(ASN1OctetString.getInstance(var64).getOctets());
-               GeneralNames var15 = var14.getAuthorityCertIssuer();
-               if (var15 != null) {
-                  GeneralName var16 = var15.getNames()[0];
-                  BigInteger var17 = var14.getAuthorityCertSerialNumber();
-                  if (var17 != null) {
-                     Object[] var18 = new Object[]{
+            ErrorBundle var50 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.NoIssuerPublicKey");
+            byte[] var56 = var47.getExtensionValue(Extension.authorityKeyIdentifier.getId());
+            if (var56 != null) {
+               AuthorityKeyIdentifier var12 = AuthorityKeyIdentifier.getInstance(ASN1OctetString.getInstance(var56).getOctets());
+               GeneralNames var13 = var12.getAuthorityCertIssuer();
+               if (var13 != null) {
+                  GeneralName var14 = var13.getNames()[0];
+                  BigInteger var15 = var12.getAuthorityCertSerialNumber();
+                  if (var15 != null) {
+                     Object[] var16 = new Object[]{
                         new LocaleString("org.bouncycastle.x509.CertPathReviewerMessages", "missingIssuer"),
                         " \"",
-                        var16,
+                        var14,
                         "\" ",
                         new LocaleString("org.bouncycastle.x509.CertPathReviewerMessages", "missingSerial"),
                         " ",
-                        var17
+                        var15
                      };
-                     var58.setExtraArguments(var18);
+                     var50.setExtraArguments(var16);
                   }
                }
             }
 
-            this.addError(var58, var11);
+            this.addError(var50, var9);
          }
 
          try {
-            var9.checkValidity(this.validDate);
-         } catch (CertificateNotYetValidException var25) {
-            ErrorBundle var66 = new ErrorBundle(
-               "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.certificateNotYetValid", new Object[]{new TrustedInput(var9.getNotBefore())}
+            var47.checkValidity(this.validDate);
+         } catch (CertificateNotYetValidException var23) {
+            ErrorBundle var58 = new ErrorBundle(
+               "org.bouncycastle.x509.CertPathReviewerMessages",
+               "CertPathReviewer.certificateNotYetValid",
+               new Object[]{new TrustedInput(var47.getNotBefore())}
             );
-            this.addError(var66, var11);
-         } catch (CertificateExpiredException var26) {
-            ErrorBundle var65 = new ErrorBundle(
-               "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.certificateExpired", new Object[]{new TrustedInput(var9.getNotAfter())}
+            this.addError(var58, var9);
+         } catch (CertificateExpiredException var24) {
+            ErrorBundle var57 = new ErrorBundle(
+               "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.certificateExpired", new Object[]{new TrustedInput(var47.getNotAfter())}
             );
-            this.addError(var65, var11);
+            this.addError(var57, var9);
          }
 
          if (this.pkixParams.isRevocationEnabled()) {
-            CRLDistPoint var59 = null;
+            CRLDistPoint var51 = null;
 
             try {
-               ASN1Primitive var67 = getExtensionValue(var9, CRL_DIST_POINTS);
-               if (var67 != null) {
-                  var59 = CRLDistPoint.getInstance(var67);
+               ASN1Primitive var59 = getExtensionValue(var47, CRL_DIST_POINTS);
+               if (var59 != null) {
+                  var51 = CRLDistPoint.getInstance(var59);
                }
-            } catch (AnnotatedException var24) {
-               ErrorBundle var73 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.crlDistPtExtError");
-               this.addError(var73, var11);
+            } catch (AnnotatedException var22) {
+               ErrorBundle var65 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.crlDistPtExtError");
+               this.addError(var65, var9);
             }
 
-            AuthorityInformationAccess var68 = null;
+            AuthorityInformationAccess var60 = null;
 
             try {
-               ASN1Primitive var74 = getExtensionValue(var9, AUTH_INFO_ACCESS);
-               if (var74 != null) {
-                  var68 = AuthorityInformationAccess.getInstance(var74);
-               }
-            } catch (AnnotatedException var23) {
-               ErrorBundle var78 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.crlAuthInfoAccError");
-               this.addError(var78, var11);
-            }
-
-            Vector var75 = this.getCRLDistUrls(var59);
-            Vector var79 = this.getOCSPUrls(var68);
-            Iterator var80 = var75.iterator();
-
-            while (var80.hasNext()) {
-               ErrorBundle var82 = new ErrorBundle(
-                  "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.crlDistPoint", new Object[]{new UntrustedUrlInput(var80.next())}
-               );
-               this.addNotification(var82, var11);
-            }
-
-            var80 = var79.iterator();
-
-            while (var80.hasNext()) {
-               ErrorBundle var83 = new ErrorBundle(
-                  "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.ocspLocation", new Object[]{new UntrustedUrlInput(var80.next())}
-               );
-               this.addNotification(var83, var11);
-            }
-
-            try {
-               this.checkRevocation(this.pkixParams, var9, this.validDate, var44, var36, var75, var79, var11);
-            } catch (CertPathReviewerException var22) {
-               this.addError(var22.getErrorMessage(), var11);
-            }
-         }
-
-         if (var39 != null && !var9.getIssuerX500Principal().equals(var39)) {
-            ErrorBundle var60 = new ErrorBundle(
-               "org.bouncycastle.x509.CertPathReviewerMessages",
-               "CertPathReviewer.certWrongIssuer",
-               new Object[]{var39.getName(), var9.getIssuerX500Principal().getName()}
-            );
-            this.addError(var60, var11);
-         }
-
-         if (var57 != this.n) {
-            if (var9 != null && var9.getVersion() == 1) {
-               ErrorBundle var61 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noCACert");
-               this.addError(var61, var11);
-            }
-
-            try {
-               BasicConstraints var62 = BasicConstraints.getInstance(getExtensionValue(var9, BASIC_CONSTRAINTS));
-               if (var62 != null) {
-                  if (!var62.isCA()) {
-                     ErrorBundle var69 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noCACert");
-                     this.addError(var69, var11);
-                  }
-               } else {
-                  ErrorBundle var70 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noBasicConstraints");
-                  this.addError(var70, var11);
+               ASN1Primitive var66 = getExtensionValue(var47, AUTH_INFO_ACCESS);
+               if (var66 != null) {
+                  var60 = AuthorityInformationAccess.getInstance(var66);
                }
             } catch (AnnotatedException var21) {
-               ErrorBundle var76 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.errorProcesingBC");
-               this.addError(var76, var11);
+               ErrorBundle var70 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.crlAuthInfoAccError");
+               this.addError(var70, var9);
             }
 
-            boolean[] var71 = var9.getKeyUsage();
-            if (var71 != null && (var71.length <= 5 || !var71[5])) {
-               ErrorBundle var77 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noCertSign");
-               this.addError(var77, var11);
+            Vector var67 = this.getCRLDistUrls(var51);
+            Vector var71 = this.getOCSPUrls(var60);
+            Iterator var72 = var67.iterator();
+
+            while (var72.hasNext()) {
+               ErrorBundle var74 = new ErrorBundle(
+                  "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.crlDistPoint", new Object[]{new UntrustedUrlInput(var72.next())}
+               );
+               this.addNotification(var74, var9);
+            }
+
+            var72 = var71.iterator();
+
+            while (var72.hasNext()) {
+               ErrorBundle var75 = new ErrorBundle(
+                  "org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.ocspLocation", new Object[]{new UntrustedUrlInput(var72.next())}
+               );
+               this.addNotification(var75, var9);
+            }
+
+            try {
+               this.checkRevocation(this.pkixParams, var47, this.validDate, var42, var34, var67, var71, var9);
+            } catch (CertPathReviewerException var20) {
+               this.addError(var20.getErrorMessage(), var9);
             }
          }
 
-         var44 = var9;
-         var39 = var9.getSubjectX500Principal();
+         if (var37 != null && !var47.getIssuerX500Principal().equals(var37)) {
+            ErrorBundle var52 = new ErrorBundle(
+               "org.bouncycastle.x509.CertPathReviewerMessages",
+               "CertPathReviewer.certWrongIssuer",
+               new Object[]{var37.getName(), var47.getIssuerX500Principal().getName()}
+            );
+            this.addError(var52, var9);
+         }
+
+         if (var49 != this.n) {
+            if (var47 != null && var47.getVersion() == 1) {
+               ErrorBundle var53 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noCACert");
+               this.addError(var53, var9);
+            }
+
+            try {
+               BasicConstraints var54 = BasicConstraints.getInstance(getExtensionValue(var47, BASIC_CONSTRAINTS));
+               if (var54 != null) {
+                  if (!var54.isCA()) {
+                     ErrorBundle var61 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noCACert");
+                     this.addError(var61, var9);
+                  }
+               } else {
+                  ErrorBundle var62 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noBasicConstraints");
+                  this.addError(var62, var9);
+               }
+            } catch (AnnotatedException var19) {
+               ErrorBundle var68 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.errorProcesingBC");
+               this.addError(var68, var9);
+            }
+
+            boolean[] var63 = var47.getKeyUsage();
+            if (var63 != null && (var63.length <= 5 || !var63[5])) {
+               ErrorBundle var69 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.noCertSign");
+               this.addError(var69, var9);
+            }
+         }
+
+         var42 = var47;
+         var37 = var47.getSubjectX500Principal();
 
          try {
-            var36 = getNextWorkingKey(this.certs, var11);
-            var6 = getAlgorithmIdentifier(var36);
-            var49 = var6.getAlgorithm();
-            var8 = var6.getParameters();
-         } catch (CertPathValidatorException var20) {
-            ErrorBundle var72 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.pubKeyError");
-            this.addError(var72, var11);
+            var34 = getNextWorkingKey(this.certs, var9);
+            var6 = getAlgorithmIdentifier(var34);
+         } catch (CertPathValidatorException var18) {
+            ErrorBundle var64 = new ErrorBundle("org.bouncycastle.x509.CertPathReviewerMessages", "CertPathReviewer.pubKeyError");
+            this.addError(var64, var9);
             var6 = null;
-            var49 = null;
-            var8 = null;
          }
       }
 
       this.trustAnchor = var1;
-      this.subjectPublicKey = var36;
+      this.subjectPublicKey = var34;
    }
 
    private void checkPolicy() {

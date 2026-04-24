@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthBrowserFlow;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthClient;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthDeviceFlow;
+import com.hypixel.hytale.server.core.telemetry.TelemetryService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
@@ -752,6 +753,11 @@ public class ServerAuthManager {
       }
 
       LOGGER.at(Level.INFO).log("Authentication successful! Mode: %s", mode);
+      TelemetryService telemetryService = TelemetryService.get();
+      if (telemetryService != null) {
+         telemetryService.onAuthenticated();
+      }
+
       return true;
    }
 

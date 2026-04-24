@@ -13,16 +13,20 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
    public static final int PACKET_ID = 403;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-   public static final int FIXED_BLOCK_SIZE = 24;
+   public static final int FIXED_BLOCK_SIZE = 30;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 24;
-   public static final int MAX_SIZE = 24;
+   public static final int VARIABLE_BLOCK_START = 30;
+   public static final int MAX_SIZE = 30;
    public int x;
    public int y;
    public int z;
    public int xNormal;
    public int yNormal;
    public int zNormal;
+   @Nonnull
+   public ExtrudeMode mode = ExtrudeMode.Extrude;
+   public boolean isHoldDownInteraction;
+   public int undoGroupSize;
 
    @Override
    public int getId() {
@@ -37,13 +41,18 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
    public BuilderToolExtrudeAction() {
    }
 
-   public BuilderToolExtrudeAction(int x, int y, int z, int xNormal, int yNormal, int zNormal) {
+   public BuilderToolExtrudeAction(
+      int x, int y, int z, int xNormal, int yNormal, int zNormal, @Nonnull ExtrudeMode mode, boolean isHoldDownInteraction, int undoGroupSize
+   ) {
       this.x = x;
       this.y = y;
       this.z = z;
       this.xNormal = xNormal;
       this.yNormal = yNormal;
       this.zNormal = zNormal;
+      this.mode = mode;
+      this.isHoldDownInteraction = isHoldDownInteraction;
+      this.undoGroupSize = undoGroupSize;
    }
 
    public BuilderToolExtrudeAction(@Nonnull BuilderToolExtrudeAction other) {
@@ -53,12 +62,15 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
       this.xNormal = other.xNormal;
       this.yNormal = other.yNormal;
       this.zNormal = other.zNormal;
+      this.mode = other.mode;
+      this.isHoldDownInteraction = other.isHoldDownInteraction;
+      this.undoGroupSize = other.undoGroupSize;
    }
 
    @Nonnull
    public static BuilderToolExtrudeAction deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 24) {
-         throw ProtocolException.bufferTooSmall("BuilderToolExtrudeAction", 24, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 30) {
+         throw ProtocolException.bufferTooSmall("BuilderToolExtrudeAction", 30, buf.readableBytes() - offset);
       }
 
       BuilderToolExtrudeAction obj = new BuilderToolExtrudeAction();
@@ -68,11 +80,14 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
       obj.xNormal = buf.getIntLE(offset + 12);
       obj.yNormal = buf.getIntLE(offset + 16);
       obj.zNormal = buf.getIntLE(offset + 20);
+      obj.mode = ExtrudeMode.fromValue(buf.getByte(offset + 24));
+      obj.isHoldDownInteraction = buf.getByte(offset + 25) != 0;
+      obj.undoGroupSize = buf.getIntLE(offset + 26);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 24;
+      return 30;
    }
 
    @Override
@@ -83,15 +98,23 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
       buf.writeIntLE(this.xNormal);
       buf.writeIntLE(this.yNormal);
       buf.writeIntLE(this.zNormal);
+      buf.writeByte(this.mode.getValue());
+      buf.writeByte(this.isHoldDownInteraction ? 1 : 0);
+      buf.writeIntLE(this.undoGroupSize);
    }
 
    @Override
    public int computeSize() {
-      return 24;
+      return 30;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 24 ? ValidationResult.error("Buffer too small: expected at least 24 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 30) {
+         return ValidationResult.error("Buffer too small: expected at least 30 bytes");
+      }
+
+      int v = buffer.getByte(offset + 24) & 255;
+      return v >= 3 ? ValidationResult.error("Invalid ExtrudeMode value for Mode") : ValidationResult.OK;
    }
 
    public BuilderToolExtrudeAction clone() {
@@ -102,6 +125,9 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
       copy.xNormal = this.xNormal;
       copy.yNormal = this.yNormal;
       copy.zNormal = this.zNormal;
+      copy.mode = this.mode;
+      copy.isHoldDownInteraction = this.isHoldDownInteraction;
+      copy.undoGroupSize = this.undoGroupSize;
       return copy;
    }
 
@@ -117,12 +143,15 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
                && this.z == other.z
                && this.xNormal == other.xNormal
                && this.yNormal == other.yNormal
-               && this.zNormal == other.zNormal;
+               && this.zNormal == other.zNormal
+               && Objects.equals(this.mode, other.mode)
+               && this.isHoldDownInteraction == other.isHoldDownInteraction
+               && this.undoGroupSize == other.undoGroupSize;
       }
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(this.x, this.y, this.z, this.xNormal, this.yNormal, this.zNormal);
+      return Objects.hash(this.x, this.y, this.z, this.xNormal, this.yNormal, this.zNormal, this.mode, this.isHoldDownInteraction, this.undoGroupSize);
    }
 }

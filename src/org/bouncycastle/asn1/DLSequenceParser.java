@@ -2,7 +2,6 @@ package org.bouncycastle.asn1;
 
 import java.io.IOException;
 
-@Deprecated
 public class DLSequenceParser implements ASN1SequenceParser {
    private ASN1StreamParser _parser;
 

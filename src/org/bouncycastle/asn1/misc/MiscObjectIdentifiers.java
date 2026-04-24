@@ -46,7 +46,7 @@ public interface MiscObjectIdentifiers {
    ASN1ObjectIdentifier id_scrypt = new ASN1ObjectIdentifier("1.3.6.1.4.1.11591.4.11");
    ASN1ObjectIdentifier id_alg_composite = new ASN1ObjectIdentifier("1.3.6.1.4.1.18227.2.1");
    ASN1ObjectIdentifier id_composite_key = new ASN1ObjectIdentifier("2.16.840.1.114027.80.4.1");
-   ASN1ObjectIdentifier id_oracle_PKCS12_trusted_key_usage = new ASN1ObjectIdentifier("2.16.840.1.113894.746875.1.1");
+   ASN1ObjectIdentifier id_oracle_pkcs12_trusted_key_usage = new ASN1ObjectIdentifier("2.16.840.1.113894.746875.1.1");
    ASN1ObjectIdentifier id_composite_signatures = new ASN1ObjectIdentifier("2.16.840.1.114027.80.8.1");
    ASN1ObjectIdentifier id_MLDSA65_RSA3072_PSS_SHA256 = id_composite_signatures.branch("26");
    ASN1ObjectIdentifier id_MLDSA65_RSA3072_PKCS15_SHA256 = id_composite_signatures.branch("27");

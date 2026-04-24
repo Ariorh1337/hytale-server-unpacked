@@ -17,7 +17,7 @@ import org.bouncycastle.jcajce.provider.util.AlgorithmProvider;
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter;
 
 public class BouncyCastlePQCProvider extends Provider implements ConfigurableProvider {
-   private static String info = "BouncyCastle Post-Quantum Security Provider v1.83";
+   private static String info = "BouncyCastle Post-Quantum Security Provider v1.84";
    public static String PROVIDER_NAME = "BCPQC";
    public static final ProviderConfiguration CONFIGURATION = null;
    private static final Map keyInfoConverters = new HashMap();
@@ -41,11 +41,12 @@ public class BouncyCastlePQCProvider extends Provider implements ConfigurablePro
       "HQC",
       "Rainbow",
       "Mayo",
-      "Snova"
+      "Snova",
+      "NTRUPlus"
    };
 
    public BouncyCastlePQCProvider() {
-      super(PROVIDER_NAME, 1.83, info);
+      super(PROVIDER_NAME, 1.84, info);
       AccessController.doPrivileged(new PrivilegedAction() {
          @Override
          public Object run() {

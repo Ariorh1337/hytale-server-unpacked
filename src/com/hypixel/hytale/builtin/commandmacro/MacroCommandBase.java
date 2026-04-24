@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
+import com.hypixel.hytale.server.core.command.system.PermissionBypassSender;
 import com.hypixel.hytale.server.core.command.system.arguments.system.AbstractOptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.Argument;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
@@ -35,11 +36,27 @@ public class MacroCommandBase extends AbstractAsyncCommand {
    @Nonnull
    private final List<Pair<String, List<MacroCommandReplacement>>> commandReplacements = new ObjectArrayList<>();
    private final Map<String, String> defaultValueStrings = new Object2ObjectOpenHashMap<>();
+   private final boolean bypassCommandPermissions;
 
    public MacroCommandBase(
-      @Nonnull String name, @Nullable String[] aliases, @Nonnull String description, @Nullable MacroCommandParameter[] parameters, @Nonnull String[] commands
+      @Nonnull String name,
+      @Nullable String[] aliases,
+      @Nonnull String description,
+      @Nullable MacroCommandParameter[] parameters,
+      @Nonnull String[] commands,
+      @Nullable String permissionGroup,
+      boolean bypassCommandPermissions
    ) {
       super(name, description);
+      this.bypassCommandPermissions = bypassCommandPermissions;
+      if (permissionGroup != null) {
+         if (permissionGroup.isEmpty()) {
+            throw new IllegalArgumentException("Macro command '" + name + "' has an empty permissionGroup; remove the field or specify a valid group");
+         }
+
+         this.setPermissionGroups(permissionGroup);
+      }
+
       if (aliases != null) {
          this.addAliases(aliases);
       }
@@ -162,9 +179,10 @@ public class MacroCommandBase extends AbstractAsyncCommand {
       }
 
       CompletableFuture<Void> completableFuture = CompletableFuture.completedFuture(null);
+      CommandSender executionSender = this.bypassCommandPermissions ? new PermissionBypassSender(commandSender) : commandSender;
 
       for (String command : commandsToExecute) {
-         completableFuture = completableFuture.thenCompose(VOID -> CommandManager.get().handleCommand(commandSender, command));
+         completableFuture = completableFuture.thenCompose(VOID -> CommandManager.get().handleCommand(executionSender, command));
       }
 
       return completableFuture;

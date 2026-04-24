@@ -1,5 +1,7 @@
 package org.bouncycastle.crypto.params;
 
+import org.bouncycastle.util.Arrays;
+
 public class DESParameters extends KeyParameter {
    public static final int DES_KEY_LENGTH = 8;
    private static final int N_DES_WEAK_KEYS = 16;
@@ -142,19 +144,14 @@ public class DESParameters extends KeyParameter {
    }
 
    public static boolean isWeakKey(byte[] var0, int var1) {
-      if (var0.length - var1 < 8) {
+      if (var1 > var0.length - 8) {
          throw new IllegalArgumentException("key material too short.");
       }
 
-      label28:
       for (int var2 = 0; var2 < 16; var2++) {
-         for (int var3 = 0; var3 < 8; var3++) {
-            if (var0[var3 + var1] != DES_weak_keys[var2 * 8 + var3]) {
-               continue label28;
-            }
+         if (Arrays.constantTimeAreEqual(8, var0, var1, DES_weak_keys, var2 * 8)) {
+            return true;
          }
-
-         return true;
       }
 
       return false;

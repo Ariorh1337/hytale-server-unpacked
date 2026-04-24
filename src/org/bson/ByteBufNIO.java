@@ -73,6 +73,30 @@ public class ByteBufNIO implements ByteBuf {
    }
 
    @Override
+   public ByteBuf putInt(int b) {
+      this.buf.putInt(b);
+      return this;
+   }
+
+   @Override
+   public ByteBuf putInt(int index, int b) {
+      this.buf.putInt(index, b);
+      return this;
+   }
+
+   @Override
+   public ByteBuf putDouble(double b) {
+      this.buf.putDouble(b);
+      return this;
+   }
+
+   @Override
+   public ByteBuf putLong(long b) {
+      this.buf.putLong(b);
+      return this;
+   }
+
+   @Override
    public ByteBuf flip() {
       ((Buffer)this.buf).flip();
       return this;
@@ -81,6 +105,16 @@ public class ByteBufNIO implements ByteBuf {
    @Override
    public byte[] array() {
       return this.buf.array();
+   }
+
+   @Override
+   public boolean isBackedByArray() {
+      return this.buf.hasArray();
+   }
+
+   @Override
+   public int arrayOffset() {
+      return this.buf.arrayOffset();
    }
 
    @Override
@@ -135,8 +169,12 @@ public class ByteBufNIO implements ByteBuf {
 
    @Override
    public ByteBuf get(int index, byte[] bytes, int offset, int length) {
-      for (int i = 0; i < length; i++) {
-         bytes[offset + i] = this.buf.get(index + i);
+      if (this.buf.hasArray()) {
+         System.arraycopy(this.buf.array(), index, bytes, offset, length);
+      } else {
+         for (int i = 0; i < length; i++) {
+            bytes[offset + i] = this.buf.get(index + i);
+         }
       }
 
       return this;

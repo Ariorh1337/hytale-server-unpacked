@@ -94,27 +94,19 @@ public class JsonWriter extends AbstractBsonWriter {
    @Override
    protected void doWriteDBPointer(BsonDbPointer value) {
       if (this.settings.getOutputMode() == JsonMode.EXTENDED) {
-         (new Converter<BsonDbPointer>() {
-            public void convert(BsonDbPointer value1, StrictJsonWriter writer) {
-               writer.writeStartObject();
-               writer.writeStartObject("$dbPointer");
-               writer.writeString("$ref", value1.getNamespace());
-               writer.writeName("$id");
-               JsonWriter.this.doWriteObjectId(value1.getId());
-               writer.writeEndObject();
-               writer.writeEndObject();
-            }
-         }).convert(value, this.strictJsonWriter);
+         this.strictJsonWriter.writeStartObject();
+         this.strictJsonWriter.writeStartObject("$dbPointer");
+         this.strictJsonWriter.writeString("$ref", value.getNamespace());
+         this.strictJsonWriter.writeName("$id");
+         this.doWriteObjectId(value.getId());
+         this.strictJsonWriter.writeEndObject();
+         this.strictJsonWriter.writeEndObject();
       } else {
-         (new Converter<BsonDbPointer>() {
-            public void convert(BsonDbPointer value1, StrictJsonWriter writer) {
-               writer.writeStartObject();
-               writer.writeString("$ref", value1.getNamespace());
-               writer.writeName("$id");
-               JsonWriter.this.doWriteObjectId(value1.getId());
-               writer.writeEndObject();
-            }
-         }).convert(value, this.strictJsonWriter);
+         this.strictJsonWriter.writeStartObject();
+         this.strictJsonWriter.writeString("$ref", value.getNamespace());
+         this.strictJsonWriter.writeName("$id");
+         this.doWriteObjectId(value.getId());
+         this.strictJsonWriter.writeEndObject();
       }
    }
 

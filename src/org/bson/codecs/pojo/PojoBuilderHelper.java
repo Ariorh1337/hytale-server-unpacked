@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,12 +25,12 @@ final class PojoBuilderHelper {
       ArrayList<Annotation> annotations = new ArrayList<>();
       Set<String> propertyNames = new TreeSet<>();
       Map<String, TypeParameterMap> propertyTypeParameterMap = new HashMap<>();
-      Class<? super T> currentClass = clazz;
       String declaringClassName = clazz.getSimpleName();
-      TypeData<?> parentClassTypeData = null;
       Map<String, PropertyMetadata<?>> propertyNameMap = new HashMap<>();
 
-      while (!currentClass.isEnum() && currentClass.getSuperclass() != null) {
+      for (PojoBuilderHelper.ClassWithParentTypeData<? super T> currentClassWithParentTypeData : getClassHierarchy(clazz, null)) {
+         Class<? super T> currentClass = currentClassWithParentTypeData.clazz;
+         TypeData<?> parentClassTypeData = currentClassWithParentTypeData.parentClassTypeData;
          annotations.addAll(Arrays.asList(currentClass.getDeclaredAnnotations()));
          List<String> genericTypeNames = new ArrayList<>();
 
@@ -107,13 +108,6 @@ final class PojoBuilderHelper {
                }
             }
          }
-
-         parentClassTypeData = TypeData.newInstance(currentClass.getGenericSuperclass(), currentClass);
-         currentClass = currentClass.getSuperclass();
-      }
-
-      if (currentClass.isInterface()) {
-         annotations.addAll(Arrays.asList(currentClass.getDeclaredAnnotations()));
       }
 
       for (String propertyName : propertyNames) {
@@ -129,9 +123,7 @@ final class PojoBuilderHelper {
       Constructor<T> noArgsConstructor = null;
 
       for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
-         if (constructor.getParameterTypes().length == 0 && (Modifier.isPublic(constructor.getModifiers()) || Modifier.isProtected(constructor.getModifiers()))
-            )
-          {
+         if (constructor.getParameterCount() == 0 && (Modifier.isPublic(constructor.getModifiers()) || Modifier.isProtected(constructor.getModifiers()))) {
             noArgsConstructor = (Constructor<T>)constructor;
             noArgsConstructor.setAccessible(true);
          }
@@ -267,6 +259,35 @@ final class PojoBuilderHelper {
       }
    }
 
+   private static <T> Set<PojoBuilderHelper.ClassWithParentTypeData<? super T>> getClassHierarchy(Class<? super T> clazz, TypeData<?> classTypeData) {
+      Set<PojoBuilderHelper.ClassWithParentTypeData<? super T>> classesToScan = new LinkedHashSet<>();
+      Class<? super T> currentClass = clazz;
+      TypeData<?> parentClassTypeData = classTypeData;
+
+      while (currentClass != null && !currentClass.isEnum() && !currentClass.equals(Object.class)) {
+         classesToScan.add(new PojoBuilderHelper.ClassWithParentTypeData<>(currentClass, parentClassTypeData));
+         parentClassTypeData = TypeData.newInstance(currentClass.getGenericSuperclass(), currentClass);
+
+         for (Class<?> interfaceClass : currentClass.getInterfaces()) {
+            classesToScan.addAll(getClassHierarchy((Class<? super T>)interfaceClass, parentClassTypeData));
+         }
+
+         currentClass = currentClass.getSuperclass();
+      }
+
+      return classesToScan;
+   }
+
    private PojoBuilderHelper() {
+   }
+
+   private static final class ClassWithParentTypeData<T> {
+      private final Class<T> clazz;
+      private final TypeData<?> parentClassTypeData;
+
+      private ClassWithParentTypeData(Class<T> clazz, TypeData<?> parentClassTypeData) {
+         this.clazz = clazz;
+         this.parentClassTypeData = parentClassTypeData;
+      }
    }
 }

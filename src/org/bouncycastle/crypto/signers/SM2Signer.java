@@ -2,6 +2,8 @@ package org.bouncycastle.crypto.signers;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.CryptoException;
 import org.bouncycastle.crypto.CryptoServicesRegistrar;
@@ -24,6 +26,7 @@ import org.bouncycastle.util.BigIntegers;
 import org.bouncycastle.util.encoders.Hex;
 
 public class SM2Signer implements Signer, ECConstants {
+   private static final Logger LOG = Logger.getLogger(SM2Signer.class.getName());
    private final DSAKCalculator kCalculator = new RandomDSAKCalculator();
    private final Digest digest;
    private final DSAEncoding encoding;
@@ -118,6 +121,9 @@ public class SM2Signer implements Signer, ECConstants {
          BigInteger[] var2 = this.encoding.decode(this.ecParams.getN(), var1);
          return this.verifySignature(var2[0], var2[1]);
       } catch (Exception var7) {
+         if (LOG.isLoggable(Level.FINE)) {
+            LOG.log(Level.FINE, "SM2 signature verification failed due to exception", var7);
+         }
       } finally {
          this.reset();
       }
@@ -171,27 +177,43 @@ public class SM2Signer implements Signer, ECConstants {
 
    private boolean verifySignature(BigInteger var1, BigInteger var2) {
       BigInteger var3 = this.ecParams.getN();
-      if (var1.compareTo(ONE) < 0 || var1.compareTo(var3) >= 0) {
-         return false;
-      }
+      if (var1.compareTo(ONE) >= 0 && var1.compareTo(var3) < 0) {
+         if (var2.compareTo(ONE) >= 0 && var2.compareTo(var3) < 0) {
+            byte[] var4 = this.digestDoFinal();
+            BigInteger var5 = this.calculateE(var3, var4);
+            BigInteger var6 = var1.add(var2).mod(var3);
+            if (var6.equals(ZERO)) {
+               if (LOG.isLoggable(Level.FINE)) {
+                  LOG.fine("SM2 signature verification failed: t equals zero");
+               }
 
-      if (var2.compareTo(ONE) >= 0 && var2.compareTo(var3) < 0) {
-         byte[] var4 = this.digestDoFinal();
-         BigInteger var5 = this.calculateE(var3, var4);
-         BigInteger var6 = var1.add(var2).mod(var3);
-         if (var6.equals(ZERO)) {
+               return false;
+            } else {
+               ECPoint var7 = ((ECPublicKeyParameters)this.ecKey).getQ();
+               ECPoint var8 = ECAlgorithms.sumOfTwoMultiplies(this.ecParams.getG(), var2, var7, var6).normalize();
+               if (var8.isInfinity()) {
+                  if (LOG.isLoggable(Level.FINE)) {
+                     LOG.fine("SM2 signature verification failed: calculated point at infinity");
+                  }
+
+                  return false;
+               } else {
+                  BigInteger var9 = var5.add(var8.getAffineXCoord().toBigInteger()).mod(var3);
+                  return var9.equals(var1);
+               }
+            }
+         } else {
+            if (LOG.isLoggable(Level.FINE)) {
+               LOG.fine("SM2 signature verification failed: s out of range");
+            }
+
             return false;
          }
-
-         ECPoint var7 = ((ECPublicKeyParameters)this.ecKey).getQ();
-         ECPoint var8 = ECAlgorithms.sumOfTwoMultiplies(this.ecParams.getG(), var2, var7, var6).normalize();
-         if (var8.isInfinity()) {
-            return false;
-         }
-
-         BigInteger var9 = var5.add(var8.getAffineXCoord().toBigInteger()).mod(var3);
-         return var9.equals(var1);
       } else {
+         if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("SM2 signature verification failed: r out of range");
+         }
+
          return false;
       }
    }

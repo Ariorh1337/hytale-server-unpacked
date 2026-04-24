@@ -36,6 +36,7 @@ public class StashCommand extends AbstractPlayerCommand {
 
    public StashCommand() {
       super("stash", "server.commands.stash.getDroplist.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

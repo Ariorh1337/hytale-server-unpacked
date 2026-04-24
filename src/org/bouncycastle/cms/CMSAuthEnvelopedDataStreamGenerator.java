@@ -2,7 +2,6 @@ package org.bouncycastle.cms;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Collections;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -11,7 +10,6 @@ import org.bouncycastle.asn1.BERSequenceGenerator;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.cms.CMSObjectIdentifiers;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.operator.OutputAEADEncryptor;
 
 public class CMSAuthEnvelopedDataStreamGenerator extends CMSAuthEnvelopedGenerator {
@@ -26,24 +24,18 @@ public class CMSAuthEnvelopedDataStreamGenerator extends CMSAuthEnvelopedGenerat
       this._berEncodeRecipientSet = var1;
    }
 
-   private OutputStream doOpen(ASN1ObjectIdentifier var1, OutputStream var2, OutputAEADEncryptor var3) throws IOException, CMSException {
-      ASN1EncodableVector var4 = CMSUtils.getRecipentInfos(var3.getKey(), this.recipientInfoGenerators);
-      return this.open(var1, var2, var4, var3);
-   }
-
    protected OutputStream open(ASN1ObjectIdentifier var1, OutputStream var2, ASN1EncodableVector var3, OutputAEADEncryptor var4) throws IOException {
       BERSequenceGenerator var5 = new BERSequenceGenerator(var2);
       var5.addObject(CMSObjectIdentifiers.authEnvelopedData);
       BERSequenceGenerator var6 = new BERSequenceGenerator(var5.getRawOutputStream(), 0, true);
-      var6.addObject(new ASN1Integer(0L));
+      var6.addObject(ASN1Integer.ZERO);
       CMSUtils.addOriginatorInfoToGenerator(var6, this.originatorInfo);
       CMSUtils.addRecipientInfosToGenerator(var3, var6, this._berEncodeRecipientSet);
       BERSequenceGenerator var7 = new BERSequenceGenerator(var6.getRawOutputStream());
       var7.addObject(var1);
-      AlgorithmIdentifier var8 = var4.getAlgorithmIdentifier();
-      var7.getRawOutputStream().write(var8.getEncoded());
-      OutputStream var9 = CMSUtils.createBEROctetOutputStream(var7.getRawOutputStream(), 0, true, this._bufferSize);
-      return new CMSAuthEnvelopedDataStreamGenerator.CMSAuthEnvelopedDataOutputStream(var4, var9, var5, var6, var7);
+      var7.addObject(var4.getAlgorithmIdentifier());
+      OutputStream var8 = CMSUtils.createBEROctetOutputStream(var7.getRawOutputStream(), 0, false, this._bufferSize);
+      return new CMSAuthEnvelopedDataStreamGenerator.CMSAuthEnvelopedDataOutputStream(var4, var8, var5, var6, var7);
    }
 
    protected OutputStream open(OutputStream var1, ASN1EncodableVector var2, OutputAEADEncryptor var3) throws CMSException {
@@ -55,7 +47,12 @@ public class CMSAuthEnvelopedDataStreamGenerator extends CMSAuthEnvelopedGenerat
    }
 
    public OutputStream open(OutputStream var1, OutputAEADEncryptor var2) throws CMSException, IOException {
-      return this.doOpen(new ASN1ObjectIdentifier(CMSObjectIdentifiers.data.getId()), var1, var2);
+      return this.open(CMSObjectIdentifiers.data, var1, var2);
+   }
+
+   public OutputStream open(ASN1ObjectIdentifier var1, OutputStream var2, OutputAEADEncryptor var3) throws CMSException, IOException {
+      ASN1EncodableVector var4 = CMSUtils.getRecipentInfos(var3.getKey(), this.recipientInfoGenerators);
+      return this.open(var1, var2, var4, var3);
    }
 
    private class CMSAuthEnvelopedDataOutputStream extends OutputStream {
@@ -103,7 +100,7 @@ public class CMSAuthEnvelopedDataStreamGenerator extends CMSAuthEnvelopedGenerat
          }
 
          this._envGen.addObject(new DEROctetString(this._encryptor.getMAC()));
-         CMSUtils.addAttriSetToGenerator(this._envGen, CMSAuthEnvelopedDataStreamGenerator.this.unauthAttrsGenerator, 2, Collections.EMPTY_MAP);
+         CMSUtils.addAttriSetToGenerator(this._envGen, CMSAuthEnvelopedDataStreamGenerator.this.unauthAttrsGenerator, 2, CMSUtils.getEmptyParameters());
          this._envGen.close();
          this._cGen.close();
       }

@@ -20,7 +20,7 @@ public class ThreadedSeedGenerator {
          }
       }
 
-      public byte[] generateSeed(int var1, boolean var2) {
+      byte[] generateSeed(int var1, boolean var2) {
          Thread var3 = new Thread(this);
          byte[] var4 = new byte[var1];
          this.counter = 0;

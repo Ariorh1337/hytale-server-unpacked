@@ -33,9 +33,9 @@ public class SignerInfo extends ASN1Object {
 
    public SignerInfo(SignerIdentifier var1, AlgorithmIdentifier var2, ASN1Set var3, AlgorithmIdentifier var4, ASN1OctetString var5, ASN1Set var6) {
       if (var1.isTagged()) {
-         this.version = new ASN1Integer(3L);
+         this.version = ASN1Integer.THREE;
       } else {
-         this.version = new ASN1Integer(1L);
+         this.version = ASN1Integer.ONE;
       }
 
       this.sid = var1;
@@ -48,9 +48,9 @@ public class SignerInfo extends ASN1Object {
 
    public SignerInfo(SignerIdentifier var1, AlgorithmIdentifier var2, Attributes var3, AlgorithmIdentifier var4, ASN1OctetString var5, Attributes var6) {
       if (var1.isTagged()) {
-         this.version = new ASN1Integer(3L);
+         this.version = ASN1Integer.THREE;
       } else {
-         this.version = new ASN1Integer(1L);
+         this.version = ASN1Integer.ONE;
       }
 
       this.sid = var1;

@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeDirection;
@@ -21,7 +20,7 @@ import javax.annotation.Nullable;
 public class FlipCommand extends AbstractPlayerCommand {
    public FlipCommand() {
       super("flip", "server.commands.flip.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new FlipCommand.FlipWithDirectionCommand());
    }
 
@@ -60,7 +59,7 @@ public class FlipCommand extends AbstractPlayerCommand {
 
       public FlipWithDirectionCommand() {
          super("server.commands.flip.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

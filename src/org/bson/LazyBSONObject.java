@@ -80,21 +80,43 @@ public class LazyBSONObject implements BSONObject {
    public boolean containsField(String s) {
       BsonBinaryReader reader = this.getBsonReader();
 
-      try {
-         reader.readStartDocument();
+      boolean var3;
+      label48: {
+         try {
+            reader.readStartDocument();
 
-         while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-            if (reader.readName().equals(s)) {
-               return true;
+            while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+               if (reader.readName().equals(s)) {
+                  var3 = true;
+                  break label48;
+               }
+
+               reader.skipValue();
+            }
+         } catch (Throwable var6) {
+            if (reader != null) {
+               try {
+                  reader.close();
+               } catch (Throwable var5) {
+                  var6.addSuppressed(var5);
+               }
             }
 
-            reader.skipValue();
+            throw var6;
          }
-      } finally {
+
+         if (reader != null) {
+            reader.close();
+         }
+
+         return false;
+      }
+
+      if (reader != null) {
          reader.close();
       }
 
-      return false;
+      return var3;
    }
 
    @Override
@@ -111,7 +133,19 @@ public class LazyBSONObject implements BSONObject {
          }
 
          reader.readEndDocument();
-      } finally {
+      } catch (Throwable var6) {
+         if (reader != null) {
+            try {
+               reader.close();
+            } catch (Throwable var5) {
+               var6.addSuppressed(var5);
+            }
+         }
+
+         throw var6;
+      }
+
+      if (reader != null) {
          reader.close();
       }
 
@@ -243,7 +277,19 @@ public class LazyBSONObject implements BSONObject {
          }
 
          reader.readEndDocument();
-      } finally {
+      } catch (Throwable var6) {
+         if (reader != null) {
+            try {
+               reader.close();
+            } catch (Throwable var5) {
+               var6.addSuppressed(var5);
+            }
+         }
+
+         throw var6;
+      }
+
+      if (reader != null) {
          reader.close();
       }
 

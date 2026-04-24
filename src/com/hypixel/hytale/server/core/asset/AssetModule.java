@@ -14,7 +14,6 @@ import com.hypixel.hytale.common.plugin.Mod;
 import com.hypixel.hytale.common.plugin.ModLoadOrderException;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
-import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
@@ -32,6 +31,7 @@ import com.hypixel.hytale.server.core.asset.type.item.DroplistCommand;
 import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.server.core.event.events.BootEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
@@ -43,7 +43,6 @@ import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGen
 import com.hypixel.hytale.server.core.universe.world.worldmap.IWorldMap;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import it.unimi.dsi.fastutil.objects.ObjectBooleanPair;
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -71,8 +70,6 @@ public class AssetModule extends JavaPlugin {
    private AssetMonitor assetMonitor;
    @Nonnull
    private List<AssetPack> assetPacks = new CopyOnWriteArrayList<>();
-   private final List<ObjectBooleanPair<AssetPack>> pendingAssetPacks = new ArrayList<>();
-   private boolean hasSetup = false;
    private boolean hasLoaded = false;
    private final List<AssetStore<?, ?, ?>> pendingAssetStores = new CopyOnWriteArrayList<>();
 
@@ -102,23 +99,15 @@ public class AssetModule extends JavaPlugin {
          this.loadAndRegisterPack(path, false);
       }
 
-      this.hasSetup = true;
-
-      for (ObjectBooleanPair<AssetPack> p : this.pendingAssetPacks) {
-         if (this.getAssetPack(p.left().getName()) != null) {
-            if (!p.rightBoolean()) {
-               throw new IllegalStateException("Asset pack with name '" + p.left().getName() + "' already exists");
-            }
-
-            this.getLogger()
-               .at(Level.WARNING)
-               .log("Asset pack with name '%s' already exists, skipping registration from path: %s", p.left().getName(), p.left().getRoot());
-         } else {
-            this.assetPacks.add(p.left());
+      for (PluginManager.ClasspathAssetPack classpathPack : PluginManager.get().consumeClasspathAssetPacks()) {
+         String id = new PluginIdentifier(classpathPack.manifest()).toString();
+         if (!this.registerPack(id, classpathPack.path(), classpathPack.manifest(), AssetPack.PackSource.CLASSPATH)) {
+            Message reasonMessage = Message.translation("client.disconnection.shutdownReason.packDuplicate").param("pack", id);
+            HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(reasonMessage));
+            return;
          }
       }
 
-      this.pendingAssetPacks.clear();
       this.loadPacksFromDirectory(PluginManager.MODS_PATH);
 
       for (Path modsPath : Options.getOptionSet().valuesOf(Options.MODS_DIRECTORIES)) {
@@ -168,7 +157,7 @@ public class AssetModule extends JavaPlugin {
                   AddPlayerToWorldEvent.class,
                   event -> {
                      PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
-                     if (playerRef != null && playerRef.hasPermission("hytale.mods.outdated.notify")) {
+                     if (playerRef != null && playerRef.hasPermission(HytalePermissions.MODS_OUTDATED_NOTIFY)) {
                         StringBuilder modsList = new StringBuilder();
 
                         for (String packx : outdatedPacks) {
@@ -283,7 +272,22 @@ public class AssetModule extends JavaPlugin {
 
    @Nullable
    private PluginManifest loadPackManifest(Path packPath) throws IOException {
-      if (packPath.getFileName().toString().toLowerCase().endsWith(".zip")) {
+      String lowerFileName = packPath.getFileName().toString().toLowerCase();
+      if (!lowerFileName.endsWith(".zip") && !lowerFileName.endsWith(".jar")) {
+         if (Files.isDirectory(packPath)) {
+            Path manifestPath = packPath.resolve("manifest.json");
+            if (Files.exists(manifestPath)) {
+               try (FileReader reader = new FileReader(manifestPath.toFile(), StandardCharsets.UTF_8)) {
+                  char[] buffer = RawJsonReader.READ_BUFFER.get();
+                  RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
+                  ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
+                  PluginManifest manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+                  extraInfo.getValidationResults().logOrThrowValidatorExceptions(this.getLogger());
+                  return manifest;
+               }
+            }
+         }
+      } else {
          try (FileSystem fs = FileSystems.newFileSystem(packPath, (ClassLoader)null)) {
             Path manifestPath = fs.getPath("manifest.json");
             if (Files.exists(manifestPath)) {
@@ -297,18 +301,6 @@ public class AssetModule extends JavaPlugin {
                }
             }
          }
-      } else if (Files.isDirectory(packPath)) {
-         Path manifestPath = packPath.resolve("manifest.json");
-         if (Files.exists(manifestPath)) {
-            try (FileReader reader = new FileReader(manifestPath.toFile(), StandardCharsets.UTF_8)) {
-               char[] buffer = RawJsonReader.READ_BUFFER.get();
-               RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
-               ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
-               PluginManifest manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
-               extraInfo.getValidationResults().logOrThrowValidatorExceptions(this.getLogger());
-               return manifest;
-            }
-         }
       }
 
       return null;
@@ -320,7 +312,7 @@ public class AssetModule extends JavaPlugin {
 
          try (DirectoryStream<Path> stream = Files.newDirectoryStream(modsPath)) {
             for (Path packPath : stream) {
-               if (packPath.getFileName() != null && !packPath.getFileName().toString().toLowerCase().endsWith(".jar")) {
+               if (packPath.getFileName() != null) {
                   this.loadAndRegisterPack(packPath, true);
                }
             }
@@ -343,26 +335,54 @@ public class AssetModule extends JavaPlugin {
          return;
       }
 
-      PluginIdentifier packIdentifier = new PluginIdentifier(manifest);
-      HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-      ModConfig modConfig = serverConfig.getModConfig().get(packIdentifier);
-      boolean enabled;
-      if (modConfig != null && modConfig.getEnabled() != null) {
-         enabled = modConfig.getEnabled();
+      if (packPath.getFileName().toString().toLowerCase().endsWith(".jar") && !manifest.includesAssetPack()) {
+         this.getLogger().at(Level.FINE).log("Skipping jar without asset pack: %s", packPath.getFileName());
       } else {
-         enabled = !manifest.isDisabledByDefault() && (!isExternal || serverConfig.getDefaultModsEnabled());
-      }
+         PluginIdentifier packIdentifier = new PluginIdentifier(manifest);
+         String packId = packIdentifier.toString();
+         AssetPack.PackSource source = isExternal ? AssetPack.PackSource.MODS : AssetPack.PackSource.CLI;
+         HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+         ModConfig modConfig = serverConfig.getModConfig().get(packIdentifier);
+         boolean enabled;
+         if (modConfig != null && modConfig.getEnabled() != null) {
+            enabled = modConfig.getEnabled();
+         } else {
+            enabled = !manifest.isDisabledByDefault() && (!isExternal || serverConfig.getDefaultModsEnabled());
+         }
 
-      String packId = packIdentifier.toString();
-      if (enabled) {
-         this.registerPack(packId, packPath, manifest, false);
-         this.getLogger().at(Level.INFO).log("Loaded pack: %s from %s", packId, packPath.getFileName());
-      } else {
-         this.getLogger().at(Level.INFO).log("Skipped disabled pack: %s", packId);
+         if (enabled) {
+            if (!this.registerPack(packId, packPath, manifest, source)) {
+               Message reasonMessage = Message.translation("client.disconnection.shutdownReason.packDuplicate").param("pack", packId);
+               HytaleServer.get().shutdownServer(ShutdownReason.MOD_ERROR.withMessage(reasonMessage));
+               return;
+            }
+
+            this.getLogger().at(Level.INFO).log("Loaded pack: %s from %s", packId, packPath.getFileName());
+         } else {
+            this.getLogger().at(Level.INFO).log("Skipped disabled pack: %s", packId);
+         }
       }
    }
 
-   public void registerPack(@Nonnull String name, @Nonnull Path path, @Nonnull PluginManifest manifest, boolean ignoreIfExists) {
+   public boolean registerPack(@Nonnull String name, @Nonnull Path path, @Nonnull PluginManifest manifest, @Nonnull AssetPack.PackSource source) {
+      AssetPack existingPack = this.getAssetPack(name);
+      if (existingPack != null) {
+         if (existingPack.getSource().overrides(source)) {
+            this.getLogger().at(Level.WARNING).log("Asset pack '%s' already registered (%s), skipping %s: %s", name, existingPack.getSource(), source, path);
+            return true;
+         }
+
+         if (!source.overrides(existingPack.getSource())) {
+            this.getLogger()
+               .at(Level.SEVERE)
+               .log("Duplicate asset pack '%s' at %s (already loaded from %s). Remove the duplicate.", name, path, existingPack.getPackLocation());
+            return false;
+         }
+
+         this.getLogger().at(Level.WARNING).log("Asset pack '%s' overriding %s with %s: %s", name, existingPack.getSource(), source, path);
+         this.unregisterPack(name);
+      }
+
       Path absolutePath = path.toAbsolutePath().normalize();
       Path packLocation = absolutePath;
       FileSystem fileSystem = null;
@@ -380,31 +400,21 @@ public class AssetModule extends JavaPlugin {
          }
       }
 
-      AssetPack pack = new AssetPack(packLocation, name, absolutePath, fileSystem, isImmutable, manifest);
-      if (!this.hasSetup) {
-         this.pendingAssetPacks.add(ObjectBooleanPair.of(pack, ignoreIfExists));
-      } else if (this.getAssetPack(name) != null) {
-         if (ignoreIfExists) {
-            this.getLogger().at(Level.WARNING).log("Asset pack with name '%s' already exists, skipping registration from path: %s", name, path);
-         } else {
-            throw new IllegalStateException("Asset pack with name '" + name + "' already exists");
-         }
-      } else {
-         this.assetPacks.add(pack);
-         AssetRegistry.ASSET_LOCK.writeLock().lock();
+      AssetPack pack = new AssetPack(packLocation, name, absolutePath, fileSystem, isImmutable, manifest, source);
+      this.assetPacks.add(pack);
+      AssetRegistry.ASSET_LOCK.writeLock().lock();
 
-         try {
-            if (this.hasLoaded) {
-               HytaleServer.get()
-                  .getEventBus()
-                  .<Void, AssetPackRegisterEvent>dispatchFor(AssetPackRegisterEvent.class)
-                  .dispatch(new AssetPackRegisterEvent(pack));
-               return;
-            }
-         } finally {
-            AssetRegistry.ASSET_LOCK.writeLock().unlock();
+      try {
+         if (!this.hasLoaded) {
+            return true;
          }
+
+         HytaleServer.get().getEventBus().<Void, AssetPackRegisterEvent>dispatchFor(AssetPackRegisterEvent.class).dispatch(new AssetPackRegisterEvent(pack));
+      } finally {
+         AssetRegistry.ASSET_LOCK.writeLock().unlock();
       }
+
+      return true;
    }
 
    public void unregisterPack(@Nonnull String name) {
@@ -454,7 +464,7 @@ public class AssetModule extends JavaPlugin {
 
          try {
             this.assetPacks = new CopyOnWriteArrayList<>(
-               Mod.calculateLoadOrder(pendingPacks, pluginIdentifier -> PluginManager.get().hasPlugin(pluginIdentifier, SemverRange.WILDCARD), modOrder)
+               Mod.calculateLoadOrder(pendingPacks, (pluginIdentifier, range) -> PluginManager.get().hasPlugin(pluginIdentifier, range), modOrder)
             );
          } catch (ModLoadOrderException e) {
             throw new IllegalStateException("Failed to calculate asset pack load order", e);

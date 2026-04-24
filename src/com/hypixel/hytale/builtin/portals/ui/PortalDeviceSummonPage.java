@@ -36,11 +36,9 @@ import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -82,27 +80,25 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    public void build(
       @Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
-      PortalDeviceSummonPage.State state = this.computeState(playerComponent, store);
+      PortalDeviceSummonPage.State state = this.computeState(ref, store);
       if (state != PortalDeviceSummonPage.Error.INVALID_BLOCK) {
          if (state instanceof PortalDeviceSummonPage.CanSpawnPortal canSpawn) {
             commandBuilder.append("Pages/PortalDeviceSummon.ui");
-            PortalKey var22 = canSpawn.portalKey();
+            PortalKey var21 = canSpawn.portalKey();
             PortalType portalType = canSpawn.portalType();
-            PortalDescription var24 = portalType.getDescription();
-            commandBuilder.set("#Artwork.Background", "Pages/Portals/" + var24.getSplashImageFilename());
-            commandBuilder.set("#Title0.TextSpans", var24.getDisplayName());
-            commandBuilder.set("#FlavorLabel.TextSpans", var24.getFlavorText());
+            PortalDescription var23 = portalType.getDescription();
+            commandBuilder.set("#Artwork.Background", "Pages/Portals/" + var23.getSplashImageFilename());
+            commandBuilder.set("#Title0.TextSpans", var23.getDisplayName());
+            commandBuilder.set("#FlavorLabel.TextSpans", var23.getFlavorText());
             updateCustomPills(commandBuilder, portalType);
-            String[] var25 = var24.getObjectivesKeys();
-            String[] var27 = var24.getWisdomKeys();
-            commandBuilder.set("#Objectives.Visible", var25.length > 0);
-            commandBuilder.set("#Tips.Visible", var27.length > 0);
-            updateBulletList(commandBuilder, "#ObjectivesList", var25);
-            updateBulletList(commandBuilder, "#TipsList", var27);
+            String[] var24 = var23.getObjectivesKeys();
+            String[] var26 = var23.getWisdomKeys();
+            commandBuilder.set("#Objectives.Visible", var24.length > 0);
+            commandBuilder.set("#Tips.Visible", var26.length > 0);
+            updateBulletList(commandBuilder, "#ObjectivesList", var24);
+            updateBulletList(commandBuilder, "#TipsList", var26);
             PortalGameplayConfig gameplayConfig = portalType.getGameplayConfig().getPluginConfig().get(PortalGameplayConfig.class);
-            long totalTimeLimit = TimeUnit.SECONDS.toMinutes(var22.getTimeLimitSeconds());
+            long totalTimeLimit = TimeUnit.SECONDS.toMinutes(var21.getTimeLimitSeconds());
             if (portalType.isVoidInvasionEnabled()) {
                long minutesBreach = TimeUnit.SECONDS.toMinutes(gameplayConfig.getVoidEvent().getDurationSeconds());
                long exploMinutes = totalTimeLimit - minutesBreach;
@@ -193,10 +189,8 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    }
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull PortalDeviceSummonPage.Data data) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      assert playerComponent != null;
       CombinedItemContainer combinedInventoryHotbarFirst = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
-      if (this.computeState(playerComponent, store) instanceof PortalDeviceSummonPage.CanSpawnPortal canSpawn) {
+      if (this.computeState(ref, store) instanceof PortalDeviceSummonPage.CanSpawnPortal canSpawn) {
          if ("SummonMouseEntered".equals(data.action)) {
             UICommandBuilder commandBuilder = new UICommandBuilder();
             commandBuilder.set("#Vignette.Visible", true);
@@ -206,6 +200,8 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
             commandBuilder.set("#Vignette.Visible", false);
             this.sendUpdate(commandBuilder, null, false);
          } else {
+            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            assert playerComponent != null;
             playerComponent.getPageManager().setPage(ref, store, Page.None);
             World originWorld = store.getExternalData().getWorld();
             int index = canSpawn.blockState().getIndex();
@@ -231,7 +227,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                      SoundUtil.playSoundEvent3d(spawningType.getInteractionSoundEventIndex(), SoundCategory.SFX, worldX, worldY, worldZ, store);
                   }
 
-                  ItemStack removedItem = decrementItemInHand(playerComponent.getInventory(), 1);
+                  ItemStack removedItem = decrementItemInHand(ref, store, 1);
                   Transform transform = new Transform(x + 0.5, y + 1.0, z + 0.5);
                   UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
                   assert uuidComponent != null;
@@ -391,7 +387,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    }
 
    @Nonnull
-   private PortalDeviceSummonPage.State computeState(@Nonnull Player player, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   private PortalDeviceSummonPage.State computeState(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.blockRef.isValid()) {
          return PortalDeviceSummonPage.Error.INVALID_BLOCK;
       }
@@ -424,8 +420,8 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
             return PortalDeviceSummonPage.Error.NOTHING_OFFERED;
          }
 
-         ItemStack inHand = player.getInventory().getItemInHand();
-         if (!this.offeredItemStack.equals(inHand)) {
+         ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+         if (!this.offeredItemStack.equals(itemInHand)) {
             return PortalDeviceSummonPage.Error.OFFERED_IS_NOT_HELD;
          }
 
@@ -464,23 +460,28 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   private static ItemStack decrementItemInHand(@Nonnull Inventory inventory, int amount) {
-      if (inventory.usingToolsItem()) {
+   private static ItemStack decrementItemInHand(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor, int amount) {
+      InventoryComponent.Tool toolComponent = accessor.getComponent(ref, InventoryComponent.Tool.getComponentType());
+      if (toolComponent != null && toolComponent.isUsingToolsItem()) {
          return ItemStack.EMPTY;
       }
 
-      byte hotbarSlot = inventory.getActiveHotbarSlot();
+      InventoryComponent.Hotbar hotbarComponent = accessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent == null) {
+         return ItemStack.EMPTY;
+      }
+
+      byte hotbarSlot = hotbarComponent.getActiveSlot();
       if (hotbarSlot == -1) {
          return ItemStack.EMPTY;
       }
 
-      ItemContainer hotbar = inventory.getHotbar();
-      ItemStack inHand = hotbar.getItemStack(hotbarSlot);
+      ItemStack inHand = hotbarComponent.getInventory().getItemStack(hotbarSlot);
       if (inHand == null) {
          return ItemStack.EMPTY;
       }
 
-      hotbar.removeItemStackFromSlot(hotbarSlot, inHand, amount, false, true);
+      hotbarComponent.getInventory().removeItemStackFromSlot(hotbarSlot, inHand, amount, false, true);
       return inHand.withQuantity(amount);
    }
 

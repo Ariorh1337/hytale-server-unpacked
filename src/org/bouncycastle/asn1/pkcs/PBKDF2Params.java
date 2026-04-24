@@ -39,9 +39,9 @@ public class PBKDF2Params extends ASN1Object {
 
    public PBKDF2Params(byte[] var1, int var2, int var3, AlgorithmIdentifier var4) {
       this.octStr = new DEROctetString(Arrays.clone(var1));
-      this.iterationCount = new ASN1Integer(var2);
+      this.iterationCount = ASN1Integer.valueOf(var2);
       if (var3 > 0) {
-         this.keyLength = new ASN1Integer(var3);
+         this.keyLength = ASN1Integer.valueOf(var3);
       } else {
          this.keyLength = null;
       }

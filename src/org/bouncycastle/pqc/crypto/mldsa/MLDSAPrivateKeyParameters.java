@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mldsa;
 
 import org.bouncycastle.util.Arrays;
 
+@Deprecated
 public class MLDSAPrivateKeyParameters extends MLDSAKeyParameters {
    public static final int BOTH = 0;
    public static final int SEED_ONLY = 1;

@@ -14,10 +14,12 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSequenceVali
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.RelationalOperator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.BlockSetExistsValidator;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionControllerWalk;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
+import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
@@ -456,6 +458,12 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
       return MotionController.class;
    }
 
+   @Nonnull
+   @Override
+   public String getType() {
+      return "Walk";
+   }
+
    public double getMinHorizontalSpeed() {
       return this.minHorizontalSpeed;
    }
@@ -618,8 +626,73 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
    public SpawnTestResult canSpawn(@Nonnull SpawningContext context) {
       if (!context.isOnSolidGround()) {
          return SpawnTestResult.FAIL_NO_POSITION;
-      } else {
-         return context.validatePosition(20) ? SpawnTestResult.TEST_OK : SpawnTestResult.FAIL_INVALID_POSITION;
+      }
+
+      if (context.movementMode == null) {
+         context.movementMode = context.breathesInAir ? MovementMode.WALK : MovementMode.UNDERWATER_WALK;
+      }
+
+      boolean fluidSpan = context.waterLevel != -1;
+      switch (context.movementMode) {
+         case WALK:
+            if (fluidSpan) {
+               return SpawnTestResult.FAIL_NO_POSITION;
+            }
+            break;
+         case WADE:
+            if (!fluidSpan) {
+               return SpawnTestResult.FAIL_NO_POSITION;
+            }
+
+            if (!context.canBreathe(!context.enableSafeSpawning || context.breathesInAir, false)) {
+               return SpawnTestResult.FAIL_NOT_BREATHABLE;
+            }
+            break;
+         case UNDERWATER_WALK:
+            if (!fluidSpan) {
+               return SpawnTestResult.FAIL_NO_POSITION;
+            }
+
+            if (!context.canBreathe(false, !context.enableSafeSpawning || context.breathesInWater)) {
+               return SpawnTestResult.FAIL_NOT_BREATHABLE;
+            }
+            break;
+         default:
+            throw new IllegalStateException("Unexpected value: " + context.movementMode);
+      }
+
+      if (context.invalidMaterials == -1) {
+         context.invalidMaterials = 20 + switch (context.movementMode) {
+            case WALK -> 10;
+            case WADE -> 0;
+            case UNDERWATER_WALK -> 1;
+            default -> throw new IllegalStateException("Unexpected movement mode : " + context.movementMode);
+         };
+      }
+
+      return context.validatePosition(context.invalidMaterials) ? SpawnTestResult.TEST_OK : SpawnTestResult.FAIL_INVALID_POSITION;
+   }
+
+   @Override
+   public void getMovementModes(
+      @Nonnull SpawningContext context,
+      @Nonnull Set<MovementMode> outSupportedMovementModes,
+      @Nonnull Set<MovementMode> outDefaultMovementModes,
+      @Nonnull Set<MovementMode> outSafeMovementModes
+   ) {
+      outSupportedMovementModes.addAll(MotionControllerWalk.SUPPORTED_MOVEMENT_MODES);
+      if (context.breathesInAir) {
+         outDefaultMovementModes.add(MovementMode.WALK);
+         outSafeMovementModes.add(MovementMode.WALK);
+         outSafeMovementModes.add(MovementMode.WADE);
+      }
+
+      if (context.breathesInWater) {
+         if (outDefaultMovementModes.isEmpty()) {
+            outDefaultMovementModes.add(MovementMode.UNDERWATER_WALK);
+         }
+
+         outSafeMovementModes.add(MovementMode.UNDERWATER_WALK);
       }
    }
 
@@ -627,5 +700,11 @@ public class BuilderMotionControllerWalk extends BuilderMotionControllerBase {
    @Override
    public Class<? extends MotionController> getClassType() {
       return MotionControllerWalk.class;
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getSupportedMovementModes() {
+      return MotionControllerWalk.SUPPORTED_MOVEMENT_MODES;
    }
 }

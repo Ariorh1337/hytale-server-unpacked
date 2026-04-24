@@ -1,6 +1,5 @@
 package org.bouncycastle.asn1.tsp;
 
-import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1OctetString;
@@ -30,6 +29,14 @@ public class ArchiveTimeStamp extends ASN1Object {
       }
    }
 
+   public static ArchiveTimeStamp getInstance(ASN1TaggedObject var0, boolean var1) {
+      return new ArchiveTimeStamp(ASN1Sequence.getInstance(var0, var1));
+   }
+
+   public static ArchiveTimeStamp getTagged(ASN1TaggedObject var0, boolean var1) {
+      return new ArchiveTimeStamp(ASN1Sequence.getTagged(var0, var1));
+   }
+
    public ArchiveTimeStamp(AlgorithmIdentifier var1, PartialHashtree[] var2, ContentInfo var3) {
       this(var1, null, var2, var3);
    }
@@ -39,49 +46,56 @@ public class ArchiveTimeStamp extends ASN1Object {
    }
 
    public ArchiveTimeStamp(AlgorithmIdentifier var1, Attributes var2, PartialHashtree[] var3, ContentInfo var4) {
-      this.digestAlgorithm = var1;
-      this.attributes = var2;
-      if (var3 != null) {
-         this.reducedHashTree = new DERSequence(var3);
-      } else {
-         this.reducedHashTree = null;
+      if (var4 == null) {
+         throw new NullPointerException("'timeStamp' cannot be null");
       }
 
+      this.digestAlgorithm = var1;
+      this.attributes = var2;
+      this.reducedHashTree = DERSequence.fromElementsOptional(var3);
       this.timeStamp = var4;
    }
 
    private ArchiveTimeStamp(ASN1Sequence var1) {
-      if (var1.size() >= 1 && var1.size() <= 4) {
-         AlgorithmIdentifier var2 = null;
-         Attributes var3 = null;
-         ASN1Sequence var4 = null;
-
-         for (int var5 = 0; var5 < var1.size() - 1; var5++) {
-            ASN1Encodable var6 = var1.getObjectAt(var5);
-            if (var6 instanceof ASN1TaggedObject) {
-               ASN1TaggedObject var7 = ASN1TaggedObject.getInstance(var6);
-               switch (var7.getTagNo()) {
-                  case 0:
-                     var2 = AlgorithmIdentifier.getInstance(var7, false);
-                     break;
-                  case 1:
-                     var3 = Attributes.getInstance(var7, false);
-                     break;
-                  case 2:
-                     var4 = ASN1Sequence.getInstance(var7, false);
-                     break;
-                  default:
-                     throw new IllegalArgumentException("invalid tag no in constructor: " + var7.getTagNo());
-               }
+      int var2 = var1.size();
+      int var3 = 0;
+      if (var2 >= 1 && var2 <= 4) {
+         AlgorithmIdentifier var4 = null;
+         if (var3 < var2) {
+            ASN1TaggedObject var5 = ASN1TaggedObject.getContextOptional(var1.getObjectAt(var3), 0);
+            if (var5 != null) {
+               var3++;
+               var4 = AlgorithmIdentifier.getTagged(var5, false);
             }
          }
 
-         this.digestAlgorithm = var2;
-         this.attributes = var3;
-         this.reducedHashTree = var4;
-         this.timeStamp = ContentInfo.getInstance(var1.getObjectAt(var1.size() - 1));
+         this.digestAlgorithm = var4;
+         Attributes var9 = null;
+         if (var3 < var2) {
+            ASN1TaggedObject var6 = ASN1TaggedObject.getContextOptional(var1.getObjectAt(var3), 1);
+            if (var6 != null) {
+               var3++;
+               var9 = Attributes.getTagged(var6, false);
+            }
+         }
+
+         this.attributes = var9;
+         ASN1Sequence var10 = null;
+         if (var3 < var2) {
+            ASN1TaggedObject var7 = ASN1TaggedObject.getContextOptional(var1.getObjectAt(var3), 2);
+            if (var7 != null) {
+               var3++;
+               var10 = ASN1Sequence.getInstance(var7, false);
+            }
+         }
+
+         this.reducedHashTree = var10;
+         this.timeStamp = ContentInfo.getInstance(var1.getObjectAt(var3++));
+         if (var3 != var2) {
+            throw new IllegalArgumentException("Unexpected elements in sequence");
+         }
       } else {
-         throw new IllegalArgumentException("wrong sequence size in constructor: " + var1.size());
+         throw new IllegalArgumentException("Bad sequence size: " + var2);
       }
    }
 
@@ -94,16 +108,18 @@ public class ArchiveTimeStamp extends ASN1Object {
    }
 
    private TSTInfo getTimeStampInfo() {
-      if (this.timeStamp.getContentType().equals(CMSObjectIdentifiers.signedData)) {
-         SignedData var1 = SignedData.getInstance(this.timeStamp.getContent());
-         if (var1.getEncapContentInfo().getContentType().equals(PKCSObjectIdentifiers.id_ct_TSTInfo)) {
-            return TSTInfo.getInstance(ASN1OctetString.getInstance(var1.getEncapContentInfo().getContent()).getOctets());
-         } else {
-            throw new IllegalStateException("cannot parse time stamp");
-         }
-      } else {
+      if (!CMSObjectIdentifiers.signedData.equals(this.timeStamp.getContentType())) {
          throw new IllegalStateException("cannot identify algorithm identifier for digest");
       }
+
+      SignedData var1 = SignedData.getInstance(this.timeStamp.getContent());
+      ContentInfo var2 = var1.getEncapContentInfo();
+      if (!PKCSObjectIdentifiers.id_ct_TSTInfo.equals(var2.getContentType())) {
+         throw new IllegalStateException("cannot parse time stamp");
+      }
+
+      ASN1OctetString var3 = ASN1OctetString.getInstance(var2.getContent());
+      return TSTInfo.getInstance(var3.getOctets());
    }
 
    public AlgorithmIdentifier getDigestAlgorithm() {

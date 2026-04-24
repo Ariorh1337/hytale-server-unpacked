@@ -60,6 +60,11 @@ public final class LiveConfigSnapshot {
       return this.flags.size();
    }
 
+   @Nonnull
+   public Map<String, LiveConfigSnapshot.ResolvedFlag> getAllFlags() {
+      return this.flags;
+   }
+
    public record ResolvedFlag(@Nonnull String type, @Nullable Object value) {
    }
 }

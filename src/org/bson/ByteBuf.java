@@ -16,9 +16,21 @@ public interface ByteBuf {
 
    ByteBuf put(byte var1);
 
+   ByteBuf putInt(int var1);
+
+   ByteBuf putInt(int var1, int var2);
+
+   ByteBuf putDouble(double var1);
+
+   ByteBuf putLong(long var1);
+
    ByteBuf flip();
 
    byte[] array();
+
+   boolean isBackedByArray();
+
+   int arrayOffset();
 
    int limit();
 

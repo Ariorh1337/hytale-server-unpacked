@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -31,7 +30,7 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
 
    public ClearBlocksCommand() {
       super("clearBlocks", "server.commands.clear.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addAliases("clear");
       this.addUsageVariant(
          new AbstractPlayerCommand("server.commands.clear.desc") {

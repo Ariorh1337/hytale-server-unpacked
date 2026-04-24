@@ -21,6 +21,7 @@ import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.ActiveAnimationsUpdate;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.PlayerSkin;
@@ -36,6 +37,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.ApplyRandomSkinPersistedComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
@@ -248,7 +250,13 @@ public class ModelSystems {
                }
 
                boundingBox.setBoundingBox(modelBoundingBox);
+               boundingBox.setBaseModelBox(modelBoundingBox);
                boundingBox.setDetailBoxes(model.getDetailBoxes());
+               TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+               if (transform != null) {
+                  Rotation3f rotation = transform.getRotation();
+                  boundingBox.applyRotation(rotation.pitch(), rotation.yaw(), rotation.roll());
+               }
             }
          }
       }
@@ -466,6 +474,7 @@ public class ModelSystems {
          }
 
          boundingBox.setBoundingBox(modelBoundingBox);
+         boundingBox.setBaseModelBox(modelBoundingBox);
       }
    }
 

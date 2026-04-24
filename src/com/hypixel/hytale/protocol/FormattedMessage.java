@@ -14,10 +14,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class FormattedMessage {
-   public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 6;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 2;
+   public static final int FIXED_BLOCK_SIZE = 7;
    public static final int VARIABLE_FIELD_COUNT = 8;
-   public static final int VARIABLE_BLOCK_START = 38;
+   public static final int VARIABLE_BLOCK_START = 39;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String rawText;
@@ -31,14 +31,14 @@ public class FormattedMessage {
    public Map<String, FormattedMessage> messageParams;
    @Nullable
    public String color;
-   @Nonnull
-   public MaybeBool bold = MaybeBool.Null;
-   @Nonnull
-   public MaybeBool italic = MaybeBool.Null;
-   @Nonnull
-   public MaybeBool monospace = MaybeBool.Null;
-   @Nonnull
-   public MaybeBool underlined = MaybeBool.Null;
+   @Nullable
+   public Boolean bold;
+   @Nullable
+   public Boolean italic;
+   @Nullable
+   public Boolean monospace;
+   @Nullable
+   public Boolean underlined;
    @Nullable
    public String link;
    public boolean markupEnabled;
@@ -55,10 +55,10 @@ public class FormattedMessage {
       @Nullable Map<String, ParamValue> params,
       @Nullable Map<String, FormattedMessage> messageParams,
       @Nullable String color,
-      @Nonnull MaybeBool bold,
-      @Nonnull MaybeBool italic,
-      @Nonnull MaybeBool monospace,
-      @Nonnull MaybeBool underlined,
+      @Nullable Boolean bold,
+      @Nullable Boolean italic,
+      @Nullable Boolean monospace,
+      @Nullable Boolean underlined,
       @Nullable String link,
       boolean markupEnabled,
       @Nullable FormattedMessageImage image
@@ -96,24 +96,36 @@ public class FormattedMessage {
 
    @Nonnull
    public static FormattedMessage deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 38) {
-         throw ProtocolException.bufferTooSmall("FormattedMessage", 38, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 39) {
+         throw ProtocolException.bufferTooSmall("FormattedMessage", 39, buf.readableBytes() - offset);
       }
 
       FormattedMessage obj = new FormattedMessage();
-      byte nullBits = buf.getByte(offset);
-      obj.bold = MaybeBool.fromValue(buf.getByte(offset + 1));
-      obj.italic = MaybeBool.fromValue(buf.getByte(offset + 2));
-      obj.monospace = MaybeBool.fromValue(buf.getByte(offset + 3));
-      obj.underlined = MaybeBool.fromValue(buf.getByte(offset + 4));
-      obj.markupEnabled = buf.getByte(offset + 5) != 0;
-      if ((nullBits & 1) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 6);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 38) {
+      byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
+      if ((nullBits[0] & 1) != 0) {
+         obj.bold = buf.getByte(offset + 2) != 0;
+      }
+
+      if ((nullBits[0] & 2) != 0) {
+         obj.italic = buf.getByte(offset + 3) != 0;
+      }
+
+      if ((nullBits[0] & 4) != 0) {
+         obj.monospace = buf.getByte(offset + 4) != 0;
+      }
+
+      if ((nullBits[0] & 8) != 0) {
+         obj.underlined = buf.getByte(offset + 5) != 0;
+      }
+
+      obj.markupEnabled = buf.getByte(offset + 6) != 0;
+      if ((nullBits[0] & 16) != 0) {
+         int varPosBase0 = buf.getIntLE(offset + 7);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("RawText", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 38 + varPosBase0;
+         int varPos0 = offset + 39 + varPosBase0;
          int rawTextLen = VarInt.peek(buf, varPos0);
          if (rawTextLen < 0) {
             throw ProtocolException.invalidVarInt("RawText");
@@ -131,13 +143,13 @@ public class FormattedMessage {
          obj.rawText = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits & 2) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 10);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 32) != 0) {
+         int varPosBase1 = buf.getIntLE(offset + 11);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("MessageId", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 38 + varPosBase1;
+         int varPos1 = offset + 39 + varPosBase1;
          int messageIdLen = VarInt.peek(buf, varPos1);
          if (messageIdLen < 0) {
             throw ProtocolException.invalidVarInt("MessageId");
@@ -155,13 +167,13 @@ public class FormattedMessage {
          obj.messageId = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
-      if ((nullBits & 4) != 0) {
-         int varPosBase2 = buf.getIntLE(offset + 14);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 64) != 0) {
+         int varPosBase2 = buf.getIntLE(offset + 15);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Children", varPosBase2, buf.readableBytes());
          }
 
-         int varPos2 = offset + 38 + varPosBase2;
+         int varPos2 = offset + 39 + varPosBase2;
          int childrenCount = VarInt.peek(buf, varPos2);
          if (childrenCount < 0) {
             throw ProtocolException.invalidVarInt("Children");
@@ -172,8 +184,8 @@ public class FormattedMessage {
             throw ProtocolException.arrayTooLong("Children", childrenCount, 4096000);
          }
 
-         if (varPos2 + varIntLen + childrenCount * 6L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Children", varPos2 + varIntLen + childrenCount * 6, buf.readableBytes());
+         if (varPos2 + varIntLen + childrenCount * 7L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Children", varPos2 + varIntLen + childrenCount * 7, buf.readableBytes());
          }
 
          obj.children = new FormattedMessage[childrenCount];
@@ -185,13 +197,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 8) != 0) {
-         int varPosBase3 = buf.getIntLE(offset + 18);
-         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 128) != 0) {
+         int varPosBase3 = buf.getIntLE(offset + 19);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Params", varPosBase3, buf.readableBytes());
          }
 
-         int varPos3 = offset + 38 + varPosBase3;
+         int varPos3 = offset + 39 + varPosBase3;
          int paramsCount = VarInt.peek(buf, varPos3);
          if (paramsCount < 0) {
             throw ProtocolException.invalidVarInt("Params");
@@ -230,13 +242,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 16) != 0) {
-         int varPosBase4 = buf.getIntLE(offset + 22);
-         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 1) != 0) {
+         int varPosBase4 = buf.getIntLE(offset + 23);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("MessageParams", varPosBase4, buf.readableBytes());
          }
 
-         int varPos4 = offset + 38 + varPosBase4;
+         int varPos4 = offset + 39 + varPosBase4;
          int messageParamsCount = VarInt.peek(buf, varPos4);
          if (messageParamsCount < 0) {
             throw ProtocolException.invalidVarInt("MessageParams");
@@ -275,13 +287,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 32) != 0) {
-         int varPosBase5 = buf.getIntLE(offset + 26);
-         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 2) != 0) {
+         int varPosBase5 = buf.getIntLE(offset + 27);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Color", varPosBase5, buf.readableBytes());
          }
 
-         int varPos5 = offset + 38 + varPosBase5;
+         int varPos5 = offset + 39 + varPosBase5;
          int colorLen = VarInt.peek(buf, varPos5);
          if (colorLen < 0) {
             throw ProtocolException.invalidVarInt("Color");
@@ -299,13 +311,13 @@ public class FormattedMessage {
          obj.color = PacketIO.readVarString(buf, varPos5, PacketIO.UTF8);
       }
 
-      if ((nullBits & 64) != 0) {
-         int varPosBase6 = buf.getIntLE(offset + 30);
-         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 4) != 0) {
+         int varPosBase6 = buf.getIntLE(offset + 31);
+         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Link", varPosBase6, buf.readableBytes());
          }
 
-         int varPos6 = offset + 38 + varPosBase6;
+         int varPos6 = offset + 39 + varPosBase6;
          int linkLen = VarInt.peek(buf, varPos6);
          if (linkLen < 0) {
             throw ProtocolException.invalidVarInt("Link");
@@ -323,13 +335,13 @@ public class FormattedMessage {
          obj.link = PacketIO.readVarString(buf, varPos6, PacketIO.UTF8);
       }
 
-      if ((nullBits & 128) != 0) {
-         int varPosBase7 = buf.getIntLE(offset + 34);
-         if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 8) != 0) {
+         int varPosBase7 = buf.getIntLE(offset + 35);
+         if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Image", varPosBase7, buf.readableBytes());
          }
 
-         int varPos7 = offset + 38 + varPosBase7;
+         int varPos7 = offset + 39 + varPosBase7;
          obj.image = FormattedMessageImage.deserialize(buf, varPos7);
       }
 
@@ -337,15 +349,15 @@ public class FormattedMessage {
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      byte nullBits = buf.getByte(offset);
-      int maxEnd = 38;
-      if ((nullBits & 1) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 6);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 38) {
+      byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
+      int maxEnd = 39;
+      if ((nullBits[0] & 16) != 0) {
+         int fieldOffset0 = buf.getIntLE(offset + 7);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("RawText", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 38 + fieldOffset0;
+         int pos0 = offset + 39 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -353,13 +365,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 2) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 10);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 32) != 0) {
+         int fieldOffset1 = buf.getIntLE(offset + 11);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("MessageId", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 38 + fieldOffset1;
+         int pos1 = offset + 39 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
@@ -367,13 +379,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 4) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 14);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 64) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 15);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Children", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 38 + fieldOffset2;
+         int pos2 = offset + 39 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.size(arrLen);
 
@@ -386,13 +398,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 8) != 0) {
-         int fieldOffset3 = buf.getIntLE(offset + 18);
-         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 128) != 0) {
+         int fieldOffset3 = buf.getIntLE(offset + 19);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Params", fieldOffset3, maxEnd);
          }
 
-         int pos3 = offset + 38 + fieldOffset3;
+         int pos3 = offset + 39 + fieldOffset3;
          int dictLen = VarInt.peek(buf, pos3);
          pos3 += VarInt.size(dictLen);
 
@@ -407,13 +419,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 16) != 0) {
-         int fieldOffset4 = buf.getIntLE(offset + 22);
-         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 1) != 0) {
+         int fieldOffset4 = buf.getIntLE(offset + 23);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("MessageParams", fieldOffset4, maxEnd);
          }
 
-         int pos4 = offset + 38 + fieldOffset4;
+         int pos4 = offset + 39 + fieldOffset4;
          int dictLen = VarInt.peek(buf, pos4);
          pos4 += VarInt.size(dictLen);
 
@@ -428,13 +440,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 32) != 0) {
-         int fieldOffset5 = buf.getIntLE(offset + 26);
-         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 2) != 0) {
+         int fieldOffset5 = buf.getIntLE(offset + 27);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Color", fieldOffset5, maxEnd);
          }
 
-         int pos5 = offset + 38 + fieldOffset5;
+         int pos5 = offset + 39 + fieldOffset5;
          int sl = VarInt.peek(buf, pos5);
          pos5 += VarInt.size(sl) + sl;
          if (pos5 - offset > maxEnd) {
@@ -442,13 +454,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 64) != 0) {
-         int fieldOffset6 = buf.getIntLE(offset + 30);
-         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 4) != 0) {
+         int fieldOffset6 = buf.getIntLE(offset + 31);
+         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Link", fieldOffset6, maxEnd);
          }
 
-         int pos6 = offset + 38 + fieldOffset6;
+         int pos6 = offset + 39 + fieldOffset6;
          int sl = VarInt.peek(buf, pos6);
          pos6 += VarInt.size(sl) + sl;
          if (pos6 - offset > maxEnd) {
@@ -456,13 +468,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 128) != 0) {
-         int fieldOffset7 = buf.getIntLE(offset + 34);
-         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 8) != 0) {
+         int fieldOffset7 = buf.getIntLE(offset + 35);
+         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 39) {
             throw ProtocolException.invalidOffset("Image", fieldOffset7, maxEnd);
          }
 
-         int pos7 = offset + 38 + fieldOffset7;
+         int pos7 = offset + 39 + fieldOffset7;
          pos7 += FormattedMessageImage.computeBytesConsumed(buf, pos7);
          if (pos7 - offset > maxEnd) {
             maxEnd = pos7 - offset;
@@ -474,44 +486,80 @@ public class FormattedMessage {
 
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
-      byte nullBits = 0;
+      byte[] nullBits = new byte[2];
+      if (this.bold != null) {
+         nullBits[0] = (byte)(nullBits[0] | 1);
+      }
+
+      if (this.italic != null) {
+         nullBits[0] = (byte)(nullBits[0] | 2);
+      }
+
+      if (this.monospace != null) {
+         nullBits[0] = (byte)(nullBits[0] | 4);
+      }
+
+      if (this.underlined != null) {
+         nullBits[0] = (byte)(nullBits[0] | 8);
+      }
+
       if (this.rawText != null) {
-         nullBits = (byte)(nullBits | 1);
+         nullBits[0] = (byte)(nullBits[0] | 16);
       }
 
       if (this.messageId != null) {
-         nullBits = (byte)(nullBits | 2);
+         nullBits[0] = (byte)(nullBits[0] | 32);
       }
 
       if (this.children != null) {
-         nullBits = (byte)(nullBits | 4);
+         nullBits[0] = (byte)(nullBits[0] | 64);
       }
 
       if (this.params != null) {
-         nullBits = (byte)(nullBits | 8);
+         nullBits[0] = (byte)(nullBits[0] | 128);
       }
 
       if (this.messageParams != null) {
-         nullBits = (byte)(nullBits | 16);
+         nullBits[1] = (byte)(nullBits[1] | 1);
       }
 
       if (this.color != null) {
-         nullBits = (byte)(nullBits | 32);
+         nullBits[1] = (byte)(nullBits[1] | 2);
       }
 
       if (this.link != null) {
-         nullBits = (byte)(nullBits | 64);
+         nullBits[1] = (byte)(nullBits[1] | 4);
       }
 
       if (this.image != null) {
-         nullBits = (byte)(nullBits | 128);
+         nullBits[1] = (byte)(nullBits[1] | 8);
       }
 
-      buf.writeByte(nullBits);
-      buf.writeByte(this.bold.getValue());
-      buf.writeByte(this.italic.getValue());
-      buf.writeByte(this.monospace.getValue());
-      buf.writeByte(this.underlined.getValue());
+      buf.writeBytes(nullBits);
+      if (this.bold != null) {
+         buf.writeByte(this.bold ? 1 : 0);
+      } else {
+         buf.writeZero(1);
+      }
+
+      if (this.italic != null) {
+         buf.writeByte(this.italic ? 1 : 0);
+      } else {
+         buf.writeZero(1);
+      }
+
+      if (this.monospace != null) {
+         buf.writeByte(this.monospace ? 1 : 0);
+      } else {
+         buf.writeZero(1);
+      }
+
+      if (this.underlined != null) {
+         buf.writeByte(this.underlined ? 1 : 0);
+      } else {
+         buf.writeZero(1);
+      }
+
       buf.writeByte(this.markupEnabled ? 1 : 0);
       int rawTextOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
@@ -614,7 +662,7 @@ public class FormattedMessage {
    }
 
    public int computeSize() {
-      int size = 38;
+      int size = 39;
       if (this.rawText != null) {
          size += PacketIO.stringSize(this.rawText);
       }
@@ -669,38 +717,18 @@ public class FormattedMessage {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 38) {
-         return ValidationResult.error("Buffer too small: expected at least 38 bytes");
+      if (buffer.readableBytes() - offset < 39) {
+         return ValidationResult.error("Buffer too small: expected at least 39 bytes");
       }
 
-      byte nullBits = buffer.getByte(offset);
-      int v = buffer.getByte(offset + 1) & 255;
-      if (v >= 3) {
-         return ValidationResult.error("Invalid MaybeBool value for Bold");
-      }
-
-      v = buffer.getByte(offset + 2) & 255;
-      if (v >= 3) {
-         return ValidationResult.error("Invalid MaybeBool value for Italic");
-      }
-
-      v = buffer.getByte(offset + 3) & 255;
-      if (v >= 3) {
-         return ValidationResult.error("Invalid MaybeBool value for Monospace");
-      }
-
-      v = buffer.getByte(offset + 4) & 255;
-      if (v >= 3) {
-         return ValidationResult.error("Invalid MaybeBool value for Underlined");
-      }
-
-      if ((nullBits & 1) != 0) {
-         v = buffer.getIntLE(offset + 6);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
+      if ((nullBits[0] & 16) != 0) {
+         int rawTextOffset = buffer.getIntLE(offset + 7);
+         if (rawTextOffset < 0 || rawTextOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for RawText");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + rawTextOffset;
          int rawTextLen = VarInt.peek(buffer, pos);
          if (rawTextLen < 0) {
             return ValidationResult.error("Invalid string length for RawText");
@@ -717,13 +745,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 2) != 0) {
-         v = buffer.getIntLE(offset + 10);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 32) != 0) {
+         int messageIdOffset = buffer.getIntLE(offset + 11);
+         if (messageIdOffset < 0 || messageIdOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for MessageId");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + messageIdOffset;
          int messageIdLen = VarInt.peek(buffer, pos);
          if (messageIdLen < 0) {
             return ValidationResult.error("Invalid string length for MessageId");
@@ -740,13 +768,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 4) != 0) {
-         v = buffer.getIntLE(offset + 14);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 64) != 0) {
+         int childrenOffset = buffer.getIntLE(offset + 15);
+         if (childrenOffset < 0 || childrenOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for Children");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + childrenOffset;
          int childrenCount = VarInt.peek(buffer, pos);
          if (childrenCount < 0) {
             return ValidationResult.error("Invalid array count for Children");
@@ -768,13 +796,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 8) != 0) {
-         v = buffer.getIntLE(offset + 18);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      if ((nullBits[0] & 128) != 0) {
+         int paramsOffset = buffer.getIntLE(offset + 19);
+         if (paramsOffset < 0 || paramsOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for Params");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + paramsOffset;
          int paramsCount = VarInt.peek(buffer, pos);
          if (paramsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Params");
@@ -806,13 +834,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 16) != 0) {
-         v = buffer.getIntLE(offset + 22);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 1) != 0) {
+         int messageParamsOffset = buffer.getIntLE(offset + 23);
+         if (messageParamsOffset < 0 || messageParamsOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for MessageParams");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + messageParamsOffset;
          int messageParamsCount = VarInt.peek(buffer, pos);
          if (messageParamsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for MessageParams");
@@ -844,13 +872,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 32) != 0) {
-         v = buffer.getIntLE(offset + 26);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 2) != 0) {
+         int colorOffset = buffer.getIntLE(offset + 27);
+         if (colorOffset < 0 || colorOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for Color");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + colorOffset;
          int colorLen = VarInt.peek(buffer, pos);
          if (colorLen < 0) {
             return ValidationResult.error("Invalid string length for Color");
@@ -867,13 +895,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 64) != 0) {
-         v = buffer.getIntLE(offset + 30);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 4) != 0) {
+         int linkOffset = buffer.getIntLE(offset + 31);
+         if (linkOffset < 0 || linkOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for Link");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + linkOffset;
          int linkLen = VarInt.peek(buffer, pos);
          if (linkLen < 0) {
             return ValidationResult.error("Invalid string length for Link");
@@ -890,13 +918,13 @@ public class FormattedMessage {
          }
       }
 
-      if ((nullBits & 128) != 0) {
-         v = buffer.getIntLE(offset + 34);
-         if (v < 0 || v > buffer.writerIndex() - offset - 38) {
+      if ((nullBits[1] & 8) != 0) {
+         int imageOffset = buffer.getIntLE(offset + 35);
+         if (imageOffset < 0 || imageOffset > buffer.writerIndex() - offset - 39) {
             return ValidationResult.error("Invalid offset for Image");
          }
 
-         int pos = offset + 38 + v;
+         int pos = offset + 39 + imageOffset;
          ValidationResult imageResult = FormattedMessageImage.validateStructure(buffer, pos);
          if (!imageResult.isValid()) {
             return ValidationResult.error("Invalid Image: " + imageResult.error());

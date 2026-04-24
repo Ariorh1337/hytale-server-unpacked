@@ -44,10 +44,14 @@ import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector4d;
 
 public class SelectInteraction extends SimpleInteraction {
    public static boolean SHOW_VISUAL_DEBUG;
@@ -101,6 +105,11 @@ public class SelectInteraction extends SimpleInteraction {
          "Determines whether the owner of the affiliated entity should be ignored in the selection.\n\nFor example, ignoring the thrower of a projectile."
       )
       .add()
+      .<Integer>appendInherited(
+         new KeyedCodec<>("MaxTargets", Codec.INTEGER), (o, v) -> o.maxTargets = v, o -> o.maxTargets, (o, p) -> o.maxTargets = p.maxTargets
+      )
+      .documentation("Maximum number of targets to select for running interactions (uses reservoir sampling).")
+      .add()
       .build();
    @Nonnull
    public static final MetaKey<IntSet> HIT_ENTITIES = META_REGISTRY.registerMetaObject(i -> new IntOpenHashSet());
@@ -119,6 +128,7 @@ public class SelectInteraction extends SimpleInteraction {
    @Nonnull
    protected FailOnType failOn = FailOnType.Neither;
    protected boolean ignoreOwner = true;
+   protected int maxTargets;
 
    @Nonnull
    @Override
@@ -158,6 +168,7 @@ public class SelectInteraction extends SimpleInteraction {
       boolean checkEntities = this.hitEntity != null || this.hitEntityRules != null;
       if (checkEntities) {
          IntSet hitEntities = instanceStore.getMetaObject(HIT_ENTITIES);
+         ArrayList<SelectInteraction.EntityCandidate> candidates = new ArrayList<>();
          selector.selectTargetEntities(commandBuffer, context.getEntity(), (targetRef, hit) -> {
             NetworkId networkIdComponent = targetRef.getStore().getComponent(targetRef, NetworkId.getComponentType());
             if (networkIdComponent != null) {
@@ -184,11 +195,11 @@ public class SelectInteraction extends SimpleInteraction {
                   }
 
                   if (this.hitEntityRules != null) {
-                     label57:
+                     label51:
                      for (SelectInteraction.HitEntity rule : this.hitEntityRules) {
                         for (SelectInteraction.EntityMatcher matcher : rule.matchers) {
                            if (!matcher.test(ref, targetRef, commandBuffer)) {
-                              continue label57;
+                              continue label51;
                            }
                         }
 
@@ -197,37 +208,44 @@ public class SelectInteraction extends SimpleInteraction {
                   }
 
                   if (hitEntity != null) {
-                     RootInteraction hitEntityInteraction = RootInteraction.getRootInteractionOrUnknown(hitEntity);
-                     InteractionContext subCtx = context.duplicate();
-                     DynamicMetaStore<InteractionContext> metaStore = subCtx.getMetaStore();
-                     metaStore.putMetaObject(TARGET_ENTITY, targetRef);
-                     metaStore.putMetaObject(HIT_LOCATION, hit);
-                     metaStore.putMetaObject(SELECT_META_STORE, instanceStore);
-                     metaStore.removeMetaObject(TARGET_BLOCK);
-                     metaStore.removeMetaObject(TARGET_BLOCK_RAW);
-                     if (playerComponent != null && SNAPSHOT_SOURCE == SelectInteraction.SnapshotSource.CLIENT) {
-                        InteractionSyncData currentState = context.getClientState();
-                        subCtx.setSnapshotProvider((cBuffer, attacker, targetNetworkId) -> {
-                           int attackerNetworkId = cBuffer.getComponent(attacker, NetworkId.getComponentType()).getId();
-                           if (targetNetworkId == attackerNetworkId) {
-                              return new EntitySnapshot(PositionUtil.toVector3d(currentState.attackerPos), PositionUtil.toRotation(currentState.attackerRot));
-                           }
-
-                           for (SelectedHitEntity e : currentState.hitEntities) {
-                              if (e.networkId == targetNetworkId) {
-                                 return new EntitySnapshot(PositionUtil.toVector3d(e.position), PositionUtil.toRotation(e.bodyRotation));
-                              }
-                           }
-
-                           throw new IllegalArgumentException("No entity " + targetNetworkId + " in client state");
-                        });
-                     }
-
-                     context.fork(new InteractionChainData(), context.getChain().getType(), subCtx, hitEntityInteraction, false);
+                     candidates.add(new SelectInteraction.EntityCandidate(targetRef, hit, hitEntity));
                   }
                }
             }
          }, e -> this.ignoreOwner && e.equals(ref) ? false : !e.equals(context.getEntity()));
+
+         for (SelectInteraction.EntityCandidate candidate : this.maxTargets > 0 && candidates.size() > this.maxTargets
+            ? reservoirSample(candidates, this.maxTargets)
+            : candidates) {
+            RootInteraction hitEntityInteraction = RootInteraction.getRootInteractionOrUnknown(candidate.hitEntity());
+            InteractionContext subCtx = context.duplicate();
+            DynamicMetaStore<InteractionContext> metaStore = subCtx.getMetaStore();
+            metaStore.putMetaObject(TARGET_ENTITY, candidate.targetRef());
+            metaStore.putMetaObject(HIT_LOCATION, candidate.hit());
+            metaStore.putMetaObject(SELECT_META_STORE, instanceStore);
+            metaStore.removeMetaObject(TARGET_BLOCK);
+            metaStore.removeMetaObject(TARGET_BLOCK_RAW);
+            if (playerComponent != null && SNAPSHOT_SOURCE == SelectInteraction.SnapshotSource.CLIENT) {
+               InteractionSyncData currentState = context.getClientState();
+               subCtx.setSnapshotProvider((cBuffer, attacker, targetNetworkId) -> {
+                  int attackerNetworkId = cBuffer.getComponent(attacker, NetworkId.getComponentType()).getId();
+                  if (targetNetworkId == attackerNetworkId) {
+                     return new EntitySnapshot(PositionUtil.toVector3d(currentState.attackerPos), PositionUtil.toRotation(currentState.attackerRot));
+                  }
+
+                  for (SelectedHitEntity e : currentState.hitEntities) {
+                     if (e.networkId == targetNetworkId) {
+                        return new EntitySnapshot(PositionUtil.toVector3d(e.position), PositionUtil.toRotation(e.bodyRotation));
+                     }
+                  }
+
+                  throw new IllegalArgumentException("No entity " + targetNetworkId + " in client state");
+               });
+            }
+
+            context.fork(new InteractionChainData(), context.getChain().getType(), subCtx, hitEntityInteraction, false);
+         }
+
          if (context.hasLabels()
             && hitEntities.isEmpty()
             && context.getState().state == InteractionState.Finished
@@ -238,20 +256,28 @@ public class SelectInteraction extends SimpleInteraction {
 
       if (this.hitBlock != null) {
          Set<BlockPosition> hitBlocks = instanceStore.getMetaObject(HIT_BLOCKS);
-         RootInteraction hitBlock = RootInteraction.getRootInteractionOrUnknown(this.hitBlock);
+         RootInteraction hitBlockInteraction = RootInteraction.getRootInteractionOrUnknown(this.hitBlock);
+         ArrayList<SelectInteraction.BlockCandidate> blockCandidates = new ArrayList<>();
          selector.selectTargetBlocks(commandBuffer, context.getEntity(), (x, y, z) -> {
             BlockPosition rawBlock = new BlockPosition(x, y, z);
             BlockPosition targetBlock = world.getBaseBlock(rawBlock);
             if (hitBlocks.add(targetBlock)) {
-               InteractionContext subCtx = context.duplicate();
-               DynamicMetaStore<InteractionContext> metaStore = subCtx.getMetaStore();
-               metaStore.putMetaObject(TARGET_BLOCK, targetBlock);
-               metaStore.putMetaObject(TARGET_BLOCK_RAW, rawBlock);
-               metaStore.putMetaObject(SELECT_META_STORE, instanceStore);
-               metaStore.removeMetaObject(TARGET_ENTITY);
-               context.fork(new InteractionChainData(), context.getChain().getType(), subCtx, hitBlock, false);
+               blockCandidates.add(new SelectInteraction.BlockCandidate(rawBlock, targetBlock));
             }
          });
+
+         for (SelectInteraction.BlockCandidate candidate : this.maxTargets > 0 && blockCandidates.size() > this.maxTargets
+            ? reservoirSample(blockCandidates, this.maxTargets)
+            : blockCandidates) {
+            InteractionContext subCtx = context.duplicate();
+            DynamicMetaStore<InteractionContext> metaStore = subCtx.getMetaStore();
+            metaStore.putMetaObject(TARGET_BLOCK, candidate.targetBlock());
+            metaStore.putMetaObject(TARGET_BLOCK_RAW, candidate.rawBlock());
+            metaStore.putMetaObject(SELECT_META_STORE, instanceStore);
+            metaStore.removeMetaObject(TARGET_ENTITY);
+            context.fork(new InteractionChainData(), context.getChain().getType(), subCtx, hitBlockInteraction, false);
+         }
+
          if (context.hasLabels()
             && hitBlocks.isEmpty()
             && context.getState().state == InteractionState.Finished
@@ -320,6 +346,26 @@ public class SelectInteraction extends SimpleInteraction {
    }
 
    @Nonnull
+   private static <T> List<T> reservoirSample(@Nonnull List<T> source, int count) {
+      ArrayList<T> reservoir = new ArrayList<>(count);
+      ThreadLocalRandom rng = ThreadLocalRandom.current();
+      int itr = 0;
+
+      for (int len = source.size(); itr < len; itr++) {
+         if (itr < count) {
+            reservoir.add(source.get(itr));
+         } else {
+            int idx = rng.nextInt(itr + 1);
+            if (idx < count) {
+               reservoir.set(idx, source.get(itr));
+            }
+         }
+      }
+
+      return reservoir;
+   }
+
+   @Nonnull
    @Override
    public String toString() {
       return "SelectInteraction{selector="
@@ -330,8 +376,16 @@ public class SelectInteraction extends SimpleInteraction {
          + this.hitBlock
          + "', ignoreOwner='"
          + this.ignoreOwner
-         + "'} "
+         + "', maxTargets="
+         + this.maxTargets
+         + "} "
          + super.toString();
+   }
+
+   record BlockCandidate(BlockPosition rawBlock, BlockPosition targetBlock) {
+   }
+
+   record EntityCandidate(Ref<EntityStore> targetRef, Vector4d hit, String hitEntity) {
    }
 
    public abstract static class EntityMatcher implements NetworkSerializable<com.hypixel.hytale.protocol.EntityMatcher> {

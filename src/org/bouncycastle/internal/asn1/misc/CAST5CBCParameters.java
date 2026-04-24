@@ -23,7 +23,7 @@ public class CAST5CBCParameters extends ASN1Object {
 
    public CAST5CBCParameters(byte[] var1, int var2) {
       this.iv = new DEROctetString(Arrays.clone(var1));
-      this.keyLength = new ASN1Integer(var2);
+      this.keyLength = ASN1Integer.valueOf(var2);
    }
 
    private CAST5CBCParameters(ASN1Sequence var1) {

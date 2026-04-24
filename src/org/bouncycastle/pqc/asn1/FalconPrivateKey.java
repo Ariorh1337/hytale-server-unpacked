@@ -66,7 +66,7 @@ public class FalconPrivateKey extends ASN1Object {
    @Override
    public ASN1Primitive toASN1Primitive() {
       ASN1EncodableVector var1 = new ASN1EncodableVector();
-      var1.add(new ASN1Integer(this.version));
+      var1.add(ASN1Integer.valueOf(this.version));
       var1.add(new DEROctetString(this.f));
       var1.add(new DEROctetString(this.g));
       var1.add(new DEROctetString(this.F));

@@ -183,7 +183,7 @@ public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
          playerComponent.getPageManager().setPage(ref, store, Page.None);
          BlockSelection prefab = PrefabStore.get().getPrefab(file);
          BuilderToolsPlugin.addToQueue(playerComponent, playerRefComponent, (r, s, componentAccessor) -> s.load(displayPath, prefab, componentAccessor));
-         PasteToolUtil.switchToPasteTool(ref, playerComponent, playerRefComponent, store);
+         PasteToolUtil.switchToPasteTool(ref, playerRefComponent, store);
       }
    }
 

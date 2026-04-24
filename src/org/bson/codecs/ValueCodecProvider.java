@@ -34,6 +34,10 @@ public class ValueCodecProvider implements CodecProvider {
       this.addCodec(new StringCodec());
       this.addCodec(new SymbolCodec());
       this.addCodec(new OverridableUuidRepresentationUuidCodec());
+      this.addCodec(new BinaryVectorCodec());
+      this.addCodec(new Float32BinaryVectorCodec());
+      this.addCodec(new Int8VectorCodec());
+      this.addCodec(new PackedBitBinaryVectorCodec());
       this.addCodec(new ByteCodec());
       this.addCodec(new PatternCodec());
       this.addCodec(new ShortCodec());
@@ -56,5 +60,10 @@ public class ValueCodecProvider implements CodecProvider {
    @Override
    public int hashCode() {
       return 0;
+   }
+
+   @Override
+   public String toString() {
+      return "ValueCodecProvider{}";
    }
 }

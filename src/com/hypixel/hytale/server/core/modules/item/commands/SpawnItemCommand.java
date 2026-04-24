@@ -42,6 +42,7 @@ public class SpawnItemCommand extends AbstractPlayerCommand {
 
    public SpawnItemCommand() {
       super("spawnitem", "server.commands.spawnitem.desc");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

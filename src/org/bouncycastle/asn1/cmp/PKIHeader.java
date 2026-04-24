@@ -82,7 +82,7 @@ public class PKIHeader extends ASN1Object {
    }
 
    public PKIHeader(int var1, GeneralName var2, GeneralName var3) {
-      this(new ASN1Integer(var1), var2, var3);
+      this(ASN1Integer.valueOf(var1), var2, var3);
    }
 
    private PKIHeader(ASN1Integer var1, GeneralName var2, GeneralName var3) {

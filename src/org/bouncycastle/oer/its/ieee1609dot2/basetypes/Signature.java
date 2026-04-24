@@ -50,7 +50,7 @@ public class Signature extends ASN1Object implements ASN1Choice {
       if (var0 instanceof Signature) {
          return (Signature)var0;
       } else {
-         return var0 != null ? new Signature(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new Signature(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

@@ -32,6 +32,8 @@ public class PositionsDensity extends Density {
    private final double[] rDistance;
    @Nonnull
    private final boolean[] rHasClosestPoint;
+   @Nonnull
+   private final PositionProvider.Context rPositionsContext;
 
    public PositionsDensity(
       @Nonnull PositionProvider positionsField, @Nonnull ReturnType returnType, @Nonnull DistanceFunction distanceFunction, double maxDistance
@@ -52,6 +54,7 @@ public class PositionsDensity extends Density {
       this.rLocalPoint = new Vector3d();
       this.rDistance = new double[2];
       this.rHasClosestPoint = new boolean[2];
+      this.rPositionsContext = new PositionProvider.Context();
    }
 
    @Nonnull
@@ -86,11 +89,10 @@ public class PositionsDensity extends Density {
             }
          }
       };
-      PositionProvider.Context positionsContext = new PositionProvider.Context();
-      positionsContext.bounds.min.set(this.rMin);
-      positionsContext.bounds.max.set(this.rMax);
-      positionsContext.pipe = positionsPipe;
-      this.positionProvider.generate(positionsContext);
+      this.rPositionsContext.bounds.min.set(this.rMin);
+      this.rPositionsContext.bounds.max.set(this.rMax);
+      this.rPositionsContext.pipe = positionsPipe;
+      this.positionProvider.generate(this.rPositionsContext);
       this.rDistance[0] = Math.sqrt(this.rDistance[0]);
       this.rDistance[1] = Math.sqrt(this.rDistance[1]);
       return this.returnType

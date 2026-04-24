@@ -39,7 +39,7 @@ public class Evidence extends ASN1Object implements ASN1Choice {
       if (var0 == null || var0 instanceof Evidence) {
          return (Evidence)var0;
       } else if (var0 instanceof ASN1TaggedObject) {
-         return new Evidence(ASN1TaggedObject.getInstance(var0, 128));
+         return new Evidence(ASN1TaggedObject.getContextInstance(var0));
       } else {
          throw new IllegalArgumentException("unknown object in getInstance");
       }

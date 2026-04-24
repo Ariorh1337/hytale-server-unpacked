@@ -30,7 +30,7 @@ public class KemBMParameter extends ASN1Object {
    }
 
    public KemBMParameter(AlgorithmIdentifier var1, long var2, AlgorithmIdentifier var4) {
-      this(var1, new ASN1Integer(var2), var4);
+      this(var1, ASN1Integer.valueOf(var2), var4);
    }
 
    public static KemBMParameter getInstance(Object var0) {

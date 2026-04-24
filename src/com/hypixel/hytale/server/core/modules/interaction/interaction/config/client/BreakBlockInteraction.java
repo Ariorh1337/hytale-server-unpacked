@@ -131,18 +131,7 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
                switch (playerComponent.getGameMode()) {
                   case Adventure:
                      BlockHarvestUtils.performBlockDamage(
-                        playerComponent,
-                        ref,
-                        targetBlock,
-                        heldItemStack,
-                        null,
-                        this.toolId,
-                        this.matchTool,
-                        1.0F,
-                        0,
-                        chunkReference,
-                        commandBuffer,
-                        chunkStoreStore
+                        ref, targetBlock, heldItemStack, null, this.toolId, this.matchTool, 1.0F, 0, chunkReference, commandBuffer, chunkStoreStore
                      );
                      break;
                   case Creative:

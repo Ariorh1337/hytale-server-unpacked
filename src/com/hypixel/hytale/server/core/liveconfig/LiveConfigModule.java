@@ -7,6 +7,11 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import io.sentry.Breadcrumb;
+import io.sentry.Sentry;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -101,11 +106,40 @@ public class LiveConfigModule extends JavaPlugin {
          String currentEtag = this.snapshot.getEtag();
          LiveConfigSnapshot newSnapshot = this.liveConfigService.fetchServerConfigs(this.patchline, this.os, this.arch, currentEtag);
          if (newSnapshot != null) {
+            String previousVersion = this.snapshot.getVersion();
             this.snapshot = newSnapshot;
-            LOGGER.at(Level.INFO).log("LiveConfig updated: version=%s, %d flag(s)", newSnapshot.getVersion(), newSnapshot.getFlagCount());
+            String newVersion = newSnapshot.getVersion();
+            if (previousVersion == null || !previousVersion.equals(newVersion)) {
+               updateSentryFlagContext(newSnapshot);
+               LOGGER.at(Level.INFO).log("LiveConfig updated: version=%s, %d flag(s)", newVersion, newSnapshot.getFlagCount());
+            }
          }
       } catch (Exception e) {
          LOGGER.at(Level.WARNING).withCause(e).log("Failed to refresh live config");
+      }
+   }
+
+   private static void updateSentryFlagContext(@Nonnull LiveConfigSnapshot snapshot) {
+      Map<String, LiveConfigSnapshot.ResolvedFlag> allFlags = snapshot.getAllFlags();
+      HashMap<String, String> flagContext = new HashMap<>(allFlags.size());
+
+      for (Entry<String, LiveConfigSnapshot.ResolvedFlag> entry : allFlags.entrySet()) {
+         Object value = entry.getValue().value();
+         flagContext.put(entry.getKey(), value != null ? value.toString() : "null");
+      }
+
+      try {
+         Sentry.configureScope(scope -> scope.setContexts("feature_flags", flagContext));
+
+         for (Entry<String, LiveConfigSnapshot.ResolvedFlag> entry : allFlags.entrySet()) {
+            if (entry.getValue().value() instanceof Boolean b) {
+               Sentry.addFeatureFlag(entry.getKey(), b);
+            }
+         }
+
+         Sentry.addBreadcrumb(Breadcrumb.info(String.format("LiveConfig refreshed with %d flag(s)", allFlags.size())));
+      } catch (Exception e) {
+         LOGGER.at(Level.WARNING).withCause(e).log("Failed to update Sentry feature flag context");
       }
    }
 

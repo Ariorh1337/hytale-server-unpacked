@@ -30,7 +30,6 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemToolSpec;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
@@ -170,13 +169,10 @@ public class BlockHarvestUtils {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      return performBlockDamage(
-         null, null, targetBlock, itemStack, tool, null, false, damageScale, setBlockSettings, chunkReference, componentAccessor, chunkStore
-      );
+      return performBlockDamage(null, targetBlock, itemStack, tool, null, false, damageScale, setBlockSettings, chunkReference, componentAccessor, chunkStore);
    }
 
    public static boolean performBlockDamage(
-      @Nullable LivingEntity entity,
       @Nullable Ref<EntityStore> ref,
       @Nonnull Vector3i targetBlockPos,
       @Nullable ItemStack itemStack,
@@ -278,7 +274,7 @@ public class BlockHarvestUtils {
       } else {
          if (!blockGathering.isSoft()) {
             if (heldItem != null && heldItem.getWeapon() == null) {
-               if (ref != null && entity != null) {
+               if (ref != null) {
                   GatheringEffectsConfig unbreakableBlockConfig = gameplayConfig.getGatheringConfig().getUnbreakableBlockConfig();
                   if ((setBlockSettings & 4) == 0) {
                      String particleSystemId = unbreakableBlockConfig.getParticleSystemId();
@@ -435,7 +431,7 @@ public class BlockHarvestUtils {
          }
       }
 
-      if (ref != null && entity != null) {
+      if (ref != null) {
          if ((setBlockSettings & 1024) == 0 && !targetBlockCenterPos.equals(Vector3dUtil.MAX)) {
             int hitSoundEventLayerIndex = 0;
             if (itemToolSpec != null) {
@@ -475,11 +471,11 @@ public class BlockHarvestUtils {
          }
       }
 
-      if (entity != null && ref != null && ItemUtils.canDecreaseItemStackDurability(ref, entityStore) && itemStack != null && !itemStack.isUnbreakable()) {
+      if (ref != null && ItemUtils.canDecreaseItemStackDurability(ref, entityStore) && itemStack != null && !itemStack.isUnbreakable()) {
          InventoryComponent.Hotbar hotbarComponent = entityStore.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
          if (hotbarComponent != null && hotbarComponent.getActiveSlot() != -1) {
             double durability = calculateDurabilityUse(heldItem, targetBlockType);
-            entity.updateItemStackDurability(ref, itemStack, hotbarComponent.getInventory(), hotbarComponent.getActiveSlot(), -durability, entityStore);
+            ItemUtils.updateItemStackDurability(ref, itemStack, hotbarComponent.getInventory(), hotbarComponent.getActiveSlot(), -durability, entityStore);
          }
       }
 

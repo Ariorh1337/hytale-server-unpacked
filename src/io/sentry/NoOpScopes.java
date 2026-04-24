@@ -2,6 +2,8 @@ package io.sentry;
 
 import io.sentry.logger.ILoggerApi;
 import io.sentry.logger.NoOpLoggerApi;
+import io.sentry.metrics.IMetricsApi;
+import io.sentry.metrics.NoOpMetricsApi;
 import io.sentry.protocol.Feedback;
 import io.sentry.protocol.SentryId;
 import io.sentry.protocol.SentryTransaction;
@@ -366,6 +368,12 @@ public final class NoOpScopes implements IScopes {
    @Override
    public ILoggerApi logger() {
       return NoOpLoggerApi.getInstance();
+   }
+
+   @NotNull
+   @Override
+   public IMetricsApi metrics() {
+      return NoOpMetricsApi.getInstance();
    }
 
    @Override

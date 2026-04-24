@@ -72,6 +72,8 @@ public final class ExternalOptions {
    @Nullable
    private Boolean enableLogs;
    @Nullable
+   private Boolean enableMetrics;
+   @Nullable
    private String spotlightConnectionUrl;
    @Nullable
    private List<String> ignoredCheckIns;
@@ -178,6 +180,7 @@ public final class ExternalOptions {
       options.setGlobalHubMode(propertiesProvider.getBooleanProperty("global-hub-mode"));
       options.setCaptureOpenTelemetryEvents(propertiesProvider.getBooleanProperty("capture-open-telemetry-events"));
       options.setEnableLogs(propertiesProvider.getBooleanProperty("logs.enabled"));
+      options.setEnableMetrics(propertiesProvider.getBooleanProperty("metrics.enabled"));
 
       for (String ignoredExceptionType : propertiesProvider.getList("ignored-exceptions-for-type")) {
          try {
@@ -588,6 +591,15 @@ public final class ExternalOptions {
    @Nullable
    public Boolean isEnableLogs() {
       return this.enableLogs;
+   }
+
+   public void setEnableMetrics(@Nullable Boolean enableMetrics) {
+      this.enableMetrics = enableMetrics;
+   }
+
+   @Nullable
+   public Boolean isEnableMetrics() {
+      return this.enableMetrics;
    }
 
    @Nullable

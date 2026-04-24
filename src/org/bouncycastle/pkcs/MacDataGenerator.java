@@ -7,6 +7,7 @@ import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.DigestInfo;
 import org.bouncycastle.operator.MacCalculator;
+import org.bouncycastle.util.BigIntegers;
 import org.bouncycastle.util.Strings;
 
 class MacDataGenerator {
@@ -37,7 +38,7 @@ class MacDataGenerator {
       } else {
          PKCS12PBEParams var8 = PKCS12PBEParams.getInstance(var10.getParameters());
          var6 = var8.getIV();
-         var7 = var8.getIterations().intValue();
+         var7 = BigIntegers.intValueExact(var8.getIterations());
       }
 
       return new MacData(var5, var6, var7);

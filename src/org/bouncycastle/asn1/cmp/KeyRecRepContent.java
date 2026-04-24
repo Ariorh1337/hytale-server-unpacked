@@ -21,7 +21,7 @@ public class KeyRecRepContent extends ASN1Object {
       this.status = PKIStatusInfo.getInstance(var2.nextElement());
 
       while (var2.hasMoreElements()) {
-         ASN1TaggedObject var3 = ASN1TaggedObject.getInstance(var2.nextElement(), 128);
+         ASN1TaggedObject var3 = ASN1TaggedObject.getContextInstance(var2.nextElement());
          switch (var3.getTagNo()) {
             case 0:
                this.newSigCert = CMPCertificate.getInstance(var3.getExplicitBaseObject());

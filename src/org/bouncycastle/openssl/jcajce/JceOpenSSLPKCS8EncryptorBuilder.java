@@ -152,7 +152,7 @@ public class JceOpenSSLPKCS8EncryptorBuilder {
          this.salt = new byte[20];
          this.random.nextBytes(this.salt);
          var9.add(new DEROctetString(this.salt));
-         var9.add(new ASN1Integer(this.iterationCount));
+         var9.add(ASN1Integer.valueOf(this.iterationCount));
          var1 = new AlgorithmIdentifier(this.algOID, PKCS12PBEParams.getInstance(new DERSequence(var9)));
 
          try {

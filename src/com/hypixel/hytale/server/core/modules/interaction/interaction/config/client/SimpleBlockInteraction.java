@@ -5,6 +5,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.BlockFace;
 import com.hypixel.hytale.protocol.BlockPosition;
@@ -21,6 +22,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -28,11 +30,13 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3i;
 
 public abstract class SimpleBlockInteraction extends SimpleInteraction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<SimpleBlockInteraction> CODEC = BuilderCodec.abstractBuilder(SimpleBlockInteraction.class, SimpleInteraction.CODEC)
       .appendInherited(
@@ -79,7 +83,6 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
             BlockPosition latestBlockPos = clientState.blockPosition;
             TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
             assert transformComponent != null;
-            double distanceSquared = transformComponent.getPosition().distanceSquared(latestBlockPos.x + 0.5, latestBlockPos.y + 0.5, latestBlockPos.z + 0.5);
             BlockPosition baseBlock = world.getBaseBlock(latestBlockPos);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK, baseBlock);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK_RAW, latestBlockPos);
@@ -87,6 +90,11 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
 
          BlockPosition targetBlockPos = context.getTargetBlock();
          if (targetBlockPos == null) {
+            context.getState().state = InteractionState.Failed;
+            super.tick0(firstRun, time, type, context, cooldownHandler);
+         } else if (!InteractionValidation.canPlayerInteractWithBlock(ref, commandBuffer, context.getHeldItem(), targetBlockPos)) {
+            LOGGER.at(Level.WARNING)
+               .log("Entity %d failed block interaction distance check at [%d, %d, %d]", ref.getIndex(), targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
             context.getState().state = InteractionState.Failed;
             super.tick0(firstRun, time, type, context, cooldownHandler);
          } else {

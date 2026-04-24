@@ -107,6 +107,11 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
          npcEntity -> npcEntity.requiresLeashPosition() ? (double)npcEntity.leashPitch : null
       )
       .addField(new KeyedCodec<>("RoleName", Codec.STRING), (npcEntity, s) -> npcEntity.roleName = s, npcEntity -> npcEntity.roleName)
+      .addField(
+         new KeyedCodec<>("ActiveMC", Codec.STRING),
+         (npcEntity, s) -> npcEntity.activeMotionControllerName = s,
+         npcEntity -> npcEntity.activeMotionControllerName
+      )
       .build();
    private String roleName;
    private int roleIndex = Integer.MIN_VALUE;
@@ -117,6 +122,8 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    private String spawnRoleName;
    @Nullable
    private String spawnConfigurationName;
+   @Nullable
+   private String activeMotionControllerName;
    private int environmentIndex = Integer.MIN_VALUE;
    private int spawnConfigurationIndex = Integer.MIN_VALUE;
    private boolean isSpawnTracked;
@@ -392,6 +399,15 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
       } else {
          this.spawnRoleName = NPCPlugin.get().getName(spawnRoleIndex);
       }
+   }
+
+   @Nullable
+   public String getActiveMotionControllerName() {
+      return this.activeMotionControllerName;
+   }
+
+   public void setActiveMotionControllerName(@Nullable String activeMotionControllerName) {
+      this.activeMotionControllerName = activeMotionControllerName;
    }
 
    @Nonnull

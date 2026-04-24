@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import org.bson.assertions.Assertions;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecProvider;
@@ -45,21 +46,21 @@ public final class PojoCodecProvider implements CodecProvider {
 
    @Override
    public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
-      return this.getPojoCodec(clazz, registry);
+      return this.createCodec(clazz, registry);
    }
 
-   private <T> PojoCodec<T> getPojoCodec(Class<T> clazz, CodecRegistry registry) {
+   private <T> PojoCodec<T> createCodec(Class<T> clazz, CodecRegistry registry) {
       ClassModel<T> classModel = (ClassModel<T>)this.classModels.get(clazz);
       if (classModel != null) {
-         return new PojoCodecImpl<>(classModel, registry, this.propertyCodecProviders, this.discriminatorLookup);
+         return createCodec(classModel, registry, this.propertyCodecProviders, this.discriminatorLookup);
       }
 
       if (this.automatic || clazz.getPackage() != null && this.packages.contains(clazz.getPackage().getName())) {
          try {
             classModel = createClassModel(clazz, this.conventions);
-            if (clazz.isInterface() || !classModel.getPropertyModels().isEmpty()) {
+            if (clazz.isInterface() || !classModel.getPropertyModels().isEmpty() || classModel.useDiscriminator()) {
                this.discriminatorLookup.addClassModel(classModel);
-               return new AutomaticPojoCodec<>(new PojoCodecImpl<>(classModel, registry, this.propertyCodecProviders, this.discriminatorLookup));
+               return new AutomaticPojoCodec<>(createCodec(classModel, registry, this.propertyCodecProviders, this.discriminatorLookup));
             }
          } catch (Exception e) {
             LOGGER.warn(String.format("Cannot use '%s' with the PojoCodec.", clazz.getSimpleName()), e);
@@ -70,6 +71,14 @@ public final class PojoCodecProvider implements CodecProvider {
       return null;
    }
 
+   private static <T> PojoCodec<T> createCodec(
+      ClassModel<T> classModel, CodecRegistry codecRegistry, List<PropertyCodecProvider> propertyCodecProviders, DiscriminatorLookup discriminatorLookup
+   ) {
+      return shouldSpecialize(classModel)
+         ? new PojoCodecImpl<>(classModel, codecRegistry, propertyCodecProviders, discriminatorLookup)
+         : new LazyPropertyModelCodec.NeedSpecializationCodec<>(classModel, discriminatorLookup, codecRegistry);
+   }
+
    private static <T> ClassModel<T> createClassModel(Class<T> clazz, List<Convention> conventions) {
       ClassModelBuilder<T> builder = ClassModel.builder(clazz);
       if (conventions != null) {
@@ -77,6 +86,22 @@ public final class PojoCodecProvider implements CodecProvider {
       }
 
       return builder.build();
+   }
+
+   private static boolean shouldSpecialize(ClassModel<?> classModel) {
+      if (!classModel.hasTypeParameters()) {
+         return true;
+      }
+
+      for (Entry<String, TypeParameterMap> entry : classModel.getPropertyNameToTypeParameterMap().entrySet()) {
+         TypeParameterMap typeParameterMap = entry.getValue();
+         PropertyModel<?> propertyModel = classModel.getPropertyModel(entry.getKey());
+         if (typeParameterMap.hasTypeParameters() && (propertyModel == null || propertyModel.getCodec() == null)) {
+            return false;
+         }
+      }
+
+      return true;
    }
 
    public static final class Builder {

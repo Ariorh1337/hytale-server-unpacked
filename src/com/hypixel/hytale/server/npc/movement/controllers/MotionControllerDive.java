@@ -15,12 +15,14 @@ import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.movement.MotionKind;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerDive;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.PositionProbeWater;
 import java.util.EnumSet;
+import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,6 +30,8 @@ import org.joml.Vector3d;
 
 public class MotionControllerDive extends MotionControllerBase {
    public static final String TYPE = "Dive";
+   public static final Set<MovementMode> SUPPORTED_MOVEMENT_MODES = Set.of(MovementMode.DIVE);
+   public static final Set<MovementMode> DEFAULT_SPAWN_MOVEMENT_MODES = Set.of(MovementMode.DIVE);
    public static final int COLLISION_MATERIALS_ACTIVE = 5;
    public static final int COLLISION_MATERIALS_PASSIVE = 4;
    public static final double DEFAULT_SWIM_DEPTH = 0.5;
@@ -447,6 +451,18 @@ public class MotionControllerDive extends MotionControllerBase {
    @Override
    public String getType() {
       return "Dive";
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getSupportedMovementModes() {
+      return SUPPORTED_MOVEMENT_MODES;
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getDefaultSpawnMovementModes() {
+      return DEFAULT_SPAWN_MOVEMENT_MODES;
    }
 
    public double bisect(

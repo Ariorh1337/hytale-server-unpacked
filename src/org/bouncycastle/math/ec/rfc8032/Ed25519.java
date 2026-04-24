@@ -7,6 +7,7 @@ import org.bouncycastle.math.ec.rfc7748.X25519;
 import org.bouncycastle.math.ec.rfc7748.X25519Field;
 import org.bouncycastle.math.raw.Interleave;
 import org.bouncycastle.math.raw.Nat256;
+import org.bouncycastle.util.Integers;
 
 public abstract class Ed25519 {
    private static final int COORD_INTS = 8;
@@ -113,11 +114,11 @@ public abstract class Ed25519 {
       }
 
       int var10 = Codec.decode32(var0, 0);
-      if (var2 == 0 && var10 + Integer.MIN_VALUE <= -2147483647) {
+      if (var2 == 0 && Integers.compareUnsigned(var10, 1) <= 0) {
          return false;
       }
 
-      if (var3 == 0 && var10 + Integer.MIN_VALUE >= P[0] - 1 + Integer.MIN_VALUE) {
+      if (var3 == 0 && Integers.compareUnsigned(var10, P[0] - 1) >= 0) {
          return false;
       }
 
@@ -164,7 +165,7 @@ public abstract class Ed25519 {
 
    private static boolean decodePointVar(byte[] var0, boolean var1, Ed25519.PointAffine var2) {
       int var3 = (var0[31] & 128) >>> 7;
-      Ed25519.F.decode(var0, var2.y);
+      Ed25519.F.decode255(var0, var2.y);
       int[] var4 = Ed25519.F.create();
       int[] var5 = Ed25519.F.create();
       Ed25519.F.sqr(var2.y, var4);
@@ -694,12 +695,16 @@ public abstract class Ed25519 {
    }
 
    private static void pointPrecompute(Ed25519.PointAffine var0, Ed25519.PointExtended[] var1, int var2, int var3, Ed25519.PointTemp var4) {
-      pointCopy(var0, var1[var2] = new Ed25519.PointExtended());
       Ed25519.PointExtended var5 = new Ed25519.PointExtended();
-      pointAdd(var1[var2], var1[var2], var5, var4);
+      pointCopy(var0, var5);
+      var1[var2] = var5;
+      Ed25519.PointExtended var6 = new Ed25519.PointExtended();
+      pointAdd(var5, var5, var6, var4);
 
-      for (int var6 = 1; var6 < var3; var6++) {
-         pointAdd(var1[var2 + var6 - 1], var5, var1[var2 + var6] = new Ed25519.PointExtended(), var4);
+      for (int var7 = 1; var7 < var3; var7++) {
+         Ed25519.PointExtended var8 = new Ed25519.PointExtended();
+         pointAdd(var1[var2 + var7 - 1], var6, var8, var4);
+         var1[var2 + var7] = var8;
       }
    }
 
@@ -739,8 +744,9 @@ public abstract class Ed25519 {
       int var6 = 0;
 
       while (true) {
-         Ed25519.PointPrecompZ var7 = var1[var6] = new Ed25519.PointPrecompZ();
+         Ed25519.PointPrecompZ var7 = new Ed25519.PointPrecompZ();
          pointCopy(var4, var7);
+         var1[var6] = var7;
          if (++var6 == var2) {
             return;
          }
@@ -789,7 +795,7 @@ public abstract class Ed25519 {
             Ed25519.PointExtended var19 = new Ed25519.PointExtended();
 
             for (int var12 = 0; var12 < 8; var12++) {
-               Ed25519.PointExtended var13 = var4[var9++] = new Ed25519.PointExtended();
+               Ed25519.PointExtended var13 = new Ed25519.PointExtended();
 
                for (int var14 = 0; var14 < 4; var14++) {
                   if (var14 == 0) {
@@ -810,6 +816,7 @@ public abstract class Ed25519 {
 
                Ed25519.F.negate(var13.x, var13.x);
                Ed25519.F.negate(var13.t, var13.t);
+               var4[var9++] = var13;
 
                for (int var28 = 0; var28 < 3; var28++) {
                   int var32 = 1 << var28;
@@ -827,7 +834,7 @@ public abstract class Ed25519 {
 
             for (int var20 = 0; var20 < var1; var20++) {
                Ed25519.PointExtended var23 = var4[var20];
-               Ed25519.PointPrecomp var29 = PRECOMP_BASE_WNAF[var20] = new Ed25519.PointPrecomp();
+               Ed25519.PointPrecomp var29 = new Ed25519.PointPrecomp();
                Ed25519.F.mul(var23.x, var23.z, var23.x);
                Ed25519.F.mul(var23.y, var23.z, var23.y);
                Ed25519.F.apm(var23.y, var23.x, var29.ypx_h, var29.ymx_h);
@@ -836,13 +843,14 @@ public abstract class Ed25519 {
                Ed25519.F.normalize(var29.ymx_h);
                Ed25519.F.normalize(var29.ypx_h);
                Ed25519.F.normalize(var29.xyd);
+               PRECOMP_BASE_WNAF[var20] = var29;
             }
 
             PRECOMP_BASE128_WNAF = new Ed25519.PointPrecomp[var1];
 
             for (int var21 = 0; var21 < var1; var21++) {
                Ed25519.PointExtended var24 = var4[var1 + var21];
-               Ed25519.PointPrecomp var30 = PRECOMP_BASE128_WNAF[var21] = new Ed25519.PointPrecomp();
+               Ed25519.PointPrecomp var30 = new Ed25519.PointPrecomp();
                Ed25519.F.mul(var24.x, var24.z, var24.x);
                Ed25519.F.mul(var24.y, var24.z, var24.y);
                Ed25519.F.apm(var24.y, var24.x, var30.ypx_h, var30.ymx_h);
@@ -851,6 +859,7 @@ public abstract class Ed25519 {
                Ed25519.F.normalize(var30.ymx_h);
                Ed25519.F.normalize(var30.ypx_h);
                Ed25519.F.normalize(var30.xyd);
+               PRECOMP_BASE128_WNAF[var21] = var30;
             }
 
             PRECOMP_BASE_COMB = Ed25519.F.createTable(var2 * 3);

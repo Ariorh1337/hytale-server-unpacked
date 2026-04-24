@@ -1,6 +1,7 @@
 package io.sentry;
 
 import io.sentry.logger.ILoggerApi;
+import io.sentry.metrics.IMetricsApi;
 import io.sentry.protocol.Feedback;
 import io.sentry.protocol.SentryId;
 import io.sentry.protocol.SentryTransaction;
@@ -282,6 +283,9 @@ public interface IScopes {
 
    @NotNull
    ILoggerApi logger();
+
+   @NotNull
+   IMetricsApi metrics();
 
    void addFeatureFlag(@Nullable String var1, @Nullable Boolean var2);
 }

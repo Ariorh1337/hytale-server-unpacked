@@ -82,7 +82,7 @@ public class CertEtcToken extends ASN1Object implements ASN1Choice {
       if (var0 instanceof CertEtcToken) {
          return (CertEtcToken)var0;
       } else if (var0 instanceof ASN1TaggedObject) {
-         return new CertEtcToken(ASN1TaggedObject.getInstance(var0, 128));
+         return new CertEtcToken(ASN1TaggedObject.getContextInstance(var0));
       } else {
          return var0 != null ? new CertEtcToken(Extension.getInstance(var0)) : null;
       }

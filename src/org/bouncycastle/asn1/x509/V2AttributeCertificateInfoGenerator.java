@@ -10,7 +10,7 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERSet;
 
 public class V2AttributeCertificateInfoGenerator {
-   private ASN1Integer version = new ASN1Integer(1L);
+   private ASN1Integer version = ASN1Integer.ONE;
    private Holder holder;
    private AttCertIssuer issuer;
    private AlgorithmIdentifier signature;

@@ -9,8 +9,8 @@ import org.bouncycastle.oer.SwitchIndexer;
 import org.bouncycastle.oer.its.template.ieee1609dot2.basetypes.Ieee1609Dot2BaseTypes;
 
 public class EtsiTs103097ExtensionModule {
-   public static final ASN1Integer etsiTs102941CrlRequestId = new ASN1Integer(1L);
-   public static final ASN1Integer etsiTs102941DeltaCtlRequestId = new ASN1Integer(2L);
+   public static final ASN1Integer etsiTs102941CrlRequestId = ASN1Integer.ONE;
+   public static final ASN1Integer etsiTs102941DeltaCtlRequestId = ASN1Integer.TWO;
    private static final ASN1Encodable[] extensionKeys = new ASN1Encodable[]{etsiTs102941CrlRequestId, etsiTs102941DeltaCtlRequestId};
    public static final OERDefinition.Builder ExtId = OERDefinition.integer(0L, 255L)
       .validSwitchValue(etsiTs102941CrlRequestId, etsiTs102941DeltaCtlRequestId)

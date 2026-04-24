@@ -57,8 +57,6 @@ public class InteractionContext {
    @Nullable
    private final Ref<EntityStore> runningForEntity;
    @Nullable
-   private LivingEntity entity;
-   @Nullable
    private InteractionChain chain;
    @Nullable
    private InteractionEntry entry;
@@ -402,16 +400,15 @@ public class InteractionContext {
       return interactionIds;
    }
 
-   void initEntry(@Nonnull InteractionChain chain, InteractionEntry entry, @Nullable LivingEntity entity) {
+   void initEntry(@Nonnull InteractionChain chain, @Nonnull InteractionEntry entry, @Nullable Ref<EntityStore> ref) {
       CommandBuffer<EntityStore> commandBuffer = this.getCommandBuffer();
       assert commandBuffer != null;
       this.chain = chain;
       this.entry = entry;
-      this.entity = entity;
       this.labels = null;
       Player playerComponent = null;
-      if (entity != null) {
-         playerComponent = commandBuffer.getComponent(entity.getReference(), Player.getComponentType());
+      if (ref != null) {
+         playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       }
 
       GameMode gameMode = playerComponent != null ? playerComponent.getGameMode() : GameMode.Adventure;
@@ -419,10 +416,9 @@ public class InteractionContext {
       chain.skipChainOnClick = chain.skipChainOnClick | (settings != null && settings.allowSkipChainOnClick);
    }
 
-   void deinitEntry(InteractionChain chain, InteractionEntry entry, LivingEntity entity) {
+   void deinitEntry(InteractionChain chain, InteractionEntry entry, Ref<EntityStore> ref) {
       this.chain = null;
       this.entry = null;
-      this.entity = null;
       this.labels = null;
    }
 
@@ -441,8 +437,6 @@ public class InteractionContext {
          + this.originalItemType
          + ", interactionVarsGetter="
          + this.interactionVarsGetter
-         + ", entity="
-         + this.entity
          + ", labels="
          + Arrays.toString(this.labels)
          + ", snapshotProvider="

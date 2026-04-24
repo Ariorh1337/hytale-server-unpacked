@@ -92,7 +92,7 @@ public class X509Extensions extends ASN1Object {
       } else if (var0 instanceof Extensions) {
          return new X509Extensions((ASN1Sequence)((Extensions)var0).toASN1Primitive());
       } else if (var0 instanceof ASN1TaggedObject) {
-         ASN1TaggedObject var1 = ASN1TaggedObject.getInstance(var0, 128);
+         ASN1TaggedObject var1 = ASN1TaggedObject.getContextInstance(var0);
          return getInstance(var1.getBaseObject().toASN1Primitive());
       } else {
          throw new IllegalArgumentException("illegal object in getInstance: " + var0.getClass().getName());

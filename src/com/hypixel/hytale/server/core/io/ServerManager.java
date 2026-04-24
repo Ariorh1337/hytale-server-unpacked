@@ -5,6 +5,7 @@ import com.hypixel.hytale.common.util.CompletableFutureUtil;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.NetworkUtil;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
+import com.hypixel.hytale.protocol.io.ServerListener;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Options;
@@ -15,15 +16,12 @@ import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.game.InventoryPacketHandler;
 import com.hypixel.hytale.server.core.io.transport.QUICTransport;
-import com.hypixel.hytale.server.core.io.transport.TCPTransport;
 import com.hypixel.hytale.server.core.io.transport.Transport;
 import com.hypixel.hytale.server.core.io.transport.TransportType;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -33,7 +31,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -51,7 +51,7 @@ public class ServerManager extends JavaPlugin {
    };
    private static ServerManager instance;
    @Nonnull
-   private final List<Channel> listeners = new CopyOnWriteArrayList<>();
+   private final List<ServerListener> listeners = new CopyOnWriteArrayList<>();
    @Nonnull
    private final List<Function<IPacketHandler, SubPacketHandler>> subPacketHandlers = new ObjectArrayList<>();
    @Nullable
@@ -76,13 +76,15 @@ public class ServerManager extends JavaPlugin {
    public void init() {
       this.registerFuture = CompletableFutureUtil._catch(CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> {
          long start = System.nanoTime();
-
-         this.transport = switch ((TransportType)Options.getOptionSet().valuesOf(Options.TRANSPORT).getFirst()) {
-            case TCP -> new TCPTransport();
-            case QUIC -> new QUICTransport();
-         };
-         this.getLogger().at(Level.INFO).log("Took %s to setup transport!", FormatUtil.nanosToString(System.nanoTime() - start));
-         this.registerFuture = null;
+         switch ((TransportType)Options.getOptionSet().valuesOf(Options.TRANSPORT).getFirst()) {
+            case QUIC:
+               this.transport = new QUICTransport();
+               this.getLogger().at(Level.INFO).log("Took %s to setup transport!", FormatUtil.nanosToString(System.nanoTime() - start));
+               this.registerFuture = null;
+               return;
+            default:
+               throw new MatchException(null, null);
+         }
       })));
    }
 
@@ -149,7 +151,7 @@ public class ServerManager extends JavaPlugin {
    }
 
    public void unbindAllListeners() {
-      for (Channel channel : this.listeners) {
+      for (ServerListener channel : this.listeners) {
          this.unbind0(channel);
       }
 
@@ -157,30 +159,30 @@ public class ServerManager extends JavaPlugin {
    }
 
    @Nonnull
-   public List<Channel> getListeners() {
+   public List<ServerListener> getListeners() {
       return Collections.unmodifiableList(this.listeners);
    }
 
    public boolean bind(@Nonnull InetSocketAddress address) {
       if (address.getAddress().isAnyLocalAddress() && this.transport.getType() == TransportType.QUIC) {
-         Channel channelIpv6 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV6_ADDRESS, address.getPort()));
+         ServerListener channelIpv6 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV6_ADDRESS, address.getPort()));
          if (channelIpv6 != null) {
             this.listeners.add(channelIpv6);
          }
 
-         Channel channelIpv4 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV4_ADDRESS, address.getPort()));
+         ServerListener channelIpv4 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV4_ADDRESS, address.getPort()));
          if (channelIpv4 != null) {
             this.listeners.add(channelIpv4);
          }
 
-         Channel channelIpv6Localhost = this.bind0(new InetSocketAddress(NetworkUtil.LOOPBACK_IPV6_ADDRESS, address.getPort()));
+         ServerListener channelIpv6Localhost = this.bind0(new InetSocketAddress(NetworkUtil.LOOPBACK_IPV6_ADDRESS, address.getPort()));
          if (channelIpv6Localhost != null) {
             this.listeners.add(channelIpv6Localhost);
          }
 
          return channelIpv4 != null || channelIpv6 != null;
       } else {
-         Channel channel = this.bind0(address);
+         ServerListener channel = this.bind0(address);
          if (channel != null) {
             this.listeners.add(channel);
          }
@@ -189,7 +191,7 @@ public class ServerManager extends JavaPlugin {
       }
    }
 
-   public boolean unbind(@Nonnull Channel channel) {
+   public boolean unbind(@Nonnull ServerListener channel) {
       boolean success = this.unbind0(channel);
       if (success) {
          this.listeners.remove(channel);
@@ -200,7 +202,7 @@ public class ServerManager extends JavaPlugin {
 
    @Nullable
    public InetSocketAddress getLocalOrPublicAddress() throws SocketException {
-      for (Channel channel : this.listeners) {
+      for (ServerListener channel : this.listeners) {
          if (channel.localAddress() instanceof InetSocketAddress inetSocketAddress) {
             InetAddress address = inetSocketAddress.getAddress();
             if (address.isLoopbackAddress()) {
@@ -225,7 +227,7 @@ public class ServerManager extends JavaPlugin {
 
    @Nullable
    public InetSocketAddress getNonLoopbackAddress() throws SocketException {
-      for (Channel channel : this.listeners) {
+      for (ServerListener channel : this.listeners) {
          if (channel.localAddress() instanceof InetSocketAddress inetSocketAddress) {
             InetAddress address = inetSocketAddress.getAddress();
             if (!address.isLoopbackAddress()) {
@@ -248,7 +250,7 @@ public class ServerManager extends JavaPlugin {
 
    @Nullable
    public InetSocketAddress getPublicAddress() throws SocketException {
-      for (Channel channel : this.listeners) {
+      for (ServerListener channel : this.listeners) {
          if (channel.localAddress() instanceof InetSocketAddress inetSocketAddress) {
             InetAddress address = inetSocketAddress.getAddress();
             if (!address.isLoopbackAddress() && !address.isSiteLocalAddress()) {
@@ -287,40 +289,37 @@ public class ServerManager extends JavaPlugin {
    }
 
    @Nullable
-   private Channel bind0(@Nonnull InetSocketAddress address) {
+   private ServerListener bind0(@Nonnull InetSocketAddress address) {
       long start = System.nanoTime();
       this.getLogger().at(Level.FINE).log("Binding to %s (%s)", address, this.transport.getType());
 
       try {
-         ChannelFuture f = this.transport.bind(address).sync();
-         if (f.isSuccess()) {
-            Channel channel = f.channel();
-            this.getLogger().at(Level.INFO).log("Listening on %s and took %s", channel.localAddress(), FormatUtil.nanosToString(System.nanoTime() - start));
-            return channel;
-         }
-
-         this.getLogger().at(Level.SEVERE).withCause(new SkipSentryException(f.cause())).log("Could not bind to host %s", address);
+         ServerListener channel = this.transport.bind(address).get();
+         this.getLogger().at(Level.INFO).log("Listening on %s and took %s", channel.localAddress(), FormatUtil.nanosToString(System.nanoTime() - start));
+         return channel;
       } catch (InterruptedException e) {
          Thread.currentThread().interrupt();
          throw new RuntimeException("Interrupted when attempting to bind to host " + address, e);
       } catch (Throwable t) {
          this.getLogger().at(Level.SEVERE).withCause(new SkipSentryException(t)).log("Failed to bind to %s", address);
+         return null;
       }
-
-      return null;
    }
 
-   private boolean unbind0(@Nonnull Channel channel) {
+   private boolean unbind0(@Nonnull ServerListener channel) {
       long start = System.nanoTime();
       this.getLogger().at(Level.FINE).log("Closing listener %s", channel);
 
       try {
-         channel.close().await(1L, TimeUnit.SECONDS);
+         channel.close().get(1L, TimeUnit.SECONDS);
          this.getLogger().at(Level.INFO).log("Closed listener %s and took %s", channel, FormatUtil.nanosToString(System.nanoTime() - start));
          return true;
       } catch (InterruptedException e) {
          this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to await for listener to close!");
          Thread.currentThread().interrupt();
+         return false;
+      } catch (ExecutionException | TimeoutException e) {
+         this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to await for listener to close!");
          return false;
       }
    }

@@ -1,16 +1,16 @@
 package org.bouncycastle.crypto.agreement.kdf;
 
 import java.io.IOException;
-import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.x9.KeySpecificInfo;
+import org.bouncycastle.asn1.x9.OtherInfo;
 import org.bouncycastle.crypto.DataLengthException;
 import org.bouncycastle.crypto.DerivationFunction;
 import org.bouncycastle.crypto.DerivationParameters;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.OutputLengthException;
+import org.bouncycastle.crypto.io.DigestOutputStream;
 import org.bouncycastle.util.Pack;
 
 public class DHKEKGenerator implements DerivationFunction {
@@ -18,7 +18,7 @@ public class DHKEKGenerator implements DerivationFunction {
    private ASN1ObjectIdentifier algorithm;
    private int keySize;
    private byte[] z;
-   private byte[] partyAInfo;
+   private byte[] extraInfo;
 
    public DHKEKGenerator(Digest var1) {
       this.digest = var1;
@@ -30,7 +30,7 @@ public class DHKEKGenerator implements DerivationFunction {
       this.algorithm = var2.getAlgorithm();
       this.keySize = var2.getKeySize();
       this.z = var2.getZ();
-      this.partyAInfo = var2.getExtraInfo();
+      this.extraInfo = var2.getExtraInfo();
    }
 
    public Digest getDigest() {
@@ -43,49 +43,44 @@ public class DHKEKGenerator implements DerivationFunction {
          throw new OutputLengthException("output buffer too small");
       }
 
-      long var4 = var3;
-      int var6 = this.digest.getDigestSize();
-      if (var4 > 8589934591L) {
+      this.digest.reset();
+      int var4 = var3;
+      int var5 = this.digest.getDigestSize();
+      if (var4 > 4294967295L * var5) {
          throw new IllegalArgumentException("Output length too large");
       }
 
-      int var7 = (int)((var4 + var6 - 1L) / var6);
-      byte[] var8 = new byte[this.digest.getDigestSize()];
-      int var9 = 1;
+      int var6 = 0;
+      byte[] var7 = new byte[4];
+      DEROctetString var8 = DEROctetString.withContents(var7);
+      KeySpecificInfo var9 = new KeySpecificInfo(this.algorithm, var8);
+      DEROctetString var10 = DEROctetString.withContentsOptional(this.extraInfo);
+      DEROctetString var11 = DEROctetString.withContents(Pack.intToBigEndian(this.keySize));
+      OtherInfo var12 = new OtherInfo(var9, var10, var11);
+      DigestOutputStream var13 = new DigestOutputStream(this.digest);
 
-      for (int var10 = 0; var10 < var7; var10++) {
+      while (var3 > 0) {
          this.digest.update(this.z, 0, this.z.length);
-         ASN1EncodableVector var11 = new ASN1EncodableVector();
-         ASN1EncodableVector var12 = new ASN1EncodableVector();
-         var12.add(this.algorithm);
-         var12.add(new DEROctetString(Pack.intToBigEndian(var9)));
-         var11.add(new DERSequence(var12));
-         if (this.partyAInfo != null) {
-            var11.add(new DERTaggedObject(true, 0, new DEROctetString(this.partyAInfo)));
-         }
-
-         var11.add(new DERTaggedObject(true, 2, new DEROctetString(Pack.intToBigEndian(this.keySize))));
 
          try {
-            byte[] var13 = new DERSequence(var11).getEncoded("DER");
-            this.digest.update(var13, 0, var13.length);
-         } catch (IOException var14) {
-            throw new IllegalArgumentException("unable to encode parameter info: " + var14.getMessage());
+            Pack.intToBigEndian(++var6, var7);
+            var12.encodeTo(var13, "DER");
+         } catch (IOException var15) {
+            throw new IllegalArgumentException("unable to encode parameter info: " + var15.getMessage());
          }
 
-         this.digest.doFinal(var8, 0);
-         if (var3 > var6) {
-            System.arraycopy(var8, 0, var1, var2, var6);
-            var2 += var6;
-            var3 -= var6;
-         } else {
-            System.arraycopy(var8, 0, var1, var2, var3);
+         if (var3 < var5) {
+            byte[] var14 = new byte[var5];
+            this.digest.doFinal(var14, 0);
+            System.arraycopy(var14, 0, var1, var2, var3);
+            break;
          }
 
-         var9++;
+         this.digest.doFinal(var1, var2);
+         var2 += var5;
+         var3 -= var5;
       }
 
-      this.digest.reset();
-      return (int)var4;
+      return var4;
    }
 }

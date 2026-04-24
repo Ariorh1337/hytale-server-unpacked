@@ -13,12 +13,12 @@ public class BsonTypeCodecMap {
       this.bsonTypeClassMap = Assertions.notNull("bsonTypeClassMap", bsonTypeClassMap);
       Assertions.notNull("codecRegistry", codecRegistry);
 
-      for (BsonType cur : bsonTypeClassMap.keys()) {
+      for (BsonType cur : BsonType.values()) {
          Class<?> clazz = bsonTypeClassMap.get(cur);
          if (clazz != null) {
             try {
                this.codecs[cur.getValue()] = codecRegistry.get(clazz);
-            } catch (CodecConfigurationException var7) {
+            } catch (CodecConfigurationException var9) {
             }
          }
       }

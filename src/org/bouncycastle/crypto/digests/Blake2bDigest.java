@@ -33,7 +33,7 @@ public class Blake2bDigest implements ExtendedDigest {
       {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
       {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}
    };
-   private static int ROUNDS = 12;
+   private static final int ROUNDS = 12;
    private static final int BLOCK_LENGTH_BYTES = 128;
    private int digestLength = 64;
    private int keyLength = 0;
@@ -47,10 +47,10 @@ public class Blake2bDigest implements ExtendedDigest {
    private int nodeDepth = 0;
    private int innerHashLength = 0;
    private boolean isLastNode = false;
-   private byte[] buffer = null;
+   private final byte[] buffer = new byte[128];
    private int bufferPos = 0;
-   private long[] internalState = new long[16];
-   private long[] chainValue = null;
+   private final long[] internalState = new long[16];
+   private final long[] chainValue = new long[8];
    private long t0 = 0L;
    private long t1 = 0L;
    private long f0 = 0L;
@@ -66,12 +66,12 @@ public class Blake2bDigest implements ExtendedDigest {
    }
 
    public Blake2bDigest(Blake2bDigest var1) {
+      System.arraycopy(var1.chainValue, 0, this.chainValue, 0, 8);
+      System.arraycopy(var1.buffer, 0, this.buffer, 0, 128);
       this.bufferPos = var1.bufferPos;
-      this.buffer = Arrays.clone(var1.buffer);
       this.keyLength = var1.keyLength;
       this.key = Arrays.clone(var1.key);
       this.digestLength = var1.digestLength;
-      this.chainValue = Arrays.clone(var1.chainValue);
       this.personalization = Arrays.clone(var1.personalization);
       this.salt = Arrays.clone(var1.salt);
       this.t0 = var1.t0;
@@ -83,7 +83,6 @@ public class Blake2bDigest implements ExtendedDigest {
    public Blake2bDigest(int var1, CryptoServicePurpose var2) {
       this.purpose = var2;
       if (var1 >= 8 && var1 <= 512 && var1 % 8 == 0) {
-         this.buffer = new byte[128];
          this.keyLength = 0;
          this.digestLength = var1 / 8;
          CryptoServicesRegistrar.checkConstraints(Utils.getDefaultProperties(this, var1, var2));
@@ -98,14 +97,13 @@ public class Blake2bDigest implements ExtendedDigest {
    }
 
    public Blake2bDigest(byte[] var1, CryptoServicePurpose var2) {
-      this.buffer = new byte[128];
       if (var1 != null) {
-         this.key = new byte[var1.length];
-         System.arraycopy(var1, 0, this.key, 0, var1.length);
          if (var1.length > 64) {
-            throw new IllegalArgumentException("Keys > 64 are not supported");
+            throw new IllegalArgumentException("Keys > 64 bytes are not supported");
          }
 
+         this.key = new byte[var1.length];
+         System.arraycopy(var1, 0, this.key, 0, var1.length);
          this.keyLength = var1.length;
          System.arraycopy(var1, 0, this.buffer, 0, var1.length);
          this.bufferPos = 128;
@@ -123,7 +121,6 @@ public class Blake2bDigest implements ExtendedDigest {
 
    public Blake2bDigest(byte[] var1, int var2, byte[] var3, byte[] var4, CryptoServicePurpose var5) {
       this.purpose = var5;
-      this.buffer = new byte[128];
       if (var2 >= 1 && var2 <= 64) {
          this.digestLength = var2;
          if (var3 != null) {
@@ -145,12 +142,12 @@ public class Blake2bDigest implements ExtendedDigest {
          }
 
          if (var1 != null) {
-            this.key = new byte[var1.length];
-            System.arraycopy(var1, 0, this.key, 0, var1.length);
             if (var1.length > 64) {
-               throw new IllegalArgumentException("Keys > 64 are not supported");
+               throw new IllegalArgumentException("Keys > 64 bytes are not supported");
             }
 
+            this.key = new byte[var1.length];
+            System.arraycopy(var1, 0, this.key, 0, var1.length);
             this.keyLength = var1.length;
             System.arraycopy(var1, 0, this.buffer, 0, var1.length);
             this.bufferPos = 128;
@@ -164,7 +161,6 @@ public class Blake2bDigest implements ExtendedDigest {
    }
 
    public Blake2bDigest(byte[] var1, byte[] var2) {
-      this.buffer = new byte[128];
       this.purpose = CryptoServicePurpose.ANY;
       this.digestLength = var2[0];
       this.keyLength = var2[1];
@@ -178,25 +174,22 @@ public class Blake2bDigest implements ExtendedDigest {
    }
 
    private void init() {
-      if (this.chainValue == null) {
-         this.chainValue = new long[8];
-         this.chainValue[0] = blake2b_IV[0] ^ (this.digestLength | this.keyLength << 8 | this.fanout << 16 | this.depth << 24 | this.leafLength << 32);
-         this.chainValue[1] = blake2b_IV[1] ^ this.nodeOffset;
-         this.chainValue[2] = blake2b_IV[2] ^ (this.nodeDepth | this.innerHashLength << 8);
-         this.chainValue[3] = blake2b_IV[3];
-         this.chainValue[4] = blake2b_IV[4];
-         this.chainValue[5] = blake2b_IV[5];
-         if (this.salt != null) {
-            this.chainValue[4] = this.chainValue[4] ^ Pack.littleEndianToLong(this.salt, 0);
-            this.chainValue[5] = this.chainValue[5] ^ Pack.littleEndianToLong(this.salt, 8);
-         }
+      this.chainValue[0] = blake2b_IV[0] ^ (this.digestLength | this.keyLength << 8 | this.fanout << 16 | this.depth << 24 | this.leafLength << 32);
+      this.chainValue[1] = blake2b_IV[1] ^ this.nodeOffset;
+      this.chainValue[2] = blake2b_IV[2] ^ (this.nodeDepth | this.innerHashLength << 8);
+      this.chainValue[3] = blake2b_IV[3];
+      this.chainValue[4] = blake2b_IV[4];
+      this.chainValue[5] = blake2b_IV[5];
+      if (this.salt != null) {
+         this.chainValue[4] = this.chainValue[4] ^ Pack.littleEndianToLong(this.salt, 0);
+         this.chainValue[5] = this.chainValue[5] ^ Pack.littleEndianToLong(this.salt, 8);
+      }
 
-         this.chainValue[6] = blake2b_IV[6];
-         this.chainValue[7] = blake2b_IV[7];
-         if (this.personalization != null) {
-            this.chainValue[6] = this.chainValue[6] ^ Pack.littleEndianToLong(this.personalization, 0);
-            this.chainValue[7] = this.chainValue[7] ^ Pack.littleEndianToLong(this.personalization, 8);
-         }
+      this.chainValue[6] = blake2b_IV[6];
+      this.chainValue[7] = blake2b_IV[7];
+      if (this.personalization != null) {
+         this.chainValue[6] = this.chainValue[6] ^ Pack.littleEndianToLong(this.personalization, 0);
+         this.chainValue[7] = this.chainValue[7] ^ Pack.littleEndianToLong(this.personalization, 8);
       }
    }
 
@@ -211,21 +204,15 @@ public class Blake2bDigest implements ExtendedDigest {
 
    @Override
    public void update(byte var1) {
-      int var2 = 0;
-      var2 = 128 - this.bufferPos;
+      int var2 = 128 - this.bufferPos;
       if (var2 == 0) {
-         this.t0 += 128L;
-         if (this.t0 == 0L) {
-            this.t1++;
-         }
-
+         this.incrementCounter(128);
          this.compress(this.buffer, 0);
          Arrays.fill(this.buffer, (byte)0);
          this.buffer[0] = var1;
          this.bufferPos = 1;
       } else {
-         this.buffer[this.bufferPos] = var1;
-         this.bufferPos++;
+         this.buffer[this.bufferPos++] = var1;
       }
    }
 
@@ -242,30 +229,22 @@ public class Blake2bDigest implements ExtendedDigest {
             }
 
             System.arraycopy(var1, var2, this.buffer, this.bufferPos, var4);
-            this.t0 += 128L;
-            if (this.t0 == 0L) {
-               this.t1++;
-            }
-
+            this.incrementCounter(128);
             this.compress(this.buffer, 0);
             this.bufferPos = 0;
             Arrays.fill(this.buffer, (byte)0);
          }
 
-         int var6 = var2 + var3 - 128;
+         int var5 = var2 + var3 - 128;
 
-         int var5;
-         for (var5 = var2 + var4; var5 < var6; var5 += 128) {
-            this.t0 += 128L;
-            if (this.t0 == 0L) {
-               this.t1++;
-            }
-
-            this.compress(var1, var5);
+         int var6;
+         for (var6 = var2 + var4; var6 < var5; var6 += 128) {
+            this.incrementCounter(128);
+            this.compress(var1, var6);
          }
 
-         System.arraycopy(var1, var5, this.buffer, 0, var2 + var3 - var5);
-         this.bufferPos += var2 + var3 - var5;
+         System.arraycopy(var1, var6, this.buffer, 0, var2 + var3 - var6);
+         this.bufferPos += var2 + var3 - var6;
       }
    }
 
@@ -280,24 +259,18 @@ public class Blake2bDigest implements ExtendedDigest {
          this.f1 = -1L;
       }
 
-      this.t0 = this.t0 + this.bufferPos;
-      if (this.bufferPos > 0 && this.t0 == 0L) {
-         this.t1++;
+      if (this.bufferPos > 0) {
+         this.incrementCounter(this.bufferPos);
       }
 
       this.compress(this.buffer, 0);
-      Arrays.fill(this.buffer, (byte)0);
-      Arrays.fill(this.internalState, 0L);
       int var3 = this.digestLength >>> 3;
       int var4 = this.digestLength & 7;
       Pack.longToLittleEndian(this.chainValue, 0, var3, var1, var2);
       if (var4 > 0) {
-         byte[] var5 = new byte[8];
-         Pack.longToLittleEndian(this.chainValue[var3], var5, 0);
-         System.arraycopy(var5, 0, var1, var2 + this.digestLength - var4, var4);
+         Pack.longToLittleEndian_Low(this.chainValue[var3], var1, var2 + this.digestLength - var4, var4);
       }
 
-      Arrays.fill(this.chainValue, 0L);
       this.reset();
       return this.digestLength;
    }
@@ -310,7 +283,7 @@ public class Blake2bDigest implements ExtendedDigest {
       this.t0 = 0L;
       this.t1 = 0L;
       this.isLastNode = false;
-      this.chainValue = null;
+      Arrays.fill(this.internalState, 0L);
       Arrays.fill(this.buffer, (byte)0);
       if (this.key != null) {
          System.arraycopy(this.key, 0, this.buffer, 0, this.key.length);
@@ -325,7 +298,7 @@ public class Blake2bDigest implements ExtendedDigest {
       long[] var3 = new long[16];
       Pack.littleEndianToLong(var1, var2, var3);
 
-      for (int var4 = 0; var4 < ROUNDS; var4++) {
+      for (int var4 = 0; var4 < 12; var4++) {
          this.G(var3[blake2b_sigma[var4][0]], var3[blake2b_sigma[var4][1]], 0, 4, 8, 12);
          this.G(var3[blake2b_sigma[var4][2]], var3[blake2b_sigma[var4][3]], 1, 5, 9, 13);
          this.G(var3[blake2b_sigma[var4][4]], var3[blake2b_sigma[var4][5]], 2, 6, 10, 14);
@@ -381,6 +354,14 @@ public class Blake2bDigest implements ExtendedDigest {
    public void clearSalt() {
       if (this.salt != null) {
          Arrays.fill(this.salt, (byte)0);
+      }
+   }
+
+   private void incrementCounter(int var1) {
+      long var2 = var1;
+      this.t0 += var2;
+      if (Longs.compareUnsigned(this.t0, var2) < 0) {
+         this.t1++;
       }
    }
 }

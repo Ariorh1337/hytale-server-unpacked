@@ -15,13 +15,14 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
    public static final int PACKET_ID = 402;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 54;
+   public static final int FIXED_BLOCK_SIZE = 55;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 54;
-   public static final int MAX_SIZE = 54;
+   public static final int VARIABLE_BLOCK_START = 55;
+   public static final int MAX_SIZE = 55;
    public int entityId;
    @Nullable
    public ModelTransform modelTransform;
+   public boolean isSessionEnd;
 
    @Override
    public int getId() {
@@ -36,20 +37,22 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
    public BuilderToolSetEntityTransform() {
    }
 
-   public BuilderToolSetEntityTransform(int entityId, @Nullable ModelTransform modelTransform) {
+   public BuilderToolSetEntityTransform(int entityId, @Nullable ModelTransform modelTransform, boolean isSessionEnd) {
       this.entityId = entityId;
       this.modelTransform = modelTransform;
+      this.isSessionEnd = isSessionEnd;
    }
 
    public BuilderToolSetEntityTransform(@Nonnull BuilderToolSetEntityTransform other) {
       this.entityId = other.entityId;
       this.modelTransform = other.modelTransform;
+      this.isSessionEnd = other.isSessionEnd;
    }
 
    @Nonnull
    public static BuilderToolSetEntityTransform deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 54) {
-         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityTransform", 54, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 55) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityTransform", 55, buf.readableBytes() - offset);
       }
 
       BuilderToolSetEntityTransform obj = new BuilderToolSetEntityTransform();
@@ -59,11 +62,12 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
          obj.modelTransform = ModelTransform.deserialize(buf, offset + 5);
       }
 
+      obj.isSessionEnd = buf.getByte(offset + 54) != 0;
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 54;
+      return 55;
    }
 
    @Override
@@ -80,16 +84,18 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
       } else {
          buf.writeZero(49);
       }
+
+      buf.writeByte(this.isSessionEnd ? 1 : 0);
    }
 
    @Override
    public int computeSize() {
-      return 54;
+      return 55;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 54) {
-         return ValidationResult.error("Buffer too small: expected at least 54 bytes");
+      if (buffer.readableBytes() - offset < 55) {
+         return ValidationResult.error("Buffer too small: expected at least 55 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -100,6 +106,7 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
       BuilderToolSetEntityTransform copy = new BuilderToolSetEntityTransform();
       copy.entityId = this.entityId;
       copy.modelTransform = this.modelTransform != null ? this.modelTransform.clone() : null;
+      copy.isSessionEnd = this.isSessionEnd;
       return copy;
    }
 
@@ -110,12 +117,12 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
       } else {
          return !(obj instanceof BuilderToolSetEntityTransform other)
             ? false
-            : this.entityId == other.entityId && Objects.equals(this.modelTransform, other.modelTransform);
+            : this.entityId == other.entityId && Objects.equals(this.modelTransform, other.modelTransform) && this.isSessionEnd == other.isSessionEnd;
       }
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(this.entityId, this.modelTransform);
+      return Objects.hash(this.entityId, this.modelTransform, this.isSessionEnd);
    }
 }

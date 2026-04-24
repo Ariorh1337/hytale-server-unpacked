@@ -62,17 +62,20 @@ public class AsconAEAD128 extends AsconBaseEngine {
       if (var2 >= 8) {
          long var5 = Pack.littleEndianToLong(var1, 0);
          var2 -= 8;
-         long var7 = Pack.littleEndianToLong(var1, 8, var2);
          Pack.longToLittleEndian(this.p.x0 ^ var5, var3, var4);
-         Pack.longToLittleEndian(this.p.x1 ^ var7, var3, var4 + 8, var2);
          this.p.x0 = var5;
-         this.p.x1 &= -(1L << (var2 << 3));
-         this.p.x1 |= var7;
+         if (var2 > 0) {
+            long var7 = Pack.littleEndianToLong_Low(var1, 8, var2);
+            Pack.longToLittleEndian_Low(this.p.x1 ^ var7, var3, var4 + 8, var2);
+            this.p.x1 &= -(1L << (var2 << 3));
+            this.p.x1 |= var7;
+         }
+
          this.p.x1 = this.p.x1 ^ this.pad(var2);
       } else {
-         if (var2 != 0) {
-            long var10 = Pack.littleEndianToLong(var1, 0, var2);
-            Pack.longToLittleEndian(this.p.x0 ^ var10, var3, var4, var2);
+         if (var2 > 0) {
+            long var10 = Pack.littleEndianToLong_Low(var1, 0, var2);
+            Pack.longToLittleEndian_Low(this.p.x0 ^ var10, var3, var4, var2);
             this.p.x0 &= -(1L << (var2 << 3));
             this.p.x0 |= var10;
          }
@@ -88,14 +91,17 @@ public class AsconAEAD128 extends AsconBaseEngine {
       if (var2 >= 8) {
          this.p.x0 = this.p.x0 ^ Pack.littleEndianToLong(var1, 0);
          var2 -= 8;
-         this.p.x1 = this.p.x1 ^ Pack.littleEndianToLong(var1, 8, var2);
          Pack.longToLittleEndian(this.p.x0, var3, var4);
-         Pack.longToLittleEndian(this.p.x1, var3, var4 + 8);
+         if (var2 > 0) {
+            this.p.x1 = this.p.x1 ^ Pack.littleEndianToLong_Low(var1, 8, var2);
+            Pack.longToLittleEndian_Low(this.p.x1, var3, var4 + 8, var2);
+         }
+
          this.p.x1 = this.p.x1 ^ this.pad(var2);
       } else {
-         if (var2 != 0) {
-            this.p.x0 = this.p.x0 ^ Pack.littleEndianToLong(var1, 0, var2);
-            Pack.longToLittleEndian(this.p.x0, var3, var4, var2);
+         if (var2 > 0) {
+            this.p.x0 = this.p.x0 ^ Pack.littleEndianToLong_Low(var1, 0, var2);
+            Pack.longToLittleEndian_Low(this.p.x0, var3, var4, var2);
          }
 
          this.p.x0 = this.p.x0 ^ this.pad(var2);

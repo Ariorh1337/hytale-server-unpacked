@@ -22,7 +22,7 @@ public abstract class BsonValue {
    }
 
    public BsonNumber asNumber() {
-      if (this.getBsonType() != BsonType.INT32 && this.getBsonType() != BsonType.INT64 && this.getBsonType() != BsonType.DOUBLE) {
+      if (!this.isNumber()) {
          throw new BsonInvalidOperationException(String.format("Value expected to be of a numerical BSON type is of unexpected type %s", this.getBsonType()));
       } else {
          return (BsonNumber)this;
@@ -116,7 +116,7 @@ public abstract class BsonValue {
    }
 
    public boolean isNumber() {
-      return this.isInt32() || this.isInt64() || this.isDouble();
+      return this instanceof BsonNumber;
    }
 
    public boolean isInt32() {

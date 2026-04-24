@@ -12,9 +12,9 @@ import org.bouncycastle.crypto.digests.NullDigest;
 import org.bouncycastle.crypto.digests.SHA3Digest;
 import org.bouncycastle.crypto.digests.SHA512Digest;
 import org.bouncycastle.crypto.digests.SHAKEDigest;
-import org.bouncycastle.pqc.crypto.picnic.PicnicPrivateKeyParameters;
-import org.bouncycastle.pqc.crypto.picnic.PicnicPublicKeyParameters;
-import org.bouncycastle.pqc.crypto.picnic.PicnicSigner;
+import org.bouncycastle.pqc.legacy.picnic.PicnicPrivateKeyParameters;
+import org.bouncycastle.pqc.legacy.picnic.PicnicPublicKeyParameters;
+import org.bouncycastle.pqc.legacy.picnic.PicnicSigner;
 
 public class SignatureSpi extends Signature {
    private SecureRandom random;

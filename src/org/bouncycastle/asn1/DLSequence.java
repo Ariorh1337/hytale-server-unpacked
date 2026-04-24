@@ -3,7 +3,20 @@ package org.bouncycastle.asn1;
 import java.io.IOException;
 
 public class DLSequence extends ASN1Sequence {
+   public static final DLSequence EMPTY = new DLSequence();
    private int contentsLength = -1;
+
+   public static DLSequence convert(ASN1Sequence var0) {
+      return (DLSequence)var0.toDLObject();
+   }
+
+   public static DLSequence fromElementsOptional(ASN1Encodable[] var0) {
+      if (var0 == null) {
+         return null;
+      } else {
+         return var0.length < 1 ? EMPTY : new DLSequence(var0);
+      }
+   }
 
    public DLSequence() {
    }
@@ -86,7 +99,7 @@ public class DLSequence extends ASN1Sequence {
 
    @Override
    ASN1External toASN1External() {
-      return new DLExternal(this);
+      return DLExternal.fromSequence(this);
    }
 
    @Override

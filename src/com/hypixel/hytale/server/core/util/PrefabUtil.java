@@ -231,12 +231,14 @@ public class PrefabUtil {
                            entityPosition.z = entityWorldPosition.z;
                            PrefabPlaceEntityEvent prefabPlaceEntityEvent = new PrefabPlaceEntityEvent(prefabId, entityToAdd);
                            componentAccessor.invoke(prefabPlaceEntityEvent);
-                           entityToAdd.ensureComponent(FromPrefab.getComponentType());
-                           if (technicalPaste) {
-                              entityToAdd.ensureComponent(PrefabCopyableComponent.getComponentType());
-                           }
+                           if (!prefabPlaceEntityEvent.isCancelled()) {
+                              entityToAdd.ensureComponent(FromPrefab.getComponentType());
+                              if (technicalPaste) {
+                                 entityToAdd.ensureComponent(PrefabCopyableComponent.getComponentType());
+                              }
 
-                           componentAccessor.addEntity(entityToAdd, AddReason.LOAD);
+                              componentAccessor.addEntity(entityToAdd, AddReason.LOAD);
+                           }
                         }
                      }
                   }

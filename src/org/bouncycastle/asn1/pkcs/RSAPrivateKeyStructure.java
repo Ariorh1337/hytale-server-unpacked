@@ -112,7 +112,7 @@ public class RSAPrivateKeyStructure extends ASN1Object {
    @Override
    public ASN1Primitive toASN1Primitive() {
       ASN1EncodableVector var1 = new ASN1EncodableVector(10);
-      var1.add(new ASN1Integer(this.version));
+      var1.add(ASN1Integer.valueOf(this.version));
       var1.add(new ASN1Integer(this.getModulus()));
       var1.add(new ASN1Integer(this.getPublicExponent()));
       var1.add(new ASN1Integer(this.getPrivateExponent()));

@@ -68,9 +68,10 @@ class CertPathValidatorUtilities {
    protected static final String AUTHORITY_KEY_IDENTIFIER = Extension.authorityKeyIdentifier.getId();
    protected static final String ANY_POLICY = "2.5.29.32.0";
    protected static final String CRL_NUMBER = Extension.cRLNumber.getId();
+   protected static final String REASON_CODE = Extension.reasonCode.getId();
    protected static final int KEY_CERT_SIGN = 5;
    protected static final int CRL_SIGN = 6;
-   protected static final String[] crlReasons = new String[]{
+   static final String[] crlReasons = new String[]{
       "unspecified",
       "keyCompromise",
       "cACompromise",
@@ -92,17 +93,13 @@ class CertPathValidatorUtilities {
       }
    }
 
-   protected static Date getValidDate(PKIXParameters var0) {
-      Date var1 = var0.getDate();
-      if (var1 == null) {
-         var1 = new Date();
-      }
-
-      return var1;
-   }
-
    protected static X500Principal getSubjectPrincipal(X509Certificate var0) {
       return var0.getSubjectX500Principal();
+   }
+
+   static Date getValidityDate(PKIXParameters var0, Date var1) {
+      Date var2 = var0.getDate();
+      return null == var2 ? var1 : var2;
    }
 
    protected static boolean isSelfIssued(X509Certificate var0) {
@@ -111,7 +108,7 @@ class CertPathValidatorUtilities {
 
    protected static ASN1Primitive getExtensionValue(X509Extension var0, String var1) throws AnnotatedException {
       byte[] var2 = var0.getExtensionValue(var1);
-      return var2 == null ? null : getObject(var1, var2);
+      return null == var2 ? null : getObject(var1, var2);
    }
 
    private static ASN1Primitive getObject(String var0, byte[] var1) throws AnnotatedException {
@@ -435,18 +432,24 @@ class CertPathValidatorUtilities {
       }
 
       ASN1Enumerated var11 = null;
-      if (var4.hasExtensions()) {
+      label64:
+      if (!var4.hasExtensions()) {
+         int var7 = null == var11 ? 0 : var11.intValueExact();
+         if (var0.getTime() >= var4.getRevocationDate().getTime() || var7 == 0 || var7 == 1 || var7 == 2 || var7 == 10) {
+            var3.setCertStatus(var7);
+            var3.setRevocationDate(var4.getRevocationDate());
+         }
+      } else {
+         if (var4.hasUnsupportedCriticalExtension()) {
+            throw new AnnotatedException("CRL entry has unsupported critical extensions.");
+         }
+
          try {
-            var11 = ASN1Enumerated.getInstance(getExtensionValue(var4, Extension.reasonCode.getId()));
+            var11 = ASN1Enumerated.getInstance(getExtensionValue(var4, REASON_CODE));
+            break label64;
          } catch (Exception var8) {
             throw new AnnotatedException("Reason code CRL entry extension could not be decoded.", var8);
          }
-      }
-
-      int var7 = null == var11 ? 0 : var11.getValue().intValue();
-      if (var0.getTime() >= var4.getRevocationDate().getTime() || var7 == 0 || var7 == 1 || var7 == 2 || var7 == 10) {
-         var3.setCertStatus(var7);
-         var3.setRevocationDate(var4.getRevocationDate());
       }
    }
 
@@ -496,15 +499,34 @@ class CertPathValidatorUtilities {
 
    static boolean isIndirectCRL(X509CRL var0) throws CRLException {
       try {
-         byte[] var1 = var0.getExtensionValue(Extension.issuingDistributionPoint.getId());
+         byte[] var1 = var0.getExtensionValue(ISSUING_DISTRIBUTION_POINT);
          return var1 != null && IssuingDistributionPoint.getInstance(ASN1OctetString.getInstance(var1).getOctets()).isIndirectCRL();
       } catch (Exception var2) {
          throw new CRLException("Exception reading IssuingDistributionPoint: " + var2);
       }
    }
 
-   protected static Date getValidityDate(PKIXParameters var0, Date var1) {
-      Date var2 = var0.getDate();
-      return null == var2 ? var1 : var2;
+   static void checkCRLCriticalExtensions(X509CRL var0, String var1) throws AnnotatedException {
+      if (var0.hasUnsupportedCriticalExtension()) {
+         throw new AnnotatedException(var1);
+      }
+
+      Set var2 = var0.getCriticalExtensionOIDs();
+      if (var2 != null) {
+         int var3 = var2.size();
+         if (var3 > 0) {
+            if (var2.contains(ISSUING_DISTRIBUTION_POINT)) {
+               var3--;
+            }
+
+            if (var2.contains(DELTA_CRL_INDICATOR)) {
+               var3--;
+            }
+
+            if (var3 > 0) {
+               throw new AnnotatedException(var1);
+            }
+         }
+      }
    }
 }

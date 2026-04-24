@@ -7,13 +7,13 @@ import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Primitive;
 
 public class CMCStatus extends ASN1Object {
-   public static final CMCStatus success = new CMCStatus(new ASN1Integer(0L));
-   public static final CMCStatus failed = new CMCStatus(new ASN1Integer(2L));
-   public static final CMCStatus pending = new CMCStatus(new ASN1Integer(3L));
-   public static final CMCStatus noSupport = new CMCStatus(new ASN1Integer(4L));
-   public static final CMCStatus confirmRequired = new CMCStatus(new ASN1Integer(5L));
-   public static final CMCStatus popRequired = new CMCStatus(new ASN1Integer(6L));
-   public static final CMCStatus partial = new CMCStatus(new ASN1Integer(7L));
+   public static final CMCStatus success = new CMCStatus(ASN1Integer.valueOf(0));
+   public static final CMCStatus failed = new CMCStatus(ASN1Integer.valueOf(2));
+   public static final CMCStatus pending = new CMCStatus(ASN1Integer.valueOf(3));
+   public static final CMCStatus noSupport = new CMCStatus(ASN1Integer.valueOf(4));
+   public static final CMCStatus confirmRequired = new CMCStatus(ASN1Integer.valueOf(5));
+   public static final CMCStatus popRequired = new CMCStatus(ASN1Integer.valueOf(6));
+   public static final CMCStatus partial = new CMCStatus(ASN1Integer.valueOf(7));
    private static Map range = new HashMap();
    private final ASN1Integer value;
 

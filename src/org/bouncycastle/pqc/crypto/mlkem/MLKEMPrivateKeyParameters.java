@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mlkem;
 
 import org.bouncycastle.util.Arrays;
 
+@Deprecated
 public class MLKEMPrivateKeyParameters extends MLKEMKeyParameters {
    public static final int BOTH = 0;
    public static final int SEED_ONLY = 1;
@@ -27,6 +28,7 @@ public class MLKEMPrivateKeyParameters extends MLKEMKeyParameters {
       this.rho = Arrays.clone(var6);
       this.seed = Arrays.clone(var7);
       this.prefFormat = 0;
+      this.validate();
    }
 
    public MLKEMPrivateKeyParameters(MLKEMParameters var1, byte[] var2) {
@@ -46,10 +48,10 @@ public class MLKEMPrivateKeyParameters extends MLKEMKeyParameters {
          this.seed = var5[5];
       } else {
          int var6 = 0;
-         this.s = Arrays.copyOfRange(var2, 0, var4.getKyberIndCpaSecretKeyBytes());
-         var6 += var4.getKyberIndCpaSecretKeyBytes();
-         this.t = Arrays.copyOfRange(var2, var6, var6 + var4.getKyberIndCpaPublicKeyBytes() - 32);
-         var6 += var4.getKyberIndCpaPublicKeyBytes() - 32;
+         this.s = Arrays.copyOfRange(var2, 0, var4.getIndCpaSecretKeyBytes());
+         var6 += var4.getIndCpaSecretKeyBytes();
+         this.t = Arrays.copyOfRange(var2, var6, var6 + var4.getIndCpaPublicKeyBytes() - 32);
+         var6 += var4.getIndCpaPublicKeyBytes() - 32;
          this.rho = Arrays.copyOfRange(var2, var6, var6 + 32);
          var6 += 32;
          this.hpk = Arrays.copyOfRange(var2, var6, var6 + 32);
@@ -58,6 +60,7 @@ public class MLKEMPrivateKeyParameters extends MLKEMKeyParameters {
          this.seed = null;
       }
 
+      this.validate();
       if (var3 == null || Arrays.constantTimeAreEqual(this.t, var3.t) && Arrays.constantTimeAreEqual(this.rho, var3.rho)) {
          this.prefFormat = this.seed == null ? 2 : 0;
       } else {
@@ -74,9 +77,22 @@ public class MLKEMPrivateKeyParameters extends MLKEMKeyParameters {
       this.nonce = var1.nonce;
       this.seed = var1.seed;
       this.prefFormat = var2;
+      this.validate();
    }
 
+   private void validate() {
+      MLKEMEngine var1 = this.getParameters().getEngine();
+      if (!var1.checkPrivateKey(this.getEncoded())) {
+         throw new IllegalArgumentException("'encoding' fails hash check");
+      }
+   }
+
+   /** @deprecated */
    public MLKEMPrivateKeyParameters getParametersWithFormat(int var1) {
+      return this.withPreferredFormat(var1);
+   }
+
+   public MLKEMPrivateKeyParameters withPreferredFormat(int var1) {
       if (this.prefFormat == var1) {
          return this;
       }

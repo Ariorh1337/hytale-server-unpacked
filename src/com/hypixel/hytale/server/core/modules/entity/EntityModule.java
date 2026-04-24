@@ -479,7 +479,6 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEntityModel(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEntitySkin(this.visibleComponentType, this.playerSkinComponentType));
       entityStoreRegistry.registerSystem(new BlockEntitySystems.BlockEntityTrackerSystem(this.visibleComponentType, this.blockEntityComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEquipment(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new EntityTrackerSystems.EffectControllerSystem(this.visibleComponentType, this.effectControllerComponentType));
       entityStoreRegistry.registerSystem(new EntitySystems.DynamicLightTracker(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new DynamicLightSystems.Setup());
@@ -619,6 +618,11 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new InventorySystems.LegacyHotbarChangeStatSystem());
       entityStoreRegistry.registerSystem(new InventorySystems.LegacyUtilityChangeStatSystem());
       entityStoreRegistry.registerSystem(new InventorySystems.PlayerInventoryChangeEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedToolsEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedEntityEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedToolsHolderEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedEntityHolderEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.SyncEquipmentSystem(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerInitSystem());
       Condition.CODEC.register("LogicCondition", LogicCondition.class, LogicCondition.CODEC);
       Condition.CODEC.register("RegenHealth", RegenHealthCondition.class, RegenHealthCondition.CODEC);

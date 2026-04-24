@@ -60,6 +60,6 @@ public class EncryptedData extends ASN1Object {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      return new BERSequence(new ASN1Integer(0L), this.data);
+      return new BERSequence(ASN1Integer.ZERO, this.data);
    }
 }

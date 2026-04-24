@@ -88,7 +88,7 @@ public class TraceOptimizer {
 
    private static int calculateTrace(ECFieldElement var0) {
       int var1 = var0.getFieldSize();
-      int var2 = 31 - Integers.numberOfLeadingZeros(var1);
+      int var2 = Integers.bitLength(var1) - 1;
       int var3 = 1;
       ECFieldElement var4 = var0;
 

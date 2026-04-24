@@ -3,7 +3,7 @@ package org.bouncycastle.pqc.crypto.hqc;
 import org.bouncycastle.util.Arrays;
 
 class ReedSolomon {
-   static int[][] alpha128 = new int[][]{
+   private static final int[][] alpha128 = new int[][]{
       {
             2,
             4,
@@ -1415,7 +1415,7 @@ class ReedSolomon {
             15
       }
    };
-   static int[][] alpha192 = new int[][]{
+   private static final int[][] alpha192 = new int[][]{
       {
             2,
             4,
@@ -3241,7 +3241,7 @@ class ReedSolomon {
             244
       }
    };
-   static int[][] alpha256 = new int[][]{
+   private static final int[][] alpha256 = new int[][]{
       {
             2,
             4,
@@ -8521,7 +8521,7 @@ class ReedSolomon {
             222
       }
    };
-   static int[] logArrays = new int[]{
+   private static final int[] logArrays = new int[]{
       256,
       0,
       1,
@@ -8779,7 +8779,7 @@ class ReedSolomon {
       88,
       175
    };
-   static int[] expArrays = new int[]{
+   private static final int[] expArrays = new int[]{
       1,
       2,
       4,
@@ -9040,27 +9040,25 @@ class ReedSolomon {
       4
    };
 
-   static void encode(byte[] var0, byte[] var1, int var2, int var3, int var4, int[] var5) {
-      byte[] var7 = new byte[var2];
-      int[] var8 = new int[var4];
-      byte[] var9 = Arrays.clone(var1);
+   static void encode(byte[] var0, byte[] var1, int var2, int var3, int[] var4) {
+      int var5 = Utils.toUnsigned8bits(var1[var3 - 1]);
 
-      for (int var10 = 0; var10 < var3; var10++) {
-         int var6 = Utils.toUnsigned8bits(var9[var3 - 1 - var10] ^ var7[var2 - var3 - 1]);
-
-         for (int var11 = 0; var11 < var4; var11++) {
-            var8[var11] = GFCalculator.mult(var6, var5[var11]);
-         }
-
-         for (int var12 = var2 - var3 - 1; var12 > 0; var12--) {
-            var7[var12] = (byte)(var7[var12 - 1] ^ var8[var12]);
-         }
-
-         var7[0] = (byte)var8[0];
+      for (int var6 = 0; var6 < var2 - var3; var6++) {
+         var0[var6] = (byte)GF.mul(var5, var4[var6]);
       }
 
-      System.arraycopy(var9, 0, var7, var2 - var3, var3);
-      System.arraycopy(var7, 0, var0, 0, var0.length);
+      for (int var10 = 2; var10 <= var3; var10++) {
+         int var11 = Utils.toUnsigned8bits(var1[var3 - var10] ^ var0[var2 - var3 - 1]);
+         byte var7 = 0;
+
+         for (int var8 = 0; var8 < var2 - var3; var8++) {
+            byte var9 = var0[var8];
+            var0[var8] = (byte)(var7 ^ GF.mul(var11, var4[var8]));
+            var7 = var9;
+         }
+      }
+
+      System.arraycopy(var1, 0, var0, var2 - var3, var3);
    }
 
    static void decode(byte[] var0, byte[] var1, int var2, int var3, int var4, int var5, int var6) {
@@ -9101,11 +9099,13 @@ class ReedSolomon {
 
    private static void computeSyndromes(int[] var0, byte[] var1, int var2, int var3, int[][] var4) {
       for (int var5 = 0; var5 < 2 * var2; var5++) {
-         for (int var6 = 1; var6 < var3; var6++) {
-            var0[var5] ^= GFCalculator.mult(Utils.toUnsigned8bits(var1[var6]), var4[var5][var6 - 1]);
+         int var6 = var0[var5] ^ Utils.toUnsigned8bits(var1[0]);
+
+         for (int var7 = 1; var7 < var3; var7++) {
+            var6 ^= GF.mul(Utils.toUnsigned8bits(var1[var7]), var4[var5][var7 - 1]);
          }
 
-         var0[var5] ^= Utils.toUnsigned8bits(var1[0]);
+         var0[var5] = var6;
       }
    }
 
@@ -9115,42 +9115,40 @@ class ReedSolomon {
       int var4 = 0;
       int[] var5 = new int[var2 + 1];
       int[] var6 = new int[var2 + 1];
-      int var8 = Utils.toUnsigned16Bits(-1);
-      int var9 = 1;
-      int var10 = var1[0];
+      int var7 = Utils.toUnsigned16Bits(-1);
+      int var8 = 1;
+      int var9 = var1[0];
       var6[1] = 1;
 
-      for (int var11 = 0; var11 < 2 * var2; var11++) {
+      for (int var10 = 0; var10 < 2 * var2; var10++) {
          System.arraycopy(var0, 0, var5, 0, var2 + 1);
-         int var7 = var3;
-         int var12 = GFCalculator.mult(var10, GFCalculator.inverse(var9));
+         int var11 = var3;
+         int var12 = GF.div(var9, var8);
 
-         for (int var13 = 1; var13 <= var11 + 1 && var13 <= var2; var13++) {
-            var0[var13] ^= GFCalculator.mult(var12, var6[var13]);
+         for (int var13 = 1; var13 <= var10 + 1 && var13 <= var2; var13++) {
+            var0[var13] ^= GF.mul(var12, var6[var13]);
          }
 
-         int var19 = Utils.toUnsigned16Bits(var11 - var8);
-         int var14 = Utils.toUnsigned16Bits(var19 + var4);
-         int var15 = var10 != 0 ? 65535 : 0;
-         int var16 = var14 > var3 ? 65535 : 0;
-         int var17 = var15 & var16;
-         var3 ^= var17 & (var14 ^ var3);
-         if (var11 == 2 * var2 - 1) {
+         int var17 = Utils.toUnsigned16Bits(var10 - var7);
+         int var14 = Utils.toUnsigned16Bits(var17 + var4);
+         int var15 = ((var9 | -var9) & var3 - var14) >> 31;
+         var3 ^= var15 & (var14 ^ var3);
+         if (var10 == 2 * var2 - 1) {
             break;
          }
 
-         var8 ^= var17 & (var11 ^ var8);
-         var9 ^= var17 & (var10 ^ var9);
+         var7 ^= var15 & (var10 ^ var7);
+         var8 ^= var15 & (var9 ^ var8);
 
-         for (int var18 = var2; var18 > 0; var18--) {
-            var6[var18] = var17 & var5[var18 - 1] ^ ~var17 & var6[var18 - 1];
+         for (int var16 = var2; var16 > 0; var16--) {
+            var6[var16] = var15 & var5[var16 - 1] ^ ~var15 & var6[var16 - 1];
          }
 
-         var4 ^= var17 & (var7 ^ var4);
-         var10 = var1[var11 + 1];
+         var4 ^= var15 & (var11 ^ var4);
+         var9 = var1[var10 + 1];
 
-         for (int var20 = 1; var20 <= var11 + 1 && var20 <= var2; var20++) {
-            var10 ^= GFCalculator.mult(var0[var20], var1[var11 + 1 - var20]);
+         for (int var18 = 1; var18 <= var10 + 1 && var18 <= var2; var18++) {
+            var9 ^= GF.mul(var0[var18], var1[var10 + 1 - var18]);
          }
       }
 
@@ -9159,76 +9157,77 @@ class ReedSolomon {
 
    private static void computeZx(int[] var0, int[] var1, int var2, int[] var3, int var4) {
       var0[0] = 1;
-
-      for (int var5 = 1; var5 < var4 + 1; var5++) {
-         int var6 = var5 - var2 < 1 ? 65535 : 0;
-         var0[var5] = var6 & var1[var5];
-      }
-
-      var0[1] ^= var3[0];
+      var0[1] = var3[0];
+      int var5 = ~(var2 - 1) >> 31;
+      var0[1] ^= var5 & var1[1];
 
       for (int var8 = 2; var8 <= var4; var8++) {
-         int var9 = var8 - var2 < 1 ? 65535 : 0;
-         var0[var8] ^= var9 & var3[var8 - 1];
+         int var6 = var1[var8] ^ var3[var8 - 1];
 
          for (int var7 = 1; var7 < var8; var7++) {
-            var0[var8] ^= var9 & GFCalculator.mult(var1[var7], var3[var8 - var7 - 1]);
+            var6 ^= GF.mul(var1[var7], var3[var8 - var7 - 1]);
          }
+
+         int var9 = ~(var2 - var8) >> 31;
+         var0[var8] = var9 & var6;
       }
    }
 
    private static void computeErrors(int[] var0, int[] var1, byte[] var2, int var3, int var4) {
       int[] var5 = new int[var3];
-      int[] var6 = new int[var3];
-      int var7 = 0;
+      int var6 = 0;
 
-      for (int var10 = 0; var10 < var4; var10++) {
-         int var11 = 0;
-         int var12 = var2[var10] != 0 ? 65535 : 0;
+      for (int var7 = 0; var7 < var4; var7++) {
+         int var8 = var2[var7] & 255;
+         int var9 = (var8 | -var8) >> 31;
+         int var10 = 0;
+
+         for (int var11 = 0; var11 < var3; var11++) {
+            int var12 = (var11 ^ var6) - 1 >> 31 & var9;
+            var5[var11] += var12 & expArrays[var7];
+            var10 -= var12;
+         }
+
+         var6 += var10;
+      }
+
+      int[] var15 = new int[var3];
+
+      for (int var16 = 0; var16 < var3; var16++) {
+         int var18 = GF.inv(var5[var16]);
+         int var20 = 0;
+
+         for (int var23 = var3; var23 > 0; var23--) {
+            var20 = GF.mul(var20 ^ var1[var23], var18);
+         }
+
+         var20 ^= 1;
+         int var24 = 1;
+
+         for (int var26 = 0; var26 < var3; var26++) {
+            if (var16 != var26) {
+               var24 ^= GF.mul3(var24, var18, var5[var26]);
+            }
+         }
+
+         int var27 = var16 - var6 >> 31;
+         var15[var16] = var27 & GF.div(var20, var24);
+      }
+
+      int var17 = 0;
+
+      for (int var19 = 0; var19 < var4; var19++) {
+         int var22 = var2[var19] & 255;
+         int var25 = (var22 | -var22) >> 31;
+         int var28 = 0;
 
          for (int var13 = 0; var13 < var3; var13++) {
-            int var14 = var13 == var7 ? 65535 : 0;
-            var5[var13] += var14 & var12 & expArrays[var10];
-            var11 += var14 & var12 & 1;
+            int var14 = (var13 ^ var17) - 1 >> 31 & var25;
+            var0[var19] += var14 & var15[var13];
+            var28 -= var14;
          }
 
-         var7 += var11;
-      }
-
-      int var8 = var7;
-
-      for (int var17 = 0; var17 < var3; var17++) {
-         int var19 = 1;
-         int var21 = 1;
-         int var23 = GFCalculator.inverse(var5[var17]);
-         int var25 = 1;
-
-         for (int var15 = 1; var15 <= var3; var15++) {
-            var25 = GFCalculator.mult(var25, var23);
-            var19 ^= GFCalculator.mult(var25, var1[var15]);
-         }
-
-         for (int var27 = 1; var27 < var3; var27++) {
-            var21 = GFCalculator.mult(var21, 1 ^ GFCalculator.mult(var23, var5[(var17 + var27) % var3]));
-         }
-
-         int var9 = var17 < var8 ? 65535 : 0;
-         var6[var17] = var9 & GFCalculator.mult(var19, GFCalculator.inverse(var21));
-      }
-
-      var7 = 0;
-
-      for (int var18 = 0; var18 < var4; var18++) {
-         int var20 = 0;
-         int var22 = var2[var18] != 0 ? 65535 : 0;
-
-         for (int var24 = 0; var24 < var3; var24++) {
-            int var26 = var24 == var7 ? 65535 : 0;
-            var0[var18] += var26 & var22 & var6[var24];
-            var20 += var26 & var22 & 1;
-         }
-
-         var7 += var20;
+         var17 += var28;
       }
    }
 }

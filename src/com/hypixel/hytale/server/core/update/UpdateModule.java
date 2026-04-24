@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
 import com.hypixel.hytale.server.core.config.UpdateConfig;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -408,7 +409,7 @@ public class UpdateModule extends JavaPlugin {
          PermissionsModule permissionsModule = PermissionsModule.get();
 
          for (PlayerRef player : universe.getPlayers()) {
-            if (permissionsModule.hasPermission(player.getUuid(), "hytale.system.update.notify")) {
+            if (permissionsModule.hasPermission(player.getUuid(), HytalePermissions.UPDATE_NOTIFY)) {
                player.sendMessage(message);
             }
          }

@@ -11,12 +11,14 @@ import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.util.expression.Scope;
 import com.hypixel.hytale.server.npc.validators.NPCLoadTimeValidationHelper;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import javax.annotation.Nonnull;
 
 public abstract class BuilderMotionControllerBase extends BuilderBaseWithType<MotionController> {
@@ -147,4 +149,7 @@ public abstract class BuilderMotionControllerBase extends BuilderBaseWithType<Mo
    }
 
    public abstract Class<? extends MotionController> getClassType();
+
+   @Nonnull
+   public abstract Set<MovementMode> getSupportedMovementModes();
 }

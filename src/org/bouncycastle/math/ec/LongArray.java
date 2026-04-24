@@ -2,6 +2,8 @@ package org.bouncycastle.math.ec;
 
 import java.math.BigInteger;
 import org.bouncycastle.util.Arrays;
+import org.bouncycastle.util.Integers;
+import org.bouncycastle.util.Longs;
 
 class LongArray implements Cloneable {
    private static final short[] INTERLEAVE2_TABLE = new short[]{
@@ -1295,264 +1297,6 @@ class LongArray implements Cloneable {
       72624976668147841L
    };
    private static final String ZEROES = "0000000000000000000000000000000000000000000000000000000000000000";
-   static final byte[] bitLengths = new byte[]{
-      0,
-      1,
-      2,
-      2,
-      3,
-      3,
-      3,
-      3,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      5,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      6,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      7,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8,
-      8
-   };
    private long[] m_ints;
 
    public LongArray(int var1) {
@@ -1684,7 +1428,7 @@ class LongArray implements Cloneable {
       while (var1 != 0) {
          long var2 = this.m_ints[--var1];
          if (var2 != 0L) {
-            return (var1 << 6) + bitLength(var2);
+            return var1 * 64 + Longs.bitLength(var2);
          }
       }
 
@@ -1697,34 +1441,11 @@ class LongArray implements Cloneable {
       while (var2 != 0) {
          long var3 = this.m_ints[--var2];
          if (var3 != 0L) {
-            return (var2 << 6) + bitLength(var3);
+            return var2 * 64 + Longs.bitLength(var3);
          }
       }
 
       return 0;
-   }
-
-   private static int bitLength(long var0) {
-      int var2 = (int)(var0 >>> 32);
-      byte var3;
-      if (var2 == 0) {
-         var2 = (int)var0;
-         var3 = 0;
-      } else {
-         var3 = 32;
-      }
-
-      int var4 = var2 >>> 16;
-      int var5;
-      if (var4 == 0) {
-         var4 = var2 >>> 8;
-         var5 = var4 == 0 ? bitLengths[var2] : 8 + bitLengths[var4];
-      } else {
-         int var6 = var4 >>> 8;
-         var5 = var6 == 0 ? 16 + bitLengths[var4] : 24 + bitLengths[var6];
-      }
-
-      return var3 + var5;
    }
 
    private long[] resizedInts(int var1) {
@@ -2512,7 +2233,7 @@ class LongArray implements Cloneable {
          case 4:
          case 6:
          default:
-            interleave2_n(var0, var1, var2, var3, var4, bitLengths[var5] - 1);
+            interleave2_n(var0, var1, var2, var3, var4, Integers.bitLength(var5) - 1);
             break;
          case 5:
             interleave5(var0, var1, var2, var3, var4);

@@ -61,7 +61,7 @@ public class HytaleChannelInitializer extends ChannelInitializer<Channel> {
                   new ServerDisconnect(Message.translation("server.general.disconnect.clientOutdated").getFormattedMessage(), DisconnectType.Disconnect)
                )
                .addListener(
-                  future -> channel.eventLoop().schedule(() -> ProtocolUtil.closeApplicationConnection(channel, rejectErrorCode), 100L, TimeUnit.MILLISECONDS)
+                  future -> channel.eventLoop().schedule(() -> NettyUtil.closeApplicationConnection(channel, rejectErrorCode), 100L, TimeUnit.MILLISECONDS)
                );
             return;
          }
@@ -112,7 +112,7 @@ public class HytaleChannelInitializer extends ChannelInitializer<Channel> {
          channel.pipeline().addLast("logger", NettyUtil.LOGGER);
       }
 
-      InitialPacketHandler playerConnection = new InitialPacketHandler(channel);
+      InitialPacketHandler playerConnection = new InitialPacketHandler(new NettyUtil.NettyChannelConnection(channel));
       channel.pipeline().addLast("handler", new PlayerChannelHandler(playerConnection));
       channel.pipeline().addLast(new HytaleChannelInitializer.ExceptionHandler());
       if (channel instanceof QuicStreamChannel quicStreamChannel) {
@@ -139,15 +139,15 @@ public class HytaleChannelInitializer extends ChannelInitializer<Channel> {
             .writeAndFlush(
                new ServerDisconnect(Message.translation("server.general.disconnect.internalServerError").getFormattedMessage(), DisconnectType.Crash)
             )
-            .addListener(ProtocolUtil.CLOSE_ON_COMPLETE);
+            .addListener(NettyUtil.CLOSE_ON_COMPLETE);
       } else {
-         ProtocolUtil.closeApplicationConnection(ctx.channel());
+         NettyUtil.closeApplicationConnection(ctx.channel());
       }
    }
 
    @Override
    public void channelInactive(@Nonnull ChannelHandlerContext ctx) throws Exception {
-      ProtocolUtil.closeApplicationConnection(ctx.channel());
+      NettyUtil.closeApplicationConnection(ctx.channel());
       super.channelInactive(ctx);
    }
 
@@ -233,15 +233,15 @@ public class HytaleChannelInitializer extends ChannelInitializer<Channel> {
          Channel channel = ctx.channel();
          if (channel.isWritable()) {
             channel.writeAndFlush(new ServerDisconnect(reason, DisconnectType.Disconnect))
-               .addListener(future -> ProtocolUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Timeout));
+               .addListener(future -> NettyUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Timeout));
             channel.eventLoop().schedule(() -> {
                if (channel.isOpen()) {
                   LOGGER.at(Level.FINE).log("Force closing %s after graceful disconnect attempt", identifier);
-                  ProtocolUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Timeout);
+                  NettyUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Timeout);
                }
             }, 1L, TimeUnit.SECONDS);
          } else {
-            ProtocolUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Timeout);
+            NettyUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Timeout);
          }
       }
    }

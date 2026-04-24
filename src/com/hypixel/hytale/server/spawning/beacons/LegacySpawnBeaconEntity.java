@@ -277,6 +277,9 @@ public class LegacySpawnBeaconEntity extends Entity {
       if (!floodFillPositionSelectorComponent.hasPositionsForRole(roleIndex)) {
          this.markNPCUnspawnable(roleIndex);
          return false;
+      } else if (!floodFillPositionSelectorComponent.hasValidMovementModeWeights(roleIndex, spawningContext)) {
+         this.markNPCUnspawnable(roleIndex);
+         return false;
       } else {
          return floodFillPositionSelectorComponent.prepareSpawnContext(playerPosition, spawnsThisRound, roleIndex, spawningContext, this.spawnWrapper);
       }

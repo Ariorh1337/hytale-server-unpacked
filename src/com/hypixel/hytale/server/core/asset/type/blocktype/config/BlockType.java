@@ -52,6 +52,7 @@ import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.RandomTickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.TickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.fallingblocks.FallingBlockSettings;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.FarmingData;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.mountpoints.RotatedMountPointsArray;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeListAsset;
@@ -69,12 +70,12 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Roo
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlockRuleSet;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import io.netty.buffer.ByteBuf;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.lang.foreign.MemorySegment;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
 import java.util.Collections;
@@ -82,7 +83,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.ToIntFunction;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -434,6 +434,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          (blockType, parent) -> blockType.farming = parent.farming
       )
       .add()
+      .<FallingBlockSettings>appendInherited(
+         new KeyedCodec<>("FallingBlockSettings", FallingBlockSettings.CODEC),
+         (blockType, settings) -> blockType.fallingBlockSettings = settings,
+         blockType -> blockType.fallingBlockSettings,
+         (blockType, parent) -> blockType.fallingBlockSettings = parent.fallingBlockSettings
+      )
+      .documentation("Settings for blocks that can become falling block entities.")
+      .add()
       .appendInherited(
          new KeyedCodec<>("IsDoor", Codec.BOOLEAN),
          (blockType, s) -> blockType.isDoor = s,
@@ -508,6 +516,16 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       )
       .documentation("Sets the PhysicalMaterial of the block. Currently used primarily for acoustic properties.")
       .addValidator(PhysicalMaterial.VALIDATOR_CACHE.getValidator())
+      .add()
+      .<Float>appendInherited(
+         new KeyedCodec<>("SoundOcclusionOpacity", Codec.FLOAT),
+         (blockType, o) -> blockType.soundOcclusionOpacity = o,
+         blockType -> blockType.soundOcclusionOpacity,
+         (blockType, parent) -> blockType.soundOcclusionOpacity = parent.soundOcclusionOpacity
+      )
+      .documentation(
+         "Scales per-source audio occlusion attenuation for this block. Multiplied with PhysicalMaterial AttenuationPerBlock. Set to 0, the material applies no attenuation. Set to 1 it applies the full specified attenuation. Can be set to values higher than 1 to increase attenuation until no sound penetrates."
+      )
       .add()
       .<String>appendInherited(
          new KeyedCodec<>("AmbientSoundEventId", Codec.STRING),
@@ -796,13 +814,30 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    );
    public static final ShaderType[] DEFAULT_SHADER_EFFECTS = new ShaderType[]{ShaderType.None};
    public static final BlockType DEFAULT_BLOCK_TYPE = new BlockType();
-   public static final AbstractSectionPalette.KeySerializer KEY_SERIALIZER = (buf, id) -> {
-      String key = getAssetMap().getAssetOrDefault(id, BlockType.UNKNOWN).getId();
-      ByteBufUtil.writeUTF(buf, key);
+   public static final AbstractSectionPalette.KeyMemorySerializer KEY_MEMORY_SERIALIZER = new AbstractSectionPalette.KeyMemorySerializer() {
+      @Override
+      public int serialize(MemorySegment memorySegment, int offset, int index) {
+         String key = BlockType.getAssetMap().getAssetOrDefault(index, BlockType.UNKNOWN).getId();
+         return MemorySegmentUtil.writeUTF(memorySegment, offset, key);
+      }
+
+      @Override
+      public int keySize(int index) {
+         String key = BlockType.getAssetMap().getAssetOrDefault(index, BlockType.UNKNOWN).getId();
+         return MemorySegmentUtil.utf8Size(key);
+      }
    };
-   public static final ToIntFunction<ByteBuf> KEY_DESERIALIZER = byteBuf -> {
-      String blockType = ByteBufUtil.readUTF(byteBuf);
-      return getBlockIdOrUnknown(blockType, "Failed to find block '%s' in chunk section!", blockType);
+   public static final AbstractSectionPalette.KeyMemoryDeserializer KEY_MEMORY_DESERIALIZER = new AbstractSectionPalette.KeyMemoryDeserializer() {
+      @Override
+      public int deserialize(MemorySegment mem, int offset) {
+         String block = MemorySegmentUtil.readUTF(mem, offset);
+         return BlockType.getBlockIdOrUnknown(block, "Failed to find block '%s' in chunk section!", block);
+      }
+
+      @Override
+      public int keySize(MemorySegment mem, int offset) {
+         return MemorySegmentUtil.utf8Size(mem, offset);
+      }
    };
    public static final String EMPTY_KEY = "Empty";
    public static final String UNKNOWN_KEY = "Unknown";
@@ -871,6 +906,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected transient int blockSoundSetIndex = 0;
    protected String physicalMaterialId = "EMPTY";
    protected transient int physicalMaterialIndex = 0;
+   protected float soundOcclusionOpacity = 1.0F;
    protected ModelParticle[] particles;
    protected String blockParticleSetId;
    protected String blockBreakingDecalId;
@@ -952,6 +988,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected boolean isLooping;
    protected Holder<ChunkStore> blockEntity;
    protected FarmingData farming;
+   @Nullable
+   protected FallingBlockSettings fallingBlockSettings;
    protected SupportDropType supportDropType = SupportDropType.BREAK;
    protected int maxSupportDistance;
    @Nullable
@@ -1007,6 +1045,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.blockSoundSetIndex = other.blockSoundSetIndex;
       this.physicalMaterialId = other.physicalMaterialId;
       this.physicalMaterialIndex = other.physicalMaterialIndex;
+      this.soundOcclusionOpacity = other.soundOcclusionOpacity;
       this.particles = other.particles;
       this.blockParticleSetId = other.blockParticleSetId;
       this.blockBreakingDecalId = other.blockBreakingDecalId;
@@ -1059,6 +1098,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.state = other.state;
       this.blockEntity = other.blockEntity;
       this.farming = other.farming;
+      this.fallingBlockSettings = other.fallingBlockSettings;
       this.supportDropType = other.supportDropType;
       this.maxSupportDistance = other.maxSupportDistance;
       this.support = other.support;
@@ -1101,6 +1141,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
       packet.blockSoundSetIndex = this.blockSoundSetIndex;
       packet.physicalMaterialIndex = this.physicalMaterialIndex;
+      packet.soundOcclusionOpacity = this.soundOcclusionOpacity;
       packet.blockParticleSetId = this.blockParticleSetId;
       packet.blockBreakingDecalId = this.blockBreakingDecalId;
       packet.particleColor = this.particleColor;
@@ -1659,6 +1700,11 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return this.farming;
    }
 
+   @Nullable
+   public FallingBlockSettings getFallingBlockSettings() {
+      return this.fallingBlockSettings;
+   }
+
    public SupportDropType getSupportDropType() {
       return this.supportDropType;
    }
@@ -2052,6 +2098,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          + this.isLooping
          + ", farming="
          + this.farming
+         + ", fallingBlockSettings="
+         + this.fallingBlockSettings
          + ", supportDropType="
          + this.supportDropType
          + ", maxSupportDistance="

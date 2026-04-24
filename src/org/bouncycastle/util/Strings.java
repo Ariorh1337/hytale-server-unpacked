@@ -199,7 +199,7 @@ public final class Strings {
 
       while (var3) {
          int var5 = var0.indexOf(var1);
-         if (var5 > 0) {
+         if (var5 >= 0) {
             String var4 = var0.substring(0, var5);
             var2.addElement(var4);
             var0 = var0.substring(var5 + 1);

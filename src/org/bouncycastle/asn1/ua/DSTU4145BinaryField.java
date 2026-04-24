@@ -67,14 +67,14 @@ public class DSTU4145BinaryField extends ASN1Object {
    @Override
    public ASN1Primitive toASN1Primitive() {
       ASN1EncodableVector var1 = new ASN1EncodableVector(2);
-      var1.add(new ASN1Integer(this.m));
+      var1.add(ASN1Integer.valueOf(this.m));
       if (this.j == 0) {
-         var1.add(new ASN1Integer(this.k));
+         var1.add(ASN1Integer.valueOf(this.k));
       } else {
          ASN1EncodableVector var2 = new ASN1EncodableVector(3);
-         var2.add(new ASN1Integer(this.k));
-         var2.add(new ASN1Integer(this.j));
-         var2.add(new ASN1Integer(this.l));
+         var2.add(ASN1Integer.valueOf(this.k));
+         var2.add(ASN1Integer.valueOf(this.j));
+         var2.add(ASN1Integer.valueOf(this.l));
          var1.add(new DERSequence(var2));
       }
 

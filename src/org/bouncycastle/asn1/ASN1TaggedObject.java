@@ -13,6 +13,24 @@ public abstract class ASN1TaggedObject extends ASN1Primitive implements ASN1Tagg
    final int tagNo;
    final ASN1Encodable obj;
 
+   public static ASN1TaggedObject getContextInstance(Object var0) {
+      return ASN1Util.checkContextTagClass(checkInstance(var0));
+   }
+
+   public static ASN1TaggedObject getContextInstance(Object var0, int var1) {
+      return ASN1Util.checkContextTag(checkInstance(var0), var1);
+   }
+
+   public static ASN1TaggedObject getContextOptional(ASN1Encodable var0) {
+      ASN1TaggedObject var1 = getOptional(var0);
+      return var1 != null && var1.hasContextTag() ? var1 : null;
+   }
+
+   public static ASN1TaggedObject getContextOptional(ASN1Encodable var0, int var1) {
+      ASN1TaggedObject var2 = getOptional(var0);
+      return var2 != null && var2.hasContextTag(var1) ? var2 : null;
+   }
+
    public static ASN1TaggedObject getInstance(Object var0) {
       if (var0 != null && !(var0 instanceof ASN1TaggedObject)) {
          if (var0 instanceof ASN1Encodable) {

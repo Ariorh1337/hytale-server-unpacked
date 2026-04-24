@@ -189,7 +189,7 @@ public class PKIXCertPath extends CertPath {
             var8.add(this.toASN1Object((X509Certificate)this.certificates.get(var10)));
          }
 
-         SignedData var11 = new SignedData(new ASN1Integer(1L), new DERSet(), var6, new DERSet(var8), null, new DERSet());
+         SignedData var11 = new SignedData(ASN1Integer.ONE, new DERSet(), var6, new DERSet(var8), null, new DERSet());
          return this.toDEREncoded(new ContentInfo(PKCSObjectIdentifiers.signedData, var11));
       } else if (var1.equalsIgnoreCase("PEM")) {
          ByteArrayOutputStream var2 = new ByteArrayOutputStream();

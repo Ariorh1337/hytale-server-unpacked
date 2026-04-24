@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.math.util.NumberUtil;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
-import io.netty.buffer.ByteBuf;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.bytes.Byte2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortMaps;
@@ -16,9 +16,9 @@ import it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ShortMap;
 import it.unimi.dsi.fastutil.shorts.Short2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.ShortSet;
+import java.lang.foreign.MemorySegment;
 import java.util.BitSet;
 import java.util.function.IntConsumer;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 
 public final class ShortSectionPalette extends AbstractSectionPalette {
@@ -293,52 +293,79 @@ public final class ShortSectionPalette extends AbstractSectionPalette {
    }
 
    @Override
-   public void serializeForPacket(@Nonnull ByteBuf buf) {
-      buf.writeShortLE(this.internalToExternal.size());
+   public int serializedPacketByteSize() {
+      return 2 + 8 * this.internalToExternal.size() + this.blocks.length * 2;
+   }
+
+   @Override
+   public int serializeForPacket(MemorySegment memorySegment, int baseOffset) {
+      int offset = baseOffset;
+      memorySegment.set(MemorySegmentUtil.SHORT_LE, offset, (short)this.internalToExternal.size());
+      offset += 2;
 
       for (Short2IntMap.Entry entry : this.internalToExternal.short2IntEntrySet()) {
          short internalId = entry.getShortKey();
          int externalId = entry.getIntValue();
-         buf.writeShortLE(internalId & 65535);
-         buf.writeIntLE(externalId);
-         buf.writeShortLE(this.internalIdCount.get(internalId));
+         memorySegment.set(MemorySegmentUtil.SHORT_LE, offset, internalId);
+         memorySegment.set(MemorySegmentUtil.INT_LE, offset + 2, externalId);
+         memorySegment.set(MemorySegmentUtil.SHORT_LE, offset + 2 + 4, this.internalIdCount.get(internalId));
+         offset += 8;
       }
 
-      for (int i = 0; i < this.blocks.length; i++) {
-         buf.writeShortLE(this.blocks[i]);
-      }
+      MemorySegment.copy(this.blocks, 0, memorySegment, MemorySegmentUtil.SHORT_LE, offset, this.blocks.length);
+      offset += this.blocks.length * 2;
+      return offset - baseOffset;
    }
 
    @Override
-   public void serialize(@Nonnull AbstractSectionPalette.KeySerializer keySerializer, @Nonnull ByteBuf buf) {
-      buf.writeShort(this.internalToExternal.size());
+   public int serializedByteSize(AbstractSectionPalette.KeyMemorySerializer keySerializer) {
+      int size = 2 + 4 * this.internalToExternal.size() + this.blocks.length * 2;
+
+      for (int externalId : this.internalToExternal.values()) {
+         size += keySerializer.keySize(externalId);
+      }
+
+      return size;
+   }
+
+   @Override
+   public int serialize(AbstractSectionPalette.KeyMemorySerializer keySerializer, MemorySegment memorySegment, int baseOffset) {
+      int offset = baseOffset;
+      memorySegment.set(MemorySegmentUtil.SHORT_BE, offset, (short)this.internalToExternal.size());
+      offset += 2;
 
       for (Short2IntMap.Entry entry : this.internalToExternal.short2IntEntrySet()) {
          short internalId = entry.getShortKey();
          int externalId = entry.getIntValue();
-         buf.writeShort(internalId & 65535);
-         keySerializer.serialize(buf, externalId);
-         buf.writeShort(this.internalIdCount.get(internalId));
+         memorySegment.set(MemorySegmentUtil.SHORT_BE, offset, internalId);
+         offset += 2 + keySerializer.serialize(memorySegment, offset + 2, externalId);
+         memorySegment.set(MemorySegmentUtil.SHORT_BE, offset, this.internalIdCount.get(internalId));
+         offset += 2;
       }
 
-      for (int i = 0; i < this.blocks.length; i++) {
-         buf.writeShort(this.blocks[i]);
-      }
+      MemorySegment.copy(this.blocks, 0, memorySegment, MemorySegmentUtil.SHORT_BE, offset, this.blocks.length);
+      offset += this.blocks.length * 2;
+      return offset - baseOffset;
    }
 
    @Override
-   public void deserialize(@Nonnull ToIntFunction<ByteBuf> deserializer, @Nonnull ByteBuf buf, int version) {
+   public int deserialize(AbstractSectionPalette.KeyMemoryDeserializer deserializer, MemorySegment memorySegment, int baseOffset) {
+      int offset = baseOffset;
       this.externalToInternal.clear();
       this.internalToExternal.clear();
       this.internalIdSet.clear();
       this.internalIdCount.clear();
       Short2ShortMap internalIdRemapping = null;
-      int blockCount = buf.readShort();
+      int blockCount = memorySegment.get(MemorySegmentUtil.SHORT_BE, offset);
+      offset += 2;
 
       for (int i = 0; i < blockCount; i++) {
-         short internalId = buf.readShort();
-         int externalId = deserializer.applyAsInt(buf);
-         short count = buf.readShort();
+         short internalId = memorySegment.get(MemorySegmentUtil.SHORT_BE, offset);
+         offset += 2;
+         int externalId = deserializer.deserialize(memorySegment, offset);
+         offset += deserializer.keySize(memorySegment, offset);
+         short count = memorySegment.get(MemorySegmentUtil.SHORT_BE, offset);
+         offset += 2;
          if (this.externalToInternal.containsKey(externalId)) {
             short existingInternalId = this.externalToInternal.get(externalId);
             if (internalIdRemapping == null) {
@@ -355,10 +382,8 @@ public final class ShortSectionPalette extends AbstractSectionPalette {
          }
       }
 
-      for (int i = 0; i < this.blocks.length; i++) {
-         this.blocks[i] = buf.readShort();
-      }
-
+      MemorySegment.copy(memorySegment, MemorySegmentUtil.SHORT_BE, offset, this.blocks, 0, this.blocks.length);
+      offset += (int)(this.blocks.length * MemorySegmentUtil.SHORT_BE.byteSize());
       if (internalIdRemapping != null) {
          for (int i = 0; i < 32768; i++) {
             short oldInternalId = this.blocks[i];
@@ -367,6 +392,8 @@ public final class ShortSectionPalette extends AbstractSectionPalette {
             }
          }
       }
+
+      return offset - baseOffset;
    }
 
    @Nonnull

@@ -3,11 +3,14 @@ package org.bouncycastle.asn1;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import org.bouncycastle.util.Properties;
 
 public class ASN1StreamParser {
    private final InputStream _in;
    private final int _limit;
    private final byte[][] tmpBuffers;
+   private final int level;
+   private final int maxLevel;
 
    public ASN1StreamParser(InputStream var1) {
       this(var1, StreamUtil.findLimit(var1));
@@ -25,6 +28,16 @@ public class ASN1StreamParser {
       this._in = var1;
       this._limit = var2;
       this.tmpBuffers = var3;
+      this.level = 0;
+      this.maxLevel = Properties.asInteger("org.bouncycastle.asn1.max_cons_depth", 32);
+   }
+
+   private ASN1StreamParser(InputStream var1, int var2, byte[][] var3, int var4, int var5) {
+      this._in = var1;
+      this._limit = var2;
+      this.tmpBuffers = var3;
+      this.level = var4;
+      this.maxLevel = var5;
    }
 
    public ASN1Encodable readObject() throws IOException {
@@ -33,6 +46,10 @@ public class ASN1StreamParser {
    }
 
    ASN1Encodable implParseObject(int var1) throws IOException {
+      if (this.level == this.maxLevel) {
+         throw new IOException("maximum nested construction level reached - increase org.bouncycastle.asn1.max_cons_depth (currently " + this.maxLevel + ")");
+      }
+
       this.set00Check(false);
       int var2 = ASN1InputStream.readTagNumber(this._in, var1);
       int var3 = ASN1InputStream.readLength(this._in, this._limit, var2 == 3 || var2 == 4 || var2 == 16 || var2 == 17 || var2 == 8);
@@ -42,7 +59,7 @@ public class ASN1StreamParser {
          }
 
          IndefiniteLengthInputStream var8 = new IndefiniteLengthInputStream(this._in, this._limit);
-         ASN1StreamParser var9 = new ASN1StreamParser(var8, this._limit, this.tmpBuffers);
+         ASN1StreamParser var9 = new ASN1StreamParser(var8, this._limit, this.tmpBuffers, this.level + 1, this.maxLevel);
          int var10 = var1 & 192;
          return 0 != var10 ? new BERTaggedObjectParser(var10, var2, var9) : var9.parseImplicitConstructedIL(var2);
       } else {
@@ -50,7 +67,7 @@ public class ASN1StreamParser {
          if (0 == (var1 & 224)) {
             return this.parseImplicitPrimitive(var2, var4);
          } else {
-            ASN1StreamParser var5 = new ASN1StreamParser(var4, var4.getLimit(), this.tmpBuffers);
+            ASN1StreamParser var5 = new ASN1StreamParser(var4, var4.getLimit(), this.tmpBuffers, this.level + 1, this.maxLevel);
             int var6 = var1 & 192;
             if (0 != var6) {
                boolean var7 = (var1 & 32) != 0;

@@ -14,7 +14,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers;
-import org.bouncycastle.asn1.nist.NISTObjectIdentifiers;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -23,7 +22,6 @@ import org.bouncycastle.crypto.CryptoServiceProperties;
 import org.bouncycastle.crypto.CryptoServicePurpose;
 import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.internal.asn1.isara.IsaraObjectIdentifiers;
-import org.bouncycastle.jcajce.provider.asymmetric.mlkem.MLKEMKeyFactorySpi;
 import org.bouncycastle.jcajce.provider.config.ConfigurableProvider;
 import org.bouncycastle.jcajce.provider.config.ProviderConfiguration;
 import org.bouncycastle.jcajce.provider.symmetric.util.ClassUtil;
@@ -50,7 +48,7 @@ import org.bouncycastle.util.Strings;
 
 public final class BouncyCastleProvider extends Provider implements ConfigurableProvider {
    private static final Logger LOG = Logger.getLogger(BouncyCastleProvider.class.getName());
-   private static String info = "BouncyCastle Security Provider v1.83";
+   private static String info = "BouncyCastle Security Provider v1.84";
    public static final String PROVIDER_NAME = "BC";
    public static final ProviderConfiguration CONFIGURATION = new BouncyCastleProviderConfiguration();
    private static final Map keyInfoConverters = new HashMap();
@@ -112,14 +110,14 @@ public final class BouncyCastleProvider extends Provider implements Configurable
       "GM",
       "EdEC",
       "LMS",
-      "SPHINCSPlus",
-      "Dilithium",
-      "Falcon",
       "NTRU",
+      "Falcon",
       "CONTEXT",
       "SLHDSA",
       "MLDSA",
-      "MLKEM"
+      "MLKEM",
+      "Dilithium",
+      "SPHINCSPlus"
    };
    private static final String DIGEST_PACKAGE = "org.bouncycastle.jcajce.provider.digest.";
    private static final String[] DIGESTS = new String[]{
@@ -153,11 +151,11 @@ public final class BouncyCastleProvider extends Provider implements Configurable
    private static final String SECURE_RANDOM_PACKAGE = "org.bouncycastle.jcajce.provider.drbg.";
    private static final String[] SECURE_RANDOMS = new String[]{"DRBG"};
    private static final String KDF_PACKAGE = "org.bouncycastle.jcajce.provider.kdf.";
-   private static final String[] KDFS = new String[]{"HKDF", "PBEPBKDF2", "SCRYPT"};
+   private static final String[] KDFS = new String[]{"HKDF", "PBKDF2", "SCRYPT"};
    private Map<String, Service> serviceMap = new ConcurrentHashMap<>();
 
    public BouncyCastleProvider() {
-      super("BC", 1.83, info);
+      super("BC", 1.84, info);
       AccessController.doPrivileged(new PrivilegedAction() {
          @Override
          public Object run() {
@@ -330,9 +328,6 @@ public final class BouncyCastleProvider extends Provider implements Configurable
       this.addKeyInfoConverter(IsaraObjectIdentifiers.id_alg_xmssmt, new XMSSMTKeyFactorySpi());
       this.addKeyInfoConverter(PKCSObjectIdentifiers.id_alg_hss_lms_hashsig, new LMSKeyFactorySpi());
       this.addKeyInfoConverter(BCObjectIdentifiers.picnic_key, new PicnicKeyFactorySpi());
-      this.addKeyInfoConverter(NISTObjectIdentifiers.id_alg_ml_kem_512, new MLKEMKeyFactorySpi());
-      this.addKeyInfoConverter(NISTObjectIdentifiers.id_alg_ml_kem_768, new MLKEMKeyFactorySpi());
-      this.addKeyInfoConverter(NISTObjectIdentifiers.id_alg_ml_kem_1024, new MLKEMKeyFactorySpi());
       this.addKeyInfoConverter(BCObjectIdentifiers.old_falcon_512, new FalconKeyFactorySpi(BCObjectIdentifiers.old_falcon_512));
       this.addKeyInfoConverter(BCObjectIdentifiers.old_falcon_1024, new FalconKeyFactorySpi(BCObjectIdentifiers.old_falcon_1024));
       this.addKeyInfoConverter(BCObjectIdentifiers.falcon_512, new FalconKeyFactorySpi(BCObjectIdentifiers.falcon_512));

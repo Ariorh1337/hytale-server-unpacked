@@ -10,9 +10,11 @@ import org.bouncycastle.math.ec.WNafUtil;
 public class DSTU4145NamedCurves {
    private static final BigInteger ZERO = BigInteger.valueOf(0L);
    private static final BigInteger ONE = BigInteger.valueOf(1L);
-   static final ECDomainParameters[] params = new ECDomainParameters[10];
-   static final ASN1ObjectIdentifier[] oids = new ASN1ObjectIdentifier[10];
-   static final String oidBase = UAObjectIdentifiers.dstu4145le.getId() + ".2.";
+   private static final BigInteger TWO = BigInteger.valueOf(2L);
+   private static final BigInteger FOUR = BigInteger.valueOf(4L);
+   private static final ECDomainParameters[] DOMAIN_PARAMETERS = new ECDomainParameters[10];
+   private static final ASN1ObjectIdentifier[] OIDS = new ASN1ObjectIdentifier[10];
+   private static final ASN1ObjectIdentifier OID_BASE = UAObjectIdentifiers.dstu4145le.branch("2");
 
    private static ECPoint configureBasepoint(ECCurve var0, BigInteger var1, BigInteger var2) {
       ECPoint var3 = var0.createPoint(var1, var2);
@@ -21,17 +23,21 @@ public class DSTU4145NamedCurves {
    }
 
    public static ASN1ObjectIdentifier[] getOIDs() {
-      return oids;
+      ASN1ObjectIdentifier[] var0 = new ASN1ObjectIdentifier[OIDS.length];
+      System.arraycopy(OIDS, 0, var0, 0, OIDS.length);
+      return var0;
    }
 
    public static ECDomainParameters getByOID(ASN1ObjectIdentifier var0) {
-      String var1 = var0.getId();
-      if (!var1.startsWith(oidBase)) {
-         return null;
+      if (var0.on(OID_BASE)) {
+         for (int var1 = 0; var1 < 10; var1++) {
+            if (OIDS[var1].equals(var0)) {
+               return DOMAIN_PARAMETERS[var1];
+            }
+         }
       }
 
-      int var2 = Integer.parseInt(var1.substring(var1.lastIndexOf(46) + 1));
-      return var2 >= 0 && var2 < params.length ? params[var2] : null;
+      return null;
    }
 
    static {
@@ -47,18 +53,7 @@ public class DSTU4145NamedCurves {
          new BigInteger("40000000000000000000000000000000000000000000009C300B75A3FA824F22428FD28CE8812245EF44049B2D49", 16),
          new BigInteger("3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBA3175458009A8C0A724F02F81AA8A1FCBAF80D90C7A95110504CF", 16)
       };
-      BigInteger[] var1 = new BigInteger[]{
-         BigInteger.valueOf(2L),
-         BigInteger.valueOf(2L),
-         BigInteger.valueOf(4L),
-         BigInteger.valueOf(2L),
-         BigInteger.valueOf(2L),
-         BigInteger.valueOf(2L),
-         BigInteger.valueOf(4L),
-         BigInteger.valueOf(2L),
-         BigInteger.valueOf(2L),
-         BigInteger.valueOf(2L)
-      };
+      BigInteger[] var1 = new BigInteger[]{TWO, TWO, FOUR, TWO, TWO, TWO, FOUR, TWO, TWO, TWO};
       ECCurve.F2m[] var2 = new ECCurve.F2m[]{
          new ECCurve.F2m(163, 3, 6, 7, ONE, new BigInteger("5FF6108462A2DC8210AB403925E638A19C1455D21", 16), var0[0], var1[0]),
          new ECCurve.F2m(167, 6, ONE, new BigInteger("6EE3CEEB230811759F20518A0930F1A4315A827DAC", 16), var0[1], var1[1]),
@@ -129,12 +124,9 @@ public class DSTU4145NamedCurves {
          )
       };
 
-      for (int var4 = 0; var4 < params.length; var4++) {
-         params[var4] = new ECDomainParameters(var2[var4], var3[var4], var0[var4], var1[var4]);
-      }
-
-      for (int var5 = 0; var5 < oids.length; var5++) {
-         oids[var5] = new ASN1ObjectIdentifier(oidBase + var5);
+      for (int var4 = 0; var4 < 10; var4++) {
+         DOMAIN_PARAMETERS[var4] = new ECDomainParameters(var2[var4], var3[var4], var0[var4], var1[var4]);
+         OIDS[var4] = OID_BASE.branch("" + var4);
       }
    }
 }

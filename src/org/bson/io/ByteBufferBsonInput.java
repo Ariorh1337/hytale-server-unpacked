@@ -1,14 +1,14 @@
 package org.bson.io;
 
 import java.nio.ByteOrder;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import org.bson.BsonSerializationException;
 import org.bson.ByteBuf;
 import org.bson.types.ObjectId;
 
 public class ByteBufferBsonInput implements BsonInput {
-   private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
    private static final String[] ONE_BYTE_ASCII_STRINGS = new String[128];
+   private byte[] scratchBuffer;
    private ByteBuf buffer;
 
    public ByteBufferBsonInput(ByteBuf buffer) {
@@ -90,30 +90,42 @@ public class ByteBufferBsonInput implements BsonInput {
 
    @Override
    public String readCString() {
-      int mark = this.buffer.position();
-      this.skipCString();
-      int size = this.buffer.position() - mark;
-      this.buffer.position(mark);
+      this.ensureOpen();
+      int size = this.computeCStringLength(this.buffer.position());
       return this.readString(size);
    }
 
-   private String readString(int size) {
-      if (size == 2) {
+   private String readString(int bsonStringSize) {
+      if (bsonStringSize == 2) {
          byte asciiByte = this.buffer.get();
          byte nullByte = this.buffer.get();
          if (nullByte != 0) {
             throw new BsonSerializationException("Found a BSON string that is not null-terminated");
          } else {
-            return asciiByte < 0 ? UTF8_CHARSET.newDecoder().replacement() : ONE_BYTE_ASCII_STRINGS[asciiByte];
+            return asciiByte < 0 ? StandardCharsets.UTF_8.newDecoder().replacement() : ONE_BYTE_ASCII_STRINGS[asciiByte];
          }
-      } else {
-         byte[] bytes = new byte[size - 1];
-         this.buffer.get(bytes);
-         byte nullByte = this.buffer.get();
-         if (nullByte != 0) {
+      } else if (this.buffer.isBackedByArray()) {
+         int position = this.buffer.position();
+         int arrayOffset = this.buffer.arrayOffset();
+         int newPosition = position + bsonStringSize;
+         this.buffer.position(newPosition);
+         byte[] array = this.buffer.array();
+         if (array[arrayOffset + newPosition - 1] != 0) {
             throw new BsonSerializationException("Found a BSON string that is not null-terminated");
          } else {
-            return new String(bytes, UTF8_CHARSET);
+            return new String(array, arrayOffset + position, bsonStringSize - 1, StandardCharsets.UTF_8);
+         }
+      } else {
+         if (this.scratchBuffer == null || bsonStringSize > this.scratchBuffer.length) {
+            int scratchBufferSize = bsonStringSize + (bsonStringSize >>> 1);
+            this.scratchBuffer = new byte[scratchBufferSize];
+         }
+
+         this.buffer.get(this.scratchBuffer, 0, bsonStringSize);
+         if (this.scratchBuffer[bsonStringSize - 1] != 0) {
+            throw new BsonSerializationException("BSON string not null-terminated");
+         } else {
+            return new String(this.scratchBuffer, 0, bsonStringSize - 1, StandardCharsets.UTF_8);
          }
       }
    }
@@ -121,12 +133,35 @@ public class ByteBufferBsonInput implements BsonInput {
    @Override
    public void skipCString() {
       this.ensureOpen();
+      int pos = this.buffer.position();
+      int length = this.computeCStringLength(pos);
+      this.buffer.position(pos + length);
+   }
 
-      for (boolean checkNext = true; checkNext; checkNext = this.buffer.get() != 0) {
-         if (!this.buffer.hasRemaining()) {
-            throw new BsonSerializationException("Found a BSON string that is not null-terminated");
+   private int computeCStringLength(int prevPos) {
+      int pos = prevPos;
+      int limit = this.buffer.limit();
+      int chunks = limit - pos >>> 3;
+
+      for (int toPos = pos + (chunks << 3); pos < toPos; pos += 8) {
+         long chunk = this.buffer.getLong(pos);
+         long mask = chunk - 72340172838076673L;
+         mask &= ~chunk;
+         mask &= -9187201950435737472L;
+         if (mask != 0L) {
+            int offset = Long.numberOfTrailingZeros(mask) >>> 3;
+            return pos - prevPos + offset + 1;
          }
       }
+
+      while (pos < limit) {
+         if (this.buffer.get(pos++) == 0) {
+            return pos - prevPos;
+         }
+      }
+
+      this.buffer.position(pos);
+      throw new BsonSerializationException("Found a BSON string that is not null-terminated");
    }
 
    @Override
@@ -138,7 +173,7 @@ public class ByteBufferBsonInput implements BsonInput {
    @Override
    public BsonInputMark getMark(int readLimit) {
       return new BsonInputMark() {
-         private int mark = ByteBufferBsonInput.this.buffer.position();
+         private final int mark = ByteBufferBsonInput.this.buffer.position();
 
          @Override
          public void reset() {

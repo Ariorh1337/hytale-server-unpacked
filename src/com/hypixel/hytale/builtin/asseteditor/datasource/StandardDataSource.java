@@ -59,7 +59,7 @@ public class StandardDataSource implements DataSource {
    }
 
    private static boolean isInModsDirectory(Path path) {
-      if (path.startsWith(PluginManager.MODS_PATH)) {
+      if (path.startsWith(PluginManager.MODS_PATH.toAbsolutePath())) {
          return true;
       }
 

@@ -15,7 +15,7 @@ public class PKCS12PBEParams extends ASN1Object {
 
    public PKCS12PBEParams(byte[] var1, int var2) {
       this.iv = new DEROctetString(var1);
-      this.iterations = new ASN1Integer(var2);
+      this.iterations = ASN1Integer.valueOf(var2);
    }
 
    private PKCS12PBEParams(ASN1Sequence var1) {

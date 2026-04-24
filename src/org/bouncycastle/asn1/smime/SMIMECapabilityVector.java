@@ -14,7 +14,7 @@ public class SMIMECapabilityVector {
    }
 
    public void addCapability(ASN1ObjectIdentifier var1, int var2) {
-      this.capabilities.add(new DERSequence(var1, new ASN1Integer(var2)));
+      this.capabilities.add(new DERSequence(var1, ASN1Integer.valueOf(var2)));
    }
 
    public void addCapability(ASN1ObjectIdentifier var1, ASN1Encodable var2) {

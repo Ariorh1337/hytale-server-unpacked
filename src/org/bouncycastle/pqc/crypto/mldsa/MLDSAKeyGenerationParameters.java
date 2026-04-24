@@ -3,6 +3,7 @@ package org.bouncycastle.pqc.crypto.mldsa;
 import java.security.SecureRandom;
 import org.bouncycastle.crypto.KeyGenerationParameters;
 
+@Deprecated
 public class MLDSAKeyGenerationParameters extends KeyGenerationParameters {
    private final MLDSAParameters params;
 

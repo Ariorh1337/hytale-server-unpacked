@@ -9,6 +9,7 @@ import org.bouncycastle.crypto.digests.SHAKEDigest;
 import org.bouncycastle.crypto.params.ParametersWithContext;
 import org.bouncycastle.crypto.params.ParametersWithRandom;
 
+@Deprecated
 public class MLDSASigner implements Signer {
    private static final byte[] EMPTY_CONTEXT = new byte[0];
    private MLDSAPublicKeyParameters pubKey;

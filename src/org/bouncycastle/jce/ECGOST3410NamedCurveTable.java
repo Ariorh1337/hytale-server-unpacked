@@ -10,10 +10,9 @@ public class ECGOST3410NamedCurveTable {
    public static ECNamedCurveParameterSpec getParameterSpec(String var0) {
       X9ECParameters var1 = ECGOST3410NamedCurves.getByNameX9(var0);
       if (var1 == null) {
-         try {
-            var1 = ECGOST3410NamedCurves.getByOIDX9(new ASN1ObjectIdentifier(var0));
-         } catch (IllegalArgumentException var3) {
-            return null;
+         ASN1ObjectIdentifier var2 = ASN1ObjectIdentifier.tryFromID(var0);
+         if (var2 != null) {
+            var1 = ECGOST3410NamedCurves.getByOIDX9(var2);
          }
       }
 

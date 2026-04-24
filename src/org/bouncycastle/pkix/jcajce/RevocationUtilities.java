@@ -340,7 +340,7 @@ class RevocationUtilities {
 
    public static boolean isIndirectCRL(X509CRL var0) throws CRLException {
       try {
-         byte[] var1 = var0.getExtensionValue(Extension.issuingDistributionPoint.getId());
+         byte[] var1 = var0.getExtensionValue(ISSUING_DISTRIBUTION_POINT);
          return var1 != null && IssuingDistributionPoint.getInstance(ASN1OctetString.getInstance(var1).getOctets()).isIndirectCRL();
       } catch (Exception var2) {
          throw new CRLException("exception reading IssuingDistributionPoint", var2);

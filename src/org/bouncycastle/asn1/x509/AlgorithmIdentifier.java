@@ -13,16 +13,20 @@ public class AlgorithmIdentifier extends ASN1Object {
    private ASN1ObjectIdentifier algorithm;
    private ASN1Encodable parameters;
 
-   public static AlgorithmIdentifier getInstance(ASN1TaggedObject var0, boolean var1) {
-      return getInstance(ASN1Sequence.getInstance(var0, var1));
-   }
-
    public static AlgorithmIdentifier getInstance(Object var0) {
       if (var0 instanceof AlgorithmIdentifier) {
          return (AlgorithmIdentifier)var0;
       } else {
          return var0 != null ? new AlgorithmIdentifier(ASN1Sequence.getInstance(var0)) : null;
       }
+   }
+
+   public static AlgorithmIdentifier getInstance(ASN1TaggedObject var0, boolean var1) {
+      return new AlgorithmIdentifier(ASN1Sequence.getInstance(var0, var1));
+   }
+
+   public static AlgorithmIdentifier getTagged(ASN1TaggedObject var0, boolean var1) {
+      return new AlgorithmIdentifier(ASN1Sequence.getTagged(var0, var1));
    }
 
    public AlgorithmIdentifier(ASN1ObjectIdentifier var1) {

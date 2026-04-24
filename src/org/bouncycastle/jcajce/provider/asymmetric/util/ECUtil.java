@@ -215,7 +215,7 @@ public class ECUtil {
          var0 = var0.substring(var1 + 1);
       }
 
-      ASN1ObjectIdentifier var2 = getOID(var0);
+      ASN1ObjectIdentifier var2 = ASN1ObjectIdentifier.tryFromID(var0);
       return null != var2 ? var2 : ECNamedCurveTable.getOID(var0);
    }
 
@@ -286,17 +286,5 @@ public class ECUtil {
 
    public static String getNameFrom(AlgorithmParameterSpec var0) {
       return SpecUtil.getNameFrom(var0);
-   }
-
-   private static ASN1ObjectIdentifier getOID(String var0) {
-      char var1 = var0.charAt(0);
-      if (var1 >= '0' && var1 <= '2') {
-         try {
-            return new ASN1ObjectIdentifier(var0);
-         } catch (Exception var3) {
-         }
-      }
-
-      return null;
    }
 }

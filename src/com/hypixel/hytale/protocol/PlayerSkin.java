@@ -14,7 +14,7 @@ public class PlayerSkin {
    public static final int FIXED_BLOCK_SIZE = 3;
    public static final int VARIABLE_FIELD_COUNT = 20;
    public static final int VARIABLE_BLOCK_START = 83;
-   public static final int MAX_SIZE = 327680183;
+   public static final int MAX_SIZE = 2103;
    @Nullable
    public String bodyCharacteristic;
    @Nullable
@@ -147,15 +147,15 @@ public class PlayerSkin {
          }
 
          int bodyCharacteristicVarIntLen = VarInt.size(bodyCharacteristicLen);
-         if (bodyCharacteristicLen > 4096000) {
-            throw ProtocolException.stringTooLong("BodyCharacteristic", bodyCharacteristicLen, 4096000);
+         if (bodyCharacteristicLen > 96) {
+            throw ProtocolException.stringTooLong("BodyCharacteristic", bodyCharacteristicLen, 96);
          }
 
          if (varPos0 + bodyCharacteristicVarIntLen + bodyCharacteristicLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("BodyCharacteristic", varPos0 + bodyCharacteristicVarIntLen + bodyCharacteristicLen, buf.readableBytes());
          }
 
-         obj.bodyCharacteristic = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+         obj.bodyCharacteristic = PacketIO.readValidatedAsciiString(buf, varPos0 + bodyCharacteristicVarIntLen, bodyCharacteristicLen, "BodyCharacteristic");
       }
 
       if ((nullBits[0] & 2) != 0) {
@@ -171,15 +171,15 @@ public class PlayerSkin {
          }
 
          int underwearVarIntLen = VarInt.size(underwearLen);
-         if (underwearLen > 4096000) {
-            throw ProtocolException.stringTooLong("Underwear", underwearLen, 4096000);
+         if (underwearLen > 96) {
+            throw ProtocolException.stringTooLong("Underwear", underwearLen, 96);
          }
 
          if (varPos1 + underwearVarIntLen + underwearLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Underwear", varPos1 + underwearVarIntLen + underwearLen, buf.readableBytes());
          }
 
-         obj.underwear = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
+         obj.underwear = PacketIO.readValidatedAsciiString(buf, varPos1 + underwearVarIntLen, underwearLen, "Underwear");
       }
 
       if ((nullBits[0] & 4) != 0) {
@@ -195,15 +195,15 @@ public class PlayerSkin {
          }
 
          int faceVarIntLen = VarInt.size(faceLen);
-         if (faceLen > 4096000) {
-            throw ProtocolException.stringTooLong("Face", faceLen, 4096000);
+         if (faceLen > 96) {
+            throw ProtocolException.stringTooLong("Face", faceLen, 96);
          }
 
          if (varPos2 + faceVarIntLen + faceLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Face", varPos2 + faceVarIntLen + faceLen, buf.readableBytes());
          }
 
-         obj.face = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
+         obj.face = PacketIO.readValidatedAsciiString(buf, varPos2 + faceVarIntLen, faceLen, "Face");
       }
 
       if ((nullBits[0] & 8) != 0) {
@@ -219,15 +219,15 @@ public class PlayerSkin {
          }
 
          int eyesVarIntLen = VarInt.size(eyesLen);
-         if (eyesLen > 4096000) {
-            throw ProtocolException.stringTooLong("Eyes", eyesLen, 4096000);
+         if (eyesLen > 96) {
+            throw ProtocolException.stringTooLong("Eyes", eyesLen, 96);
          }
 
          if (varPos3 + eyesVarIntLen + eyesLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Eyes", varPos3 + eyesVarIntLen + eyesLen, buf.readableBytes());
          }
 
-         obj.eyes = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
+         obj.eyes = PacketIO.readValidatedAsciiString(buf, varPos3 + eyesVarIntLen, eyesLen, "Eyes");
       }
 
       if ((nullBits[0] & 16) != 0) {
@@ -243,15 +243,15 @@ public class PlayerSkin {
          }
 
          int earsVarIntLen = VarInt.size(earsLen);
-         if (earsLen > 4096000) {
-            throw ProtocolException.stringTooLong("Ears", earsLen, 4096000);
+         if (earsLen > 96) {
+            throw ProtocolException.stringTooLong("Ears", earsLen, 96);
          }
 
          if (varPos4 + earsVarIntLen + earsLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Ears", varPos4 + earsVarIntLen + earsLen, buf.readableBytes());
          }
 
-         obj.ears = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
+         obj.ears = PacketIO.readValidatedAsciiString(buf, varPos4 + earsVarIntLen, earsLen, "Ears");
       }
 
       if ((nullBits[0] & 32) != 0) {
@@ -267,15 +267,15 @@ public class PlayerSkin {
          }
 
          int mouthVarIntLen = VarInt.size(mouthLen);
-         if (mouthLen > 4096000) {
-            throw ProtocolException.stringTooLong("Mouth", mouthLen, 4096000);
+         if (mouthLen > 96) {
+            throw ProtocolException.stringTooLong("Mouth", mouthLen, 96);
          }
 
          if (varPos5 + mouthVarIntLen + mouthLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Mouth", varPos5 + mouthVarIntLen + mouthLen, buf.readableBytes());
          }
 
-         obj.mouth = PacketIO.readVarString(buf, varPos5, PacketIO.UTF8);
+         obj.mouth = PacketIO.readValidatedAsciiString(buf, varPos5 + mouthVarIntLen, mouthLen, "Mouth");
       }
 
       if ((nullBits[0] & 64) != 0) {
@@ -291,15 +291,15 @@ public class PlayerSkin {
          }
 
          int facialHairVarIntLen = VarInt.size(facialHairLen);
-         if (facialHairLen > 4096000) {
-            throw ProtocolException.stringTooLong("FacialHair", facialHairLen, 4096000);
+         if (facialHairLen > 96) {
+            throw ProtocolException.stringTooLong("FacialHair", facialHairLen, 96);
          }
 
          if (varPos6 + facialHairVarIntLen + facialHairLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FacialHair", varPos6 + facialHairVarIntLen + facialHairLen, buf.readableBytes());
          }
 
-         obj.facialHair = PacketIO.readVarString(buf, varPos6, PacketIO.UTF8);
+         obj.facialHair = PacketIO.readValidatedAsciiString(buf, varPos6 + facialHairVarIntLen, facialHairLen, "FacialHair");
       }
 
       if ((nullBits[0] & 128) != 0) {
@@ -315,15 +315,15 @@ public class PlayerSkin {
          }
 
          int haircutVarIntLen = VarInt.size(haircutLen);
-         if (haircutLen > 4096000) {
-            throw ProtocolException.stringTooLong("Haircut", haircutLen, 4096000);
+         if (haircutLen > 96) {
+            throw ProtocolException.stringTooLong("Haircut", haircutLen, 96);
          }
 
          if (varPos7 + haircutVarIntLen + haircutLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Haircut", varPos7 + haircutVarIntLen + haircutLen, buf.readableBytes());
          }
 
-         obj.haircut = PacketIO.readVarString(buf, varPos7, PacketIO.UTF8);
+         obj.haircut = PacketIO.readValidatedAsciiString(buf, varPos7 + haircutVarIntLen, haircutLen, "Haircut");
       }
 
       if ((nullBits[1] & 1) != 0) {
@@ -339,15 +339,15 @@ public class PlayerSkin {
          }
 
          int eyebrowsVarIntLen = VarInt.size(eyebrowsLen);
-         if (eyebrowsLen > 4096000) {
-            throw ProtocolException.stringTooLong("Eyebrows", eyebrowsLen, 4096000);
+         if (eyebrowsLen > 96) {
+            throw ProtocolException.stringTooLong("Eyebrows", eyebrowsLen, 96);
          }
 
          if (varPos8 + eyebrowsVarIntLen + eyebrowsLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Eyebrows", varPos8 + eyebrowsVarIntLen + eyebrowsLen, buf.readableBytes());
          }
 
-         obj.eyebrows = PacketIO.readVarString(buf, varPos8, PacketIO.UTF8);
+         obj.eyebrows = PacketIO.readValidatedAsciiString(buf, varPos8 + eyebrowsVarIntLen, eyebrowsLen, "Eyebrows");
       }
 
       if ((nullBits[1] & 2) != 0) {
@@ -363,15 +363,15 @@ public class PlayerSkin {
          }
 
          int pantsVarIntLen = VarInt.size(pantsLen);
-         if (pantsLen > 4096000) {
-            throw ProtocolException.stringTooLong("Pants", pantsLen, 4096000);
+         if (pantsLen > 96) {
+            throw ProtocolException.stringTooLong("Pants", pantsLen, 96);
          }
 
          if (varPos9 + pantsVarIntLen + pantsLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Pants", varPos9 + pantsVarIntLen + pantsLen, buf.readableBytes());
          }
 
-         obj.pants = PacketIO.readVarString(buf, varPos9, PacketIO.UTF8);
+         obj.pants = PacketIO.readValidatedAsciiString(buf, varPos9 + pantsVarIntLen, pantsLen, "Pants");
       }
 
       if ((nullBits[1] & 4) != 0) {
@@ -387,15 +387,15 @@ public class PlayerSkin {
          }
 
          int overpantsVarIntLen = VarInt.size(overpantsLen);
-         if (overpantsLen > 4096000) {
-            throw ProtocolException.stringTooLong("Overpants", overpantsLen, 4096000);
+         if (overpantsLen > 96) {
+            throw ProtocolException.stringTooLong("Overpants", overpantsLen, 96);
          }
 
          if (varPos10 + overpantsVarIntLen + overpantsLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Overpants", varPos10 + overpantsVarIntLen + overpantsLen, buf.readableBytes());
          }
 
-         obj.overpants = PacketIO.readVarString(buf, varPos10, PacketIO.UTF8);
+         obj.overpants = PacketIO.readValidatedAsciiString(buf, varPos10 + overpantsVarIntLen, overpantsLen, "Overpants");
       }
 
       if ((nullBits[1] & 8) != 0) {
@@ -411,15 +411,15 @@ public class PlayerSkin {
          }
 
          int undertopVarIntLen = VarInt.size(undertopLen);
-         if (undertopLen > 4096000) {
-            throw ProtocolException.stringTooLong("Undertop", undertopLen, 4096000);
+         if (undertopLen > 96) {
+            throw ProtocolException.stringTooLong("Undertop", undertopLen, 96);
          }
 
          if (varPos11 + undertopVarIntLen + undertopLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Undertop", varPos11 + undertopVarIntLen + undertopLen, buf.readableBytes());
          }
 
-         obj.undertop = PacketIO.readVarString(buf, varPos11, PacketIO.UTF8);
+         obj.undertop = PacketIO.readValidatedAsciiString(buf, varPos11 + undertopVarIntLen, undertopLen, "Undertop");
       }
 
       if ((nullBits[1] & 16) != 0) {
@@ -435,15 +435,15 @@ public class PlayerSkin {
          }
 
          int overtopVarIntLen = VarInt.size(overtopLen);
-         if (overtopLen > 4096000) {
-            throw ProtocolException.stringTooLong("Overtop", overtopLen, 4096000);
+         if (overtopLen > 96) {
+            throw ProtocolException.stringTooLong("Overtop", overtopLen, 96);
          }
 
          if (varPos12 + overtopVarIntLen + overtopLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Overtop", varPos12 + overtopVarIntLen + overtopLen, buf.readableBytes());
          }
 
-         obj.overtop = PacketIO.readVarString(buf, varPos12, PacketIO.UTF8);
+         obj.overtop = PacketIO.readValidatedAsciiString(buf, varPos12 + overtopVarIntLen, overtopLen, "Overtop");
       }
 
       if ((nullBits[1] & 32) != 0) {
@@ -459,15 +459,15 @@ public class PlayerSkin {
          }
 
          int shoesVarIntLen = VarInt.size(shoesLen);
-         if (shoesLen > 4096000) {
-            throw ProtocolException.stringTooLong("Shoes", shoesLen, 4096000);
+         if (shoesLen > 96) {
+            throw ProtocolException.stringTooLong("Shoes", shoesLen, 96);
          }
 
          if (varPos13 + shoesVarIntLen + shoesLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Shoes", varPos13 + shoesVarIntLen + shoesLen, buf.readableBytes());
          }
 
-         obj.shoes = PacketIO.readVarString(buf, varPos13, PacketIO.UTF8);
+         obj.shoes = PacketIO.readValidatedAsciiString(buf, varPos13 + shoesVarIntLen, shoesLen, "Shoes");
       }
 
       if ((nullBits[1] & 64) != 0) {
@@ -483,15 +483,15 @@ public class PlayerSkin {
          }
 
          int headAccessoryVarIntLen = VarInt.size(headAccessoryLen);
-         if (headAccessoryLen > 4096000) {
-            throw ProtocolException.stringTooLong("HeadAccessory", headAccessoryLen, 4096000);
+         if (headAccessoryLen > 96) {
+            throw ProtocolException.stringTooLong("HeadAccessory", headAccessoryLen, 96);
          }
 
          if (varPos14 + headAccessoryVarIntLen + headAccessoryLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("HeadAccessory", varPos14 + headAccessoryVarIntLen + headAccessoryLen, buf.readableBytes());
          }
 
-         obj.headAccessory = PacketIO.readVarString(buf, varPos14, PacketIO.UTF8);
+         obj.headAccessory = PacketIO.readValidatedAsciiString(buf, varPos14 + headAccessoryVarIntLen, headAccessoryLen, "HeadAccessory");
       }
 
       if ((nullBits[1] & 128) != 0) {
@@ -507,15 +507,15 @@ public class PlayerSkin {
          }
 
          int faceAccessoryVarIntLen = VarInt.size(faceAccessoryLen);
-         if (faceAccessoryLen > 4096000) {
-            throw ProtocolException.stringTooLong("FaceAccessory", faceAccessoryLen, 4096000);
+         if (faceAccessoryLen > 96) {
+            throw ProtocolException.stringTooLong("FaceAccessory", faceAccessoryLen, 96);
          }
 
          if (varPos15 + faceAccessoryVarIntLen + faceAccessoryLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("FaceAccessory", varPos15 + faceAccessoryVarIntLen + faceAccessoryLen, buf.readableBytes());
          }
 
-         obj.faceAccessory = PacketIO.readVarString(buf, varPos15, PacketIO.UTF8);
+         obj.faceAccessory = PacketIO.readValidatedAsciiString(buf, varPos15 + faceAccessoryVarIntLen, faceAccessoryLen, "FaceAccessory");
       }
 
       if ((nullBits[2] & 1) != 0) {
@@ -531,15 +531,15 @@ public class PlayerSkin {
          }
 
          int earAccessoryVarIntLen = VarInt.size(earAccessoryLen);
-         if (earAccessoryLen > 4096000) {
-            throw ProtocolException.stringTooLong("EarAccessory", earAccessoryLen, 4096000);
+         if (earAccessoryLen > 96) {
+            throw ProtocolException.stringTooLong("EarAccessory", earAccessoryLen, 96);
          }
 
          if (varPos16 + earAccessoryVarIntLen + earAccessoryLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EarAccessory", varPos16 + earAccessoryVarIntLen + earAccessoryLen, buf.readableBytes());
          }
 
-         obj.earAccessory = PacketIO.readVarString(buf, varPos16, PacketIO.UTF8);
+         obj.earAccessory = PacketIO.readValidatedAsciiString(buf, varPos16 + earAccessoryVarIntLen, earAccessoryLen, "EarAccessory");
       }
 
       if ((nullBits[2] & 2) != 0) {
@@ -555,15 +555,15 @@ public class PlayerSkin {
          }
 
          int skinFeatureVarIntLen = VarInt.size(skinFeatureLen);
-         if (skinFeatureLen > 4096000) {
-            throw ProtocolException.stringTooLong("SkinFeature", skinFeatureLen, 4096000);
+         if (skinFeatureLen > 96) {
+            throw ProtocolException.stringTooLong("SkinFeature", skinFeatureLen, 96);
          }
 
          if (varPos17 + skinFeatureVarIntLen + skinFeatureLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("SkinFeature", varPos17 + skinFeatureVarIntLen + skinFeatureLen, buf.readableBytes());
          }
 
-         obj.skinFeature = PacketIO.readVarString(buf, varPos17, PacketIO.UTF8);
+         obj.skinFeature = PacketIO.readValidatedAsciiString(buf, varPos17 + skinFeatureVarIntLen, skinFeatureLen, "SkinFeature");
       }
 
       if ((nullBits[2] & 4) != 0) {
@@ -579,15 +579,15 @@ public class PlayerSkin {
          }
 
          int glovesVarIntLen = VarInt.size(glovesLen);
-         if (glovesLen > 4096000) {
-            throw ProtocolException.stringTooLong("Gloves", glovesLen, 4096000);
+         if (glovesLen > 96) {
+            throw ProtocolException.stringTooLong("Gloves", glovesLen, 96);
          }
 
          if (varPos18 + glovesVarIntLen + glovesLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Gloves", varPos18 + glovesVarIntLen + glovesLen, buf.readableBytes());
          }
 
-         obj.gloves = PacketIO.readVarString(buf, varPos18, PacketIO.UTF8);
+         obj.gloves = PacketIO.readValidatedAsciiString(buf, varPos18 + glovesVarIntLen, glovesLen, "Gloves");
       }
 
       if ((nullBits[2] & 8) != 0) {
@@ -603,15 +603,15 @@ public class PlayerSkin {
          }
 
          int capeVarIntLen = VarInt.size(capeLen);
-         if (capeLen > 4096000) {
-            throw ProtocolException.stringTooLong("Cape", capeLen, 4096000);
+         if (capeLen > 96) {
+            throw ProtocolException.stringTooLong("Cape", capeLen, 96);
          }
 
          if (varPos19 + capeVarIntLen + capeLen > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("Cape", varPos19 + capeVarIntLen + capeLen, buf.readableBytes());
          }
 
-         obj.cape = PacketIO.readVarString(buf, varPos19, PacketIO.UTF8);
+         obj.cape = PacketIO.readValidatedAsciiString(buf, varPos19 + capeVarIntLen, capeLen, "Cape");
       }
 
       return obj;
@@ -1030,140 +1030,140 @@ public class PlayerSkin {
       int varBlockStart = buf.writerIndex();
       if (this.bodyCharacteristic != null) {
          buf.setIntLE(bodyCharacteristicOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.bodyCharacteristic, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.bodyCharacteristic, 96);
       } else {
          buf.setIntLE(bodyCharacteristicOffsetSlot, -1);
       }
 
       if (this.underwear != null) {
          buf.setIntLE(underwearOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.underwear, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.underwear, 96);
       } else {
          buf.setIntLE(underwearOffsetSlot, -1);
       }
 
       if (this.face != null) {
          buf.setIntLE(faceOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.face, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.face, 96);
       } else {
          buf.setIntLE(faceOffsetSlot, -1);
       }
 
       if (this.eyes != null) {
          buf.setIntLE(eyesOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.eyes, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.eyes, 96);
       } else {
          buf.setIntLE(eyesOffsetSlot, -1);
       }
 
       if (this.ears != null) {
          buf.setIntLE(earsOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.ears, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.ears, 96);
       } else {
          buf.setIntLE(earsOffsetSlot, -1);
       }
 
       if (this.mouth != null) {
          buf.setIntLE(mouthOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.mouth, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.mouth, 96);
       } else {
          buf.setIntLE(mouthOffsetSlot, -1);
       }
 
       if (this.facialHair != null) {
          buf.setIntLE(facialHairOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.facialHair, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.facialHair, 96);
       } else {
          buf.setIntLE(facialHairOffsetSlot, -1);
       }
 
       if (this.haircut != null) {
          buf.setIntLE(haircutOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.haircut, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.haircut, 96);
       } else {
          buf.setIntLE(haircutOffsetSlot, -1);
       }
 
       if (this.eyebrows != null) {
          buf.setIntLE(eyebrowsOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.eyebrows, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.eyebrows, 96);
       } else {
          buf.setIntLE(eyebrowsOffsetSlot, -1);
       }
 
       if (this.pants != null) {
          buf.setIntLE(pantsOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.pants, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.pants, 96);
       } else {
          buf.setIntLE(pantsOffsetSlot, -1);
       }
 
       if (this.overpants != null) {
          buf.setIntLE(overpantsOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.overpants, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.overpants, 96);
       } else {
          buf.setIntLE(overpantsOffsetSlot, -1);
       }
 
       if (this.undertop != null) {
          buf.setIntLE(undertopOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.undertop, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.undertop, 96);
       } else {
          buf.setIntLE(undertopOffsetSlot, -1);
       }
 
       if (this.overtop != null) {
          buf.setIntLE(overtopOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.overtop, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.overtop, 96);
       } else {
          buf.setIntLE(overtopOffsetSlot, -1);
       }
 
       if (this.shoes != null) {
          buf.setIntLE(shoesOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.shoes, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.shoes, 96);
       } else {
          buf.setIntLE(shoesOffsetSlot, -1);
       }
 
       if (this.headAccessory != null) {
          buf.setIntLE(headAccessoryOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.headAccessory, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.headAccessory, 96);
       } else {
          buf.setIntLE(headAccessoryOffsetSlot, -1);
       }
 
       if (this.faceAccessory != null) {
          buf.setIntLE(faceAccessoryOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.faceAccessory, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.faceAccessory, 96);
       } else {
          buf.setIntLE(faceAccessoryOffsetSlot, -1);
       }
 
       if (this.earAccessory != null) {
          buf.setIntLE(earAccessoryOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.earAccessory, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.earAccessory, 96);
       } else {
          buf.setIntLE(earAccessoryOffsetSlot, -1);
       }
 
       if (this.skinFeature != null) {
          buf.setIntLE(skinFeatureOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.skinFeature, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.skinFeature, 96);
       } else {
          buf.setIntLE(skinFeatureOffsetSlot, -1);
       }
 
       if (this.gloves != null) {
          buf.setIntLE(glovesOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.gloves, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.gloves, 96);
       } else {
          buf.setIntLE(glovesOffsetSlot, -1);
       }
 
       if (this.cape != null) {
          buf.setIntLE(capeOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.cape, 4096000);
+         PacketIO.writeVarAsciiString(buf, this.cape, 96);
       } else {
          buf.setIntLE(capeOffsetSlot, -1);
       }
@@ -1172,83 +1172,83 @@ public class PlayerSkin {
    public int computeSize() {
       int size = 83;
       if (this.bodyCharacteristic != null) {
-         size += PacketIO.stringSize(this.bodyCharacteristic);
+         size += VarInt.size(this.bodyCharacteristic.length()) + this.bodyCharacteristic.length();
       }
 
       if (this.underwear != null) {
-         size += PacketIO.stringSize(this.underwear);
+         size += VarInt.size(this.underwear.length()) + this.underwear.length();
       }
 
       if (this.face != null) {
-         size += PacketIO.stringSize(this.face);
+         size += VarInt.size(this.face.length()) + this.face.length();
       }
 
       if (this.eyes != null) {
-         size += PacketIO.stringSize(this.eyes);
+         size += VarInt.size(this.eyes.length()) + this.eyes.length();
       }
 
       if (this.ears != null) {
-         size += PacketIO.stringSize(this.ears);
+         size += VarInt.size(this.ears.length()) + this.ears.length();
       }
 
       if (this.mouth != null) {
-         size += PacketIO.stringSize(this.mouth);
+         size += VarInt.size(this.mouth.length()) + this.mouth.length();
       }
 
       if (this.facialHair != null) {
-         size += PacketIO.stringSize(this.facialHair);
+         size += VarInt.size(this.facialHair.length()) + this.facialHair.length();
       }
 
       if (this.haircut != null) {
-         size += PacketIO.stringSize(this.haircut);
+         size += VarInt.size(this.haircut.length()) + this.haircut.length();
       }
 
       if (this.eyebrows != null) {
-         size += PacketIO.stringSize(this.eyebrows);
+         size += VarInt.size(this.eyebrows.length()) + this.eyebrows.length();
       }
 
       if (this.pants != null) {
-         size += PacketIO.stringSize(this.pants);
+         size += VarInt.size(this.pants.length()) + this.pants.length();
       }
 
       if (this.overpants != null) {
-         size += PacketIO.stringSize(this.overpants);
+         size += VarInt.size(this.overpants.length()) + this.overpants.length();
       }
 
       if (this.undertop != null) {
-         size += PacketIO.stringSize(this.undertop);
+         size += VarInt.size(this.undertop.length()) + this.undertop.length();
       }
 
       if (this.overtop != null) {
-         size += PacketIO.stringSize(this.overtop);
+         size += VarInt.size(this.overtop.length()) + this.overtop.length();
       }
 
       if (this.shoes != null) {
-         size += PacketIO.stringSize(this.shoes);
+         size += VarInt.size(this.shoes.length()) + this.shoes.length();
       }
 
       if (this.headAccessory != null) {
-         size += PacketIO.stringSize(this.headAccessory);
+         size += VarInt.size(this.headAccessory.length()) + this.headAccessory.length();
       }
 
       if (this.faceAccessory != null) {
-         size += PacketIO.stringSize(this.faceAccessory);
+         size += VarInt.size(this.faceAccessory.length()) + this.faceAccessory.length();
       }
 
       if (this.earAccessory != null) {
-         size += PacketIO.stringSize(this.earAccessory);
+         size += VarInt.size(this.earAccessory.length()) + this.earAccessory.length();
       }
 
       if (this.skinFeature != null) {
-         size += PacketIO.stringSize(this.skinFeature);
+         size += VarInt.size(this.skinFeature.length()) + this.skinFeature.length();
       }
 
       if (this.gloves != null) {
-         size += PacketIO.stringSize(this.gloves);
+         size += VarInt.size(this.gloves.length()) + this.gloves.length();
       }
 
       if (this.cape != null) {
-         size += PacketIO.stringSize(this.cape);
+         size += VarInt.size(this.cape.length()) + this.cape.length();
       }
 
       return size;
@@ -1272,14 +1272,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for BodyCharacteristic");
          }
 
-         if (bodyCharacteristicLen > 4096000) {
-            return ValidationResult.error("BodyCharacteristic exceeds max length 4096000");
+         if (bodyCharacteristicLen > 96) {
+            return ValidationResult.error("BodyCharacteristic exceeds max length 96");
          }
 
          pos += VarInt.size(bodyCharacteristicLen);
          pos += bodyCharacteristicLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BodyCharacteristic");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - bodyCharacteristicLen, bodyCharacteristicLen)) {
+            return ValidationResult.error("BodyCharacteristic contains non-ASCII bytes");
          }
       }
 
@@ -1295,14 +1299,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Underwear");
          }
 
-         if (underwearLen > 4096000) {
-            return ValidationResult.error("Underwear exceeds max length 4096000");
+         if (underwearLen > 96) {
+            return ValidationResult.error("Underwear exceeds max length 96");
          }
 
          pos += VarInt.size(underwearLen);
          pos += underwearLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Underwear");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - underwearLen, underwearLen)) {
+            return ValidationResult.error("Underwear contains non-ASCII bytes");
          }
       }
 
@@ -1318,14 +1326,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Face");
          }
 
-         if (faceLen > 4096000) {
-            return ValidationResult.error("Face exceeds max length 4096000");
+         if (faceLen > 96) {
+            return ValidationResult.error("Face exceeds max length 96");
          }
 
          pos += VarInt.size(faceLen);
          pos += faceLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Face");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - faceLen, faceLen)) {
+            return ValidationResult.error("Face contains non-ASCII bytes");
          }
       }
 
@@ -1341,14 +1353,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Eyes");
          }
 
-         if (eyesLen > 4096000) {
-            return ValidationResult.error("Eyes exceeds max length 4096000");
+         if (eyesLen > 96) {
+            return ValidationResult.error("Eyes exceeds max length 96");
          }
 
          pos += VarInt.size(eyesLen);
          pos += eyesLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Eyes");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - eyesLen, eyesLen)) {
+            return ValidationResult.error("Eyes contains non-ASCII bytes");
          }
       }
 
@@ -1364,14 +1380,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Ears");
          }
 
-         if (earsLen > 4096000) {
-            return ValidationResult.error("Ears exceeds max length 4096000");
+         if (earsLen > 96) {
+            return ValidationResult.error("Ears exceeds max length 96");
          }
 
          pos += VarInt.size(earsLen);
          pos += earsLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Ears");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - earsLen, earsLen)) {
+            return ValidationResult.error("Ears contains non-ASCII bytes");
          }
       }
 
@@ -1387,14 +1407,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Mouth");
          }
 
-         if (mouthLen > 4096000) {
-            return ValidationResult.error("Mouth exceeds max length 4096000");
+         if (mouthLen > 96) {
+            return ValidationResult.error("Mouth exceeds max length 96");
          }
 
          pos += VarInt.size(mouthLen);
          pos += mouthLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Mouth");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - mouthLen, mouthLen)) {
+            return ValidationResult.error("Mouth contains non-ASCII bytes");
          }
       }
 
@@ -1410,14 +1434,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for FacialHair");
          }
 
-         if (facialHairLen > 4096000) {
-            return ValidationResult.error("FacialHair exceeds max length 4096000");
+         if (facialHairLen > 96) {
+            return ValidationResult.error("FacialHair exceeds max length 96");
          }
 
          pos += VarInt.size(facialHairLen);
          pos += facialHairLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FacialHair");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - facialHairLen, facialHairLen)) {
+            return ValidationResult.error("FacialHair contains non-ASCII bytes");
          }
       }
 
@@ -1433,14 +1461,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Haircut");
          }
 
-         if (haircutLen > 4096000) {
-            return ValidationResult.error("Haircut exceeds max length 4096000");
+         if (haircutLen > 96) {
+            return ValidationResult.error("Haircut exceeds max length 96");
          }
 
          pos += VarInt.size(haircutLen);
          pos += haircutLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Haircut");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - haircutLen, haircutLen)) {
+            return ValidationResult.error("Haircut contains non-ASCII bytes");
          }
       }
 
@@ -1456,14 +1488,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Eyebrows");
          }
 
-         if (eyebrowsLen > 4096000) {
-            return ValidationResult.error("Eyebrows exceeds max length 4096000");
+         if (eyebrowsLen > 96) {
+            return ValidationResult.error("Eyebrows exceeds max length 96");
          }
 
          pos += VarInt.size(eyebrowsLen);
          pos += eyebrowsLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Eyebrows");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - eyebrowsLen, eyebrowsLen)) {
+            return ValidationResult.error("Eyebrows contains non-ASCII bytes");
          }
       }
 
@@ -1479,14 +1515,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Pants");
          }
 
-         if (pantsLen > 4096000) {
-            return ValidationResult.error("Pants exceeds max length 4096000");
+         if (pantsLen > 96) {
+            return ValidationResult.error("Pants exceeds max length 96");
          }
 
          pos += VarInt.size(pantsLen);
          pos += pantsLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Pants");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - pantsLen, pantsLen)) {
+            return ValidationResult.error("Pants contains non-ASCII bytes");
          }
       }
 
@@ -1502,14 +1542,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Overpants");
          }
 
-         if (overpantsLen > 4096000) {
-            return ValidationResult.error("Overpants exceeds max length 4096000");
+         if (overpantsLen > 96) {
+            return ValidationResult.error("Overpants exceeds max length 96");
          }
 
          pos += VarInt.size(overpantsLen);
          pos += overpantsLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Overpants");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - overpantsLen, overpantsLen)) {
+            return ValidationResult.error("Overpants contains non-ASCII bytes");
          }
       }
 
@@ -1525,14 +1569,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Undertop");
          }
 
-         if (undertopLen > 4096000) {
-            return ValidationResult.error("Undertop exceeds max length 4096000");
+         if (undertopLen > 96) {
+            return ValidationResult.error("Undertop exceeds max length 96");
          }
 
          pos += VarInt.size(undertopLen);
          pos += undertopLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Undertop");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - undertopLen, undertopLen)) {
+            return ValidationResult.error("Undertop contains non-ASCII bytes");
          }
       }
 
@@ -1548,14 +1596,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Overtop");
          }
 
-         if (overtopLen > 4096000) {
-            return ValidationResult.error("Overtop exceeds max length 4096000");
+         if (overtopLen > 96) {
+            return ValidationResult.error("Overtop exceeds max length 96");
          }
 
          pos += VarInt.size(overtopLen);
          pos += overtopLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Overtop");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - overtopLen, overtopLen)) {
+            return ValidationResult.error("Overtop contains non-ASCII bytes");
          }
       }
 
@@ -1571,14 +1623,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Shoes");
          }
 
-         if (shoesLen > 4096000) {
-            return ValidationResult.error("Shoes exceeds max length 4096000");
+         if (shoesLen > 96) {
+            return ValidationResult.error("Shoes exceeds max length 96");
          }
 
          pos += VarInt.size(shoesLen);
          pos += shoesLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Shoes");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - shoesLen, shoesLen)) {
+            return ValidationResult.error("Shoes contains non-ASCII bytes");
          }
       }
 
@@ -1594,14 +1650,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for HeadAccessory");
          }
 
-         if (headAccessoryLen > 4096000) {
-            return ValidationResult.error("HeadAccessory exceeds max length 4096000");
+         if (headAccessoryLen > 96) {
+            return ValidationResult.error("HeadAccessory exceeds max length 96");
          }
 
          pos += VarInt.size(headAccessoryLen);
          pos += headAccessoryLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading HeadAccessory");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - headAccessoryLen, headAccessoryLen)) {
+            return ValidationResult.error("HeadAccessory contains non-ASCII bytes");
          }
       }
 
@@ -1617,14 +1677,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for FaceAccessory");
          }
 
-         if (faceAccessoryLen > 4096000) {
-            return ValidationResult.error("FaceAccessory exceeds max length 4096000");
+         if (faceAccessoryLen > 96) {
+            return ValidationResult.error("FaceAccessory exceeds max length 96");
          }
 
          pos += VarInt.size(faceAccessoryLen);
          pos += faceAccessoryLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading FaceAccessory");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - faceAccessoryLen, faceAccessoryLen)) {
+            return ValidationResult.error("FaceAccessory contains non-ASCII bytes");
          }
       }
 
@@ -1640,14 +1704,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for EarAccessory");
          }
 
-         if (earAccessoryLen > 4096000) {
-            return ValidationResult.error("EarAccessory exceeds max length 4096000");
+         if (earAccessoryLen > 96) {
+            return ValidationResult.error("EarAccessory exceeds max length 96");
          }
 
          pos += VarInt.size(earAccessoryLen);
          pos += earAccessoryLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading EarAccessory");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - earAccessoryLen, earAccessoryLen)) {
+            return ValidationResult.error("EarAccessory contains non-ASCII bytes");
          }
       }
 
@@ -1663,14 +1731,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for SkinFeature");
          }
 
-         if (skinFeatureLen > 4096000) {
-            return ValidationResult.error("SkinFeature exceeds max length 4096000");
+         if (skinFeatureLen > 96) {
+            return ValidationResult.error("SkinFeature exceeds max length 96");
          }
 
          pos += VarInt.size(skinFeatureLen);
          pos += skinFeatureLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading SkinFeature");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - skinFeatureLen, skinFeatureLen)) {
+            return ValidationResult.error("SkinFeature contains non-ASCII bytes");
          }
       }
 
@@ -1686,14 +1758,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Gloves");
          }
 
-         if (glovesLen > 4096000) {
-            return ValidationResult.error("Gloves exceeds max length 4096000");
+         if (glovesLen > 96) {
+            return ValidationResult.error("Gloves exceeds max length 96");
          }
 
          pos += VarInt.size(glovesLen);
          pos += glovesLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Gloves");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - glovesLen, glovesLen)) {
+            return ValidationResult.error("Gloves contains non-ASCII bytes");
          }
       }
 
@@ -1709,14 +1785,18 @@ public class PlayerSkin {
             return ValidationResult.error("Invalid string length for Cape");
          }
 
-         if (capeLen > 4096000) {
-            return ValidationResult.error("Cape exceeds max length 4096000");
+         if (capeLen > 96) {
+            return ValidationResult.error("Cape exceeds max length 96");
          }
 
          pos += VarInt.size(capeLen);
          pos += capeLen;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Cape");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - capeLen, capeLen)) {
+            return ValidationResult.error("Cape contains non-ASCII bytes");
          }
       }
 

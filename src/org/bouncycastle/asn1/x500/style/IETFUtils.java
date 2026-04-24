@@ -91,51 +91,51 @@ public class IETFUtils {
    }
 
    public static RDN[] rDNsFromString(String var0, X500NameStyle var1) {
-      X500NameTokenizer var2 = new X500NameTokenizer(var0);
-      X500NameBuilder var3 = new X500NameBuilder(var1);
-      addRDNs(var1, var3, var2);
-      return var3.build().getRDNs();
+      X500NameBuilder var2 = new X500NameBuilder(var1);
+      addRDNs(var2, new X500NameTokenizer(var0));
+      return var2.buildRDNs();
    }
 
-   private static void addRDNs(X500NameStyle var0, X500NameBuilder var1, X500NameTokenizer var2) {
-      String var3;
-      while ((var3 = var2.nextToken()) != null) {
-         if (var3.indexOf(43) >= 0) {
-            addMultiValuedRDN(var0, var1, new X500NameTokenizer(var3, '+'));
+   private static void addRDNs(X500NameBuilder var0, X500NameTokenizer var1) {
+      String var2;
+      while ((var2 = var1.nextToken()) != null) {
+         if (var2.indexOf(43) >= 0) {
+            addMultiValuedRDN(var0, new X500NameTokenizer(var2, '+'));
          } else {
-            addRDN(var0, var1, var3);
+            addRDN(var0, var2);
          }
       }
    }
 
-   private static void addMultiValuedRDN(X500NameStyle var0, X500NameBuilder var1, X500NameTokenizer var2) {
-      String var3 = var2.nextToken();
-      if (var3 == null) {
+   private static void addMultiValuedRDN(X500NameBuilder var0, X500NameTokenizer var1) {
+      String var2 = var1.nextToken();
+      if (var2 == null) {
          throw new IllegalArgumentException("badly formatted directory string");
       }
 
-      if (!var2.hasMoreTokens()) {
-         addRDN(var0, var1, var3);
+      if (!var1.hasMoreTokens()) {
+         addRDN(var0, var2);
       } else {
+         Vector var3 = new Vector();
          Vector var4 = new Vector();
-         Vector var5 = new Vector();
+         X500NameStyle var5 = var0.getStyle();
 
          do {
-            collectAttributeTypeAndValue(var0, var4, var5, var3);
-            var3 = var2.nextToken();
-         } while (var3 != null);
+            collectAttributeTypeAndValue(var5, var3, var4, var2);
+            var2 = var1.nextToken();
+         } while (var2 != null);
 
-         var1.addMultiValuedRDN(toOIDArray(var4), toValueArray(var5));
+         var0.addMultiValuedRDN(toOIDArray(var3), toValueArray(var4));
       }
    }
 
-   private static void addRDN(X500NameStyle var0, X500NameBuilder var1, String var2) {
-      X500NameTokenizer var3 = new X500NameTokenizer(var2, '=');
-      String var4 = nextToken(var3, true);
-      String var5 = nextToken(var3, false);
-      ASN1ObjectIdentifier var6 = var0.attrNameToOID(var4.trim());
-      String var7 = unescape(var5);
-      var1.addRDN(var6, var7);
+   private static void addRDN(X500NameBuilder var0, String var1) {
+      X500NameTokenizer var2 = new X500NameTokenizer(var1, '=');
+      String var3 = nextToken(var2, true);
+      String var4 = nextToken(var2, false);
+      ASN1ObjectIdentifier var5 = var0.getStyle().attrNameToOID(var3.trim());
+      String var6 = unescape(var4);
+      var0.addRDN(var5, var6);
    }
 
    private static void collectAttributeTypeAndValue(X500NameStyle var0, Vector var1, Vector var2, String var3) {
@@ -245,8 +245,11 @@ public class IETFUtils {
 
             appendTypeAndValue(var0, var3[var5], var2);
          }
-      } else if (var1.getFirst() != null) {
-         appendTypeAndValue(var0, var1.getFirst(), var2);
+      } else {
+         AttributeTypeAndValue var6 = var1.getFirst();
+         if (var6 != null) {
+            appendTypeAndValue(var0, var6, var2);
+         }
       }
    }
 
@@ -264,8 +267,11 @@ public class IETFUtils {
 
             appendTypeAndValue(var0, var3[var5], var2);
          }
-      } else if (var1.getFirst() != null) {
-         appendTypeAndValue(var0, var1.getFirst(), var2);
+      } else {
+         AttributeTypeAndValue var6 = var1.getFirst();
+         if (var6 != null) {
+            appendTypeAndValue(var0, var6, var2);
+         }
       }
    }
 

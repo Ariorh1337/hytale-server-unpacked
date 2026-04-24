@@ -7,6 +7,10 @@ public class SNTRUPrimeKEMExtractor implements EncapsulatedSecretExtractor {
    private final SNTRUPrimePrivateKeyParameters privateKey;
 
    public SNTRUPrimeKEMExtractor(SNTRUPrimePrivateKeyParameters var1) {
+      if (var1 == null) {
+         throw new NullPointerException("'privateKey' cannot be null");
+      }
+
       this.privateKey = var1;
    }
 
@@ -53,7 +57,7 @@ public class SNTRUPrimeKEMExtractor implements EncapsulatedSecretExtractor {
       byte[] var25 = new byte[var19.length + var24.length / 2];
       System.arraycopy(var19, 0, var25, 0, var19.length);
       System.arraycopy(var24, 0, var25, var19.length, var24.length / 2);
-      int var26 = Arrays.areEqual(var1, var25) ? 0 : -1;
+      int var26 = Arrays.constantTimeAreEqual(var1, var25) ? 0 : -1;
       Utils.updateDiffMask(var15, this.privateKey.getRho(), var26);
       byte[] var27 = new byte[]{3};
       byte[] var28 = Utils.getHashWithPrefix(var27, var15);

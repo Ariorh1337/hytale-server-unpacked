@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.ICancellable;
 import com.hypixel.hytale.protocol.MouseMotionEvent;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -15,7 +14,7 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
    private final long clientUseTime;
    private final Item itemInHand;
    private final Vector3i targetBlock;
-   private final Entity targetEntity;
+   private final Ref<EntityStore> targetEntityRef;
    private final Vector2fc screenPoint;
    private final MouseMotionEvent mouseMotion;
    private boolean cancelled;
@@ -26,7 +25,7 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
       long clientUseTime,
       Item itemInHand,
       Vector3i targetBlock,
-      Entity targetEntity,
+      Ref<EntityStore> targetEntityRef,
       Vector2fc screenPoint,
       MouseMotionEvent mouseMotion
    ) {
@@ -34,7 +33,7 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
       this.clientUseTime = clientUseTime;
       this.itemInHand = itemInHand;
       this.targetBlock = targetBlock;
-      this.targetEntity = targetEntity;
+      this.targetEntityRef = targetEntityRef;
       this.screenPoint = screenPoint;
       this.mouseMotion = mouseMotion;
    }
@@ -61,8 +60,8 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
       return this.targetBlock;
    }
 
-   public Entity getTargetEntity() {
-      return this.targetEntity;
+   public Ref<EntityStore> getTargetEntityRef() {
+      return this.targetEntityRef;
    }
 
    public Vector2fc getScreenPoint() {
@@ -82,8 +81,8 @@ public class PlayerMouseMotionEvent extends PlayerEvent<Void> implements ICancel
          + this.itemInHand
          + ", targetBlock="
          + this.targetBlock
-         + ", targetEntity="
-         + this.targetEntity
+         + ", targetEntityRef="
+         + this.targetEntityRef
          + ", screenPoint="
          + this.screenPoint
          + ", mouseMotion="

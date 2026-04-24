@@ -12,6 +12,13 @@ public class ASN1Integer extends ASN1Primitive {
          return ASN1Integer.createPrimitive(var1.getOctets());
       }
    };
+   private static final ASN1Integer[] SMALL_CONSTANTS = new ASN1Integer[17];
+   public static final ASN1Integer ZERO;
+   public static final ASN1Integer ONE;
+   public static final ASN1Integer TWO;
+   public static final ASN1Integer THREE;
+   public static final ASN1Integer FOUR;
+   public static final ASN1Integer FIVE;
    static final int SIGN_EXT_SIGNED = -1;
    static final int SIGN_EXT_UNSIGNED = 255;
    private final byte[] bytes;
@@ -39,6 +46,19 @@ public class ASN1Integer extends ASN1Primitive {
 
    public static ASN1Integer getTagged(ASN1TaggedObject var0, boolean var1) {
       return (ASN1Integer)TYPE.getTagged(var0, var1);
+   }
+
+   public static ASN1Integer valueOf(int var0) {
+      return var0 >= 0L && var0 < SMALL_CONSTANTS.length ? SMALL_CONSTANTS[var0] : new ASN1Integer(var0);
+   }
+
+   public static ASN1Integer valueOf(long var0) {
+      return var0 >= 0L && var0 < SMALL_CONSTANTS.length ? SMALL_CONSTANTS[(int)var0] : new ASN1Integer(var0);
+   }
+
+   public ASN1Integer(int var1) {
+      this.bytes = BigInteger.valueOf(var1).toByteArray();
+      this.start = 0;
    }
 
    public ASN1Integer(long var1) {
@@ -194,5 +214,18 @@ public class ASN1Integer extends ASN1Primitive {
       }
 
       return var1;
+   }
+
+   static {
+      for (int var0 = 0; var0 < SMALL_CONSTANTS.length; var0++) {
+         SMALL_CONSTANTS[var0] = new ASN1Integer(var0);
+      }
+
+      ZERO = SMALL_CONSTANTS[0];
+      ONE = SMALL_CONSTANTS[1];
+      TWO = SMALL_CONSTANTS[2];
+      THREE = SMALL_CONSTANTS[3];
+      FOUR = SMALL_CONSTANTS[4];
+      FIVE = SMALL_CONSTANTS[5];
    }
 }

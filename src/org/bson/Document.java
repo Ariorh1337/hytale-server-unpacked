@@ -2,6 +2,7 @@ package org.bson;
 
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -11,11 +12,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import org.bson.assertions.Assertions;
+import org.bson.codecs.BsonValueCodecProvider;
+import org.bson.codecs.Codec;
+import org.bson.codecs.CollectionCodecProvider;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
-import org.bson.codecs.DocumentCodec;
+import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.Encoder;
 import org.bson.codecs.EncoderContext;
+import org.bson.codecs.IterableCodecProvider;
+import org.bson.codecs.MapCodecProvider;
+import org.bson.codecs.ValueCodecProvider;
+import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.json.JsonMode;
@@ -25,6 +33,20 @@ import org.bson.json.JsonWriterSettings;
 import org.bson.types.ObjectId;
 
 public class Document implements Map<String, Object>, Serializable, Bson {
+   private static final Codec<Document> DEFAULT_CODEC = CodecRegistries.withUuidRepresentation(
+         CodecRegistries.fromProviders(
+            Arrays.asList(
+               new ValueCodecProvider(),
+               new CollectionCodecProvider(),
+               new IterableCodecProvider(),
+               new BsonValueCodecProvider(),
+               new DocumentCodecProvider(),
+               new MapCodecProvider()
+            )
+         ),
+         UuidRepresentation.STANDARD
+      )
+      .get(Document.class);
    private static final long serialVersionUID = 6297731997167536582L;
    private final LinkedHashMap<String, Object> documentAsMap;
 
@@ -37,12 +59,12 @@ public class Document implements Map<String, Object>, Serializable, Bson {
       this.documentAsMap.put(key, value);
    }
 
-   public Document(Map<String, Object> map) {
-      this.documentAsMap = new LinkedHashMap<>(map);
+   public Document(Map<String, ?> map) {
+      this.documentAsMap = new LinkedHashMap<>((Map<? extends String, ? extends Object>)map);
    }
 
    public static Document parse(String json) {
-      return parse(json, new DocumentCodec());
+      return parse(json, DEFAULT_CODEC);
    }
 
    public static Document parse(String json, Decoder<Document> decoder) {
@@ -155,18 +177,18 @@ public class Document implements Map<String, Object>, Serializable, Bson {
    }
 
    private <T> List<T> constructValuesList(Object key, Class<T> clazz, List<T> defaultValue) {
-      List<?> value = this.get(key, List.class);
+      List<T> value = this.get(key, List.class);
       if (value == null) {
          return defaultValue;
       }
 
       for (Object item : value) {
-         if (!clazz.isAssignableFrom(item.getClass())) {
+         if (item != null && !clazz.isAssignableFrom(item.getClass())) {
             throw new ClassCastException(String.format("List element cannot be cast to %s", clazz.getName()));
          }
       }
 
-      return (List<T>)value;
+      return value;
    }
 
    public String toJson() {
@@ -174,7 +196,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
    }
 
    public String toJson(JsonWriterSettings writerSettings) {
-      return this.toJson(writerSettings, new DocumentCodec());
+      return this.toJson(writerSettings, DEFAULT_CODEC);
    }
 
    public String toJson(Encoder<Document> encoder) {

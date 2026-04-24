@@ -69,7 +69,7 @@ public class GOST3410ParamSetParameters extends ASN1Object {
    @Override
    public ASN1Primitive toASN1Primitive() {
       ASN1EncodableVector var1 = new ASN1EncodableVector(4);
-      var1.add(new ASN1Integer(this.keySize));
+      var1.add(ASN1Integer.valueOf(this.keySize));
       var1.add(this.p);
       var1.add(this.q);
       var1.add(this.a);

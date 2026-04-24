@@ -126,19 +126,19 @@ public class XMSSMTPrivateKey extends ASN1Object {
    public ASN1Primitive toASN1Primitive() {
       ASN1EncodableVector var1 = new ASN1EncodableVector();
       if (this.maxIndex >= 0L) {
-         var1.add(new ASN1Integer(1L));
+         var1.add(ASN1Integer.ONE);
       } else {
-         var1.add(new ASN1Integer(0L));
+         var1.add(ASN1Integer.ZERO);
       }
 
       ASN1EncodableVector var2 = new ASN1EncodableVector();
-      var2.add(new ASN1Integer(this.index));
+      var2.add(ASN1Integer.valueOf(this.index));
       var2.add(new DEROctetString(this.secretKeySeed));
       var2.add(new DEROctetString(this.secretKeyPRF));
       var2.add(new DEROctetString(this.publicSeed));
       var2.add(new DEROctetString(this.root));
       if (this.maxIndex >= 0L) {
-         var2.add(new DERTaggedObject(false, 0, new ASN1Integer(this.maxIndex)));
+         var2.add(new DERTaggedObject(false, 0, ASN1Integer.valueOf(this.maxIndex)));
       }
 
       var1.add(new DERSequence(var2));

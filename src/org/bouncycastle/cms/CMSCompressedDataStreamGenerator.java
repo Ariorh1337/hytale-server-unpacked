@@ -24,7 +24,7 @@ public class CMSCompressedDataStreamGenerator {
       BERSequenceGenerator var4 = new BERSequenceGenerator(var2);
       var4.addObject(CMSObjectIdentifiers.compressedData);
       BERSequenceGenerator var5 = new BERSequenceGenerator(var4.getRawOutputStream(), 0, true);
-      var5.addObject(new ASN1Integer(0L));
+      var5.addObject(ASN1Integer.ZERO);
       var5.addObject(var3.getAlgorithmIdentifier());
       BERSequenceGenerator var6 = new BERSequenceGenerator(var5.getRawOutputStream());
       var6.addObject(var1);

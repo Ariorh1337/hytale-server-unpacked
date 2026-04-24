@@ -77,7 +77,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
-import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Quaterniond;
@@ -1170,9 +1169,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       try {
          for (Holder<EntityStore> entityHolder : this.entities) {
             Ref<EntityStore> entity = this.placeEntity(world, entityHolder.clone(), pos, this.prefabId);
-            if (entity == null) {
-               LOGGER.at(Level.WARNING).log("Failed to spawn entity in world %s! Data: %s", world.getName(), entityHolder);
-            } else {
+            if (entity != null) {
                entityConsumer.accept(entity);
             }
          }
@@ -1181,7 +1178,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       }
    }
 
-   @Nonnull
+   @Nullable
    private Ref<EntityStore> placeEntity(@Nonnull World world, @Nonnull Holder<EntityStore> entityHolder, @Nonnull Vector3ic pos, int prefabId) {
       TransformComponent transformComponent = entityHolder.getComponent(TransformComponent.getComponentType());
       assert transformComponent != null;
@@ -1189,6 +1186,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       Store<EntityStore> store = world.getEntityStore().getStore();
       PrefabPlaceEntityEvent prefabPlaceEntityEvent = new PrefabPlaceEntityEvent(prefabId, entityHolder);
       store.invoke(prefabPlaceEntityEvent);
+      if (prefabPlaceEntityEvent.isCancelled()) {
+         return null;
+      }
+
       entityHolder.addComponent(FromPrefab.getComponentType(), FromPrefab.INSTANCE);
       Ref<EntityStore> entityRef = new Ref<>(store);
       world.execute(() -> store.addEntity(entityHolder, entityRef, AddReason.LOAD));
@@ -1319,6 +1320,27 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       euler.premul(axisRotation);
    }
 
+   private void rotateEntities(@Nonnull BlockSelection dest, @Nonnull Quaterniond rotation) {
+      this.forEachEntity(entityHolder -> {
+         Holder<EntityStore> copy = entityHolder.clone();
+         TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
+         assert transformComponent != null;
+         Vector3d position = transformComponent.getPosition();
+         HeadRotation headRotationComp = copy.getComponent(HeadRotation.getComponentType());
+         boolean isBlockEntity = entityHolder.getComponent(BlockEntity.getComponentType()) != null;
+         Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
+         position.sub(this.anchorX, this.anchorY, this.anchorZ).sub(offset);
+         rotation.transform(position);
+         position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
+         composeAxisRotation(rotation, transformComponent.getRotation());
+         if (headRotationComp != null) {
+            composeAxisRotation(rotation, headRotationComp.getRotation());
+         }
+
+         dest.addEntity0(copy);
+      });
+   }
+
    @Nonnull
    public BlockSelection rotateArbitrary(float yawDegrees, float pitchDegrees, float rollDegrees) {
       double pitchRad = Math.toRadians(pitchDegrees);
@@ -1358,127 +1380,112 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          this.blocksLock.readLock().unlock();
       }
 
-      if (srcMinX == Integer.MAX_VALUE) {
-         BlockSelection selection = new BlockSelection(0, this.getEntityCount());
-         selection.copyPropertiesFrom(this);
-         return selection;
-      }
-
-      int[][] corners = new int[][]{
-         {srcMinX, srcMinY, srcMinZ},
-         {srcMaxX, srcMinY, srcMinZ},
-         {srcMinX, srcMaxY, srcMinZ},
-         {srcMaxX, srcMaxY, srcMinZ},
-         {srcMinX, srcMinY, srcMaxZ},
-         {srcMaxX, srcMinY, srcMaxZ},
-         {srcMinX, srcMaxY, srcMaxZ},
-         {srcMaxX, srcMaxY, srcMaxZ}
-      };
-
-      for (int[] corner : corners) {
-         tempVec.set(corner[0], corner[1], corner[2]);
-         rotation.transform(tempVec);
-         int rx = MathUtil.floor(tempVec.x);
-         int ry = MathUtil.floor(tempVec.y);
-         int rz = MathUtil.floor(tempVec.z);
-         destMinX = Math.min(destMinX, rx);
-         destMinY = Math.min(destMinY, ry);
-         destMinZ = Math.min(destMinZ, rz);
-         destMaxX = Math.max(destMaxX, rx + 1);
-         destMaxY = Math.max(destMaxY, ry + 1);
-         destMaxZ = Math.max(destMaxZ, rz + 1);
-      }
-
-      BlockSelection selection = new BlockSelection(this.getBlockCount(), this.getEntityCount());
+      boolean hasBlocks = srcMinX != Integer.MAX_VALUE;
+      BlockSelection selection = new BlockSelection(hasBlocks ? this.getBlockCount() : 0, this.getEntityCount());
       selection.copyPropertiesFrom(this);
-      Rotation snappedYaw = Rotation.ofDegrees(Math.round(yawDegrees / 90.0F) * 90);
-      Rotation snappedPitch = Rotation.ofDegrees(Math.round(pitchDegrees / 90.0F) * 90);
-      Rotation snappedRoll = Rotation.ofDegrees(Math.round(rollDegrees / 90.0F) * 90);
-      RotationTuple snappedRotation = RotationTuple.of(snappedYaw, snappedPitch, snappedRoll);
-      this.blocksLock.readLock().lock();
+      if (hasBlocks) {
+         int[][] corners = new int[][]{
+            {srcMinX, srcMinY, srcMinZ},
+            {srcMaxX, srcMinY, srcMinZ},
+            {srcMinX, srcMaxY, srcMinZ},
+            {srcMaxX, srcMaxY, srcMinZ},
+            {srcMinX, srcMinY, srcMaxZ},
+            {srcMaxX, srcMinY, srcMaxZ},
+            {srcMinX, srcMaxY, srcMaxZ},
+            {srcMaxX, srcMaxY, srcMaxZ}
+         };
 
-      try {
-         for (int dx = destMinX; dx <= destMaxX; dx++) {
-            for (int dy = destMinY; dy <= destMaxY; dy++) {
-               for (int dz = destMinZ; dz <= destMaxZ; dz++) {
-                  tempVec.set(dx, dy, dz);
-                  inverse.transform(tempVec);
-                  int sx = (int)Math.round(tempVec.x);
-                  int sy = (int)Math.round(tempVec.y);
-                  int sz = (int)Math.round(tempVec.z);
-                  long packedSource = BlockUtil.pack(sx + this.anchorX, sy + this.anchorY, sz + this.anchorZ);
-                  BlockSelection.BlockHolder block = this.blocks.get(packedSource);
-                  if (block != null) {
-                     RotationTuple blockRotation = RotationTuple.get(block.rotation());
-                     RotationTuple rotatedRotation = RotationTuple.compose(snappedRotation, blockRotation);
-                     if (rotatedRotation == null) {
-                        rotatedRotation = blockRotation;
+         for (int[] corner : corners) {
+            tempVec.set(corner[0], corner[1], corner[2]);
+            rotation.transform(tempVec);
+            int rx = MathUtil.floor(tempVec.x);
+            int ry = MathUtil.floor(tempVec.y);
+            int rz = MathUtil.floor(tempVec.z);
+            destMinX = Math.min(destMinX, rx);
+            destMinY = Math.min(destMinY, ry);
+            destMinZ = Math.min(destMinZ, rz);
+            destMaxX = Math.max(destMaxX, rx + 1);
+            destMaxY = Math.max(destMaxY, ry + 1);
+            destMaxZ = Math.max(destMaxZ, rz + 1);
+         }
+
+         Rotation snappedYaw = Rotation.ofDegrees(Math.round(yawDegrees / 90.0F) * 90);
+         Rotation snappedPitch = Rotation.ofDegrees(Math.round(pitchDegrees / 90.0F) * 90);
+         Rotation snappedRoll = Rotation.ofDegrees(Math.round(rollDegrees / 90.0F) * 90);
+         RotationTuple snappedRotation = RotationTuple.of(snappedYaw, snappedPitch, snappedRoll);
+         this.blocksLock.readLock().lock();
+
+         try {
+            for (int dx = destMinX; dx <= destMaxX; dx++) {
+               for (int dy = destMinY; dy <= destMaxY; dy++) {
+                  for (int dz = destMinZ; dz <= destMaxZ; dz++) {
+                     tempVec.set(dx, dy, dz);
+                     inverse.transform(tempVec);
+                     int sx = (int)Math.round(tempVec.x);
+                     int sy = (int)Math.round(tempVec.y);
+                     int sz = (int)Math.round(tempVec.z);
+                     long packedSource = BlockUtil.pack(sx + this.anchorX, sy + this.anchorY, sz + this.anchorZ);
+                     BlockSelection.BlockHolder block = this.blocks.get(packedSource);
+                     if (block != null) {
+                        RotationTuple blockRotation = RotationTuple.get(block.rotation());
+                        RotationTuple rotatedRotation = RotationTuple.compose(snappedRotation, blockRotation);
+                        if (rotatedRotation == null) {
+                           rotatedRotation = blockRotation;
+                        }
+
+                        int rotatedFiller = block.filler();
+                        if (rotatedFiller != 0) {
+                           int fillerX = FillerBlockUtil.unpackX(rotatedFiller);
+                           int fillerY = FillerBlockUtil.unpackY(rotatedFiller);
+                           int fillerZ = FillerBlockUtil.unpackZ(rotatedFiller);
+                           tempVec.set(fillerX, fillerY, fillerZ);
+                           rotation.transform(tempVec);
+                           rotatedFiller = FillerBlockUtil.pack((int)Math.round(tempVec.x), (int)Math.round(tempVec.y), (int)Math.round(tempVec.z));
+                        }
+
+                        Holder<ChunkStore> holder = block.holder();
+                        selection.addBlock0(
+                           dx + this.anchorX,
+                           dy + this.anchorY,
+                           dz + this.anchorZ,
+                           block.blockId(),
+                           rotatedRotation.index(),
+                           rotatedFiller,
+                           block.supportValue(),
+                           holder != null ? holder.clone() : null
+                        );
                      }
-
-                     int rotatedFiller = block.filler();
-                     if (rotatedFiller != 0) {
-                        int fillerX = FillerBlockUtil.unpackX(rotatedFiller);
-                        int fillerY = FillerBlockUtil.unpackY(rotatedFiller);
-                        int fillerZ = FillerBlockUtil.unpackZ(rotatedFiller);
-                        tempVec.set(fillerX, fillerY, fillerZ);
-                        rotation.transform(tempVec);
-                        rotatedFiller = FillerBlockUtil.pack((int)Math.round(tempVec.x), (int)Math.round(tempVec.y), (int)Math.round(tempVec.z));
-                     }
-
-                     Holder<ChunkStore> holder = block.holder();
-                     selection.addBlock0(
-                        dx + this.anchorX,
-                        dy + this.anchorY,
-                        dz + this.anchorZ,
-                        block.blockId(),
-                        rotatedRotation.index(),
-                        rotatedFiller,
-                        block.supportValue(),
-                        holder != null ? holder.clone() : null
-                     );
                   }
                }
             }
-         }
 
-         for (int dx = destMinX; dx <= destMaxX; dx++) {
-            for (int dy = destMinY; dy <= destMaxY; dy++) {
-               for (int dz = destMinZ; dz <= destMaxZ; dz++) {
-                  tempVec.set(dx, dy, dz);
-                  inverse.transform(tempVec);
-                  int sx = (int)Math.round(tempVec.x);
-                  int sy = (int)Math.round(tempVec.y);
-                  int sz = (int)Math.round(tempVec.z);
-                  long packedSource = BlockUtil.pack(sx + this.anchorX, sy + this.anchorY, sz + this.anchorZ);
-                  BlockSelection.FluidHolder fluid = this.fluids.get(packedSource);
-                  if (fluid != null) {
-                     selection.addFluid0(dx + this.anchorX, dy + this.anchorY, dz + this.anchorZ, fluid.fluidId(), fluid.fluidLevel());
+            for (int dx = destMinX; dx <= destMaxX; dx++) {
+               for (int dy = destMinY; dy <= destMaxY; dy++) {
+                  for (int dz = destMinZ; dz <= destMaxZ; dz++) {
+                     tempVec.set(dx, dy, dz);
+                     inverse.transform(tempVec);
+                     int sx = (int)Math.round(tempVec.x);
+                     int sy = (int)Math.round(tempVec.y);
+                     int sz = (int)Math.round(tempVec.z);
+                     long packedSource = BlockUtil.pack(sx + this.anchorX, sy + this.anchorY, sz + this.anchorZ);
+                     BlockSelection.FluidHolder fluid = this.fluids.get(packedSource);
+                     if (fluid != null) {
+                        selection.addFluid0(dx + this.anchorX, dy + this.anchorY, dz + this.anchorZ, fluid.fluidId(), fluid.fluidLevel());
+                     }
                   }
                }
             }
+         } finally {
+            this.blocksLock.readLock().unlock();
          }
-      } finally {
-         this.blocksLock.readLock().unlock();
+
+         selection.setSelectionArea(
+            new Vector3i(destMinX + this.anchorX + this.x, destMinY + this.anchorY + this.y, destMinZ + this.anchorZ + this.z),
+            new Vector3i(destMaxX + this.anchorX + this.x, destMaxY + this.anchorY + this.y, destMaxZ + this.anchorZ + this.z)
+         );
       }
 
-      this.forEachEntity(entityHolder -> {
-         Holder<EntityStore> copy = entityHolder.clone();
-         TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
-         assert transformComponent != null;
-         Vector3d position = transformComponent.getPosition();
-         HeadRotation headRotationComp = copy.getComponent(HeadRotation.getComponentType());
-         boolean isBlockEntity = entityHolder.getComponent(BlockEntity.getComponentType()) != null;
-         Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
-         position.sub(this.anchorX, this.anchorY, this.anchorZ).sub(offset);
-         rotation.transform(position);
-         position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
-         composeAxisRotation(rotation, transformComponent.getRotation());
-         if (headRotationComp != null) {
-            composeAxisRotation(rotation, headRotationComp.getRotation());
-         }
-
-         selection.addEntity0(copy);
-      });
+      this.rotateEntities(selection, rotation);
       return selection;
    }
 
@@ -1519,8 +1526,6 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       this.forEachEntity(entityHolder -> {
          Holder<EntityStore> copy = entityHolder.clone();
          HeadRotation headRotationComponent = copy.getComponent(HeadRotation.getComponentType());
-         assert headRotationComponent != null;
-         Rotation3f headRotation = headRotationComponent.getRotation();
          TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
          assert transformComponent != null;
          Vector3d position = transformComponent.getPosition();
@@ -1531,7 +1536,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          axis.flip(position);
          position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
          axis.flipRotation(bodyRotation);
-         axis.flipRotation(headRotation);
+         if (headRotationComponent != null) {
+            axis.flipRotation(headRotationComponent.getRotation());
+         }
+
          selection.addEntity0(copy);
       });
       return selection;

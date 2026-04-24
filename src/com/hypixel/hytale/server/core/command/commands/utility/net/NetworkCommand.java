@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackSystems;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.netty.LatencySimulationHandler;
+import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.entity.player.KnockbackPredictionSystems;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -76,9 +77,12 @@ public class NetworkCommand extends AbstractCommandCollection {
             @Nonnull World world,
             @Nonnull Store<EntityStore> store
          ) {
-            Channel channel = playerRef.getPacketHandler().getChannel();
-            LatencySimulationHandler.setLatency(channel, 0L, TimeUnit.MILLISECONDS);
-            context.sendMessage(MESSAGE_COMMANDS_LATENCY_SIMULATION_RESET_SUCCESS);
+            if (playerRef.getPacketHandler().getChannel() instanceof NettyUtil.NettyChannelConnection(Channel channel1)) {
+               LatencySimulationHandler.setLatency(channel1, 0L, TimeUnit.MILLISECONDS);
+               context.sendMessage(MESSAGE_COMMANDS_LATENCY_SIMULATION_RESET_SUCCESS);
+            } else {
+               context.sendMessage(Message.translation("server.commands.latencySimulation.unsupported"));
+            }
          }
       }
 
@@ -100,9 +104,12 @@ public class NetworkCommand extends AbstractCommandCollection {
             @Nonnull Store<EntityStore> store
          ) {
             int delay = this.delayArg.get(context);
-            Channel channel = playerRef.getPacketHandler().getChannel();
-            LatencySimulationHandler.setLatency(channel, delay, TimeUnit.MILLISECONDS);
-            context.sendMessage(Message.translation("server.commands.latencySimulation.set.success").param("millis", delay));
+            if (playerRef.getPacketHandler().getChannel() instanceof NettyUtil.NettyChannelConnection(Channel channel1)) {
+               LatencySimulationHandler.setLatency(channel1, delay, TimeUnit.MILLISECONDS);
+               context.sendMessage(Message.translation("server.commands.latencySimulation.set.success").param("millis", delay));
+            } else {
+               context.sendMessage(Message.translation("server.commands.latencySimulation.unsupported"));
+            }
          }
       }
    }

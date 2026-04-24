@@ -28,6 +28,8 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteract
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
@@ -122,8 +124,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          playerBuilderToolSettings.clearLastBrushPosition();
       }
 
-      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
-      BuilderTool.ArgData args = this.args = builderTool.getItemArgData(playerComponent.getInventory().getItemInHand());
+      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
+      ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+      BuilderTool.ArgData args = this.args = builderTool.getItemArgData(itemInHand);
       Object width = args.tool().get("builtin_Width");
       Object height = args.tool().get("builtin_Height");
       Object thickness = args.tool().get("builtin_Thickness");
@@ -731,7 +734,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) throws Exception {
-      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(player);
+      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
       if (builderTool == null) {
          throw new IllegalStateException("No builder tool active on player");
       } else {
@@ -817,7 +820,6 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    }
 
    static {
-      OPERATIONS.put("Flood", FloodOperation::new);
       OPERATIONS.put("Noise", NoiseOperation::new);
       OPERATIONS.put("Scatter", ScatterOperation::new);
       OPERATIONS.put("Smooth", (ref, player1, playerRef1, packet, componentAccessor) -> new SmoothOperation(ref, packet, componentAccessor));

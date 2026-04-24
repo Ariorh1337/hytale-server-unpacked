@@ -18,4 +18,9 @@ final class MapOfCodecsProvider implements CodecProvider {
    public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
       return (Codec<T>)this.codecsMap.get(clazz);
    }
+
+   @Override
+   public String toString() {
+      return "MapOfCodecsProvider{codecsMap=" + this.codecsMap + '}';
+   }
 }

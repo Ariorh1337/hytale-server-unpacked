@@ -39,18 +39,18 @@ public class PhysicalMaterial
       .addValidator(Validators.range(0.0F, 1.0F))
       .add()
       .<Float>appendInherited(
-         new KeyedCodec<>("GainPerBlock", Codec.FLOAT),
-         (mat, v) -> mat.gainPerBlock = v,
-         mat -> mat.gainPerBlock,
-         (mat, parent) -> mat.gainPerBlock = parent.gainPerBlock
+         new KeyedCodec<>("AttenuationPerBlock", Codec.FLOAT),
+         (mat, v) -> mat.attenuationPerBlock = v,
+         mat -> mat.attenuationPerBlock,
+         (mat, parent) -> mat.attenuationPerBlock = parent.attenuationPerBlock
       )
       .addValidator(Validators.min(0.0F))
       .add()
       .<Float>appendInherited(
-         new KeyedCodec<>("HFGainPerBlock", Codec.FLOAT),
-         (mat, v) -> mat.hfGainPerBlock = v,
-         mat -> mat.hfGainPerBlock,
-         (mat, parent) -> mat.hfGainPerBlock = parent.hfGainPerBlock
+         new KeyedCodec<>("HFAttenuationPerBlock", Codec.FLOAT),
+         (mat, v) -> mat.hfAttenuationPerBlock = v,
+         mat -> mat.hfAttenuationPerBlock,
+         (mat, parent) -> mat.hfAttenuationPerBlock = parent.hfAttenuationPerBlock
       )
       .addValidator(Validators.min(0.0F))
       .add()
@@ -69,8 +69,8 @@ public class PhysicalMaterial
    protected AssetExtraInfo.Data data;
    protected String id;
    protected float reflectionCoeff;
-   protected float gainPerBlock;
-   protected float hfGainPerBlock;
+   protected float attenuationPerBlock;
+   protected float hfAttenuationPerBlock;
    protected float shelterOpacity;
    private SoftReference<com.hypixel.hytale.protocol.PhysicalMaterial> cachedPacket;
 
@@ -103,8 +103,8 @@ public class PhysicalMaterial
       com.hypixel.hytale.protocol.PhysicalMaterial packet = new com.hypixel.hytale.protocol.PhysicalMaterial();
       packet.id = this.id;
       packet.reflectionCoeff = this.reflectionCoeff;
-      packet.gainPerBlock = this.gainPerBlock;
-      packet.hFGainPerBlock = this.hfGainPerBlock;
+      packet.attenuationPerBlock = this.attenuationPerBlock;
+      packet.hFAttenuationPerBlock = this.hfAttenuationPerBlock;
       packet.shelterOpacity = this.shelterOpacity;
       this.cachedPacket = new SoftReference<>(packet);
       return packet;
@@ -118,12 +118,12 @@ public class PhysicalMaterial
       return this.reflectionCoeff;
    }
 
-   public float getGainPerBlock() {
-      return this.gainPerBlock;
+   public float getAttenuationPerBlock() {
+      return this.attenuationPerBlock;
    }
 
-   public float getHfGainPerBlock() {
-      return this.hfGainPerBlock;
+   public float getHfAttenuationPerBlock() {
+      return this.hfAttenuationPerBlock;
    }
 
    public float getShelterOpacity() {
@@ -140,10 +140,10 @@ public class PhysicalMaterial
          + this.id
          + "', reflectionCoeff="
          + this.reflectionCoeff
-         + ", gainPerBlock="
-         + this.gainPerBlock
-         + ", hfGainPerBlock="
-         + this.hfGainPerBlock
+         + ", attenuationPerBlock="
+         + this.attenuationPerBlock
+         + ", hfAttenuationPerBlock="
+         + this.hfAttenuationPerBlock
          + ", shelterOpacity="
          + this.shelterOpacity
          + "}";

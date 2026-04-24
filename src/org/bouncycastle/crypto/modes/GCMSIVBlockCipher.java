@@ -13,6 +13,7 @@ import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.util.Arrays;
+import org.bouncycastle.util.Longs;
 import org.bouncycastle.util.Pack;
 
 public class GCMSIVBlockCipher implements AEADBlockCipher {
@@ -111,7 +112,7 @@ public class GCMSIVBlockCipher implements AEADBlockCipher {
          throw new IllegalStateException("AEAD data cannot be processed after ordinary data");
       }
 
-      if (this.theAEADHasher.getBytesProcessed() + Long.MIN_VALUE > 2147483623 - var1 + Long.MIN_VALUE) {
+      if (Longs.compareUnsigned(this.theAEADHasher.getBytesProcessed(), 2147483623 - var1) > 0) {
          throw new IllegalStateException("AEAD byte count exceeded");
       }
    }
@@ -133,7 +134,7 @@ public class GCMSIVBlockCipher implements AEADBlockCipher {
          var4 = this.theEncData.size();
       }
 
-      if (var4 + Long.MIN_VALUE > var2 - var1 + Long.MIN_VALUE) {
+      if (Longs.compareUnsigned(var4, var2 - var1) > 0) {
          throw new IllegalStateException("byte count exceeded");
       }
    }

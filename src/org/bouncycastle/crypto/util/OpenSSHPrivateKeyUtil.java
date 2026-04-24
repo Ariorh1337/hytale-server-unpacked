@@ -29,7 +29,7 @@ import org.bouncycastle.util.BigIntegers;
 import org.bouncycastle.util.Strings;
 
 public class OpenSSHPrivateKeyUtil {
-   static final byte[] AUTH_MAGIC = Strings.toByteArray("openssh-key-v1\u0000");
+   private static final byte[] AUTH_MAGIC = Strings.toByteArray("openssh-key-v1\u0000");
 
    private OpenSSHPrivateKeyUtil() {
    }
@@ -40,53 +40,54 @@ public class OpenSSHPrivateKeyUtil {
       }
 
       if (var0 instanceof RSAPrivateCrtKeyParameters) {
+         PrivateKeyInfo var10 = PrivateKeyInfoFactory.createPrivateKeyInfo(var0);
+         return var10.parsePrivateKey().toASN1Primitive().getEncoded();
+      }
+
+      if (var0 instanceof ECPrivateKeyParameters) {
          PrivateKeyInfo var9 = PrivateKeyInfoFactory.createPrivateKeyInfo(var0);
          return var9.parsePrivateKey().toASN1Primitive().getEncoded();
       }
 
-      if (var0 instanceof ECPrivateKeyParameters) {
-         PrivateKeyInfo var8 = PrivateKeyInfoFactory.createPrivateKeyInfo(var0);
-         return var8.parsePrivateKey().toASN1Primitive().getEncoded();
-      }
-
       if (var0 instanceof DSAPrivateKeyParameters) {
-         DSAPrivateKeyParameters var7 = (DSAPrivateKeyParameters)var0;
-         DSAParameters var10 = var7.getParameters();
-         ASN1EncodableVector var12 = new ASN1EncodableVector();
-         var12.add(new ASN1Integer(0L));
-         var12.add(new ASN1Integer(var10.getP()));
-         var12.add(new ASN1Integer(var10.getQ()));
-         var12.add(new ASN1Integer(var10.getG()));
-         BigInteger var13 = var10.getG().modPow(var7.getX(), var10.getP());
-         var12.add(new ASN1Integer(var13));
-         var12.add(new ASN1Integer(var7.getX()));
+         DSAPrivateKeyParameters var8 = (DSAPrivateKeyParameters)var0;
+         DSAParameters var11 = var8.getParameters();
+         BigInteger var12 = var11.getG().modPow(var8.getX(), var11.getP());
+         ASN1EncodableVector var14 = new ASN1EncodableVector();
+         var14.add(ASN1Integer.ZERO);
+         var14.add(new ASN1Integer(var11.getP()));
+         var14.add(new ASN1Integer(var11.getQ()));
+         var14.add(new ASN1Integer(var11.getG()));
+         var14.add(new ASN1Integer(var12));
+         var14.add(new ASN1Integer(var8.getX()));
 
          try {
-            return new DERSequence(var12).getEncoded();
-         } catch (Exception var6) {
-            throw new IllegalStateException("unable to encode DSAPrivateKeyParameters " + var6.getMessage());
+            return new DERSequence(var14).getEncoded();
+         } catch (Exception var7) {
+            throw new IllegalStateException("unable to encode DSAPrivateKeyParameters " + var7.getMessage());
          }
       } else if (var0 instanceof Ed25519PrivateKeyParameters) {
-         Ed25519PublicKeyParameters var1 = ((Ed25519PrivateKeyParameters)var0).generatePublicKey();
-         SSHBuilder var2 = new SSHBuilder();
-         var2.writeBytes(AUTH_MAGIC);
-         var2.writeString("none");
-         var2.writeString("none");
-         var2.writeString("");
-         var2.u32(1);
-         byte[] var3 = OpenSSHPublicKeyUtil.encodePublicKey(var1);
-         var2.writeBlock(var3);
-         SSHBuilder var11 = new SSHBuilder();
-         int var4 = CryptoServicesRegistrar.getSecureRandom().nextInt();
-         var11.u32(var4);
-         var11.u32(var4);
-         var11.writeString("ssh-ed25519");
-         byte[] var5 = var1.getEncoded();
-         var11.writeBlock(var5);
-         var11.writeBlock(Arrays.concatenate(((Ed25519PrivateKeyParameters)var0).getEncoded(), var5));
-         var11.writeString("");
-         var2.writeBlock(var11.getPaddedBytes());
-         return var2.getBytes();
+         Ed25519PrivateKeyParameters var1 = (Ed25519PrivateKeyParameters)var0;
+         Ed25519PublicKeyParameters var2 = var1.generatePublicKey();
+         SSHBuilder var3 = new SSHBuilder();
+         var3.writeBytes(AUTH_MAGIC);
+         var3.writeString("none");
+         var3.writeString("none");
+         var3.writeString("");
+         var3.u32(1);
+         byte[] var4 = OpenSSHPublicKeyUtil.encodePublicKey(var2);
+         var3.writeBlock(var4);
+         SSHBuilder var13 = new SSHBuilder();
+         int var5 = CryptoServicesRegistrar.getSecureRandom().nextInt();
+         var13.u32(var5);
+         var13.u32(var5);
+         var13.writeString("ssh-ed25519");
+         byte[] var6 = var2.getEncoded();
+         var13.writeBlock(var6);
+         var13.writeBlock(Arrays.concatenate(var1.getEncoded(), var6));
+         var13.writeString("");
+         var3.writeBlock(var13.getPaddedBytes());
+         return var3.getBytes();
       } else {
          throw new IllegalArgumentException("unable to convert " + var0.getClass().getName() + " to openssh private key");
       }

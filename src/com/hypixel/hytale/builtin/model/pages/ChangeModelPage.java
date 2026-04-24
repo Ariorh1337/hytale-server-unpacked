@@ -86,7 +86,7 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
          UIEventBuilder eventBuilder = new UIEventBuilder();
          this.buildModelList(ref, store, commandBuilder, eventBuilder);
          this.sendUpdate(commandBuilder, eventBuilder, false);
-      } else {
+      } else if (data.type != null) {
          switch (data.type) {
             case "Select":
                if (data.model != null) {
@@ -96,9 +96,11 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
                }
                break;
             case "UpdateScale":
-               this.scale = data.scale;
-               if (this.modelPreview.isValid()) {
-                  store.putComponent(this.modelPreview, ModelComponent.getComponentType(), new ModelComponent(this.getModel(this.scale)));
+               if (data.scale > 0.0F) {
+                  this.scale = data.scale;
+                  if (this.modelPreview != null && this.modelPreview.isValid()) {
+                     store.putComponent(this.modelPreview, ModelComponent.getComponentType(), new ModelComponent(this.getModel(this.scale)));
+                  }
                }
                break;
             case "ChangeModel":

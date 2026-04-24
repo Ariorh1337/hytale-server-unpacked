@@ -3,6 +3,7 @@ package org.bson.codecs;
 import java.util.concurrent.atomic.AtomicLong;
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
+import org.bson.internal.NumberCodecHelper;
 
 public class AtomicLongCodec implements Codec<AtomicLong> {
    public void encode(BsonWriter writer, AtomicLong value, EncoderContext encoderContext) {

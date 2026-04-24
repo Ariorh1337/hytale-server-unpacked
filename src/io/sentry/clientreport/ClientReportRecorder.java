@@ -8,6 +8,8 @@ import io.sentry.SentryItemType;
 import io.sentry.SentryLevel;
 import io.sentry.SentryLogEvent;
 import io.sentry.SentryLogEvents;
+import io.sentry.SentryMetricsEvent;
+import io.sentry.SentryMetricsEvents;
 import io.sentry.SentryOptions;
 import io.sentry.protocol.SentrySpan;
 import io.sentry.protocol.SentryTransaction;
@@ -102,6 +104,16 @@ public final class ClientReportRecorder implements IClientReportRecorder {
                      this.executeOnDiscard(reason, itemCategory, count);
                   } else {
                      this.options.getLogger().log(SentryLevel.ERROR, "Unable to parse lost logs envelope item.");
+                  }
+               } else if (itemCategory.equals(DataCategory.TraceMetric)) {
+                  SentryMetricsEvents metrics = envelopeItem.getMetrics(this.options.getSerializer());
+                  if (metrics != null) {
+                     List<SentryMetricsEvent> items = metrics.getItems();
+                     long count = items.size();
+                     this.recordLostEventInternal(reason.getReason(), itemCategory.getCategory(), count);
+                     this.executeOnDiscard(reason, itemCategory, count);
+                  } else {
+                     this.options.getLogger().log(SentryLevel.ERROR, "Unable to parse lost metrics envelope item.");
                   }
                } else {
                   this.recordLostEventInternal(reason.getReason(), itemCategory.getCategory(), 1L);

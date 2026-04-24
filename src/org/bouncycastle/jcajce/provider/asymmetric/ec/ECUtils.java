@@ -39,7 +39,7 @@ class ECUtils {
             var0 = var0.substring(var2 + 1);
          }
 
-         ASN1ObjectIdentifier var3 = getOID(var0);
+         ASN1ObjectIdentifier var3 = ASN1ObjectIdentifier.tryFromID(var0);
          if (null == var3) {
             return ECUtil.getNamedCurveByName(var0);
          }
@@ -80,17 +80,5 @@ class ECUtils {
       }
 
       return var2;
-   }
-
-   private static ASN1ObjectIdentifier getOID(String var0) {
-      char var1 = var0.charAt(0);
-      if (var1 >= '0' && var1 <= '2') {
-         try {
-            return new ASN1ObjectIdentifier(var0);
-         } catch (Exception var3) {
-         }
-      }
-
-      return null;
    }
 }

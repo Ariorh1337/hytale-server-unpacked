@@ -25,7 +25,7 @@ import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -82,7 +82,6 @@ public class BlockPlaceUtils {
       @Nonnull Vector3i placementNormal,
       @Nonnull Vector3i blockPosition,
       @Nonnull BlockRotation blockRotation,
-      @Nullable Inventory inventory,
       byte activeSlot,
       boolean removeItemInHand,
       @Nonnull Ref<ChunkStore> chunkReference,
@@ -172,7 +171,7 @@ public class BlockPlaceUtils {
                   if (success) {
                      onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition, blockTypeAsset, targetRotation);
                   } else {
-                     onPlaceBlockFailure(itemStack, inventory, activeSlot, playerComponent, playerRefComponent, targetBlockSection, targetBlockPosition);
+                     onPlaceBlockFailure(ref, itemStack, activeSlot, playerComponent, playerRefComponent, targetBlockSection, targetBlockPosition, entityStore);
                   }
                }
             }
@@ -181,20 +180,22 @@ public class BlockPlaceUtils {
    }
 
    private static void onPlaceBlockFailure(
+      @Nonnull Ref<EntityStore> ref,
       @Nullable ItemStack itemStack,
-      @Nullable Inventory inventory,
       byte activeSlot,
       @Nullable Player playerComponent,
       @Nullable PlayerRef playerRefComponent,
       @Nonnull BlockSection blockSection,
-      @Nonnull Vector3i blockPosition
+      @Nonnull Vector3i blockPosition,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       boolean isAdventure = playerComponent == null || playerComponent.getGameMode() == GameMode.Adventure;
-      if (inventory != null && itemStack != null && isAdventure) {
-         ItemContainer hotbar = inventory.getHotbar();
-         ItemStackSlotTransaction transaction = hotbar.addItemStackToSlot(activeSlot, itemStack);
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent != null && itemStack != null && isAdventure) {
+         ItemContainer hotbarInventory = hotbarComponent.getInventory();
+         ItemStackSlotTransaction transaction = hotbarInventory.addItemStackToSlot(activeSlot, itemStack);
          if (!transaction.succeeded()) {
-            ItemStackTransaction itemStackTransaction = hotbar.addItemStack(itemStack);
+            ItemStackTransaction itemStackTransaction = hotbarInventory.addItemStack(itemStack);
             if (!itemStackTransaction.succeeded() && playerRefComponent != null) {
                playerRefComponent.sendMessage(MESSAGE_MODULES_INTERACTION_FAILED_ADD_BACK_AFTER_FAILED_PLACE);
             }

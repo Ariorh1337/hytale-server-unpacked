@@ -13,7 +13,7 @@ public class SPHINCS256KeyParams extends ASN1Object {
    private final AlgorithmIdentifier treeDigest;
 
    public SPHINCS256KeyParams(AlgorithmIdentifier var1) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.treeDigest = var1;
    }
 

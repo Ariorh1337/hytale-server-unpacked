@@ -36,7 +36,7 @@ public class AsconDigest extends AsconBaseDigest {
 
    @Override
    protected long loadBytes(byte[] var1, int var2, int var3) {
-      return Pack.bigEndianToLong(var1, var2, var3);
+      return var3 <= 0 ? 0L : Pack.bigEndianToLong_High(var1, var2, var3);
    }
 
    @Override
@@ -46,7 +46,9 @@ public class AsconDigest extends AsconBaseDigest {
 
    @Override
    protected void setBytes(long var1, byte[] var3, int var4, int var5) {
-      Pack.longToBigEndian(var1, var3, var4, var5);
+      if (var5 > 0) {
+         Pack.longToBigEndian_High(var1, var3, var4, var5);
+      }
    }
 
    @Override

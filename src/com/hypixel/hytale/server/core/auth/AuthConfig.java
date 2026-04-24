@@ -14,6 +14,7 @@ public class AuthConfig {
    public static final String ACCOUNT_DATA_URL = "https://account-data.hytale.com";
    public static final String LIVE_CONFIG_URL = "https://liveconfig.hytale.com";
    public static final String BUILD_ENVIRONMENT = "release";
+   public static final String TELEMETRY_SERVICE_URL = "https://telemetry.hytale.com";
    public static final String CLIENT_ID = "hytale-server";
    public static final String[] SCOPES = new String[]{"openid", "offline", "auth:server"};
    public static final String SCOPE_CLIENT = "hytale:client";

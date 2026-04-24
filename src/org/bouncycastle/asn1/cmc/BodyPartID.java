@@ -43,6 +43,6 @@ public class BodyPartID extends ASN1Object {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      return new ASN1Integer(this.id);
+      return ASN1Integer.valueOf(this.id);
    }
 }

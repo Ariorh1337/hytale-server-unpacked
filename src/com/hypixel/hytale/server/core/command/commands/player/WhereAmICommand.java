@@ -6,7 +6,6 @@ import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -32,7 +31,7 @@ public class WhereAmICommand extends AbstractPlayerCommand {
 
    public WhereAmICommand() {
       super("whereami", "server.commands.whereami.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:Adventurer");
       this.requirePermission(HytalePermissions.fromCommand("whereami.self"));
       this.addUsageVariant(new WhereAmICommand.WhereAmIOtherCommand());
    }
@@ -93,7 +92,7 @@ public class WhereAmICommand extends AbstractPlayerCommand {
 
       WhereAmIOtherCommand() {
          super("server.commands.whereami.other.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:Adventurer");
          this.requirePermission(HytalePermissions.fromCommand("whereami.other"));
       }
 

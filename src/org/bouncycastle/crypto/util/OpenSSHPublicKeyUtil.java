@@ -7,6 +7,7 @@ import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.DSAParameters;
 import org.bouncycastle.crypto.params.DSAPublicKeyParameters;
+import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.bouncycastle.crypto.params.ECNamedDomainParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
@@ -39,40 +40,41 @@ public class OpenSSHPublicKeyUtil {
             throw new IllegalArgumentException("RSAKeyParamaters was for encryption");
          }
 
-         RSAKeyParameters var6 = (RSAKeyParameters)var0;
-         SSHBuilder var8 = new SSHBuilder();
-         var8.writeString("ssh-rsa");
-         var8.writeBigNum(var6.getExponent());
-         var8.writeBigNum(var6.getModulus());
-         return var8.getBytes();
+         RSAKeyParameters var7 = (RSAKeyParameters)var0;
+         SSHBuilder var10 = new SSHBuilder();
+         var10.writeString("ssh-rsa");
+         var10.writeBigNum(var7.getExponent());
+         var10.writeBigNum(var7.getModulus());
+         return var10.getBytes();
       } else if (var0 instanceof ECPublicKeyParameters) {
-         SSHBuilder var5 = new SSHBuilder();
-         String var7 = SSHNamedCurves.getNameForParameters(((ECPublicKeyParameters)var0).getParameters());
-         if (var7 == null) {
-            throw new IllegalArgumentException(
-               "unable to derive ssh curve name for " + ((ECPublicKeyParameters)var0).getParameters().getCurve().getClass().getName()
-            );
+         ECPublicKeyParameters var6 = (ECPublicKeyParameters)var0;
+         ECDomainParameters var9 = var6.getParameters();
+         SSHBuilder var11 = new SSHBuilder();
+         String var4 = SSHNamedCurves.getNameForParameters(var9);
+         if (var4 == null) {
+            throw new IllegalArgumentException("unable to derive ssh curve name for " + var9.getCurve().getClass().getName());
          }
 
-         var5.writeString("ecdsa-sha2-" + var7);
-         var5.writeString(var7);
-         var5.writeBlock(((ECPublicKeyParameters)var0).getQ().getEncoded(false));
-         return var5.getBytes();
+         var11.writeString("ecdsa-sha2-" + var4);
+         var11.writeString(var4);
+         var11.writeBlock(var6.getQ().getEncoded(false));
+         return var11.getBytes();
       } else if (var0 instanceof DSAPublicKeyParameters) {
-         DSAPublicKeyParameters var4 = (DSAPublicKeyParameters)var0;
-         DSAParameters var2 = var4.getParameters();
+         DSAPublicKeyParameters var5 = (DSAPublicKeyParameters)var0;
+         DSAParameters var8 = var5.getParameters();
          SSHBuilder var3 = new SSHBuilder();
          var3.writeString("ssh-dss");
-         var3.writeBigNum(var2.getP());
-         var3.writeBigNum(var2.getQ());
-         var3.writeBigNum(var2.getG());
-         var3.writeBigNum(var4.getY());
+         var3.writeBigNum(var8.getP());
+         var3.writeBigNum(var8.getQ());
+         var3.writeBigNum(var8.getG());
+         var3.writeBigNum(var5.getY());
          return var3.getBytes();
       } else if (var0 instanceof Ed25519PublicKeyParameters) {
-         SSHBuilder var1 = new SSHBuilder();
-         var1.writeString("ssh-ed25519");
-         var1.writeBlock(((Ed25519PublicKeyParameters)var0).getEncoded());
-         return var1.getBytes();
+         Ed25519PublicKeyParameters var1 = (Ed25519PublicKeyParameters)var0;
+         SSHBuilder var2 = new SSHBuilder();
+         var2.writeString("ssh-ed25519");
+         var2.writeBlock(var1.getEncoded());
+         return var2.getBytes();
       } else {
          throw new IllegalArgumentException("unable to convert " + var0.getClass().getName() + " to public key");
       }
@@ -121,7 +123,7 @@ public class OpenSSHPublicKeyUtil {
          }
 
          var1 = new Ed25519PublicKeyParameters(var12, 0);
-      } else if ("sk-ecdsa-sha2-nistp256@openssh.com".equals(var2)) {
+      } else if ("sk-ssh-ed25519@openssh.com".equals(var2)) {
          byte[] var13 = var0.readBlock();
          if (var13.length != 32) {
             throw new IllegalStateException("public key value of wrong length");

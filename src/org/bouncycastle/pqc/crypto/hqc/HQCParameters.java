@@ -9,7 +9,6 @@ public class HQCParameters implements KEMParameters {
       46,
       384,
       16,
-      31,
       15,
       66,
       75,
@@ -25,7 +24,6 @@ public class HQCParameters implements KEMParameters {
       56,
       640,
       24,
-      33,
       16,
       100,
       114,
@@ -43,7 +41,6 @@ public class HQCParameters implements KEMParameters {
       90,
       640,
       32,
-      59,
       29,
       131,
       149,
@@ -113,26 +110,26 @@ public class HQCParameters implements KEMParameters {
          1
       }
    );
+   static final int PARAM_M = 8;
+   static final int GF_MUL_ORDER = 255;
    private final String name;
    private final int n;
    private final int n1;
    private final int n2;
    private final int publicKeyBytes;
    private final int secretKeyBytes;
-   static final int PARAM_M = 8;
-   static final int GF_MUL_ORDER = 255;
-   private final HQCEngine hqcEngine;
+   private final HQCEngine engine;
 
    private HQCParameters(
-      String var1, int var2, int var3, int var4, int var5, int var6, int var7, int var8, int var9, int var10, int var11, int var12, int var13, int[] var14
+      String var1, int var2, int var3, int var4, int var5, int var6, int var7, int var8, int var9, int var10, int var11, int var12, int[] var13
    ) {
       this.name = var1;
       this.n = var2;
       this.n1 = var3;
       this.n2 = var4;
-      this.publicKeyBytes = var12;
-      this.secretKeyBytes = var13;
-      this.hqcEngine = new HQCEngine(var2, var3, var4, var5, var6, var7, var8, var9, var10, var11, var12, var14);
+      this.publicKeyBytes = var11;
+      this.secretKeyBytes = var12;
+      this.engine = new HQCEngine(var2, var3, var4, var5, var6, var7, var8, var9, var10, var11, var13);
    }
 
    int getSHA512_BYTES() {
@@ -152,7 +149,11 @@ public class HQCParameters implements KEMParameters {
    }
 
    HQCEngine getEngine() {
-      return this.hqcEngine;
+      return this.engine;
+   }
+
+   public int getEncapsulationLength() {
+      return this.engine.getCipherTextBytes();
    }
 
    public int getSessionKeySize() {

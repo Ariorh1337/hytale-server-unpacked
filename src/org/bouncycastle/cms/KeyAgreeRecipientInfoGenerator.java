@@ -1,5 +1,6 @@
 package org.bouncycastle.cms;
 
+import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERNull;
@@ -16,9 +17,9 @@ import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.operator.GenericKey;
 
 public abstract class KeyAgreeRecipientInfoGenerator implements RecipientInfoGenerator {
-   private ASN1ObjectIdentifier keyAgreementOID;
-   private ASN1ObjectIdentifier keyEncryptionOID;
-   private SubjectPublicKeyInfo originatorKeyInfo;
+   private final ASN1ObjectIdentifier keyAgreementOID;
+   private final ASN1ObjectIdentifier keyEncryptionOID;
+   private final SubjectPublicKeyInfo originatorKeyInfo;
 
    protected KeyAgreeRecipientInfoGenerator(ASN1ObjectIdentifier var1, SubjectPublicKeyInfo var2, ASN1ObjectIdentifier var3) {
       this.originatorKeyInfo = var2;
@@ -28,28 +29,24 @@ public abstract class KeyAgreeRecipientInfoGenerator implements RecipientInfoGen
 
    @Override
    public RecipientInfo generate(GenericKey var1) throws CMSException {
-      OriginatorIdentifierOrKey var2 = new OriginatorIdentifierOrKey(this.createOriginatorPublicKey(this.originatorKeyInfo));
-      AlgorithmIdentifier var3;
-      if (CMSUtils.isDES(this.keyEncryptionOID.getId()) || this.keyEncryptionOID.equals(PKCSObjectIdentifiers.id_alg_CMSRC2wrap)) {
-         var3 = new AlgorithmIdentifier(this.keyEncryptionOID, DERNull.INSTANCE);
+      OriginatorPublicKey var2 = this.createOriginatorPublicKey(this.originatorKeyInfo);
+      OriginatorIdentifierOrKey var3 = new OriginatorIdentifierOrKey(var2);
+      ASN1Object var4 = null;
+      if (CMSUtils.isDES(this.keyEncryptionOID) || PKCSObjectIdentifiers.id_alg_CMSRC2wrap.equals(this.keyEncryptionOID)) {
+         var4 = DERNull.INSTANCE;
       } else if (CMSUtils.isGOST(this.keyAgreementOID)) {
-         var3 = new AlgorithmIdentifier(
-            this.keyEncryptionOID, new Gost2814789KeyWrapParameters(CryptoProObjectIdentifiers.id_Gost28147_89_CryptoPro_A_ParamSet)
-         );
-      } else {
-         var3 = new AlgorithmIdentifier(this.keyEncryptionOID);
+         var4 = new Gost2814789KeyWrapParameters(CryptoProObjectIdentifiers.id_Gost28147_89_CryptoPro_A_ParamSet);
       }
 
-      AlgorithmIdentifier var4 = new AlgorithmIdentifier(this.keyAgreementOID, var3);
-      ASN1Sequence var5 = this.generateRecipientEncryptedKeys(var4, var3, var1);
-      byte[] var6 = this.getUserKeyingMaterial(var4);
-      return var6 != null
-         ? new RecipientInfo(new KeyAgreeRecipientInfo(var2, new DEROctetString(var6), var4, var5))
-         : new RecipientInfo(new KeyAgreeRecipientInfo(var2, null, var4, var5));
+      AlgorithmIdentifier var5 = new AlgorithmIdentifier(this.keyEncryptionOID, var4);
+      AlgorithmIdentifier var6 = new AlgorithmIdentifier(this.keyAgreementOID, var5);
+      ASN1Sequence var7 = this.generateRecipientEncryptedKeys(var6, var5, var1);
+      DEROctetString var8 = DEROctetString.fromContentsOptional(this.getUserKeyingMaterial(var6));
+      return new RecipientInfo(new KeyAgreeRecipientInfo(var3, var8, var6, var7));
    }
 
    protected OriginatorPublicKey createOriginatorPublicKey(SubjectPublicKeyInfo var1) {
-      return new OriginatorPublicKey(var1.getAlgorithm(), var1.getPublicKeyData().getBytes());
+      return new OriginatorPublicKey(var1.getAlgorithm(), var1.getPublicKeyData());
    }
 
    protected abstract ASN1Sequence generateRecipientEncryptedKeys(AlgorithmIdentifier var1, AlgorithmIdentifier var2, GenericKey var3) throws CMSException;

@@ -145,6 +145,9 @@ public class WorldConfig {
       .<GameMode>append(new KeyedCodec<>("GameMode", ProtocolCodecs.GAMEMODE), (o, i) -> o.gameMode = i, o -> o.gameMode)
       .documentation("Sets the default gamemode for this world.")
       .add()
+      .<String>append(new KeyedCodec<>("DefaultPermissionGroup", Codec.STRING), (o, i) -> o.defaultPermissionGroup = i, o -> o.defaultPermissionGroup)
+      .documentation("The default permission group assigned to new players joining this world.")
+      .add()
       .<Boolean>append(new KeyedCodec<>("IsSpawningNPC", Codec.BOOLEAN), (o, i) -> o.isSpawningNPC = i, o -> o.isSpawningNPC)
       .documentation("Whether NPCs can spawn in this world or not.")
       .add()
@@ -260,6 +263,8 @@ public class WorldConfig {
    private ClientEffectWorldSettings clientEffects = new ClientEffectWorldSettings();
    private Map<PluginIdentifier, SemverRange> requiredPlugins = Collections.emptyMap();
    private GameMode gameMode;
+   @Nullable
+   private String defaultPermissionGroup;
    private boolean isSpawningNPC = true;
    private boolean isSpawnMarkersEnabled = true;
    private boolean isAllNPCFrozen = false;
@@ -482,6 +487,15 @@ public class WorldConfig {
 
    public void setGameMode(GameMode gameMode) {
       this.gameMode = gameMode;
+   }
+
+   @Nonnull
+   public String getDefaultPermissionGroup() {
+      return this.defaultPermissionGroup != null ? this.defaultPermissionGroup : "hytale:Adventurer";
+   }
+
+   public void setDefaultPermissionGroup(@Nullable String defaultPermissionGroup) {
+      this.defaultPermissionGroup = defaultPermissionGroup;
    }
 
    public boolean isSpawningNPC() {

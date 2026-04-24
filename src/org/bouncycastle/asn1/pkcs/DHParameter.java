@@ -18,7 +18,7 @@ public class DHParameter extends ASN1Object {
       this.p = new ASN1Integer(var1);
       this.g = new ASN1Integer(var2);
       if (var3 != 0) {
-         this.l = new ASN1Integer(var3);
+         this.l = ASN1Integer.valueOf(var3);
       } else {
          this.l = null;
       }

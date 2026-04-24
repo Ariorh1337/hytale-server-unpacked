@@ -8,7 +8,7 @@ import org.bson.codecs.configuration.CodecConfigurationException;
 import org.bson.types.ObjectId;
 
 public class StringCodec implements Codec<String>, RepresentationConfigurable<String> {
-   private BsonType representation;
+   private final BsonType representation;
 
    public StringCodec() {
       this.representation = BsonType.STRING;

@@ -50,7 +50,7 @@ public class TintOperation extends ToolOperation {
          String hexColor = ColorParseUtil.toHexString(sampledTint & 16777215);
          InventoryComponent.Hotbar hotbar = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
          ItemStack itemStack = hotbar.getActiveItem();
-         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(player);
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
 
          try {
             ItemStack newItemStack = builderTool.updateArgMetadata(itemStack, "bTintColor", hexColor);
@@ -71,7 +71,7 @@ public class TintOperation extends ToolOperation {
             throw e;
          }
 
-         this.opacity = ((Integer)this.args.tool().getOrDefault("cOpacity", 0)).intValue() / 100.0;
+         this.opacity = ((Integer)this.args.tool().getOrDefault("cOpacity", 100)).intValue() / 100.0;
          UUIDComponent uuidComponent = ref.getStore().getComponent(ref, UUIDComponent.getComponentType());
          PrototypePlayerBuilderToolSettings prototypeSettings = PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
          if (!packet.isHoldDownInteraction) {
@@ -115,7 +115,7 @@ public class TintOperation extends ToolOperation {
       this.packedPlacedTinsPositions.add(packed);
       if (this.blendMode) {
          int targetColor = this.sampleKernelBlend(x, z);
-         this.edit.setTint(x, z, targetColor, 0.0);
+         this.edit.setTint(x, z, targetColor, 1.0);
       } else {
          this.edit.setTint(x, z, this.tintColor, this.opacity);
       }

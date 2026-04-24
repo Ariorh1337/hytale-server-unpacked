@@ -226,6 +226,31 @@ public final class SentryEnvelopeItem {
       }
    }
 
+   @Nullable
+   public SentryMetricsEvents getMetrics(@NotNull ISerializer serializer) throws Exception {
+      if (this.header != null && this.header.getType() == SentryItemType.TraceMetric) {
+         Reader eventReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(this.getData()), UTF_8));
+
+         SentryMetricsEvents var3;
+         try {
+            var3 = serializer.deserialize(eventReader, SentryMetricsEvents.class);
+         } catch (Throwable var6) {
+            try {
+               eventReader.close();
+            } catch (Throwable var5) {
+               var6.addSuppressed(var5);
+            }
+
+            throw var6;
+         }
+
+         eventReader.close();
+         return var3;
+      } else {
+         return null;
+      }
+   }
+
    public static SentryEnvelopeItem fromUserFeedback(@NotNull ISerializer serializer, @NotNull UserFeedback userFeedback) {
       Objects.requireNonNull(serializer, "ISerializer is required.");
       Objects.requireNonNull(userFeedback, "UserFeedback is required.");
@@ -697,6 +722,55 @@ public final class SentryEnvelopeItem {
       });
       SentryEnvelopeItemHeader itemHeader = new SentryEnvelopeItemHeader(
          SentryItemType.Log, () -> cachedItem.getBytes().length, "application/vnd.sentry.items.log+json", null, null, null, logEvents.getItems().size()
+      );
+      return new SentryEnvelopeItem(itemHeader, () -> cachedItem.getBytes());
+   }
+
+   public static SentryEnvelopeItem fromMetrics(@NotNull ISerializer serializer, @NotNull SentryMetricsEvents metricsEvents) {
+      Objects.requireNonNull(serializer, "ISerializer is required.");
+      Objects.requireNonNull(metricsEvents, "SentryMetricsEvents is required.");
+      SentryEnvelopeItem.CachedItem cachedItem = new SentryEnvelopeItem.CachedItem(() -> {
+         ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+         byte[] var4;
+         try {
+            Writer writer = new BufferedWriter(new OutputStreamWriter(stream, UTF_8));
+
+            try {
+               serializer.serialize(metricsEvents, writer);
+               var4 = stream.toByteArray();
+            } catch (Throwable var8) {
+               try {
+                  writer.close();
+               } catch (Throwable var7) {
+                  var8.addSuppressed(var7);
+               }
+
+               throw var8;
+            }
+
+            writer.close();
+         } catch (Throwable var9) {
+            try {
+               stream.close();
+            } catch (Throwable var6) {
+               var9.addSuppressed(var6);
+            }
+
+            throw var9;
+         }
+
+         stream.close();
+         return var4;
+      });
+      SentryEnvelopeItemHeader itemHeader = new SentryEnvelopeItemHeader(
+         SentryItemType.TraceMetric,
+         () -> cachedItem.getBytes().length,
+         "application/vnd.sentry.items.trace-metric+json",
+         null,
+         null,
+         null,
+         metricsEvents.getItems().size()
       );
       return new SentryEnvelopeItem(itemHeader, () -> cachedItem.getBytes());
    }

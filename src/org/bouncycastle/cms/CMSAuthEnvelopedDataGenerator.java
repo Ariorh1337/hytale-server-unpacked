@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.BEROctetString;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.cms.AuthEnvelopedData;
@@ -30,18 +31,17 @@ public class CMSAuthEnvelopedDataGenerator extends CMSAuthEnvelopedGenerator {
          }
 
          var6.close();
-      } catch (IOException var11) {
-         throw new CMSException("unable to process authenticated content: " + var11.getMessage(), var11);
+      } catch (IOException var12) {
+         throw new CMSException("unable to process authenticated content: " + var12.getMessage(), var12);
       }
 
-      byte[] var12 = var4.toByteArray();
-      byte[] var7 = var2.getMAC();
-      EncryptedContentInfo var8 = CMSUtils.getEncryptedContentInfo(var1, var2, var12);
+      BEROctetString var13 = new BEROctetString(var4.toByteArray());
+      DEROctetString var7 = new DEROctetString(var2.getMAC());
+      EncryptedContentInfo var8 = CMSUtils.getEncryptedContentInfo(var1, var2, var13);
       ASN1Set var9 = CMSUtils.getAttrDLSet(this.unauthAttrsGenerator);
-      ContentInfo var10 = new ContentInfo(
-         CMSObjectIdentifiers.authEnvelopedData, new AuthEnvelopedData(this.originatorInfo, new DERSet(var3), var8, var5, new DEROctetString(var7), var9)
-      );
-      return new CMSAuthEnvelopedData(var10);
+      AuthEnvelopedData var10 = new AuthEnvelopedData(this.originatorInfo, new DERSet(var3), var8, var5, var7, var9);
+      ContentInfo var11 = new ContentInfo(CMSObjectIdentifiers.authEnvelopedData, var10);
+      return new CMSAuthEnvelopedData(var11);
    }
 
    public CMSAuthEnvelopedData generate(CMSTypedData var1, OutputAEADEncryptor var2) throws CMSException {

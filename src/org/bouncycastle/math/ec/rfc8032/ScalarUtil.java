@@ -139,7 +139,7 @@ abstract class ScalarUtil {
          var2--;
       }
 
-      return var2 * 32 + 32 - Integers.numberOfLeadingZeros(var1[var2] ^ var3);
+      return var2 * 32 + Integers.bitLength(var1[var2] ^ var3);
    }
 
    static int getBitLengthPositive(int var0, int[] var1) {
@@ -149,10 +149,10 @@ abstract class ScalarUtil {
          var2--;
       }
 
-      return var2 * 32 + 32 - Integers.numberOfLeadingZeros(var1[var2]);
+      return var2 * 32 + Integers.bitLength(var1[var2]);
    }
 
-   static boolean lessThan(int var0, int[] var1, int[] var2) {
+   static boolean lessThanUnsigned(int var0, int[] var1, int[] var2) {
       int var3 = var0;
 
       do {

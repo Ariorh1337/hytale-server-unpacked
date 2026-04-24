@@ -29,12 +29,11 @@ import javax.security.auth.x500.X500Principal;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.x509.CertificatePair;
 import org.bouncycastle.jce.X509LDAPCertStoreParameters;
-import org.bouncycastle.util.Strings;
+import org.bouncycastle.ldap.LDAPUtils;
 
 public class X509LDAPCertStoreSpi extends CertStoreSpi {
-   private static String[] FILTER_ESCAPE_TABLE = new String[93];
-   private static String LDAP_PROVIDER;
-   private static String REFERRALS_IGNORE;
+   private static String LDAP_PROVIDER = "com.sun.jndi.ldap.LdapCtxFactory";
+   private static String REFERRALS_IGNORE = "ignore";
    private static final String SEARCH_SECURITY_LEVEL = "none";
    private static final String URL_CONTEXT_PREFIX = "com.sun.jndi.url";
    private X509LDAPCertStoreParameters params;
@@ -59,40 +58,6 @@ public class X509LDAPCertStoreSpi extends CertStoreSpi {
       var1.setProperty("java.naming.referral", REFERRALS_IGNORE);
       var1.setProperty("java.naming.security.authentication", "none");
       return new InitialDirContext(var1);
-   }
-
-   private String parseDN(String var1, String var2) {
-      String var3 = var1;
-      int var4 = Strings.toLowerCase(var3).indexOf(Strings.toLowerCase(var2));
-      var3 = var3.substring(var4 + var2.length());
-      int var5 = var3.indexOf(44);
-      if (var5 == -1) {
-         var5 = var3.length();
-      }
-
-      while (var3.charAt(var5 - 1) == '\\') {
-         var5 = var3.indexOf(44, var5 + 1);
-         if (var5 == -1) {
-            var5 = var3.length();
-         }
-      }
-
-      var3 = var3.substring(0, var5);
-      var4 = var3.indexOf(61);
-      var3 = var3.substring(var4 + 1);
-      if (var3.charAt(0) == ' ') {
-         var3 = var3.substring(1);
-      }
-
-      if (var3.startsWith("\"")) {
-         var3 = var3.substring(1);
-      }
-
-      if (var3.endsWith("\"")) {
-         var3 = var3.substring(0, var3.length() - 1);
-      }
-
-      return this.filterEncode(var3);
    }
 
    @Override
@@ -171,7 +136,7 @@ public class X509LDAPCertStoreSpi extends CertStoreSpi {
                var6 = var1.getSubjectAsString();
             }
 
-            String var8 = this.parseDN(var6, var4);
+            String var8 = LDAPUtils.parseDN(var6, var4);
             var5.addAll(this.search(var3, "*" + var8 + "*", var2));
             if (var7 != null && this.params.getSearchForSerialNumberIn() != null) {
                var8 = var7;
@@ -233,10 +198,10 @@ public class X509LDAPCertStoreSpi extends CertStoreSpi {
             Object var9 = null;
             if (var8 instanceof String) {
                String var10 = this.params.getCertificateRevocationListIssuerAttributeName();
-               var9 = this.parseDN((String)var8, var10);
+               var9 = LDAPUtils.parseDN((String)var8, var10);
             } else {
                String var16 = this.params.getCertificateRevocationListIssuerAttributeName();
-               var9 = this.parseDN(new X500Principal((byte[])var8).getName("RFC1779"), var16);
+               var9 = LDAPUtils.parseDN(new X500Principal((byte[])var8).getName("RFC1779"), var16);
             }
 
             var6.addAll(this.search(var5, "*" + var9 + "*", var2));
@@ -262,26 +227,6 @@ public class X509LDAPCertStoreSpi extends CertStoreSpi {
       } catch (Exception var11) {
          throw new CertStoreException("CRL cannot be constructed from LDAP result " + var11);
       }
-   }
-
-   private String filterEncode(String var1) {
-      if (var1 == null) {
-         return null;
-      }
-
-      StringBuilder var2 = new StringBuilder(var1.length() * 2);
-      int var3 = var1.length();
-
-      for (int var4 = 0; var4 < var3; var4++) {
-         char var5 = var1.charAt(var4);
-         if (var5 < FILTER_ESCAPE_TABLE.length) {
-            var2.append(FILTER_ESCAPE_TABLE[var5]);
-         } else {
-            var2.append(var5);
-         }
-      }
-
-      return var2.toString();
    }
 
    private Set search(String var1, String var2, String[] var3) throws CertStoreException {
@@ -331,19 +276,5 @@ public class X509LDAPCertStoreSpi extends CertStoreSpi {
       }
 
       return var6;
-   }
-
-   static {
-      for (char var0 = 0; var0 < FILTER_ESCAPE_TABLE.length; var0++) {
-         FILTER_ESCAPE_TABLE[var0] = String.valueOf(var0);
-      }
-
-      FILTER_ESCAPE_TABLE[42] = "\\2a";
-      FILTER_ESCAPE_TABLE[40] = "\\28";
-      FILTER_ESCAPE_TABLE[41] = "\\29";
-      FILTER_ESCAPE_TABLE[92] = "\\5c";
-      FILTER_ESCAPE_TABLE[0] = "\\00";
-      LDAP_PROVIDER = "com.sun.jndi.ldap.LdapCtxFactory";
-      REFERRALS_IGNORE = "ignore";
    }
 }

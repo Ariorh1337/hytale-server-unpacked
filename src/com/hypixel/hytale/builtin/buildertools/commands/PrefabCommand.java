@@ -10,7 +10,6 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
@@ -23,6 +22,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -50,7 +50,7 @@ public class PrefabCommand extends AbstractCommandCollection {
    public PrefabCommand() {
       super("prefab", "server.commands.prefab.desc");
       this.addAliases("p");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new PrefabCommand.PrefabSaveCommand());
       this.addSubCommand(new PrefabCommand.PrefabLoadCommand());
       this.addSubCommand(new PrefabCommand.PrefabDeleteCommand());
@@ -63,7 +63,7 @@ public class PrefabCommand extends AbstractCommandCollection {
 
       public PrefabDeleteCommand() {
          super("delete", "server.commands.prefab.delete.desc", true);
-         this.requirePermission("hytale.editor.prefab.manage");
+         this.requirePermission(HytalePermissions.EDITOR_PREFAB_MANAGE);
       }
 
       @Override
@@ -273,7 +273,7 @@ public class PrefabCommand extends AbstractCommandCollection {
    private static class PrefabLoadCommand extends AbstractPlayerCommand {
       public PrefabLoadCommand() {
          super("load", "server.commands.prefab.load.desc");
-         this.requirePermission("hytale.editor.prefab.use");
+         this.requirePermission(HytalePermissions.EDITOR_PREFAB_USE);
          this.addUsageVariant(new PrefabCommand.PrefabLoadByNameCommand());
       }
 
@@ -295,7 +295,7 @@ public class PrefabCommand extends AbstractCommandCollection {
 
       public PrefabSaveCommand() {
          super("save", "server.commands.prefab.save.desc");
-         this.requirePermission("hytale.editor.prefab.manage");
+         this.requirePermission(HytalePermissions.EDITOR_PREFAB_MANAGE);
          this.addUsageVariant(new PrefabCommand.PrefabSaveDirectCommand());
       }
 

@@ -3,6 +3,7 @@ package org.bouncycastle.pqc.crypto.slhdsa;
 import java.security.SecureRandom;
 import org.bouncycastle.crypto.KeyGenerationParameters;
 
+@Deprecated
 public class SLHDSAKeyGenerationParameters extends KeyGenerationParameters {
    private final SLHDSAParameters parameters;
 

@@ -15,17 +15,16 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.DestroyFailedException;
-import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.SecretWithEncapsulation;
 import org.bouncycastle.crypto.Wrapper;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.jcajce.provider.asymmetric.util.WrapUtil;
 import org.bouncycastle.jcajce.spec.KEMParameterSpec;
 import org.bouncycastle.jcajce.spec.KTSParameterSpec;
 import org.bouncycastle.pqc.crypto.hqc.HQCKEMExtractor;
 import org.bouncycastle.pqc.crypto.hqc.HQCKEMGenerator;
 import org.bouncycastle.pqc.crypto.hqc.HQCParameters;
-import org.bouncycastle.pqc.jcajce.provider.util.WrapUtil;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Exceptions;
 import org.bouncycastle.util.Strings;
@@ -119,7 +118,7 @@ class HQCCipherSpi extends CipherSpi {
          }
 
          this.wrapKey = (BCHQCPublicKey)var2;
-         this.kemGen = new HQCKEMGenerator(CryptoServicesRegistrar.getSecureRandom(var4));
+         this.kemGen = new HQCKEMGenerator(var4);
       } else {
          if (var1 != 4) {
             throw new InvalidParameterException("Cipher only valid for wrapping/unwrapping");

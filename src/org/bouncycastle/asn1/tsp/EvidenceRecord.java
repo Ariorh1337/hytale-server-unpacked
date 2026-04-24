@@ -15,7 +15,7 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 public class EvidenceRecord extends ASN1Object {
    private static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.11.0.2.1");
-   private ASN1Integer version = new ASN1Integer(1L);
+   private ASN1Integer version = ASN1Integer.ONE;
    private ASN1Sequence digestAlgorithms;
    private CryptoInfos cryptoInfos;
    private EncryptionInfo encryptionInfo;

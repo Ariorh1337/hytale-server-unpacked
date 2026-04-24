@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.plugin;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.codec.ExtraInfo;
@@ -14,6 +15,7 @@ import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import com.hypixel.hytale.metrics.MetricsRegistry;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
@@ -24,6 +26,7 @@ import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.plugin.commands.PluginCommand;
 import com.hypixel.hytale.server.core.plugin.event.PluginSetupEvent;
 import com.hypixel.hytale.server.core.plugin.pending.PendingLoadJavaPlugin;
@@ -62,6 +65,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -87,6 +91,7 @@ public class PluginManager {
    private final Map<PluginIdentifier, PluginBase> plugins = new Object2ObjectLinkedOpenHashMap<>();
    private final Map<Path, PluginClassLoader> classLoaders = new ConcurrentHashMap<>();
    private final List<PluginIdentifier> outdatedPlugins = new ArrayList<>();
+   private final List<PluginManager.ClasspathAssetPack> classpathAssetPacks = new CopyOnWriteArrayList<>();
    private final boolean loadExternalPlugins = true;
    @Nonnull
    private PluginState state = PluginState.NONE;
@@ -195,7 +200,7 @@ public class PluginManager {
                event -> {
                   PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
                   if (playerRef != null) {
-                     if (playerRef.hasPermission("hytale.mods.outdated.notify")) {
+                     if (playerRef.hasPermission(HytalePermissions.MODS_OUTDATED_NOTIFY)) {
                         StringBuilder modsList = new StringBuilder();
 
                         for (PluginIdentifier id : this.outdatedPlugins) {
@@ -215,7 +220,10 @@ public class PluginManager {
       }
 
       List<PluginIdentifier> modOrder = List.of(HytaleServer.get().getConfig().getModLoadOrder());
-      this.loadOrder = Mod.calculateLoadOrder(pending, pluginIdentifier -> AssetModule.get().getAssetPack(pluginIdentifier.toString()) != null, modOrder);
+      this.loadOrder = Mod.calculateLoadOrder(pending, (pluginIdentifier, range) -> {
+         AssetPack pack = AssetModule.get().getAssetPack(pluginIdentifier.toString());
+         return pack != null && pack.getManifest().getVersion().satisfies(range);
+      }, modOrder);
 
       for (PendingLoadPlugin pendingLoadPlugin : this.loadOrder) {
          if (pendingLoadPlugin instanceof PendingLoadJavaPlugin javaPlugin && javaPlugin.isCoreMod() && !"Hytale".equals(javaPlugin.getIdentifier().getGroup())
@@ -249,13 +257,17 @@ public class PluginManager {
                   preLoadFutures.add(future);
                }
             } catch (ClassNotFoundException e) {
-               LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s. Failed to find main class!", pendingLoadPlugin.getPath());
+               LOGGER.at(Level.SEVERE)
+                  .withCause(wrapIfThirdParty(pendingLoadPlugin, e))
+                  .log("Failed to load plugin %s. Failed to find main class!", pendingLoadPlugin.getPath());
                failedBootPlugins.add(pendingLoadPlugin.getIdentifier());
             } catch (NoSuchMethodException e) {
-               LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s. Requires default constructor!", pendingLoadPlugin.getPath());
+               LOGGER.at(Level.SEVERE)
+                  .withCause(wrapIfThirdParty(pendingLoadPlugin, e))
+                  .log("Failed to load plugin %s. Requires default constructor!", pendingLoadPlugin.getPath());
                failedBootPlugins.add(pendingLoadPlugin.getIdentifier());
             } catch (Throwable e) {
-               LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s", pendingLoadPlugin.getPath());
+               LOGGER.at(Level.SEVERE).withCause(wrapIfThirdParty(pendingLoadPlugin, e)).log("Failed to load plugin %s", pendingLoadPlugin.getPath());
                failedBootPlugins.add(pendingLoadPlugin.getIdentifier());
             }
          }
@@ -577,6 +589,10 @@ public class PluginManager {
                      }
 
                      LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
+                     if (manifest.includesAssetPack() && plugin.getPath() != null) {
+                        this.classpathAssetPacks.add(new PluginManager.ClasspathAssetPack(plugin.getPath(), manifest));
+                     }
+
                      if (this.canLoadOnBoot(plugin)) {
                         loadPendingPlugin(pending, plugin);
                      } else {
@@ -609,6 +625,10 @@ public class PluginManager {
                   for (PluginManifest manifest : manifests) {
                      PendingLoadJavaPlugin plugin = new PendingLoadJavaPlugin(path, manifest, pluginClassLoader);
                      LOGGER.at(Level.INFO).log("- %s", plugin.getIdentifier());
+                     if (manifest.includesAssetPack() && path != null) {
+                        this.classpathAssetPacks.add(new PluginManager.ClasspathAssetPack(path, manifest));
+                     }
+
                      if (this.canLoadOnBoot(plugin)) {
                         loadPendingPlugin(pending, plugin);
                      } else {
@@ -652,6 +672,54 @@ public class PluginManager {
       return plugin != null && plugin.getManifest().getVersion().satisfies(range);
    }
 
+   @Nonnull
+   public List<PluginManager.ClasspathAssetPack> consumeClasspathAssetPacks() {
+      List<PluginManager.ClasspathAssetPack> packs = List.copyOf(this.classpathAssetPacks);
+      this.classpathAssetPacks.clear();
+      return packs;
+   }
+
+   private boolean registerAssetPackIfNeeded(@Nonnull PendingLoadPlugin pendingLoadPlugin) {
+      PluginManifest manifest = pendingLoadPlugin.getManifest();
+      if (!manifest.includesAssetPack()) {
+         return true;
+      }
+
+      Path path = pendingLoadPlugin.getPath();
+      if (path == null) {
+         return true;
+      }
+
+      AssetModule assetModule = AssetModule.get();
+      if (assetModule == null) {
+         return true;
+      }
+
+      String id = new PluginIdentifier(manifest).toString();
+
+      try {
+         return assetModule.registerPack(id, path, manifest, AssetPack.PackSource.RUNTIME);
+      } catch (Exception e) {
+         LOGGER.at(Level.SEVERE).withCause(e).log("Failed to register asset pack for plugin %s", pendingLoadPlugin.getPath());
+         return false;
+      }
+   }
+
+   private void unregisterAssetPackIfNeeded(@Nonnull JavaPlugin plugin) {
+      if (plugin.getManifest().includesAssetPack()) {
+         AssetModule assetModule = AssetModule.get();
+         if (assetModule != null) {
+            String id = new PluginIdentifier(plugin.getManifest()).toString();
+            AssetPack pack = assetModule.getAssetPack(id);
+            if (pack != null) {
+               if (pack.getPackLocation().equals(plugin.getFile())) {
+                  assetModule.unregisterPack(id);
+               }
+            }
+         }
+      }
+   }
+
    public boolean reload(@Nonnull PluginIdentifier identifier) {
       boolean result = this.unload(identifier) && this.load(identifier);
       this.pluginListPageManager.notifyPluginChange(this.plugins, identifier);
@@ -669,6 +737,7 @@ public class PluginManager {
             HytaleServer.get().doneStop(plugin);
             this.plugins.remove(identifier);
             if (plugin instanceof JavaPlugin javaPlugin) {
+               this.unregisterAssetPackIfNeeded(javaPlugin);
                this.unloadJavaPlugin(javaPlugin);
             }
 
@@ -847,13 +916,29 @@ public class PluginManager {
 
          CompletableFuture<Void> preload = plugin.preLoad();
          if (preload == null) {
-            boolean result = this.setup(plugin) && this.start(plugin);
+            if (!this.setup(plugin)) {
+               this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
+               return false;
+            }
+
+            if (!this.registerAssetPackIfNeeded(pendingLoadPlugin)) {
+               plugin.shutdown0(false);
+               this.plugins.remove(plugin.getIdentifier());
+               this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
+               return false;
+            }
+
+            boolean result = this.start(plugin);
             this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
             return result;
          }
 
          preload.thenAccept(v -> {
             if (!this.setup(plugin)) {
+               this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
+            } else if (!this.registerAssetPackIfNeeded(pendingLoadPlugin)) {
+               plugin.shutdown0(false);
+               this.plugins.remove(plugin.getIdentifier());
                this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
             } else if (!this.start(plugin)) {
                this.pluginListPageManager.notifyPluginChange(this.plugins, plugin.getIdentifier());
@@ -863,14 +948,22 @@ public class PluginManager {
          });
          this.pluginListPageManager.notifyPluginChange(this.plugins, pendingLoadPlugin.getIdentifier());
       } catch (ClassNotFoundException e) {
-         LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s. Failed to find main class!", pendingLoadPlugin.getPath());
+         LOGGER.at(Level.SEVERE)
+            .withCause(wrapIfThirdParty(pendingLoadPlugin, e))
+            .log("Failed to load plugin %s. Failed to find main class!", pendingLoadPlugin.getPath());
       } catch (NoSuchMethodException e) {
-         LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s. Requires default constructor!", pendingLoadPlugin.getPath());
+         LOGGER.at(Level.SEVERE)
+            .withCause(wrapIfThirdParty(pendingLoadPlugin, e))
+            .log("Failed to load plugin %s. Requires default constructor!", pendingLoadPlugin.getPath());
       } catch (Throwable e) {
-         LOGGER.at(Level.SEVERE).withCause(e).log("Failed to load plugin %s", pendingLoadPlugin.getPath());
+         LOGGER.at(Level.SEVERE).withCause(wrapIfThirdParty(pendingLoadPlugin, e)).log("Failed to load plugin %s", pendingLoadPlugin.getPath());
       }
 
       return false;
+   }
+
+   private static Throwable wrapIfThirdParty(@Nonnull PendingLoadPlugin pendingLoadPlugin, @Nonnull Throwable t) {
+      return pendingLoadPlugin.isCoreMod() ? t : new SkipSentryException(t);
    }
 
    private boolean setup(@Nonnull PluginBase plugin) {
@@ -963,6 +1056,9 @@ public class PluginManager {
 
    public ComponentType<EntityStore, PluginListPageManager.SessionSettings> getSessionSettingsComponentType() {
       return this.sessionSettingsComponentType;
+   }
+
+   public record ClasspathAssetPack(@Nonnull Path path, @Nonnull PluginManifest manifest) {
    }
 
    public static class PluginBridgeClassLoader extends ClassLoader {

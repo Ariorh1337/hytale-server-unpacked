@@ -23,8 +23,6 @@ import org.bouncycastle.pqc.asn1.SPHINCS256KeyParams;
 import org.bouncycastle.pqc.asn1.XMSSKeyParams;
 import org.bouncycastle.pqc.asn1.XMSSMTKeyParams;
 import org.bouncycastle.pqc.asn1.XMSSPublicKey;
-import org.bouncycastle.pqc.crypto.bike.BIKEParameters;
-import org.bouncycastle.pqc.crypto.bike.BIKEPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.cmce.CMCEParameters;
 import org.bouncycastle.pqc.crypto.cmce.CMCEPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumParameters;
@@ -46,14 +44,12 @@ import org.bouncycastle.pqc.crypto.mlkem.MLKEMPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.newhope.NHPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.ntru.NTRUParameters;
 import org.bouncycastle.pqc.crypto.ntru.NTRUPublicKeyParameters;
+import org.bouncycastle.pqc.crypto.ntruplus.NTRUPlusParameters;
+import org.bouncycastle.pqc.crypto.ntruplus.NTRUPlusPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.ntruprime.NTRULPRimeParameters;
 import org.bouncycastle.pqc.crypto.ntruprime.NTRULPRimePublicKeyParameters;
 import org.bouncycastle.pqc.crypto.ntruprime.SNTRUPrimeParameters;
 import org.bouncycastle.pqc.crypto.ntruprime.SNTRUPrimePublicKeyParameters;
-import org.bouncycastle.pqc.crypto.picnic.PicnicParameters;
-import org.bouncycastle.pqc.crypto.picnic.PicnicPublicKeyParameters;
-import org.bouncycastle.pqc.crypto.rainbow.RainbowParameters;
-import org.bouncycastle.pqc.crypto.rainbow.RainbowPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.saber.SABERParameters;
 import org.bouncycastle.pqc.crypto.saber.SABERPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.slhdsa.SLHDSAParameters;
@@ -61,12 +57,18 @@ import org.bouncycastle.pqc.crypto.slhdsa.SLHDSAPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.snova.SnovaParameters;
 import org.bouncycastle.pqc.crypto.snova.SnovaPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.sphincs.SPHINCSPublicKeyParameters;
-import org.bouncycastle.pqc.crypto.sphincsplus.SPHINCSPlusParameters;
-import org.bouncycastle.pqc.crypto.sphincsplus.SPHINCSPlusPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.xmss.XMSSMTParameters;
 import org.bouncycastle.pqc.crypto.xmss.XMSSMTPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.xmss.XMSSParameters;
 import org.bouncycastle.pqc.crypto.xmss.XMSSPublicKeyParameters;
+import org.bouncycastle.pqc.legacy.bike.BIKEParameters;
+import org.bouncycastle.pqc.legacy.bike.BIKEPublicKeyParameters;
+import org.bouncycastle.pqc.legacy.picnic.PicnicParameters;
+import org.bouncycastle.pqc.legacy.picnic.PicnicPublicKeyParameters;
+import org.bouncycastle.pqc.legacy.rainbow.RainbowParameters;
+import org.bouncycastle.pqc.legacy.rainbow.RainbowPublicKeyParameters;
+import org.bouncycastle.pqc.legacy.sphincsplus.SPHINCSPlusParameters;
+import org.bouncycastle.pqc.legacy.sphincsplus.SPHINCSPlusPublicKeyParameters;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Pack;
 
@@ -325,6 +327,9 @@ public class PublicKeyFactory {
       converters.put(BCObjectIdentifiers.snova_75_33_2_ssk, new PublicKeyFactory.SnovaConverter());
       converters.put(BCObjectIdentifiers.snova_75_33_2_shake_esk, new PublicKeyFactory.SnovaConverter());
       converters.put(BCObjectIdentifiers.snova_75_33_2_shake_ssk, new PublicKeyFactory.SnovaConverter());
+      converters.put(BCObjectIdentifiers.ntruplus768, new PublicKeyFactory.NTRUPlusConverter());
+      converters.put(BCObjectIdentifiers.ntruplus864, new PublicKeyFactory.NTRUPlusConverter());
+      converters.put(BCObjectIdentifiers.ntruplus1152, new PublicKeyFactory.NTRUPlusConverter());
    }
 
    private static class BIKEConverter extends PublicKeyFactory.SubjectPublicKeyInfoConverter {
@@ -527,6 +532,18 @@ public class PublicKeyFactory {
          byte[] var3 = ASN1OctetString.getInstance(var1.parsePublicKey()).getOctets();
          NTRULPRimeParameters var4 = Utils.ntrulprimeParamsLookup(var1.getAlgorithm().getAlgorithm());
          return new NTRULPRimePublicKeyParameters(var4, var3);
+      }
+   }
+
+   private static class NTRUPlusConverter extends PublicKeyFactory.SubjectPublicKeyInfoConverter {
+      private NTRUPlusConverter() {
+      }
+
+      @Override
+      AsymmetricKeyParameter getPublicKeyParameters(SubjectPublicKeyInfo var1, Object var2) throws IOException {
+         byte[] var3 = ASN1OctetString.getInstance(var1.parsePublicKey()).getOctets();
+         NTRUPlusParameters var4 = Utils.ntruPlusParamsLookup(var1.getAlgorithm().getAlgorithm());
+         return new NTRUPlusPublicKeyParameters(var4, var3);
       }
    }
 

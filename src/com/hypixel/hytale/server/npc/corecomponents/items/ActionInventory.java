@@ -3,10 +3,8 @@ package com.hypixel.hytale.server.npc.corecomponents.items;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
@@ -63,95 +61,106 @@ public class ActionInventory extends ActionBase {
       Ref<EntityStore> targetRef = this.useTarget ? (positionProvider != null ? positionProvider.getTarget() : null) : ref;
       if (targetRef == null) {
          return false;
-      } else if (!(EntityUtils.getEntity(targetRef, store) instanceof LivingEntity livingEntity)) {
-         return false;
-      } else {
-         Inventory var15 = livingEntity.getInventory();
-         if (this.operation == ActionInventory.Operation.ClearHeldItem) {
-            InventoryHelper.clearItemInHand(targetRef, var15, (byte)-1, store);
-            return true;
-         }
+      }
 
-         if (this.operation == ActionInventory.Operation.RemoveHeldItem) {
-            InventoryHelper.removeItemInHand(var15, this.count);
-            return true;
-         }
+      if (this.operation == ActionInventory.Operation.ClearHeldItem) {
+         InventoryHelper.clearItemInHand(targetRef, (byte)-1, store);
+         return true;
+      }
 
-         if (this.operation != ActionInventory.Operation.EquipHotbar || this.item != null && !this.item.isEmpty()) {
-            if (this.operation != ActionInventory.Operation.EquipOffHand || this.item != null && !this.item.isEmpty()) {
-               String itemStackKey = this.item;
-               if (itemStackKey != null && !"Empty".equals(itemStackKey) && !"Unknown".equals(itemStackKey) && ItemModule.exists(itemStackKey)) {
-                  CombinedItemContainer combinedStorage = InventoryComponent.getCombined(store, targetRef, InventoryComponent.HOTBAR_FIRST);
-                  ItemStack itemStack = new ItemStack(itemStackKey, this.count);
-                  switch (this.operation) {
-                     case Add:
-                        if (this.count > 0) {
-                           combinedStorage.addItemStack(itemStack);
-                        }
-                        break;
-                     case Remove:
-                        if (this.count > 0) {
-                           combinedStorage.removeItemStack(itemStack);
-                        }
-                        break;
-                     case Equip:
-                        Item item = itemStack.getItem();
-                        if (item.getArmor() != null) {
-                           InventoryHelper.useArmor(var15.getArmor(), itemStack);
-                        } else {
-                           InventoryHelper.useItem(targetRef, var15, item.getId(), store);
-                        }
-                     case ClearHeldItem:
-                     case RemoveHeldItem:
-                     default:
-                        break;
-                     case SetHotbar:
-                        if (InventoryHelper.checkHotbarSlot(var15, this.slot)) {
-                           var15.getHotbar().setItemStackForSlot(this.slot, itemStack);
-                        }
-                        break;
-                     case EquipHotbar:
-                        if (InventoryHelper.checkHotbarSlot(var15, this.slot)) {
-                           var15.getHotbar().setItemStackForSlot(this.slot, itemStack);
-                        }
+      if (this.operation == ActionInventory.Operation.RemoveHeldItem) {
+         InventoryHelper.removeItemInHand(targetRef, store, this.count);
+         return true;
+      }
 
-                        if (var15.getActiveHotbarSlot() != this.slot && InventoryHelper.checkHotbarSlot(var15, this.slot)) {
-                           var15.setActiveHotbarSlot(targetRef, this.slot, store);
+      if (this.operation != ActionInventory.Operation.EquipHotbar || this.item != null && !this.item.isEmpty()) {
+         if (this.operation != ActionInventory.Operation.EquipOffHand || this.item != null && !this.item.isEmpty()) {
+            String itemStackKey = this.item;
+            if (itemStackKey != null && !"Empty".equals(itemStackKey) && !"Unknown".equals(itemStackKey) && ItemModule.exists(itemStackKey)) {
+               CombinedItemContainer combinedStorage = InventoryComponent.getCombined(store, targetRef, InventoryComponent.HOTBAR_FIRST);
+               ItemStack itemStack = new ItemStack(itemStackKey, this.count);
+               switch (this.operation) {
+                  case Add:
+                     if (this.count > 0) {
+                        combinedStorage.addItemStack(itemStack);
+                     }
+                     break;
+                  case Remove:
+                     if (this.count > 0) {
+                        combinedStorage.removeItemStack(itemStack);
+                     }
+                     break;
+                  case Equip:
+                     Item item = itemStack.getItem();
+                     if (item.getArmor() != null) {
+                        InventoryComponent.Armor armorComponent = store.getComponent(targetRef, InventoryComponent.Armor.getComponentType());
+                        if (armorComponent != null) {
+                           InventoryHelper.useArmor(armorComponent.getInventory(), itemStack);
                         }
-                        break;
-                     case SetOffHand:
-                        if (InventoryHelper.checkOffHandSlot(var15, this.slot)) {
-                           var15.getUtility().setItemStackForSlot(this.slot, itemStack);
+                     } else {
+                        InventoryHelper.useItem(targetRef, item.getId(), store);
+                     }
+                  case ClearHeldItem:
+                  case RemoveHeldItem:
+                  default:
+                     break;
+                  case SetHotbar:
+                     if (InventoryHelper.checkHotbarSlot(targetRef, this.slot, store)) {
+                        InventoryComponent.Hotbar hotbarComponent = store.getComponent(targetRef, InventoryComponent.Hotbar.getComponentType());
+                        if (hotbarComponent != null) {
+                           hotbarComponent.getInventory().setItemStackForSlot(this.slot, itemStack);
                         }
-                        break;
-                     case EquipOffHand:
-                        if (InventoryHelper.checkOffHandSlot(var15, this.slot)) {
-                           var15.getUtility().setItemStackForSlot(this.slot, itemStack);
+                     }
+                     break;
+                  case EquipHotbar:
+                     if (InventoryHelper.checkHotbarSlot(targetRef, this.slot, store)) {
+                        InventoryComponent.Hotbar hotbarComponent = store.getComponent(targetRef, InventoryComponent.Hotbar.getComponentType());
+                        if (hotbarComponent != null) {
+                           hotbarComponent.getInventory().setItemStackForSlot(this.slot, itemStack);
+                           if (hotbarComponent.getActiveSlot() != this.slot) {
+                              hotbarComponent.setActiveSlot(this.slot, targetRef, store);
+                           }
                         }
+                     }
+                     break;
+                  case SetOffHand:
+                     if (InventoryHelper.checkOffHandSlot(targetRef, this.slot, store)) {
+                        InventoryComponent.Utility utilityComponent = store.getComponent(targetRef, InventoryComponent.Utility.getComponentType());
+                        if (utilityComponent != null) {
+                           utilityComponent.getInventory().setItemStackForSlot(this.slot, itemStack);
+                        }
+                     }
+                     break;
+                  case EquipOffHand:
+                     if (InventoryHelper.checkOffHandSlot(targetRef, this.slot, store)) {
+                        InventoryComponent.Utility utilityComponent = store.getComponent(targetRef, InventoryComponent.Utility.getComponentType());
+                        if (utilityComponent != null) {
+                           utilityComponent.getInventory().setItemStackForSlot(this.slot, itemStack);
+                        }
+                     }
 
-                        InventoryHelper.setOffHandSlot(targetRef, var15, this.slot, store);
-                  }
-
-                  return true;
-               } else {
-                  NPCPlugin.get().getLogger().at(Level.WARNING).log("Unknown item %s in Inventory action", this.item);
-                  return true;
+                     InventoryHelper.setOffHandSlot(targetRef, this.slot, store);
                }
+
+               return true;
             } else {
-               InventoryHelper.setOffHandSlot(targetRef, var15, this.slot, store);
+               NPCPlugin.get().getLogger().at(Level.WARNING).log("Unknown item %s in Inventory action", this.item);
                return true;
             }
          } else {
-            if (var15.getActiveHotbarSlot() == this.slot) {
-               return true;
-            }
-
-            if (InventoryHelper.checkHotbarSlot(var15, this.slot)) {
-               var15.setActiveHotbarSlot(targetRef, this.slot, store);
-            }
-
+            InventoryHelper.setOffHandSlot(targetRef, this.slot, store);
             return true;
          }
+      } else {
+         if (InventoryUtils.getActiveSlot(targetRef, -1, store) == this.slot) {
+            return true;
+         }
+
+         if (InventoryHelper.checkHotbarSlot(targetRef, this.slot, store)) {
+            InventoryUtils.setActiveSlot(targetRef, -1, this.slot, store);
+         }
+
+         return true;
       }
    }
 

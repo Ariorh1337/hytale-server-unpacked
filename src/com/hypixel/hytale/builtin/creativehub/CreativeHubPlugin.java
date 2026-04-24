@@ -15,6 +15,9 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -36,6 +39,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -88,7 +92,9 @@ public class CreativeHubPlugin extends JavaPlugin {
    }
 
    @Nonnull
-   public CompletableFuture<World> spawnPermanentWorldFromTemplate(@Nonnull String instanceAssetName, @Nonnull String permanentWorldName) {
+   public CompletableFuture<World> spawnPermanentWorldFromTemplate(
+      @Nonnull String instanceAssetName, @Nonnull String permanentWorldName, @Nullable Consumer<WorldConfig> configCustomizer
+   ) {
       Universe universe = Universe.get();
       World existingWorld = universe.getWorld(permanentWorldName);
       if (existingWorld != null) {
@@ -112,6 +118,10 @@ public class CreativeHubPlugin extends JavaPlugin {
                   }
 
                   config.getPluginConfig().remove(InstanceWorldConfig.class);
+                  if (configCustomizer != null) {
+                     configCustomizer.accept(config);
+                  }
+
                   config.markChanged();
                   long start = System.nanoTime();
                   this.getLogger().at(Level.INFO).log("Copying instance template %s to permanent world %s", instanceAssetName, permanentWorldName);
@@ -184,7 +194,7 @@ public class CreativeHubPlugin extends JavaPlugin {
             if (parentHubConfig != null && parentHubConfig.getStartupInstance() != null && targetWorld == null) {
                event.setWorld(parentWorld);
                targetWorld = parentWorld;
-               holder.removeComponent(TransformComponent.getComponentType());
+               holder.tryRemoveComponent(TransformComponent.getComponentType());
             }
          }
       }
@@ -193,6 +203,17 @@ public class CreativeHubPlugin extends JavaPlugin {
          WorldConfig worldConfig = targetWorld.getWorldConfig();
          CreativeHubWorldConfig hubConfig = CreativeHubWorldConfig.get(worldConfig);
          if (hubConfig != null && hubConfig.getStartupInstance() != null) {
+            Player playerComponent = holder.getComponent(Player.getComponentType());
+            if (playerComponent != null) {
+               PlayerConfigData playerConfig = playerComponent.getPlayerConfigData();
+               if (targetWorld.getName().equals(playerConfig.getWorld())) {
+                  PlayerWorldData worldData = playerConfig.getPerWorldData().get(targetWorld.getName());
+                  if (worldData != null && worldData.getLastPosition() != null) {
+                     return;
+                  }
+               }
+            }
+
             PlayerRef playerRef = event.getPlayerRef();
             ISpawnProvider spawnProvider = worldConfig.getSpawnProvider();
             Transform returnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(targetWorld, playerRef.getUuid()) : new Transform();
@@ -204,6 +225,7 @@ public class CreativeHubPlugin extends JavaPlugin {
                CreativeHubEntityConfig hubEntityConfig = CreativeHubEntityConfig.ensureAndGet(holder);
                hubEntityConfig.setParentHubWorldUuid(targetWorld.getWorldConfig().getUuid());
                event.setWorld(hubInstance);
+               holder.tryRemoveComponent(TransformComponent.getComponentType());
             } catch (Exception e) {
                get()
                   .getLogger()

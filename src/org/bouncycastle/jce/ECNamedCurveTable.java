@@ -8,13 +8,7 @@ import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 
 public class ECNamedCurveTable {
    public static ECNamedCurveParameterSpec getParameterSpec(String var0) {
-      ASN1ObjectIdentifier var1;
-      try {
-         var1 = possibleOID(var0) ? new ASN1ObjectIdentifier(var0) : null;
-      } catch (IllegalArgumentException var3) {
-         var1 = null;
-      }
-
+      ASN1ObjectIdentifier var1 = ASN1ObjectIdentifier.tryFromID(var0);
       X9ECParameters var2;
       if (var1 != null) {
          var2 = CustomNamedCurves.getByOID(var1);
@@ -35,14 +29,5 @@ public class ECNamedCurveTable {
 
    public static Enumeration getNames() {
       return org.bouncycastle.asn1.x9.ECNamedCurveTable.getNames();
-   }
-
-   private static boolean possibleOID(String var0) {
-      if (var0.length() >= 3 && var0.charAt(1) == '.') {
-         char var1 = var0.charAt(0);
-         return var1 >= '0' && var1 <= '2';
-      } else {
-         return false;
-      }
    }
 }

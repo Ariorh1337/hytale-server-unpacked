@@ -46,10 +46,8 @@ import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManag
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.ecs.ChangeGameModeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
@@ -66,8 +64,6 @@ import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTracker
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
-import com.hypixel.hytale.server.core.permissions.PermissionHolder;
-import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -93,7 +89,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
-public class Player extends LivingEntity implements PermissionHolder, MetricProvider {
+public class Player extends LivingEntity implements MetricProvider {
    @Nonnull
    public static final MetricsRegistry<Player> METRICS_REGISTRY = new MetricsRegistry<Player>()
       .register("Uuid", Entity::getUuid, Codec.UUID_STRING)
@@ -235,7 +231,7 @@ public class Player extends LivingEntity implements PermissionHolder, MetricProv
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
-      this.addLocationChange(ref, locX - position.x(), locY - position.y(), locZ - position.z(), componentAccessor);
+      addLocationChange(ref, locX - position.x(), locY - position.y(), locZ - position.z(), componentAccessor);
       super.moveTo(ref, locX, locY, locZ, componentAccessor);
       this.windowManager.validateWindows(ref, componentAccessor);
    }
@@ -250,12 +246,7 @@ public class Player extends LivingEntity implements PermissionHolder, MetricProv
       this.data.markChanged();
    }
 
-   @Override
-   public void unloadFromWorld() {
-      super.unloadFromWorld();
-   }
-
-   public void applyMovementStates(
+   public static void applyMovementStates(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull SavedMovementStates savedMovementStates,
       @Nonnull MovementStates movementStates,
@@ -398,19 +389,7 @@ public class Player extends LivingEntity implements PermissionHolder, MetricProv
       playerRefComponent.getPacketHandler().writeNoCache(new SetBlockPlacementOverride(overrideBlockPlacementRestrictions));
    }
 
-   @Deprecated(forRemoval = true)
-   @Override
-   public boolean hasPermission(@Nonnull String id) {
-      return PermissionsModule.get().hasPermission(this.getUuid(), id);
-   }
-
-   @Deprecated(forRemoval = true)
-   @Override
-   public boolean hasPermission(@Nonnull String id, boolean def) {
-      return PermissionsModule.get().hasPermission(this.getUuid(), id, def);
-   }
-
-   public void addLocationChange(
+   public static void addLocationChange(
       @Nonnull Ref<EntityStore> ref, double deltaX, double deltaY, double deltaZ, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       CollisionResultComponent collisionResultComponent = componentAccessor.getComponent(ref, CollisionResultComponent.getComponentType());
@@ -663,29 +642,6 @@ public class Player extends LivingEntity implements PermissionHolder, MetricProv
       return Math.min(this.clientViewRadius, HytaleServer.get().getConfig().getMaxViewRadius());
    }
 
-   @Nullable
-   @Override
-   public ItemStackSlotTransaction updateItemStackDurability(
-      @Nonnull Ref<EntityStore> ref,
-      @Nonnull ItemStack itemStack,
-      ItemContainer container,
-      int slotId,
-      double durabilityChange,
-      @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      ItemStackSlotTransaction transaction = super.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
-      if (transaction != null && transaction.getSlotAfter().isBroken() && !itemStack.isBroken()) {
-         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-         assert playerRefComponent != null;
-         Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
-         playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBroken").param("itemName", itemNameMessage).color("#ff5555"));
-         int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
-         SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
-      }
-
-      return transaction;
-   }
-
    @Nonnull
    @Override
    public MetricResults toMetricResults() {
@@ -769,21 +725,6 @@ public class Player extends LivingEntity implements PermissionHolder, MetricProv
          movementManager.update(playerRefComponent.getPacketHandler());
       }
 
-      PermissionsModule permissionsModule = PermissionsModule.get();
-      if (oldGameMode != null) {
-         GameModeType oldGameModeType = GameModeType.fromGameMode(oldGameMode);
-
-         for (String group : oldGameModeType.getPermissionGroups()) {
-            permissionsModule.removeUserFromGroup(playerRefComponent.getUuid(), group);
-         }
-      }
-
-      GameModeType gameModeType = GameModeType.fromGameMode(gameMode);
-
-      for (String group : gameModeType.getPermissionGroups()) {
-         permissionsModule.addUserToGroup(playerRefComponent.getUuid(), group);
-      }
-
       if (gameMode == GameMode.Creative) {
          componentAccessor.putComponent(playerRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
       } else {
@@ -833,7 +774,7 @@ public class Player extends LivingEntity implements PermissionHolder, MetricProv
          playerSettings = PlayerSettings.defaults();
       }
 
-      return Inventory.getContainerForItemPickup(ref, stack.getItem(), playerSettings, componentAccessor).addItemStack(stack);
+      return InventoryUtils.getContainerForItemPickup(ref, stack.getItem(), playerSettings, componentAccessor).addItemStack(stack);
    }
 
    @Override

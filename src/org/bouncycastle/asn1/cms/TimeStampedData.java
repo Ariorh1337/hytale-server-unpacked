@@ -18,7 +18,7 @@ public class TimeStampedData extends ASN1Object {
    private Evidence temporalEvidence;
 
    public TimeStampedData(ASN1IA5String var1, MetaData var2, ASN1OctetString var3, Evidence var4) {
-      this.version = new ASN1Integer(1L);
+      this.version = ASN1Integer.ONE;
       this.dataUri = var1;
       this.metaData = var2;
       this.content = var3;

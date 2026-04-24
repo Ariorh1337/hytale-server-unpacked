@@ -126,28 +126,19 @@ public class SpawnBeacon extends Entity {
                      int flockSize = flockDefinition != null ? flockDefinition.pickFlockSize() : 1;
 
                      try {
+                        String mcType = this.spawningContext.activeMotionControllerType;
                         Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get()
-                           .spawnEntity(
-                              store,
-                              roleIndex,
-                              position,
-                              rotation,
-                              this.spawningContext.getModel(),
-                              (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store)
-                           );
+                           .spawnEntity(store, roleIndex, position, rotation, this.spawningContext.getModel(), (_npc, _ref, _store) -> {
+                              _npc.setActiveMotionControllerName(mcType);
+                              postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store);
+                           });
                         Ref<EntityStore> npcRef = npcPair.first();
                         NPCEntity npcComponent = npcPair.second();
                         FlockPlugin.trySpawnFlock(
-                           npcRef,
-                           npcComponent,
-                           roleIndex,
-                           position,
-                           rotation,
-                           flockSize,
-                           flockDefinition,
-                           null,
-                           (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store),
-                           store
+                           npcRef, npcComponent, roleIndex, position, rotation, flockSize, flockDefinition, null, (_npc, _ref, _store) -> {
+                              _npc.setActiveMotionControllerName(mcType);
+                              postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store);
+                           }, store
                         );
                         spawnedCount++;
                      } catch (RuntimeException e) {

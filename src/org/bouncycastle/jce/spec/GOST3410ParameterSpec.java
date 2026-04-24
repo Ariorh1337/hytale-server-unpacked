@@ -15,23 +15,24 @@ public class GOST3410ParameterSpec implements AlgorithmParameterSpec, GOST3410Pa
    private String encryptionParamSetOID;
 
    public GOST3410ParameterSpec(String var1, String var2, String var3) {
-      GOST3410ParamSetParameters var4 = null;
-
-      try {
-         var4 = GOST3410NamedParameters.getByOID(new ASN1ObjectIdentifier(var1));
-      } catch (IllegalArgumentException var7) {
-         ASN1ObjectIdentifier var6 = GOST3410NamedParameters.getOID(var1);
-         if (var6 != null) {
-            var1 = var6.getId();
-            var4 = GOST3410NamedParameters.getByOID(var6);
+      ASN1ObjectIdentifier var4 = ASN1ObjectIdentifier.tryFromID(var1);
+      if (var4 == null) {
+         var4 = GOST3410NamedParameters.getOID(var1);
+         if (var4 != null) {
+            var1 = var4.getId();
          }
       }
 
-      if (var4 == null) {
+      GOST3410ParamSetParameters var5 = null;
+      if (var4 != null) {
+         var5 = GOST3410NamedParameters.getByOID(var4);
+      }
+
+      if (var5 == null) {
          throw new IllegalArgumentException("no key parameter set for passed in name/OID.");
       }
 
-      this.keyParameters = new GOST3410PublicKeyParameterSetSpec(var4.getP(), var4.getQ(), var4.getA());
+      this.keyParameters = new GOST3410PublicKeyParameterSetSpec(var5.getP(), var5.getQ(), var5.getA());
       this.keyParamSetOID = var1;
       this.digestParamSetOID = var2;
       this.encryptionParamSetOID = var3;

@@ -32,7 +32,6 @@ import com.hypixel.hytale.protocol.EquipmentUpdate;
 import com.hypixel.hytale.protocol.IntangibleUpdate;
 import com.hypixel.hytale.protocol.InteractableUpdate;
 import com.hypixel.hytale.protocol.InvulnerableUpdate;
-import com.hypixel.hytale.protocol.ItemArmorSlot;
 import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.ModelUpdate;
 import com.hypixel.hytale.protocol.NameplateUpdate;
@@ -48,7 +47,6 @@ import com.hypixel.hytale.protocol.packets.player.SetBlockPlacementOverride;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
-import com.hypixel.hytale.server.core.asset.type.gameplay.PlayerConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.SpawnConfig;
 import com.hypixel.hytale.server.core.asset.type.particle.config.WorldParticle;
 import com.hypixel.hytale.server.core.entity.Entity;
@@ -60,10 +58,9 @@ import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementMa
 import com.hypixel.hytale.server.core.entity.entities.player.pages.RespawnPage;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.event.events.player.RemovedPlayerFromWorldEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
@@ -90,7 +87,6 @@ import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -387,11 +383,10 @@ public class PlayerSystems {
                backpack != null ? backpack.getInventory().toPacket() : null
             )
          );
-         Inventory playerInventory = playerComponent.getInventory();
-         playerConnection.writeNoCache(new SetActiveSlot(-1, playerInventory.getActiveHotbarSlot()));
-         playerConnection.writeNoCache(new SetActiveSlot(-5, playerInventory.getActiveUtilitySlot()));
-         playerConnection.writeNoCache(new SetActiveSlot(-8, playerInventory.getActiveToolsSlot()));
-         if (Inventory.containsBrokenItem(ref, commandBuffer)) {
+         playerConnection.writeNoCache(new SetActiveSlot(-1, hotbar != null ? hotbar.getActiveSlot() : -1));
+         playerConnection.writeNoCache(new SetActiveSlot(-5, utility != null ? utility.getActiveSlot() : -1));
+         playerConnection.writeNoCache(new SetActiveSlot(-8, tool != null ? tool.getActiveSlot() : -1));
+         if (InventoryUtils.containsBrokenItem(ref, commandBuffer)) {
             playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
          }
 
@@ -569,11 +564,6 @@ public class PlayerSystems {
             throw new IllegalArgumentException("Viewer is missing NetworkId component");
          }
 
-         Player playerComponent = store.getComponent(viewerRef, Player.getComponentType());
-         if (playerComponent == null) {
-            throw new IllegalArgumentException("Viewer is missing Player component");
-         }
-
          EntityUpdate entityUpdate = new EntityUpdate();
          entityUpdate.networkId = networkIdComponent.getId();
          ObjectArrayList<ComponentUpdate> list = new ObjectArrayList<>();
@@ -615,40 +605,10 @@ public class PlayerSystems {
          list.add(update);
          PlayerSkinComponent playerSkinComponent = store.getComponent(viewerRef, PlayerSkinComponent.getComponentType());
          list.add(new PlayerSkinUpdate(playerSkinComponent != null ? playerSkinComponent.getPlayerSkin() : null));
-         Inventory inventory = playerComponent.getInventory();
-         EquipmentUpdate updatex = new EquipmentUpdate();
-         ItemContainer armor = inventory.getArmor();
-         updatex.armorIds = new String[armor.getCapacity()];
-         Arrays.fill(updatex.armorIds, "");
-         armor.forEachWithMeta((slot, itemStack, armorIds) -> armorIds[slot] = itemStack.getItemId(), updatex.armorIds);
          PlayerSettings playerSettingsComponent = store.getComponent(viewerRef, PlayerSettings.getComponentType());
-         if (playerSettingsComponent != null) {
-            PlayerConfig.ArmorVisibilityOption armorVisibilityOption = store.getExternalData()
-               .getWorld()
-               .getGameplayConfig()
-               .getPlayerConfig()
-               .getArmorVisibilityOption();
-            if (armorVisibilityOption.canHideHelmet() && playerSettingsComponent.hideHelmet()) {
-               updatex.armorIds[ItemArmorSlot.Head.ordinal()] = "";
-            }
-
-            if (armorVisibilityOption.canHideCuirass() && playerSettingsComponent.hideCuirass()) {
-               updatex.armorIds[ItemArmorSlot.Chest.ordinal()] = "";
-            }
-
-            if (armorVisibilityOption.canHideGauntlets() && playerSettingsComponent.hideGauntlets()) {
-               updatex.armorIds[ItemArmorSlot.Hands.ordinal()] = "";
-            }
-
-            if (armorVisibilityOption.canHidePants() && playerSettingsComponent.hidePants()) {
-               updatex.armorIds[ItemArmorSlot.Legs.ordinal()] = "";
-            }
-         }
-
-         ItemStack itemInHand = inventory.getItemInHand();
-         updatex.rightHandItemId = itemInHand != null ? itemInHand.getItemId() : "Empty";
-         ItemStack utilityItem = inventory.getUtilityItem();
-         updatex.leftHandItemId = utilityItem != null ? utilityItem.getItemId() : "Empty";
+         InventoryComponent.Armor armorComponent = store.getComponent(viewerRef, InventoryComponent.Armor.getComponentType());
+         InventoryComponent.Utility utilityComponent = store.getComponent(viewerRef, InventoryComponent.Utility.getComponentType());
+         EquipmentUpdate updatex = InventoryUtils.createEquipmentUpdate(viewerRef, store, playerSettingsComponent, armorComponent, utilityComponent);
          list.add(updatex);
          TransformComponent transformComponent = store.getComponent(viewerRef, TransformComponent.getComponentType());
          HeadRotation headRotationComponent = store.getComponent(viewerRef, HeadRotation.getComponentType());

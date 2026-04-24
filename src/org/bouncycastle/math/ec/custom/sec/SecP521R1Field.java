@@ -51,14 +51,7 @@ public class SecP521R1Field {
    }
 
    public static int isZero(int[] var0) {
-      int var1 = 0;
-
-      for (int var2 = 0; var2 < 17; var2++) {
-         var1 |= var0[var2];
-      }
-
-      var1 = var1 >>> 1 | var1 & 1;
-      return var1 - 1 >> 31;
+      return Nat.equalToZero(17, var0);
    }
 
    public static void multiply(int[] var0, int[] var1, int[] var2) {

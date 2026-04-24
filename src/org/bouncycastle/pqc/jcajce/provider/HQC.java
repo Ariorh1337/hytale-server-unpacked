@@ -3,6 +3,7 @@ package org.bouncycastle.pqc.jcajce.provider;
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers;
 import org.bouncycastle.jcajce.provider.config.ConfigurableProvider;
 import org.bouncycastle.jcajce.provider.util.AsymmetricAlgorithmProvider;
+import org.bouncycastle.jcajce.util.SpiUtil;
 import org.bouncycastle.pqc.jcajce.provider.hqc.HQCKeyFactorySpi;
 
 public class HQC {
@@ -32,9 +33,7 @@ public class HQC {
          this.addKeyGeneratorAlgorithm(var1, "HQC192", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCKeyGeneratorSpi$HQC192", BCObjectIdentifiers.hqc192);
          this.addKeyGeneratorAlgorithm(var1, "HQC256", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCKeyGeneratorSpi$HQC256", BCObjectIdentifiers.hqc256);
          HQCKeyFactorySpi var2 = new HQCKeyFactorySpi();
-         var1.addAlgorithm("Cipher.HQC", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCCipherSpi$Base");
-         var1.addAlgorithm("Alg.Alias.Cipher.HQC", "HQC");
-         var1.addAlgorithm("Alg.Alias.Cipher." + BCObjectIdentifiers.pqc_kem_hqc, "HQC");
+         this.addCipherAlgorithm(var1, "HQC", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCCipherSpi$Base", BCObjectIdentifiers.pqc_kem_hqc);
          this.addCipherAlgorithm(var1, "HQC128", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCCipherSpi$HQC128", BCObjectIdentifiers.hqc128);
          this.addCipherAlgorithm(var1, "HQC192", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCCipherSpi$HQC192", BCObjectIdentifiers.hqc192);
          this.addCipherAlgorithm(var1, "HQC256", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCCipherSpi$HQC256", BCObjectIdentifiers.hqc256);
@@ -42,6 +41,12 @@ public class HQC {
          var1.addKeyInfoConverter(BCObjectIdentifiers.hqc128, var2);
          var1.addKeyInfoConverter(BCObjectIdentifiers.hqc192, var2);
          var1.addKeyInfoConverter(BCObjectIdentifiers.hqc256, var2);
+         if (SpiUtil.hasKEM()) {
+            var1.addAlgorithm("KEM.HQC", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCKEMSpi$HQC");
+            this.addKEMAlgorithm(var1, "HQC-128", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCKEMSpi$HQC128", BCObjectIdentifiers.hqc128);
+            this.addKEMAlgorithm(var1, "HQC-192", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCKEMSpi$HQC192", BCObjectIdentifiers.hqc192);
+            this.addKEMAlgorithm(var1, "HQC-256", "org.bouncycastle.pqc.jcajce.provider.hqc.HQCKEMSpi$HQC256", BCObjectIdentifiers.hqc256);
+         }
       }
    }
 }

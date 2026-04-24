@@ -1,5 +1,7 @@
 package org.bson.internal;
 
+import java.lang.reflect.Type;
+import java.util.List;
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
 import org.bson.codecs.Codec;
@@ -10,11 +12,13 @@ import org.bson.codecs.configuration.CodecRegistry;
 class LazyCodec<T> implements Codec<T> {
    private final CodecRegistry registry;
    private final Class<T> clazz;
+   private final List<Type> types;
    private volatile Codec<T> wrapped;
 
-   LazyCodec(CodecRegistry registry, Class<T> clazz) {
+   LazyCodec(CodecRegistry registry, Class<T> clazz, List<Type> types) {
       this.registry = registry;
       this.clazz = clazz;
+      this.types = types;
    }
 
    @Override
@@ -34,7 +38,11 @@ class LazyCodec<T> implements Codec<T> {
 
    private Codec<T> getWrapped() {
       if (this.wrapped == null) {
-         this.wrapped = this.registry.get(this.clazz);
+         if (this.types == null) {
+            this.wrapped = this.registry.get(this.clazz);
+         } else {
+            this.wrapped = this.registry.get(this.clazz, this.types);
+         }
       }
 
       return this.wrapped;

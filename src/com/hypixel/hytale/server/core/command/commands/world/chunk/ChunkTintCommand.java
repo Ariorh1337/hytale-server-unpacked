@@ -59,6 +59,7 @@ public class ChunkTintCommand extends AbstractPlayerCommand {
 
    public ChunkTintCommand() {
       super("tint", "server.commands.chunk.tint.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new ChunkTintCommand.TintChunkPageCommand());
    }
 

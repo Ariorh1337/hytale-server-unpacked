@@ -352,7 +352,7 @@ public class EthereumIESEngine {
 
          long var4 = var3;
          int var6 = this.digest.getDigestSize();
-         if (var4 > 8589934591L) {
+         if (var4 > 4294967295L * var6) {
             throw new IllegalArgumentException("output length too large");
          }
 

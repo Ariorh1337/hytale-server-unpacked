@@ -129,8 +129,7 @@ public class InteractionSystems {
          PlayerRef playerRefComponent = holder.getComponent(PlayerRef.getComponentType());
          assert playerRefComponent != null;
          holder.addComponent(
-            InteractionModule.get().getInteractionManagerComponent(),
-            new InteractionManager(playerComponent, playerRefComponent, new InteractionSimulationHandler())
+            InteractionModule.get().getInteractionManagerComponent(), new InteractionManager(playerRefComponent, new InteractionSimulationHandler())
          );
       }
 

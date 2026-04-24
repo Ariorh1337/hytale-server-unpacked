@@ -369,7 +369,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       return itemFrom == null || itemFrom.isEmpty();
    }
 
-   public static boolean isStackableWith(@Nullable ItemStack a, ItemStack b) {
+   public static boolean isStackableWith(@Nullable ItemStack a, @Nullable ItemStack b) {
       return a == b || a != null && a.isStackableWith(b);
    }
 

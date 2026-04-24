@@ -25,23 +25,31 @@ import org.bson.json.JsonWriterSettings;
 
 public class BsonDocument extends BsonValue implements Map<String, BsonValue>, Cloneable, Bson, Serializable {
    private static final long serialVersionUID = 1L;
-   private final Map<String, BsonValue> map = new LinkedHashMap<>();
+   private final Map<String, BsonValue> map;
 
    public static BsonDocument parse(String json) {
       return new BsonDocumentCodec().decode(new JsonReader(json), DecoderContext.builder().build());
    }
 
    public BsonDocument(List<BsonElement> bsonElements) {
+      this(bsonElements.size());
+
       for (BsonElement cur : bsonElements) {
          this.put(cur.getName(), cur.getValue());
       }
    }
 
    public BsonDocument(String key, BsonValue value) {
+      this();
       this.put(key, value);
    }
 
+   public BsonDocument(int initialCapacity) {
+      this.map = new LinkedHashMap<>(initialCapacity);
+   }
+
    public BsonDocument() {
+      this.map = new LinkedHashMap<>();
    }
 
    @Override
@@ -268,8 +276,6 @@ public class BsonDocument extends BsonValue implements Map<String, BsonValue>, C
    public BsonValue put(String key, BsonValue value) {
       if (value == null) {
          throw new IllegalArgumentException(String.format("The value for key %s can not be null", key));
-      } else if (key.contains("\u0000")) {
-         throw new BSONException(String.format("BSON cstring '%s' is not valid because it contains a null character at index %d", key, key.indexOf(0)));
       } else {
          return this.map.put(key, value);
       }
@@ -354,7 +360,7 @@ public class BsonDocument extends BsonValue implements Map<String, BsonValue>, C
    }
 
    public BsonDocument clone() {
-      BsonDocument to = new BsonDocument();
+      BsonDocument to = new BsonDocument(this.size());
 
       for (Entry<String, BsonValue> cur : this.entrySet()) {
          switch (cur.getValue().getBsonType()) {

@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.MovementState;
 import com.hypixel.hytale.server.npc.movement.NavState;
 import com.hypixel.hytale.server.npc.movement.Steering;
@@ -20,14 +21,23 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import java.util.EnumSet;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
 public interface MotionController extends DebugSupport.DebugFlagsChangeListener {
+   @Nonnull
    String getType();
 
+   @Nonnull
+   Set<MovementMode> getSupportedMovementModes();
+
+   @Nonnull
+   Set<MovementMode> getDefaultSpawnMovementModes();
+
+   @Nonnull
    Role getRole();
 
    void setRole(Role var1);

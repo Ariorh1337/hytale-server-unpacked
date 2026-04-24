@@ -33,7 +33,7 @@ public class BlockInspectFillerCommand extends AbstractPlayerCommand {
 
    public BlockInspectFillerCommand() {
       super("inspectfiller", "server.commands.block.inspectfiller.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

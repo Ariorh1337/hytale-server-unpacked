@@ -130,14 +130,21 @@ public class PrefabFarmingStageData extends FarmingStageData {
       @Nonnull FastRandom random
    ) {
       return prefabBuffer.forEachRaw(
-         IPrefabBuffer.iterateAllColumns(),
-         (blockX, blockY, blockZ, blockId, chance, holder, supportValue, rotation, filler, t) -> isPrefabBlockIntact(
-            chunkAccessor, worldX, worldY, worldZ, blockX, blockY, blockZ, blockId, rotation, prefabRotation
-         ),
-         (fluidX, fluidY, fluidZ, fluidId, level, o) -> true,
-         null,
-         new PrefabBufferCall(random, prefabRotation)
+         IPrefabBuffer.iterateAllColumns(), (blockX, blockY, blockZ, blockId, chance, holder, supportValue, rotation, filler, t) -> {
+            if (chance < 1.0F) {
+               return true;
+            } else {
+               return filler != 0
+                  ? true
+                  : isPrefabBlockIntact(chunkAccessor, worldX, worldY, worldZ, blockX, blockY, blockZ, blockId, rotation, prefabRotation);
+            }
+         }, (fluidX, fluidY, fluidZ, fluidId, level, o) -> true, null, new PrefabBufferCall(random, prefabRotation)
       );
+   }
+
+   @Override
+   public boolean consumesRemainingTime() {
+      return true;
    }
 
    public IWeightedMap<PrefabFarmingStageData.PrefabStage> getPrefabStages() {
@@ -160,7 +167,6 @@ public class PrefabFarmingStageData extends FarmingStageData {
             .atMostEvery(1, TimeUnit.MINUTES)
             .log("Missing farming block component when applying prefab farming stage at (%d, %d, %d)", x, y, z);
       } else {
-         IPrefabBuffer prefabBuffer = this.getCachedPrefab(x, y, z, farmingBlockComponent.getGeneration());
          BlockSection blockSection = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
          int randomRotation = HashUtil.randomInt(x, y, z, Rotation.VALUES.length);
          RotationTuple yaw = RotationTuple.of(Rotation.VALUES[randomRotation], Rotation.None);
@@ -173,6 +179,7 @@ public class PrefabFarmingStageData extends FarmingStageData {
             int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
             int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
             int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
+            IPrefabBuffer prefabBuffer = this.getCachedPrefab(worldX, worldY, worldZ, farmingBlockComponent.getGeneration());
             if (farmingBlockComponent.getPreviousBlockType() == null) {
                farmingBlockComponent.setPreviousBlockType(BlockType.getAssetMap().getAsset(blockSection.get(x, y, z)).getId());
             }
@@ -181,7 +188,7 @@ public class PrefabFarmingStageData extends FarmingStageData {
             double zLength = prefabBuffer.getMaxZ() - prefabBuffer.getMinZ();
             int prefabRadius = (int)MathUtil.fastFloor(0.5 * Math.sqrt(xLength * xLength + zLength * zLength));
             World world = commandBuffer.getExternalData().getWorld();
-            LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, x, z, prefabRadius);
+            LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, worldX, worldZ, prefabRadius);
             FastRandom random = new FastRandom();
             PrefabRotation prefabRotation = PrefabRotation.fromRotation(yaw.yaw());
             BlockTypeAssetMap<String, BlockType> blockTypeMap = BlockType.getAssetMap();

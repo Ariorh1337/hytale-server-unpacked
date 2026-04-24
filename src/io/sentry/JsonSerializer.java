@@ -74,6 +74,7 @@ public final class JsonSerializer implements ISerializer {
       this.deserializersByClass.put(Device.DeviceOrientation.class, new Device.DeviceOrientation.Deserializer());
       this.deserializersByClass.put(Feedback.class, new Feedback.Deserializer());
       this.deserializersByClass.put(Gpu.class, new Gpu.Deserializer());
+      this.deserializersByClass.put(SentryStackTrace.InstructionAddressAdjustment.class, new SentryStackTrace.InstructionAddressAdjustment.Deserializer());
       this.deserializersByClass.put(MeasurementValue.class, new MeasurementValue.Deserializer());
       this.deserializersByClass.put(Mechanism.class, new Mechanism.Deserializer());
       this.deserializersByClass.put(Message.class, new Message.Deserializer());
@@ -103,6 +104,7 @@ public final class JsonSerializer implements ISerializer {
       this.deserializersByClass.put(SentryLevel.class, new SentryLevel.Deserializer());
       this.deserializersByClass.put(SentryLockReason.class, new SentryLockReason.Deserializer());
       this.deserializersByClass.put(SentryLogEvents.class, new SentryLogEvents.Deserializer());
+      this.deserializersByClass.put(SentryMetricsEvents.class, new SentryMetricsEvents.Deserializer());
       this.deserializersByClass.put(SentryPackage.class, new SentryPackage.Deserializer());
       this.deserializersByClass.put(SentryRuntime.class, new SentryRuntime.Deserializer());
       this.deserializersByClass.put(SentryReplayEvent.class, new SentryReplayEvent.Deserializer());

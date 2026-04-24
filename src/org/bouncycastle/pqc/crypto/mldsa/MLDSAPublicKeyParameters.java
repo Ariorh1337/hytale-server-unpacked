@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mldsa;
 
 import org.bouncycastle.util.Arrays;
 
+@Deprecated
 public class MLDSAPublicKeyParameters extends MLDSAKeyParameters {
    final byte[] rho;
    final byte[] t1;

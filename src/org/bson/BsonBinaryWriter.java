@@ -1,7 +1,8 @@
 package org.bson;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
-import java.util.Stack;
 import org.bson.assertions.Assertions;
 import org.bson.io.BsonInput;
 import org.bson.io.BsonOutput;
@@ -11,7 +12,11 @@ import org.bson.types.ObjectId;
 public class BsonBinaryWriter extends AbstractBsonWriter {
    private final BsonBinaryWriterSettings binaryWriterSettings;
    private final BsonOutput bsonOutput;
-   private final Stack<Integer> maxDocumentSizeStack = new Stack<>();
+   private final Deque<Integer> maxDocumentSizeStack = new ArrayDeque<>();
+   private static final int ARRAY_INDEXES_CACHE_SIZE = 1000;
+   private static final byte[] ARRAY_INDEXES_BUFFER;
+   private static final int[] ARRAY_INDEXES_OFFSETS = new int[1000];
+   private static final int[] ARRAY_INDEXES_LENGTHS = new int[1000];
    private BsonBinaryWriter.Mark mark;
 
    public BsonBinaryWriter(BsonOutput bsonOutput, FieldNameValidator validator) {
@@ -23,7 +28,7 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
    }
 
    public BsonBinaryWriter(BsonWriterSettings settings, BsonBinaryWriterSettings binaryWriterSettings, BsonOutput bsonOutput) {
-      this(settings, binaryWriterSettings, bsonOutput, new NoOpFieldNameValidator());
+      this(settings, binaryWriterSettings, bsonOutput, NoOpFieldNameValidator.INSTANCE);
    }
 
    public BsonBinaryWriter(BsonWriterSettings settings, BsonBinaryWriterSettings binaryWriterSettings, BsonOutput bsonOutput, FieldNameValidator validator) {
@@ -44,10 +49,6 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
 
    public BsonBinaryWriterSettings getBinaryWriterSettings() {
       return this.binaryWriterSettings;
-   }
-
-   @Override
-   public void flush() {
    }
 
    protected BsonBinaryWriter.Context getContext() {
@@ -198,7 +199,7 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
    public void doWriteObjectId(ObjectId value) {
       this.bsonOutput.writeByte(BsonType.OBJECT_ID.getValue());
       this.writeCurrentName();
-      this.bsonOutput.writeBytes(value.toByteArray());
+      this.bsonOutput.writeObjectId(value);
    }
 
    @Override
@@ -321,7 +322,12 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
 
    private void writeCurrentName() {
       if (this.getContext().getContextType() == BsonContextType.ARRAY) {
-         this.bsonOutput.writeCString(Integer.toString(this.getContext().index++));
+         int index = this.getContext().index++;
+         if (index >= 1000) {
+            this.bsonOutput.writeCString(Integer.toString(index));
+         } else {
+            this.bsonOutput.writeBytes(ARRAY_INDEXES_BUFFER, ARRAY_INDEXES_OFFSETS[index], ARRAY_INDEXES_LENGTHS[index]);
+         }
       } else {
          this.bsonOutput.writeCString(this.getName());
       }
@@ -336,6 +342,30 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
    private void validateSize(int size) {
       if (size > this.maxDocumentSizeStack.peek()) {
          throw new BsonMaximumSizeExceededException(String.format("Document size of %d is larger than maximum of %d.", size, this.maxDocumentSizeStack.peek()));
+      }
+   }
+
+   static {
+      int totalSize = 0;
+
+      for (int i = 0; i < 1000; i++) {
+         totalSize += (int)(Math.log10(Math.max(i, 1)) + 1.0 + 1.0);
+      }
+
+      ARRAY_INDEXES_BUFFER = new byte[totalSize];
+      int offset = 0;
+
+      for (int i = 0; i < 1000; i++) {
+         String string = Integer.toString(i);
+         int length = string.length();
+
+         for (int j = 0; j < length; j++) {
+            ARRAY_INDEXES_BUFFER[offset++] = (byte)string.charAt(j);
+         }
+
+         ARRAY_INDEXES_BUFFER[offset++] = 0;
+         ARRAY_INDEXES_OFFSETS[i] = offset - (length + 1);
+         ARRAY_INDEXES_LENGTHS[i] = length + 1;
       }
    }
 

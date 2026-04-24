@@ -240,7 +240,6 @@ public class BaseBlockCipher extends BaseWrapCipher implements PBE {
             this.engineParams.init(this.pbeSpec);
             return this.engineParams;
          } catch (Exception var6) {
-            var6.printStackTrace();
             return null;
          }
       } else if (this.aeadParams != null) {

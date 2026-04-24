@@ -36,6 +36,18 @@ public class MacroCommandBuilder implements JsonAssetWithMap<String, DefaultAsse
       .add()
       .append(new KeyedCodec<>("Commands", Codec.STRING_ARRAY, true), (builder, commands) -> builder.commands = commands, builder -> builder.commands)
       .add()
+      .append(
+         new KeyedCodec<>("PermissionGroup", Codec.STRING, false),
+         (builder, permissionGroup) -> builder.permissionGroup = permissionGroup,
+         builder -> builder.permissionGroup
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("BypassCommandPermissions", Codec.BOOLEAN, false),
+         (builder, bypassCommandPermissions) -> builder.bypassCommandPermissions = bypassCommandPermissions,
+         builder -> builder.bypassCommandPermissions
+      )
+      .add()
       .build();
    private String id;
    private String name;
@@ -43,6 +55,8 @@ public class MacroCommandBuilder implements JsonAssetWithMap<String, DefaultAsse
    private String description;
    private MacroCommandParameter[] parameters;
    private String[] commands;
+   private String permissionGroup;
+   private boolean bypassCommandPermissions;
    private AssetExtraInfo.Data data;
 
    @Nullable
@@ -51,7 +65,9 @@ public class MacroCommandBuilder implements JsonAssetWithMap<String, DefaultAsse
          return null;
       }
 
-      MacroCommandBase macroCommandBase = new MacroCommandBase(builder.name, builder.aliases, builder.description, builder.parameters, builder.commands);
+      MacroCommandBase macroCommandBase = new MacroCommandBase(
+         builder.name, builder.aliases, builder.description, builder.parameters, builder.commands, builder.permissionGroup, builder.bypassCommandPermissions
+      );
       return MacroCommandPlugin.get().getCommandRegistry().registerCommand(macroCommandBase);
    }
 

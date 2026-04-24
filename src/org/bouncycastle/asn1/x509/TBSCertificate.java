@@ -44,7 +44,7 @@ public class TBSCertificate extends ASN1Object {
          this.version = ASN1Integer.getInstance((ASN1TaggedObject)var1.getObjectAt(0), true);
       } else {
          var2 = -1;
-         this.version = new ASN1Integer(0L);
+         this.version = ASN1Integer.ZERO;
       }
 
       boolean var3 = false;
@@ -126,7 +126,7 @@ public class TBSCertificate extends ASN1Object {
          throw new NullPointerException("'subjectPublicKeyInfo' cannot be null");
       }
 
-      this.version = var1 != null ? var1 : new ASN1Integer(0L);
+      this.version = var1 != null ? var1 : ASN1Integer.ZERO;
       this.serialNumber = var2;
       this.signature = var3;
       this.issuer = var4;

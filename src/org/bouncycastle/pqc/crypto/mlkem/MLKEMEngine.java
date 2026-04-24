@@ -1,173 +1,133 @@
 package org.bouncycastle.pqc.crypto.mlkem;
 
 import java.security.SecureRandom;
+import org.bouncycastle.crypto.digests.SHA3Digest;
+import org.bouncycastle.crypto.digests.SHAKEDigest;
 import org.bouncycastle.util.Arrays;
 
 class MLKEMEngine {
-   private SecureRandom random;
    private final MLKEMIndCpa indCpa;
-   public static final int KyberN = 256;
-   public static final int KyberQ = 3329;
-   public static final int KyberQinv = 62209;
-   public static final int KyberSymBytes = 32;
-   private static final int KyberSharedSecretBytes = 32;
-   public static final int KyberPolyBytes = 384;
-   private static final int KyberEta2 = 2;
-   private static final int KyberIndCpaMsgBytes = 32;
-   private final int KyberK;
-   private final int KyberPolyVecBytes;
-   private final int KyberPolyCompressedBytes;
-   private final int KyberPolyVecCompressedBytes;
-   private final int KyberEta1;
-   private final int KyberIndCpaPublicKeyBytes;
-   private final int KyberIndCpaSecretKeyBytes;
-   private final int KyberIndCpaBytes;
-   private final int KyberPublicKeyBytes;
-   private final int KyberSecretKeyBytes;
-   private final int KyberCipherTextBytes;
-   private final int CryptoBytes;
-   private final int CryptoSecretKeyBytes;
-   private final int CryptoPublicKeyBytes;
-   private final int CryptoCipherTextBytes;
-   private final int sessionKeyLength;
-   private final Symmetric symmetric;
+   static final int N = 256;
+   static final int Q = 3329;
+   static final int Qinv = 62209;
+   static final int SymBytes = 32;
+   static final int SharedSecretBytes = 32;
+   static final int PolyBytes = 384;
+   static final int Eta2 = 2;
+   static final int SeedBytes = 64;
+   private final int K;
+   private final int PolyVecBytes;
+   private final int PolyCompressedBytes;
+   private final int PolyVecCompressedBytes;
+   private final int Eta1;
+   private final int IndCpaPublicKeyBytes;
+   private final int IndCpaSecretKeyBytes;
+   private final int SecretKeyBytes;
+   private final int CipherTextBytes;
 
-   public Symmetric getSymmetric() {
-      return this.symmetric;
+   int getCipherTextBytes() {
+      return this.CipherTextBytes;
    }
 
-   public static int getKyberEta2() {
-      return 2;
+   int getSecretKeyBytes() {
+      return this.SecretKeyBytes;
    }
 
-   public static int getKyberIndCpaMsgBytes() {
-      return 32;
+   int getIndCpaPublicKeyBytes() {
+      return this.IndCpaPublicKeyBytes;
    }
 
-   public int getCryptoCipherTextBytes() {
-      return this.CryptoCipherTextBytes;
+   int getIndCpaSecretKeyBytes() {
+      return this.IndCpaSecretKeyBytes;
    }
 
-   public int getCryptoPublicKeyBytes() {
-      return this.CryptoPublicKeyBytes;
+   int getPublicKeyBytes() {
+      return this.getIndCpaPublicKeyBytes();
    }
 
-   public int getCryptoSecretKeyBytes() {
-      return this.CryptoSecretKeyBytes;
+   int getPolyCompressedBytes() {
+      return this.PolyCompressedBytes;
    }
 
-   public int getCryptoBytes() {
-      return this.CryptoBytes;
+   int getK() {
+      return this.K;
    }
 
-   public int getKyberCipherTextBytes() {
-      return this.KyberCipherTextBytes;
+   int getPolyVecBytes() {
+      return this.PolyVecBytes;
    }
 
-   public int getKyberSecretKeyBytes() {
-      return this.KyberSecretKeyBytes;
+   int getPolyVecCompressedBytes() {
+      return this.PolyVecCompressedBytes;
    }
 
-   public int getKyberIndCpaPublicKeyBytes() {
-      return this.KyberIndCpaPublicKeyBytes;
+   int getEta1() {
+      return this.Eta1;
    }
 
-   public int getKyberIndCpaSecretKeyBytes() {
-      return this.KyberIndCpaSecretKeyBytes;
-   }
-
-   public int getKyberIndCpaBytes() {
-      return this.KyberIndCpaBytes;
-   }
-
-   public int getKyberPublicKeyBytes() {
-      return this.KyberPublicKeyBytes;
-   }
-
-   public int getKyberPolyCompressedBytes() {
-      return this.KyberPolyCompressedBytes;
-   }
-
-   public int getKyberK() {
-      return this.KyberK;
-   }
-
-   public int getKyberPolyVecBytes() {
-      return this.KyberPolyVecBytes;
-   }
-
-   public int getKyberPolyVecCompressedBytes() {
-      return this.KyberPolyVecCompressedBytes;
-   }
-
-   public int getKyberEta1() {
-      return this.KyberEta1;
-   }
-
-   public MLKEMEngine(int var1) {
-      this.KyberK = var1;
+   MLKEMEngine(int var1) {
+      this.K = var1;
       switch (var1) {
          case 2:
-            this.KyberEta1 = 3;
-            this.KyberPolyCompressedBytes = 128;
-            this.KyberPolyVecCompressedBytes = var1 * 320;
-            this.sessionKeyLength = 32;
+            this.Eta1 = 3;
+            this.PolyCompressedBytes = 128;
+            this.PolyVecCompressedBytes = var1 * 320;
             break;
          case 3:
-            this.KyberEta1 = 2;
-            this.KyberPolyCompressedBytes = 128;
-            this.KyberPolyVecCompressedBytes = var1 * 320;
-            this.sessionKeyLength = 32;
+            this.Eta1 = 2;
+            this.PolyCompressedBytes = 128;
+            this.PolyVecCompressedBytes = var1 * 320;
             break;
          case 4:
-            this.KyberEta1 = 2;
-            this.KyberPolyCompressedBytes = 160;
-            this.KyberPolyVecCompressedBytes = var1 * 352;
-            this.sessionKeyLength = 32;
+            this.Eta1 = 2;
+            this.PolyCompressedBytes = 160;
+            this.PolyVecCompressedBytes = var1 * 352;
             break;
          default:
-            throw new IllegalArgumentException("K: " + var1 + " is not supported for Crystals Kyber");
+            throw new IllegalArgumentException("K: " + var1 + " is not supported for ML-KEM");
       }
 
-      this.KyberPolyVecBytes = var1 * 384;
-      this.KyberIndCpaPublicKeyBytes = this.KyberPolyVecBytes + 32;
-      this.KyberIndCpaSecretKeyBytes = this.KyberPolyVecBytes;
-      this.KyberIndCpaBytes = this.KyberPolyVecCompressedBytes + this.KyberPolyCompressedBytes;
-      this.KyberPublicKeyBytes = this.KyberIndCpaPublicKeyBytes;
-      this.KyberSecretKeyBytes = this.KyberIndCpaSecretKeyBytes + this.KyberIndCpaPublicKeyBytes + 64;
-      this.KyberCipherTextBytes = this.KyberIndCpaBytes;
-      this.CryptoBytes = 32;
-      this.CryptoSecretKeyBytes = this.KyberSecretKeyBytes;
-      this.CryptoPublicKeyBytes = this.KyberPublicKeyBytes;
-      this.CryptoCipherTextBytes = this.KyberCipherTextBytes;
-      this.symmetric = new Symmetric.ShakeSymmetric();
+      this.PolyVecBytes = var1 * 384;
+      this.IndCpaPublicKeyBytes = this.PolyVecBytes + 32;
+      this.IndCpaSecretKeyBytes = this.PolyVecBytes;
+      this.CipherTextBytes = this.PolyVecCompressedBytes + this.PolyCompressedBytes;
+      this.SecretKeyBytes = this.IndCpaSecretKeyBytes + this.IndCpaPublicKeyBytes + 64;
       this.indCpa = new MLKEMIndCpa(this);
-   }
-
-   public void init(SecureRandom var1) {
-      this.random = var1;
    }
 
    boolean checkModulus(byte[] var1) {
       return PolyVec.checkModulus(this, var1) < 0;
    }
 
-   public byte[][] generateKemKeyPair() {
-      byte[] var1 = new byte[32];
+   boolean checkPrivateKey(byte[] var1) {
+      int var2 = this.getK();
+      int var3 = var2 * 384;
+      int var4 = var2 * 768;
+      if (var4 + 96 != var1.length) {
+         throw new IllegalArgumentException("'encoding' has invalid length");
+      }
+
+      byte[] var5 = new byte[32];
+      hash_H(var1, var3, var3 + 32, var5, 0);
+      return Arrays.constantTimeAreEqual(32, var5, 0, var1, var4 + 32);
+   }
+
+   public byte[][] generateKemKeyPair(SecureRandom var1) {
       byte[] var2 = new byte[32];
-      this.random.nextBytes(var1);
-      this.random.nextBytes(var2);
-      return this.generateKemKeyPairInternal(var1, var2);
+      byte[] var3 = new byte[32];
+      var1.nextBytes(var2);
+      var1.nextBytes(var3);
+      return this.generateKemKeyPairInternal(var2, var3);
    }
 
    public byte[][] generateKemKeyPairInternal(byte[] var1, byte[] var2) {
       byte[][] var3 = this.indCpa.generateKeyPair(var1);
-      byte[] var4 = new byte[this.KyberIndCpaSecretKeyBytes];
-      System.arraycopy(var3[1], 0, var4, 0, this.KyberIndCpaSecretKeyBytes);
+      byte[] var4 = new byte[this.IndCpaSecretKeyBytes];
+      System.arraycopy(var3[1], 0, var4, 0, this.IndCpaSecretKeyBytes);
       byte[] var5 = new byte[32];
-      this.symmetric.hash_h(var5, var3[0], 0);
-      byte[] var6 = new byte[this.KyberIndCpaPublicKeyBytes];
-      System.arraycopy(var3[0], 0, var6, 0, this.KyberIndCpaPublicKeyBytes);
+      hash_H(var3[0], 0, var3[0].length, var5, 0);
+      byte[] var6 = new byte[this.IndCpaPublicKeyBytes];
+      System.arraycopy(var3[0], 0, var6, 0, this.IndCpaPublicKeyBytes);
       return new byte[][]{
          Arrays.copyOfRange(var6, 0, var6.length - 32),
          Arrays.copyOfRange(var6, var6.length - 32, var6.length),
@@ -178,15 +138,28 @@ class MLKEMEngine {
       };
    }
 
+   static void hash_G(byte[] var0, byte[] var1) {
+      implDigest(new SHA3Digest(512), var0, 0, var0.length, var1, 0);
+   }
+
+   private static void hash_H(byte[] var0, int var1, int var2, byte[] var3, int var4) {
+      implDigest(new SHA3Digest(256), var0, var1, var2, var3, var4);
+   }
+
+   private static void implDigest(SHA3Digest var0, byte[] var1, int var2, int var3, byte[] var4, int var5) {
+      var0.update(var1, var2, var3);
+      var0.doFinal(var4, var5);
+   }
+
    byte[][] kemEncrypt(MLKEMPublicKeyParameters var1, byte[] var2) {
       byte[] var3 = var1.getEncoded();
       byte[] var4 = new byte[64];
       byte[] var5 = new byte[64];
       System.arraycopy(var2, 0, var4, 0, 32);
-      this.symmetric.hash_h(var4, var3, 32);
-      this.symmetric.hash_g(var5, var4);
-      byte[] var6 = this.indCpa.encrypt(var3, Arrays.copyOfRange(var4, 0, 32), Arrays.copyOfRange(var5, 32, var5.length));
-      byte[] var7 = new byte[this.sessionKeyLength];
+      hash_H(var3, 0, var3.length, var4, 32);
+      hash_G(var4, var5);
+      byte[] var6 = this.indCpa.encrypt(var3, 0, var4, 0, var5, 32);
+      byte[] var7 = new byte[32];
       System.arraycopy(var5, 0, var7, 0, var7.length);
       return new byte[][]{var7, var6};
    }
@@ -194,19 +167,20 @@ class MLKEMEngine {
    byte[] kemDecrypt(MLKEMPrivateKeyParameters var1, byte[] var2) {
       byte[] var3 = var1.getEncoded();
       byte[] var4 = new byte[64];
+      this.indCpa.decrypt(var3, var2, var4);
+      System.arraycopy(var3, this.SecretKeyBytes - 64, var4, 32, 32);
       byte[] var5 = new byte[64];
-      byte[] var6 = Arrays.copyOfRange(var3, this.KyberIndCpaSecretKeyBytes, var3.length);
-      System.arraycopy(this.indCpa.decrypt(var3, var2), 0, var4, 0, 32);
-      System.arraycopy(var3, this.KyberSecretKeyBytes - 64, var4, 32, 32);
-      this.symmetric.hash_g(var5, var4);
-      byte[] var7 = new byte[32 + this.KyberCipherTextBytes];
-      System.arraycopy(var3, this.KyberSecretKeyBytes - 32, var7, 0, 32);
-      System.arraycopy(var2, 0, var7, 32, this.KyberCipherTextBytes);
-      this.symmetric.kdf(var7, var7);
-      byte[] var8 = this.indCpa.encrypt(var6, Arrays.copyOfRange(var4, 0, 32), Arrays.copyOfRange(var5, 32, var5.length));
-      int var9 = this.constantTimeZeroOnEqual(var2, var8);
-      this.cmov(var5, var7, 32, var9);
-      return Arrays.copyOfRange(var5, 0, this.sessionKeyLength);
+      hash_G(var4, var5);
+      int var6 = this.IndCpaSecretKeyBytes;
+      byte[] var7 = this.indCpa.encrypt(var3, var6, var4, 0, var5, 32);
+      int var8 = this.constantTimeZeroOnEqual(var2, var7);
+      byte[] var9 = new byte[32];
+      SHAKEDigest var10 = new SHAKEDigest(256);
+      var10.update(var3, this.SecretKeyBytes - 32, 32);
+      var10.update(var2, 0, this.CipherTextBytes);
+      var10.doFinal(var9, 0, 32);
+      this.cmov(var5, var9, 32, var8);
+      return Arrays.copyOfRange(var5, 0, 32);
    }
 
    private void cmov(byte[] var1, byte[] var2, int var3, int var4) {

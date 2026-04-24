@@ -33,6 +33,10 @@ public class ProviderJcaJceHelper implements JcaJceHelper {
       this.provider = var1;
    }
 
+   public Provider getProvider() {
+      return this.provider;
+   }
+
    @Override
    public Cipher createCipher(String var1) throws NoSuchAlgorithmException, NoSuchPaddingException {
       return Cipher.getInstance(var1, this.provider);

@@ -6,6 +6,7 @@ import org.bouncycastle.crypto.digests.SHAKEDigest;
 import org.bouncycastle.math.ec.rfc7748.X448;
 import org.bouncycastle.math.ec.rfc7748.X448Field;
 import org.bouncycastle.math.raw.Nat;
+import org.bouncycastle.util.Integers;
 
 public abstract class Ed448 {
    private static final int COORD_INTS = 14;
@@ -169,7 +170,7 @@ public abstract class Ed448 {
 
       for (int var4 = 12; var4 > 0; var4--) {
          int var5 = Codec.decode32(var0, var4 * 4);
-         if (var3 == 0 && var5 + Integer.MIN_VALUE > P[var4] + Integer.MIN_VALUE) {
+         if (var3 == 0 && Integers.compareUnsigned(var5, P[var4]) > 0) {
             return false;
          }
 
@@ -178,7 +179,7 @@ public abstract class Ed448 {
       }
 
       int var6 = Codec.decode32(var0, 0);
-      return var2 == 0 && var6 + Integer.MIN_VALUE <= -2147483647 ? false : var3 != 0 || var6 + Integer.MIN_VALUE < P[0] - 1 + Integer.MIN_VALUE;
+      return var2 == 0 && Integers.compareUnsigned(var6, 1) <= 0 ? false : var3 != 0 || Integers.compareUnsigned(var6, P[0] - 1) < 0;
    }
 
    private static boolean checkPointOrderVar(Ed448.PointAffine var0) {
@@ -217,7 +218,7 @@ public abstract class Ed448 {
 
    private static boolean decodePointVar(byte[] var0, boolean var1, Ed448.PointAffine var2) {
       int var3 = (var0[56] & 128) >>> 7;
-      Ed448.F.decode(var0, var2.y);
+      Ed448.F.decode448(var0, var2.y);
       int[] var4 = Ed448.F.create();
       int[] var5 = Ed448.F.create();
       Ed448.F.sqr(var2.y, var4);
@@ -817,7 +818,7 @@ public abstract class Ed448 {
             }
 
             for (int var18 = 0; var18 < 5; var18++) {
-               Ed448.PointProjective var12 = var4[var9++] = new Ed448.PointProjective();
+               Ed448.PointProjective var12 = new Ed448.PointProjective();
 
                for (int var13 = 0; var13 < 5; var13++) {
                   if (var13 == 0) {
@@ -836,6 +837,7 @@ public abstract class Ed448 {
                }
 
                Ed448.F.negate(var12.x, var12.x);
+               var4[var9++] = var12;
 
                for (int var26 = 0; var26 < 4; var26++) {
                   int var30 = 1 << var26;
@@ -854,22 +856,24 @@ public abstract class Ed448 {
 
             for (int var19 = 0; var19 < var1; var19++) {
                Ed448.PointProjective var23 = var4[var19];
-               Ed448.PointAffine var27 = PRECOMP_BASE_WNAF[var19] = new Ed448.PointAffine();
+               Ed448.PointAffine var27 = new Ed448.PointAffine();
                Ed448.F.mul(var23.x, var23.z, var27.x);
                Ed448.F.normalize(var27.x);
                Ed448.F.mul(var23.y, var23.z, var27.y);
                Ed448.F.normalize(var27.y);
+               PRECOMP_BASE_WNAF[var19] = var27;
             }
 
             PRECOMP_BASE225_WNAF = new Ed448.PointAffine[var1];
 
             for (int var20 = 0; var20 < var1; var20++) {
                Ed448.PointProjective var24 = var4[var1 + var20];
-               Ed448.PointAffine var28 = PRECOMP_BASE225_WNAF[var20] = new Ed448.PointAffine();
+               Ed448.PointAffine var28 = new Ed448.PointAffine();
                Ed448.F.mul(var24.x, var24.z, var28.x);
                Ed448.F.normalize(var28.x);
                Ed448.F.mul(var24.y, var24.z, var28.y);
                Ed448.F.normalize(var28.y);
+               PRECOMP_BASE225_WNAF[var20] = var28;
             }
 
             PRECOMP_BASE_COMB = Ed448.F.createTable(var2 * 2);

@@ -23,7 +23,7 @@ public class PKIStatus extends ASN1Object {
    private final ASN1Integer value;
 
    private PKIStatus(int var1) {
-      this(new ASN1Integer(var1));
+      this(ASN1Integer.valueOf(var1));
    }
 
    private PKIStatus(ASN1Integer var1) {

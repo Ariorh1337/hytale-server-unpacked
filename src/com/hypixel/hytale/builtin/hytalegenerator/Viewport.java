@@ -2,25 +2,22 @@ package com.hypixel.hytale.builtin.hytalegenerator;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public class Viewport {
    @Nonnull
-   private final World world;
-   @Nonnull
-   private final CommandSender sender;
+   private final WeakReference<World> world;
    @Nonnull
    private final LongSet affectedChunkIndices;
 
-   public Viewport(@Nonnull Bounds3i viewportBounds_voxelGrid, @Nonnull World world, @Nonnull CommandSender sender) {
-      this.world = world;
-      this.sender = sender;
+   public Viewport(@Nonnull Bounds3i viewportBounds_voxelGrid, @Nonnull World world) {
+      this.world = new WeakReference<>(world);
       int minCX = ChunkUtil.chunkCoordinate(viewportBounds_voxelGrid.min.x);
       int minCZ = ChunkUtil.chunkCoordinate(viewportBounds_voxelGrid.min.z);
       int maxCX = ChunkUtil.chunkCoordinate(viewportBounds_voxelGrid.max.x);
@@ -35,24 +32,34 @@ public class Viewport {
       }
    }
 
-   public void refresh() {
-      LoggerUtil.getLogger().info("Refreshing viewport...");
-      CompletableFuture<?>[] futures = new CompletableFuture[this.affectedChunkIndices.size()];
-      int i = 0;
-
-      for (long chunkIndex : this.affectedChunkIndices) {
-         ChunkStore chunkStore = this.world.getChunkStore();
-         CompletableFuture<?> future = chunkStore.getChunkReferenceAsync(chunkIndex, 9);
-         futures[i++] = future;
+   public void submitRefresh() {
+      World world = this.world.get();
+      if (world != null) {
+         world.execute(this::refresh);
       }
+   }
 
-      CompletableFuture.allOf(futures).handle((r, e) -> {
-         if (e == null) {
-            return (Void)r;
+   public void refresh() {
+      World world = this.world.get();
+      if (world != null) {
+         LoggerUtil.getLogger().info("Refreshing viewport...");
+         CompletableFuture<?>[] futures = new CompletableFuture[this.affectedChunkIndices.size()];
+         int i = 0;
+
+         for (long chunkIndex : this.affectedChunkIndices) {
+            ChunkStore chunkStore = world.getChunkStore();
+            CompletableFuture<?> future = chunkStore.getChunkReferenceAsync(chunkIndex, 9);
+            futures[i++] = future;
          }
 
-         LoggerUtil.logException("viewport refresh", e);
-         return null;
-      }).thenRun(() -> LoggerUtil.getLogger().info("Viewport refresh complete."));
+         CompletableFuture.allOf(futures).handle((r, e) -> {
+            if (e == null) {
+               return (Void)r;
+            }
+
+            LoggerUtil.logException("viewport refresh", e);
+            return null;
+         }).thenRun(() -> LoggerUtil.getLogger().info("Viewport refresh complete."));
+      }
    }
 }

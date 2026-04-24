@@ -104,7 +104,6 @@ import java.util.Map.Entry;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bouncycastle.util.Arrays;
 import org.joml.Vector3d;
 import org.joml.Vector4d;
 
@@ -213,7 +212,7 @@ public class DamageSystems {
                   boolean damageCanBePredicted = damage.getMetaStore().getMetaObject(Damage.CAN_BE_PREDICTED);
                   double particlesViewDistance = particles.getViewDistance();
                   WorldParticle[] worldParticles = particles.getWorldParticles();
-                  if (!Arrays.isNullOrEmpty(worldParticles)) {
+                  if (worldParticles != null && worldParticles.length > 0) {
                      TransformComponent sourceTransformComponent = commandBuffer.getComponent(sourceRef, TransformComponent.getComponentType());
                      if (sourceTransformComponent != null) {
                         float angleBetween = TrigMathUtil.atan2(
@@ -233,7 +232,7 @@ public class DamageSystems {
                   }
 
                   ModelParticle[] modelParticles = particles.getModelParticles();
-                  if (!Arrays.isNullOrEmpty(modelParticles)) {
+                  if (modelParticles != null && modelParticles.length > 0) {
                      com.hypixel.hytale.protocol.ModelParticle[] modelParticlesProtocol = new com.hypixel.hytale.protocol.ModelParticle[modelParticles.length];
 
                      for (int j = 0; j < modelParticles.length; j++) {
@@ -663,8 +662,6 @@ public class DamageSystems {
          @Nonnull CommandBuffer<EntityStore> commandBuffer,
          @Nonnull Damage damage
       ) {
-         LivingEntity entity = (LivingEntity)EntityUtils.getEntity(index, archetypeChunk);
-         assert entity != null;
          Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
          DamageCause damageCause = damage.getCause();
          if (damageCause.isDurabilityLoss()) {
@@ -679,7 +676,7 @@ public class DamageSystems {
                }, armorPartIndexes);
                if (!armorPartIndexes.isEmpty()) {
                   short slot = armorPartIndexes.getShort(RandomExtra.randomRange(armorPartIndexes.size()));
-                  LivingEntity.decreaseItemStackDurability(ref, armor.getItemStack(slot), -3, slot, commandBuffer);
+                  ItemUtils.decreaseItemStackDurability(ref, armor.getItemStack(slot), -3, slot, commandBuffer);
                }
             }
          }
@@ -713,11 +710,12 @@ public class DamageSystems {
             Ref<EntityStore> sourceRef = entitySource.getRef();
             if (sourceRef.isValid()) {
                InventoryComponent.Hotbar hotbarComponent = commandBuffer.getComponent(sourceRef, InventoryComponent.Hotbar.getComponentType());
-               assert hotbarComponent != null;
-               byte activeHotbarSlot = hotbarComponent.getActiveSlot();
-               if (activeHotbarSlot != -1) {
-                  ItemStack itemInHand = InventoryComponent.getItemInHand(commandBuffer, sourceRef);
-                  LivingEntity.decreaseItemStackDurability(sourceRef, itemInHand, -1, activeHotbarSlot, commandBuffer);
+               if (hotbarComponent != null) {
+                  byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+                  if (activeHotbarSlot != -1) {
+                     ItemStack itemInHand = InventoryComponent.getItemInHand(commandBuffer, sourceRef);
+                     ItemUtils.decreaseItemStackDurability(sourceRef, itemInHand, -1, activeHotbarSlot, commandBuffer);
+                  }
                }
             }
          }

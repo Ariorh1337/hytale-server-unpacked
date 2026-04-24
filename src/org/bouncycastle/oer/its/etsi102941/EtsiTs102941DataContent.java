@@ -76,7 +76,7 @@ public class EtsiTs102941DataContent extends ASN1Object implements ASN1Choice {
       if (var0 instanceof EtsiTs102941DataContent) {
          return (EtsiTs102941DataContent)var0;
       } else {
-         return var0 != null ? new EtsiTs102941DataContent(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new EtsiTs102941DataContent(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

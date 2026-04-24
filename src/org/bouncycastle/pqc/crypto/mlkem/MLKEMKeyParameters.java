@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mlkem;
 
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 
+@Deprecated
 public class MLKEMKeyParameters extends AsymmetricKeyParameter {
    private MLKEMParameters params;
 

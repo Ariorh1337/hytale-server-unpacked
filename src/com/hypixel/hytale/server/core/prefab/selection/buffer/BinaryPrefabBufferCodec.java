@@ -13,12 +13,12 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBufferB
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.BsonUtil;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -35,6 +35,24 @@ public class BinaryPrefabBufferCodec {
    private static final int MASK_SUPPORT_VALUE = 8;
    private static final int MASK_FILLER = 16;
    private static final int MASK_ROTATION = 32;
+
+   public static void writeUTF(@Nonnull DataOutputStream out, @Nonnull String string) throws IOException {
+      byte[] str = string.getBytes(StandardCharsets.UTF_8);
+      if (str.length >= 65535) {
+         throw new IllegalArgumentException("String is too large");
+      }
+
+      out.writeShort(str.length);
+      out.write(str);
+   }
+
+   @Nonnull
+   public static String readUTF(@Nonnull ByteBuffer buffer) {
+      int length = Short.toUnsignedInt(buffer.getShort());
+      byte[] bytes = new byte[length];
+      buffer.get(bytes);
+      return new String(bytes, StandardCharsets.UTF_8);
+   }
 
    @Nonnull
    public PrefabBuffer deserialize(@Nonnull ByteBuffer buffer) {
@@ -171,7 +189,7 @@ public class BinaryPrefabBufferCodec {
    private BinaryPrefabBufferCodec.BlockIdEntry deserializeBlock(
       @Nonnull ByteBuffer buffer, @Nonnull BlockTypeAssetMap<String, BlockType> assetMap, @Nullable Function<String, String> blockMigration
    ) {
-      String blockTypeString = ByteBufUtil.readUTF(buffer);
+      String blockTypeString = readUTF(buffer);
       String blockTypeKey = blockTypeString;
       if (blockMigration != null) {
          blockTypeKey = blockMigration.apply(blockTypeKey);
@@ -183,7 +201,7 @@ public class BinaryPrefabBufferCodec {
 
    @Nonnull
    private BinaryPrefabBufferCodec.FluidIdEntry deserializeFluid(@Nonnull ByteBuffer buffer, @Nonnull IndexedLookupTableAssetMap<String, Fluid> assetMap) {
-      String fluidName = ByteBufUtil.readUTF(buffer);
+      String fluidName = readUTF(buffer);
       int fluidId = Fluid.getFluidIdOrUnknown(assetMap, fluidName, "Failed to find fluid '%s'", fluidName);
       return new BinaryPrefabBufferCodec.FluidIdEntry(fluidId, fluidName);
    }
@@ -219,12 +237,12 @@ public class BinaryPrefabBufferCodec {
       out.writeInt(blockNameMapping.size());
       blockNameMapping.int2ObjectEntrySet().fastForEach(SneakyThrow.sneakyConsumer(entry -> {
          out.writeInt(entry.getIntKey());
-         ByteBufUtil.writeUTF(out, (String)entry.getValue());
+         writeUTF(out, (String)entry.getValue());
       }));
       out.writeInt(fluidNameMapping.size());
       fluidNameMapping.int2ObjectEntrySet().fastForEach(SneakyThrow.sneakyConsumer(entry -> {
          out.writeInt(entry.getIntKey());
-         ByteBufUtil.writeUTF(out, (String)entry.getValue());
+         writeUTF(out, (String)entry.getValue());
       }));
       out.writeInt(access.getColumnCount());
       access.forEachRaw((x, z, blocks, o) -> {

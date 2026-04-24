@@ -1,11 +1,37 @@
 package org.bouncycastle.asn1;
 
 import java.io.IOException;
+import org.bouncycastle.util.Arrays;
 
 public class BEROctetString extends ASN1OctetString {
+   public static final BEROctetString EMPTY = new BEROctetString(EMPTY_OCTETS);
    private static final int DEFAULT_SEGMENT_LIMIT = 1000;
    private final int segmentLimit;
    private final ASN1OctetString[] elements;
+
+   public static BEROctetString fromContents(byte[] var0) {
+      if (var0 == null) {
+         throw new NullPointerException("'contents' cannot be null");
+      } else {
+         return internalFromContents(var0);
+      }
+   }
+
+   public static BEROctetString fromContentsOptional(byte[] var0) {
+      return var0 == null ? null : internalFromContents(var0);
+   }
+
+   public static BEROctetString withContents(byte[] var0) {
+      if (var0 == null) {
+         throw new NullPointerException("'contents' cannot be null");
+      } else {
+         return internalWithContents(var0);
+      }
+   }
+
+   public static BEROctetString withContentsOptional(byte[] var0) {
+      return var0 == null ? null : internalWithContents(var0);
+   }
 
    static byte[] flattenOctetStrings(ASN1OctetString[] var0) {
       int var1 = var0.length;
@@ -34,6 +60,14 @@ public class BEROctetString extends ASN1OctetString {
 
             return var7;
       }
+   }
+
+   static BEROctetString internalFromContents(byte[] var0) {
+      return var0.length < 1 ? EMPTY : new BEROctetString(Arrays.clone(var0));
+   }
+
+   static BEROctetString internalWithContents(byte[] var0) {
+      return var0.length < 1 ? EMPTY : new BEROctetString(var0);
    }
 
    public BEROctetString(byte[] var1) {

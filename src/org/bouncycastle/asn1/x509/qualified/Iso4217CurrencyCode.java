@@ -32,7 +32,7 @@ public class Iso4217CurrencyCode extends ASN1Object implements ASN1Choice {
 
    public Iso4217CurrencyCode(int var1) {
       if (var1 <= 999 && var1 >= 1) {
-         this.obj = new ASN1Integer(var1);
+         this.obj = ASN1Integer.valueOf(var1);
       } else {
          throw new IllegalArgumentException("wrong size in numeric code : not in (1..999)");
       }

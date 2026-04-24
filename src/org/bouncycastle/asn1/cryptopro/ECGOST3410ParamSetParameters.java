@@ -37,7 +37,7 @@ public class ECGOST3410ParamSetParameters extends ASN1Object {
       this.b = new ASN1Integer(var2);
       this.p = new ASN1Integer(var3);
       this.q = new ASN1Integer(var4);
-      this.x = new ASN1Integer(var5);
+      this.x = ASN1Integer.valueOf(var5);
       this.y = new ASN1Integer(var6);
    }
 

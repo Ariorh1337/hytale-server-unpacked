@@ -28,7 +28,7 @@ public class PKIHeaderBuilder {
    private ASN1Sequence generalInfo;
 
    public PKIHeaderBuilder(int var1, GeneralName var2, GeneralName var3) {
-      this(new ASN1Integer(var1), var2, var3);
+      this(ASN1Integer.valueOf(var1), var2, var3);
    }
 
    private PKIHeaderBuilder(ASN1Integer var1, GeneralName var2, GeneralName var3) {

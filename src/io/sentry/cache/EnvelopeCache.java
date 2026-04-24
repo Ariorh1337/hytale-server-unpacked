@@ -13,6 +13,7 @@ import io.sentry.SentryUUID;
 import io.sentry.Session;
 import io.sentry.UncaughtExceptionHandlerIntegration;
 import io.sentry.hints.AbnormalExit;
+import io.sentry.hints.NativeCrashExit;
 import io.sentry.hints.SessionEnd;
 import io.sentry.hints.SessionStart;
 import io.sentry.transport.NoOpEnvelopeCache;
@@ -98,7 +99,7 @@ public class EnvelopeCache extends CacheStrategy implements IEnvelopeCache {
          this.options.getLogger().log(SentryLevel.WARNING, "Current envelope doesn't exist.");
       }
 
-      if (HintUtils.hasType(hint, AbnormalExit.class)) {
+      if (HintUtils.hasType(hint, AbnormalExit.class) || HintUtils.hasType(hint, NativeCrashExit.class)) {
          this.tryEndPreviousSession(hint);
       }
 
@@ -145,34 +146,50 @@ public class EnvelopeCache extends CacheStrategy implements IEnvelopeCache {
 
    private void tryEndPreviousSession(@NotNull Hint hint) {
       Object sdkHint = HintUtils.getSentrySdkHint(hint);
-      if (sdkHint instanceof AbnormalExit) {
-         File previousSessionFile = getPreviousSessionFile(this.directory.getAbsolutePath());
-         if (previousSessionFile.exists()) {
-            this.options.getLogger().log(SentryLevel.WARNING, "Previous session is not ended, we'd need to end it.");
+      File previousSessionFile = getPreviousSessionFile(this.directory.getAbsolutePath());
+      if (previousSessionFile.exists()) {
+         this.options.getLogger().log(SentryLevel.WARNING, "Previous session is not ended, we'd need to end it.");
 
-            try {
-               Reader reader = new BufferedReader(new InputStreamReader(new FileInputStream(previousSessionFile), UTF_8));
+         try {
+            Reader reader = new BufferedReader(new InputStreamReader(new FileInputStream(previousSessionFile), UTF_8));
 
-               label71: {
+            label71: {
+               label90: {
                   try {
                      Session session = this.serializer.getValue().deserialize(reader, Session.class);
                      if (session != null) {
-                        AbnormalExit abnormalHint = (AbnormalExit)sdkHint;
-                        Long abnormalExitTimestamp = abnormalHint.timestamp();
                         Date timestamp = null;
-                        if (abnormalExitTimestamp != null) {
-                           timestamp = DateUtils.getDateTime(abnormalExitTimestamp);
+                        if (sdkHint instanceof AbnormalExit) {
+                           AbnormalExit abnormalHint = (AbnormalExit)sdkHint;
+                           Long abnormalExitTimestamp = abnormalHint.timestamp();
+                           if (abnormalExitTimestamp != null) {
+                              timestamp = DateUtils.getDateTime(abnormalExitTimestamp);
+                              Date sessionStart = session.getStarted();
+                              if (sessionStart == null || timestamp.before(sessionStart)) {
+                                 this.options
+                                    .getLogger()
+                                    .log(SentryLevel.WARNING, "Abnormal exit happened before previous session start, not ending the session.");
+                                 break label71;
+                              }
+                           }
+
+                           String abnormalMechanism = abnormalHint.mechanism();
+                           session.update(Session.State.Abnormal, null, true, abnormalMechanism);
+                        } else if (sdkHint instanceof NativeCrashExit) {
+                           NativeCrashExit nativeCrashHint = (NativeCrashExit)sdkHint;
+                           Long nativeCrashExitTimestamp = nativeCrashHint.timestamp();
+                           timestamp = DateUtils.getDateTime(nativeCrashExitTimestamp);
                            Date sessionStart = session.getStarted();
                            if (sessionStart == null || timestamp.before(sessionStart)) {
                               this.options
                                  .getLogger()
-                                 .log(SentryLevel.WARNING, "Abnormal exit happened before previous session start, not ending the session.");
-                              break label71;
+                                 .log(SentryLevel.WARNING, "Native crash exit happened before previous session start, not ending the session.");
+                              break label90;
                            }
+
+                           session.update(Session.State.Crashed, null, true, null);
                         }
 
-                        String abnormalMechanism = abnormalHint.mechanism();
-                        session.update(Session.State.Abnormal, null, true, abnormalMechanism);
                         session.end(timestamp);
                         this.writeSessionToDisk(previousSessionFile, session);
                      }
@@ -192,12 +209,15 @@ public class EnvelopeCache extends CacheStrategy implements IEnvelopeCache {
 
                reader.close();
                return;
-            } catch (Throwable e) {
-               this.options.getLogger().log(SentryLevel.ERROR, "Error processing previous session.", e);
             }
-         } else {
-            this.options.getLogger().log(SentryLevel.DEBUG, "No previous session file to end.");
+
+            reader.close();
+            return;
+         } catch (Throwable e) {
+            this.options.getLogger().log(SentryLevel.ERROR, "Error processing previous session.", e);
          }
+      } else {
+         this.options.getLogger().log(SentryLevel.DEBUG, "No previous session file to end.");
       }
    }
 
@@ -451,15 +471,19 @@ public class EnvelopeCache extends CacheStrategy implements IEnvelopeCache {
    public void movePreviousSession(@NotNull File currentSessionFile, @NotNull File previousSessionFile) {
       ISentryLifecycleToken ignored = this.sessionLock.acquire();
 
-      try {
-         if (previousSessionFile.exists()) {
-            this.options.getLogger().log(SentryLevel.DEBUG, "Previous session file already exists, deleting it.");
-            if (!previousSessionFile.delete()) {
-               this.options.getLogger().log(SentryLevel.WARNING, "Unable to delete previous session file: %s", previousSessionFile);
+      label56: {
+         try {
+            if (!currentSessionFile.exists()) {
+               break label56;
             }
-         }
 
-         if (currentSessionFile.exists()) {
+            if (previousSessionFile.exists()) {
+               this.options.getLogger().log(SentryLevel.DEBUG, "Previous session file already exists, deleting it.");
+               if (!previousSessionFile.delete()) {
+                  this.options.getLogger().log(SentryLevel.WARNING, "Unable to delete previous session file: %s", previousSessionFile);
+               }
+            }
+
             this.options.getLogger().log(SentryLevel.INFO, "Moving current session to previous session.");
 
             try {
@@ -470,17 +494,23 @@ public class EnvelopeCache extends CacheStrategy implements IEnvelopeCache {
             } catch (Throwable e) {
                this.options.getLogger().log(SentryLevel.ERROR, "Error moving current session to previous session.", e);
             }
-         }
-      } catch (Throwable var8) {
-         if (ignored != null) {
-            try {
-               ignored.close();
-            } catch (Throwable var6) {
-               var8.addSuppressed(var6);
+         } catch (Throwable var8) {
+            if (ignored != null) {
+               try {
+                  ignored.close();
+               } catch (Throwable var6) {
+                  var8.addSuppressed(var6);
+               }
             }
+
+            throw var8;
          }
 
-         throw var8;
+         if (ignored != null) {
+            ignored.close();
+         }
+
+         return;
       }
 
       if (ignored != null) {

@@ -118,7 +118,7 @@ public class Grain128Engine implements StreamCipher {
       int var14 = this.lfsr[1] >>> 28 | this.lfsr[2] << 4;
       int var15 = this.lfsr[2] >>> 15 | this.lfsr[3] << 17;
       int var16 = this.lfsr[2] >>> 29 | this.lfsr[3] << 3;
-      int var17 = this.lfsr[2] >>> 31 | this.lfsr[3] << 1;
+      int var17 = this.lfsr[2] >>> 30 | this.lfsr[3] << 2;
       return var2 & var10 ^ var11 & var12 ^ var9 & var13 ^ var14 & var15 ^ var2 & var9 & var17 ^ var16 ^ var1 ^ var3 ^ var4 ^ var5 ^ var6 ^ var7 ^ var8;
    }
 

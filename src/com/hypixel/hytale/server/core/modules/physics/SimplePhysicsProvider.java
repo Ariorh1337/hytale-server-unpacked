@@ -11,8 +11,6 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionProvider;
 import com.hypixel.hytale.server.core.modules.collision.BlockContactData;
 import com.hypixel.hytale.server.core.modules.collision.BlockData;
@@ -247,7 +245,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
    }
 
    @Nullable
-   public Entity tick(
+   public Ref<EntityStore> tick(
       double dt,
       @Nonnull Velocity entityVelocity,
       @Nonnull World entityWorld,
@@ -290,95 +288,117 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       this.stateUpdater.update(this.stateBefore, this.stateAfter, mass, dt, this.onGround, this.forceProviders);
       this.velocity.set(this.stateAfter.velocity);
       this.movement.set(this.velocity).mul(dt);
-      this.forceProviderStandardState.clear();
-      if (this.velocity.lengthSquared() * dt * dt >= 1.0000000000000002E-10) {
-         this.state = SimplePhysicsProvider.STATE.Active;
-      } else {
-         this.velocity.zero();
-      }
-
-      double maxRelativeDistance = 1.0;
-      if (this.provideCharacterCollisions) {
-         Ref<EntityStore> creatorReference = null;
-         if (this.creatorUuid != null) {
-            creatorReference = entityWorld.getEntityRef(this.creatorUuid);
+      if (Double.isFinite(this.movement.x) && Double.isFinite(this.movement.y) && Double.isFinite(this.movement.z)) {
+         this.forceProviderStandardState.clear();
+         if (this.velocity.lengthSquared() * dt * dt >= 1.0000000000000002E-10) {
+            this.state = SimplePhysicsProvider.STATE.Active;
+         } else {
+            this.velocity.zero();
          }
 
-         maxRelativeDistance = this.entityCollisionProvider
-            .computeNearest(this.boundingBox.getBoundingBox(), this.position, this.movement, selfRef, creatorReference, componentAccessor);
-         if (maxRelativeDistance < 0.0 || maxRelativeDistance > 1.0) {
-            maxRelativeDistance = 1.0;
-         }
-      }
+         double maxRelativeDistance = 1.0;
+         if (this.provideCharacterCollisions) {
+            Ref<EntityStore> creatorReference = null;
+            if (this.creatorUuid != null) {
+               creatorReference = entityWorld.getEntityRef(this.creatorUuid);
+            }
 
-      this.bounced = false;
-      this.onGround = false;
-      this.moveOutOfSolidVelocity.zero();
-      this.movedInsideSolid = false;
-      this.displacedMass = 0.0;
-      this.subSurfaceVolume = 0.0;
-      this.enterFluid = Double.MAX_VALUE;
-      this.leaveFluid = -Double.MAX_VALUE;
-      this.collisionStart = maxRelativeDistance;
-      this.contactPosition.set(this.position).fma(this.collisionStart, this.movement);
-      this.contactNormal.zero();
-      this.blockCollisionProvider
-         .cast(entityWorld, this.boundingBox.getBoundingBox(), this.position, this.movement, this, this.triggerTracker, maxRelativeDistance);
-      this.fluidTracker.reset();
-      double density = this.displacedMass > 0.0 ? this.displacedMass / this.subSurfaceVolume : 1.2;
-      if (this.movedInsideSolid) {
-         this.position.fma(dt, this.moveOutOfSolidVelocity);
-         this.velocity.set(this.moveOutOfSolidVelocity);
-         this.forceProviderStandardState.dragCoefficient = this.getDragCoefficient(density);
+            maxRelativeDistance = this.entityCollisionProvider
+               .computeNearest(this.boundingBox.getBoundingBox(), this.position, this.movement, selfRef, creatorReference, componentAccessor);
+            if (maxRelativeDistance < 0.0 || maxRelativeDistance > 1.0) {
+               maxRelativeDistance = 1.0;
+            }
+         }
+
+         this.bounced = false;
+         this.onGround = false;
+         this.moveOutOfSolidVelocity.zero();
+         this.movedInsideSolid = false;
+         this.displacedMass = 0.0;
+         this.subSurfaceVolume = 0.0;
+         this.enterFluid = Double.MAX_VALUE;
+         this.leaveFluid = -Double.MAX_VALUE;
+         this.collisionStart = maxRelativeDistance;
+         this.contactPosition.set(this.position).fma(this.collisionStart, this.movement);
+         this.contactNormal.zero();
+         this.blockCollisionProvider
+            .cast(entityWorld, this.boundingBox.getBoundingBox(), this.position, this.movement, this, this.triggerTracker, maxRelativeDistance);
+         this.fluidTracker.reset();
+         double density = this.displacedMass > 0.0 ? this.displacedMass / this.subSurfaceVolume : 1.2;
+         if (this.movedInsideSolid) {
+            this.position.fma(dt, this.moveOutOfSolidVelocity);
+            this.velocity.set(this.moveOutOfSolidVelocity);
+            this.forceProviderStandardState.dragCoefficient = this.getDragCoefficient(density);
+            this.forceProviderStandardState.displacedMass = this.displacedMass;
+            this.forceProviderStandardState.gravity = this.gravity;
+            this.finishTick(entityTransform, entityVelocity);
+            return null;
+         }
+
+         double velocityClip = this.bounced ? this.collisionStart : 1.0;
+         boolean enteringWater = false;
+         if (!this.inFluid && this.enterFluid < this.collisionStart) {
+            this.inFluid = true;
+            velocityClip = this.enterFluid;
+            this.velocityExtremaCount = 2;
+            enteringWater = true;
+         } else if (this.inFluid && this.leaveFluid < this.collisionStart) {
+            this.inFluid = false;
+            velocityClip = this.leaveFluid;
+            this.velocityExtremaCount = 2;
+         }
+
+         if (velocityClip > 0.0 && velocityClip < 1.0) {
+            this.stateUpdater.update(this.stateBefore, this.stateAfter, mass, dt * velocityClip, this.onGround, this.forceProviders);
+            this.velocity.set(this.stateAfter.velocity);
+         }
+
+         if (this.inFluid && this.subSurfaceVolume < this.boundingBox.getBoundingBox().getVolume() && this.velocityExtremaCount > 0) {
+            double speedBefore = this.stateBefore.velocity.y;
+            double speedAfter = this.stateAfter.velocity.y;
+            if (speedBefore * speedAfter <= 0.0) {
+               this.velocityExtremaCount--;
+            }
+         }
+
+         if (this.isSwimming()) {
+            this.forceProviderStandardState.externalForce.y = this.forceProviderStandardState.externalForce.y
+               - this.stateAfter.velocity.y * (this.swimmingDampingFactor / mass);
+         }
+
+         if (enteringWater) {
+            this.forceProviderStandardState.externalImpulse.fma(-this.hitWaterImpulseLoss * mass, this.stateAfter.velocity);
+         }
+
          this.forceProviderStandardState.displacedMass = this.displacedMass;
+         this.forceProviderStandardState.dragCoefficient = this.getDragCoefficient(density);
          this.forceProviderStandardState.gravity = this.gravity;
-         this.finishTick(entityTransform, entityVelocity);
-         return null;
-      }
+         if (this.bounced) {
+            this.position.set(this.contactPosition);
+            computeReflectedVector(this.velocity, this.contactNormal, this.velocity);
+            this.velocity.mul(this.bounciness);
+            if (this.velocity.lengthSquared() * dt * dt < 0.16000000000000003) {
+               boolean hitGround = this.contactNormal.equals(Vector3dUtil.UP);
+               if (this.sticksVertically || hitGround) {
+                  this.state = SimplePhysicsProvider.STATE.Resting;
+                  this.restingSupport.rest(entityWorld, this.boundingBox.getBoundingBox(), this.position);
+                  this.onGround = hitGround;
+                  if (this.impactConsumer != null) {
+                     this.impactConsumer.accept(selfRef, this.position, null, componentAccessor);
+                  }
+               }
 
-      double velocityClip = this.bounced ? this.collisionStart : 1.0;
-      boolean enteringWater = false;
-      if (!this.inFluid && this.enterFluid < this.collisionStart) {
-         this.inFluid = true;
-         velocityClip = this.enterFluid;
-         this.velocityExtremaCount = 2;
-         enteringWater = true;
-      } else if (this.inFluid && this.leaveFluid < this.collisionStart) {
-         this.inFluid = false;
-         velocityClip = this.leaveFluid;
-         this.velocityExtremaCount = 2;
-      }
+               this.velocity.zero();
+            } else if (this.bounceConsumer != null) {
+               this.bounceConsumer.accept(this.position, componentAccessor);
+            }
 
-      if (velocityClip > 0.0 && velocityClip < 1.0) {
-         this.stateUpdater.update(this.stateBefore, this.stateAfter, mass, dt * velocityClip, this.onGround, this.forceProviders);
-         this.velocity.set(this.stateAfter.velocity);
-      }
-
-      if (this.inFluid && this.subSurfaceVolume < this.boundingBox.getBoundingBox().getVolume() && this.velocityExtremaCount > 0) {
-         double speedBefore = this.stateBefore.velocity.y;
-         double speedAfter = this.stateAfter.velocity.y;
-         if (speedBefore * speedAfter <= 0.0) {
-            this.velocityExtremaCount--;
-         }
-      }
-
-      if (this.isSwimming()) {
-         this.forceProviderStandardState.externalForce.y = this.forceProviderStandardState.externalForce.y
-            - this.stateAfter.velocity.y * (this.swimmingDampingFactor / mass);
-      }
-
-      if (enteringWater) {
-         this.forceProviderStandardState.externalImpulse.fma(-this.hitWaterImpulseLoss * mass, this.stateAfter.velocity);
-      }
-
-      this.forceProviderStandardState.displacedMass = this.displacedMass;
-      this.forceProviderStandardState.dragCoefficient = this.getDragCoefficient(density);
-      this.forceProviderStandardState.gravity = this.gravity;
-      if (!this.bounced) {
-         if (this.entityCollisionProvider.getCount() > 0) {
+            this.rotateBody(dt, entityTransform.getRotation());
+            this.finishTick(entityTransform, entityVelocity);
+            return null;
+         } else if (this.entityCollisionProvider.getCount() > 0) {
             EntityContactData contact = this.entityCollisionProvider.getContact(0);
             Ref<EntityStore> contactRef = contact.getEntityReference();
-            Entity target = EntityUtils.getEntity(contactRef, componentAccessor);
             this.position.set(contact.getCollisionPoint());
             this.state = SimplePhysicsProvider.STATE.Inactive;
             if (this.impactConsumer != null) {
@@ -387,7 +407,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
 
             this.rotateBody(dt, entityTransform.getRotation());
             this.finishTick(entityTransform, entityVelocity);
-            return target;
+            return contactRef;
          } else {
             this.position.add(this.movement);
             this.rotateBody(dt, entityTransform.getRotation());
@@ -395,26 +415,9 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
             return null;
          }
       } else {
-         this.position.set(this.contactPosition);
-         computeReflectedVector(this.velocity, this.contactNormal, this.velocity);
-         this.velocity.mul(this.bounciness);
-         if (this.velocity.lengthSquared() * dt * dt < 0.16000000000000003) {
-            boolean hitGround = this.contactNormal.equals(Vector3dUtil.UP);
-            if (this.sticksVertically || hitGround) {
-               this.state = SimplePhysicsProvider.STATE.Resting;
-               this.restingSupport.rest(entityWorld, this.boundingBox.getBoundingBox(), this.position);
-               this.onGround = hitGround;
-               if (this.impactConsumer != null) {
-                  this.impactConsumer.accept(selfRef, this.position, null, componentAccessor);
-               }
-            }
-
-            this.velocity.zero();
-         } else if (this.bounceConsumer != null) {
-            this.bounceConsumer.accept(this.position, componentAccessor);
-         }
-
-         this.rotateBody(dt, entityTransform.getRotation());
+         this.velocity.zero();
+         this.movement.zero();
+         this.forceProviderStandardState.clear();
          this.finishTick(entityTransform, entityVelocity);
          return null;
       }

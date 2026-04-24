@@ -8,19 +8,29 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.InteractivelyPickupItemEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
+import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -156,5 +166,66 @@ public class ItemUtils {
    public static boolean canApplyItemStackPenalties(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
       Player playerComponent = accessor.getComponent(ref, Player.getComponentType());
       return playerComponent != null ? playerComponent.getGameMode() != GameMode.Creative : true;
+   }
+
+   @Nonnull
+   public static ItemStackSlotTransaction updateItemStackDurability(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ItemStack itemStack,
+      ItemContainer container,
+      int slotId,
+      double durabilityChange,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      ItemStack updatedItemStack = itemStack.withIncreasedDurability(durabilityChange);
+      ItemStackSlotTransaction transaction = container.replaceItemStackInSlot((short)slotId, itemStack, updatedItemStack);
+      if (transaction.getSlotAfter().isBroken() && !itemStack.isBroken()) {
+         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
+            playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBroken").param("itemName", itemNameMessage).color("#ff5555"));
+            int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
+            SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
+         }
+      }
+
+      return transaction;
+   }
+
+   @Nullable
+   public static ItemStackSlotTransaction decreaseItemStackDurability(
+      @Nonnull Ref<EntityStore> ref, @Nullable ItemStack itemStack, int inventoryId, int slotId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      if (!canDecreaseItemStackDurability(ref, componentAccessor)) {
+         return null;
+      }
+
+      if (itemStack == null || itemStack.isEmpty() || itemStack.getItem() == Item.UNKNOWN) {
+         return null;
+      }
+
+      if (itemStack.isBroken()) {
+         return null;
+      }
+
+      Item item = itemStack.getItem();
+      ItemContainer section = InventoryUtils.getSectionById(ref, inventoryId, componentAccessor);
+      if (section == null) {
+         return null;
+      }
+
+      if (item.getArmor() != null) {
+         ItemStackSlotTransaction transaction = updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor);
+         if (transaction.getSlotAfter().isBroken()) {
+            EntityStatMap entityStatMap = componentAccessor.getComponent(ref, EntityStatMap.getComponentType());
+            if (entityStatMap != null) {
+               entityStatMap.getStatModifiersManager().scheduleRecalculate();
+            }
+         }
+
+         return transaction;
+      } else {
+         return item.getWeapon() != null ? updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor) : null;
+      }
    }
 }

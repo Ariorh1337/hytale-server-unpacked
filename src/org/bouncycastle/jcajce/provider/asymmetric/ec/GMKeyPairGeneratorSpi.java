@@ -42,7 +42,7 @@ public abstract class GMKeyPairGeneratorSpi extends KeyPairGenerator {
       boolean initialised = false;
       String algorithm;
       ProviderConfiguration configuration;
-      private static Hashtable ecParameters = new Hashtable();
+      private static final Hashtable ecParameters = new Hashtable();
 
       public BaseSM2() {
          super("EC");

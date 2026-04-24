@@ -30,18 +30,13 @@ public abstract class BERGenerator extends ASN1Generator {
    }
 
    protected void writeBERHeader(int var1) throws IOException {
-      if (this._tagged) {
-         int var2 = this._tagNo | 128;
-         if (this._isExplicit) {
-            this.writeHdr(var2 | 32);
-            this.writeHdr(var1);
-         } else if ((var1 & 32) != 0) {
-            this.writeHdr(var2 | 32);
-         } else {
-            this.writeHdr(var2);
-         }
-      } else {
+      if (!this._tagged) {
          this.writeHdr(var1);
+      } else if (this._isExplicit) {
+         this.writeHdr(this._tagNo | 128 | 32);
+         this.writeHdr(var1);
+      } else {
+         this.writeHdr(inheritConstructedFlag(this._tagNo | 128, var1));
       }
    }
 

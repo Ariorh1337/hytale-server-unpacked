@@ -29,7 +29,7 @@ public class CertRequest extends ASN1Object {
    }
 
    public CertRequest(int var1, CertTemplate var2, Controls var3) {
-      this(new ASN1Integer(var1), var2, var3);
+      this(ASN1Integer.valueOf(var1), var2, var3);
    }
 
    public CertRequest(ASN1Integer var1, CertTemplate var2, Controls var3) {

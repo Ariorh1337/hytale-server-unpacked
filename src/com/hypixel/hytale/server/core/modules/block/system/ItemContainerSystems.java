@@ -61,32 +61,31 @@ public class ItemContainerSystems {
             int blockId = blockSection.get(x, y, z);
             BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
             if (blockType != null && blockType.getBlockEntity() != null) {
-               short capacity = itemContainerComponent.getCapacity();
+               SimpleItemContainer itemContainer = itemContainerComponent.getItemContainer();
                ItemContainerBlock assetConfig = blockType.getBlockEntity().getComponent(this.itemContainerBlockComponentType);
                if (assetConfig != null) {
-                  capacity = assetConfig.getCapacity();
+                  short capacity = assetConfig.getCapacity();
+                  ObjectArrayList<ItemStack> remainder = new ObjectArrayList<>();
+                  itemContainer = ItemContainer.ensureContainerCapacity(itemContainer, capacity, SimpleItemContainer::new, remainder);
+                  itemContainerComponent.setItemContainer(itemContainer);
+                  if (!remainder.isEmpty()) {
+                     Store<EntityStore> entityStore = store.getExternalData().getWorld().getEntityStore().getStore();
+                     Vector3d blockPosition = new Vector3d(
+                        ChunkUtil.worldCoordFromLocalCoord(blockChunkComponent.getX(), x), y, ChunkUtil.worldCoordFromLocalCoord(blockChunkComponent.getZ(), z)
+                     );
+                     Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, remainder, blockPosition, Rotation3f.IDENTITY);
+                     entityStore.addEntities(itemEntityHolders, AddReason.SPAWN);
+                  }
                }
 
-               List<ItemStack> remainder = new ObjectArrayList<>();
-               SimpleItemContainer itemContainer = itemContainerComponent.getItemContainer();
-               itemContainer = ItemContainer.ensureContainerCapacity(itemContainer, capacity, SimpleItemContainer::new, remainder);
-               World world = store.getExternalData().getWorld();
-               itemContainer.registerChangeEvent(EventPriority.LAST, itemContainerChangeEvent -> {
+               itemContainer.registerChangeEvent(EventPriority.LAST, var2x -> {
+                  World world = ref.getStore().getExternalData().getWorld();
                   if (world.isInThread()) {
                      blockStateInfoComponent.markNeedsSaving();
                   } else {
                      world.execute(blockStateInfoComponent::markNeedsSaving);
                   }
                });
-               itemContainerComponent.setItemContainer(itemContainer);
-               if (!remainder.isEmpty()) {
-                  Store<EntityStore> entityStore = world.getEntityStore().getStore();
-                  Vector3d blockPosition = new Vector3d(
-                     ChunkUtil.worldCoordFromLocalCoord(blockChunkComponent.getX(), x), y, ChunkUtil.worldCoordFromLocalCoord(blockChunkComponent.getZ(), z)
-                  );
-                  Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, remainder, blockPosition, Rotation3f.IDENTITY);
-                  entityStore.addEntities(itemEntityHolders, AddReason.SPAWN);
-               }
             }
          }
       }

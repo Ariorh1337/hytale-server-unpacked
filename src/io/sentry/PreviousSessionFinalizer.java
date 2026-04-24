@@ -52,33 +52,35 @@ final class PreviousSessionFinalizer implements Runnable {
                            .getLogger()
                            .log(SentryLevel.ERROR, "Stream from path %s resulted in a null envelope.", previousSessionFile.getAbsolutePath());
                      } else {
-                        Date timestamp = null;
                         File crashMarkerFile = new File(this.options.getCacheDirPath(), ".sentry-native/last_crash");
-                        if (crashMarkerFile.exists()) {
+                        if (session.getStatus() == Session.State.Crashed) {
+                           SentryCrashLastRunState crashLastRunState = SentryCrashLastRunState.getInstance();
+                           crashLastRunState.reset();
+                           crashLastRunState.setCrashedLastRun(true);
+                        } else if (crashMarkerFile.exists()) {
                            this.options.getLogger().log(SentryLevel.INFO, "Crash marker file exists, last Session is gonna be Crashed.");
-                           timestamp = this.getTimestampFromCrashMarkerFile(crashMarkerFile);
-                           if (!crashMarkerFile.delete()) {
-                              this.options.getLogger().log(SentryLevel.ERROR, "Failed to delete the crash marker file. %s.", crashMarkerFile.getAbsolutePath());
-                           }
-
+                           Date timestamp = this.getTimestampFromCrashMarkerFile(crashMarkerFile);
                            session.update(Session.State.Crashed, null, true);
+                           session.end(timestamp);
+                        } else if (session.getAbnormalMechanism() == null) {
+                           session.end();
                         }
 
-                        if (session.getAbnormalMechanism() == null) {
-                           session.end(timestamp);
+                        if (crashMarkerFile.exists() && !crashMarkerFile.delete()) {
+                           this.options.getLogger().log(SentryLevel.ERROR, "Failed to delete the crash marker file. %s.", crashMarkerFile.getAbsolutePath());
                         }
 
                         SentryEnvelope fromSession = SentryEnvelope.from(serializer, session, this.options.getSdkVersion());
                         this.scopes.captureEnvelope(fromSession);
                      }
-                  } catch (Throwable var11) {
+                  } catch (Throwable var10) {
                      try {
                         reader.close();
-                     } catch (Throwable var10) {
-                        var11.addSuppressed(var10);
+                     } catch (Throwable var9) {
+                        var10.addSuppressed(var9);
                      }
 
-                     throw var11;
+                     throw var10;
                   }
 
                   reader.close();

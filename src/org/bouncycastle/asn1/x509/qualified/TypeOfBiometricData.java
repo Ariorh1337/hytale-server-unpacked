@@ -32,7 +32,7 @@ public class TypeOfBiometricData extends ASN1Object implements ASN1Choice {
          throw new IllegalArgumentException("unknow PredefinedBiometricType : " + var1);
       }
 
-      this.obj = new ASN1Integer(var1);
+      this.obj = ASN1Integer.valueOf(var1);
    }
 
    public TypeOfBiometricData(ASN1ObjectIdentifier var1) {

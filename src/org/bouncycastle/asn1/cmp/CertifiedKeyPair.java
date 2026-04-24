@@ -20,15 +20,15 @@ public class CertifiedKeyPair extends ASN1Object {
       this.certOrEncCert = CertOrEncCert.getInstance(var1.getObjectAt(0));
       if (var1.size() >= 2) {
          if (var1.size() == 2) {
-            ASN1TaggedObject var2 = ASN1TaggedObject.getInstance(var1.getObjectAt(1), 128);
+            ASN1TaggedObject var2 = ASN1TaggedObject.getContextInstance(var1.getObjectAt(1));
             if (var2.getTagNo() == 0) {
                this.privateKey = EncryptedKey.getInstance(var2.getExplicitBaseObject());
             } else {
                this.publicationInfo = PKIPublicationInfo.getInstance(var2.getExplicitBaseObject());
             }
          } else {
-            this.privateKey = EncryptedKey.getInstance(ASN1TaggedObject.getInstance(var1.getObjectAt(1), 128).getExplicitBaseObject());
-            this.publicationInfo = PKIPublicationInfo.getInstance(ASN1TaggedObject.getInstance(var1.getObjectAt(2), 128).getExplicitBaseObject());
+            this.privateKey = EncryptedKey.getInstance(ASN1TaggedObject.getContextInstance(var1.getObjectAt(1)).getExplicitBaseObject());
+            this.publicationInfo = PKIPublicationInfo.getInstance(ASN1TaggedObject.getContextInstance(var1.getObjectAt(2)).getExplicitBaseObject());
          }
       }
    }

@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -44,8 +44,8 @@ public class CopyCommand extends AbstractPlayerCommand {
 
    public CopyCommand() {
       super("copy", "server.commands.copy.desc");
-      this.setPermissionGroup(GameMode.Creative);
-      this.requirePermission("hytale.editor.selection.clipboard");
+      this.setPermissionGroups("hytale:WorldEditor");
+      this.requirePermission(HytalePermissions.EDITOR_SELECTION_CLIPBOARD);
       this.addUsageVariant(new CopyCommand.CopyRegionCommand());
    }
 

@@ -19,6 +19,7 @@ import org.bouncycastle.operator.MacCalculator;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.pkcs.PKCS12MacCalculatorBuilder;
 import org.bouncycastle.pkcs.PKCS12MacCalculatorBuilderProvider;
+import org.bouncycastle.util.BigIntegers;
 
 public class JcePKCS12MacCalculatorBuilderProvider implements PKCS12MacCalculatorBuilderProvider {
    private JcaJceHelper helper = new DefaultJcaJceHelper();
@@ -43,7 +44,7 @@ public class JcePKCS12MacCalculatorBuilderProvider implements PKCS12MacCalculato
             try {
                final ASN1ObjectIdentifier var3 = var1.getAlgorithm();
                final Mac var4 = JcePKCS12MacCalculatorBuilderProvider.this.helper.createMac(var3.getId());
-               PBEParameterSpec var5 = new PBEParameterSpec(var2.getIV(), var2.getIterations().intValue());
+               PBEParameterSpec var5 = new PBEParameterSpec(var2.getIV(), BigIntegers.intValueExact(var2.getIterations()));
                final PKCS12Key var6 = new PKCS12Key(var1x);
                var4.init(var6, var5);
                return new MacCalculator() {

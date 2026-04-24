@@ -37,15 +37,16 @@ public abstract class AbstractX500NameStyle implements X500NameStyle {
 
       for (int var4 = 0; var4 != var3.length; var4++) {
          if (var3[var4].isMultiValued()) {
-            AttributeTypeAndValue[] var5 = var3[var4].getTypesAndValues();
+            AttributeTypeAndValue[] var9 = var3[var4].getTypesAndValues();
 
-            for (int var6 = 0; var6 != var5.length; var6++) {
-               var2 ^= var5[var6].getType().hashCode();
-               var2 ^= this.calcHashCode(var5[var6].getValue());
+            for (int var6 = 0; var6 != var9.length; var6++) {
+               var2 ^= var9[var6].getType().hashCode();
+               var2 ^= this.calcHashCode(var9[var6].getValue());
             }
          } else {
-            var2 ^= var3[var4].getFirst().getType().hashCode();
-            var2 ^= this.calcHashCode(var3[var4].getFirst().getValue());
+            AttributeTypeAndValue var5 = var3[var4].getFirst();
+            var2 ^= var5.getType().hashCode();
+            var2 ^= this.calcHashCode(var5.getValue());
          }
       }
 

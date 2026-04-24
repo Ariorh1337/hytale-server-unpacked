@@ -33,7 +33,7 @@ public class ReasonFlags extends DERBitString {
    public static final int aACompromise = 32768;
 
    public ReasonFlags(int var1) {
-      super(getBytes(var1), getPadBits(var1));
+      super(var1);
    }
 
    public ReasonFlags(ASN1BitString var1) {

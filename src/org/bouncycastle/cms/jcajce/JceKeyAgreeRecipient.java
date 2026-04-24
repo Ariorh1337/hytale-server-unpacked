@@ -170,49 +170,51 @@ public abstract class JceKeyAgreeRecipient implements KeyAgreeRecipient {
    protected Key extractSecretKey(AlgorithmIdentifier var1, AlgorithmIdentifier var2, SubjectPublicKeyInfo var3, ASN1OctetString var4, byte[] var5) throws CMSException {
       try {
          AlgorithmIdentifier var6 = AlgorithmIdentifier.getInstance(var1.getParameters());
-         X509EncodedKeySpec var7 = new X509EncodedKeySpec(var3.getEncoded());
-         KeyFactory var8 = this.helper.createKeyFactory(var3.getAlgorithm().getAlgorithm());
-         PublicKey var9 = var8.generatePublic(var7);
+         ASN1ObjectIdentifier var7 = var6.getAlgorithm();
+         X509EncodedKeySpec var8 = new X509EncodedKeySpec(var3.getEncoded());
+         KeyFactory var9 = this.helper.createKeyFactory(var3.getAlgorithm().getAlgorithm());
+         PublicKey var10 = var9.generatePublic(var8);
 
          try {
-            SecretKey var10 = this.calculateAgreedWrapKey(var1, var6, var9, var4, this.recipientKey, ecc_cms_Generator);
-            if (!var6.getAlgorithm().equals(CryptoProObjectIdentifiers.id_Gost28147_89_None_KeyWrap)
-               && !var6.getAlgorithm().equals(CryptoProObjectIdentifiers.id_Gost28147_89_CryptoPro_KeyWrap)) {
-               return this.unwrapSessionKey(var6.getAlgorithm(), var10, var2.getAlgorithm(), var5);
+            SecretKey var11 = this.calculateAgreedWrapKey(var1, var6, var10, var4, this.recipientKey, ecc_cms_Generator);
+            if (!CryptoProObjectIdentifiers.id_Gost28147_89_None_KeyWrap.equals(var7)
+               && !CryptoProObjectIdentifiers.id_Gost28147_89_CryptoPro_KeyWrap.equals(var7)) {
+               return this.unwrapSessionKey(var7, var11, var2.getAlgorithm(), var5);
             }
 
-            Gost2814789EncryptedKey var22 = Gost2814789EncryptedKey.getInstance(var5);
-            Gost2814789KeyWrapParameters var12 = Gost2814789KeyWrapParameters.getInstance(var6.getParameters());
-            Cipher var13 = this.helper.createCipher(var6.getAlgorithm());
-            var13.init(4, var10, new GOST28147WrapParameterSpec(var12.getEncryptionParamSet(), var4.getOctets()));
-            return var13.unwrap(Arrays.concatenate(var22.getEncryptedKey(), var22.getMacKey()), this.helper.getBaseCipherName(var2.getAlgorithm()), 3);
-         } catch (InvalidKeyException var15) {
+            Gost2814789EncryptedKey var24 = Gost2814789EncryptedKey.getInstance(var5);
+            Gost2814789KeyWrapParameters var13 = Gost2814789KeyWrapParameters.getInstance(var6.getParameters());
+            Cipher var14 = this.helper.createCipher(var7);
+            var14.init(4, var11, new GOST28147WrapParameterSpec(var13.getEncryptionParamSet(), var4.getOctets()));
+            byte[] var15 = Arrays.concatenate(var24.getEncryptedKey(), var24.getMacKey());
+            return var14.unwrap(var15, this.helper.getBaseCipherName(var2.getAlgorithm()), 3);
+         } catch (InvalidKeyException var17) {
             if (possibleOldMessages.contains(var1.getAlgorithm())) {
-               SecretKey var21 = this.calculateAgreedWrapKey(var1, var6, var9, var4, this.recipientKey, old_ecc_cms_Generator);
-               return this.unwrapSessionKey(var6.getAlgorithm(), var21, var2.getAlgorithm(), var5);
+               SecretKey var23 = this.calculateAgreedWrapKey(var1, var6, var10, var4, this.recipientKey, old_ecc_cms_Generator);
+               return this.unwrapSessionKey(var7, var23, var2.getAlgorithm(), var5);
             }
 
             if (var4 != null) {
                try {
-                  SecretKey var11 = this.calculateAgreedWrapKey(var1, var6, var9, var4, this.recipientKey, simple_ecc_cmsGenerator);
-                  return this.unwrapSessionKey(var6.getAlgorithm(), var11, var2.getAlgorithm(), var5);
-               } catch (InvalidKeyException var14) {
-                  throw var15;
+                  SecretKey var12 = this.calculateAgreedWrapKey(var1, var6, var10, var4, this.recipientKey, simple_ecc_cmsGenerator);
+                  return this.unwrapSessionKey(var7, var12, var2.getAlgorithm(), var5);
+               } catch (InvalidKeyException var16) {
+                  throw var17;
                }
             } else {
-               throw var15;
+               throw var17;
             }
          }
-      } catch (NoSuchAlgorithmException var16) {
-         throw new CMSException("can't find algorithm.", var16);
-      } catch (InvalidKeyException var17) {
-         throw new CMSException("key invalid in message.", var17);
-      } catch (InvalidKeySpecException var18) {
-         throw new CMSException("originator key spec invalid.", var18);
-      } catch (NoSuchPaddingException var19) {
-         throw new CMSException("required padding not supported.", var19);
-      } catch (Exception var20) {
-         throw new CMSException("originator key invalid.", var20);
+      } catch (NoSuchAlgorithmException var18) {
+         throw new CMSException("can't find algorithm.", var18);
+      } catch (InvalidKeyException var19) {
+         throw new CMSException("key invalid in message.", var19);
+      } catch (InvalidKeySpecException var20) {
+         throw new CMSException("originator key spec invalid.", var20);
+      } catch (NoSuchPaddingException var21) {
+         throw new CMSException("required padding not supported.", var21);
+      } catch (Exception var22) {
+         throw new CMSException("originator key invalid.", var22);
       }
    }
 

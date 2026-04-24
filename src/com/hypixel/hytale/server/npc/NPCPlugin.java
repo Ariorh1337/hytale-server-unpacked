@@ -14,6 +14,8 @@ import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
+import com.hypixel.hytale.codec.codecs.set.SetCodec;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.common.benchmark.TimeDistributionRecorder;
 import com.hypixel.hytale.common.util.FormatUtil;
@@ -65,6 +67,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.schema.SchemaGenerator;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.npc.INonPlayerCharacter;
 import com.hypixel.hytale.server.core.universe.world.path.WorldPathChangedEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -260,7 +263,9 @@ import com.hypixel.hytale.server.npc.instructions.builders.BuilderInstructionRan
 import com.hypixel.hytale.server.npc.instructions.builders.BuilderInstructionReference;
 import com.hypixel.hytale.server.npc.interactions.ContextualUseNPCInteraction;
 import com.hypixel.hytale.server.npc.interactions.SpawnNPCInteraction;
+import com.hypixel.hytale.server.npc.interactions.SpawnNPCInteractionFailureTracker;
 import com.hypixel.hytale.server.npc.interactions.UseNPCInteraction;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.controllers.BuilderMotionControllerMapUtil;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerDive;
@@ -294,6 +299,7 @@ import com.hypixel.hytale.server.npc.systems.PositionCacheSystems;
 import com.hypixel.hytale.server.npc.systems.RoleBuilderSystem;
 import com.hypixel.hytale.server.npc.systems.RoleChangeSystem;
 import com.hypixel.hytale.server.npc.systems.RoleSystems;
+import com.hypixel.hytale.server.npc.systems.SpawnNPCInteractionFailureTrackerSystems;
 import com.hypixel.hytale.server.npc.systems.StateEvaluatorSystem;
 import com.hypixel.hytale.server.npc.systems.SteeringSystem;
 import com.hypixel.hytale.server.npc.systems.StepCleanupSystem;
@@ -301,12 +307,16 @@ import com.hypixel.hytale.server.npc.systems.TimerSystem;
 import com.hypixel.hytale.server.npc.util.SensorSupportBenchmark;
 import com.hypixel.hytale.server.npc.util.expression.StdScope;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
+import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
+import com.hypixel.hytale.server.spawning.SpawnTestResult;
+import com.hypixel.hytale.server.spawning.SpawningContext;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.file.Path;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -321,6 +331,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
 public class NPCPlugin extends JavaPlugin {
@@ -342,6 +353,12 @@ public class NPCPlugin extends JavaPlugin {
    public static String FACTORY_CLASS_ACTION_LIST = "ActionList";
    @Nonnull
    public static String ROLE_ASSETS_PATH = "Server/NPC/Roles";
+   @Nonnull
+   public static final EnumCodec<MovementMode> MOVEMENT_MODE_CODEC = new EnumCodec<>(MovementMode.class);
+   @Nonnull
+   public static final SetCodec<MovementMode, EnumSet<MovementMode>> MOVEMENT_MODE_SET_CODEC = new SetCodec<>(
+      MOVEMENT_MODE_CODEC, () -> EnumSet.noneOf(MovementMode.class), true
+   );
    private static NPCPlugin instance;
    protected List<BuilderDescriptor> builderDescriptors;
    protected final BuilderManager builderManager = new BuilderManager();
@@ -375,6 +392,7 @@ public class NPCPlugin extends JavaPlugin {
    private ResourceType<EntityStore, SortBufferProviderResource> sortBufferProviderResourceResourceType;
    private ResourceType<EntityStore, AStarNodePoolProviderSimple> aStarNodePoolProviderSimpleResourceType;
    private ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> npcSpatialResource;
+   private ResourceType<EntityStore, SpawnNPCInteractionFailureTracker> spawnNPCInteractionFailureTrackerResourceType;
    private ComponentType<EntityStore, CombatViewSystems.CombatData> combatDataComponentType;
    private ComponentType<EntityStore, NPCRunTestsCommand.NPCTestData> npcTestDataComponentType;
    private ComponentType<EntityStore, BeaconSupport> beaconSupportComponentType;
@@ -510,6 +528,9 @@ public class NPCPlugin extends JavaPlugin {
       this.sortBufferProviderResourceResourceType = entityStoreRegistry.registerResource(SortBufferProviderResource.class, SortBufferProviderResource::new);
       this.aStarNodePoolProviderSimpleResourceType = entityStoreRegistry.registerResource(AStarNodePoolProviderSimple.class, AStarNodePoolProviderSimple::new);
       this.npcSpatialResource = entityStoreRegistry.registerSpatialResource(() -> new KDTree<>(Ref::isValid));
+      this.spawnNPCInteractionFailureTrackerResourceType = entityStoreRegistry.registerResource(
+         SpawnNPCInteractionFailureTracker.class, SpawnNPCInteractionFailureTracker::new
+      );
       this.combatDataComponentType = entityStoreRegistry.registerComponent(CombatViewSystems.CombatData.class, CombatViewSystems.CombatData::new);
       this.npcTestDataComponentType = entityStoreRegistry.registerComponent(NPCRunTestsCommand.NPCTestData.class, NPCRunTestsCommand.NPCTestData::new);
       this.beaconSupportComponentType = entityStoreRegistry.registerComponent(BeaconSupport.class, BeaconSupport::new);
@@ -535,6 +556,7 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new BlackboardSystems.TickingSystem(this.blackboardResourceType));
       entityStoreRegistry.registerSystem(new BlackboardSystems.DamageBlockEventSystem());
       entityStoreRegistry.registerSystem(new BlackboardSystems.BreakBlockEventSystem());
+      entityStoreRegistry.registerSystem(new SpawnNPCInteractionFailureTrackerSystems.BreakBlockClearSystem(this.spawnNPCInteractionFailureTrackerResourceType));
       entityStoreRegistry.registerSystem(new CombatViewSystems.Ensure(this.combatDataComponentType));
       entityStoreRegistry.registerSystem(new CombatViewSystems.EntityRemoved(this.combatDataComponentType, this.combatDataPoolResourceType));
       entityStoreRegistry.registerSystem(new CombatViewSystems.Ticking(this.combatDataComponentType, this.combatDataPoolResourceType));
@@ -641,6 +663,10 @@ public class NPCPlugin extends JavaPlugin {
 
    public ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> getNpcSpatialResource() {
       return this.npcSpatialResource;
+   }
+
+   public ResourceType<EntityStore, SpawnNPCInteractionFailureTracker> getSpawnNPCInteractionFailureTrackerResourceType() {
+      return this.spawnNPCInteractionFailureTrackerResourceType;
    }
 
    public ComponentType<EntityStore, CombatViewSystems.CombatData> getCombatDataComponentType() {
@@ -875,6 +901,102 @@ public class NPCPlugin extends JavaPlugin {
          } else {
             return null;
          }
+      }
+   }
+
+   @Nonnull
+   public SpawnTestResult spawnNPCWithSpaceValidation(
+      @Nonnull Store<EntityStore> store, @Nonnull String npcType, @Nullable String groupType, @Nonnull Vector3dc position, @Nonnull Rotation3fc rotation
+   ) {
+      SpawnTestResult result = this.canSpawnAtExactPosition(store, npcType, position);
+      if (result != SpawnTestResult.TEST_OK) {
+         return result;
+      } else {
+         return this.spawnNPC(store, npcType, groupType, position, rotation) == null ? SpawnTestResult.FAIL_SPAWN : SpawnTestResult.TEST_OK;
+      }
+   }
+
+   @Nonnull
+   public SpawnTestResult spawnNPCWithColumnProbe(
+      @Nonnull Store<EntityStore> store,
+      @Nonnull String npcType,
+      @Nullable String groupType,
+      @Nonnull World world,
+      int worldBlockX,
+      int worldBlockZ,
+      double yHint,
+      @Nonnull Rotation3fc rotation
+   ) {
+      int roleIndex = this.getIndex(npcType);
+      if (roleIndex < 0) {
+         return SpawnTestResult.FAIL_NOT_SPAWNABLE;
+      }
+
+      Builder<Role> roleBuilder = this.tryGetCachedValidRole(roleIndex);
+      if (roleBuilder != null && roleBuilder.isSpawnable() && roleBuilder instanceof ISpawnableWithModel spawnable) {
+         SpawningContext spawningContext = new SpawningContext();
+
+         try {
+            if (!spawningContext.setSpawnable(spawnable)) {
+               return SpawnTestResult.FAIL_NOT_SPAWNABLE;
+            }
+
+            double centerX = worldBlockX + 0.5;
+            double centerZ = worldBlockZ + 0.5;
+            if (!spawningContext.set(world, centerX, yHint, centerZ)) {
+               return SpawnTestResult.FAIL_INVALID_POSITION;
+            }
+
+            if (spawningContext.canSpawn() != SpawnTestResult.TEST_OK) {
+               return SpawnTestResult.FAIL_INVALID_POSITION;
+            }
+
+            Model model = spawningContext.getModel();
+            if (model == null) {
+               return SpawnTestResult.FAIL_INVALID_POSITION;
+            }
+
+            Vector3d spawnPosition = new Vector3d(spawningContext.xSpawn, spawningContext.ySpawn, spawningContext.zSpawn);
+            Pair<Ref<EntityStore>, NPCEntity> npcPair = this.spawnEntity(store, roleIndex, spawnPosition, rotation, model, null);
+            if (npcPair == null) {
+               return SpawnTestResult.FAIL_SPAWN;
+            }
+
+            FlockAsset flockDefinition = groupType != null ? FlockAsset.getAssetMap().getAsset(groupType) : null;
+            FlockPlugin.trySpawnFlock(npcPair.first(), npcPair.second(), store, roleIndex, spawnPosition, rotation, flockDefinition, null);
+            return SpawnTestResult.TEST_OK;
+         } finally {
+            spawningContext.releaseFull();
+         }
+      } else {
+         return SpawnTestResult.FAIL_NOT_SPAWNABLE;
+      }
+   }
+
+   @Nonnull
+   private SpawnTestResult canSpawnAtExactPosition(@Nonnull Store<EntityStore> store, @Nonnull String npcType, @Nonnull Vector3dc position) {
+      int roleIndex = this.getIndex(npcType);
+      if (roleIndex < 0) {
+         return SpawnTestResult.FAIL_NOT_SPAWNABLE;
+      }
+
+      Builder<Role> roleBuilder = this.tryGetCachedValidRole(roleIndex);
+      if (roleBuilder != null && roleBuilder.isSpawnable() && roleBuilder instanceof ISpawnableWithModel spawnable) {
+         SpawningContext spawningContext = new SpawningContext();
+
+         try {
+            if (!spawningContext.setSpawnable(spawnable)) {
+               return SpawnTestResult.FAIL_NOT_SPAWNABLE;
+            } else if (!spawningContext.setExact(store.getExternalData().getWorld(), position.x(), position.y(), position.z())) {
+               return SpawnTestResult.FAIL_INVALID_POSITION;
+            } else {
+               return spawningContext.validatePosition(20) ? SpawnTestResult.TEST_OK : SpawnTestResult.FAIL_INVALID_POSITION;
+            }
+         } finally {
+            spawningContext.releaseFull();
+         }
+      } else {
+         return SpawnTestResult.FAIL_NOT_SPAWNABLE;
       }
    }
 

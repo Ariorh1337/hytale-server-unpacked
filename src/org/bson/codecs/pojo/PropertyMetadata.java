@@ -11,6 +11,7 @@ import java.util.Map;
 import org.bson.codecs.configuration.CodecConfigurationException;
 
 final class PropertyMetadata<T> {
+   private static final TypeData<Void> VOID_TYPE_DATA = TypeData.builder(Void.class).build();
    private final String name;
    private final String declaringClassName;
    private final TypeData<T> typeData;
@@ -130,15 +131,27 @@ final class PropertyMetadata<T> {
    }
 
    public boolean isSerializable() {
-      return this.getter != null
-         ? this.field == null || this.notStaticOrTransient(this.field.getModifiers())
-         : this.field != null && this.isPublicAndNotStaticOrTransient(this.field.getModifiers());
+      if (this.isVoidType()) {
+         return false;
+      } else {
+         return this.getter != null
+            ? this.field == null || this.notStaticOrTransient(this.field.getModifiers())
+            : this.field != null && this.isPublicAndNotStaticOrTransient(this.field.getModifiers());
+      }
    }
 
    public boolean isDeserializable() {
-      return this.setter != null
-         ? this.field == null || !Modifier.isFinal(this.field.getModifiers()) && this.notStaticOrTransient(this.field.getModifiers())
-         : this.field != null && !Modifier.isFinal(this.field.getModifiers()) && this.isPublicAndNotStaticOrTransient(this.field.getModifiers());
+      if (this.isVoidType()) {
+         return false;
+      } else {
+         return this.setter != null
+            ? this.field == null || !Modifier.isFinal(this.field.getModifiers()) && this.notStaticOrTransient(this.field.getModifiers())
+            : this.field != null && !Modifier.isFinal(this.field.getModifiers()) && this.isPublicAndNotStaticOrTransient(this.field.getModifiers());
+      }
+   }
+
+   private boolean isVoidType() {
+      return VOID_TYPE_DATA.equals(this.typeData);
    }
 
    private boolean notStaticOrTransient(int modifiers) {

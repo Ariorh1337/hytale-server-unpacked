@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.worldgen;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.builtin.worldgen.modifier.EventHandler;
 import com.hypixel.hytale.builtin.worldgen.modifier.WorldGenModifier;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
@@ -118,10 +119,13 @@ public class WorldGenPlugin extends JavaPlugin {
 
          for (WorldGenPlugin.Version version : packs) {
             validateVersion(version, packs);
-            assets.registerPack(version.getPackName(), version.path, version.manifest, false);
-            Semver latest = versions.get(version.name);
-            if (latest == null || version.manifest.getVersion().compareTo(latest) > 0) {
-               versions.put(version.name, version.manifest.getVersion());
+            if (!assets.registerPack(version.getPackName(), version.path, version.manifest, AssetPack.PackSource.CLASSPATH)) {
+               this.getLogger().at(Level.SEVERE).log("Failed to register world gen asset pack: %s", version.getPackName());
+            } else {
+               Semver latest = versions.get(version.name);
+               if (latest == null || version.manifest.getVersion().compareTo(latest) > 0) {
+                  versions.put(version.name, version.manifest.getVersion());
+               }
             }
          }
 

@@ -17,8 +17,8 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -28,11 +28,13 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawnRejection;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
+import com.hypixel.hytale.server.spawning.assets.spawns.config.RoleSpawnParameters;
 import com.hypixel.hytale.server.spawning.suppression.SuppressionSpanHelper;
 import com.hypixel.hytale.server.spawning.suppression.component.ChunkSuppressionEntry;
 import com.hypixel.hytale.server.spawning.suppression.component.SpawnSuppressionController;
@@ -92,6 +94,16 @@ public class WorldSpawnJobSystems {
 
             return endProbing(WorldSpawnJobSystems.Result.FAILED, spawnJobData, chunk, worldSpawnData);
          } else {
+            RoleSpawnParameters roleParams = spawnJobData.getSpawnConfig().getRoles().get(roleIndex);
+            double[] weights = roleParams.getOrComputeMovementModeWeights(spawnable, spawningContext);
+            if (weights == null) {
+               return endProbing(WorldSpawnJobSystems.Result.PERMANENT_FAILURE, spawnJobData, chunk, worldSpawnData);
+            }
+
+            if (!spawningContext.setMovementMode(MovementMode.values()[RandomExtra.pickWeightedIndex(weights)], roleParams.getEnableSafeSpawning())) {
+               return endProbing(WorldSpawnJobSystems.Result.PERMANENT_FAILURE, spawnJobData, chunk, worldSpawnData);
+            }
+
             spawningContext.setChunk(chunk, spawnJobData.getEnvironmentIndex());
             SuppressionSpanHelper suppressionSpanHelper = spawnJobData.getSuppressionSpanHelper();
             Long2ObjectConcurrentHashMap<ChunkSuppressionEntry> chunkSuppressionMap = spawnSuppressionController.getChunkSuppressionMap();
@@ -160,7 +172,7 @@ public class WorldSpawnJobSystems {
             spansTested++;
             if (!spawnJobData.getSpawnConfig().withinLightRange(spawningContext)) {
                rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.OUTSIDE_LIGHT_RANGE);
-            } else if (!canSpawnOnBlock(spawnBlockSet, spawnFluidTag, spawningContext)) {
+            } else if (!spawningContext.canSpawnOnBlock(spawnBlockSet, spawnFluidTag)) {
                spansBlocked++;
                rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.INVALID_SPAWN_BLOCK);
             } else {
@@ -179,6 +191,21 @@ public class WorldSpawnJobSystems {
                   rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.NOT_BREATHABLE);
                   spansBlocked++;
                } else {
+                  if (spawnTestResult == SpawnTestResult.FAIL_NO_MOTION_CONTROLLERS) {
+                     rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.NO_MOTION_CONTROLLERS);
+                     return endProbing(WorldSpawnJobSystems.Result.PERMANENT_FAILURE, spawnJobData, worldChunk, worldSpawnData);
+                  }
+
+                  if (spawnTestResult == SpawnTestResult.FAIL_NO_MOTION_CONTROLLER_MATCH) {
+                     rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.NO_MOTION_CONTROLLER_MATCH);
+                     return endProbing(WorldSpawnJobSystems.Result.PERMANENT_FAILURE, spawnJobData, worldChunk, worldSpawnData);
+                  }
+
+                  if (spawnTestResult == SpawnTestResult.FAIL_BREATHING_INCOMPATIBLE) {
+                     rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.BREATHING_INCOMPATIBLE);
+                     return endProbing(WorldSpawnJobSystems.Result.PERMANENT_FAILURE, spawnJobData, worldChunk, worldSpawnData);
+                  }
+
                   rejectSpawn(spawnJobData.getRejectionMap(), SpawnRejection.OTHER);
                }
             }
@@ -310,16 +337,7 @@ public class WorldSpawnJobSystems {
 
       npc.setEnvironment(spawnJobData.getEnvironmentIndex());
       npc.setSpawnConfiguration(spawnJobData.getSpawnConfigIndex());
-   }
-
-   private static boolean canSpawnOnBlock(@Nullable IntSet spawnBlockSet, int spawnFluidTag, @Nonnull SpawningContext spawningContext) {
-      if (spawnBlockSet == null && spawnFluidTag == Integer.MIN_VALUE) {
-         return true;
-      } else {
-         return spawnBlockSet != null && spawnBlockSet.contains(spawningContext.groundBlockId)
-            ? true
-            : spawnFluidTag != Integer.MIN_VALUE && Fluid.getAssetMap().getIndexesForTag(spawnFluidTag).contains(spawningContext.groundFluidId);
-      }
+      npc.setActiveMotionControllerName(spawnJobData.getSpawningContext().activeMotionControllerType);
    }
 
    private static void rejectSpawn(@Nonnull Object2IntMap<SpawnRejection> rejectionMap, @Nonnull SpawnRejection rejection) {

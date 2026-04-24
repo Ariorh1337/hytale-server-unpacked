@@ -25,50 +25,6 @@ final class ConventionSetPrivateFieldImpl implements Convention {
    }
 
    private <T> void setPropertyAccessor(PropertyModelBuilder<T> propertyModelBuilder) {
-      propertyModelBuilder.propertyAccessor(
-         new ConventionSetPrivateFieldImpl.PrivatePropertyAccessor<>((PropertyAccessorImpl)propertyModelBuilder.getPropertyAccessor())
-      );
-   }
-
-   private static final class PrivatePropertyAccessor<T> implements PropertyAccessor<T> {
-      private final PropertyAccessorImpl<T> wrapped;
-
-      private PrivatePropertyAccessor(PropertyAccessorImpl<T> wrapped) {
-         this.wrapped = wrapped;
-
-         try {
-            wrapped.getPropertyMetadata().getField().setAccessible(true);
-         } catch (Exception e) {
-            throw new CodecConfigurationException(
-               String.format(
-                  "Unable to make private field accessible '%s' in %s",
-                  wrapped.getPropertyMetadata().getName(),
-                  wrapped.getPropertyMetadata().getDeclaringClassName()
-               ),
-               e
-            );
-         }
-      }
-
-      @Override
-      public <S> T get(S instance) {
-         return this.wrapped.get(instance);
-      }
-
-      @Override
-      public <S> void set(S instance, T value) {
-         try {
-            this.wrapped.getPropertyMetadata().getField().set(instance, value);
-         } catch (Exception e) {
-            throw new CodecConfigurationException(
-               String.format(
-                  "Unable to set value for property '%s' in %s",
-                  this.wrapped.getPropertyMetadata().getName(),
-                  this.wrapped.getPropertyMetadata().getDeclaringClassName()
-               ),
-               e
-            );
-         }
-      }
+      propertyModelBuilder.propertyAccessor(new FieldPropertyAccessor<>((PropertyAccessorImpl<T>)propertyModelBuilder.getPropertyAccessor()));
    }
 }

@@ -137,13 +137,13 @@ public abstract class AlgorithmParametersSpi extends java.security.AlgorithmPara
             AlgorithmIdentifier var7 = new AlgorithmIdentifier(
                PKCSObjectIdentifiers.id_mgf1, new AlgorithmIdentifier(DigestFactory.getOID(var4.getDigestAlgorithm()), DERNull.INSTANCE)
             );
-            RSASSAPSSparams var8 = new RSASSAPSSparams(var3, var7, new ASN1Integer(var1.getSaltLength()), new ASN1Integer(var1.getTrailerField()));
+            RSASSAPSSparams var8 = new RSASSAPSSparams(var3, var7, ASN1Integer.valueOf(var1.getSaltLength()), ASN1Integer.valueOf(var1.getTrailerField()));
             return var8.getEncoded("DER");
          } else {
             AlgorithmIdentifier var5 = new AlgorithmIdentifier(
                var1.getMGFAlgorithm().equals("SHAKE128") ? NISTObjectIdentifiers.id_shake128 : NISTObjectIdentifiers.id_shake256
             );
-            RSASSAPSSparams var6 = new RSASSAPSSparams(var3, var5, new ASN1Integer(var1.getSaltLength()), new ASN1Integer(var1.getTrailerField()));
+            RSASSAPSSparams var6 = new RSASSAPSSparams(var3, var5, ASN1Integer.valueOf(var1.getSaltLength()), ASN1Integer.valueOf(var1.getTrailerField()));
             return var6.getEncoded("DER");
          }
       }

@@ -35,7 +35,7 @@ public class EncryptedDataEncryptionKey extends ASN1Object implements ASN1Choice
       if (var0 instanceof EncryptedDataEncryptionKey) {
          return (EncryptedDataEncryptionKey)var0;
       } else {
-         return var0 != null ? new EncryptedDataEncryptionKey(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new EncryptedDataEncryptionKey(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

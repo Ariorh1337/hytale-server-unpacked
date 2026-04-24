@@ -383,8 +383,10 @@ public class InstancesPlugin extends JavaPlugin {
 
    @Nonnull
    public static Path getInstanceAssetPath(@Nonnull String name) {
-      for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-         Path instancesDir = pack.getRoot().resolve("Server").resolve("Instances");
+      List<AssetPack> packs = AssetModule.get().getAssetPacks();
+
+      for (int i = packs.size() - 1; i >= 0; i--) {
+         Path instancesDir = packs.get(i).getRoot().resolve("Server").resolve("Instances");
          Path path = PathUtil.resolvePathWithinDir(instancesDir, name);
          if (path == null) {
             throw new IllegalArgumentException("Invalid instance name");

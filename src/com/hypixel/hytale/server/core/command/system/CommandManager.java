@@ -24,7 +24,6 @@ import com.hypixel.hytale.server.core.command.commands.debug.component.hitboxcol
 import com.hypixel.hytale.server.core.command.commands.debug.component.repulsion.RepulsionCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.packs.PacksCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.server.ServerCommand;
-import com.hypixel.hytale.server.core.command.commands.debug.stresstest.StressTestCommand;
 import com.hypixel.hytale.server.core.command.commands.player.DamageCommand;
 import com.hypixel.hytale.server.core.command.commands.player.GameModeCommand;
 import com.hypixel.hytale.server.core.command.commands.player.HideCommand;
@@ -131,7 +130,6 @@ public class CommandManager implements CommandOwner {
       this.registerSystemCommand(new AssetsCommand());
       this.registerSystemCommand(new PacksCommand());
       this.registerSystemCommand(new ServerCommand());
-      this.registerSystemCommand(new StressTestCommand());
       this.registerSystemCommand(new HitboxCollisionCommand());
       this.registerSystemCommand(new DebugPlayerPositionCommand());
       this.registerSystemCommand(new MessageTranslationTestCommand());

@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -92,7 +93,14 @@ public class BlockEntity implements Component<EntityStore> {
       }
 
       BlockType blockType = assetMap.getAsset(this.blockTypeKey);
-      return blockType == null ? null : new BoundingBox(BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex()).get(0).getBoundingBox());
+      if (blockType == null) {
+         return null;
+      }
+
+      Box blockBox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex()).get(0).getBoundingBox();
+      BoundingBox boundingBox = new BoundingBox(blockBox);
+      boundingBox.setBaseModelBox(blockBox);
+      return boundingBox;
    }
 
    public void setBlockTypeKey(String blockTypeKey, @Nonnull Ref<EntityStore> ref, @Nonnull CommandBuffer<EntityStore> commandBuffer) {

@@ -189,17 +189,17 @@ public class TimeStampTokenGenerator {
       if (this.accuracySeconds > 0 || this.accuracyMillis > 0 || this.accuracyMicros > 0) {
          ASN1Integer var8 = null;
          if (this.accuracySeconds > 0) {
-            var8 = new ASN1Integer(this.accuracySeconds);
+            var8 = ASN1Integer.valueOf(this.accuracySeconds);
          }
 
          ASN1Integer var9 = null;
          if (this.accuracyMillis > 0) {
-            var9 = new ASN1Integer(this.accuracyMillis);
+            var9 = ASN1Integer.valueOf(this.accuracyMillis);
          }
 
          ASN1Integer var10 = null;
          if (this.accuracyMicros > 0) {
-            var10 = new ASN1Integer(this.accuracyMicros);
+            var10 = ASN1Integer.valueOf(this.accuracyMicros);
          }
 
          var7 = new Accuracy(var8, var9, var10);

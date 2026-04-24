@@ -286,47 +286,53 @@ public class ASN1RelativeOID extends ASN1Primitive {
    }
 
    static byte[] parseIdentifier(String var0) {
-      ByteArrayOutputStream var1 = new ByteArrayOutputStream();
-      OIDTokenizer var2 = new OIDTokenizer(var0);
+      int var1 = (var0.length() + 1) / 2;
+      ByteArrayOutputStream var2 = new ByteArrayOutputStream(var1);
+      int var3 = 0;
+      int var4 = 0;
 
-      while (var2.hasMoreTokens()) {
-         String var3 = var2.nextToken();
-         if (var3.length() <= 18) {
-            writeField(var1, Long.parseLong(var3));
-         } else {
-            writeField(var1, new BigInteger(var3));
+      while (++var4 < var0.length()) {
+         if (var0.charAt(var4) == '.') {
+            writeField(var2, var0, var3, var4);
+            var3 = var4 + 1;
+            var4 = var3;
          }
       }
 
-      return var1.toByteArray();
+      writeField(var2, var0, var3, var4);
+      return var2.toByteArray();
+   }
+
+   static void writeField(ByteArrayOutputStream var0, String var1, int var2, int var3) {
+      String var4 = var1.substring(var2, var3);
+      if (var4.length() <= 18) {
+         writeField(var0, Long.parseLong(var4));
+      } else {
+         writeField(var0, new BigInteger(var4));
+      }
    }
 
    static void writeField(ByteArrayOutputStream var0, long var1) {
       byte[] var3 = new byte[9];
-      int var4 = 8;
+      int var4 = var3.length - 1;
 
       for (var3[var4] = (byte)((int)var1 & 127); var1 >= 128L; var3[--var4] = (byte)((int)var1 | 128)) {
          var1 >>= 7;
       }
 
-      var0.write(var3, var4, 9 - var4);
+      var0.write(var3, var4, var3.length - var4);
    }
 
    static void writeField(ByteArrayOutputStream var0, BigInteger var1) {
       int var2 = (var1.bitLength() + 6) / 7;
-      if (var2 == 0) {
-         var0.write(0);
-      } else {
-         BigInteger var3 = var1;
-         byte[] var4 = new byte[var2];
+      byte[] var3 = new byte[var2];
 
-         for (int var5 = var2 - 1; var5 >= 0; var5--) {
-            var4[var5] = (byte)(var3.intValue() | 128);
-            var3 = var3.shiftRight(7);
-         }
-
-         var4[var2 - 1] = (byte)(var4[var2 - 1] & 127);
-         var0.write(var4, 0, var4.length);
+      for (int var4 = var2 - 1; var4 >= 0; var4--) {
+         var3[var4] = (byte)(var1.intValue() | 128);
+         var1 = var1.shiftRight(7);
       }
+
+      var3[var2 - 1] = (byte)(var3[var2 - 1] & 127);
+      var0.write(var3, 0, var3.length);
    }
 }

@@ -117,7 +117,7 @@ public class NPCMemory extends Memory {
    @Nonnull
    @Override
    public String getIconPath() {
-      return "UI/Custom/Pages/Memories/npcs/" + this.npcRole + ".png";
+      return "Icons/ModelsGenerated/" + this.npcRole + ".png";
    }
 
    @Nonnull

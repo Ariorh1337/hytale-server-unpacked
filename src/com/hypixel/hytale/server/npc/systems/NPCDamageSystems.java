@@ -20,8 +20,9 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.asset.type.gameplay.DeathConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
@@ -214,8 +215,11 @@ public class NPCDamageSystems {
                   role.setDeathItemsDropped();
                   List<ItemStack> itemsToDrop = new ObjectArrayList<>();
                   if (role.isPickupDropOnDeath()) {
-                     Inventory inventory = npcComponent.getInventory();
-                     itemsToDrop.addAll(inventory.getStorage().dropAllItemStacks());
+                     InventoryComponent.Storage storageComponent = archetypeChunk.getComponent(index, InventoryComponent.Storage.getComponentType());
+                     if (storageComponent != null) {
+                        ItemContainer storageInventory = storageComponent.getInventory();
+                        itemsToDrop.addAll(storageInventory.dropAllItemStacks());
+                     }
                   }
 
                   String dropListId = role.getDropListId();

@@ -5,7 +5,6 @@ import com.hypixel.hytale.math.util.NumberUtil;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.EmptySectionPalette;
-import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
@@ -105,19 +104,5 @@ public class GeneratedChunkSection {
       }
 
       return new BlockSection(AbstractSectionPalette.from(this.data, this.tempIdCounts), this.fillers, this.rotations);
-   }
-
-   public void serialize(@Nonnull ByteBuf buf) {
-      for (int i = 0; i < 32768; i++) {
-         buf.writeInt(this.data[i]);
-      }
-   }
-
-   public void deserialize(@Nonnull ByteBuf buf, int version) {
-      int[] blocks = new int[32768];
-
-      for (int i = 0; i < blocks.length; i++) {
-         blocks[i] = buf.readInt();
-      }
    }
 }

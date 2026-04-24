@@ -45,6 +45,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.RespawnPage;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -295,7 +296,7 @@ public class DeathSystems {
             List<ItemStack> itemsToDrop = null;
             switch (component.getItemsLossMode()) {
                case ALL:
-                  itemsToDrop = playerComponent.getInventory().dropAllItemStacks();
+                  itemsToDrop = InventoryUtils.dropAllItemStacks(ref, store);
                   break;
                case CONFIGURED:
                   double itemsAmountLossPercentage = component.getItemsAmountLossPercentage();

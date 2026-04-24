@@ -6,27 +6,22 @@ import org.bouncycastle.crypto.AsymmetricCipherKeyPairGenerator;
 import org.bouncycastle.crypto.KeyGenerationParameters;
 
 public class HQCKeyPairGenerator implements AsymmetricCipherKeyPairGenerator {
-   private HQCKeyGenerationParameters hqcKeyGenerationParameters;
    private SecureRandom random;
+   private HQCParameters parameters;
 
    @Override
    public void init(KeyGenerationParameters var1) {
-      this.hqcKeyGenerationParameters = (HQCKeyGenerationParameters)var1;
       this.random = var1.getRandom();
-   }
-
-   private AsymmetricCipherKeyPair genKeyPair() {
-      HQCEngine var1 = this.hqcKeyGenerationParameters.getParameters().getEngine();
-      byte[] var2 = new byte[this.hqcKeyGenerationParameters.getParameters().getPublicKeyBytes()];
-      byte[] var3 = new byte[this.hqcKeyGenerationParameters.getParameters().getSecretKeyBytes()];
-      var1.genKeyPair(var2, var3, this.random);
-      HQCPublicKeyParameters var4 = new HQCPublicKeyParameters(this.hqcKeyGenerationParameters.getParameters(), var2);
-      HQCPrivateKeyParameters var5 = new HQCPrivateKeyParameters(this.hqcKeyGenerationParameters.getParameters(), var3);
-      return new AsymmetricCipherKeyPair(var4, var5);
+      this.parameters = ((HQCKeyGenerationParameters)var1).getParameters();
    }
 
    @Override
    public AsymmetricCipherKeyPair generateKeyPair() {
-      return this.genKeyPair();
+      byte[] var1 = new byte[this.parameters.getPublicKeyBytes()];
+      byte[] var2 = new byte[this.parameters.getSecretKeyBytes()];
+      this.parameters.getEngine().genKeyPair(var1, var2, this.random);
+      HQCPublicKeyParameters var3 = new HQCPublicKeyParameters(this.parameters, var1);
+      HQCPrivateKeyParameters var4 = new HQCPrivateKeyParameters(this.parameters, var2);
+      return new AsymmetricCipherKeyPair(var3, var4);
    }
 }

@@ -14,7 +14,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.protocol.packets.world.UpdateEnvironmentMusic;
+import com.hypixel.hytale.protocol.packets.world.UpdateForcedMusic;
+import com.hypixel.hytale.protocol.packets.world.UpdateMusicState;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -35,7 +36,7 @@ public class ForcedMusicSystems {
       ) {
          this.playerRefComponentType = playerRefComponentType;
          this.ambienceTrackerComponentType = ambienceTrackerComponentType;
-         this.query = Query.and(playerRefComponentType, ambienceTrackerComponentType);
+         this.query = Query.and(playerRefComponentType);
       }
 
       @Override
@@ -49,8 +50,8 @@ public class ForcedMusicSystems {
          assert ambienceTrackerComponent != null;
          PlayerRef playerRefComponent = holder.getComponent(this.playerRefComponentType);
          assert playerRefComponent != null;
-         UpdateEnvironmentMusic pooledPacket = ambienceTrackerComponent.getMusicPacket();
-         pooledPacket.environmentIndex = 0;
+         UpdateForcedMusic pooledPacket = ambienceTrackerComponent.getMusicPacket();
+         pooledPacket.containerIndex = 0;
          playerRefComponent.getPacketHandler().write(pooledPacket);
       }
 
@@ -96,13 +97,24 @@ public class ForcedMusicSystems {
          assert ambienceTrackerComponent != null;
          PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
          assert playerRefComponent != null;
-         int have = ambienceTrackerComponent.getForcedMusicIndex();
-         int desired = ambienceResource.getForcedMusicIndex();
+         int have = ambienceTrackerComponent.getLastSentContainerIndex();
+         int desired = ambienceResource.getForcedMusicContainerIndex();
          if (have != desired) {
-            ambienceTrackerComponent.setForcedMusicIndex(desired);
-            UpdateEnvironmentMusic pooledPacket = ambienceTrackerComponent.getMusicPacket();
-            pooledPacket.environmentIndex = desired;
+            ambienceTrackerComponent.setLastSentContainerIndex(desired);
+            ambienceTrackerComponent.setLastSentMusicStateVersion(0);
+            UpdateForcedMusic pooledPacket = ambienceTrackerComponent.getMusicPacket();
+            pooledPacket.containerIndex = desired;
             playerRefComponent.getPacketHandler().write(pooledPacket);
+         }
+
+         int desiredStateVersion = ambienceResource.getForcedMusicStateVersion();
+         if (ambienceTrackerComponent.getLastSentMusicStateVersion() != desiredStateVersion) {
+            ambienceTrackerComponent.setLastSentMusicStateVersion(desiredStateVersion);
+            UpdateMusicState statePacket = ambienceTrackerComponent.getMusicStatePacket();
+            statePacket.containerIndex = desired;
+            statePacket.stateIndex = ambienceResource.getForcedMusicStateIndex();
+            statePacket.fadeDuration = ambienceResource.getForcedMusicStateFadeDuration();
+            playerRefComponent.getPacketHandler().write(statePacket);
          }
       }
 

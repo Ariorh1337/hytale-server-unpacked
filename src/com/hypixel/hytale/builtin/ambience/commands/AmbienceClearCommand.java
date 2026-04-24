@@ -20,7 +20,7 @@ public class AmbienceClearCommand extends AbstractWorldCommand {
    @Override
    protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       AmbienceResource ambienceResource = store.getResource(AmbienceResource.getResourceType());
-      ambienceResource.setForcedMusicAmbience(null);
+      ambienceResource.setForcedMusicContainerIndex(0);
       context.sendMessage(MESSAGE_SERVER_COMMANDS_AMBIENCE_CLEAR_SUCCESS);
    }
 }

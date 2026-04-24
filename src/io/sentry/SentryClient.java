@@ -10,6 +10,8 @@ import io.sentry.hints.DiskFlushNotification;
 import io.sentry.hints.TransactionEnd;
 import io.sentry.logger.ILoggerBatchProcessor;
 import io.sentry.logger.NoOpLoggerBatchProcessor;
+import io.sentry.metrics.IMetricsBatchProcessor;
+import io.sentry.metrics.NoOpMetricsBatchProcessor;
 import io.sentry.protocol.Contexts;
 import io.sentry.protocol.DebugMeta;
 import io.sentry.protocol.FeatureFlags;
@@ -54,6 +56,8 @@ public final class SentryClient implements ISentryClient {
    private final SentryClient.SortBreadcrumbsByDate sortBreadcrumbsByDate = new SentryClient.SortBreadcrumbsByDate();
    @NotNull
    private final ILoggerBatchProcessor loggerBatchProcessor;
+   @NotNull
+   private final IMetricsBatchProcessor metricsBatchProcessor;
 
    @Override
    public boolean isEnabled() {
@@ -75,6 +79,12 @@ public final class SentryClient implements ISentryClient {
          this.loggerBatchProcessor = options.getLogs().getLoggerBatchProcessorFactory().create(options, this);
       } else {
          this.loggerBatchProcessor = NoOpLoggerBatchProcessor.getInstance();
+      }
+
+      if (options.getMetrics().isEnabled()) {
+         this.metricsBatchProcessor = options.getMetrics().getMetricsBatchProcessorFactory().create(options, this);
+      } else {
+         this.metricsBatchProcessor = NoOpMetricsBatchProcessor.getInstance();
       }
    }
 
@@ -395,6 +405,27 @@ public final class SentryClient implements ISentryClient {
    }
 
    @Nullable
+   private SentryMetricsEvent processMetricsEvent(@NotNull SentryMetricsEvent event, @NotNull List<EventProcessor> eventProcessors, @NotNull Hint hint) {
+      for (EventProcessor processor : eventProcessors) {
+         try {
+            event = processor.process(event, hint);
+         } catch (Throwable e) {
+            this.options
+               .getLogger()
+               .log(SentryLevel.ERROR, e, "An exception occurred while processing metrics event by processor: %s", processor.getClass().getName());
+         }
+
+         if (event == null) {
+            this.options.getLogger().log(SentryLevel.DEBUG, "Metrics event was dropped by a processor: %s", processor.getClass().getName());
+            this.options.getClientReportRecorder().recordLostEvent(DiscardReason.EVENT_PROCESSOR, DataCategory.TraceMetric);
+            break;
+         }
+      }
+
+      return event;
+   }
+
+   @Nullable
    private SentryTransaction processTransaction(@NotNull SentryTransaction transaction, @NotNull Hint hint, @NotNull List<EventProcessor> eventProcessors) {
       for (EventProcessor processor : eventProcessors) {
          int spanCountBeforeProcessor = transaction.getSpans().size();
@@ -507,6 +538,15 @@ public final class SentryClient implements ISentryClient {
       List<SentryEnvelopeItem> envelopeItems = new ArrayList<>();
       SentryEnvelopeItem logItem = SentryEnvelopeItem.fromLogs(this.options.getSerializer(), logEvents);
       envelopeItems.add(logItem);
+      SentryEnvelopeHeader envelopeHeader = new SentryEnvelopeHeader(null, this.options.getSdkVersion(), null);
+      return new SentryEnvelope(envelopeHeader, envelopeItems);
+   }
+
+   @NotNull
+   private SentryEnvelope buildEnvelope(@NotNull SentryMetricsEvents metricsEvents) {
+      List<SentryEnvelopeItem> envelopeItems = new ArrayList<>();
+      SentryEnvelopeItem metricsItem = SentryEnvelopeItem.fromMetrics(this.options.getSerializer(), metricsEvents);
+      envelopeItems.add(metricsItem);
       SentryEnvelopeHeader envelopeHeader = new SentryEnvelopeHeader(null, this.options.getSdkVersion(), null);
       return new SentryEnvelope(envelopeHeader, envelopeItems);
    }
@@ -907,7 +947,51 @@ public final class SentryClient implements ISentryClient {
          SentryEnvelope envelope = this.buildEnvelope(logEvents);
          this.sendEnvelope(envelope, null);
       } catch (IOException e) {
-         this.options.getLogger().log(SentryLevel.WARNING, e, "Capturing log failed.");
+         this.options.getLogger().log(SentryLevel.WARNING, e, "Capturing logs failed.");
+      }
+   }
+
+   @Experimental
+   @Override
+   public void captureMetric(@Nullable SentryMetricsEvent metricsEvent, @Nullable IScope scope, @Nullable Hint hint) {
+      if (hint == null) {
+         hint = new Hint();
+      }
+
+      if (metricsEvent != null && scope != null) {
+         metricsEvent = this.processMetricsEvent(metricsEvent, scope.getEventProcessors(), hint);
+         if (metricsEvent == null) {
+            return;
+         }
+      }
+
+      if (metricsEvent != null) {
+         metricsEvent = this.processMetricsEvent(metricsEvent, this.options.getEventProcessors(), hint);
+         if (metricsEvent == null) {
+            return;
+         }
+      }
+
+      if (metricsEvent != null) {
+         metricsEvent = this.executeBeforeSendMetric(metricsEvent, hint);
+         if (metricsEvent == null) {
+            this.options.getLogger().log(SentryLevel.DEBUG, "Metrics Event was dropped by beforeSendMetrics");
+            this.options.getClientReportRecorder().recordLostEvent(DiscardReason.BEFORE_SEND, DataCategory.TraceMetric);
+            return;
+         }
+
+         this.metricsBatchProcessor.add(metricsEvent);
+      }
+   }
+
+   @Internal
+   @Override
+   public void captureBatchedMetricsEvents(@NotNull SentryMetricsEvents metricsEvents) {
+      try {
+         SentryEnvelope envelope = this.buildEnvelope(metricsEvents);
+         this.sendEnvelope(envelope, null);
+      } catch (IOException e) {
+         this.options.getLogger().log(SentryLevel.WARNING, e, "Capturing metrics failed.");
       }
    }
 
@@ -1196,6 +1280,21 @@ public final class SentryClient implements ISentryClient {
       return event;
    }
 
+   @Nullable
+   private SentryMetricsEvent executeBeforeSendMetric(@NotNull SentryMetricsEvent event, @NotNull Hint hint) {
+      SentryOptions.Metrics.BeforeSendMetricCallback beforeSendMetric = this.options.getMetrics().getBeforeSend();
+      if (beforeSendMetric != null) {
+         try {
+            event = beforeSendMetric.execute(event, hint);
+         } catch (Throwable e) {
+            this.options.getLogger().log(SentryLevel.ERROR, "The BeforeSendMetric callback threw an exception. Dropping metrics event.", e);
+            event = null;
+         }
+      }
+
+      return event;
+   }
+
    @Override
    public void close() {
       this.close(false);
@@ -1208,6 +1307,7 @@ public final class SentryClient implements ISentryClient {
       try {
          this.flush(isRestarting ? 0L : this.options.getShutdownTimeoutMillis());
          this.loggerBatchProcessor.close(isRestarting);
+         this.metricsBatchProcessor.close(isRestarting);
          this.transport.close(isRestarting);
       } catch (IOException e) {
          this.options.getLogger().log(SentryLevel.WARNING, "Failed to close the connection to the Sentry Server.", e);
@@ -1229,6 +1329,7 @@ public final class SentryClient implements ISentryClient {
    @Override
    public void flush(long timeoutMillis) {
       this.loggerBatchProcessor.flush(timeoutMillis);
+      this.metricsBatchProcessor.flush(timeoutMillis);
       this.transport.flush(timeoutMillis);
    }
 

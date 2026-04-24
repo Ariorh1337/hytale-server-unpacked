@@ -1,5 +1,6 @@
 package org.bouncycastle.asn1;
 
+/** @deprecated */
 public class OIDTokenizer {
    private String oid;
    private int index;

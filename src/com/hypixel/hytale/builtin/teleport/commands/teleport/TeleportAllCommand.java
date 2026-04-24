@@ -44,7 +44,7 @@ public class TeleportAllCommand extends CommandBase {
 
    public TeleportAllCommand() {
       super("all", "server.commands.tpall.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:Admin");
       this.requirePermission(HytalePermissions.fromCommand("teleport.all"));
    }
 

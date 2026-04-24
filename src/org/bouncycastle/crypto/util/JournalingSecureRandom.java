@@ -77,7 +77,7 @@ public class JournalingSecureRandom extends SecureRandom {
       private TranscriptStream() {
       }
 
-      public void clear() {
+      void clear() {
          Arrays.fill(this.buf, (byte)0);
       }
    }

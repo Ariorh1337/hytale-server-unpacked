@@ -18,9 +18,9 @@ public class KeyTransRecipientInfo extends ASN1Object {
 
    public KeyTransRecipientInfo(RecipientIdentifier var1, AlgorithmIdentifier var2, ASN1OctetString var3) {
       if (var1.toASN1Primitive() instanceof ASN1TaggedObject) {
-         this.version = new ASN1Integer(2L);
+         this.version = ASN1Integer.TWO;
       } else {
-         this.version = new ASN1Integer(0L);
+         this.version = ASN1Integer.ZERO;
       }
 
       this.rid = var1;

@@ -6,7 +6,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 
 public class X500NameBuilder {
-   private X500NameStyle template;
+   private X500NameStyle style;
    private Vector rdns = new Vector();
 
    public X500NameBuilder() {
@@ -14,11 +14,15 @@ public class X500NameBuilder {
    }
 
    public X500NameBuilder(X500NameStyle var1) {
-      this.template = var1;
+      this.style = var1;
+   }
+
+   public X500NameStyle getStyle() {
+      return this.style;
    }
 
    public X500NameBuilder addRDN(ASN1ObjectIdentifier var1, String var2) {
-      this.addRDN(var1, this.template.stringToValue(var1, var2));
+      this.addRDN(var1, this.style.stringToValue(var1, var2));
       return this;
    }
 
@@ -36,7 +40,7 @@ public class X500NameBuilder {
       ASN1Encodable[] var3 = new ASN1Encodable[var2.length];
 
       for (int var4 = 0; var4 != var3.length; var4++) {
-         var3[var4] = this.template.stringToValue(var1[var4], var2[var4]);
+         var3[var4] = this.style.stringToValue(var1[var4], var2[var4]);
       }
 
       return this.addMultiValuedRDN(var1, var3);
@@ -58,12 +62,16 @@ public class X500NameBuilder {
    }
 
    public X500Name build() {
+      return new X500Name(this.style, this.buildRDNs());
+   }
+
+   public RDN[] buildRDNs() {
       RDN[] var1 = new RDN[this.rdns.size()];
 
       for (int var2 = 0; var2 != var1.length; var2++) {
          var1[var2] = (RDN)this.rdns.elementAt(var2);
       }
 
-      return new X500Name(this.template, var1);
+      return var1;
    }
 }

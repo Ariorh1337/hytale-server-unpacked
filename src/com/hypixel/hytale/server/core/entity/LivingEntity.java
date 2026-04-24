@@ -9,7 +9,6 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
-import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -18,7 +17,6 @@ import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransac
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -45,7 +43,6 @@ public abstract class LivingEntity extends Entity {
    public static final int DEFAULT_ITEM_THROW_SPEED = 6;
    private Inventory inventory;
    protected double currentFallDistance;
-   private boolean isEquipmentNetworkOutdated;
 
    public LivingEntity() {
       this.setInventory(new Inventory());
@@ -114,51 +111,7 @@ public abstract class LivingEntity extends Entity {
       super.moveTo(ref, locX, locY, locZ, componentAccessor);
    }
 
-   @Nullable
-   public static ItemStackSlotTransaction decreaseItemStackDurability(
-      @Nonnull Ref<EntityStore> ref, @Nullable ItemStack itemStack, int inventoryId, int slotId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      if (EntityUtils.getEntity(ref, componentAccessor) instanceof LivingEntity livingEntity) {
-         if (!ItemUtils.canDecreaseItemStackDurability(ref, componentAccessor)) {
-            return null;
-         }
-
-         if (itemStack == null || itemStack.isEmpty() || itemStack.getItem() == null) {
-            return null;
-         }
-
-         if (itemStack.isBroken()) {
-            return null;
-         }
-
-         Item item = itemStack.getItem();
-         ItemContainer section = livingEntity.getInventory().getSectionById(inventoryId);
-         if (section == null) {
-            return null;
-         }
-
-         if (item.getArmor() != null) {
-            ItemStackSlotTransaction transaction = livingEntity.updateItemStackDurability(
-               ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor
-            );
-            if (transaction.getSlotAfter().isBroken()) {
-               EntityStatMap entityStatMap = componentAccessor.getComponent(ref, EntityStatMap.getComponentType());
-               if (entityStatMap != null) {
-                  entityStatMap.getStatModifiersManager().scheduleRecalculate();
-               }
-            }
-
-            return transaction;
-         } else {
-            return item.getWeapon() != null
-               ? livingEntity.updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor)
-               : null;
-         }
-      } else {
-         return null;
-      }
-   }
-
+   @Deprecated(forRemoval = true)
    @Nullable
    public ItemStackSlotTransaction updateItemStackDurability(
       @Nonnull Ref<EntityStore> ref,
@@ -168,18 +121,7 @@ public abstract class LivingEntity extends Entity {
       double durabilityChange,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      ItemStack updatedItemStack = itemStack.withIncreasedDurability(durabilityChange);
-      return container.replaceItemStackInSlot((short)slotId, itemStack, updatedItemStack);
-   }
-
-   public void invalidateEquipmentNetwork() {
-      this.isEquipmentNetworkOutdated = true;
-   }
-
-   public boolean consumeEquipmentNetworkOutdated() {
-      boolean temp = this.isEquipmentNetworkOutdated;
-      this.isEquipmentNetworkOutdated = false;
-      return temp;
+      return ItemUtils.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
    }
 
    public double getCurrentFallDistance() {

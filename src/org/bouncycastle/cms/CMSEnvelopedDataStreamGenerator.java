@@ -2,7 +2,6 @@ package org.bouncycastle.cms;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Collections;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -10,7 +9,6 @@ import org.bouncycastle.asn1.BERSequenceGenerator;
 import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.CMSObjectIdentifiers;
 import org.bouncycastle.asn1.cms.EnvelopedData;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.operator.OutputAEADEncryptor;
 import org.bouncycastle.operator.OutputEncryptor;
 
@@ -28,13 +26,8 @@ public class CMSEnvelopedDataStreamGenerator extends CMSEnvelopedGenerator {
 
    private ASN1Integer getVersion(ASN1EncodableVector var1) {
       return this.unprotectedAttributeGenerator != null
-         ? new ASN1Integer(EnvelopedData.calculateVersion(this.originatorInfo, new DLSet(var1), new DLSet()))
-         : new ASN1Integer(EnvelopedData.calculateVersion(this.originatorInfo, new DLSet(var1), null));
-   }
-
-   private OutputStream doOpen(ASN1ObjectIdentifier var1, OutputStream var2, OutputEncryptor var3) throws IOException, CMSException {
-      ASN1EncodableVector var4 = CMSUtils.getRecipentInfos(var3.getKey(), this.recipientInfoGenerators);
-      return this.open(var1, var2, var4, var3);
+         ? ASN1Integer.valueOf(EnvelopedData.calculateVersion(this.originatorInfo, new DLSet(var1), new DLSet()))
+         : ASN1Integer.valueOf(EnvelopedData.calculateVersion(this.originatorInfo, new DLSet(var1), null));
    }
 
    protected OutputStream open(ASN1ObjectIdentifier var1, OutputStream var2, ASN1EncodableVector var3, OutputEncryptor var4) throws IOException {
@@ -46,10 +39,9 @@ public class CMSEnvelopedDataStreamGenerator extends CMSEnvelopedGenerator {
       CMSUtils.addRecipientInfosToGenerator(var3, var6, this._berEncodeRecipientSet);
       BERSequenceGenerator var7 = new BERSequenceGenerator(var6.getRawOutputStream());
       var7.addObject(var1);
-      AlgorithmIdentifier var8 = var4.getAlgorithmIdentifier();
-      var7.getRawOutputStream().write(var8.getEncoded());
-      OutputStream var9 = CMSUtils.createBEROctetOutputStream(var7.getRawOutputStream(), 0, false, this._bufferSize);
-      return new CMSEnvelopedDataStreamGenerator.CmsEnvelopedDataOutputStream(var4, var9, var5, var6, var7);
+      var7.addObject(var4.getAlgorithmIdentifier());
+      OutputStream var8 = CMSUtils.createBEROctetOutputStream(var7.getRawOutputStream(), 0, false, this._bufferSize);
+      return new CMSEnvelopedDataStreamGenerator.CmsEnvelopedDataOutputStream(var4, var8, var5, var6, var7);
    }
 
    protected OutputStream open(OutputStream var1, ASN1EncodableVector var2, OutputEncryptor var3) throws CMSException {
@@ -61,11 +53,12 @@ public class CMSEnvelopedDataStreamGenerator extends CMSEnvelopedGenerator {
    }
 
    public OutputStream open(OutputStream var1, OutputEncryptor var2) throws CMSException, IOException {
-      return this.doOpen(new ASN1ObjectIdentifier(CMSObjectIdentifiers.data.getId()), var1, var2);
+      return this.open(CMSObjectIdentifiers.data, var1, var2);
    }
 
    public OutputStream open(ASN1ObjectIdentifier var1, OutputStream var2, OutputEncryptor var3) throws CMSException, IOException {
-      return this.doOpen(var1, var2, var3);
+      ASN1EncodableVector var4 = CMSUtils.getRecipentInfos(var3.getKey(), this.recipientInfoGenerators);
+      return this.open(var1, var2, var4, var3);
    }
 
    private class CmsEnvelopedDataOutputStream extends OutputStream {
@@ -111,7 +104,7 @@ public class CMSEnvelopedDataStreamGenerator extends CMSEnvelopedGenerator {
          }
 
          this._eiGen.close();
-         CMSUtils.addAttriSetToGenerator(this._envGen, CMSEnvelopedDataStreamGenerator.this.unprotectedAttributeGenerator, 1, Collections.EMPTY_MAP);
+         CMSUtils.addAttriSetToGenerator(this._envGen, CMSEnvelopedDataStreamGenerator.this.unprotectedAttributeGenerator, 1, CMSUtils.getEmptyParameters());
          this._envGen.close();
          this._cGen.close();
       }

@@ -1,5 +1,6 @@
 package org.bson.codecs.pojo;
 
+import java.util.Objects;
 import org.bson.BsonType;
 import org.bson.codecs.Codec;
 
@@ -118,15 +119,15 @@ public final class PropertyModel<T> {
                         if (this.getPropertySerialization() != null
                            ? this.getPropertySerialization().equals(that.getPropertySerialization())
                            : that.getPropertySerialization() == null) {
-                           if (this.useDiscriminator != null ? this.useDiscriminator.equals(that.useDiscriminator) : that.useDiscriminator == null) {
-                              if (this.getPropertyAccessor() != null
-                                 ? this.getPropertyAccessor().equals(that.getPropertyAccessor())
-                                 : that.getPropertyAccessor() == null) {
-                                 if (this.getError() != null ? this.getError().equals(that.getError()) : that.getError() == null) {
-                                    return this.getCachedCodec() != null ? this.getCachedCodec().equals(that.getCachedCodec()) : that.getCachedCodec() == null;
-                                 } else {
-                                    return false;
-                                 }
+                           if (!Objects.equals(this.useDiscriminator, that.useDiscriminator)) {
+                              return false;
+                           }
+
+                           if (this.getPropertyAccessor() != null
+                              ? this.getPropertyAccessor().equals(that.getPropertyAccessor())
+                              : that.getPropertyAccessor() == null) {
+                              if (this.getError() != null ? this.getError().equals(that.getError()) : that.getError() == null) {
+                                 return this.getCachedCodec() != null ? this.getCachedCodec().equals(that.getCachedCodec()) : that.getCachedCodec() == null;
                               } else {
                                  return false;
                               }

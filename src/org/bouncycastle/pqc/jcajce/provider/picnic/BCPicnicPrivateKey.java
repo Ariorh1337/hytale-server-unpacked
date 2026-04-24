@@ -6,11 +6,11 @@ import java.io.ObjectOutputStream;
 import java.security.PrivateKey;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
-import org.bouncycastle.pqc.crypto.picnic.PicnicPrivateKeyParameters;
 import org.bouncycastle.pqc.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.pqc.crypto.util.PrivateKeyInfoFactory;
 import org.bouncycastle.pqc.jcajce.interfaces.PicnicKey;
 import org.bouncycastle.pqc.jcajce.spec.PicnicParameterSpec;
+import org.bouncycastle.pqc.legacy.picnic.PicnicPrivateKeyParameters;
 import org.bouncycastle.util.Arrays;
 
 public class BCPicnicPrivateKey implements PrivateKey, PicnicKey {

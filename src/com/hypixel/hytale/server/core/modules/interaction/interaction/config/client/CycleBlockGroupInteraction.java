@@ -93,7 +93,7 @@ public class CycleBlockGroupInteraction extends SimpleBlockInteraction {
                               && hotbarComponent != null
                               && ItemUtils.canDecreaseItemStackDurability(ref, commandBuffer)
                               && !heldItem.isUnbreakable()) {
-                              playerComponent.updateItemStackDurability(
+                              ItemUtils.updateItemStackDurability(
                                  ref,
                                  heldItem,
                                  hotbarComponent.getInventory(),

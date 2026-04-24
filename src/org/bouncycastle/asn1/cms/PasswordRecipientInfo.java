@@ -18,13 +18,13 @@ public class PasswordRecipientInfo extends ASN1Object {
    private ASN1OctetString encryptedKey;
 
    public PasswordRecipientInfo(AlgorithmIdentifier var1, ASN1OctetString var2) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.keyEncryptionAlgorithm = var1;
       this.encryptedKey = var2;
    }
 
    public PasswordRecipientInfo(AlgorithmIdentifier var1, AlgorithmIdentifier var2, ASN1OctetString var3) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.keyDerivationAlgorithm = var1;
       this.keyEncryptionAlgorithm = var2;
       this.encryptedKey = var3;

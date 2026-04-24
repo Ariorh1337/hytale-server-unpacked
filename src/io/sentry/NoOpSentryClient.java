@@ -94,9 +94,18 @@ final class NoOpSentryClient implements ISentryClient {
    public void captureLog(@NotNull SentryLogEvent logEvent, @Nullable IScope scope) {
    }
 
+   @Override
+   public void captureMetric(@NotNull SentryMetricsEvent metricsEvent, @Nullable IScope scope, @Nullable Hint hint) {
+   }
+
    @Internal
    @Override
    public void captureBatchedLogEvents(@NotNull SentryLogEvents logEvents) {
+   }
+
+   @Internal
+   @Override
+   public void captureBatchedMetricsEvents(@NotNull SentryMetricsEvents metricsEvents) {
    }
 
    @Nullable

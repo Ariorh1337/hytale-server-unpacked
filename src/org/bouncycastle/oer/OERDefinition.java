@@ -31,7 +31,7 @@ public class OERDefinition {
    }
 
    public static OERDefinition.Builder integer(long var0) {
-      return new OERDefinition.Builder(OERDefinition.BaseType.INT).defaultValue(new ASN1Integer(var0));
+      return new OERDefinition.Builder(OERDefinition.BaseType.INT).defaultValue(ASN1Integer.valueOf(var0));
    }
 
    public static OERDefinition.Builder bitString(long var0) {

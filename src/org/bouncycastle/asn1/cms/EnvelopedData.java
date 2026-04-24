@@ -19,7 +19,7 @@ public class EnvelopedData extends ASN1Object {
    private ASN1Set unprotectedAttrs;
 
    public EnvelopedData(OriginatorInfo var1, ASN1Set var2, EncryptedContentInfo var3, ASN1Set var4) {
-      this.version = new ASN1Integer(calculateVersion(var1, var2, var4));
+      this.version = ASN1Integer.valueOf(calculateVersion(var1, var2, var4));
       this.originatorInfo = var1;
       this.recipientInfos = var2;
       this.encryptedContentInfo = var3;
@@ -27,7 +27,7 @@ public class EnvelopedData extends ASN1Object {
    }
 
    public EnvelopedData(OriginatorInfo var1, ASN1Set var2, EncryptedContentInfo var3, Attributes var4) {
-      this.version = new ASN1Integer(calculateVersion(var1, var2, ASN1Set.getInstance(var4)));
+      this.version = ASN1Integer.valueOf(calculateVersion(var1, var2, ASN1Set.getInstance(var4)));
       this.originatorInfo = var1;
       this.recipientInfos = var2;
       this.encryptedContentInfo = var3;

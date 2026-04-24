@@ -7,6 +7,7 @@ import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.bouncycastle.asn1.ASN1BitString;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
@@ -14,9 +15,6 @@ import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.sec.ECPrivateKey;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.asn1.x9.ECNamedCurveTable;
-import org.bouncycastle.crypto.util.PrivateKeyFactory;
-import org.bouncycastle.crypto.util.PrivateKeyInfoFactory;
 import org.bouncycastle.internal.asn1.iana.IANAObjectIdentifiers;
 import org.bouncycastle.internal.asn1.misc.MiscObjectIdentifiers;
 import org.bouncycastle.jcajce.interfaces.MLDSAPrivateKey;
@@ -148,52 +146,58 @@ public class CompositePrivateKey implements PrivateKey {
 
    @Override
    public byte[] getEncoded() {
-      if (this.algorithmIdentifier.getAlgorithm().on(IANAObjectIdentifiers.id_alg)) {
+      ASN1ObjectIdentifier var1 = this.algorithmIdentifier.getAlgorithm();
+      if (var1.on(IANAObjectIdentifiers.id_alg)) {
          try {
-            byte[] var8 = ((MLDSAPrivateKey)this.keys.get(0)).getSeed();
-            PrivateKeyInfo var10 = PrivateKeyInfoFactory.createPrivateKeyInfo(PrivateKeyFactory.createKey(this.keys.get(1).getEncoded()));
-            byte[] var12 = var10.getPrivateKey().getOctets();
-            if (this.keys.get(1).getAlgorithm().contains("Ed")) {
-               var12 = ASN1OctetString.getInstance(var12).getOctets();
-            } else if (this.keys.get(1).getAlgorithm().contains("EC")) {
-               ECPrivateKey var13 = ECPrivateKey.getInstance(var12);
-               var12 = new ECPrivateKey(
-                     ECNamedCurveTable.getByOID(ASN1ObjectIdentifier.getInstance(var13.getParametersObject())).getCurve().getFieldSize(),
-                     var13.getKey(),
-                     var13.getParametersObject()
-                  )
-                  .getEncoded();
+            PrivateKey var13 = this.keys.get(0);
+            PrivateKey var15 = this.keys.get(1);
+            byte[] var17 = ((MLDSAPrivateKey)var13).getSeed();
+            PrivateKeyInfo var18 = PrivateKeyInfo.getInstance(var15.getEncoded());
+            String var7 = var15.getAlgorithm();
+            byte[] var6;
+            if (var7.contains("Ed")) {
+               var6 = ASN1OctetString.getInstance(var18.parsePrivateKey()).getOctets();
+            } else if (var7.contains("EC")) {
+               ECPrivateKey var8 = ECPrivateKey.getInstance(var18.parsePrivateKey());
+               ASN1BitString var9 = var8.getPublicKey();
+               if (var9 != null) {
+                  var8 = new ECPrivateKey(var8.getPrivateKey(), var8.getParametersObject(), null);
+               }
+
+               var6 = var8.getEncoded("DER");
+            } else {
+               var6 = var18.getPrivateKey().getOctets();
             }
 
-            return new PrivateKeyInfo(this.algorithmIdentifier, Arrays.concatenate(var8, var12)).getEncoded();
-         } catch (IOException var5) {
-            throw new IllegalStateException("unable to encode composite public key: " + var5.getMessage());
+            return new PrivateKeyInfo(this.algorithmIdentifier, Arrays.concatenate(var17, var6)).getEncoded();
+         } catch (IOException var10) {
+            throw new IllegalStateException("unable to encode composite public key: " + var10.getMessage());
          }
       } else {
-         ASN1EncodableVector var1 = new ASN1EncodableVector();
-         if (this.algorithmIdentifier.getAlgorithm().equals(MiscObjectIdentifiers.id_composite_key)) {
-            for (int var9 = 0; var9 < this.keys.size(); var9++) {
-               PrivateKeyInfo var11 = PrivateKeyInfo.getInstance(this.keys.get(var9).getEncoded());
-               var1.add(var11);
+         ASN1EncodableVector var2 = new ASN1EncodableVector();
+         if (MiscObjectIdentifiers.id_composite_key.equals(var1)) {
+            for (int var14 = 0; var14 < this.keys.size(); var14++) {
+               PrivateKeyInfo var16 = PrivateKeyInfo.getInstance(this.keys.get(var14).getEncoded());
+               var2.add(var16);
             }
 
             try {
-               return new PrivateKeyInfo(this.algorithmIdentifier, new DERSequence(var1)).getEncoded("DER");
-            } catch (IOException var6) {
-               throw new IllegalStateException("unable to encode composite private key: " + var6.getMessage());
+               return new PrivateKeyInfo(this.algorithmIdentifier, new DERSequence(var2)).getEncoded("DER");
+            } catch (IOException var11) {
+               throw new IllegalStateException("unable to encode composite private key: " + var11.getMessage());
             }
          } else {
-            byte[] var2 = null;
+            byte[] var3 = null;
 
-            for (int var3 = 0; var3 < this.keys.size(); var3++) {
-               PrivateKeyInfo var4 = PrivateKeyInfo.getInstance(this.keys.get(var3).getEncoded());
-               var2 = Arrays.concatenate(var2, var4.getPrivateKey().getOctets());
+            for (int var4 = 0; var4 < this.keys.size(); var4++) {
+               PrivateKeyInfo var5 = PrivateKeyInfo.getInstance(this.keys.get(var4).getEncoded());
+               var3 = Arrays.concatenate(var3, var5.getPrivateKey().getOctets());
             }
 
             try {
-               return new PrivateKeyInfo(this.algorithmIdentifier, var2).getEncoded("DER");
-            } catch (IOException var7) {
-               throw new IllegalStateException("unable to encode composite private key: " + var7.getMessage());
+               return new PrivateKeyInfo(this.algorithmIdentifier, var3).getEncoded("DER");
+            } catch (IOException var12) {
+               throw new IllegalStateException("unable to encode composite private key: " + var12.getMessage());
             }
          }
       }

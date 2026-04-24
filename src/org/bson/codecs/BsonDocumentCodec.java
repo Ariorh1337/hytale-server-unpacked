@@ -1,10 +1,7 @@
 package org.bson.codecs;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map.Entry;
 import org.bson.BsonDocument;
-import org.bson.BsonElement;
 import org.bson.BsonObjectId;
 import org.bson.BsonReader;
 import org.bson.BsonType;
@@ -40,16 +37,16 @@ public class BsonDocumentCodec implements CollectibleCodec<BsonDocument> {
    }
 
    public BsonDocument decode(BsonReader reader, DecoderContext decoderContext) {
-      List<BsonElement> keyValuePairs = new ArrayList<>();
+      BsonDocument bsonDocument = new BsonDocument();
       reader.readStartDocument();
 
       while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
          String fieldName = reader.readName();
-         keyValuePairs.add(new BsonElement(fieldName, this.readValue(reader, decoderContext)));
+         bsonDocument.append(fieldName, this.readValue(reader, decoderContext));
       }
 
       reader.readEndDocument();
-      return new BsonDocument(keyValuePairs);
+      return bsonDocument;
    }
 
    protected BsonValue readValue(BsonReader reader, DecoderContext decoderContext) {
@@ -82,7 +79,7 @@ public class BsonDocumentCodec implements CollectibleCodec<BsonDocument> {
    }
 
    private void writeValue(BsonWriter writer, EncoderContext encoderContext, BsonValue value) {
-      Codec codec = this.codecRegistry.get(value.getClass());
+      Codec codec = this.bsonTypeCodecMap.get(value.getBsonType());
       encoderContext.encodeWithChildContext(codec, writer, value);
    }
 

@@ -1,5 +1,6 @@
 package org.bson.codecs;
 
+import java.util.Objects;
 import org.bson.Transformer;
 import org.bson.assertions.Assertions;
 import org.bson.codecs.configuration.CodecProvider;
@@ -35,15 +36,9 @@ public class IterableCodecProvider implements CodecProvider {
    public boolean equals(Object o) {
       if (this == o) {
          return true;
-      }
-
-      if (o != null && this.getClass() == o.getClass()) {
+      } else if (o != null && this.getClass() == o.getClass()) {
          IterableCodecProvider that = (IterableCodecProvider)o;
-         if (!this.bsonTypeClassMap.equals(that.bsonTypeClassMap)) {
-            return false;
-         } else {
-            return this.valueTransformer != null ? this.valueTransformer.equals(that.valueTransformer) : that.valueTransformer == null;
-         }
+         return !this.bsonTypeClassMap.equals(that.bsonTypeClassMap) ? false : Objects.equals(this.valueTransformer, that.valueTransformer);
       } else {
          return false;
       }
@@ -53,5 +48,10 @@ public class IterableCodecProvider implements CodecProvider {
    public int hashCode() {
       int result = this.bsonTypeClassMap.hashCode();
       return 31 * result + (this.valueTransformer != null ? this.valueTransformer.hashCode() : 0);
+   }
+
+   @Override
+   public String toString() {
+      return "IterableCodecProvider{}";
    }
 }

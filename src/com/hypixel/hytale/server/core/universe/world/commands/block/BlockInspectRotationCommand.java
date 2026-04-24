@@ -31,7 +31,7 @@ public class BlockInspectRotationCommand extends AbstractPlayerCommand {
 
    public BlockInspectRotationCommand() {
       super("inspectrotation", "server.commands.block.inspectrotation.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

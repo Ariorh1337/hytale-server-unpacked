@@ -15,7 +15,7 @@ public class XMSSMTKeyParams extends ASN1Object {
    private final AlgorithmIdentifier treeDigest;
 
    public XMSSMTKeyParams(int var1, int var2, AlgorithmIdentifier var3) {
-      this.version = new ASN1Integer(0L);
+      this.version = ASN1Integer.ZERO;
       this.height = var1;
       this.layers = var2;
       this.treeDigest = var3;
@@ -50,10 +50,10 @@ public class XMSSMTKeyParams extends ASN1Object {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      ASN1EncodableVector var1 = new ASN1EncodableVector();
+      ASN1EncodableVector var1 = new ASN1EncodableVector(4);
       var1.add(this.version);
-      var1.add(new ASN1Integer(this.height));
-      var1.add(new ASN1Integer(this.layers));
+      var1.add(ASN1Integer.valueOf(this.height));
+      var1.add(ASN1Integer.valueOf(this.layers));
       var1.add(this.treeDigest);
       return new DERSequence(var1);
    }

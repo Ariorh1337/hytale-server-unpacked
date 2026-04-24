@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -143,7 +144,7 @@ public class ActionAttack extends ActionBase {
          } else if (this.attack != null && !this.attack.isEmpty()) {
             this.attackInteraction = this.attack;
          } else {
-            ItemStack itemInHand = npcComponent.getInventory().getItemInHand();
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
             InteractionContext context = InteractionContext.forInteraction(interactionManagerComponent, ref, this.interactionType, store);
             String interaction = context.getRootInteractionId(this.interactionType);
             if (interaction == null) {

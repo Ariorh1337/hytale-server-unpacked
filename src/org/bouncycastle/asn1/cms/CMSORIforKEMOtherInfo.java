@@ -30,9 +30,9 @@ public class CMSORIforKEMOtherInfo extends ASN1Object {
 
    @Override
    public ASN1Primitive toASN1Primitive() {
-      ASN1EncodableVector var1 = new ASN1EncodableVector();
+      ASN1EncodableVector var1 = new ASN1EncodableVector(3);
       var1.add(this.wrap);
-      var1.add(new ASN1Integer(this.kekLength));
+      var1.add(ASN1Integer.valueOf(this.kekLength));
       if (this.ukm != null) {
          var1.add(new DERTaggedObject(true, 0, new DEROctetString(this.ukm)));
       }

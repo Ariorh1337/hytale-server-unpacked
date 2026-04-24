@@ -32,8 +32,6 @@ import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.trail.config.Trail;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
@@ -384,12 +382,11 @@ public class InteractionModule extends JavaPlugin {
                if (ref.isValid()) {
                   EntityStore entityComponentStore = componentAccessor.getExternalData();
                   Vector3i targetBlock = blockPositionPacket == null ? null : new Vector3i(blockPositionPacket.x, blockPositionPacket.y, blockPositionPacket.z);
-                  Entity targetEntity;
+                  Ref<EntityStore> targetRef;
                   if (worldInteraction_.entityId < 0) {
-                     targetEntity = null;
+                     targetRef = null;
                   } else {
-                     Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
-                     targetEntity = EntityUtils.getEntity(entityReference, componentAccessor);
+                     targetRef = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
                   }
 
                   CameraManager cameraManagerComponent = componentAccessor.getComponent(ref, CameraManager.getComponentType());
@@ -407,7 +404,7 @@ public class InteractionModule extends JavaPlugin {
                               packet.clientTimestamp,
                               item,
                               targetBlock,
-                              targetEntity,
+                              targetRef,
                               packet.screenPoint,
                               packet.mouseButton
                            )
@@ -422,7 +419,7 @@ public class InteractionModule extends JavaPlugin {
                      if (dispatcher.hasListener()) {
                         dispatcher.dispatch(
                            new PlayerMouseMotionEvent(
-                              ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetEntity, packet.screenPoint, packet.mouseMotion
+                              ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetRef, packet.screenPoint, packet.mouseMotion
                            )
                         );
                      }

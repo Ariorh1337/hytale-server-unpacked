@@ -40,7 +40,7 @@ public class DVCSTime extends ASN1Object implements ASN1Choice {
       if (!var1) {
          throw new IllegalArgumentException("choice item must be explicitly tagged");
       } else {
-         return getInstance(ASN1TaggedObject.getInstance(var0, 128).getExplicitBaseObject());
+         return getInstance(ASN1TaggedObject.getContextInstance(var0).getExplicitBaseObject());
       }
    }
 

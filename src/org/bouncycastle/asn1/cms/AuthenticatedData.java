@@ -28,7 +28,7 @@ public class AuthenticatedData extends ASN1Object {
       OriginatorInfo var1, ASN1Set var2, AlgorithmIdentifier var3, AlgorithmIdentifier var4, ContentInfo var5, ASN1Set var6, ASN1OctetString var7, ASN1Set var8
    ) {
       if (var4 == null && var6 == null || var4 != null && var6 != null) {
-         this.version = new ASN1Integer(calculateVersion(var1));
+         this.version = ASN1Integer.valueOf(calculateVersion(var1));
          this.originatorInfo = var1;
          this.macAlgorithm = var3;
          this.digestAlgorithm = var4;

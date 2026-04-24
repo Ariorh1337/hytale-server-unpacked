@@ -34,7 +34,7 @@ public class ButterflyExpansion extends ASN1Object implements ASN1Choice {
       if (var0 instanceof ButterflyExpansion) {
          return (ButterflyExpansion)var0;
       } else {
-         return var0 != null ? new ButterflyExpansion(ASN1TaggedObject.getInstance(var0, 128)) : null;
+         return var0 != null ? new ButterflyExpansion(ASN1TaggedObject.getContextInstance(var0)) : null;
       }
    }
 

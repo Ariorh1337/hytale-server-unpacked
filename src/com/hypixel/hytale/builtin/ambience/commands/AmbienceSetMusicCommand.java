@@ -3,7 +3,7 @@ package com.hypixel.hytale.builtin.ambience.commands;
 import com.hypixel.hytale.builtin.ambience.resources.AmbienceResource;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.ambiencefx.config.AmbienceFX;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
@@ -14,8 +14,8 @@ import javax.annotation.Nonnull;
 
 public class AmbienceSetMusicCommand extends AbstractWorldCommand {
    @Nonnull
-   private final RequiredArg<AmbienceFX> ambienceFxIdArg = this.withRequiredArg(
-      "ambienceFxId", "server.commands.ambience.setmusic.arg.ambiencefxid.desc", ArgTypes.AMBIENCE_FX_ASSET
+   private final RequiredArg<MusicContainer> musicContainerArg = this.withRequiredArg(
+      "musicContainerId", "server.commands.ambience.setmusic.arg.musiccontainerid.desc", ArgTypes.MUSIC_CONTAINER_ASSET
    );
 
    public AmbienceSetMusicCommand() {
@@ -24,9 +24,9 @@ public class AmbienceSetMusicCommand extends AbstractWorldCommand {
 
    @Override
    protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
-      AmbienceFX ambienceFX = this.ambienceFxIdArg.get(context);
+      MusicContainer musicContainer = this.musicContainerArg.get(context);
       AmbienceResource ambienceResource = store.getResource(AmbienceResource.getResourceType());
-      ambienceResource.setForcedMusicAmbience(ambienceFX.getId());
-      context.sendMessage(Message.translation("server.commands.ambience.setmusic.success").param("ambience", ambienceFX.getId()));
+      ambienceResource.setForcedMusicContainerIndex(MusicContainer.getAssetMap().getIndex(musicContainer.getId()));
+      context.sendMessage(Message.translation("server.commands.ambience.setmusic.success").param("ambience", musicContainer.getId()));
    }
 }

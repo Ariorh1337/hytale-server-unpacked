@@ -3,7 +3,7 @@ package org.bouncycastle.pqc.jcajce.spec;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.HashMap;
 import java.util.Map;
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters;
+import org.bouncycastle.crypto.params.MLKEMParameters;
 import org.bouncycastle.util.Strings;
 
 public class KyberParameterSpec implements AlgorithmParameterSpec {

@@ -89,7 +89,7 @@ public class MovementStatesSystems {
          assert movementStatesComponent != null;
          PlayerWorldData perWorldData = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());
          SavedMovementStates movementStates = perWorldData.getLastMovementStates();
-         playerComponent.applyMovementStates(
+         Player.applyMovementStates(
             ref, movementStates != null ? movementStates : new SavedMovementStates(), movementStatesComponent.getMovementStates(), store
          );
       }

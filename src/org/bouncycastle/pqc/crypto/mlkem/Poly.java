@@ -1,266 +1,236 @@
 package org.bouncycastle.pqc.crypto.mlkem;
 
+import org.bouncycastle.crypto.Xof;
+
 class Poly {
-   private short[] coeffs = new short[256];
-   private MLKEMEngine engine;
-   private int polyCompressedBytes;
-   private int eta1;
-   private int eta2;
-   private Symmetric symmetric;
+   private final short[] coeffs = new short[256];
 
-   public Poly(MLKEMEngine var1) {
-      this.engine = var1;
-      this.polyCompressedBytes = var1.getKyberPolyCompressedBytes();
-      this.eta1 = var1.getKyberEta1();
-      this.eta2 = MLKEMEngine.getKyberEta2();
-      this.symmetric = var1.getSymmetric();
-   }
-
-   public short getCoeffIndex(int var1) {
+   short getCoeffIndex(int var1) {
       return this.coeffs[var1];
    }
 
-   public short[] getCoeffs() {
+   short[] getCoeffs() {
       return this.coeffs;
    }
 
-   public void setCoeffIndex(int var1, short var2) {
+   void setCoeffIndex(int var1, short var2) {
       this.coeffs[var1] = var2;
    }
 
-   public void setCoeffs(short[] var1) {
-      this.coeffs = var1;
-   }
-
-   public void polyNtt() {
-      this.setCoeffs(Ntt.ntt(this.getCoeffs()));
+   void polyNtt() {
+      Ntt.ntt(this.coeffs);
       this.reduce();
    }
 
-   public void polyInverseNttToMont() {
-      this.setCoeffs(Ntt.invNtt(this.getCoeffs()));
+   void polyInverseNttToMont() {
+      Ntt.invNtt(this.coeffs);
    }
 
-   public void reduce() {
+   void reduce() {
       for (int var1 = 0; var1 < 256; var1++) {
-         this.setCoeffIndex(var1, Reduce.barretReduce(this.getCoeffIndex(var1)));
+         this.coeffs[var1] = Reduce.barrettReduce(this.coeffs[var1]);
       }
    }
 
-   public static void baseMultMontgomery(Poly var0, Poly var1, Poly var2) {
+   static void baseMultMontgomery(Poly var0, Poly var1, Poly var2) {
       for (int var3 = 0; var3 < 64; var3++) {
          Ntt.baseMult(
-            var0,
+            var0.coeffs,
             4 * var3,
             var1.getCoeffIndex(4 * var3),
             var1.getCoeffIndex(4 * var3 + 1),
             var2.getCoeffIndex(4 * var3),
             var2.getCoeffIndex(4 * var3 + 1),
-            Ntt.nttZetas[64 + var3]
+            Ntt.ZETAS[64 + var3]
          );
          Ntt.baseMult(
-            var0,
+            var0.coeffs,
             4 * var3 + 2,
             var1.getCoeffIndex(4 * var3 + 2),
             var1.getCoeffIndex(4 * var3 + 3),
             var2.getCoeffIndex(4 * var3 + 2),
             var2.getCoeffIndex(4 * var3 + 3),
-            (short)(-1 * Ntt.nttZetas[64 + var3])
+            (short)(-1 * Ntt.ZETAS[64 + var3])
          );
       }
    }
 
-   public void addCoeffs(Poly var1) {
+   void add(Poly var1) {
       for (int var2 = 0; var2 < 256; var2++) {
-         this.setCoeffIndex(var2, (short)(this.getCoeffIndex(var2) + var1.getCoeffIndex(var2)));
+         this.coeffs[var2] = (short)(this.coeffs[var2] + var1.coeffs[var2]);
       }
    }
 
-   public void convertToMont() {
+   void convertToMont() {
       for (int var1 = 0; var1 < 256; var1++) {
          this.setCoeffIndex(var1, Reduce.montgomeryReduce(this.getCoeffIndex(var1) * 1353));
       }
    }
 
-   public byte[] compressPoly() {
-      byte[] var3 = new byte[8];
-      byte[] var4 = new byte[this.polyCompressedBytes];
-      byte var5 = 0;
-      this.conditionalSubQ();
-      if (this.polyCompressedBytes == 128) {
-         for (int var1 = 0; var1 < 32; var1++) {
-            for (int var2 = 0; var2 < 8; var2++) {
-               int var6 = this.getCoeffIndex(8 * var1 + var2);
-               var6 <<= 4;
-               var6 += 1665;
-               var6 *= 80635;
-               var6 >>= 28;
-               var6 &= 15;
-               var3[var2] = (byte)var6;
-            }
-
-            var4[var5 + 0] = (byte)(var3[0] | var3[1] << 4);
-            var4[var5 + 1] = (byte)(var3[2] | var3[3] << 4);
-            var4[var5 + 2] = (byte)(var3[4] | var3[5] << 4);
-            var4[var5 + 3] = (byte)(var3[6] | var3[7] << 4);
-            var5 += 4;
-         }
-      } else {
-         if (this.polyCompressedBytes != 160) {
-            throw new RuntimeException("PolyCompressedBytes is neither 128 or 160!");
-         }
-
-         for (int var7 = 0; var7 < 32; var7++) {
-            for (int var8 = 0; var8 < 8; var8++) {
-               int var14 = this.getCoeffIndex(8 * var7 + var8);
-               var14 <<= 5;
-               var14 += 1664;
-               var14 *= 40318;
-               var14 >>= 27;
-               var14 &= 31;
-               var3[var8] = (byte)var14;
-            }
-
-            var4[var5 + 0] = (byte)(var3[0] >> 0 | var3[1] << 5);
-            var4[var5 + 1] = (byte)(var3[1] >> 3 | var3[2] << 2 | var3[3] << 7);
-            var4[var5 + 2] = (byte)(var3[3] >> 1 | var3[4] << 4);
-            var4[var5 + 3] = (byte)(var3[4] >> 4 | var3[5] << 1 | var3[6] << 6);
-            var4[var5 + 4] = (byte)(var3[6] >> 2 | var3[7] << 3);
-            var5 += 5;
-         }
-      }
-
-      return var4;
-   }
-
-   public void decompressPoly(byte[] var1) {
-      int var3 = 0;
-      if (this.engine.getKyberPolyCompressedBytes() == 128) {
-         for (int var2 = 0; var2 < 128; var2++) {
-            this.setCoeffIndex(2 * var2 + 0, (short)((short)(var1[var3] & 0xFF & 15) * 3329 + 8 >> 4));
-            this.setCoeffIndex(2 * var2 + 1, (short)((short)((var1[var3] & 255) >> 4) * 3329 + 8 >> 4));
-            var3++;
-         }
-      } else {
-         if (this.engine.getKyberPolyCompressedBytes() != 160) {
-            throw new RuntimeException("PolyCompressedBytes is neither 128 or 160!");
-         }
-
-         byte[] var5 = new byte[8];
-
-         for (int var6 = 0; var6 < 32; var6++) {
-            var5[0] = (byte)((var1[var3 + 0] & 255) >> 0);
-            var5[1] = (byte)((var1[var3 + 0] & 255) >> 5 | (var1[var3 + 1] & 255) << 3);
-            var5[2] = (byte)((var1[var3 + 1] & 255) >> 2);
-            var5[3] = (byte)((var1[var3 + 1] & 255) >> 7 | (var1[var3 + 2] & 255) << 1);
-            var5[4] = (byte)((var1[var3 + 2] & 255) >> 4 | (var1[var3 + 3] & 255) << 4);
-            var5[5] = (byte)((var1[var3 + 3] & 255) >> 1);
-            var5[6] = (byte)((var1[var3 + 3] & 255) >> 6 | (var1[var3 + 4] & 255) << 2);
-            var5[7] = (byte)((var1[var3 + 4] & 255) >> 3);
-            var3 += 5;
-
-            for (int var4 = 0; var4 < 8; var4++) {
-               this.setCoeffIndex(8 * var6 + var4, (short)((var5[var4] & 31) * 3329 + 16 >> 5));
-            }
-         }
-      }
-   }
-
-   public byte[] toBytes() {
-      this.conditionalSubQ();
-      byte[] var1 = new byte[384];
-
-      for (int var2 = 0; var2 < 128; var2++) {
-         short var3 = this.coeffs[2 * var2 + 0];
-         short var4 = this.coeffs[2 * var2 + 1];
-         var1[3 * var2 + 0] = (byte)(var3 >> 0);
-         var1[3 * var2 + 1] = (byte)(var3 >> 8 | var4 << 4);
-         var1[3 * var2 + 2] = (byte)(var4 >> 4);
-      }
-
-      return var1;
-   }
-
-   public void fromBytes(byte[] var1) {
-      for (int var2 = 0; var2 < 128; var2++) {
-         int var3 = var1[3 * var2 + 0] & 255;
-         int var4 = var1[3 * var2 + 1] & 255;
-         int var5 = var1[3 * var2 + 2] & 255;
-         this.coeffs[2 * var2 + 0] = (short)((var3 >> 0 | var4 << 8) & 4095);
-         this.coeffs[2 * var2 + 1] = (short)((var4 >> 4 | var5 << 4) & 4095);
-      }
-   }
-
-   public byte[] toMsg() {
-      short var1 = 832;
-      int var2 = 3329 - var1;
-      byte[] var3 = new byte[MLKEMEngine.getKyberIndCpaMsgBytes()];
-      this.conditionalSubQ();
+   byte[] compressPoly128() {
+      byte[] var1 = new byte[8];
+      byte[] var2 = new byte[128];
+      byte var3 = 0;
+      this.condSubQ();
 
       for (int var4 = 0; var4 < 32; var4++) {
-         var3[var4] = 0;
+         for (int var5 = 0; var5 < 8; var5++) {
+            int var6 = this.getCoeffIndex(8 * var4 + var5);
+            var6 <<= 4;
+            var6 += 1665;
+            var6 *= 80635;
+            var6 >>= 28;
+            var6 &= 15;
+            var1[var5] = (byte)var6;
+         }
+
+         var2[var3 + 0] = (byte)(var1[0] | var1[1] << 4);
+         var2[var3 + 1] = (byte)(var1[2] | var1[3] << 4);
+         var2[var3 + 2] = (byte)(var1[4] | var1[5] << 4);
+         var2[var3 + 3] = (byte)(var1[6] | var1[7] << 4);
+         var3 += 4;
+      }
+
+      return var2;
+   }
+
+   byte[] compressPoly160() {
+      byte[] var1 = new byte[8];
+      byte[] var2 = new byte[160];
+      byte var3 = 0;
+      this.condSubQ();
+
+      for (int var4 = 0; var4 < 32; var4++) {
+         for (int var5 = 0; var5 < 8; var5++) {
+            int var6 = this.getCoeffIndex(8 * var4 + var5);
+            var6 <<= 5;
+            var6 += 1664;
+            var6 *= 40318;
+            var6 >>= 27;
+            var6 &= 31;
+            var1[var5] = (byte)var6;
+         }
+
+         var2[var3 + 0] = (byte)(var1[0] >> 0 | var1[1] << 5);
+         var2[var3 + 1] = (byte)(var1[1] >> 3 | var1[2] << 2 | var1[3] << 7);
+         var2[var3 + 2] = (byte)(var1[3] >> 1 | var1[4] << 4);
+         var2[var3 + 3] = (byte)(var1[4] >> 4 | var1[5] << 1 | var1[6] << 6);
+         var2[var3 + 4] = (byte)(var1[6] >> 2 | var1[7] << 3);
+         var3 += 5;
+      }
+
+      return var2;
+   }
+
+   void decompressPoly128(byte[] var1, int var2) {
+      int var3 = var2;
+
+      for (int var4 = 0; var4 < 128; var4++) {
+         this.setCoeffIndex(2 * var4 + 0, (short)((short)(var1[var3] & 0xFF & 15) * 3329 + 8 >> 4));
+         this.setCoeffIndex(2 * var4 + 1, (short)((short)((var1[var3] & 255) >> 4) * 3329 + 8 >> 4));
+         var3++;
+      }
+   }
+
+   void decompressPoly160(byte[] var1, int var2) {
+      int var3 = var2;
+      byte[] var4 = new byte[8];
+
+      for (int var5 = 0; var5 < 32; var5++) {
+         var4[0] = (byte)((var1[var3 + 0] & 255) >> 0);
+         var4[1] = (byte)((var1[var3 + 0] & 255) >> 5 | (var1[var3 + 1] & 255) << 3);
+         var4[2] = (byte)((var1[var3 + 1] & 255) >> 2);
+         var4[3] = (byte)((var1[var3 + 1] & 255) >> 7 | (var1[var3 + 2] & 255) << 1);
+         var4[4] = (byte)((var1[var3 + 2] & 255) >> 4 | (var1[var3 + 3] & 255) << 4);
+         var4[5] = (byte)((var1[var3 + 3] & 255) >> 1);
+         var4[6] = (byte)((var1[var3 + 3] & 255) >> 6 | (var1[var3 + 4] & 255) << 2);
+         var4[7] = (byte)((var1[var3 + 4] & 255) >> 3);
+         var3 += 5;
+
+         for (int var6 = 0; var6 < 8; var6++) {
+            this.setCoeffIndex(8 * var5 + var6, (short)((var4[var6] & 31) * 3329 + 16 >> 5));
+         }
+      }
+   }
+
+   void toBytes(byte[] var1, int var2) {
+      this.condSubQ();
+
+      for (int var3 = 0; var3 < 128; var3++) {
+         short var4 = this.coeffs[2 * var3 + 0];
+         short var5 = this.coeffs[2 * var3 + 1];
+         var1[var2 + 3 * var3 + 0] = (byte)(var4 >> 0);
+         var1[var2 + 3 * var3 + 1] = (byte)(var4 >> 8 | var5 << 4);
+         var1[var2 + 3 * var3 + 2] = (byte)(var5 >> 4);
+      }
+   }
+
+   void fromBytes(byte[] var1, int var2) {
+      for (int var3 = 0; var3 < 128; var3++) {
+         int var4 = var2 + 3 * var3;
+         int var5 = var1[var4 + 0] & 255;
+         int var6 = var1[var4 + 1] & 255;
+         int var7 = var1[var4 + 2] & 255;
+         this.coeffs[2 * var3 + 0] = (short)((var5 >> 0 | var6 << 8) & 4095);
+         this.coeffs[2 * var3 + 1] = (short)((var6 >> 4 | var7 << 4) & 4095);
+      }
+   }
+
+   void toMsg(byte[] var1) {
+      short var2 = 832;
+      int var3 = 3329 - var2;
+      this.condSubQ();
+
+      for (int var4 = 0; var4 < 32; var4++) {
+         var1[var4] = 0;
 
          for (int var5 = 0; var5 < 8; var5++) {
             short var6 = this.getCoeffIndex(8 * var4 + var5);
-            int var7 = (var1 - var6 & var6 - var2) >>> 31;
-            var3[var4] |= (byte)(var7 << var5);
-         }
-      }
-
-      return var3;
-   }
-
-   public void fromMsg(byte[] var1) {
-      if (var1.length != 32) {
-         throw new RuntimeException("KYBER_INDCPA_MSGBYTES must be equal to KYBER_N/8 bytes!");
-      }
-
-      for (int var2 = 0; var2 < 32; var2++) {
-         for (int var3 = 0; var3 < 8; var3++) {
-            short var4 = (short)(-1 * (short)((var1[var2] & 255) >> var3 & 1));
-            this.setCoeffIndex(8 * var2 + var3, (short)(var4 & 1665));
+            int var7 = (var2 - var6 & var6 - var3) >>> 31;
+            var1[var4] |= (byte)(var7 << var5);
          }
       }
    }
 
-   public void conditionalSubQ() {
+   void fromMsg(byte[] var1, int var2) {
+      for (int var3 = 0; var3 < 32; var3++) {
+         int var4 = var1[var2 + var3] & 255;
+
+         for (int var5 = 0; var5 < 8; var5++) {
+            short var6 = (short)(-(var4 >> var5 & 1));
+            this.setCoeffIndex(8 * var3 + var5, (short)(var6 & 1665));
+         }
+      }
+   }
+
+   void condSubQ() {
       for (int var1 = 0; var1 < 256; var1++) {
-         this.setCoeffIndex(var1, Reduce.conditionalSubQ(this.getCoeffIndex(var1)));
+         this.coeffs[var1] = Reduce.condSubQ(this.coeffs[var1]);
       }
    }
 
-   public void getEta1Noise(byte[] var1, byte var2) {
-      byte[] var3 = new byte[256 * this.eta1 / 4];
-      this.symmetric.prf(var3, var1, var2);
-      CBD.mlkemCBD(this, var3, this.eta1);
+   void getNoiseEta2(Xof var1, byte[] var2, int var3, byte var4) {
+      byte[] var5 = new byte[128];
+      prf(var1, var2, var3, var4, var5);
+      CBD.eta2(this, var5);
    }
 
-   public void getEta2Noise(byte[] var1, byte var2) {
-      byte[] var3 = new byte[256 * this.eta2 / 4];
-      this.symmetric.prf(var3, var1, var2);
-      CBD.mlkemCBD(this, var3, this.eta2);
+   void getNoiseEta3(Xof var1, byte[] var2, int var3, byte var4) {
+      byte[] var5 = new byte[192];
+      prf(var1, var2, var3, var4, var5);
+      CBD.eta3(this, var5);
    }
 
-   public void polySubtract(Poly var1) {
+   private static void prf(Xof var0, byte[] var1, int var2, byte var3, byte[] var4) {
+      var0.update(var1, var2, 32);
+      var0.update(var3);
+      var0.doFinal(var4, 0, var4.length);
+   }
+
+   void subtract(Poly var1) {
       for (int var2 = 0; var2 < 256; var2++) {
-         this.setCoeffIndex(var2, (short)(var1.getCoeffIndex(var2) - this.getCoeffIndex(var2)));
+         this.coeffs[var2] = (short)(var1.coeffs[var2] - this.coeffs[var2]);
       }
-   }
-
-   @Override
-   public String toString() {
-      StringBuilder var1 = new StringBuilder();
-      var1.append("[");
-
-      for (int var2 = 0; var2 < this.coeffs.length; var2++) {
-         var1.append(this.coeffs[var2]);
-         if (var2 != this.coeffs.length - 1) {
-            var1.append(", ");
-         }
-      }
-
-      var1.append("]");
-      return var1.toString();
    }
 
    static int checkModulus(byte[] var0, int var1) {

@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.mlkem;
 
 import org.bouncycastle.util.Arrays;
 
+@Deprecated
 public class MLKEMPublicKeyParameters extends MLKEMKeyParameters {
    final byte[] t;
    final byte[] rho;
@@ -13,7 +14,7 @@ public class MLKEMPublicKeyParameters extends MLKEMKeyParameters {
    public MLKEMPublicKeyParameters(MLKEMParameters var1, byte[] var2, byte[] var3) {
       super(false, var1);
       MLKEMEngine var4 = var1.getEngine();
-      if (var2.length != var4.getKyberPolyVecBytes()) {
+      if (var2.length != var4.getPolyVecBytes()) {
          throw new IllegalArgumentException("'t' has invalid length");
       }
 
@@ -31,7 +32,7 @@ public class MLKEMPublicKeyParameters extends MLKEMKeyParameters {
    public MLKEMPublicKeyParameters(MLKEMParameters var1, byte[] var2) {
       super(false, var1);
       MLKEMEngine var3 = var1.getEngine();
-      if (var2.length != var3.getKyberIndCpaPublicKeyBytes()) {
+      if (var2.length != var3.getIndCpaPublicKeyBytes()) {
          throw new IllegalArgumentException("'encoding' has invalid length");
       }
 

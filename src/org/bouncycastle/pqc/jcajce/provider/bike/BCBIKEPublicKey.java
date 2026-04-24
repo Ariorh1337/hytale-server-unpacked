@@ -5,11 +5,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.security.PublicKey;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.pqc.crypto.bike.BIKEPublicKeyParameters;
 import org.bouncycastle.pqc.crypto.util.PublicKeyFactory;
 import org.bouncycastle.pqc.crypto.util.SubjectPublicKeyInfoFactory;
 import org.bouncycastle.pqc.jcajce.interfaces.BIKEKey;
 import org.bouncycastle.pqc.jcajce.spec.BIKEParameterSpec;
+import org.bouncycastle.pqc.legacy.bike.BIKEPublicKeyParameters;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Strings;
 

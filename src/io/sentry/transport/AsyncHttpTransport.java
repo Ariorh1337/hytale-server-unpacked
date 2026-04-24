@@ -250,14 +250,11 @@ public final class AsyncHttpTransport implements ITransport {
                if (!result.isSuccess()) {
                   String message = "The transport failed to send the envelope with response code " + result.getResponseCode();
                   AsyncHttpTransport.this.options.getLogger().log(SentryLevel.ERROR, message);
-                  if (result.getResponseCode() >= 400 && result.getResponseCode() != 429 && !cached) {
-                     HintUtils.runIfDoesNotHaveType(
-                        this.hint,
-                        Retryable.class,
-                        hint -> AsyncHttpTransport.this.options
-                           .getClientReportRecorder()
-                           .recordLostEnvelope(DiscardReason.NETWORK_ERROR, envelopeWithClientReport)
-                     );
+                  if (result.getResponseCode() >= 400) {
+                     this.envelopeCache.discard(this.envelope);
+                     if (result.getResponseCode() != 429) {
+                        AsyncHttpTransport.this.options.getClientReportRecorder().recordLostEnvelope(DiscardReason.NETWORK_ERROR, envelopeWithClientReport);
+                     }
                   }
 
                   throw new IllegalStateException(message);

@@ -16,7 +16,7 @@ public class DLBitString extends ASN1BitString {
    }
 
    public DLBitString(int var1) {
-      super(getBytes(var1), getPadBits(var1));
+      super(var1);
    }
 
    public DLBitString(ASN1Encodable var1) throws IOException {

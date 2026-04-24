@@ -11,6 +11,7 @@ public class WorldMapCommand extends AbstractCommandCollection {
    public WorldMapCommand() {
       super("worldmap", "server.commands.worldmap.desc");
       this.addAliases("map");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new WorldMapReloadCommand());
       this.addSubCommand(new WorldMapDiscoverCommand());
       this.addSubCommand(new WorldMapUndiscoverCommand());

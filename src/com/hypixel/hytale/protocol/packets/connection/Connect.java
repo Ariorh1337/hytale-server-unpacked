@@ -11,7 +11,6 @@ import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -19,20 +18,16 @@ public class Connect implements Packet, ToServerPacket {
    public static final int PACKET_ID = 0;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 46;
-   public static final int VARIABLE_FIELD_COUNT = 5;
-   public static final int VARIABLE_BLOCK_START = 66;
-   public static final int MAX_SIZE = 38013;
+   public static final int FIXED_BLOCK_SIZE = 30;
+   public static final int VARIABLE_FIELD_COUNT = 4;
+   public static final int VARIABLE_BLOCK_START = 46;
+   public static final int MAX_SIZE = 37972;
    public int protocolCrc;
    public int protocolBuildNumber;
    @Nonnull
    public String clientVersion = "";
    @Nonnull
    public ClientType clientType = ClientType.Game;
-   @Nonnull
-   public UUID uuid = new UUID(0L, 0L);
-   @Nonnull
-   public String username = "";
    @Nullable
    public String identityToken;
    @Nonnull
@@ -60,8 +55,6 @@ public class Connect implements Packet, ToServerPacket {
       int protocolBuildNumber,
       @Nonnull String clientVersion,
       @Nonnull ClientType clientType,
-      @Nonnull UUID uuid,
-      @Nonnull String username,
       @Nullable String identityToken,
       @Nonnull String language,
       @Nullable byte[] referralData,
@@ -71,8 +64,6 @@ public class Connect implements Packet, ToServerPacket {
       this.protocolBuildNumber = protocolBuildNumber;
       this.clientVersion = clientVersion;
       this.clientType = clientType;
-      this.uuid = uuid;
-      this.username = username;
       this.identityToken = identityToken;
       this.language = language;
       this.referralData = referralData;
@@ -84,8 +75,6 @@ public class Connect implements Packet, ToServerPacket {
       this.protocolBuildNumber = other.protocolBuildNumber;
       this.clientVersion = other.clientVersion;
       this.clientType = other.clientType;
-      this.uuid = other.uuid;
-      this.username = other.username;
       this.identityToken = other.identityToken;
       this.language = other.language;
       this.referralData = other.referralData;
@@ -94,8 +83,8 @@ public class Connect implements Packet, ToServerPacket {
 
    @Nonnull
    public static Connect deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 66) {
-         throw ProtocolException.bufferTooSmall("Connect", 66, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 46) {
+         throw ProtocolException.bufferTooSmall("Connect", 46, buf.readableBytes() - offset);
       }
 
       Connect obj = new Connect();
@@ -104,182 +93,148 @@ public class Connect implements Packet, ToServerPacket {
       obj.protocolBuildNumber = buf.getIntLE(offset + 5);
       obj.clientVersion = PacketIO.readFixedAsciiString(buf, offset + 9, 20);
       obj.clientType = ClientType.fromValue(buf.getByte(offset + 29));
-      obj.uuid = PacketIO.readUUID(buf, offset + 30);
-      int varPosBase0 = buf.getIntLE(offset + 46);
-      if (varPosBase0 >= 0 && varPosBase0 <= buf.writerIndex() - offset - 66) {
-         int varPos0 = offset + 66 + varPosBase0;
-         int usernameLen = VarInt.peek(buf, varPos0);
-         if (usernameLen < 0) {
-            throw ProtocolException.invalidVarInt("Username");
+      if ((nullBits & 1) != 0) {
+         int varPosBase0 = buf.getIntLE(offset + 30);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("IdentityToken", varPosBase0, buf.readableBytes());
          }
 
-         int usernameVarIntLen = VarInt.size(usernameLen);
-         if (usernameLen > 16) {
-            throw ProtocolException.stringTooLong("Username", usernameLen, 16);
+         int varPos0 = offset + 46 + varPosBase0;
+         int identityTokenLen = VarInt.peek(buf, varPos0);
+         if (identityTokenLen < 0) {
+            throw ProtocolException.invalidVarInt("IdentityToken");
          }
 
-         if (varPos0 + usernameVarIntLen + usernameLen > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Username", varPos0 + usernameVarIntLen + usernameLen, buf.readableBytes());
+         int identityTokenVarIntLen = VarInt.size(identityTokenLen);
+         if (identityTokenLen > 8192) {
+            throw ProtocolException.stringTooLong("IdentityToken", identityTokenLen, 8192);
          }
 
-         obj.username = PacketIO.readVarString(buf, varPos0, PacketIO.ASCII);
-         if ((nullBits & 1) != 0) {
-            varPosBase0 = buf.getIntLE(offset + 50);
-            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 66) {
-               throw ProtocolException.invalidOffset("IdentityToken", varPosBase0, buf.readableBytes());
-            }
-
-            varPos0 = offset + 66 + varPosBase0;
-            usernameLen = VarInt.peek(buf, varPos0);
-            if (usernameLen < 0) {
-               throw ProtocolException.invalidVarInt("IdentityToken");
-            }
-
-            usernameVarIntLen = VarInt.size(usernameLen);
-            if (usernameLen > 8192) {
-               throw ProtocolException.stringTooLong("IdentityToken", usernameLen, 8192);
-            }
-
-            if (varPos0 + usernameVarIntLen + usernameLen > buf.readableBytes()) {
-               throw ProtocolException.bufferTooSmall("IdentityToken", varPos0 + usernameVarIntLen + usernameLen, buf.readableBytes());
-            }
-
-            obj.identityToken = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+         if (varPos0 + identityTokenVarIntLen + identityTokenLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("IdentityToken", varPos0 + identityTokenVarIntLen + identityTokenLen, buf.readableBytes());
          }
 
-         varPosBase0 = buf.getIntLE(offset + 54);
-         if (varPosBase0 >= 0 && varPosBase0 <= buf.writerIndex() - offset - 66) {
-            varPos0 = offset + 66 + varPosBase0;
-            usernameLen = VarInt.peek(buf, varPos0);
-            if (usernameLen < 0) {
-               throw ProtocolException.invalidVarInt("Language");
-            }
+         obj.identityToken = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+      }
 
-            usernameVarIntLen = VarInt.size(usernameLen);
-            if (usernameLen > 16) {
-               throw ProtocolException.stringTooLong("Language", usernameLen, 16);
-            }
-
-            if (varPos0 + usernameVarIntLen + usernameLen > buf.readableBytes()) {
-               throw ProtocolException.bufferTooSmall("Language", varPos0 + usernameVarIntLen + usernameLen, buf.readableBytes());
-            }
-
-            obj.language = PacketIO.readVarString(buf, varPos0, PacketIO.ASCII);
-            if ((nullBits & 2) != 0) {
-               varPosBase0 = buf.getIntLE(offset + 58);
-               if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 66) {
-                  throw ProtocolException.invalidOffset("ReferralData", varPosBase0, buf.readableBytes());
-               }
-
-               varPos0 = offset + 66 + varPosBase0;
-               usernameLen = VarInt.peek(buf, varPos0);
-               if (usernameLen < 0) {
-                  throw ProtocolException.invalidVarInt("ReferralData");
-               }
-
-               usernameVarIntLen = VarInt.size(usernameLen);
-               if (usernameLen > 4096) {
-                  throw ProtocolException.arrayTooLong("ReferralData", usernameLen, 4096);
-               }
-
-               if (varPos0 + usernameVarIntLen + usernameLen * 1L > buf.readableBytes()) {
-                  throw ProtocolException.bufferTooSmall("ReferralData", varPos0 + usernameVarIntLen + usernameLen * 1, buf.readableBytes());
-               }
-
-               obj.referralData = new byte[usernameLen];
-
-               for (int i = 0; i < usernameLen; i++) {
-                  obj.referralData[i] = buf.getByte(varPos0 + usernameVarIntLen + i * 1);
-               }
-            }
-
-            if ((nullBits & 4) != 0) {
-               varPosBase0 = buf.getIntLE(offset + 62);
-               if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 66) {
-                  throw ProtocolException.invalidOffset("ReferralSource", varPosBase0, buf.readableBytes());
-               }
-
-               varPos0 = offset + 66 + varPosBase0;
-               obj.referralSource = HostAddress.deserialize(buf, varPos0);
-            }
-
-            return obj;
-         } else {
-            throw ProtocolException.invalidOffset("Language", varPosBase0, buf.readableBytes());
+      int varPosBase1 = buf.getIntLE(offset + 34);
+      if (varPosBase1 >= 0 && varPosBase1 <= buf.writerIndex() - offset - 46) {
+         int varPos1 = offset + 46 + varPosBase1;
+         int languageLen = VarInt.peek(buf, varPos1);
+         if (languageLen < 0) {
+            throw ProtocolException.invalidVarInt("Language");
          }
+
+         int languageVarIntLen = VarInt.size(languageLen);
+         if (languageLen > 16) {
+            throw ProtocolException.stringTooLong("Language", languageLen, 16);
+         }
+
+         if (varPos1 + languageVarIntLen + languageLen > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Language", varPos1 + languageVarIntLen + languageLen, buf.readableBytes());
+         }
+
+         obj.language = PacketIO.readValidatedAsciiString(buf, varPos1 + languageVarIntLen, languageLen, "Language");
+         if ((nullBits & 2) != 0) {
+            varPosBase1 = buf.getIntLE(offset + 38);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 46) {
+               throw ProtocolException.invalidOffset("ReferralData", varPosBase1, buf.readableBytes());
+            }
+
+            varPos1 = offset + 46 + varPosBase1;
+            languageLen = VarInt.peek(buf, varPos1);
+            if (languageLen < 0) {
+               throw ProtocolException.invalidVarInt("ReferralData");
+            }
+
+            languageVarIntLen = VarInt.size(languageLen);
+            if (languageLen > 4096) {
+               throw ProtocolException.arrayTooLong("ReferralData", languageLen, 4096);
+            }
+
+            if (varPos1 + languageVarIntLen + languageLen * 1L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("ReferralData", varPos1 + languageVarIntLen + languageLen * 1, buf.readableBytes());
+            }
+
+            obj.referralData = new byte[languageLen];
+
+            for (int i = 0; i < languageLen; i++) {
+               obj.referralData[i] = buf.getByte(varPos1 + languageVarIntLen + i * 1);
+            }
+         }
+
+         if ((nullBits & 4) != 0) {
+            varPosBase1 = buf.getIntLE(offset + 42);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 46) {
+               throw ProtocolException.invalidOffset("ReferralSource", varPosBase1, buf.readableBytes());
+            }
+
+            varPos1 = offset + 46 + varPosBase1;
+            obj.referralSource = HostAddress.deserialize(buf, varPos1);
+         }
+
+         return obj;
       } else {
-         throw ProtocolException.invalidOffset("Username", varPosBase0, buf.readableBytes());
+         throw ProtocolException.invalidOffset("Language", varPosBase1, buf.readableBytes());
       }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 66;
-      int fieldOffset0 = buf.getIntLE(offset + 46);
-      if (fieldOffset0 >= 0 && fieldOffset0 <= buf.writerIndex() - offset - 66) {
-         int pos0 = offset + 66 + fieldOffset0;
+      int maxEnd = 46;
+      if ((nullBits & 1) != 0) {
+         int fieldOffset0 = buf.getIntLE(offset + 30);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("IdentityToken", fieldOffset0, maxEnd);
+         }
+
+         int pos0 = offset + 46 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
+      }
 
-         if ((nullBits & 1) != 0) {
-            fieldOffset0 = buf.getIntLE(offset + 50);
-            if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 66) {
-               throw ProtocolException.invalidOffset("IdentityToken", fieldOffset0, maxEnd);
+      int fieldOffset1 = buf.getIntLE(offset + 34);
+      if (fieldOffset1 >= 0 && fieldOffset1 <= buf.writerIndex() - offset - 46) {
+         int pos1 = offset + 46 + fieldOffset1;
+         int sl = VarInt.peek(buf, pos1);
+         pos1 += VarInt.size(sl) + sl;
+         if (pos1 - offset > maxEnd) {
+            maxEnd = pos1 - offset;
+         }
+
+         if ((nullBits & 2) != 0) {
+            fieldOffset1 = buf.getIntLE(offset + 38);
+            if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 46) {
+               throw ProtocolException.invalidOffset("ReferralData", fieldOffset1, maxEnd);
             }
 
-            pos0 = offset + 66 + fieldOffset0;
-            sl = VarInt.peek(buf, pos0);
-            pos0 += VarInt.size(sl) + sl;
-            if (pos0 - offset > maxEnd) {
-               maxEnd = pos0 - offset;
+            pos1 = offset + 46 + fieldOffset1;
+            sl = VarInt.peek(buf, pos1);
+            pos1 += VarInt.size(sl) + sl * 1;
+            if (pos1 - offset > maxEnd) {
+               maxEnd = pos1 - offset;
             }
          }
 
-         fieldOffset0 = buf.getIntLE(offset + 54);
-         if (fieldOffset0 >= 0 && fieldOffset0 <= buf.writerIndex() - offset - 66) {
-            pos0 = offset + 66 + fieldOffset0;
-            sl = VarInt.peek(buf, pos0);
-            pos0 += VarInt.size(sl) + sl;
-            if (pos0 - offset > maxEnd) {
-               maxEnd = pos0 - offset;
+         if ((nullBits & 4) != 0) {
+            fieldOffset1 = buf.getIntLE(offset + 42);
+            if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 46) {
+               throw ProtocolException.invalidOffset("ReferralSource", fieldOffset1, maxEnd);
             }
 
-            if ((nullBits & 2) != 0) {
-               fieldOffset0 = buf.getIntLE(offset + 58);
-               if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 66) {
-                  throw ProtocolException.invalidOffset("ReferralData", fieldOffset0, maxEnd);
-               }
-
-               pos0 = offset + 66 + fieldOffset0;
-               sl = VarInt.peek(buf, pos0);
-               pos0 += VarInt.size(sl) + sl * 1;
-               if (pos0 - offset > maxEnd) {
-                  maxEnd = pos0 - offset;
-               }
+            pos1 = offset + 46 + fieldOffset1;
+            pos1 += HostAddress.computeBytesConsumed(buf, pos1);
+            if (pos1 - offset > maxEnd) {
+               maxEnd = pos1 - offset;
             }
-
-            if ((nullBits & 4) != 0) {
-               fieldOffset0 = buf.getIntLE(offset + 62);
-               if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 66) {
-                  throw ProtocolException.invalidOffset("ReferralSource", fieldOffset0, maxEnd);
-               }
-
-               pos0 = offset + 66 + fieldOffset0;
-               pos0 += HostAddress.computeBytesConsumed(buf, pos0);
-               if (pos0 - offset > maxEnd) {
-                  maxEnd = pos0 - offset;
-               }
-            }
-
-            return maxEnd;
-         } else {
-            throw ProtocolException.invalidOffset("Language", fieldOffset0, maxEnd);
          }
+
+         return maxEnd;
       } else {
-         throw ProtocolException.invalidOffset("Username", fieldOffset0, maxEnd);
+         throw ProtocolException.invalidOffset("Language", fieldOffset1, maxEnd);
       }
    }
 
@@ -304,9 +259,6 @@ public class Connect implements Packet, ToServerPacket {
       buf.writeIntLE(this.protocolBuildNumber);
       PacketIO.writeFixedAsciiString(buf, this.clientVersion, 20);
       buf.writeByte(this.clientType.getValue());
-      PacketIO.writeUUID(buf, this.uuid);
-      int usernameOffsetSlot = buf.writerIndex();
-      buf.writeIntLE(0);
       int identityTokenOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int languageOffsetSlot = buf.writerIndex();
@@ -316,8 +268,6 @@ public class Connect implements Packet, ToServerPacket {
       int referralSourceOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
-      buf.setIntLE(usernameOffsetSlot, buf.writerIndex() - varBlockStart);
-      PacketIO.writeVarAsciiString(buf, this.username, 16);
       if (this.identityToken != null) {
          buf.setIntLE(identityTokenOffsetSlot, buf.writerIndex() - varBlockStart);
          PacketIO.writeVarString(buf, this.identityToken, 8192);
@@ -352,8 +302,7 @@ public class Connect implements Packet, ToServerPacket {
 
    @Override
    public int computeSize() {
-      int size = 66;
-      size += VarInt.size(this.username.length()) + this.username.length();
+      int size = 46;
       if (this.identityToken != null) {
          size += PacketIO.stringSize(this.identityToken);
       }
@@ -371,8 +320,8 @@ public class Connect implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 66) {
-         return ValidationResult.error("Buffer too small: expected at least 66 bytes");
+      if (buffer.readableBytes() - offset < 46) {
+         return ValidationResult.error("Buffer too small: expected at least 46 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -381,109 +330,92 @@ public class Connect implements Packet, ToServerPacket {
          return ValidationResult.error("Invalid ClientType value for ClientType");
       }
 
-      v = buffer.getIntLE(offset + 46);
-      if (v >= 0 && v <= buffer.writerIndex() - offset - 66) {
-         int pos = offset + 66 + v;
-         int usernameLen = VarInt.peek(buffer, pos);
-         if (usernameLen < 0) {
-            return ValidationResult.error("Invalid string length for Username");
+      if ((nullBits & 1) != 0) {
+         v = buffer.getIntLE(offset + 30);
+         if (v < 0 || v > buffer.writerIndex() - offset - 46) {
+            return ValidationResult.error("Invalid offset for IdentityToken");
          }
 
-         if (usernameLen > 16) {
-            return ValidationResult.error("Username exceeds max length 16");
+         int pos = offset + 46 + v;
+         int identityTokenLen = VarInt.peek(buffer, pos);
+         if (identityTokenLen < 0) {
+            return ValidationResult.error("Invalid string length for IdentityToken");
          }
 
-         pos += VarInt.size(usernameLen);
-         pos += usernameLen;
+         if (identityTokenLen > 8192) {
+            return ValidationResult.error("IdentityToken exceeds max length 8192");
+         }
+
+         pos += VarInt.size(identityTokenLen);
+         pos += identityTokenLen;
          if (pos > buffer.writerIndex()) {
-            return ValidationResult.error("Buffer overflow reading Username");
+            return ValidationResult.error("Buffer overflow reading IdentityToken");
+         }
+      }
+
+      v = buffer.getIntLE(offset + 34);
+      if (v >= 0 && v <= buffer.writerIndex() - offset - 46) {
+         int pos = offset + 46 + v;
+         int languageLen = VarInt.peek(buffer, pos);
+         if (languageLen < 0) {
+            return ValidationResult.error("Invalid string length for Language");
          }
 
-         if ((nullBits & 1) != 0) {
-            v = buffer.getIntLE(offset + 50);
-            if (v < 0 || v > buffer.writerIndex() - offset - 66) {
-               return ValidationResult.error("Invalid offset for IdentityToken");
+         if (languageLen > 16) {
+            return ValidationResult.error("Language exceeds max length 16");
+         }
+
+         pos += VarInt.size(languageLen);
+         pos += languageLen;
+         if (pos > buffer.writerIndex()) {
+            return ValidationResult.error("Buffer overflow reading Language");
+         }
+
+         if (!PacketIO.isValidAscii(buffer, pos - languageLen, languageLen)) {
+            return ValidationResult.error("Language contains non-ASCII bytes");
+         }
+
+         if ((nullBits & 2) != 0) {
+            v = buffer.getIntLE(offset + 38);
+            if (v < 0 || v > buffer.writerIndex() - offset - 46) {
+               return ValidationResult.error("Invalid offset for ReferralData");
             }
 
-            pos = offset + 66 + v;
-            usernameLen = VarInt.peek(buffer, pos);
-            if (usernameLen < 0) {
-               return ValidationResult.error("Invalid string length for IdentityToken");
+            pos = offset + 46 + v;
+            languageLen = VarInt.peek(buffer, pos);
+            if (languageLen < 0) {
+               return ValidationResult.error("Invalid array count for ReferralData");
             }
 
-            if (usernameLen > 8192) {
-               return ValidationResult.error("IdentityToken exceeds max length 8192");
+            if (languageLen > 4096) {
+               return ValidationResult.error("ReferralData exceeds max length 4096");
             }
 
-            pos += VarInt.size(usernameLen);
-            pos += usernameLen;
+            pos += VarInt.size(languageLen);
+            pos += languageLen * 1;
             if (pos > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading IdentityToken");
+               return ValidationResult.error("Buffer overflow reading ReferralData");
             }
          }
 
-         v = buffer.getIntLE(offset + 54);
-         if (v >= 0 && v <= buffer.writerIndex() - offset - 66) {
-            pos = offset + 66 + v;
-            usernameLen = VarInt.peek(buffer, pos);
-            if (usernameLen < 0) {
-               return ValidationResult.error("Invalid string length for Language");
+         if ((nullBits & 4) != 0) {
+            v = buffer.getIntLE(offset + 42);
+            if (v < 0 || v > buffer.writerIndex() - offset - 46) {
+               return ValidationResult.error("Invalid offset for ReferralSource");
             }
 
-            if (usernameLen > 16) {
-               return ValidationResult.error("Language exceeds max length 16");
+            pos = offset + 46 + v;
+            ValidationResult referralSourceResult = HostAddress.validateStructure(buffer, pos);
+            if (!referralSourceResult.isValid()) {
+               return ValidationResult.error("Invalid ReferralSource: " + referralSourceResult.error());
             }
 
-            pos += VarInt.size(usernameLen);
-            pos += usernameLen;
-            if (pos > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading Language");
-            }
-
-            if ((nullBits & 2) != 0) {
-               v = buffer.getIntLE(offset + 58);
-               if (v < 0 || v > buffer.writerIndex() - offset - 66) {
-                  return ValidationResult.error("Invalid offset for ReferralData");
-               }
-
-               pos = offset + 66 + v;
-               usernameLen = VarInt.peek(buffer, pos);
-               if (usernameLen < 0) {
-                  return ValidationResult.error("Invalid array count for ReferralData");
-               }
-
-               if (usernameLen > 4096) {
-                  return ValidationResult.error("ReferralData exceeds max length 4096");
-               }
-
-               pos += VarInt.size(usernameLen);
-               pos += usernameLen * 1;
-               if (pos > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading ReferralData");
-               }
-            }
-
-            if ((nullBits & 4) != 0) {
-               v = buffer.getIntLE(offset + 62);
-               if (v < 0 || v > buffer.writerIndex() - offset - 66) {
-                  return ValidationResult.error("Invalid offset for ReferralSource");
-               }
-
-               pos = offset + 66 + v;
-               ValidationResult referralSourceResult = HostAddress.validateStructure(buffer, pos);
-               if (!referralSourceResult.isValid()) {
-                  return ValidationResult.error("Invalid ReferralSource: " + referralSourceResult.error());
-               }
-
-               pos += HostAddress.computeBytesConsumed(buffer, pos);
-            }
-
-            return ValidationResult.OK;
-         } else {
-            return ValidationResult.error("Invalid offset for Language");
+            pos += HostAddress.computeBytesConsumed(buffer, pos);
          }
+
+         return ValidationResult.OK;
       } else {
-         return ValidationResult.error("Invalid offset for Username");
+         return ValidationResult.error("Invalid offset for Language");
       }
    }
 
@@ -493,8 +425,6 @@ public class Connect implements Packet, ToServerPacket {
       copy.protocolBuildNumber = this.protocolBuildNumber;
       copy.clientVersion = this.clientVersion;
       copy.clientType = this.clientType;
-      copy.uuid = this.uuid;
-      copy.username = this.username;
       copy.identityToken = this.identityToken;
       copy.language = this.language;
       copy.referralData = this.referralData != null ? Arrays.copyOf(this.referralData, this.referralData.length) : null;
@@ -513,8 +443,6 @@ public class Connect implements Packet, ToServerPacket {
                && this.protocolBuildNumber == other.protocolBuildNumber
                && Objects.equals(this.clientVersion, other.clientVersion)
                && Objects.equals(this.clientType, other.clientType)
-               && Objects.equals(this.uuid, other.uuid)
-               && Objects.equals(this.username, other.username)
                && Objects.equals(this.identityToken, other.identityToken)
                && Objects.equals(this.language, other.language)
                && Arrays.equals(this.referralData, other.referralData)
@@ -529,8 +457,6 @@ public class Connect implements Packet, ToServerPacket {
       result = 31 * result + Integer.hashCode(this.protocolBuildNumber);
       result = 31 * result + Objects.hashCode(this.clientVersion);
       result = 31 * result + Objects.hashCode(this.clientType);
-      result = 31 * result + Objects.hashCode(this.uuid);
-      result = 31 * result + Objects.hashCode(this.username);
       result = 31 * result + Objects.hashCode(this.identityToken);
       result = 31 * result + Objects.hashCode(this.language);
       result = 31 * result + Arrays.hashCode(this.referralData);

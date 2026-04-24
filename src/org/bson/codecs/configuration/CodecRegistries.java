@@ -2,10 +2,15 @@ package org.bson.codecs.configuration;
 
 import java.util.Arrays;
 import java.util.List;
+import org.bson.UuidRepresentation;
 import org.bson.codecs.Codec;
 import org.bson.internal.ProvidersCodecRegistry;
 
 public final class CodecRegistries {
+   public static CodecRegistry withUuidRepresentation(CodecRegistry codecRegistry, UuidRepresentation uuidRepresentation) {
+      return fromProviders(new OverridableUuidRepresentationCodecProvider(codecRegistry, uuidRepresentation));
+   }
+
    public static CodecRegistry fromCodecs(Codec<?>... codecs) {
       return fromCodecs(Arrays.asList(codecs));
    }

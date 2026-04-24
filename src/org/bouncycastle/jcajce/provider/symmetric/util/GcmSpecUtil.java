@@ -9,6 +9,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidParameterSpecException;
 import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.internal.asn1.cms.GCMParameters;
@@ -84,14 +85,18 @@ public class GcmSpecUtil {
       }
    }
 
-   public static GCMParameters extractGcmParameters(final AlgorithmParameterSpec var0) throws InvalidParameterSpecException {
+   public static ASN1Sequence extractGcmParameters(final AlgorithmParameterSpec var0) throws InvalidParameterSpecException {
       try {
-         return AccessController.doPrivileged(new PrivilegedExceptionAction() {
-            @Override
-            public Object run() throws Exception {
-               return new GCMParameters((byte[])GcmSpecUtil.iv.invoke(var0), (Integer)GcmSpecUtil.tLen.invoke(var0) / 8);
+         return AccessController.doPrivileged(
+            new PrivilegedExceptionAction() {
+               @Override
+               public Object run() throws Exception {
+                  return ASN1Sequence.getInstance(
+                     new GCMParameters((byte[])GcmSpecUtil.iv.invoke(var0), (Integer)GcmSpecUtil.tLen.invoke(var0) / 8).toASN1Primitive()
+                  );
+               }
             }
-         });
+         );
       } catch (Exception var2) {
          throw new InvalidParameterSpecException("Cannot process GCMParameterSpec");
       }

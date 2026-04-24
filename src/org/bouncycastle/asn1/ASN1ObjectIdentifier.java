@@ -280,26 +280,34 @@ public class ASN1ObjectIdentifier extends ASN1Primitive {
    }
 
    private static byte[] parseIdentifier(String var0) {
-      ByteArrayOutputStream var1 = new ByteArrayOutputStream();
-      OIDTokenizer var2 = new OIDTokenizer(var0);
-      int var3 = Integer.parseInt(var2.nextToken()) * 40;
-      String var4 = var2.nextToken();
-      if (var4.length() <= 18) {
-         ASN1RelativeOID.writeField(var1, var3 + Long.parseLong(var4));
-      } else {
-         ASN1RelativeOID.writeField(var1, new BigInteger(var4).add(BigInteger.valueOf(var3)));
-      }
+      int var1 = var0.length() / 2;
+      ByteArrayOutputStream var2 = new ByteArrayOutputStream(var1);
+      int var3 = (var0.charAt(0) - '0') * 40;
+      int var4 = 2;
+      int var5 = 2;
 
-      while (var2.hasMoreTokens()) {
-         String var5 = var2.nextToken();
-         if (var5.length() <= 18) {
-            ASN1RelativeOID.writeField(var1, Long.parseLong(var5));
-         } else {
-            ASN1RelativeOID.writeField(var1, new BigInteger(var5));
+      while (++var5 < var0.length()) {
+         if (var0.charAt(var5) == '.') {
+            writeField(var2, var0, var4, var5, var3);
+            var3 = 0;
+            var4 = var5 + 1;
+            var5 = var4;
          }
       }
 
-      return var1.toByteArray();
+      writeField(var2, var0, var4, var5, var3);
+      return var2.toByteArray();
+   }
+
+   static void writeField(ByteArrayOutputStream var0, String var1, int var2, int var3, int var4) {
+      String var5 = var1.substring(var2, var3);
+      if (var5.length() <= 18) {
+         long var6 = Long.parseLong(var5) + var4;
+         ASN1RelativeOID.writeField(var0, var6);
+      } else {
+         BigInteger var8 = new BigInteger(var5).add(BigInteger.valueOf(var4));
+         ASN1RelativeOID.writeField(var0, var8);
+      }
    }
 
    public ASN1ObjectIdentifier intern() {

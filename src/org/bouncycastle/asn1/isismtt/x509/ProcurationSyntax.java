@@ -35,7 +35,7 @@ public class ProcurationSyntax extends ASN1Object {
          Enumeration var2 = var1.getObjects();
 
          while (var2.hasMoreElements()) {
-            ASN1TaggedObject var3 = ASN1TaggedObject.getInstance(var2.nextElement(), 128);
+            ASN1TaggedObject var3 = ASN1TaggedObject.getContextInstance(var2.nextElement());
             switch (var3.getTagNo()) {
                case 1:
                   this.country = ASN1PrintableString.getInstance(var3, true).getString();

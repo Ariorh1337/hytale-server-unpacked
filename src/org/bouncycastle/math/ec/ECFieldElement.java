@@ -98,7 +98,7 @@ public abstract class ECFieldElement implements ECConstants {
          }
 
          int var2 = var1 + 1 >>> 1;
-         int var3 = 31 - Integers.numberOfLeadingZeros(var2);
+         int var3 = Integers.bitLength(var2) - 1;
          int var4 = 1;
          ECFieldElement var5 = this;
 
@@ -119,7 +119,7 @@ public abstract class ECFieldElement implements ECConstants {
 
       public int trace() {
          int var1 = this.getFieldSize();
-         int var2 = 31 - Integers.numberOfLeadingZeros(var1);
+         int var2 = Integers.bitLength(var1) - 1;
          int var3 = 1;
          ECFieldElement var4 = this;
 

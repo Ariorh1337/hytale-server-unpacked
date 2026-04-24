@@ -1,12 +1,25 @@
 package org.bouncycastle.asn1;
 
 public class DLExternal extends ASN1External {
-   @Deprecated
-   public DLExternal(ASN1EncodableVector var1) {
-      this(DLFactory.createSequence(var1));
+   public static DLExternal fromSequence(ASN1Sequence var0) {
+      return new DLExternal(var0);
    }
 
+   public static DLExternal fromVector(ASN1EncodableVector var0) {
+      return fromSequence(DLFactory.createSequence(var0));
+   }
+
+   @Deprecated
+   public DLExternal(ASN1EncodableVector var1) {
+      this((ASN1Sequence)DLFactory.createSequence(var1));
+   }
+
+   /** @deprecated */
    public DLExternal(DLSequence var1) {
+      super(var1);
+   }
+
+   private DLExternal(ASN1Sequence var1) {
       super(var1);
    }
 

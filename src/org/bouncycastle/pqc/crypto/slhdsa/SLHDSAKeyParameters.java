@@ -2,6 +2,7 @@ package org.bouncycastle.pqc.crypto.slhdsa;
 
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 
+@Deprecated
 public class SLHDSAKeyParameters extends AsymmetricKeyParameter {
    private final SLHDSAParameters parameters;
 

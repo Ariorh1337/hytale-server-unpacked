@@ -37,6 +37,7 @@ public class ClipboardBoundsSnapshot implements ClipboardSnapshot<ClipboardBound
    ) {
       ClipboardBoundsSnapshot snapshot = new ClipboardBoundsSnapshot(state.getSelection());
       state.getSelection().setSelectionArea(this.min, this.max);
+      state.syncRawPositions();
       state.sendArea();
       return snapshot;
    }
